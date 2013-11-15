@@ -34,9 +34,9 @@ object Formula extends BuiltInSort
 /**
  * User defined sorts
  */
-sealed class UserDefinedSort extends Sort with Quantifiable
-sealed class UserDefinedEnum extends UserDefinedSort
+sealed class UserDefinedSort(name : String) extends Sort with Quantifiable
+sealed class UserDefinedEnum(name : String, elements : list[String]) extends UserDefinedSort
 
-/* !!! name ++ elemente !!!*/
+/* ??? We could perhaps just create "Constant" objects for every element of an enum */
 
 sealed class Pair[L <: Sort, R <: Sort] extends Sort
