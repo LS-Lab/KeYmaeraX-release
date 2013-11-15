@@ -2,67 +2,88 @@
  * @author Marcus Völp
  */
 
+
+import scala.annotation.elidable
+import scala.annotation.elidable._
+
+/**
+ * Trait for adding annotations
+ * ============================
+ * 
+ * They are no longer required in the proof checker. Hence this trait may be empty.
+ */
+trait Annotable
+
 /**
  * Term
  * ====
  *
  * Data structure for representing terms in (quantified) dynamic differential logic
  *
- * Type checking works automatically for builtin terms.
+ * Type checking works automatically for builtin terms. For user defined types and
+ * for pairs, the trait TypeCheck asserts 
  */
-
-sealed abstract class Term[T <: Sort](val typeObject : T)
+sealed abstract class Term[A, T <: Sort](val typeObject : T) extends Annotable
 
 abstract class Formula     extends Term[Bool.type](Bool)
 abstract class RealTerm    extends Term[Real.type](Real)
 abstract class GameTerm    extends Term[Game.type](Game)
 abstract class ProgramTerm extends Term[Program.type](Program)
 
-abstract class BinaryFormula[C <: Sort](val left : Term[C], val right : Term[C]) extends Formula {
-  assert(left.typeObject == right.typeObject)
-}
+abstract class BinaryFormula[C <: Sort](val left : Term[C], val right : Term[C]) extends Formula
 
-/* !!! Not really nice */
+/* !!! Not really nice because only defined on formulas */
 trait Commutative[T <: Sort] extends BinaryFormula[T]
 trait Associative[T <: Sort] extends BinaryFormula[T]
 
-object True  extends Formula
-object False extends Formula
+trait TypeCheck[T <: Sort]   extends BinaryFormula[T] {
+  applicable
+  @elidable(ASSERTION) def applicable = {
+    require(left.typeObject == right.typeObject, "Sort Mismatch in Formula")
+  }
+}
 
-class Equals   [T <: Sort](left : Term[T], right : Term[T]) extends BinaryFormula[T](left, right)
-                                                               with Commutative  [T]
-                                                               with Associative  [T]
+case object True  extends Formula
+case object False extends Formula
 
-class NotEquals[T <: Sort](left : Term[T], right : Term[T]) extends BinaryFormula[T](left, right)
-                                                               with Commutative[T]
+case class Equals   [T <: Sort](left : Term[T], right : Term[T]) extends BinaryFormula[T](left, right)
+                                                                    with Commutative  [T]
+                                                                    with Associative  [T]
+                                                                    with TypeCheck    [T]
 
-class GreaterThan (left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
-class GreaterEqual(left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
-class LessThan    (left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
-class LessEqual   (left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
+case class NotEquals[T <: Sort](left : Term[T], right : Term[T]) extends BinaryFormula[T](left, right)
+                                                                    with Commutative  [T]
+                                                                    with TypeCheck    [T]
 
-class Not         (term : Formula) extends Formula
+case class GreaterThan (left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
+case class GreaterEqual(left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
+case class LessThan    (left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
+case class LessEqual   (left : RealTerm, right : RealTerm) extends BinaryFormula[Real.type](left, right)
 
-class And         (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
-                                                       with Commutative  [Bool.type]
-                                                       with Associative  [Bool.type]
-class Or          (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
-                                                       with Commutative  [Bool.type]
-                                                       with Associative  [Bool.type]
-class Implies     (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
-                                                       with Associative  [Bool.type]
-class Equivalent  (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
-                                                       with Commutative  [Bool.type]
-                                                       with Associative  [Bool.type]
+case class Not         (term : Formula) extends Formula
+
+case class And         (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
+                                                            with Commutative  [Bool.type]
+                                                            with Associative  [Bool.type]
+case class Or          (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
+                                                            with Commutative  [Bool.type]
+                                                            with Associative  [Bool.type]
+case class Implies     (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
+                                                            with Associative  [Bool.type]
+case class Equivalent  (left : Formula, right : Formula) extends BinaryFormula[Bool.type](left, right)
+                                                            with Commutative  [Bool.type]
+                                                            with Associative  [Bool.type]
+
+/**
+ * Temporal Formulas
+ */
+case class Throughout  (term : Formula) extends Formula /* []\Phi e.g., in [\alpha] []\Phi */
+case class Sometimes   (term : Formula) extends Formula /* <>\Phi e.g., in [\alpha] <>\Phi */
 
 /**
  * Modality
  */
-case class Modality          (val game : GameTerm, val term : Formula) extends Formula /* G   \Phi */
-
-/*
-class ThroughoutModality(val game : GameTerm, val term : Formula) extends Formula /* G []\Phi */
-class SometimesModality (val game : GameTerm, val term : Formula) extends Formula /* G <>\Phi */
+case class Modality        (val game : GameTerm, val term : Formula) extends Formula /* G   \Phi */
 
 /**
  * Games
@@ -91,5 +112,11 @@ case class Loop            (val program : ProgramTerm) extends ProgramTerm
 /* !!! identifier handling missing */
 /* !!! binders missing */
 
-/* !!! annotations */
+sealed abstract class Binder[T <: Sort](typeObject : T)(val variableName : String) extends Term[T](typeObject)
+
+case class Forall[T <: Sort](typeObject : T)(variableName : String) extends Binder[T](typeObject)(variableName)
+case class Exists[T <: Sort](typeObject : T)(variableName : String) extends Binder[T](typeObject)(variableName)
+
+sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Term[T]) extends Term[T](term.typeObject)
+sealed class Variable[C <: Sort](val binder : Binder[C]) : Term[C](binder.typeObject)
 
