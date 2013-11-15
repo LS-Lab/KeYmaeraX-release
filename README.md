@@ -24,6 +24,11 @@ André Platzer.
 Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics.
 Springer, 2010. 426 p. ISBN 978-3-642-14508-7. 
 
+André Platzer.
+Differential dynamic logic for verifying parametric hybrid systems.
+In Nicola Olivetti, editor, Automated Reasoning with Analytic Tableaux and Related Methods, International Conference, TABLEAUX 2007, Aix en Provence, France, July 3-6, 2007, Proceedings, volume 4548 of LNCS, pages 216-232. Springer, 2007. 
+
+
 The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are described and specified in
 
 André Platzer.
@@ -41,3 +46,12 @@ André Platzer.
 Dynamic logics of dynamical systems.
 May 2012.
 arXiv:1205.4788
+
+Background & References
+=======================
+
+Background material and more material can be found at
+
+http://symbolaris.com/pub/
+
+http://symbolaris.com/info/KeYmaera.html
