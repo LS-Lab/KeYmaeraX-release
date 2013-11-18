@@ -47,6 +47,10 @@ Dynamic logics of dynamical systems.
 May 2012.
 arXiv:1205.4788
 
+Jan-David Quesel and André Platzer.
+Playing hybrid games with KeYmaera.
+In Bernhard Gramlich, Dale Miller, and Ulrike Sattler, editors, Automated Reasoning, Sixth International Joint Conference, IJCAR 2012, Manchester, UK, Proceedings, volume 7364 of LNCS, pages 439-453. Springer, June 2012
+
 Background & References
 =======================
 
