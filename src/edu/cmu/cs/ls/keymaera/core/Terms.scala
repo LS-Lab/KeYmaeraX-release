@@ -1,6 +1,8 @@
 /**
  * @author Marcus Völp
+ * @author Jan-David Quesel
  */
+ package edu.cmu.cs.ls.keymaera
 
 
 import scala.annotation.elidable
@@ -77,8 +79,8 @@ case class Equivalent  (left : Formula, right : Formula) extends BinaryFormula[B
 /**
  * Temporal Formulas
  */
-case class Throughout  (term : Formula) extends Formula /* []\Phi e.g., in [\alpha] []\Phi */
-case class Sometimes   (term : Formula) extends Formula /* <>\Phi e.g., in [\alpha] <>\Phi */
+case class Globally  (term : Formula) extends Formula /* []\Phi e.g., in [\alpha] []\Phi */
+case class Finally   (term : Formula) extends Formula /* <>\Phi e.g., in [\alpha] <>\Phi */
 
 /**
  * Modality
@@ -118,5 +120,5 @@ case class Forall[T <: Sort](typeObject : T)(variableName : String) extends Bind
 case class Exists[T <: Sort](typeObject : T)(variableName : String) extends Binder[T](typeObject)(variableName)
 
 sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Term[T]) extends Term[T](term.typeObject)
-sealed class Variable[C <: Sort](val binder : Binder[C]) : Term[C](binder.typeObject)
+sealed class Name[C <: Sort](val name : String) : Term[C](binder.typeObject)
 

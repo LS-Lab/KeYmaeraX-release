@@ -1,13 +1,18 @@
+package edu.cmu.cs.ls.keymaera
+
 abstract class Proof
 
 abstract class ProofNode(s: Sequent, p: ProofNode, var ruleName: String, var children: Seq[ProofNode]) {
   def apply(rule: Rule);
   def apply(rule: PositionRule, p: Position);
+  def apply(rule: AssumptionRule, assumption: Position, p: Position);
 }
 
 abstract class Rule extends Sequent => Seq[Sequent]
 
 abstract class PositionRule extends Position => Rule
+
+abstract class AssumptionRule extends Position => PositionRule
 
 abstract class Position {
 
@@ -30,8 +35,8 @@ class Sequent(pref: Seq[(Name, Sort)], ante: IndexedSeq[Term], succ: IndexedSeq[
 class Cut(f: Formula) extends Rule {
   def apply(s: Sequent): Seq[Sequent] = {
     val (pref, ante, succ) = s
-    val l = Sequent(pref, ante ++ f, succ)
-    val r = Sequent(pref, ante, succ ++ f)
+    val l = Sequent(pref, ante :+ f, succ)
+    val r = Sequent(pref, ante, succ :+ f)
     new List(l, r)
   }
 
@@ -46,6 +51,35 @@ class Cut(f: Formula) extends Rule {
 
 // AX close
 // TODO: how do we represent this with just a single position?
+object AxiomClose extends AssumptionRule {
+  def apply(ass: Position): PositionRule = {
+    
+  }
+}
+class AxiomClosePos(ass: Position) extends PositionRule {
+  def apply(p: Position): Rule =
+    assert(p.isAnte != ass.isAnte)
+    new AxiomClose(ass, p)
+}
+class AxiomClose(ass: Position, p: Position) {
+
+  def apply(s: Sequent): Seq[Sequent] = {
+    if(ass.isAnte) {
+      if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
+        // close
+        Nil
+      } else {
+        throw new IllegalArgumentExcpetion("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
+      }
+    } else {
+      if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
+        // close
+        Nil
+      } else {
+        throw new IllegalArgumentExcpetion("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
+      }
+    }
+}
 
 // Impl right
 
@@ -59,7 +93,7 @@ class ImplRight(p: Position) extends Rule {
   def apply(s: Sequent): Seq[Sequent] = {
     val f = s.succ(p.getIndex)
     f match {
-      case Impl(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+      case Implies(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
       case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
     }
   }
@@ -76,7 +110,7 @@ class ImplLeft(p: Position) extends Rule {
   def apply(s: Sequent): Seq[Sequent] = {
     val f = s.ante(p.getIndex)
     f match {
-      case Impl(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      case Implies(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
       case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
     }
   }
