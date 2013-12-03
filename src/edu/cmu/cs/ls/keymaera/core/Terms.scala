@@ -2,11 +2,50 @@
  * @author Marcus Völp
  * @author Jan-David Quesel
  */
- package edu.cmu.cs.ls.keymaera
+ package edu.cmu.cs.ls.keymaera.core
 
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
+
+/**
+ * Sorts
+ * =====
+ *
+ * The rational behind the below type hierarchy Sort is to let scala
+ * discarge ill typed terms whenever this is possible. That is, scala
+ * will automatically check type safety for builtin sorts. However,
+ * because Sorts can be user defined. We have to support the creation
+ * of new Sorts, which prevents compile time checks for these sorts.
+ * We therefore equipped terms over user defined sorts with runtime
+ * checks to assert type safety.
+ */
+sealed abstract class Sort
+
+trait Quantifiable
+
+/**
+ * Builtin sorts
+ */
+sealed abstract class BuiltInSort extends Sort
+
+object Bool extends BuiltInSort with Quantifiable
+object Real extends BuiltInSort with Quantifiable
+object Unit extends BuiltInSort with Quantifiable
+
+object Game    extends BuiltInSort
+object Program extends BuiltInSort
+object Formula extends BuiltInSort
+
+/**
+ * User defined sorts
+ */
+sealed class UserDefinedSort(name : String) extends Sort with Quantifiable
+sealed class UserDefinedEnum(name : String, elements : List[String]) extends UserDefinedSort(name)
+
+/* ??? We could perhaps just create "Constant" objects for every element of an enum */
+
+sealed class Pair[L <: Sort, R <: Sort] extends Sort
 
 /**
  * Trait for adding annotations
@@ -25,14 +64,14 @@ trait Annotable
  * Type checking works automatically for builtin terms. For user defined types and
  * for pairs, the trait TypeCheck asserts 
  */
-sealed abstract class Term[A, T <: Sort](val typeObject : T) extends Annotable
+sealed abstract class Term[T <: Sort](val typeObject : T) extends Annotable
 
 abstract class Formula     extends Term[Bool.type](Bool)
 abstract class RealTerm    extends Term[Real.type](Real)
 abstract class GameTerm    extends Term[Game.type](Game)
 abstract class ProgramTerm extends Term[Program.type](Program)
 
-abstract class BinaryFormula[C <: Sort](val left : Term[C], val right : Term[C]) extends Formula
+abstract class BinaryFormula[C <: Sort](val l : Term[C], val r : Term[C]) extends Formula
 
 /* !!! Not really nice because only defined on formulas */
 trait Commutative[T <: Sort] extends BinaryFormula[T]
@@ -41,7 +80,7 @@ trait Associative[T <: Sort] extends BinaryFormula[T]
 trait TypeCheck[T <: Sort]   extends BinaryFormula[T] {
   applicable
   @elidable(ASSERTION) def applicable = {
-    require(left.typeObject == right.typeObject, "Sort Mismatch in Formula")
+    require(l.typeObject == r.typeObject, "Sort Mismatch in Formula")
   }
 }
 
@@ -116,9 +155,14 @@ case class Loop            (val program : ProgramTerm) extends ProgramTerm
 
 sealed abstract class Binder[T <: Sort](typeObject : T)(val variableName : String) extends Term[T](typeObject)
 
-case class Forall[T <: Sort](typeObject : T)(variableName : String) extends Binder[T](typeObject)(variableName)
-case class Exists[T <: Sort](typeObject : T)(variableName : String) extends Binder[T](typeObject)(variableName)
+case class Forall[T <: Sort](override val typeObject : T)(override val variableName : String) extends Binder[T](typeObject)(variableName)
+case class Exists[T <: Sort](override val typeObject : T)(override val variableName : String) extends Binder[T](typeObject)(variableName)
 
 sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Term[T]) extends Term[T](term.typeObject)
-sealed class Name[C <: Sort](val name : String) : Term[C](binder.typeObject)
+sealed class Name[C <: Sort](typeObject : C)(val name : String) extends Term[C](typeObject)
+
+sealed class FormulaName(val name : String) extends Formula
+sealed class ProgramName(val name : String) extends ProgramTerm
+sealed class GameName(val name : String) extends GameTerm
+
 
