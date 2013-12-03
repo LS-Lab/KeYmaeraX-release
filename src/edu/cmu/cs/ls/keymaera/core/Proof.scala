@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.core
 
-abstract class Proof
+object Proof {
+  type Formula = Term[Bool.type]
 
 sealed class ProofNode protected (val s: Sequent, val p: ProofNode) {
   /**
@@ -289,5 +290,5 @@ class Hide(p: Position) extends Rule {
 
 
 
-
+}
 // vim: set ts=4 sw=4 et:
