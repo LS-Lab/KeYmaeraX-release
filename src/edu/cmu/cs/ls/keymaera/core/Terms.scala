@@ -59,7 +59,7 @@ trait Annotable
  * Term
  * ====
  *
- * Data structure for representing terms in (quantified) dynamic differential logic
+ * Data structure for representing terms in (quantified) differential dynamic logic
  *
  * Type checking works automatically for builtin terms. For user defined types and
  * for pairs, the trait TypeCheck asserts 

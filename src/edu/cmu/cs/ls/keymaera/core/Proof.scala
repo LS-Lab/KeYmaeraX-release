@@ -1,29 +1,52 @@
-package edu.cmu.cs.ls.keymaera
+package edu.cmu.cs.ls.keymaera.core
 
 abstract class Proof
 
-abstract class ProofNode(s: Sequent, p: ProofNode, var ruleName: String, var children: Seq[ProofNode]) {
-  def apply(rule: Rule);
-  def apply(rule: PositionRule, p: Position);
-  def apply(rule: AssumptionRule, assumption: Position, p: Position);
+sealed class ProofNode protected (val s: Sequent, val p: ProofNode) {
+  /**
+  * The rule that has been applied to the current node
+  */
+  private[this] var rule: Rule = null
+
+  /**
+  * The resulting sub goals from the rule application
+  */
+  private[this] var children: Seq[ProofNode] = Nil
+
+  def apply(rule: Rule) = null
+  def apply(r: PositionRule, p: Position): Seq[ProofNode] = {
+    rule = r(p)
+    children = for (ns <- rule(s)) 
+      yield new ProofNode(ns, this)
+    children
+  }
+  def apply(rule: AssumptionRule, assumption: Position, p: Position) = null
+
+  def getRule = rule
+  def getChildren = children
 }
 
-abstract class Rule extends Sequent => Seq[Sequent]
+class RootNode(override val s: Sequent) extends ProofNode(s, null)
 
-abstract class PositionRule extends Position => Rule
+abstract class Rule extends (Sequent => Seq[Sequent])
 
-abstract class AssumptionRule extends Position => PositionRule
+abstract class PositionRule extends (Position => Rule)
 
-abstract class Position {
+abstract class AssumptionRule extends (Position => PositionRule)
 
-  abstract def isAnte: boolean
-  abstract def getIndex: Int
+class Position(val ante: Boolean, val index: Int) {
+  def isAnte = ante
+  def getIndex: Int = index
 }
 
 abstract class Signature
 
 // this only works if all quantifiers are the same, otherwise we have distinguish here
-class Sequent(pref: Seq[(Name, Sort)], ante: IndexedSeq[Term], succ: IndexedSeq[Term])
+class Sequent(val pref: Seq[(String, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+
+object Sequent {
+  def apply(pref: Seq[(String, Sort)], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+}
 
 // proof rules:
 
@@ -34,10 +57,9 @@ class Sequent(pref: Seq[(Name, Sort)], ante: IndexedSeq[Term], succ: IndexedSeq[
 // cut
 class Cut(f: Formula) extends Rule {
   def apply(s: Sequent): Seq[Sequent] = {
-    val (pref, ante, succ) = s
-    val l = Sequent(pref, ante :+ f, succ)
-    val r = Sequent(pref, ante, succ :+ f)
-    new List(l, r)
+    val l = new Sequent(s.pref, s.ante :+ f, s.succ)
+    val r = new Sequent(s.pref, s.ante, s.succ :+ f)
+    List(l, r)
   }
 
   def name: String = "cut"
@@ -50,35 +72,36 @@ class Cut(f: Formula) extends Rule {
 // uniform substitution
 
 // AX close
-// TODO: how do we represent this with just a single position?
 object AxiomClose extends AssumptionRule {
-  def apply(ass: Position): PositionRule = {
-    
-  }
-}
-class AxiomClosePos(ass: Position) extends PositionRule {
-  def apply(p: Position): Rule =
-    assert(p.isAnte != ass.isAnte)
-    new AxiomClose(ass, p)
-}
-class AxiomClose(ass: Position, p: Position) {
+  def apply(ass: Position): PositionRule = new AxiomClosePos(ass)
 
-  def apply(s: Sequent): Seq[Sequent] = {
-    if(ass.isAnte) {
-      if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
-        // close
-        Nil
+  private class AxiomClosePos(ass: Position) extends PositionRule {
+    def apply(p: Position): Rule = {
+      assert(p.isAnte != ass.isAnte)
+      new AxiomClose(ass, p)
+    }
+  }
+
+  private class AxiomClose(ass: Position, p: Position) extends Rule {
+
+    def apply(s: Sequent): Seq[Sequent] = {
+      if(ass.isAnte) {
+        if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
+          // close
+          Nil
+        } else {
+          throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
+        }
       } else {
-        throw new IllegalArgumentExcpetion("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
-      }
-    } else {
-      if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
-        // close
-        Nil
-      } else {
-        throw new IllegalArgumentExcpetion("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
+        if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
+          // close
+          Nil
+        } else {
+          throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
+        }
       }
     }
+  }
 }
 
 // Impl right
@@ -88,13 +111,13 @@ object ImplRight extends PositionRule {
     assert(!p.isAnte)
     new ImplRight(p)
   }
-}
-class ImplRight(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Implies(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
-      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+  private class ImplRight(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.succ(p.getIndex)
+      f match {
+        case Implies(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+        case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -105,13 +128,13 @@ object ImplLeft extends PositionRule {
     assert(p.isAnte)
     new ImplLeft(p)
   }
-}
-class ImplLeft(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Implies(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
-      case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
+  private class ImplLeft(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.ante(p.getIndex)
+      f match {
+        case Implies(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+        case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -122,13 +145,13 @@ object NotRight extends PositionRule {
     assert(!p.isAnte)
     new NotRight(p)
   }
-}
-class NotRight(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
-      case _ => throw new IllegalArgumentException("Not-Right can only be applied to negation. Tried to apply to: " + f)
+  private class NotRight(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.succ(p.getIndex)
+      f match {
+        case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
+        case _ => throw new IllegalArgumentException("Not-Right can only be applied to negation. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -139,13 +162,13 @@ object NotLeft extends PositionRule {
     assert(p.isAnte)
     new NotLeft(p)
   }
-}
-class NotLeft(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
-      case _ => throw new IllegalArgumentException("Not-Left can only be applied to negation. Tried to apply to: " + f)
+  private class NotLeft(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.ante(p.getIndex)
+      f match {
+        case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+        case _ => throw new IllegalArgumentException("Not-Left can only be applied to negation. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -156,13 +179,13 @@ object AndRight extends PositionRule {
     assert(!p.isAnte)
     new AndRight(p)
   }
-}
-class AndRight(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
-      case _ => throw new IllegalArgumentException("And-Right can only be applied to conjunctions. Tried to apply to: " + f)
+  private class AndRight(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.succ(p.getIndex)
+      f match {
+        case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
+        case _ => throw new IllegalArgumentException("And-Right can only be applied to conjunctions. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -173,13 +196,13 @@ object AndLeft extends PositionRule {
     assert(p.isAnte)
     new AndLeft(p)
   }
-}
-class AndLeft(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
-      case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
+  private class AndLeft(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.ante(p.getIndex)
+      f match {
+        case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
+        case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -190,13 +213,13 @@ object OrRight extends PositionRule {
     assert(!p.isAnte)
     new OrRight(p)
   }
-}
-class OrRight(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
-      case _ => throw new IllegalArgumentException("Or-Right can only be applied to disjunctions. Tried to apply to: " + f)
+  private class OrRight(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.succ(p.getIndex)
+      f match {
+        case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
+        case _ => throw new IllegalArgumentException("Or-Right can only be applied to disjunctions. Tried to apply to: " + f)
+      }
     }
   }
 }
@@ -207,13 +230,13 @@ object OrLeft extends PositionRule {
     assert(p.isAnte)
     new AndLeft(p)
   }
-}
-class OrLeft(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-      case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
+  private class OrLeft(p: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val f = s.ante(p.getIndex)
+      f match {
+        case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
+        case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
+      }
     }
   }
 }
