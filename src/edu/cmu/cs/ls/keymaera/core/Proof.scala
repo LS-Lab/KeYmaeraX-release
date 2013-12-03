@@ -28,7 +28,7 @@ sealed class ProofNode protected (val s: Sequent, val p: ProofNode) {
 
 class RootNode(override val s: Sequent) extends ProofNode(s, null)
 
-abstract class Rule extends (Sequent => Seq[Sequent])
+sealed abstract class Rule extends (Sequent => Seq[Sequent])
 
 abstract class PositionRule extends (Position => Rule)
 
@@ -107,7 +107,7 @@ object AxiomClose extends AssumptionRule {
 // Impl right
 
 object ImplRight extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(!p.isAnte)
     new ImplRight(p)
   }
@@ -124,7 +124,7 @@ object ImplRight extends PositionRule {
 
 // Impl left
 object ImplLeft extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(p.isAnte)
     new ImplLeft(p)
   }
@@ -141,7 +141,7 @@ object ImplLeft extends PositionRule {
 
 // Not right
 object NotRight extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(!p.isAnte)
     new NotRight(p)
   }
@@ -158,7 +158,7 @@ object NotRight extends PositionRule {
 
 // Not left
 object NotLeft extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(p.isAnte)
     new NotLeft(p)
   }
@@ -175,7 +175,7 @@ object NotLeft extends PositionRule {
 
 // And right
 object AndRight extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(!p.isAnte)
     new AndRight(p)
   }
@@ -192,7 +192,7 @@ object AndRight extends PositionRule {
 
 // And left
 object AndLeft extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(p.isAnte)
     new AndLeft(p)
   }
@@ -209,7 +209,7 @@ object AndLeft extends PositionRule {
 
 // Or right
 object OrRight extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(!p.isAnte)
     new OrRight(p)
   }
@@ -226,9 +226,9 @@ object OrRight extends PositionRule {
 
 // Or left
 object OrLeft extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(p.isAnte)
-    new AndLeft(p)
+    new OrLeft(p)
   }
   private class OrLeft(p: Position) extends Rule {
     def apply(s: Sequent): Seq[Sequent] = {
@@ -247,13 +247,13 @@ object OrLeft extends PositionRule {
 // remove duplicate succedent (this should be a tactic)
 // hide
 object HideLeft extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(p.isAnte)
     new Hide(p)
   }
 }
 object HideRight extends PositionRule {
-  def apply(p: Position) = {
+  def apply(p: Position): Rule = {
     assert(!p.isAnte)
     new Hide(p)
   }
