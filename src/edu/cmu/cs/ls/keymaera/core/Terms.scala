@@ -147,8 +147,11 @@ case class DiamondStarGame (val game : Term[GameSort.type]) extends Term[GameSor
 
 case class SequenceProgram (val left : Term[ProgramSort.type], val right : Term[ProgramSort.type]) extends Term[ProgramSort.type](ProgramSort)
 case class ChoiceProgram   (val left : Term[ProgramSort.type], val right : Term[ProgramSort.type]) extends Term[ProgramSort.type](ProgramSort)
-case class StateCheck      (val term : Term[Bool.type])        extends Term[ProgramSort.type](ProgramSort)
+case class ParallelProgram   (val left : Term[ProgramSort.type], val right : Term[ProgramSort.type]) extends Term[ProgramSort.type](ProgramSort)
 case class Loop            (val program : Term[ProgramSort.type]) extends Term[ProgramSort.type](ProgramSort)
+case class Assign[T <: Sort]          (val n: Name[T], val t : Term[T]) extends Term[ProgramSort.type](ProgramSort)
+case class NonDeterminsticAssign[T <: Sort] (val n: Name[T]) extends Term[ProgramSort.type](ProgramSort)
+case class StateCheck      (val term : Term[Bool.type])        extends Term[ProgramSort.type](ProgramSort)
 
 /* !!! identifier handling missing */
 /* !!! binders missing */
@@ -160,6 +163,11 @@ case class Exists[T <: Sort](override val typeObject : T)(override val variableN
 
 sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Term[T]) extends Term[T](term.typeObject)
 sealed class Name[C <: Sort](typeObject : C)(val name : String) extends Term[C](typeObject)
+
+sealed class Function[C <: Sort, A <: Sort](typeObject: C)(val n: Name[C], val args: Term[A]) extends Term[C](typeObject)
+
+// TODO: can we do better than "new Pair[A,B]"?
+sealed class Vector[A <: Sort, B <: Sort](val a: Term[A], val b: Term[B]) extends Term[Pair[A,B]](new Pair[A,B])
 
 //sealed case class Term[Bool.type](Bool)Name(val name : String) extends Term[Bool.type](Bool)
 //sealed case class ProgramName(val name : String) extends Term[ProgramSort.type]
