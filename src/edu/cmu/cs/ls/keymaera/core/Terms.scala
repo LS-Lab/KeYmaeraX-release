@@ -45,7 +45,7 @@ sealed class UserDefinedEnum(name : String, elements : List[String]) extends Use
 
 /* ??? We could perhaps just create "Constant" objects for every element of an enum */
 
-sealed class Pair[L <: Sort, R <: Sort] extends Sort
+sealed case class Pair[L <: Sort, R <: Sort](val l: L, val r: R) extends Sort
 
 /**
  * Trait for adding annotations
@@ -80,7 +80,7 @@ trait Associative[T <: Sort] extends BinaryFormula[T]
 trait TypeCheck[T <: Sort]   extends BinaryFormula[T] {
   applicable
   @elidable(ASSERTION) def applicable = {
-    require(l.typeObject == r.typeObject, "Sort Mismatch in Term[Bool.type](Bool)")
+    require(l.typeObject == r.typeObject, "Sort Mismatch in Formula")
   }
 }
 
@@ -150,7 +150,9 @@ case class ChoiceProgram   (val left : Term[ProgramSort.type], val right : Term[
 case class ParallelProgram   (val left : Term[ProgramSort.type], val right : Term[ProgramSort.type]) extends Term[ProgramSort.type](ProgramSort)
 case class Loop            (val program : Term[ProgramSort.type]) extends Term[ProgramSort.type](ProgramSort)
 case class Assign[T <: Sort]          (val n: Name[T], val t : Term[T]) extends Term[ProgramSort.type](ProgramSort)
+case class QuantifiedAssign[T <: Sort, A <: Sort]          (val n: Name[A], val f: Function[T, A], val t : Term[T]) extends Term[ProgramSort.type](ProgramSort)
 case class NonDeterminsticAssign[T <: Sort] (val n: Name[T]) extends Term[ProgramSort.type](ProgramSort)
+case class QuantifiedNonDeterministicAssign[T <: Sort, A <: Sort]   (val n: Name[A], val f: Function[T, A]) extends Term[ProgramSort.type](ProgramSort)
 case class StateCheck      (val term : Term[Bool.type])        extends Term[ProgramSort.type](ProgramSort)
 
 /* !!! identifier handling missing */
@@ -164,10 +166,20 @@ case class Exists[T <: Sort](override val typeObject : T)(override val variableN
 sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Term[T]) extends Term[T](term.typeObject)
 sealed class Name[C <: Sort](typeObject : C)(val name : String) extends Term[C](typeObject)
 
-sealed class Function[C <: Sort, A <: Sort](typeObject: C)(val n: Name[C], val args: Term[A]) extends Term[C](typeObject)
+sealed class Function[C <: Sort, A <: Sort](typeObject: C, argType: A)(val n: Name[C], val args: Term[A]) extends Term[C](typeObject) {
+  applicable
+  @elidable(ASSERTION) def applicable = {
+    require(typeObject == n.typeObject, "Sort Mismatch for Function Name")
+    require(argType == args.typeObject, "Sort Mismatch for Function Parameters")
+  }
+}
 
 // TODO: can we do better than "new Pair[A,B]"?
-sealed class Vector[A <: Sort, B <: Sort](val a: Term[A], val b: Term[B]) extends Term[Pair[A,B]](new Pair[A,B])
+sealed class Vector[A <: Sort, B <: Sort](aType: A, bType: B)(val a: Term[A], val b: Term[B]) extends Term[Pair[A,B]](new Pair[A,B](aType, bType))
+
+sealed class Left[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[A, Pair[A,B]](typeObject.l)(new Name[A](typeObject.l)("left"), v)
+
+sealed class Right[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[B, Pair[A,B]](typeObject.r)(new Name[B](typeObject.r)("right"), v)
 
 //sealed case class Term[Bool.type](Bool)Name(val name : String) extends Term[Bool.type](Bool)
 //sealed case class ProgramName(val name : String) extends Term[ProgramSort.type]
