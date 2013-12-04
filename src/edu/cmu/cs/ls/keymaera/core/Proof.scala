@@ -56,21 +56,36 @@ object Sequent {
 // reorder succedent
 
 // cut
-class Cut(f: Formula) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = {
-    val l = new Sequent(s.pref, s.ante :+ f, s.succ)
-    val r = new Sequent(s.pref, s.ante, s.succ :+ f)
-    List(l, r)
+object Cut {
+  def apply(f: Formula) : Rule = new Cut(f)
+  private class Cut(f: Formula) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = {
+      val l = new Sequent(s.pref, s.ante :+ f, s.succ)
+      val r = new Sequent(s.pref, s.ante, s.succ :+ f)
+      List(l, r)
+    }
+
+    def name: String = "cut"
+
+    def parameter: Formula = f
   }
-
-  def name: String = "cut"
-
-  def parameter: Formula = f
 }
 
 // equality/equivalence rewriting
 
+class SubstitutionPair[A <: Sort] (val n: Name[A], val t: Term[A]) 
+
+class Substitution(l: List[SubstitutionPair[_]])
+
 // uniform substitution
+// this rule performs a backward substitution step. That is the substition applied to the conclusion yields the premise
+object UniformSubstition {
+  def apply(substitution: Substitution) : Rule = new UniformSubstition(substitution)
+
+  private class UniformSubstition(subst: Substitution) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = Vector(s)
+  }
+}
 
 // AX close
 object AxiomClose extends AssumptionRule {
@@ -78,7 +93,7 @@ object AxiomClose extends AssumptionRule {
 
   private class AxiomClosePos(ass: Position) extends PositionRule {
     def apply(p: Position): Rule = {
-      assert(p.isAnte != ass.isAnte)
+      require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
       new AxiomClose(ass, p)
     }
   }

@@ -177,9 +177,9 @@ sealed class Function[C <: Sort, A <: Sort](typeObject: C, argType: A)(val n: Na
 // TODO: can we do better than "new Pair[A,B]"?
 sealed class Vector[A <: Sort, B <: Sort](aType: A, bType: B)(val a: Term[A], val b: Term[B]) extends Term[Pair[A,B]](new Pair[A,B](aType, bType))
 
-sealed class Left[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[A, Pair[A,B]](typeObject.l)(new Name[A](typeObject.l)("left"), v)
+sealed class Left[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[A, Pair[A,B]](typeObject.l, typeObject)(new Name[A](typeObject.l)("left"), v)
 
-sealed class Right[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[B, Pair[A,B]](typeObject.r)(new Name[B](typeObject.r)("right"), v)
+sealed class Right[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[B, Pair[A,B]](typeObject.r, typeObject)(new Name[B](typeObject.r)("right"), v)
 
 //sealed case class Term[Bool.type](Bool)Name(val name : String) extends Term[Bool.type](Bool)
 //sealed case class ProgramName(val name : String) extends Term[ProgramSort.type]
