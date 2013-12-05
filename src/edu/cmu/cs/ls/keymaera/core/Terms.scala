@@ -166,20 +166,21 @@ case class Exists[T <: Sort](override val typeObject : T)(override val variableN
 sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Term[T]) extends Term[T](term.typeObject)
 sealed class Name[C <: Sort](typeObject : C)(val name : String) extends Term[C](typeObject)
 
-sealed class Function[C <: Sort, A <: Sort](typeObject: C, argType: A)(val n: Name[C], val args: Term[A]) extends Term[C](typeObject) {
+sealed class Function[R <: Sort, A <: Sort](val retType: R, val argType: A)(val name: String) extends Term[R](retType)
+
+sealed class Application[C <: Sort, A <: Sort](val f: Function[C, A], val args: Term[A]) extends Term[C](f.typeObject) {
   applicable
   @elidable(ASSERTION) def applicable = {
-    require(typeObject == n.typeObject, "Sort Mismatch for Function Name")
-    require(argType == args.typeObject, "Sort Mismatch for Function Parameters")
+    require(f.argType == args.typeObject, "Sort Mismatch for Function Parameters")
   }
 }
 
 // TODO: can we do better than "new Pair[A,B]"?
 sealed class Vector[A <: Sort, B <: Sort](aType: A, bType: B)(val a: Term[A], val b: Term[B]) extends Term[Pair[A,B]](new Pair[A,B](aType, bType))
 
-sealed class Left[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[A, Pair[A,B]](typeObject.l, typeObject)(new Name[A](typeObject.l)("left"), v)
+sealed class Left[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Application[A, Pair[A,B]](new Function[A, Pair[A,B]](typeObject.l, typeObject)("left"), v)
 
-sealed class Right[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Function[B, Pair[A,B]](typeObject.r, typeObject)(new Name[B](typeObject.r)("right"), v)
+sealed class Right[A <: Sort, B <: Sort](typeObject : Pair[A,B]) (val v: Vector[A,B]) extends Application[B, Pair[A,B]](new Function[B, Pair[A,B]](typeObject.r, typeObject)("right"), v)
 
 //sealed case class Term[Bool.type](Bool)Name(val name : String) extends Term[Bool.type](Bool)
 //sealed case class ProgramName(val name : String) extends Term[ProgramSort.type]
