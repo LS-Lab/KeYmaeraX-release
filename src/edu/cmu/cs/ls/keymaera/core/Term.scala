@@ -34,8 +34,14 @@ case class St(nm: String, parent: Sort) extends Sort(parent) {
   }
 }
 
-case class Name(n: String) extends Term;
-case class Combinator(op: Term, args: Term*) extends Term;
+case class Function(n: String, s: Sort, ss: Sort*)
+case class Apply(op: Function, args: Term*) extends Term;
+
+case class Predicate(n: String)
+case class ApplyPred(op: Predicate, args: Formula*) extends Formula
+class BooleanOp(n: String)
+
+case class Formula(
 
 abstract class ModalityType;
 object Box extends ModalityType;
