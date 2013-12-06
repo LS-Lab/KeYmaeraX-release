@@ -232,15 +232,37 @@ sealed class Function[R <: Sort, A <: Sort](val name: String)
 
 sealed class Application[C <: Sort, A <: Sort](val f: Function[C, A], val args: Expr[A]) extends Expr[C]
 
-// TODO: can we do better than "new Pair[A,B]"?
 sealed class Vector[A <: Sort, B <: Sort](val a: Expr[A], val b: Expr[B]) extends Expr[Pair[A,B]]
 
 sealed class Left[A <: Sort, B <: Sort] (val v: Vector[A,B]) extends Application[A, Pair[A,B]](new Function[A, Pair[A,B]]("left"), v)
 
 sealed class Right[A <: Sort, B <: Sort](val v: Vector[A,B]) extends Application[B, Pair[A,B]](new Function[B, Pair[A,B]]("right"), v)
 
-//sealed case class Expr[Bool.type](Bool)Name(val name : String) extends Expr[Bool.type](Bool)
-//sealed case class ProgramName(val name : String) extends Expr[ProgramSort.type]
-//sealed case class GameName(val name : String) extends Expr[GameSort.type]
+case class Neg(t: Expr[Real.type]) extends Expr[Real.type] with UnaryExpr[Real.type, Real.type] {
+  def child = t
+  def construct(a: Expr[Real.type]) = new Neg(a,b)
+}
 
+case class Add(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with Commutative[Real.type] with Associative[Real.type] {
+  def left = l
+  def right = r
+  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Add(a,b)
+}
 
+case class Sub(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with Commutative[Real.type] with Associative[Real.type] {
+  def left = l
+  def right = r
+  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Sub(a,b)
+}
+
+case class Mult(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with Commutative[Real.type] with Associative[Real.type] {
+  def left = l
+  def right = r
+  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Mult(a,b)
+}
+
+case class Div(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
+  def left = l
+  def right = r
+  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Div(a,b)
+}
