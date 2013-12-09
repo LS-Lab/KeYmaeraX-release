@@ -195,15 +195,15 @@ case class Exists[T <: Sort](override val variableName : String) extends Binder[
 sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Expr[T]) extends Expr[T]
 sealed class Name[C <: Sort](val name : String) extends Expr[C]
 
-sealed class Function[R <: Sort, A <: Sort](val name: String) 
+sealed class Function[R <: Sort](val name: String) 
 
-sealed class Application[C <: Sort, A <: Sort](val f: Function[C, A], val args: Expr[A]) extends Expr[C]
+sealed class Application[C <: Sort](val f: Function[C], val args: Expr[_]) extends Expr[C]
 
 sealed class Vector[A <: Sort, B <: Sort](val a: Expr[A], val b: Expr[B]) extends Expr[Pair[A,B]]
 
-sealed class Left[A <: Sort, B <: Sort] (val v: Vector[A,B]) extends Application[A, Pair[A,B]](new Function[A, Pair[A,B]]("left"), v)
+sealed class Left[A <: Sort, B <: Sort] (val v: Vector[A,B]) extends Application[A](new Function[A]("left"), v)
 
-sealed class Right[A <: Sort, B <: Sort](val v: Vector[A,B]) extends Application[B, Pair[A,B]](new Function[B, Pair[A,B]]("right"), v)
+sealed class Right[A <: Sort, B <: Sort](val v: Vector[A,B]) extends Application[B](new Function[B]("right"), v)
 
 case class Neg(child: Expr[Real.type]) extends Expr[Real.type] with UnaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type]) = new Neg(a,b)
@@ -222,5 +222,9 @@ case class Mult(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real
 }
 
 case class Div(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
+  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Div(a,b)
+}
+
+case class Exp(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Div(a,b)
 }

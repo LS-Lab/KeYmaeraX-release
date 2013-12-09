@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaera.core
 
+// how do we represent Signatures? We have to be able to determine when a new name got introduced.
 object Proof {
   type Formula = Term[Bool.type]
 
