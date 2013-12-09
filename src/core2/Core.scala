@@ -123,6 +123,9 @@ object Core {
       }
     }
 
+    def deepName() = return name + "_" + id;
+    def getId() = return id;
+
     def varEquals(x : Variable[Sort]) = {
       return this.name == x.name && this.type_object == x.type_object
     }
