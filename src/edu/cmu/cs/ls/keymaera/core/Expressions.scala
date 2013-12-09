@@ -67,7 +67,7 @@ trait Annotable
 sealed abstract class Expr[+T <: Sort] extends Annotable
 
 trait UnaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
-  def child: Expr[A]
+  val child: Expr[A]
   def construct(e: Expr[A]): Expr[T]
 }
 
@@ -79,8 +79,8 @@ object UnaryExpr {
 }
 
 trait BinaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
-  def left: Expr[A]
-  def right: Expr[A]
+  val left: Expr[A]
+  val right: Expr[A]
   def constuct(l: Expr[A], r: Expr[A])
 }
 
@@ -91,91 +91,59 @@ object BinaryExpr {
   }
 }
 
-trait Commutative[T <: Sort] extends BinaryExpr[T]
-trait Associative[T <: Sort] extends BinaryExpr[T]
-
 case object True  extends Expr[Bool.type]
 case object False extends Expr[Bool.type]
 
-case class Equals   [T <: Sort](l : Expr[T], r : Expr[T]) extends Expr[Bool.type]
-                                                                    with Commutative  [T]
-                                                                    with Associative  [T] {
-  def left = l
-  def right = r
+case class Equals   [T <: Sort](left : Expr[T], right : Expr[T]) extends Expr[Bool.type] with BinaryExpr[Bool.type,T] {
   def construct(a: Expr[T], b: Expr[T]) = new Equals[T](a,b) 
 }
 
-case class NotEquals[T <: Sort](l : Expr[T], r : Expr[T]) extends Expr[Bool.type]
-                                                                    with Commutative  [T]
-                                                                    with TypeCheck    [T] {
-  def left = l
-  def right = r
+case class NotEquals[T <: Sort](left : Expr[T], right : Expr[T]) extends Expr[Bool.type]
+                                                                    with BinaryExpr[Bool.type,T] {
   def construct(a: Expr[T], b: Expr[T]) = new NotEquals[T](a,b) 
 }
 
-case class GreaterThan (l : Expr[Real.type], r : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def left = l
-  def right = r
+case class GreaterThan (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new GreaterThan(a,b) 
 }
-case class GreaterEquals (l : Expr[Real.type], r : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def left = l
-  def right = r
+case class GreaterEquals (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new GreaterEquals(a,b) 
 }
-case class LessEquals (l : Expr[Real.type], r : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def left = l
-  def right = r
+case class LessEquals (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new LessEquals(a,b) 
 }
-case class LessThan (l : Expr[Real.type], r : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def left = l
-  def right = r
+case class LessThan (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new LessThan(a,b) 
 }
 
-case class Not         (term : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] {
-  def child = term
+case class Not         (child : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] {
   def construct(e: Expr[Bool.type]) = new Not(e)
 }
 
-case class And         (l : Expr[Bool.type], r : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with Commutative  [Bool.type]
-                                                            with Associative  [Bool.type] {
-  def left = l
-  def right = r
+case class And         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
+                                                            with BinaryExpr[Bool.type,Bool.type]  {
   def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new And(a,b) 
 }
-case class Or         (l : Expr[Bool.type], r : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with Commutative  [Bool.type]
-                                                            with Associative  [Bool.type] {
-  def left = l
-  def right = r
+case class Or         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
+                                                            with BinaryExpr[Bool.type,Bool.type] {
   def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new Or(a,b) 
 }
-case class Implies         (l : Expr[Bool.type], r : Expr[Bool.type]) extends Expr[Bool.type]
+case class Implies         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
                                                             with BinaryExpr[Bool.type, Bool.type] {
-  def left = l
-  def right = r
   def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new Implies(a,b) 
 }
-case class Equivalent         (l : Expr[Bool.type], r : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with Commutative  [Bool.type]
-                                                            with Associative  [Bool.type] {
-  def left = l
-  def right = r
+case class Equivalent         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
+                                                            with BinaryExpr[Bool.type,Bool.type] {
   def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new Equivalent(a,b) 
 }
 
 /**
  * Temporal Expr[Bool.type](Bool)s
  */
-case class Globally  (term : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] { /* []\Phi e.g., in [\alpha] []\Phi */
-  def child = term
+case class Globally  (child : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] { /* []\Phi e.g., in [\alpha] []\Phi */
   def construct(e: Expr[Bool.type]) = new Globally(e)
 }
-case class Finally  (term : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] { /* <>\Phi e.g., in [\alpha] <>\Phi */
-  def child = term
+case class Finally  (child : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] { /* <>\Phi e.g., in [\alpha] <>\Phi */
   def construct(e: Expr[Bool.type]) = new Finally(e)
 }
 
@@ -189,11 +157,10 @@ case class Modality[A <: Sort]        (val game : Expr[GameSort.type], val term 
  * Games
  * =====
  */
-case class BoxModality     (val program : Expr[ProgramSort.type]) extends Expr[GameSort.type] extends UnaryExpr[ProgramSort.type] /* \[ \alpha \] */ {
-  def child = program
+case class BoxModality     (child : Expr[ProgramSort.type]) extends Expr[GameSort.type] with UnaryExpr[GameSort.type, ProgramSort.type] /* \[ \alpha \] */ {
   def construct(e: Expr[ProgramSort.type]) = new BoxModality(e)
 }
-case class DiamondModality (val program : Expr[ProgramSort.type]) extends Expr[GameSort.type] /* \< \alpha \> */
+case class DiamondModality (child : Expr[ProgramSort.type]) extends Expr[GameSort.type] with UnaryExpr[GameSort.type, ProgramSort.type] /* \< \alpha \> */
 case class SequenceGame    (val left : Expr[GameSort.type], val right : Expr[GameSort.type]) extends Expr[GameSort.type]
 case class DisjunctGame    (val left : Expr[GameSort.type], val right : Expr[GameSort.type]) extends Expr[GameSort.type]
 case class ConjunctGame    (val left : Expr[GameSort.type], val right : Expr[GameSort.type]) extends Expr[GameSort.type]
@@ -238,31 +205,22 @@ sealed class Left[A <: Sort, B <: Sort] (val v: Vector[A,B]) extends Application
 
 sealed class Right[A <: Sort, B <: Sort](val v: Vector[A,B]) extends Application[B, Pair[A,B]](new Function[B, Pair[A,B]]("right"), v)
 
-case class Neg(t: Expr[Real.type]) extends Expr[Real.type] with UnaryExpr[Real.type, Real.type] {
-  def child = t
+case class Neg(child: Expr[Real.type]) extends Expr[Real.type] with UnaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type]) = new Neg(a,b)
 }
 
-case class Add(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with Commutative[Real.type] with Associative[Real.type] {
-  def left = l
-  def right = r
+case class Add(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Add(a,b)
 }
 
-case class Sub(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with Commutative[Real.type] with Associative[Real.type] {
-  def left = l
-  def right = r
+case class Sub(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Sub(a,b)
 }
 
-case class Mult(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with Commutative[Real.type] with Associative[Real.type] {
-  def left = l
-  def right = r
+case class Mult(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Mult(a,b)
 }
 
-case class Div(l: Expr[Real.type], r: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
-  def left = l
-  def right = r
+case class Div(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
   def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Div(a,b)
 }
