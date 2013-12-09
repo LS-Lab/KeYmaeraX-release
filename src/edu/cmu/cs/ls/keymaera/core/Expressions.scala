@@ -64,7 +64,7 @@ trait Annotable
  * Type checking works automatically for builtin terms. For user defined types and
  * for pairs, the trait TypeCheck asserts 
  */
-sealed abstract class Expr[T <: Sort] extends Annotable
+sealed abstract class Expr[+T <: Sort] extends Annotable
 
 trait UnaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
   def child: Expr[A]
