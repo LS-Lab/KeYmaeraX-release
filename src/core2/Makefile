@@ -8,4 +8,6 @@ run: $E
 
 # Clean #######
 
-clean: rm -f *.scala~ *.tex~ Makefile~
+clean:
+	rm -f *.scala~ *.class *.pvs~ *.tex~ Makefile~
+	rm -rf pvsbin
