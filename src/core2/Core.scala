@@ -15,23 +15,26 @@ object Core {
  */
 
 /* List */
-  sealed abstract class CList[+T] {
-    val length : Int
+  
+sealed abstract class CList[+T]
 
-    def map[T](f : (T) => T)
+object CList {
+
+  object Nil extends CList 
+  case class CCons[T, U >: T](val head : U, val tail : CList[T]) extends CList[U] 
+
+  def nil[T] : CList[T] = Nil
+  def cons[T, U >: T](head : U, tail : CList[T]) : CList[U] = new CCons(head, tail)
+
+  def reduce[T, U >: T, A](consf : (U, A) => A, nilf : A)(l : CList[T]) : A = {
+    l match {
+        case Nil              => nilf
+        case CCons(head, tail) => consf(head, reduce(consf, nilf)(tail))
+    }
   }
 
-  object Nil extends CList {
-    val length = 0
-
-    def map[T](f : (T) => T) = Nil
-  }
-
-  case class Cons[T, U >: T](head : U, tail : CList[T]) extends CList[U] {
-    val length = 1 + tail.length
-
-    def map(f : (T) => T) = new Cons[T, T](f(head), tail.map(f))
-  }
+  def append[T](back : CList[T])(front : CList[T]) : CList[T] = reduce[T, T, CList[T]](cons, back)(front)
+}
 
 /**
  * Types
@@ -57,25 +60,39 @@ object Core {
  */
 
   sealed abstract class Term[+T <: Sort](val type_object : T) extends Annotable {
-    def reduce[A](f : (Term[Sort]) => A, red : (Term[Sort], A, A => A)) : A = {
-      f(this)
-    }
+    def reduce[L <: Sort, R <: Sort, T <: Sort]
   }
 
   trait Unary[D <: Sort, C <: Sort] extends Term[C] {
     val term : Term[D]
-
-    def reduce[A](f : (Term[Sort]) => A, red : (Term[Sort], A, A => A)) : A = {
-      red(this, f(this), term.reduce(f, red))
-    }
   }
 
   trait Binary[L <: Sort, R <: Sort, T <: Sort] extends Term[T] {
     val left  : Term[L]
     val right : Term[R]
+  }
 
-    def reduce[A](f : (Term[Sort]) => A, red : (Term[Sort], A, A => A)) : A = {
-      red(this, f(this), red(this, left.reduce(f, red), right.reduce(f, red)))
+  trait Reducible extends Term {
+    def reduce[A](leafFun : (Term[Sort]) => A, unaryFun : (Term[Sort], A) => A, binaryFun : (Term[Sort], A, A) => A) : A = {
+      this match {
+        case Unary  (term)        => unaryFun(this, term.reduce(leafFunterm)
+        case Binary (left, right) => binaryFun(
+      }
+    }
+  }
+
+
+
+
+    def reduce[A](leafFun : (Term[Sort]) => A, unaryFun : (Term[Sort], A => A), binaryFun : (Term[Sort], A, A) => A) : A = {
+      return unaryFun(this, reduce(leafFun, unaryFun, binaryFun))
+    }
+  }
+
+
+
+    def reduce[A](leafFun : (Term[Sort]) => A, unaryFun : (Term[Sort], A => A), binaryFun : (Term[Sort], A, A) => A) : A = {
+      return binaryFun(this, reduce(leafFun, unaryFun, binaryFun), reduce(leafFun, unaryFun, binaryFun))
     }
   }
 
@@ -111,7 +128,11 @@ object Core {
  * Differential Logic
  */
 
-  abstract class Variable[+T <: Sort](val name : String, val id : Int, val type_object : T) private {
+  abstract class Variable[+T <: Sort] private {
+
+    val name : String
+    private val id : Int
+    val type_object : T
 
     def this(name : String, type_object : T) = this(name, VariableCounter.get_next(), type_object)
 
