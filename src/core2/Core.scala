@@ -11,170 +11,181 @@ trait Annotable
 object Core {
 
 /**
- * Helper classes used within the core
- */
-
-/* List */
-  
-sealed abstract class CList[+T]
-
-object CList {
-
-  object Nil extends CList 
-  case class CCons[T, U >: T](val head : U, val tail : CList[T]) extends CList[U] 
-
-  def nil[T] : CList[T] = Nil
-  def cons[T, U >: T](head : U, tail : CList[T]) : CList[U] = new CCons(head, tail)
-
-  def reduce[T, U >: T, A](consf : (U, A) => A, nilf : A)(l : CList[T]) : A = {
-    l match {
-        case Nil              => nilf
-        case CCons(head, tail) => consf(head, reduce(consf, nilf)(tail))
-    }
-  }
-
-  def append[T](back : CList[T])(front : CList[T]) : CList[T] = reduce[T, T, CList[T]](cons, back)(front)
-}
-
-/**
  * Types
  */
-
   sealed abstract class Sort
 
   trait Quantifiable
 
   abstract class BuiltinSort extends Sort
 
-  object Bool    extends BuiltinSort with Quantifiable
-  object Real    extends BuiltinSort with Quantifiable
-  object Game    extends BuiltinSort
-  object Program extends BuiltinSort
-  case class  User(name : String)                          extends Sort
-  case class  Enum(name : String, elements : CList[String]) extends Sort
-  case class  Pair[L <: Sort, R <: Sort](val left : L, val right : R) extends Sort
+  object BoolT                                                        extends BuiltinSort with Quantifiable
+  object RealT                                                        extends BuiltinSort with Quantifiable
+  object GameT                                                        extends BuiltinSort
+  object ProgramT                                                     extends BuiltinSort
+  case class UserT(name : String)                                     extends Sort
+  case class EnumT(name : String, elements : List[String])           extends Sort
+  case class PairT[L <: Sort, R <: Sort](val left : L, val right : R) extends Sort
+
+/**
+ * Path definition
+ */
+  abstract class Position {
+    def goLeft  : Position
+    def goRight : Position
+  }
+
+/**
+ * Expression infrastructure
+ */
+  sealed abstract class Expression[+T <: Sort](val type_object : T) extends Annotable {
+
+    /* Generic expression traveral
+     *=============================
+
+     */
+    def reduce[A](traverse  : (Expression[Sort], Position) => Boolean,
+                  transform : (Expression[Sort], Position, A*) => A)
+                 (pos       : Position) : A
+
+    def map(traverse  : (Expression[Sort], Position) => Boolean,
+            transform : (Expression[Sort], Position, Expression[Sort]*) => Expression[Sort])
+           (pos       : Position) : Expression[Sort] = reduce[Expression[Sort]](traverse, transform)(pos)
+
+    def apply(expressions : Expression[Sort]*) : Expression[Sort]
+
+    def default_map(pos : Position, red : Expression[Sort]*) : Expression[Sort]
+  }
+
+  trait Atom[T <: Sort] extends Expression[T] {
+    def reduce[A](traverse  : (Expression[Sort], Position) => Boolean,
+                  transform : (Expression[Sort], Position, A*) => A)
+                 (pos       : Position) : A =
+          transform(this, pos)
+
+    def default_map(pos : Position, red : Expression[Sort]*) : Expression[Sort] = this
+  }
+
+  trait Unary[D <: Sort, T <: Sort] extends Expression[T] {
+    val expr : Expression[D]
+
+    def reduce[A](traverse  : (Expression[Sort], Position) => Boolean,
+                  transform : (Expression[Sort], Position, A*) => A)
+                 (pos       : Position) : A =
+      if (traverse(this, pos)) transform(this, pos, expr.reduce(traverse, transform)(pos.goLeft)) else transform(this, pos)
+
+    def default_map(pos : Position, red : Expression[Sort]*) : Expression[Sort] = 
+      if (red(0) == expr) this else apply(red(0))
+
+  }
+
+  trait Binary[L <: Sort, R <: Sort, T <: Sort] extends Expression[T] {
+    val left  : Expression[L]
+    val right : Expression[R]
+
+    def reduce[A](traverse  : (Expression[Sort], Position) => Boolean,
+                  transform : (Expression[Sort], Position, A*) => A)
+                 (pos       : Position) : A =
+      if (traverse(this, pos)) transform(this, pos, left.reduce(traverse, transform)(pos.goLeft),
+                                                    right.reduce(traverse, transform)(pos.goRight))
+      else transform(this, pos)
+
+    def default_map(pos : Position, red : Expression[Sort]*) : Expression[Sort] = 
+      if (red(0) == left && red(1) == right) this else apply(red(0), red(1))
+  }
+
+
+  /* Formula */
+  abstract class Formula      extends Expression[BoolT.type](BoolT)
+
+  abstract class UnaryGenericFormula [T <: Sort]           (val expr : Expression[T])
+                              extends Formula with Unary[T, BoolT.type]
+  abstract class BinaryGenericFormula[L <: Sort, R <: Sort](val left : Expression[L], val right : Expression[R])
+                              extends Formula with Binary[L, R, BoolT.type]
+
+  abstract class UnaryFormula(val expr : Formula)
+                              extends Formula with Unary[BoolT.type, BoolT.type]
+  abstract class BinaryFormula(val left : Formula, val right : Formula)
+                              extends Formula with Binary[BoolT.type, BoolT.type, BoolT.type]
+
+  /* Real */
+  abstract class Real         extends Expression[RealT.type](RealT)
+
+  abstract class UnaryReal    [T <: Sort]           (val expr : Expression[T])
+                              extends Real with Unary[T, RealT.type]
+  abstract class BinaryReal   [L <: Sort, R <: Sort](val left : Expression[L], val right : Expression[R])
+                              extends Real with Binary[L, R, RealT.type]
+
+  /* Game */
+  abstract class Game         extends Expression[GameT.type](GameT)
+  /* Program */
+  abstract class Program      extends Expression[ProgramT.type](ProgramT)
 
 
 /**
- * Term infrastructure
+ * Variables
  */
 
-  sealed abstract class Term[+T <: Sort](val type_object : T) extends Annotable {
-    def reduce[L <: Sort, R <: Sort, T <: Sort]
-  }
+  object VariableCounter {
+    private var next_id : Int = 0
 
-  trait Unary[D <: Sort, C <: Sort] extends Term[C] {
-    val term : Term[D]
-  }
-
-  trait Binary[L <: Sort, R <: Sort, T <: Sort] extends Term[T] {
-    val left  : Term[L]
-    val right : Term[R]
-  }
-
-  trait Reducible extends Term {
-    def reduce[A](leafFun : (Term[Sort]) => A, unaryFun : (Term[Sort], A) => A, binaryFun : (Term[Sort], A, A) => A) : A = {
-      this match {
-        case Unary  (term)        => unaryFun(this, term.reduce(leafFunterm)
-        case Binary (left, right) => binaryFun(
+    def next() : Int = {
+      this.synchronized {
+        next_id = next_id + 1;
+        return next_id;
       }
     }
   }
 
+  class Variable[+T <: Sort](val name : String, val type_object : T) {
 
+    private val id : Int = VariableCounter.next()
 
+    def deepName = name + "_" + id;
 
-    def reduce[A](leafFun : (Term[Sort]) => A, unaryFun : (Term[Sort], A => A), binaryFun : (Term[Sort], A, A) => A) : A = {
-      return unaryFun(this, reduce(leafFun, unaryFun, binaryFun))
-    }
+    def flatEquals(x : Variable[Sort]) =
+      this.name == x.name && this.type_object == x.type_object
+
+    def deepEquals(x : Variable[Sort]) =
+      flatEquals(x) && this.id == x.id
   }
 
-
-
-    def reduce[A](leafFun : (Term[Sort]) => A, unaryFun : (Term[Sort], A => A), binaryFun : (Term[Sort], A, A) => A) : A = {
-      return binaryFun(this, reduce(leafFun, unaryFun, binaryFun), reduce(leafFun, unaryFun, binaryFun))
-    }
-  }
-
-  /* Formula */
-  abstract class FormulaTerm  extends Term[Bool.type](Bool)
-
-  abstract class UnaryFormula [T <: Sort]           (val term : Term[T])
-                              extends FormulaTerm with Unary[T, Bool.type]
-  abstract class BinaryFormula[L <: Sort, R <: Sort](val left : Term[L], val right : Term[R])
-                              extends FormulaTerm with Binary[L, R, Bool.type]
-
-  abstract class UnaryBoolFormula(val term : FormulaTerm)
-                              extends FormulaTerm with Unary[Bool.type, Bool.type]
-  abstract class BinaryBoolFormula(val left : FormulaTerm, val right : FormulaTerm)
-                              extends FormulaTerm with Binary[Bool.type, Bool.type, Bool.type]
-
-  /* Real */
-  abstract class RealTerm     extends Term[Real.type](Real)
-
-  abstract class UnaryReal    [T <: Sort]           (val term : Term[T])
-                              extends RealTerm with Unary[T, Real.type]
-
-  abstract class BinaryReal   [L <: Sort, R <: Sort](val left : Term[L], val right : Term[R])
-                              extends RealTerm with Binary[L, R, Real.type]
-
-  /* Game */
-  abstract class GameTerm     extends Term[Game.type](Game)
-  /* Program */
-  abstract class ProgramTerm  extends Term[Program.type](Program)
+  class RealVar                           (name : String) extends Variable[RealT.type](name, RealT)
+  class FunctionVar[D <: Sort, T <: Sort] (name : String, val domain_type : D, type_object : T)
+                                                          extends Variable[T](name, type_object)
+  class PredicateVar[D <: Sort]           (name : String, domain_type : D)
+                                                          extends FunctionVar[D, BoolT.type](name, domain_type, BoolT)
+  class RealFunction[D <: Sort]           (name : String, domain_type : D)
+                                                          extends FunctionVar[D, RealT.type](name, domain_type, RealT)
 
 
 /**
  * Differential Logic
  */
-
-  abstract class Variable[+T <: Sort] private {
-
-    val name : String
-    private val id : Int
-    val type_object : T
-
-    def this(name : String, type_object : T) = this(name, VariableCounter.get_next(), type_object)
-
-    object VariableCounter {
-      private var next_id : Int = 0
-
-      def get_next() : Int = {
-        return ++next_id;
-      }
-    }
-
-    def deepName() = return name + "_" + id;
-    def getId() = return id;
-
-    def varEquals(x : Variable[Sort]) = {
-      return this.name == x.name && this.type_object == x.type_object
-    }
+  class Value[T <: Sort](val variable : Variable[T]) extends Expression[T](variable.type_object) with Atom[T] {
+    def apply(e : Expression[Sort]*) = new Value(variable)
   }
 
-  case class RealVariable                           (name : String) extends Variable[Real.type](name, id, Real)
-  case class FunctionVariable[D <: Sort, C <: Sort] (name : String, val domain_type : D, type_object : C)
-                                                     extends Variable[C](name, id, type_object)
-  case class PredicateVariable[D <: Sort]           (name : String, domtain_type : D)
-                                                     extends FunctionVariable[D, Bool.type](name, domain_type, Bool)
+  class Implies    (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+    def apply(e : Expression[Sort]*) =
+      new Implies(e(0).asInstanceOf[Formula], e(1).asInstanceOf[Formula])
+  }
 
+  class And        (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+    def apply (e : Expression[Sort]*) = new And(e(0).asInstanceOf[Formula], e(1).asInstanceOf[Formula])
+  }
 
-  case class Value[T <: Sort](val variable : Variable[T]) extends Term[T](variable.type_object)
+  class Antedecent (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+    def apply (e : Expression[Sort]*) = new Antedecent(e(0).asInstanceOf[Formula], e(1).asInstanceOf[Formula])
+  }
 
-  case class Implies    (left : FormulaTerm, right : FormulaTerm)
-                    extends BinaryBoolFormula(left, right)
+  class Succedent  (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+    def apply (e : Expression[Sort]*) = new Succedent(e(0).asInstanceOf[Formula], e(1).asInstanceOf[Formula])
+  }
 
-  case class And        (left : FormulaTerm, right : FormulaTerm)
-                    extends BinaryBoolFormula(left, right)
+  class Sequent    (variables : List[Variable[Sort]], left : Formula, right : Formula) extends BinaryFormula(left, right) {
 
-  case class Antedecent (left : FormulaTerm, right : FormulaTerm)
-                    extends BinaryBoolFormula(left, right)
-
-  case class Succedent  (left : FormulaTerm, right : FormulaTerm)
-                    extends BinaryBoolFormula(left, right)
-
-  case class Sequent    (variables : CList[Variable[Sort]], left : FormulaTerm, right : FormulaTerm)
-                    extends BinaryBoolFormula(left, right) {
+    def apply (e : Expression[Sort]*) = new Sequent(variables, e(0).asInstanceOf[Formula], e(1).asInstanceOf[Formula])
 
     def rename_doubles() = {
       /* if variable with same user name is in variables;
@@ -184,8 +195,9 @@ object CList {
     }
 
     def merge(s : Sequent) = {
-      val s2 = new Sequent (this.variables :: s.variables, And(this.left, s.left), And(this.right, s.right));
+/*      val s2 = new Sequent (this.variables :: s.variables, And(this.left, s.left), And(this.right, s.right));
       return s2.rename_doubles()
+      */
     }
   }
 
@@ -194,18 +206,20 @@ object CList {
  * Proof Tree
  */
 
-  class ProofTree(val sequence : Sequent, val parent : Option[ProofTree]) {
+  type Rule = ((Sequent) => List[Sequent])
 
-    @volatile private var rule     : Rule = Null
-    @volatile private var subgoals : CList[ProofTree] = Nil
+  class ProofTree(val sequent : Sequent, val parent : Option[ProofTree]) {
+
+    @volatile private var rule     : Rule = null
+    @volatile private var subgoals : List[ProofTree] = Nil
 
     def getRule     : Rule             = rule
-    def getSubgoals : CList[ProofTree] = subgoals
+    def getSubgoals : List[ProofTree] = subgoals
 
-    private def prepend(r : Rule, s : CList[ProofTree]) {
+    private def prepend(r : Rule, s : List[ProofTree]) {
       this.synchronized {
         subgoals = s
-        result   = r
+        rule     = r
       }
     }
 
@@ -213,12 +227,12 @@ object CList {
      * throws timeout / rule application failed / ...
      */ 
     def apply(rule : Rule) = {
-      var subgoals = map((s : Sequent) => new ProofTree(s, this), rule(sequence))
-      prepend(rule, subgoals)
+//      var subgoals = rule(sequent).map...
+//      prepend(rule, subgoals)
     }
 
     def prune() = {
-      rule = Null
+      rule = null
       subgoals = Nil
     }
 
