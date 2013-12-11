@@ -45,7 +45,7 @@ sealed class UserDefinedEnum(name : String, elements : List[String]) extends Use
 
 /* ??? We could perhaps just create "Constant" objects for every element of an enum */
 
-sealed case class Pair[L <: Sort, R <: Sort](val l: L, val r: R) extends Sort
+sealed case class Pair(val l: Sort, val r: Sort) extends Sort
 
 /**
  * Trait for adding annotations
