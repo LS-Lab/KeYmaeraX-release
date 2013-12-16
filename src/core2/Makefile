@@ -1,4 +1,4 @@
-E ?= Core.scala
+E ?= TCore.scala
 
 .PHONY : doc
 
