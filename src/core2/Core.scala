@@ -167,8 +167,10 @@ object Core {
   }
 
   class Implies    (left : Formula, right : Formula) extends BinaryFormula(left, right) {
-    def apply(e : Expression[Sort]*) =
-      new Implies(e(0).asInstanceOf[Formula], e(1).asInstanceOf[Formula])
+    def apply(e : Expression[Sort]*) = e match {
+      case x : Seq[Formula] => if (x.length == 2) new Implies(x(0), x(1)) else /* XXX */ 
+      case _ => /* XXX */
+
   }
 
   class And        (left : Formula, right : Formula) extends BinaryFormula(left, right) {
