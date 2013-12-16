@@ -50,8 +50,11 @@ object Core {
   class UserT(name : String)                                     extends S[UserT]
   /* user defined enum sort. values is the list of named constants of this enum */
   class EnumT(name : String, values : list[String])              extends S[EnumT]
+
   /* used to define pairs of sorts. That is the pair sort is of type L x R */
-  class PairT[L <: Sort, R <: Sort](val left : L, val right : R) extends S[PairT[L,R]]
+  class PairT[L <: Sort, R <: Sort](val left : L, val right : R) extends S[PairT[L,R]] {
+
+  }
 
   val RealXReal = new PairT(Real, Real)
   val BoolXBool = new PairT(Bool, Bool)
@@ -175,7 +178,7 @@ object Core {
   /**
    * Variables and Functions
    */
-  object VariableCounter {
+  object NameCounter {
     private var next_id : Int = 0
 
     applicable
@@ -189,9 +192,9 @@ object Core {
     }
   }
 
-  class Variable[T <: Sort](val name : String, val sort : T) {
+  abstract class NamedSymbol[T <: Sort](val name : String, val sort : T) {
 
-    private val id : Int = VariableCounter.next()
+    private val id : Int = NameCounter.next()
 
     def deepName = name + "_" + id;
 
@@ -202,8 +205,16 @@ object Core {
       flatEquals(x) && this.id == x.id
   }
 
+  class Variable[T <: Sort] (name : String, sort : T)     extends NamedSymbol[T](name, type_object)
+
   class FunctionVar[D <: Sort, T <: Sort] (name : String, val domain : D, sort : T)
-                                                          extends Variable[T](name, type_object)
+                                                          extends NamedSymbol[T](name, type_object)
+
+  /*--------------------------------------------------------------------------------*/
+
+  /* HERE !!! */
+
+  /*--------------------------------------------------------------------------------*/
 
   class RealVar      (name : String) extends Variable   (name, Real)
   class RealFnUnary  (name : String) extends FunctionVar(name, Real, Real)
