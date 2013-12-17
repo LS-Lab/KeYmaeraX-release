@@ -103,6 +103,8 @@ case class LessEqual   (left : Term[Real.type], right : Term[Real.type]) extends
 
 case class Not         (term : Term[Bool.type]) extends Term[Bool.type](term.typeObject)
 
+
+
 case class And         (left : Term[Bool.type], right : Term[Bool.type]) extends BinaryFormula[Bool.type](left, right)
                                                             with Commutative  [Bool.type]
                                                             with Associative  [Bool.type]
@@ -130,8 +132,8 @@ case class Modality        (val game : Term[GameSort.type], val term : Term[Bool
  * Games
  * =====
  */
-case class BoxModality     (val program : Term[ProgramSort.type]) extends Term[GameSort.type](GameSort) /* \[ \alpha \] */
-case class DiamondModality (val program : Term[ProgramSort.type]) extends Term[GameSort.type](GameSort) /* \< \alpha \> */
+case class BoxModality     (val program : Term[ProgramSort.type]) extends Term[GameSort.type](GameSort) /* [ \alpha ] */
+case class DiamondModality (val program : Term[ProgramSort.type]) extends Term[GameSort.type](GameSort) /* < \alpha > */
 case class SequenceGame    (val left : Term[GameSort.type], val right : Term[GameSort.type]) extends Term[GameSort.type](GameSort)
 case class DisjunctGame    (val left : Term[GameSort.type], val right : Term[GameSort.type]) extends Term[GameSort.type](GameSort)
 case class ConjunctGame    (val left : Term[GameSort.type], val right : Term[GameSort.type]) extends Term[GameSort.type](GameSort)
