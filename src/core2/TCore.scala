@@ -106,12 +106,6 @@ object Core {
  */
   sealed abstract class Expression[+T <: Sort](val sort : T) extends Annotable {
 
-    /* create a clone of this expression with the given subexpressions */
-    def apply(subexpressions : Expression[Sort]*) : Expression[Sort]
-
-    /* returns the sequence of subexpressions of an expression */
-    def subexpressions() : Seq[Expression[Sort]]
-
     /**
      * Reduce
      *--------
@@ -134,26 +128,21 @@ object Core {
      */
     def map(up : (Expression[Sort], Context) => Boolean, down : (Expression[Sort], Context, Expression[Sort]*) => Expression[Sort])
            (ctx : Context) : Expression[Sort] = reduce[Expression[Sort]](up, down)(ctx)
-
-    def identity_map(expression : Expression[Sort], ctx : Context, subexpressions : Expression[Sort]*) : Expression[Sort] = 
-          if (expression.subexpressions() == subexpressions) expression else expression.apply(subexpressions)
   }
 
   /* atom / leaf expression */
   trait Atom[T <: Sort] extends Expression[T] {
     def reduce[A](up : (Expression[Sort], Context) => Boolean, down : (Expression[Sort], Context, A*) => A)(ctx : Context) : A = 
           down(this, ctx)
-
-    def subexpressions() : Seq[Expression[Sort]] = Nil
   }
 
   /* unary expression */
   trait Unary[D <: Sort, T <: Sort] extends Expression[T] {
-    val subsort : D
+    val nSort : D
     val next    : Expression[D]
 
     applicable
-    @elidable(ASSERTION) def applicable = require(subsort == next.sort, "Sort Mismatch in Unary Expression")
+    @elidable(ASSERTION) def applicable = require(nSort == next.sort, "Sort Mismatch in Unary Expression")
 
     def reduce[A](up : (Expression[Sort], Context) => Boolean, down : (Expression[Sort], Context, A*) => A)(ctx : Context) : A =
           if (up(this, ctx)) down(this, ctx, next.reduce(up, down)(ctx.next)) else down(this, ctx)
@@ -163,13 +152,13 @@ object Core {
 
   /* binary expression (n-ary is encoded as binary of binary of ... */
   trait Binary[L <: Sort, R <: Sort, T <: Sort] extends Expression[T] {
-    val subsort : Pair[L, R]
+    val nSort : Pair[L, R]
     val left  : Expression[L]
     val right : Expression[R]
 
     applicable
     @elidable(ASSERTION) def applicable =
-          require(subsort.left == left.sort, subsort.right == right.sort, "Sort Mismatch in Binary Expression")
+          require(nSort.left == left.sort, nSort.right == right.sort, "Sort Mismatch in Binary Expression")
 
     def reduce[A](up : (Expression[Sort], Context) => Boolean, down : (Expression[Sort], Context, A*) => A)(ctx : Context) : A =
           if (up(this, ctx)) down(this, ctx, left.reduce(up, down)(ctx.left), right.reduce(up, down)(ctx.right))
@@ -225,20 +214,10 @@ object Core {
    */
 
   /* The * in nondet. assignments */
-  class Random[T <: Sort](val sort : T) extends Expression(sort) with Atom[T] {
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Nil => new Random(sort)
-      _       => throw new IllegalArgumentException("Random is an Atom and hence has no subexpressions.")
-    }
-  }
+  class Random[T <: Sort](sort : T) extends Expression(sort) with Atom
 
   /* Constant of scala type A cast into sort T */
-  class Constant[T <: Sort, A](val sort : T, val value : A) extends Expression(sort) with Atom[T] {
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Nil => new Constant(sort, value)
-      _       => throw new IllegalArgumentException("Constant is an Atom and hence has no subexpressions.")
-    }
-  }
+  class Constant[T <: Sort, A](sort : T, val value : A) extends Expression(sort) with Atom
 
   /* convenience wrappers for boolean / real constants */
   val TrueEx  = new Constant[_, Boolean](Bool, true)
@@ -249,177 +228,49 @@ object Core {
   class Number[T <: S[RealT]](sort : T, value : BigDecimal) extends Constant(sort, value)
 
   /* value of variable */
-  class Value[T <: Sort](val variable : Variable[T]) extends Expression(variable.sort) with Atom[T] {
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Nil => new Value(variable)
-      _       => throw new IllegalArgumentException("Value is an Atom and hence has no subexpressions.")
-    }
-  }
+  class Value[T <: Sort](val variable : Variable[T]) extends Expression(variable.sort) with Atom
 
   /* function application */
-  class Apply[D <: Sort, T <: Sort](val function : FunctionVar[D, T], val parameter : Expression(function.domain))
-             extends Expression(function.sort) extends Unary[D, T] { 
-    val subsort = function.domain
-
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Seq[Expression[Sort]] => if (f.length == 1) new Apply(function, f(0))
-      else
-           throw new IllegalArgumentException("Apply requires an argument of type Expression(function.domain).")
-      _ => throw new IllegalArgumentException("Apply requires an argument of type Expression(function.domain).")
-    }
-  }
+  class Apply[D <: Sort, T <: Sort](val function : FunctionVar[D, T], val next : Expression(function.domain))
+             extends Expression(function.sort) extends Unary { val nSort = function.domain }
 
   /* combine subexpressions into a vector */
-  class Vector[T <: PairT](val subsort : T, val left : Expression(subsort.left), val right : Expression(subsort.right))
-              extends Expression(subsort) with Binary {
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Seq[Expression[Sort]] => if (f.length == 2) new Vector(subsort, f(0), f(1))
-      else
-           throw new IllegalArgumentException("Vector requires two arguments of type Expression(subsort.left) 
-                                               and Expression(subsort.right), respectively.")
-      _ => throw new IllegalArgumentException("Vector requires two arguments of type Expression(subsort.left) 
-                                               and Expression(subsort.right), respectively.")
-    }
-  }
+  class Vector[T <: PairT](val nSort : T, val left : Expression(nSort.left), val right : Expression(nSort.right))
+              extends Expression(nSort) with Binary
 
   /* extract elements from a vector expression */
-  class Left [T <: PairT](val subsort : T, val next : Expression(subsort)) extends Expression(subsort.left)  with Unary {
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Seq[Expression[Sort]] => if (f.length == 1) new Left(subsort, f(0))
-      else
-           throw new IllegalArgumentException("Left requires an argument of type Expression(subsort).")
-      _ => throw new IllegalArgumentException("Left requires an argument of type Expression(subsort).")
-    }
-  }
-
-  class Right[T <: PairT](val subsort : T, val next : Expression(subsort)) extends Expression(subsort.right) with Unary {
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-      f : Seq[Expression[Sort]] => if (f.length == 1) new Right(subsort, f(0)) 
-      else
-           throw new IllegalArgumentException("Right requires an argument of type Expression(subsort).")
-      _ => throw new IllegalArgumentException("Right requires an argument of type Expression(subsort).")
-    }
-  }
+  class Left [T <: PairT](val nSort : T, val next : Expression(nSort)) extends Expression(nSort.left)  with Unary
+  class Right[T <: PairT](val nSort : T, val next : Expression(nSort)) extends Expression(nSort.right) with Unary
 
   /**
    * Formulas (aka Terms)
    *======================
    */
-  abstract class UnaryFormula  extends Expression(Bool) With Unary  {val subsort = Bool}      /* Bool -> Bool */
+  abstract class UnaryFormula  extends Expression(Bool) With Unary  {val nSort = Bool}      /* Bool -> Bool */
+  abstract class BinaryFormula extends Expression(Bool) With Binary {val nSort = BoolXBool} /* Bool x Bool -> Bool */
 
-  sealed abstract class TermSymbol
+  class Not        (val next : Expression(Bool)) extends UnaryFormula
+  class And        (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Or         (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Implies    (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Equivalent (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
 
-  abstract class UnaryTermSymbol  extends TermSymbol
-  object Not        extends UnaryTermSymbol  /* !\Phi */
-  object Globally   extends UnaryTermSymbol  /* []\Phi e.g., in [\alpha] []\Phi */
-  object Finally    extends UnaryTermSymbol  /* <>\Phi e.g., in [\alpha] <>\Phi */
+  abstract class BinaryRelation[T <: Sort](val eSort : T) 
+    extends Expression(Bool) with Binary { val nSort = new PairT(eSort, eSort) }
 
-  class UnaryFormula (val termSymbol : UnaryTermSymbol, val next : Expression(Bool))
-    extends Expression(Bool) With Unary {
-      val subsort = Bool
+  /* equality */
+  class Equals[T <: Sort]   (eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
+  class NotEquals[T <: Sort](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
 
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new UnaryFormula(termSymbol, f(0))
-        else
-             throw new IllegalArgumentException("UnaryFormula " + termSymbol + " requires one argument of type Expression(Bool)")
-        _ => throw new IllegalArgumentException("UnaryFormula " + termSymbol + " requires one argument of type Expression(Bool)")
-      }
-  }
+  /* comparisson */
+  class GreaterThan  [T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
+  class LessThan     [T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
+  class GreaterEquals[T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
+  class LessEquals   [T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
 
-  object UnaryFormula {
-    def !  (next : Expression(Bool)) = new UnaryFormula(Not     , next)
-    def <> (next : Expression(Bool)) = new UnaryFormula(Globally, next)
-    def [] (next : Expression(Bool)) = new UnaryFormula(Finally , next)
-  }
-
-  abstract class BinaryTermSymbol extends TermSymbol
-  object And        extends BinaryTermSymbol /* \Phi /\ \Psi */
-  object Or         extends BinaryTermSymbol /* \Phi \/ \Psi */
-  object Implies    extends BinaryTermSymbol /* \Phi  => \Psi */
-  object Equivalent extends BinaryTermSymbol /* \Phi <=> \Psi */
-  object Antedecent extends BinaryTermSymbol /* , left  of |- */
-  object Succedent  extends BinaryTermSymbol /* , right of |- */
-
-  class BinaryFormula (val termSymbol : BinaryTermSymbol, val left : Expression(Bool), val right : Expression(Bool)) 
-    extends Expression(Bool) With Binary {
-      val subsort = BoolXBool
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2) new BinaryFormula(termSymbol, f(0), f(1))
-        else
-             throw new IllegalArgumentException("BinaryFormula " + termSymbol+ " requires two arguments of type Expression(Bool)")
-        _ => throw new IllegalArgumentException("BinaryFormula " + termSymbol+ " requires two arguments of type Expression(Bool)")
-      }
-  }
-
-  object BinaryFormula {
-    def &   (left : Expression(Bool), right : Expression(Bool)) = new BinaryFormula(And,        left, right)
-    def |   (left : Expression(Bool), right : Expression(Bool)) = new BinaryFormula(Or,         left, right)
-    def =>  (left : Expression(Bool), right : Expression(Bool)) = new BinaryFormula(Implies,    left, right)
-    def <=> (left : Expression(Bool), right : Expression(Bool)) = new BinaryFormula(Equivalent, left, right)
-  }
-
-  /**
-   * Comparisson and Equality
-   *==========================
-   */
-
-  class Equals[T <: Sort](val elemSort : T, val left : Expression[T], val right : Expression[T])
-    extends Expression(Bool) with Binary {
-      val subsort = new Pair(elemSort, elemSort)
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2 && f(0).sort == elemSort && f(1).sort == elemSort)
-            new Equals(elemSort, f(0), f(1))
-        else
-             throw new IllegalArgumentException("Equals requires two arguments of type Expression(elemSort)")
-        _ => throw new IllegalArgumentException("Equals requires two arguments of type Expression(elemSort)")
-      }
-  }
-
-  class NotEquals[T <: Sort](val elemSort : T, val left : Expression[T], val right : Expression[T])
-    extends Expression(Bool) with Binary {
-      val subsort = new Pair(elemSort, elemSort)
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2 && f(0).sort == elemSort && f(1).sort == elemSort)
-            new NotEquals(elemSort, f(0), f(1))
-        else
-             throw new IllegalArgumentException("Equals requires two arguments of type Expression(elemSort)")
-        _ => throw new IllegalArgumentException("Equals requires two arguments of type Expression(elemSort)")
-      }
-  }
-
-  abstract class CompareSymbol extends TermSymbol
-  object GreaterThan   extends CompareSymbol /* > */
-  object LessThan      extends CompareSymbol /* < */
-  object GreaterEquals extends CompareSymbol /* >= */
-  object LessEquals    extends CompareSymbol /* <= */
-
-  class Compare[T <: S[RealT]](val cSymbol : CompareSymbol, 
-                               val elemSort : T, val left : Expression(elemSort), val right : Expression(elemSort))
-    extends Expression(Bool) with Binary {
-      val subsort = new Pair(elemSort, elemSort)
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2 && f(0).sort == elemSort && f(1).sort == elemSort)
-            new Compare(cSymbol, elemSort, f(0), f(1))
-        else
-             throw new IllegalArgumentException("Equals requires two arguments of type Expression(elemSort)")
-        _ => throw new IllegalArgumentException("Equals requires two arguments of type Expression(elemSort)")
-      }
-  }
-
-  object Compare {
-    def > [T <: S[RealT]](elemSort : T, left : Expression(elemSort), right : Expression(elemSort)) =
-          new Compare(GreaterThan, elemSort, left, right)
-    def < [T <: S[RealT]](elemSort : T, left : Expression(elemSort), right : Expression(elemSort)) =
-          new Compare(LessThan, elemSort, left, right)
-    def >=[T <: S[RealT]](elemSort : T, left : Expression(elemSort), right : Expression(elemSort)) =
-          new Compare(GreaterEquals, elemSort, left, right)
-    def <=[T <: S[RealT]](elemSort : T, left : Expression(elemSort), right : Expression(elemSort)) =
-          new Compare(LessEquals, elemSort, left, right)
-  }
+  /* temporal */
+  class Globally (val next : Expression(Bool)) extends UnaryFormula /* []\Phi e.g., in [\alpha] []\Phi */
+  class Finally  (val next : Expression(Bool)) extends UnaryFormula /* <>\Phi e.g., in [\alpha] <>\Phi */
 
   /**
    * Games
@@ -427,198 +278,85 @@ object Core {
    */
 
   /* Modality */
-  class Modality (val game : Expression(Game), val term : Expression(Bool)) extends Expression(Bool) with Binary {
-    val subsort = GameXBool
-    val left    = game
-    val right   = term
+  class Modality (val left : Expression(Game), val right : Expression(Bool)) 
+    extends Expression(Bool) with Binary { val nSort = GameXBool }
 
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2) new Modality(f(0), f(1))
-        else
-             throw new IllegalArgumentException("Modality requires two arguments of type Expression(Game) and Expression(Bool)")
-        _ => throw new IllegalArgumentException("Modality requires two arguments of type Expression(Game) and Expression(Bool)")
-      }
-  }
+  abstract class UnaryGame  extends Expression(Game) with Unary  {val nSort = Game }
+  abstract class BinaryGame extends Expression(Game) with Binary {val nSort = GameXGame }
 
   /* Games */
-  class BoxModality     (val program : Expression(Program)) extends Expression(Game) with Unary {
-    val subsort = Program
-    val next = program
+  class BoxModality     (val next : Expression(Program)) extends Expression(Game) with Unary { val nSort = Program }
+  class DiamondModality (val next : Expression(Program)) extends Expression(Game) with Unary { val nSort = Program }
 
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new BoxModality(f(0))
-        else
-             throw new IllegalArgumentException("BoxModality requires one arguments of type Expression(Program).")
-        _ => throw new IllegalArgumentException("BoxModality requires one argument of type Expression(Program).")
-      }
-  }
-
-  class DiamondModality (val program : Expression(Program)) extends Expression(Game) with Unary {
-    val subsort = Program
-    val next = program
-
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new BoxModality(f(0))
-        else
-             throw new IllegalArgumentException("BoxModality requires one argument of type Expression(Program).")
-        _ => throw new IllegalArgumentException("BoxModality requires one argument of type Expression(Program).")
-      }
-  }
-
-  abstract class UnaryGameSymbol extends TermSymbol
-  object BoxStar     extends UnaryGameSymbol
-  object DiamondStar extends UnaryGameSymbol
-
-  class UnaryGame(val gameSymbol : UnaryGameSymbol, val next : Expression(Game)) extends Expression(Game) with Unary {
-    val subobject = Game
-
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new UnaryGame(gameSymbol, f(0))
-        else
-             throw new IllegalArgumentException("UnaryGame requires one argument of type Expression(Game).")
-        _ => throw new IllegalArgumentException("UnaryGame requires one argument of type Expression(Game).")
-      }
-  }
-
-  abstract class BinaryGameSymbol extends TermSymbol
-  object SequenceGame extends BinaryGameSymbol
-  object DisjunctGame extends BinaryGameSymbol
-  object ConjunctGame extends BinaryGameSymbol
-
-  class BinaryGame(val gameSymbol : BinaryGameSymbol, val left : Expression(Game), val right : Expression(Game)) 
-    extends Expression(Game) with Binary {
-      val subobject = Game
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-          f : Seq[Expression[Sort]] => if (f.length == 2) new BinaryGame(gameSymbol, f(0), f(1))
-          else
-               throw new IllegalArgumentException("BinaryGame requires two arguments of type Expression(Game).")
-          _ => throw new IllegalArgumentException("BinaryGame requires two arguments of type Expression(Game).")
-        }
-  }
+  class BoxStar         (val next : Expression(Game))    extends UnaryGame
+  class DiamondStar     (val next : Expression(Game))    extends UnaryGame
+  class SequenceGame    (val left : Expression(Game), val right : Expression(Game)) extends BinaryGame
+  class DisjunctGame    (val left : Expression(Game), val right : Expression(Game)) extends BinaryGame
+  class ConjunctGame    (val left : Expression(Game), val right : Expression(Game)) extends BinaryGame
 
   /**
    * Programs
    *==========
    */
 
-  abstract class ProgramSymbol extends TermSymbol
-  object SequenceProgram extends ProgramSymbol
-  object Choice          extends ProgramSymbol
-  object ParallelProgram extends ProgramSymbol
+  abstract class UnaryProgram  extends Expression(Program) with Unary  {val nSort = Program }
+  abstract class BinaryProgram extends Expression(Program) with Binary {val nSort = ProgramXProgram }
 
-  class BinaryProgram(val prog : ProgramSymbol, val left : Expression(Program), val right : Expression(Program)) 
-    extends Expression(Program) with Binary {
-      val subsort = ProgramXProgram
+  class Sequence(val left : Expression(Program), val right : Expression(Program)) extends BinaryProgram
+  class Choice  (val left : Expression(Program), val right : Expression(Program)) extends BinaryProgram
+  class Parallel(val left : Expression(Program), val right : Expression(Program)) extends BinaryProgram
+  class Loop    (val next : Expression(Program))                                  extends UnaryProgram
 
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2) new BinaryProgram(prog, f(0), f(1))
-        else
-             throw new IllegalArgumentException("BinaryProgram requires two arguments of type Expression(Program).")
-        _ => throw new IllegalArgumentException("BinaryProgram requires two arguments of type Expression(Program).")
-      }
-  }
-
-
-  class Loop(val program : Expression(Program)) extends Expression(Program) with Unary {
-    val subsort = Program
-    val next = program
-
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new Loop(f(0))
-        else
-             throw new IllegalArgumentException("Loop requires one argument of type Expression(Program).")
-        _ => throw new IllegalArgumentException("Loop requires one argument of type Expression(Program).")
-      }
-  }
-
-  class Assign[T <: Sort](val variable : Variable[T], val next : Expression(variable.sort)) extends Expression(Program) with Unary {
-    val subsort = variable.sort
-
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new Assign(variable, f(0))
-        else
-             throw new IllegalArgumentException("Assign to variable requires one argument of type Expression(variable.sort).")
-        _ => throw new IllegalArgumentException("Assign to variable requires one argument of type Expression(variable.sort).")
-    }
-  }
-
+  class Assign[T <: Sort](val variable : Variable[T], val next : Expression(variable.sort)) extends UnaryProgram
   class Assign[D <: Sort, T <: Sort](val function : FunctionVar[D, T],
                                      val parameter : Expression(function.domain), val right : Expression(function.sort)
-    extends Expression(Program) with Binary {
-      val subsort = variable.sort
+    extends Expression(Program) with Binary { val nSort = function.sort }
 
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-          f : Seq[Expression[Sort]] => if (f.length == 2) new Assign(function, f(0), f(1))
-          else
-               throw new IllegalArgumentException("Assign to function requires two arguments matching domain and co-domain.")
-          _ => throw new IllegalArgumentException("Assign to function requires two arguments matching domain and co-domain.")
-      }
-  }
+  class StateCheck(val next : Expression(Bool)) extends Expression(Program) With Unary { val nSort = Bool }
 
-  class StateCheck(val next : Expression(Bool)) extends Expression(Program) With Unary {
-    val subterm = Bool
-
-    def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new StateCheck(f(0))
-        else
-             throw new IllegalArgumentException("StateCheck requires one argument of type Expression(Bool).")
-        _ => throw new IllegalArgumentException("StateCheck requires one argument of type Expression(Bool).")
-      }
-  }
-
-
-  class ContinuousEvolution(val differentialEquation : Expression(Bool), val evolutionConstraint : Expression(Bool)) 
-    extends Expression(Program) With Binary {
-      val subterm = BoolXBool
-      val left    = differentialEquation
-      val right   = evolutionConstraint
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-          f : Seq[Expression[Sort]] => if (f.length == 2) new ContinuousEvolution(f(0), f(1))
-          else
-               throw new IllegalArgumentException("ContinuousEvolution requires two argument of type Expression(Bool).")
-          _ => throw new IllegalArgumentException("ContinuousEvolution requires two argument of type Expression(Bool).")
-      }
-  }
-
+  /* left = differential algebraic formula; right = evolution domain constraint */
+  class ContinuousEvolution(val left : Expression(Bool), val right : Expression(Bool)) 
+    extends Expression(Program) With Binary { val nSort = BoolXBool }
 
   /**
    * Quantifiers
+   *=============
    */
 
-  abstract class QuantifierSymbol extends TermSymbol
-  object Forall extends QuantifierSymbol
-  object Exists extends QuantifierSymbol
+  abstract class Quantifier[T <: Sort](val variable : NamedSymbol[T], val next : Expression(Bool)) extends UnaryFormula
 
-  class Quantifier[T <: Sort](val quantSymbol : QuantifierSymbol, val nameSymbol : NamedSymbol[T], val next : Expression(Bool)) 
-    extends Expression(Bool) with Unary {
-      val subsort = Bool
-
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 1) new Quantifier(quantSymbol, nameSymbol, f(0))
-        else
-             throw new IllegalArgumentException("Quantifier requires an argument of type Expression(Bool).")
-        _ => throw new IllegalArgumentException("Quantifier requires an argument of type Expression(Bool).")
-      }
-  }
+  class Forall[T <: Sort](variable : NamedSymbol[T], next : Expression(Bool) extends Quantifier(variable, next)
+  class Exists[T <: Sort](variable : NamedSymbol[T], next : Expression(Bool) extends Quantifier(variable, next)
 
   /**
    * Sequent
    *=========
    */
-  class Sequent    (val variables : List[NamedSymbol[Sort]], val left : Expression(Bool), val right : Expression(Bool))
-    extends Expression(Bool) with Binary {
-      val subsort = BoolXBool
 
-      def apply(subexpressions : Expression[Sort]*) = subexpressions match {
-        f : Seq[Expression[Sort]] => if (f.length == 2) new Sequent(variables, f(0), f(1))
-        else
-             throw new IllegalArgumentException("Sequent construction requires two arguments of type Expression(Bool).")
-        _ => throw new IllegalArgumentException("Sequent construction requires two arguments of type Expression(Bool).")
-      }
+  class Antedecent(val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Succedent (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Sequent   (val context : List[NamedSymbol[Sort]], val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+
+
+/*--------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------*/
+
+  object Expression {
+
+    def identity_map()
+
+    def !   (next : Expression(Bool)) = new Not(next)
+    def <>  (next : Expression(Bool)) = new Finally (next)
+    def []  (next : Expression(Bool)) = new Globally(next)
+    def &   (left : Expression(Bool), right : Expression(Bool)) = new And       (left, right)
+    def |   (left : Expression(Bool), right : Expression(Bool)) = new Or        (left, right)
+    def =>  (left : Expression(Bool), right : Expression(Bool)) = new Implies   (left, right)
+    def <=> (left : Expression(Bool), right : Expression(Bool)) = new Equivalent(left, right)
+    def >  [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new GreaterThan  (eSort, left, right)
+    def <  [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new LessThan     (eSort, left, right)
+    def >= [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new GreaterEquals(eSort, left, right)
+    def <= [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new LessEquals   (eSort, left, right)
   }
-
 
   /*********************************************************************************
    * Proof Tree
