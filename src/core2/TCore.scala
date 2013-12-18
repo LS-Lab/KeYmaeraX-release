@@ -429,6 +429,8 @@ class Core {
  *==================================================================================
  */
 
+
+
 object TCore {
 
   def main(args : Array[String]) {
@@ -442,6 +444,13 @@ object TCore {
 
     val Time  = new Subtype("The time that is.", Real)
     val Speed = new Subtype("Really fast.", Real)
+
+    val ex1 = Not(TrueEx)
+
+    /* True |= q => (p => q) */
+    val p = new Variable("p", Bool)
+    val q = new Variable("q", Bool)
+    val seq = new Sequent(List(p, q), TrueEx, new Implies(new Value(q), new Implies(new Value(p), new Value(q))))
 
 
     println (Not(TrueEx))
