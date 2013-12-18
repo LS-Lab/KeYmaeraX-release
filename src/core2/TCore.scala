@@ -52,13 +52,13 @@ object Core {
   /* user defined sort */
   class UserT(name : String)                                     extends S[UserT]
   /* user defined enum sort. values is the list of named constants of this enum */
-  class EnumT(name : String, values : list[String])              extends S[EnumT]
+  class EnumT(name : String, values : List[String])              extends S[EnumT]
 
   /* used to define pairs of sorts. That is the pair sort is of type L x R */
   class PairT[L <: Sort, R <: Sort](val left : L, val right : R) extends S[PairT[L,R]] {
-    def equals(that : Anyref) = that match {
-      PairT(l, r) => left == l && right == r
-      _ => false
+    override def equals(other : Any) = other match {
+      case that : PairT[L, R] => left == that.left && right == that.right
+      case _ => false
     }
   }
 
@@ -152,17 +152,17 @@ object Core {
 
   /* binary expression (n-ary is encoded as binary of binary of ... */
   trait Binary[L <: Sort, R <: Sort, T <: Sort] extends Expression[T] {
-    val nSort : Pair[L, R]
+    val nSort : PairT[L, R]
     val left  : Expression[L]
     val right : Expression[R]
 
     applicable
     @elidable(ASSERTION) def applicable =
-          require(nSort.left == left.sort, nSort.right == right.sort, "Sort Mismatch in Binary Expression")
+          require(nSort.left == left.sort && nSort.right == right.sort, "Sort Mismatch in Binary Expression")
 
     def reduce[A](up : (Expression[Sort], Context) => Boolean, down : (Expression[Sort], Context, A*) => A)(ctx : Context) : A =
           if (up(this, ctx)) down(this, ctx, left.reduce(up, down)(ctx.left), right.reduce(up, down)(ctx.right))
-          else down(this, pos)
+          else down(this, ctx)
 
     def subexpressions() : Seq[Expression[Sort]] = Seq(left, right)
   }
@@ -197,16 +197,16 @@ object Core {
     def deepName = name + "_" + id;
 
     def flatEquals(x : Variable[Sort]) =
-      this.name == x.name && this.type_object == x.type_object
+      this.name == x.name && this.sort == x.sort
 
     def deepEquals(x : Variable[Sort]) =
       flatEquals(x) && this.id == x.id
   }
 
-  class Variable[T <: Sort] (val name : String, sort : T)     extends NamedSymbol[T](name, sort)
+  class Variable[T <: Sort] (name : String, sort : T) extends NamedSymbol[T](name, sort)
 
-  class FunctionVar[D <: Sort, T <: Sort] (val name : String, val domain : D, sort : T)
-                                                              extends NamedSymbol[T](name, sort)
+  class FunctionVar[D <: Sort, T <: Sort] (name : String, val domain : D, sort : T)
+                                                      extends NamedSymbol[T](name, sort)
 
   /**
    * Constant, Variable and Function Expressions
@@ -214,63 +214,65 @@ object Core {
    */
 
   /* The * in nondet. assignments */
-  class Random[T <: Sort](sort : T) extends Expression(sort) with Atom
+  class Random[T <: Sort](sort : T) extends Expression(sort) with Atom[T]
 
   /* Constant of scala type A cast into sort T */
-  class Constant[T <: Sort, A](sort : T, val value : A) extends Expression(sort) with Atom
+  class Constant[T <: Sort, A](sort : T, val value : A) extends Expression(sort) with Atom[T]
 
   /* convenience wrappers for boolean / real constants */
-  val TrueEx  = new Constant[_, Boolean](Bool, true)
-  val FalseEx = new Constant[_, Boolean](Bool, false)
+  val TrueEx  = new Constant(Bool, true)
+  val FalseEx = new Constant(Bool, false)
 
-  class Number[T <: S[RealT]](sort : T, value : Int)        extends Constant(sort, value)
-  class Number[T <: S[RealT]](sort : T, value : Double)     extends Constant(sort, value)
   class Number[T <: S[RealT]](sort : T, value : BigDecimal) extends Constant(sort, value)
 
   /* value of variable */
-  class Value[T <: Sort](val variable : Variable[T]) extends Expression(variable.sort) with Atom
+  class Value[T <: Sort](val variable : Variable[T]) extends Expression(variable.sort) with Atom[T]
 
   /* function application */
-  class Apply[D <: Sort, T <: Sort](val function : FunctionVar[D, T], val next : Expression(function.domain))
-             extends Expression(function.sort) extends Unary { val nSort = function.domain }
+  class Apply[D <: Sort, T <: Sort](val function : FunctionVar[D, T], val next : Expression[D])
+             extends Expression(function.sort) with Unary[D,T] { val nSort = function.domain }
 
   /* combine subexpressions into a vector */
-  class Vector[T <: PairT](val nSort : T, val left : Expression(nSort.left), val right : Expression(nSort.right))
-              extends Expression(nSort) with Binary
+  class Vector[L <: Sort, R <: Sort](val nSort : PairT[L, R], val left : Expression[L], val right : Expression[R])
+    extends Expression(nSort) with Binary[L, R, PairT[L, R]]
 
   /* extract elements from a vector expression */
-  class Left [T <: PairT](val nSort : T, val next : Expression(nSort)) extends Expression(nSort.left)  with Unary
-  class Right[T <: PairT](val nSort : T, val next : Expression(nSort)) extends Expression(nSort.right) with Unary
+  class Left [L <: Sort, R <: Sort](val nSort : PairT[L, R], val next : Expression[PairT[L, R]]) 
+    extends Expression(nSort.left)  with Unary[PairT[L, R], L]
+  class Right[L <: Sort, R <: Sort](val nSort : PairT[L, R], val next : Expression[PairT[L, R]]) 
+    extends Expression(nSort.right) with Unary[PairT[L, R], R]
 
   /**
    * Formulas (aka Terms)
    *======================
    */
-  abstract class UnaryFormula  extends Expression(Bool) With Unary  {val nSort = Bool}      /* Bool -> Bool */
-  abstract class BinaryFormula extends Expression(Bool) With Binary {val nSort = BoolXBool} /* Bool x Bool -> Bool */
+  /* Bool -> Bool */
+  abstract class UnaryFormula  extends Expression(Bool) with Unary [BoolT, BoolT]       { val nSort = Bool }
+  /* Bool x Bool -> Bool */
+  abstract class BinaryFormula extends Expression(Bool) with Binary[BoolT, BoolT, BoolT]{ val nSort = BoolXBool }
 
-  class Not        (val next : Expression(Bool)) extends UnaryFormula
-  class And        (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
-  class Or         (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
-  class Implies    (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
-  class Equivalent (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Not        (val next : Expression[BoolT]) extends UnaryFormula
+  class And        (val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
+  class Or         (val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
+  class Implies    (val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
+  class Equivalent (val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
 
   abstract class BinaryRelation[T <: Sort](val eSort : T) 
-    extends Expression(Bool) with Binary { val nSort = new PairT(eSort, eSort) }
+    extends Expression(Bool) with Binary[T, T, BoolT] { val nSort = new PairT(eSort, eSort) }
 
   /* equality */
-  class Equals[T <: Sort]   (eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
-  class NotEquals[T <: Sort](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
+  class Equals[T <: Sort]   (eSort : T, val left : Expression[T], val right : Expression[T]) extends BinaryRelation(eSort)
+  class NotEquals[T <: Sort](eSort : T, val left : Expression[T], val right : Expression[T]) extends BinaryRelation(eSort)
 
   /* comparisson */
-  class GreaterThan  [T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
-  class LessThan     [T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
-  class GreaterEquals[T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
-  class LessEquals   [T <: S[RealT]](eSort : T, val left : Expression(eSort), val right : Expression(eSort)) extends BinaryRelation(eSort)
+  class GreaterThan  [R <: S[RealT]](eSort : R, val left : Expression[R], val right : Expression[R]) extends BinaryRelation(eSort)
+  class LessThan     [R <: S[RealT]](eSort : R, val left : Expression[R], val right : Expression[R]) extends BinaryRelation(eSort)
+  class GreaterEquals[R <: S[RealT]](eSort : R, val left : Expression[R], val right : Expression[R]) extends BinaryRelation(eSort)
+  class LessEquals   [R <: S[RealT]](eSort : R, val left : Expression[R], val right : Expression[R]) extends BinaryRelation(eSort)
 
   /* temporal */
-  class Globally (val next : Expression(Bool)) extends UnaryFormula /* []\Phi e.g., in [\alpha] []\Phi */
-  class Finally  (val next : Expression(Bool)) extends UnaryFormula /* <>\Phi e.g., in [\alpha] <>\Phi */
+  class Globally (val next : Expression[BoolT]) extends UnaryFormula /* []\Phi e.g., in [\alpha] []\Phi */
+  class Finally  (val next : Expression[BoolT]) extends UnaryFormula /* <>\Phi e.g., in [\alpha] <>\Phi */
 
   /**
    * Games
@@ -278,64 +280,65 @@ object Core {
    */
 
   /* Modality */
-  class Modality (val left : Expression(Game), val right : Expression(Bool)) 
-    extends Expression(Bool) with Binary { val nSort = GameXBool }
+  class Modality (val left : Expression[GameT], val right : Expression[BoolT]) 
+    extends Expression(Bool) with Binary[GameT, BoolT, BoolT] { val nSort = GameXBool }
 
-  abstract class UnaryGame  extends Expression(Game) with Unary  {val nSort = Game }
-  abstract class BinaryGame extends Expression(Game) with Binary {val nSort = GameXGame }
+  abstract class UnaryGame  extends Expression(Game) with Unary[GameT, GameT]         {val nSort = Game }
+  abstract class BinaryGame extends Expression(Game) with Binary[GameT, GameT, GameT] {val nSort = GameXGame }
 
   /* Games */
-  class BoxModality     (val next : Expression(Program)) extends Expression(Game) with Unary { val nSort = Program }
-  class DiamondModality (val next : Expression(Program)) extends Expression(Game) with Unary { val nSort = Program }
+  class BoxModality     (val next : Expression[ProgramT]) extends Expression(Game) with Unary[ProgramT, GameT]{ val nSort = Program }
+  class DiamondModality (val next : Expression[ProgramT]) extends Expression(Game) with Unary[ProgramT, GameT]{ val nSort = Program }
 
-  class BoxStar         (val next : Expression(Game))    extends UnaryGame
-  class DiamondStar     (val next : Expression(Game))    extends UnaryGame
-  class SequenceGame    (val left : Expression(Game), val right : Expression(Game)) extends BinaryGame
-  class DisjunctGame    (val left : Expression(Game), val right : Expression(Game)) extends BinaryGame
-  class ConjunctGame    (val left : Expression(Game), val right : Expression(Game)) extends BinaryGame
+  class BoxStar         (val next : Expression[GameT])    extends UnaryGame
+  class DiamondStar     (val next : Expression[GameT])    extends UnaryGame
+  class SequenceGame    (val left : Expression[GameT], val right : Expression[GameT]) extends BinaryGame
+  class DisjunctGame    (val left : Expression[GameT], val right : Expression[GameT]) extends BinaryGame
+  class ConjunctGame    (val left : Expression[GameT], val right : Expression[GameT]) extends BinaryGame
 
   /**
    * Programs
    *==========
    */
 
-  abstract class UnaryProgram  extends Expression(Program) with Unary  {val nSort = Program }
-  abstract class BinaryProgram extends Expression(Program) with Binary {val nSort = ProgramXProgram }
+  abstract class UnaryProgram  extends Expression(Program) with Unary [ProgramT, ProgramT]           {val nSort = Program }
+  abstract class BinaryProgram extends Expression(Program) with Binary[ProgramT, ProgramT, ProgramT] {val nSort = ProgramXProgram }
 
-  class Sequence(val left : Expression(Program), val right : Expression(Program)) extends BinaryProgram
-  class Choice  (val left : Expression(Program), val right : Expression(Program)) extends BinaryProgram
-  class Parallel(val left : Expression(Program), val right : Expression(Program)) extends BinaryProgram
-  class Loop    (val next : Expression(Program))                                  extends UnaryProgram
+  class Sequence(val left : Expression[ProgramT], val right : Expression[ProgramT]) extends BinaryProgram
+  class Choice  (val left : Expression[ProgramT], val right : Expression[ProgramT]) extends BinaryProgram
+  class Parallel(val left : Expression[ProgramT], val right : Expression[ProgramT]) extends BinaryProgram
+  class Loop    (val next : Expression[ProgramT])                                   extends UnaryProgram
 
-  class Assign[T <: Sort](val variable : Variable[T], val next : Expression(variable.sort)) extends UnaryProgram
-  class Assign[D <: Sort, T <: Sort](val function : FunctionVar[D, T],
-                                     val parameter : Expression(function.domain), val right : Expression(function.sort)
-    extends Expression(Program) with Binary { val nSort = function.sort }
+  class Assign[T <: Sort](val variable : Variable[T], val next : Expression[T]) 
+    extends Expression(Program) with Unary[T, ProgramT] {val nSort = variable.sort }
 
-  class StateCheck(val next : Expression(Bool)) extends Expression(Program) With Unary { val nSort = Bool }
+  class AssignFn[D <: Sort, T <: Sort](val function : FunctionVar[D, T], val left : Expression[D], val right : Expression[T])
+    extends Expression(Program) with Binary[D, T, ProgramT] { val nSort = new PairT(function.domain, function.sort) }
+
+  class StateCheck(val next : Expression[BoolT]) extends Expression(Program) with Unary[BoolT, ProgramT] { val nSort = Bool }
 
   /* left = differential algebraic formula; right = evolution domain constraint */
-  class ContinuousEvolution(val left : Expression(Bool), val right : Expression(Bool)) 
-    extends Expression(Program) With Binary { val nSort = BoolXBool }
+  class ContinuousEvolution(val left : Expression[BoolT], val right : Expression[BoolT])
+    extends Expression(Program) with Binary[BoolT, BoolT, ProgramT] { val nSort = BoolXBool }
 
   /**
    * Quantifiers
    *=============
    */
 
-  abstract class Quantifier[T <: Sort](val variable : NamedSymbol[T], val next : Expression(Bool)) extends UnaryFormula
+  abstract class Quantifier[T <: Sort](val variable : NamedSymbol[T], val next : Expression[BoolT]) extends UnaryFormula
 
-  class Forall[T <: Sort](variable : NamedSymbol[T], next : Expression(Bool) extends Quantifier(variable, next)
-  class Exists[T <: Sort](variable : NamedSymbol[T], next : Expression(Bool) extends Quantifier(variable, next)
+  class Forall[T <: Sort](variable : NamedSymbol[T], next : Expression[BoolT]) extends Quantifier(variable, next)
+  class Exists[T <: Sort](variable : NamedSymbol[T], next : Expression[BoolT]) extends Quantifier(variable, next)
 
   /**
    * Sequent
    *=========
    */
 
-  class Antedecent(val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
-  class Succedent (val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
-  class Sequent   (val context : List[NamedSymbol[Sort]], val left : Expression(Bool), val right : Expression(Bool)) extends BinaryFormula
+  class Antedecent(val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
+  class Succedent (val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
+  class Sequent   (val context : List[NamedSymbol[Sort]], val left : Expression[BoolT], val right : Expression[BoolT]) extends BinaryFormula
 
 
 /*--------------------------------------------------------------------------------*/
@@ -343,19 +346,9 @@ object Core {
 
   object Expression {
 
-    def identity_map()
+    def identity_map() = true
 
-    def !   (next : Expression(Bool)) = new Not(next)
-    def <>  (next : Expression(Bool)) = new Finally (next)
-    def []  (next : Expression(Bool)) = new Globally(next)
-    def &   (left : Expression(Bool), right : Expression(Bool)) = new And       (left, right)
-    def |   (left : Expression(Bool), right : Expression(Bool)) = new Or        (left, right)
-    def =>  (left : Expression(Bool), right : Expression(Bool)) = new Implies   (left, right)
-    def <=> (left : Expression(Bool), right : Expression(Bool)) = new Equivalent(left, right)
-    def >  [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new GreaterThan  (eSort, left, right)
-    def <  [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new LessThan     (eSort, left, right)
-    def >= [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new GreaterEquals(eSort, left, right)
-    def <= [T <: S[RealT]](eSort : T, left : Expression(elemSort), right : Expression(elemSort)) = new LessEquals   (eSort, left, right)
+    def !   (next : Expression[BoolT]) = new Not(next)
   }
 
   /*********************************************************************************
@@ -383,8 +376,8 @@ object Core {
 
     /* must not be invoked when there is no alternative */
     def getStep : ProofStep = alternatives match {
-      List(h, t) => h
-      Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
+      case List(h, t) => h
+      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
     }
 
     private def prepend(r : Rule, s : List[ProofNode]) {
