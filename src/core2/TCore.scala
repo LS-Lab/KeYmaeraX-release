@@ -4,6 +4,39 @@
  */
 //package edu.cmu.cs.ls.keymaera.core
 
+/*
+C = codomain sort [T---->C]
+D = domain sort
+L = left child sort
+R = right child sort
+
+sort: C
+
+left : Expr[L]
+right : Expr[R]
+child : Expr[D] [next-->]
+
+domain: D [nSort-->]
+
+TupleT [PairT-->]
+
+Pair [Vector-->]
+
+Expr
+
+Imply
+Equiv
+
+Test StateCheck-->
+
+Derivative   [Derivate-->] also on Formulas
+------------------
+
+
+Monadic
+Dyadic
+
+*/
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
