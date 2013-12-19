@@ -19,6 +19,30 @@
  * domain : D = Sort object for domain D
  */
 
+/**
+ * Todos
+ *=======
+ * 1) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
+ * 2) Assignment Expressions:   := as assign(Expr, Expr) (e.g., assign(apply(f, param), term) but also (x)' := 42
+ *                                    assign(x, term) resp. assign(f, param, term)
+ *                                    quant. assign vs. vector assign with "large" vector
+ *                                    quant. assign as function update f = g with [x := y]
+ * 3) [HELP ME] differential equations in some normal form (I don't remember the details)
+ */
+
+/**
+ * Points to Discuss
+ *===================
+ * 1) Currently we support efficicent type based mapping but no constructor patterns
+ *    (i.e., case e : Add[_] instead of case Add(sort, left, right). Members are still
+ *    accessible (e.g., through e.sort). Alternatively we could add apply / unapply
+ *    methods which degrade performance and increase codesize or turn some classes into
+ *    case classes, which increases their memory footprint mainly due to successive
+ *    overwrite.
+ * 2) Modality tracks variables that are bound in game / program: simplifies building
+ *    up context but may require modality to change more often
+ */
+
 import scala.annotation.elidable
 import scala.annotation.elidable._
 
@@ -138,7 +162,7 @@ class Core {
   }
 
   /* unary expression */
-  abstract class Unary[D <: Sort, C <: Sort](sort : C, val domain : D, val child : Expr[D]) extends Expr(sort) {
+  abstract class Unary[+D <: Sort, C <: Sort](sort : C, val domain : D, val child : Expr[D]) extends Expr(sort) {
     @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
     applicable
 
@@ -148,7 +172,7 @@ class Core {
   }
 
   /* binary expression (n-ary is encoded as binary of binary of ... */
-  abstract class Binary[L <: Sort, R <: Sort, C <: Sort]
+  abstract class Binary[+L <: Sort, +R <: Sort, C <: Sort]
                        (sort : C, val domain : TupleT[L, R], val left : Expr[L], val right : Expr[R]) extends Expr(sort) {
 
     @elidable(ASSERTION) def applicable =
@@ -199,7 +223,7 @@ class Core {
 
   class Variable[C <: Sort] (name : String, sort : C) extends NamedSymbol[C](name, sort)
 
-  class FunctionVar[D <: Sort, C <: Sort] (name : String, val domain : D, sort : C) extends NamedSymbol[C](name, sort)
+  class FunctionVar[+D <: Sort, C <: Sort] (name : String, val domain : D, sort : C) extends NamedSymbol[C](name, sort)
 
   /**
    * Constant, Variable and Function Expressions
@@ -269,7 +293,7 @@ class Core {
    *==================
    */
 
-  abstract class UnaryReal [R <: S[RealT]](sort : R, child : Expr[R]) extends Unary(sort, sort, child)
+  abstract class UnaryReal [R <: S[RealT]](sort : R, child : Expr[R]) extends Unary[R, R](sort, sort, child)
   abstract class BinaryReal[R <: S[RealT]](sort : R, left  : Expr[R], right : Expr[R]) extends Binary(sort, new TupleT(sort, sort), left, right) 
 
   class Neg     [R <: S[RealT]](sort : R, child : Expr[R]) extends UnaryReal(sort, child)
@@ -287,7 +311,7 @@ class Core {
    */
 
   /* Modality */
-  class Modality (left : Expr[GameT], right : Expr[BoolT]) extends Binary(Bool, GameXBool, left, right)
+  class Modality (val variables : List[NamedSymbol[Sort]], left : Expr[GameT], right : Expr[BoolT]) extends Binary(Bool, GameXBool, left, right)
 
   abstract class UnaryGame  (child : Expr[GameT]) extends Unary(Game, Game, child)
   abstract class BinaryGame (left : Expr[GameT], right : Expr[GameT]) extends Binary(Game, GameXGame, left, right)
@@ -315,7 +339,12 @@ class Core {
   class Parallel(left  : Expr[ProgramT], right : Expr[ProgramT]) extends BinaryProgram(left, right)
   class Loop    (child : Expr[ProgramT])                         extends UnaryProgram(child)
 
-/*
+/* TODO:
+ *
+ * - Assign(func, parameter, value) vs. Assign(Apply(func, parameter), value)
+ * - need QAssign
+ * - nondeterministic assign vs. Assign(Var, Random)
+ *
   class Assign[C <: Sort](val variable : Variable[C], child : Expr[C]) extends Unary(Program, variable.sort, child)
 
   class AssignFn[D <: Sort, C <: Sort](val function : FunctionVar[D, C], left : Expr[D], right : Expr[C])
@@ -329,7 +358,7 @@ class Core {
   class Test(child : Expr[BoolT]) extends Unary(Program, Bool, child)
 
   /* left = differential algebraic formula; right = evolution domain constraint */
-  class ContinuousEvolution(left : Expr[BoolT], right : Expr[BoolT]) extends Binary(Program, BoolXBool, left, right)
+  class ContEvolve(left : Expr[BoolT], right : Expr[BoolT]) extends Binary(Program, BoolXBool, left, right)
 
   /**
    * Quantifiers
@@ -350,8 +379,13 @@ class Core {
   class Succedent (left : Expr[BoolT], right : Expr[BoolT]) extends BinaryFormula(left, right)
   class Sequent   (val context : List[NamedSymbol[Sort]], left : Expr[BoolT], right : Expr[BoolT]) extends BinaryFormula(left, right)
 
+
+/*--------------------------------------------------------------------------------*/
+/*--------------------------------------------------------------------------------*/
+
+
   /*********************************************************************************
-   * Expression Traversal
+   * Expression Traversal and Helper Functions
    *********************************************************************************
    */
 
@@ -367,11 +401,19 @@ class Core {
     def right(expr : Expr[Sort]) = this
   }
 
-  def eachExpr(expr : Expr[Sort], ctx : Context[Expr[Sort]]) : Boolean = true
+  /**
+   * Fold
+   *======
+   */
 
+  /* shortcut to traverse the entire tree */
+  def all(expr : Expr[Sort], ctx : Context[Expr[Sort]]) : Boolean = true
+
+  /* fold with context */
   def fold[A](down : (Expr[Sort], Context[Expr[Sort]], List[A]) => A, ctx : Context[Expr[Sort]])(expr : Expr[Sort]) : A = 
-        expr.reduce[A](eachExpr, down, ctx)
+        expr.reduce[A](all, down, ctx)
 
+  /* fold ignoring context */
   def fold[A](down : (Expr[Sort], List[A]) => A)(expr : Expr[Sort]) : A =
         fold[A]((e : Expr[Sort], c : Context[Expr[Sort]], red : List[A]) => down(e, red), DefaultContext)(expr)
 
@@ -385,11 +427,84 @@ class Core {
           ctx : Context[Expr[Sort]])(expr : Expr[Sort]) : Expr[Sort] =
         expr.reduce[Expr[Sort]](continue, down, ctx)
 
-  /* TODO */
-  def identity_map(expr : Expr[Sort], ctx : Context[Expr[Sort]], reduced : Expr[Sort]*) = expr
+  def cloneUnary[D <: Sort, C <: Sort](u : Unary[D, C], child : Expr[Sort]) =
+    if (child.isInstanceOf[Expr[D]]) {
+      val c = child.asInstanceOf[Expr[D]]
+      u match {
+        case e : Apply[_, _]       => new Apply             (e.function, c)
+        case e : Left[_, _]        => new Left              (e.domain, c)
+        case e : Right[_, _]       => new Right             (e.domain, c)
+        case e : Not               => new Not               (c)
+        case e : Globally          => new Globally          (c)
+        case e : Finally           => new Finally           (c)
+        case e : Neg[_]            => new Neg               (e.sort, c)
+        case e : Derivative[_]     => new Derivative        (e.sort, c)
+        case e : FormulaDerivative => new FormulaDerivative (c)
+        case e : BoxModality       => new BoxModality       (c)
+        case e : DiamondModality   => new DiamondModality   (c)
+        case e : BoxStar           => new BoxStar           (c)
+        case e : DiamondStar       => new DiamondStar       (c)
+        case e : Loop              => new Loop              (c)
+        /* Assign */
+        /* QAssign */
+        /* NDetAssignFn */
+        case e : Test              => new Test              (c)
+        case e : Forall[_]         => new Forall            (e.variable, c)
+        case e : Exists[_]         => new Exists            (e.variable, c)
+      }
+    } else throw new IllegalArgumentException("Clone unary with invalid child argument")
 
-/*--------------------------------------------------------------------------------*/
-/*--------------------------------------------------------------------------------*/
+  def cloneBinary[L <: Sort, R <: Sort, C <: Sort](b : Binary[L, R, C], left : Expr[Sort], right : Expr[Sort]) = 
+    if (left.isInstanceOf[Expr[L]] && right.isInstanceOf[Expr[R]]) {
+      val l = left.asInstanceOf[Expr[L]]
+      val r = right.asInstanceOf[Expr[R]]
+      b match {
+        case e : Pair[_, _]       => new Pair         (e.domain, l, r)
+        case e : And              => new And          (l, r)
+        case e : Or               => new Or           (l, r)
+        case e : Imply            => new Imply        (l, r)
+        case e : Equiv            => new Equiv        (l, r)
+        case e : Equals[_]        => new Equals       (e.domain.left, l, r)
+        case e : NotEquals[_]     => new NotEquals    (e.domain.left, l, r)
+        case e : GreaterThan[_]   => new GreaterThan  (e.domain.left, l, r)
+        case e : LessThan[_]      => new LessThan     (e.domain.left, l, r)
+        case e : GreaterEquals[_] => new GreaterEquals(e.domain.left, l, r)
+        case e : LessEquals[_]    => new LessEquals   (e.domain.left, l, r)
+        case e : Add[_]           => new Add          (e.sort, l, r)
+        case e : Subtract[_]      => new Subtract     (e.sort, l, r)
+        case e : Multiply[_]      => new Multiply     (e.sort, l, r)
+        case e : Divide [_]       => new Divide       (e.sort, l, r)
+        case e : Modality         => new Modality     (e.variables, l, r)
+        case e : SequenceGame     => new SequenceGame (l, r)
+        case e : DisjunctGame     => new DisjunctGame (l, r)
+        case e : ConjunctGame     => new ConjunctGame (l, r)
+        case e : Sequence         => new Sequence     (l, r)
+        case e : Choice           => new Choice       (l, r)
+        case e : Parallel         => new Parallel     (l, r)
+        /* AssignFn */
+        /* QAssignFn */
+        case e : ContEvolve       => new ContEvolve   (l, r)
+        case e : Antedecent       => new Antedecent   (l, r)
+        case e : Succedent        => new Succedent    (l, r)
+        case e : Sequent          => new Sequent      (e.context, l, r)
+      }
+    } else throw new IllegalArgumentException("Clone binary with invalid child argument")
+
+  /* create identical mapping; clone expression if a member has changed */
+  def identity_map(expr : Expr[Sort], ctx : Context[Expr[Sort]], reduced : List[Expr[Sort]]) = expr match {
+    case e : Atom[_]         => e
+    case e : Unary[_, _]     => assert(reduced == Nil || reduced.length == 1)
+                                if (reduced == Nil || reduced(0) == e.child) e
+                                else cloneUnary(e, reduced(0))
+    case e : Binary[_, _, _] => assert(reduced == Nil || reduced.length == 2)
+                                if (reduced == Nil || (reduced(0) == e.left && reduced(1) == e.right)) e /* beware the indices ist List(L, R) */
+                                else cloneBinary(e, reduced(0), reduced(1))
+  }
+
+
+
+
+
 
 
 
@@ -492,7 +607,7 @@ object TCore {
     def size(expr : Expr[Sort]) = 
       fold[Int]((e : Expr[Sort], l :  List[Int]) => l.fold[Int](1)((x : Int, y : Int) => x + y))(expr)
 
-    println (Not(TrueEx) + " has size " + size(Not(TrueEx)))
+    println (Not(TrueEx) + " has size " + size(map(all, identity_map, DefaultContext)(Not(TrueEx))))
     println (seq + " has size " + size(seq))
 //    println (new Neg(Time, new Random(Speed)))
 
