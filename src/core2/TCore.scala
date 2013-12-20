@@ -152,32 +152,39 @@ class Core {
      */
     def reduce[A](continue : (Expr[Sort], Context[Expr[Sort]]) => Boolean,
                   down : (Expr[Sort], Context[Expr[Sort]], List[A]) => A, ctx : Context[Expr[Sort]]) : A
+
   }
 
   /* atom / leaf expression */
   abstract class Atom[C <: Sort](sort : C) extends Expr(sort) {
+
     def reduce[A](continue : (Expr[Sort], Context[Expr[Sort]]) => Boolean,
                   down : (Expr[Sort], Context[Expr[Sort]], List[A]) => A, ctx : Context[Expr[Sort]]) : A =
       down(this, ctx, Nil)
+
   }
 
   /* unary expression */
-  abstract class Unary[+D <: Sort, C <: Sort](sort : C, val domain : D, val child : Expr[D]) extends Expr(sort) {
-    @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
+  abstract class Unary[D <: Sort, C <: Sort](sort : C, val domain : D, val child : Expr[D]) extends Expr(sort) {
+
     applicable
+
+    @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
+
 
     def reduce[A](continue : (Expr[Sort], Context[Expr[Sort]]) => Boolean, 
                   down : (Expr[Sort], Context[Expr[Sort]], List[A]) => A, ctx : Context[Expr[Sort]]) : A =
       if (continue(this, ctx)) down(this, ctx, List(child.reduce(continue, down, ctx.child(this)))) else down(this, ctx, Nil)
+
   }
 
   /* binary expression (n-ary is encoded as binary of binary of ... */
-  abstract class Binary[+L <: Sort, +R <: Sort, C <: Sort]
-                       (sort : C, val domain : TupleT[L, R], val left : Expr[L], val right : Expr[R]) extends Expr(sort) {
+  abstract class Binary[L <: Sort, R <: Sort, C <: Sort](sort : C, val domain : TupleT[L, R], val left : Expr[L], val right : Expr[R]) extends Expr(sort) {
 
-    @elidable(ASSERTION) def applicable =
-          require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
     applicable
+
+    @elidable(ASSERTION) def applicable = 
+          require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
 
     def reduce[A](continue : (Expr[Sort], Context[Expr[Sort]]) => Boolean, 
                   down : (Expr[Sort], Context[Expr[Sort]], List[A]) => A, ctx : Context[Expr[Sort]]) : A =
@@ -301,6 +308,7 @@ class Core {
   class Subtract[R <: S[RealT]](sort : R, left  : Expr[R], right : Expr[R]) extends BinaryReal(sort, left, right)
   class Multiply[R <: S[RealT]](sort : R, left  : Expr[R], right : Expr[R]) extends BinaryReal(sort, left, right)
   class Divide  [R <: S[RealT]](sort : R, left  : Expr[R], right : Expr[R]) extends BinaryReal(sort, left, right)
+  class Exp     [R <: S[RealT]](sort : R, left  : Expr[R], right : Expr[R]) extends BinaryReal(sort, left, right) /* x^y (for "nice" y only) */
 
   class Derivative[R <: S[RealT]](sort : R, child : Expr[R]) extends UnaryReal(sort, child)
   class FormulaDerivative        (child : Expr[BoolT])       extends UnaryFormula(child)
@@ -427,68 +435,73 @@ class Core {
           ctx : Context[Expr[Sort]])(expr : Expr[Sort]) : Expr[Sort] =
         expr.reduce[Expr[Sort]](continue, down, ctx)
 
-  def cloneUnary[D <: Sort, C <: Sort](u : Unary[D, C], child : Expr[Sort]) =
-    if (child.isInstanceOf[Expr[D]]) {
-      val c = child.asInstanceOf[Expr[D]]
-      u match {
-        case e : Apply[_, _]       => new Apply             (e.function, c)
-        case e : Left[_, _]        => new Left              (e.domain, c)
-        case e : Right[_, _]       => new Right             (e.domain, c)
-        case e : Not               => new Not               (c)
-        case e : Globally          => new Globally          (c)
-        case e : Finally           => new Finally           (c)
-        case e : Neg[_]            => new Neg               (e.sort, c)
-        case e : Derivative[_]     => new Derivative        (e.sort, c)
-        case e : FormulaDerivative => new FormulaDerivative (c)
-        case e : BoxModality       => new BoxModality       (c)
-        case e : DiamondModality   => new DiamondModality   (c)
-        case e : BoxStar           => new BoxStar           (c)
-        case e : DiamondStar       => new DiamondStar       (c)
-        case e : Loop              => new Loop              (c)
-        /* Assign */
-        /* QAssign */
-        /* NDetAssignFn */
-        case e : Test              => new Test              (c)
-        case e : Forall[_]         => new Forall            (e.variable, c)
-        case e : Exists[_]         => new Exists            (e.variable, c)
-      }
-    } else throw new IllegalArgumentException("Clone unary with invalid child argument")
+  def cast[A <: Sort](child : Expr[Sort]) : Expr[A] =
+    child match {
+      case c : Expr[A] => c
+      case _ => throw new IllegalArgumentException("Clone unary with invalid child argument") 
+    }
 
-  def cloneBinary[L <: Sort, R <: Sort, C <: Sort](b : Binary[L, R, C], left : Expr[Sort], right : Expr[Sort]) = 
-    if (left.isInstanceOf[Expr[L]] && right.isInstanceOf[Expr[R]]) {
-      val l = left.asInstanceOf[Expr[L]]
-      val r = right.asInstanceOf[Expr[R]]
-      b match {
-        case e : Pair[_, _]       => new Pair         (e.domain, l, r)
-        case e : And              => new And          (l, r)
-        case e : Or               => new Or           (l, r)
-        case e : Imply            => new Imply        (l, r)
-        case e : Equiv            => new Equiv        (l, r)
-        case e : Equals[_]        => new Equals       (e.domain.left, l, r)
-        case e : NotEquals[_]     => new NotEquals    (e.domain.left, l, r)
-        case e : GreaterThan[_]   => new GreaterThan  (e.domain.left, l, r)
-        case e : LessThan[_]      => new LessThan     (e.domain.left, l, r)
-        case e : GreaterEquals[_] => new GreaterEquals(e.domain.left, l, r)
-        case e : LessEquals[_]    => new LessEquals   (e.domain.left, l, r)
-        case e : Add[_]           => new Add          (e.sort, l, r)
-        case e : Subtract[_]      => new Subtract     (e.sort, l, r)
-        case e : Multiply[_]      => new Multiply     (e.sort, l, r)
-        case e : Divide [_]       => new Divide       (e.sort, l, r)
-        case e : Modality         => new Modality     (e.variables, l, r)
-        case e : SequenceGame     => new SequenceGame (l, r)
-        case e : DisjunctGame     => new DisjunctGame (l, r)
-        case e : ConjunctGame     => new ConjunctGame (l, r)
-        case e : Sequence         => new Sequence     (l, r)
-        case e : Choice           => new Choice       (l, r)
-        case e : Parallel         => new Parallel     (l, r)
-        /* AssignFn */
-        /* QAssignFn */
-        case e : ContEvolve       => new ContEvolve   (l, r)
-        case e : Antedecent       => new Antedecent   (l, r)
-        case e : Succedent        => new Succedent    (l, r)
-        case e : Sequent          => new Sequent      (e.context, l, r)
-      }
-    } else throw new IllegalArgumentException("Clone binary with invalid child argument")
+  def cloneUnary[D <: Sort, C <: Sort](u : Unary[D, C], child : Expr[Sort]) = {
+    u match {
+      case e : Apply[l, r]       => new Apply             (e.function, cast[l](child))
+      case e : Left [l, r]       => new Left              (e.domain, cast[TupleT[l,r]](child))
+      case e : Right[l, r]       => new Right             (e.domain, cast[TupleT[l,r]](child))
+      case e : Not               => new Not               (cast[BoolT](child))
+      case e : Globally          => new Globally          (cast[BoolT](child))
+      case e : Finally           => new Finally           (cast[BoolT](child))
+      case e : Neg[l]            => new Neg               (e.sort, cast[l](child))
+      case e : Derivative[l]     => new Derivative        (e.sort, cast[l](child))
+      case e : FormulaDerivative => new FormulaDerivative (cast[BoolT](child))
+      case e : BoxModality       => new BoxModality       (cast[ProgramT](child))
+      case e : DiamondModality   => new DiamondModality   (cast[ProgramT](child))
+      case e : BoxStar           => new BoxStar           (cast[GameT](child))
+      case e : DiamondStar       => new DiamondStar       (cast[GameT](child))
+      case e : Loop              => new Loop              (cast[ProgramT](child))
+      /* Assign */
+      /* QAssign */
+      /* NDetAssignFn */
+      case e : Test              => new Test              (cast[BoolT](child))
+      case e : Forall[l]         => new Forall            (e.variable, cast[BoolT](child))
+      case e : Exists[l]         => new Exists            (e.variable, cast[BoolT](child))
+    }
+  }
+
+  def cloneBinary[L <: Sort, R <: Sort, C <: Sort](b : Binary[L, R, C], left : Expr[Sort], right : Expr[Sort]) =
+    b
+    // if (left.isInstanceOf[b.left.type] && right.isInstanceOf[b.right.type]) {
+    //   val l = left.asInstanceOf[b.left.type]
+    //   val r = right.asInstanceOf[b.right.type]
+    //   b match {
+    //     case e : Pair[_, _]       => new Pair         (e.domain, l, r)
+    //     case e : And              => new And          (l, r)
+    //     case e : Or               => new Or           (l, r)
+    //     case e : Imply            => new Imply        (l, r)
+    //     case e : Equiv            => new Equiv        (l, r)
+    //     case e : Equals[_]        => new Equals       (e.domain.left, l, r)
+    //     case e : NotEquals[_]     => new NotEquals    (e.domain.left, l, r)
+    //     case e : GreaterThan[_]   => new GreaterThan  (e.domain.left, l, r)
+    //     case e : LessThan[_]      => new LessThan     (e.domain.left, l, r)
+    //     case e : GreaterEquals[_] => new GreaterEquals(e.domain.left, l, r)
+    //     case e : LessEquals[_]    => new LessEquals   (e.domain.left, l, r)
+    //     case e : Add[_]           => new Add          (e.sort, l, r)
+    //     case e : Subtract[_]      => new Subtract     (e.sort, l, r)
+    //     case e : Multiply[_]      => new Multiply     (e.sort, l, r)
+    //     case e : Divide [_]       => new Divide       (e.sort, l, r)
+    //     case e : Modality         => new Modality     (e.variables, l, r)
+    //     case e : SequenceGame     => new SequenceGame (l, r)
+    //     case e : DisjunctGame     => new DisjunctGame (l, r)
+    //     case e : ConjunctGame     => new ConjunctGame (l, r)
+    //     case e : Sequence         => new Sequence     (l, r)
+    //     case e : Choice           => new Choice       (l, r)
+    //     case e : Parallel         => new Parallel     (l, r)
+    //     /* AssignFn */
+    //     /* QAssignFn */
+    //     case e : ContEvolve       => new ContEvolve   (l, r)
+    //     case e : Antedecent       => new Antedecent   (l, r)
+    //     case e : Succedent        => new Succedent    (l, r)
+    //     case e : Sequent          => new Sequent      (e.context, l, r)
+    //   }
+    // } else throw new IllegalArgumentException("Clone binary with invalid child argument")
 
   /* create identical mapping; clone expression if a member has changed */
   def identity_map(expr : Expr[Sort], ctx : Context[Expr[Sort]], reduced : List[Expr[Sort]]) = expr match {
