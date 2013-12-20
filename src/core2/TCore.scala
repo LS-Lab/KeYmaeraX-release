@@ -45,6 +45,7 @@
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
+import scala.language.existentials
 
 import scala.math
 import scala.math._
