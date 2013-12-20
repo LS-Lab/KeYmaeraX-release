@@ -441,7 +441,7 @@ class Core {
       case _ => throw new IllegalArgumentException("Clone unary with invalid child argument") 
     }
 
-  def cloneUnary[D <: Sort, C <: Sort](u : Unary[D, C], child : Expr[Sort]) = {
+  def cloneUnary[D <: Sort, C <: Sort](u : Unary[D, C], child : Expr[Sort]) : Unary[D, C] = {
     u match {
       case e : Apply[l, r]       => new Apply             (e.function, cast[l](child))
       case e : Left [l, r]       => new Left              (e.domain, cast[TupleT[l,r]](child))
@@ -449,8 +449,8 @@ class Core {
       case e : Not               => new Not               (cast[BoolT](child))
       case e : Globally          => new Globally          (cast[BoolT](child))
       case e : Finally           => new Finally           (cast[BoolT](child))
-      case e : Neg[l]            => new Neg               (e.sort, cast[l](child))
-      case e : Derivative[l]     => new Derivative        (e.sort, cast[l](child))
+      case e : Neg[_]            => new Neg[C]               (e.sort, cast[C](child))
+      case e : Derivative[_]     => new Derivative[C]        (e.sort, cast[C](child))
       case e : FormulaDerivative => new FormulaDerivative (cast[BoolT](child))
       case e : BoxModality       => new BoxModality       (cast[ProgramT](child))
       case e : DiamondModality   => new DiamondModality   (cast[ProgramT](child))
