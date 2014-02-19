@@ -7,7 +7,8 @@ class CRDoesNotApply(s:String="Did you check with applies before applying?")
 extends Exception
 
 object CursorRewrite {
-  def log(s:String) = println(s)
+//  def log(s:String) = println(s)
+  def log(s:String) = null
   
   def rewrite(p:Program, ctx:Set[Channel]):Program = rewriter(p,ctx,false)
   
@@ -15,18 +16,18 @@ object CursorRewrite {
   
   def rewriter(p:Program, ctx:Set[Channel],include789:Boolean):Program = {
     def rewriteStep(p:Program, ctx:Set[Channel], include789:Boolean):Program = {
-      if(C1().applies(p, ctx))
-        {log("Applying C1");(C1().apply(p, ctx))}
-      else if(C2b().applies(p, ctx))
-        {log("Applying C2");(C2b().apply(p,ctx))}
-      else if(C3().applies(p, ctx))
-        {log("Applying C3");(C3().apply(p, ctx))}
-      else if(C4().applies(p, ctx))
-        {log("Applying C4");(C4().apply(p, ctx))}
-      else if(C5().applies(p, ctx))
-        {log("Applying C5");(C5().apply(p, ctx))}
-      else if(C6().applies(p, ctx))
-        {log("Applying C6");(C6().apply(p, ctx))}
+      if(C1.applies(p, ctx))
+        {log("Applying C1");(C1.apply(p, ctx))}
+      else if(C2.applies(p, ctx))
+        {log("Applying C2");(C2.apply(p,ctx))}
+      else if(C3.applies(p, ctx))
+        {log("Applying C3");(C3.apply(p, ctx))}
+      else if(C4.applies(p, ctx))
+        {log("Applying C4");(C4.apply(p, ctx))}
+      else if(C5.applies(p, ctx))
+        {log("Applying C5");(C5.apply(p, ctx))}
+      else if(C6.applies(p, ctx))
+        {log("Applying C6");(C6.apply(p, ctx))}
       else if(C7().applies(p,ctx))
         {log("Applying C7");(C7().apply(p, ctx))}
       else if(C8().applies(p,ctx))
@@ -77,30 +78,33 @@ sealed trait CursorRule {
 /**
  * C1. Move the cursor past primitive programs and irrelevant communication.
  */
-case class C1 extends CursorRule {
-  def applies(p:Program, ctx:Set[Channel]) = p match {
+object C1 extends CursorRule {
+  /**
+   * "u is either a primitive operation (ie, of the form x:=Theta,x:=*,?F) or
+   * u is a communication operation of a channel c not mentioned in C.
+   */
+  def applies(p:Program, ctx:Set[Channel]):Boolean = p match {
     case CursorAfter(program)  => false
     case NoCursor(program)     => false
     case CursorBefore(program) => program match {
-      case CursorBefore(p)     => true
-	  case Assignment(v,p)     => true
-	  case NonDetAssignment(p) => true
-	  case Test(f)             => true
-	  case Send(c,_,_)         => !ctx.contains(c)
-	  case Receive(c,_)        => !ctx.contains(c)
-	  case _                   => false
+      case CursorBefore(p)      => applies(p,ctx)
+      case Send(c,_,_)          => !ctx.contains(c)
+      case Receive(c,_)         => !ctx.contains(c)
+      case Assignment(v,p)      => true
+      case NonDetAssignment(p)  => true
+      case Test(f)              => true
+      case _                    => false
     }
     case _ => false
   }
   
-  def apply(p:Program, ctx:Set[Channel]) = p match {
-    case CursorBefore(p) => if(p.isSynchronizationFree) CursorAfter(p) else throw new CRDoesNotApply
-    case _               => throw new CRDoesNotApply
-  }
-//  = p match {
-//    case CursorBefore(p) => CursorAfter(p)
-//    case _               => throw new CRDoesNotApply
-//  }
+  def apply(p:Program, ctx:Set[Channel]) = if(applies(p,ctx)) {
+    p match {
+      case CursorBefore(p) => CursorAfter(p)
+      case _               => throw new CRDoesNotApply
+    }
+  } else throw new CRDoesNotApply
+
 }
 
 /**
@@ -129,7 +133,7 @@ case class C1 extends CursorRule {
 //  }
 //}
 
-case class C2b extends CursorRule {
+object C2 extends CursorRule {
 //  def applies(p:Program, ctx:Set[Channel]) = p match {
 //    case Sequence(l_cursor, r) => 
 //      l_cursor.isInstanceOf[CursorAfter] && r.isCursorFree
@@ -215,7 +219,7 @@ case class C2b extends CursorRule {
 //  }
 //}
 
-case class C3 extends CursorRule {
+object C3 extends CursorRule {
   def applies(p:Program, ctx:Set[Channel]) = p match {
     case CursorBefore(choice) => choice match {
       case Choice(a,b) => a.isCursorFree && b.isCursorFree
@@ -227,6 +231,7 @@ case class C3 extends CursorRule {
   def apply(p:Program, ctx:Set[Channel]) = p match {
     case CursorBefore(choice) => choice match {
       case Choice(a,b) => {
+        if(!a.isCursorFree || !b.isCursorFree) throw new CRDoesNotApply
         val aRewrite = CursorRewrite.rewrite(CursorBefore(a), ctx)
         val bRewrite = CursorRewrite.rewrite(CursorBefore(b), ctx) 
         CursorBefore(Choice(aRewrite, bRewrite))
@@ -237,7 +242,7 @@ case class C3 extends CursorRule {
   }
 }
 
-case class C4 extends CursorRule {
+object C4 extends CursorRule {
   /**
    * TODO refactor this applies method so that it looks more like apply;
    * the nested cases get to be a bit much
@@ -280,7 +285,7 @@ case class C4 extends CursorRule {
   }
 }
 
-case class C5 extends CursorRule {
+object C5 extends CursorRule {
   def applies(p:Program, ctx:Set[Channel]) = p match {
     case CursorBefore(closure) => closure match {
       case STClosure(p) => p.isCursorFree
@@ -302,7 +307,7 @@ case class C5 extends CursorRule {
   }
 }
 
-case class C6 extends CursorRule {
+object C6 extends CursorRule {
   def applies(p:Program, ctx:Set[Channel]) = p match {
     case CursorBefore(closure) => closure match {
       case STClosure(completed) => completed match {

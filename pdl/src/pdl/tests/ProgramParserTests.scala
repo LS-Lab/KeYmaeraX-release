@@ -2,8 +2,7 @@ package pdl.tests
 
 import pdl.core._
 
-
-object ParserTests {
+object ProgramParserTests {
   import Symbols._
   
   val pA = PVar(new Var("a"))
@@ -12,47 +11,30 @@ object ParserTests {
   val fA = FVar(new Var("a"))
   val fB = FVar(new Var("b"))
   
-  private def testProgram(s:String, expected:Program) = {
-    val parseResult = Parser.parseProgram(s)
-    try {
-      expected.equals(parseResult.asInstanceOf[Program])
-    } catch {
-      case e:ClassCastException => false
-    }
-  }
-  private  def testFormula(s:String, expected:Formula) = {
-    val parseResult = Parser.parse(s)
-    try {
-      expected.equals(parseResult.asInstanceOf[Formula])
-    } catch {
-      case e:ClassCastException => false
-    }
-  }
-  
-  private def testTestCase(t:TestCase) : Unit = {
-    if(t.result) {
-      println("OK\t" + t.name + " (message: " + t.message + ")")
-    }
-    else {
-      println("NOT OK\t" + t.name + "\t(message: " + t.message + ")")
-    }
-  }
-  private def testTestCases(l:List[TestCase]) = l.map(testTestCase(_))
-  
-  //////////////////////////////////////////////////////////////////////////////
-  abstract class TestCase {
-    val name    = this.getClass().getSimpleName().replace('$', ' ')
-    
-    def message : String
-    def result  : Boolean
-  }
-  
   abstract class ProgramTestCase extends TestCase {
     def program : Program
     def s       : String
     
     override def message = s
     override def result  = testProgram(s,program)
+        
+    protected def testProgram(s:String, expected:Program) = {
+      val parseResult = Parser.parseProgram(s)
+      try {
+        expected.equals(parseResult.asInstanceOf[Program])
+      } catch {
+        case e:ClassCastException => false
+      }
+    }
+  
+    protected  def testFormula(s:String, expected:Formula) = {
+      val parseResult = Parser.parse(s)
+      try {
+        expected.equals(parseResult.asInstanceOf[Formula])
+      } catch {
+        case e:ClassCastException => false
+      }
+    }
   }
   
   object sequence extends ProgramTestCase {
@@ -97,16 +79,18 @@ object ParserTests {
   }
   
   
+  def tests = 
+            sequence           ::
+            choice             ::
+            choiceOfSequences  ::
+            choiceOfSequences2 ::
+            ptest              ::
+            AparallelB         ::
+            receiveABonC       ::
+            sendABonC          ::
+            Nil
+  
   def main(args:Array[String]):Unit = {
-    val tests = sequence           ::
-                choice             ::
-                choiceOfSequences  ::
-                choiceOfSequences2 ::
-                ptest              ::
-                AparallelB         ::
-                receiveABonC       ::
-                sendABonC          ::
-                Nil
-    testTestCases(tests)
+    TestHarness.runSuite(tests)
   }
 }
