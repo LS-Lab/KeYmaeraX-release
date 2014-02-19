@@ -1,9 +1,8 @@
-package core.io
+package pdl.core
 
 import scala.util.parsing.combinator.RegexParsers
 import scala.util.parsing.combinator.PackratParsers
 import scala.util.matching.Regex
-import core._
 
 /**
  * @deprecated Warning: I'm in the process of refactoring how I handle grouping, so this parser isn't working ATM.
@@ -15,6 +14,15 @@ object Parser {
       case parser.Success(result,next) => result
       case parser.Failure(_,_) => throw new Exception("parse failed.")
       case parser.Error(_,_) => throw new Exception("parse errored.")
+    }
+  }
+  
+  def parseProgram(s:String):Program = {
+    val parser = new Parser()
+    parser.parseAll(parser.ProgramParser.parser, s) match {
+      case parser.Success(result,next) => result
+      case parser.Failure(a,b) => throw new Exception("parse failed.")
+      case parser.Error(a,b)   => throw new Exception("parse errored.")
     }
   }
 }
@@ -68,7 +76,7 @@ class Parser extends RegexParsers with PackratParsers {
   // Term Parser
   ////////////////////////////////////////////////////////////////////////////
   object TermParser {
-    type SubtermParser = PackratParser[SpecialTerm] 
+    type SubtermParser = PackratParser[Formula] 
     
     lazy val parser = precedence.reduce(_|_)
     
@@ -77,6 +85,7 @@ class Parser extends RegexParsers with PackratParsers {
       divP ::
       addP ::
       subP ::
+      FormulaParser.varP ::
       numberP ::
       Nil
     
@@ -134,15 +143,47 @@ class Parser extends RegexParsers with PackratParsers {
       geqP ::
       leqP ::
       gtP ::
-      ltP ::   //MAGIC WARNING. tightestComparisonParser
+      ltP ::   //MAGIC WARNING. This is the tightestComparisonParser
       value ::
       Nil
+    
+    
+    /**
+     * This is used by the ParserParser when getting a list of differential equations.
+     */
+    type SubformulaSetParser = PackratParser[List[Formula]]
+    lazy val listOfDerivatives:SubformulaSetParser = {
+      lazy val leftOfEqP = derivativeP
+      lazy val rightOfEqP = derivativeP | termP | group
       
-    lazy val value:SubformulaParser = log(termP | varP | trueP | falseP | group)("values and groups")
+      lazy val patternP = leftOfEqP ~ Symbols.EQ ~ rightOfEqP ^^ {
+        case left ~ Symbols.EQ ~ right => Eq(left,right)
+      }
+      
+      lazy val repeatingPatternP:SubformulaSetParser = rep1sep(patternP, Symbols.COMMA)
+//      lazy val repeatingPatternP:SubformulaSetParser = (patternP | (patternP ~ Symbols.COMMA ~ repeatingPatternP)) ^^ {
+//        case left ~ Symbols.COMMA ~ right => {
+//          try {
+//            right.asInstanceOf[Set[Formula]].union(Set(left.asInstanceOf[Eq]))
+//          }
+//          catch {
+//            case e:Exception => throw new Exception("Expected set of formuals on the right.")
+//          }
+//        }
+//        case single => single match {
+//          case Eq(l,r) => Set[Formula](Eq(l,r))
+//          case _ => throw new Exception("Expected to match patternP.")
+//        }
+//      }
+      
+      log(repeatingPatternP)("a'=term, b'=term, ..., c'=term")
+    }
+    
+    lazy val value:SubformulaParser = log(termP | trueP | falseP | group)("values and groups")
     lazy val group = "(" ~> parser <~ ")"
     
     lazy val termP : SubformulaParser = TermParser.parser ^^ {
-      case term => FTerm(term)
+      case term => term
     }
     
     /**
@@ -191,7 +232,17 @@ class Parser extends RegexParsers with PackratParsers {
     }
     
     lazy val varP : SubformulaParser = identifier ^^ {
-      case s => FVar(s)
+      case s => FVar(new Var(s))
+    }
+    
+    lazy val derivativeP : SubformulaParser = {
+      val pattern = asTightAsParsers(ProgramParser.precedence, ProgramParser.pvarP).reduce(_|_) ~ Symbols.PRIME
+      log(pattern)(Symbols.PRIME) ^^ {
+        case pvar ~ Symbols.PRIME => pvar match {
+          case PVar(v) => Derivative(PVar(v))
+          case _       => throw new Exception("Expected PVar from the pvarParser, but got a non-pvar.")
+        }
+      }
     }
     
     lazy val trueP : SubformulaParser = {
@@ -248,7 +299,7 @@ class Parser extends RegexParsers with PackratParsers {
     private def ignoreMe(f:Formula) = f match {
       case Impl(l:Formula,r:Formula) => false
       case Not(f:Formula) => false
-      case FVar(s:String) => false
+      case FVar(v:Var) => false
       case And(l:Formula,r:Formula) => false
       case Or(l:Formula,r:Formula) => false
       case True() => false
@@ -260,6 +311,15 @@ class Parser extends RegexParsers with PackratParsers {
       case Geq(l:Formula,r:Formula) => false
       case Gt(l:Formula,r:Formula) => false
       case Lt(l:Formula,r:Formula) => false
+      
+      //Subterms
+      case Difference(f:Formula, f2:Formula) => false
+      case Number(s:String)                  => false
+      case Product(x:Formula, y:Formula)     => false
+      case Quotient(x:Formula, y:Formula)    => false
+      case Sum(x:Formula, y:Formula)         => false
+      
+      case Derivative(p:Program)             => false
     }
   }
   
@@ -272,13 +332,71 @@ class Parser extends RegexParsers with PackratParsers {
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubprogramParser] = 
+      parallelP ::
       choiceP ::
       sequenceP ::
-      assignmentP ::
       closureP ::
+      assignmentP ::
+      nonDetAssignmentP ::
+      evolutionP ::
+      testP ::
+      receiveP ::
+      sendP :: 
       pvarP ::
+      groupP     ::
       Nil
+    
+    lazy val groupP:SubprogramParser = {
+      val pattern = "(" ~ precedence.filter(_ != groupP).reduce(_|_) ~ ")"
+      log(pattern)("Program grouping") ^^ {
+        case "(" ~ p ~ ")" => p
+      }
+    }
+    
+    lazy val parallelP:SubprogramParser = {
+      lazy val subPattern = asTightAsParsers(precedence, parallelP).reduce(_|_)
+      lazy val pattern = subPattern ~ Symbols.PCOMP ~ subPattern
+      log(pattern)(Symbols.PCOMP) ^^ {
+        case left ~ Symbols.PCOMP ~ right => Parallel(left,right)
+      }
+    }
+    
+    lazy val channelP:PackratParser[Channel] = identifier ^^ {
+      case s => new Channel(s)
+    }
+    
+    lazy val receiveP:SubprogramParser = {
+      lazy val pattern = channelP ~ 
+                         Symbols.RECEIVE ~ 
+                         Symbols.OPEN_CBRACKET ~ 
+                           rep1sep(pvarP, Symbols.COMMA) ~ 
+                         Symbols.CLOSE_CBRACKET
+      log(pattern)(Symbols.RECEIVE + "(" + Symbols.PCOMP + ")") ^^ {
+        case c ~ Symbols.RECEIVE ~ Symbols.OPEN_CBRACKET ~ variables ~ Symbols.CLOSE_CBRACKET => 
+          Receive(c, variables.toSet)
+      }
+    }
+    
+    lazy val sendP:SubprogramParser = {
+      lazy val pattern = channelP ~
+                         Symbols.SEND ~
+                         Symbols.OPEN_CBRACKET ~
+                         rep1sep(pvarP, Symbols.COMMA) ~
+                         Symbols.CLOSE_CBRACKET ~
+                         FormulaParser.value
       
+      log(pattern)(Symbols.SEND + "(" + Symbols.PCOMP + ")") ^^ {
+        case c ~ Symbols.SEND ~ Symbols.OPEN_CBRACKET ~ variables ~ Symbols.CLOSE_CBRACKET ~ v => 
+          Send(c, variables.toSet, v)
+      }
+    }
+    
+    lazy val testP:SubprogramParser = {
+      lazy val pattern = Symbols.TEST ~ FormulaParser.parser
+      log(pattern)(Symbols.TEST) ^^ {
+        case Symbols.TEST ~ f => Test(f)
+      }
+    }
     lazy val choiceP:SubprogramParser = {
       lazy val pattern = rightAssociative(precedence,choiceP,Some(Symbols.CHOICE))
       log(pattern)(Symbols.CHOICE) ^^ {
@@ -310,18 +428,66 @@ class Parser extends RegexParsers with PackratParsers {
       }
     }
     
-    lazy val pvarP:SubprogramParser = identifier ^^ {
-      case s => PVar(s)
+    lazy val evolutionP:SubprogramParser = {
+      lazy val pattern = (Symbols.OPEN_CBRACKET ~
+                          FormulaParser.listOfDerivatives ~
+                          Symbols.CLOSE_CBRACKET) |
+                         (Symbols.OPEN_CBRACKET ~ 
+                          FormulaParser.listOfDerivatives ~
+                          Symbols.COMMA ~
+                          FormulaParser.parser)
+      log(pattern)("Continuous Evolution") ^^ {
+        case Symbols.OPEN_CBRACKET ~ list ~ Symbols.CLOSE_CBRACKET => 
+          Evolution(list.asInstanceOf[List[Formula]].toSet,True())
+        case Symbols.OPEN_CBRACKET ~ list ~ Symbols.COMMA ~ condition ~ Symbols.CLOSE_CBRACKET =>
+          Evolution(list.asInstanceOf[List[Formula]].toSet, condition.asInstanceOf[Formula])
+      }
+    }
+    
+    lazy val nonDetAssignmentP:SubprogramParser = {
+      lazy val pattern = pvarP ~ Symbols.ASSIGN ~ Symbols.KSTAR
+      log(pattern)(Symbols.ASSIGN + Symbols.KSTAR) ^^ {
+        case v ~ Symbols.ASSIGN ~ Symbols.KSTAR => v match {
+          case PVar(v) => NonDetAssignment(PVar(v))
+          case _ => throw new Exception("Expected PVar out of pvarP but found Program.")
+        }
+      }
+    }
+    
+    lazy val pvarP:PackratParser[PVar] = identifier ^^ {
+      case s => PVar(new Var(s))
     }
     
     
-    //This is just here as a reminder to add parsing support for new programs
-    private def ignoreMe(p:Program) = p match {
+    /**
+     * This is an exhaustive match so that compile-time errors show up in this
+     * file whenever Program is extended with a new constructor.
+     * This should never be called.
+     */
+    private def ignoreMe(p:Program) = {p match {
       case Assignment(v:PVar,p:Program) => false
       case STClosure(p:Program) => false
-      case PVar(s:String) => false
+      case PVar(v:Var) => false
       case Sequence(l:Program,r:Program) => false
       case Choice(l:Program,r:Program) => false
-    }
+      case Evolution(s:Set[Formula], f:Formula) => false 
+      case NonDetAssignment(v:PVar) => false
+      case Test(f:Formula) => false
+      case Parallel(l:Program, r:Program) => false
+      case Receive(c:Channel, sv:Set[PVar]) => false
+      case Send(c:Channel, vs:Set[PVar], v:Formula) => false
+      
+      //These are all internal representations and do not need to be parsed:
+      case Bottom() => true
+      case CursorAfter(_) => true
+      case CursorBefore(_) => true
+      case Deadlock() => true
+      case Epsilon() => true
+      case Forward(_,_,_) => true
+      case JoinedParallel(_,_) => true
+      case Label(_) => true
+      case NoCursor(_) => true
+      case Remainder(_) => true
+    }; throw new Exception("Do not call me!")}
   }
 }

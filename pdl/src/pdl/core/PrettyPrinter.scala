@@ -5,6 +5,8 @@ object PrettyPrinter {
   import pdl.core.Symbols._
   
   def formulaToString(f:Formula):String = f match {
+    
+    case Derivative(v:PVar) => programToString(v) + PRIME
     case FVar(v:Var)	=> v.name
     case True()		=> TRUE
     case False()	=> FALSE
@@ -90,8 +92,6 @@ object PrettyPrinter {
       formulaToString(domain) + 
       CLOSE_CBRACKET
     }
-    
-    case Derivative(v:PVar) => programToString(v) + PRIME
     
     //////////////////////
     

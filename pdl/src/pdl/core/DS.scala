@@ -84,6 +84,9 @@ sealed trait Program {
 //	}
 	
 
+  /**
+   * Not even sure what this means anymore.
+   */
 	def isAtomic:Boolean = this match {
 	  case PVar(_)			=> true
 	  case STClosure(_)		=> true //?
@@ -91,7 +94,6 @@ sealed trait Program {
 	  case Choice(_,_)		=> false
 	  case Sequence(_,_)	=> false
 	  case Parallel(_,_)	=> false
-	  case Derivative(_)	=> false
 	  case Test(_)			=> false
 	  case Evolution(_,_)	=> false
 	  case NonDetAssignment(_) => true
@@ -105,6 +107,8 @@ sealed trait Program {
 	  case Deadlock() => true
 	  case Bottom() => true
 	  case Forward(_,_,_) => false 
+	  case Label(_) => false
+	  case Remainder(p:Program) => p.isAtomic
 //	  case CursorBefore(p:Program) => p.isAtomic //?
 //	  case CursorAfter(p:Program) => p.isAtomic
 //	  case NoCursor(p:Program) => p.isAtomic
@@ -117,7 +121,6 @@ sealed trait Program {
 	  case Choice(a,b) => a.isCursorFree && b.isCursorFree
 	  case NoCursor(a) => true
 	  case STClosure(p) => p.isCursorFree
-	  case Derivative(f) => true
 	  case Evolution(a,b) => true
 	  case JoinedParallel(a,b) => a.isCursorFree && b.isCursorFree
 	  case NonDetAssignment(a) => a.isCursorFree
@@ -131,6 +134,8 @@ sealed trait Program {
 	  case Epsilon() => true
 	  case Deadlock() => true
 	  case Bottom() => true
+	  case Label(_) => true
+	  case Remainder(p:Program) => p.isCursorFree
     }
 	
 	/**
@@ -169,15 +174,6 @@ sealed trait Program {
 	  }
 	  case Parallel(l,r) => other match {
 	    case Parallel(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
-	  }
-	  case Derivative(variable) => other match {
-	    case Derivative(other_variable) => variable match {
-	      case PVar(v)   => other_variable match {
-	        case PVar(v_o) => v.equals(v_o)
-	        case _        => false
-	      }
-	      case _        => false
-	    }
 	  }
 	  case Test(f) => other match {
 	    case Test(f_o) => f.equals(f_o)
@@ -246,6 +242,14 @@ sealed trait Program {
 	    case Bottom() => true
 	    case _ => false
 	  }
+	  case Label(x:Int) => other match {
+	    case Label(y:Int) => x==y
+	    case _ => false
+	  }
+	  case Remainder(p:Program) => other match{
+	    case Remainder(p2:Program) => p.equals(p2)
+	    case _ => false
+	  }
 	}
 	
 	/**
@@ -258,7 +262,6 @@ sealed trait Program {
 	  case Choice(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
 	  case NoCursor(a) => true
 	  case STClosure(p) => p.isSynchronizationFree
-	  case Derivative(f) => true
 	  case Evolution(a,b) => true
 	  case JoinedParallel(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
 	  case NonDetAssignment(a) => a.isSynchronizationFree
@@ -272,6 +275,8 @@ sealed trait Program {
 	  case Epsilon() => true
 	  case Deadlock() => true
 	  case Bottom() => true
+	  case Label(_) => true
+	  case Remainder(p) => p.isSynchronizationFree
     }
 	
 	
@@ -290,7 +295,6 @@ sealed trait Program {
 	  case STClosure(p) => STClosure(p.applyToSubprograms(fn))
 	  
 	  case Deadlock() => this
-	  case Derivative(_) => this
 	  case Epsilon() => this
 	  case Forward(a,b,c) => this
 	  case PVar(v) => this
@@ -319,7 +323,6 @@ case class Test(f:Formula)                                       extends Program
 case class NonDetAssignment(v : PVar)                            extends Program
 case class Choice(left : Program, right : Program)               extends Program
 
-case class Derivative(variable : PVar)                           extends Program
 case class Evolution(diffEq : Set[Formula], domain : Formula)    extends Program
 
 case class Parallel(left : Program, right : Program)             extends Program
@@ -371,6 +374,7 @@ sealed trait Formula {
     case Product(_,_)   => true
     case Quotient(_,_)  => true
     case FVar(_)		=> true //?
+    case Derivative(v:PVar) => true //?
   }
   
   def isAtomic:Boolean = this match {
@@ -379,7 +383,7 @@ sealed trait Formula {
     case FVar(_)			=> true
     case True()			=> true
     case False()		=> true
-//    case Derivative(_)	=> true 
+    case Derivative(_)	=> true 
     case Impl(_,_)		=> false
     case And(_,_)		=> false
     case Or(_,_)		=> false
@@ -484,6 +488,15 @@ sealed trait Formula {
       case Product(l_o, r_o) => l.equals(l_o) && r.equals(r_o)
       case _ => false
     }
+    case Derivative(variable) => other match {
+      case Derivative(other_variable) => variable match {
+        case PVar(v)   => other_variable match {
+          case PVar(v_o) => v.equals(v_o)
+          case _        => false
+        }
+        case _        => false
+      }
+    }
   }
 }
 
@@ -510,3 +523,5 @@ case class Sum(left:Formula, right:Formula)         extends Formula
 case class Difference(left:Formula, right:Formula)  extends Formula
 case class Product(left:Formula,right:Formula)      extends Formula
 case class Quotient(left:Formula,right:Formula)     extends Formula
+
+case class Derivative(variable : PVar)              extends Formula
