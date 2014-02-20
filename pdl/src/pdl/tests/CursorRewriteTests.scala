@@ -4,24 +4,34 @@ import pdl.core._
 
 object CursorRewriteTests {
   //////////////////////////////////////////////////////////////////////////////
-  // Setup
+  // Definitions
   //////////////////////////////////////////////////////////////////////////////
   
   val x = new PVar(new Var("x"))
   val y = new PVar(new Var("y"))
   val z = new PVar(new Var("z"))
-  
+  val c = new Channel("c")
   
   val cfp   = sendx(new Channel("NOT_IN_CTX")) //communication-free program.
+  val nosyncP  = NonDetAssignment(x)
+  
   def sendx(c:Channel)  = Send(c, Set(x), Number("1"))
   def receivex(c:Channel) = Receive(c, Set(x))
+      
   
   abstract class CursorRewriteTest extends TestCase {
     val original : Program
     val expected : Program
     val context  : Set[Channel]
     
-    override def message = PrettyPrinter.programToString(original) + " Expected: " + PrettyPrinter.programToString(expected)
+    override def message = "Original: " + original.prettyString + 
+      " Expected: " + expected.prettyString + 
+      " Result: " + (try {
+        CursorRewrite.rewrite(original, context).prettyString
+      }catch {
+        case e:Throwable => "ERROR"
+      })
+      
     override def result  = 
       CursorRewrite.rewrite(original, context).equals(expected)
   }
@@ -224,6 +234,49 @@ object CursorRewriteTests {
   
   
   //////////////////////////////////////////////////////////////////////////////
+  // Precursors to other tests, usually because the other test failed with a
+  // CRDoesNotApply exception.
+  //////////////////////////////////////////////////////////////////////////////
+  /**
+   * Initially failed.
+   */
+  object L2_precursorSingleStep extends CursorRewriteTest {
+    val original = CursorBefore(Sequence(Epsilon(), Assignment(x, Number("1"))))
+    val expected = Sequence(CursorAfter(Epsilon()), Assignment(x, Number("1")))
+    val context  = Set[Channel]()
+    
+    override def result = 
+      C1.applies(original,context) && C1.apply(original,context).equals(expected)
+  }
+  /**
+   * This test SHOULD fail after we've cleaned up the test suite for LR rules.
+   * To make the test fail, go into DS and remove the Epsilon logic from C1.
+   */
+  object L2_precursor extends CursorRewriteTest {
+    val original = CursorBefore(Sequence(Epsilon(), Assignment(x, Number("1"))))
+    val expected = CursorAfter(Sequence(Epsilon(), Assignment(x, Number("1"))))
+    val context  = Set[Channel]() 
+  }
+  
+  /**
+   * Initially failed. Real bug in C1!
+   */
+  object L3_precursor extends CursorRewriteTest {
+    val original = Sequence(CursorBefore(nosyncP), 
+                                Sequence(sendx(c), 
+                                Sequence(nosyncP,
+                                Sequence(Epsilon(), cfp))))
+    val expected = Sequence(nosyncP,
+                   Sequence(CursorBefore(sendx(c)),
+                   Sequence(nosyncP,
+                   Sequence(Epsilon(), cfp))))
+    val context = Set[Channel](c)
+    
+    override def message = 
+      "C1 rewrites .(a;b) into (.a;b) before applying, and C2 rewrites right-hand sequences correctly"
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
   // Run tests
   //////////////////////////////////////////////////////////////////////////////
   def tests =//C1 tests
@@ -249,6 +302,10 @@ object CursorRewriteTests {
              //C6 tests
              c6_applies ::
              c6_appliesByC6 ::
+             //Precursor tests
+             L2_precursorSingleStep ::
+             L2_precursor ::
+             L3_precursor ::
              Nil
   def main(args:Array[String]):Unit = {
     TestHarness.runSuite(tests)

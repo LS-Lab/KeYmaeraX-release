@@ -4,7 +4,9 @@ package pdl.core
  * Thrown by CursorRules when a rule does not apply.
  */
 class CRDoesNotApply(s:String="Did you check with applies before applying?") 
-extends Exception
+extends Exception {
+  override def toString = s
+}
 
 object CursorRewrite {
 //  def log(s:String) = println(s)
@@ -77,6 +79,8 @@ sealed trait CursorRule {
 
 /**
  * C1. Move the cursor past primitive programs and irrelevant communication.
+ * Note that we move cursors into sequence, but do not add cursors to the left
+ * hand of a bare sequence.
  */
 object C1 extends CursorRule {
   /**
@@ -90,18 +94,27 @@ object C1 extends CursorRule {
       case CursorBefore(p)      => applies(p,ctx)
       case Send(c,_,_)          => !ctx.contains(c)
       case Receive(c,_)         => !ctx.contains(c)
+      case Epsilon()            => true //TODO-nrf warning: allowing Epsilons as input for testing.
       case Assignment(v,p)      => true
       case NonDetAssignment(p)  => true
       case Test(f)              => true
+      case Sequence(l,r)        => {
+        val newL = if(l.isCursorFree) CursorBefore(l) else l
+        applies(newL,ctx)
+      }
       case _                    => false
     }
+    case Sequence(l,r)          => applies(l, ctx)
     case _ => false
   }
   
   def apply(p:Program, ctx:Set[Channel]) = if(applies(p,ctx)) {
     p match {
-      case CursorBefore(p) => CursorAfter(p)
-      case _               => throw new CRDoesNotApply
+      //Move cursors into sequences.
+      case CursorBefore(Sequence(l,r)) => Sequence(apply(if(l.isCursorFree) CursorBefore(l) else l,ctx), r)
+      case CursorBefore(p)             => CursorAfter(p)
+      case Sequence(l,r)               => Sequence(apply(l,ctx),r)
+      case _                           => throw new CRDoesNotApply
     }
   } else throw new CRDoesNotApply
 
@@ -152,10 +165,11 @@ object C2 extends CursorRule {
       } 
       leftHasCursor && right.isCursorFree
     }
-    case CursorBefore(sequence) => sequence match {
-      case Sequence(a,b) => true
-      case _ => false
-    }
+    case CursorBefore(sequence) => false
+//      sequence match {
+//        case Sequence(a,b) => true
+//        case _ => false
+//      }
     case _ => false
   }
   
@@ -163,15 +177,22 @@ object C2 extends CursorRule {
     case Sequence(l_cursor, right) => {
       val left = l_cursor match {
         case CursorAfter(leftWithoutCursor) => leftWithoutCursor
-        case _ => throw new CRDoesNotApply
+        case _ => throw new CRDoesNotApply(p.prettyString)
       }
       if(!right.isCursorFree) 
         throw new CRDoesNotApply
       else {
-        val rightResult = CursorRewrite.rewrite(CursorBefore(right), ctx)
+        val rightResult = right match {
+          case Sequence(rl,rr) => Sequence(CursorBefore(rl), rr)
+          case _               => CursorBefore(right)
+        }
+        
+        //TODO can we get rid of the requirement to do a big step here?
+        val rewrittenRightResult = CursorRewrite.rewrite(rightResult,ctx)
+        
         //This is another difference from the rules. We need a;b. to be (a;b).
-        //or else recursion won't do the right thing.
-        rightResult match {
+        //or else recursion won't do the right thing. TODO this seems like a bug
+        rewrittenRightResult match {
           case CursorAfter(rightResultWithoutCursor) => 
             CursorAfter(Sequence(left,rightResultWithoutCursor))
           case _ => Sequence(left, rightResult)

@@ -55,6 +55,8 @@ case class JoinedParallel(a:Program,b:Program) extends CursorProgram
  * Differential Dynamic Logic logic programs.
  */
 sealed trait Program {
+  def prettyString = PrettyPrinter.programToString(this)
+  
   def communicationType : Set[Channel] = null //TODO
   
   def splitAtCursor : Pair[Option[Program],Option[Program]] = this match {
@@ -117,7 +119,7 @@ sealed trait Program {
 	def isCursorFree:Boolean = this match {
 	  case CursorAfter(a) => false
 	  case CursorBefore(a) => false
-	  case Assignment(v,p) => p.isCursorFree
+	  case Assignment(v,f) => true
 	  case Choice(a,b) => a.isCursorFree && b.isCursorFree
 	  case NoCursor(a) => true
 	  case STClosure(p) => p.isCursorFree
@@ -258,7 +260,7 @@ sealed trait Program {
 	def isSynchronizationFree:Boolean = this match {
 	  case CursorAfter(a) => true //only difference b/w this and cursor-free.
 	  case CursorBefore(a) => false
-	  case Assignment(v,p) => p.isSynchronizationFree
+	  case Assignment(v,f) => true
 	  case Choice(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
 	  case NoCursor(a) => true
 	  case STClosure(p) => p.isSynchronizationFree
@@ -280,9 +282,12 @@ sealed trait Program {
     }
 	
 	
-	
+	/**
+	 * TODO: Add a specification which explains exactly what this does. It does
+	 * not appear to do the correct thing.
+	 */
 	def applyToSubprograms(fn:Function[Program, Program]):Program = this match {
-	  case Assignment(l,r) => Assignment(l,r.applyToSubprograms(fn))
+	  case Assignment(v,f) => Assignment(v,f)
 	  case Choice(l,r) => Choice(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
 	  case JoinedParallel(l,r) => JoinedParallel(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
 	  case Parallel(l,r) => Parallel(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
@@ -313,11 +318,23 @@ sealed trait Program {
 //| x` | {a'=x, b'=y, H}  
 //| a||b | (c,X)!\phi | c?X
 case class PVar(v:Var)                                           extends Program
-case class Assignment(v : PVar, p : Program)                     extends Program
+{
+  def toFvar = FVar(v)
+}                                                                
+case class Assignment(v : PVar, f: Formula)                      extends Program
 case class STClosure(p : Program)                                extends Program
-case class Sequence(left : Program, right : Program)             extends Program {
-  def ::(right:Program) = Sequence(left,right)
-}
+case class Sequence(left : Program, right : Program)             extends Program
+{
+  if(left.isInstanceOf[Sequence]) 
+    throw new Exception("Sequences look like S(1, S(2, 3))."
+        + "Left should never be sequence.")
+  
+  def append(newProgram:Program):Sequence = Sequence(left, right match {
+    case Sequence(rl,rr) => Sequence(rl,rr).append(newProgram)
+    case _               => Sequence(right, newProgram)
+  })
+}                                                                
+  
 case class Test(f:Formula)                                       extends Program
 
 case class NonDetAssignment(v : PVar)                            extends Program

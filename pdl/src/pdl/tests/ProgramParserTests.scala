@@ -15,7 +15,18 @@ object ProgramParserTests {
     def program : Program
     def s       : String
     
-    override def message = s
+    override def message = {
+      val resultStr = try {
+        Parser.parseProgram(s).prettyString
+      } catch {
+        case e:Exception => "Failed parse."
+      }
+      
+      val expectedStr = program.prettyString
+      
+      "Result: " + resultStr + ". Expected: " + expectedStr
+    }
+    
     override def result  = testProgram(s,program)
         
     protected def testProgram(s:String, expected:Program) = {
@@ -57,12 +68,38 @@ object ProgramParserTests {
     val s       = "(a" + CHOICE + "b)" + SCOLON + "c"
     val program = Sequence(Choice(pA,pB),pC)
   }
+
   
+  object sequenceIsRightAssoc extends ProgramTestCase {
+    val s = "a:=1; b:=2; ?2>1; c:=a+b"
+    val program = 
+      Sequence( Assignment(pA, Number("1")),
+      Sequence( Assignment(pB, Number("2")),
+      Sequence( Test(Gt(Number("2"),Number("1"))), 
+                Assignment(pC, Sum(pA.toFvar, pB.toFvar))
+      )))
+  }
+  //////////////////////////////////////////////////////////////////////////////
+  // Atomics
+  //////////////////////////////////////////////////////////////////////////////
   object ptest extends ProgramTestCase {
     val s       = TEST + "a" + GT + "b"
     val program = Test(Gt(fA,fB))
   }
   
+  object assign extends ProgramTestCase {
+    val s       = "a" + ASSIGN + 2.toString()
+    val program = Assignment(pA, Number("2"))
+  }
+  
+  object ndassign extends ProgramTestCase {
+    val s       = "a" + ASSIGN + KSTAR
+    val program = NonDetAssignment(pA)
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Parallel stuff
+  //////////////////////////////////////////////////////////////////////////////
   object AparallelB extends ProgramTestCase {
     val s       = "a" + PCOMP + "b"
     val program = Parallel(pA, pB)
@@ -78,16 +115,18 @@ object ProgramParserTests {
     val program = Send(new Channel("c"), Set(pA,pB), Number("1"))
   }
   
-  
   def tests = 
-            sequence           ::
-            choice             ::
-            choiceOfSequences  ::
-            choiceOfSequences2 ::
-            ptest              ::
-            AparallelB         ::
-            receiveABonC       ::
-            sendABonC          ::
+            sequence             ::
+            choice               ::
+            choiceOfSequences    ::
+            choiceOfSequences2   ::
+            ptest                ::
+            assign               ::
+            ndassign             ::
+            AparallelB           ::
+            receiveABonC         ::
+            sendABonC            ::
+            sequenceIsRightAssoc ::
             Nil
   
   def main(args:Array[String]):Unit = {

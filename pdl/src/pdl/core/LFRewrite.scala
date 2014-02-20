@@ -14,12 +14,12 @@ object LFRewrite {
   }
   
   def bigStep(p:Program, ctx:Set[Channel]):LFResult = {
-    if(L1().applies(p, ctx))
-      {log("Applying L1");(L1().apply(p,ctx))}
-    else if(L2().applies(p, ctx))
-      {log("Applying L2 to " + PrettyPrinter.programToString(p));(L2().apply(p,ctx))}
-    else if(L3().applies(p, ctx))
-      {log("Applying L3");(L3().apply(p,ctx))}
+    if(L1.applies(p, ctx))
+      {log("Applying L1");(L1.apply(p,ctx))}
+    else if(L2.applies(p, ctx))
+      {log("Applying L2 to " + PrettyPrinter.programToString(p));(L2.apply(p,ctx))}
+    else if(L3.applies(p, ctx))
+      {log("Applying L3");(L3.apply(p,ctx))}
     else if(L4().applies(p, ctx))
       {log("Applying L4");(L4().apply(p,ctx))}
     else {log("No LF rules are applicable to " + PrettyPrinter.programToString(p));(LinearForm(None, Some(p), None,None))}
@@ -33,6 +33,27 @@ sealed trait LFResult {
   def toSet:Set[LinearForm] = this match {
     case LinearForm(_,_,_,_)        => Set(this.asInstanceOf[LinearForm])
     case LFChoice(left,right)       => left.toSet.union(right.toSet)
+  }
+  
+  override def equals(right:Any):Boolean = if(right.isInstanceOf[LFResult]) {
+    resultEqual(right.asInstanceOf[LFResult])
+  } else {
+    super.equals(right)
+  }
+  
+  def resultEqual(other:LFResult) = this match {
+    case LinearForm(u,sync,v,gamma) => other match {
+      case LinearForm(o_u,o_sync,o_v,o_gamma) => 
+        u.equals(o_u) &&
+        sync.equals(o_sync) &&
+        v.equals(o_v) &&
+        gamma.equals(o_gamma)
+      case LFChoice(_,_) => false
+    }
+    case LFChoice(l,r) => other match {
+      case LFChoice(o_l, o_r)  => l.equals(o_l) && r.equals(o_r)
+      case LinearForm(_,_,_,_) => false
+    }
   }
 }
 
@@ -95,8 +116,6 @@ sealed trait LFRule {
    */
   type ProgramTriple = Triple[Option[Program],Option[Program],Option[Program]]
   
- 
-  
   /**
    * Splits a Sequence into three parts: a precursor, a synch operation, and a 
    * successor or remainder. E.g.:
@@ -105,151 +124,92 @@ sealed trait LFRule {
    * a;!b => [a,b,MPME]
    * a; !b; !c; d => [a, !b, !c, d]
    * vocabulary: [pred, synch, succ]; input sequence: (left,right)
+   * 
+   * Relies upon the invariant that sequences look like s(1,s(2,s(...s(n,n+1))))
+   * This is enforced in the constructor for sequences.
+   * See source control history for a much more complicated version of this
+   * algorithm which does not rely on sequences being in normal form.
+   * 
+   * This is tested by the L2 rule rewrite tests.
    */
-  def splitSequence(s:Sequence) : ProgramTriple = {
-  
-    val (unnormalLeft,unnormalRight) = s match {
+  def splitSequence(s:Sequence, triple:ProgramTriple=(None,None,None)) : ProgramTriple = {
+    val(left,right) = s match {
       case Sequence(l,r) => (l,r)
     }
     
-    //Put left and right into a form in which cursors do not precede a Sequence.
-    //This is necessary for recursion to go all the way through, and is the 
-    //correct behavior sense there is no LinearForm rule defined on sequences.
-    def removeLeadingCursors(p:Program):Program = p match {
-      case CursorBefore(next) => removeLeadingCursors(next)
-      case _                  => p
-    }
-  
-    val left = removeLeadingCursors(unnormalLeft) match {
-      case Sequence(l_left, l_right) => Sequence(l_left, l_right)
-      case _                         => unnormalLeft
-    }
-    val right = removeLeadingCursors(unnormalRight) match {
-      case Sequence(r_left, r_right) => Sequence(r_left, r_right)
-      case _                         => unnormalRight
-    }
-    
-    //Recurse structurally on the left, and handle the base case.
-    val leftResult = left match {
-      case Sequence(_,_) => splitSequence(left.asInstanceOf[Sequence])
-      case _             => 
-        if(left.isSynchronizationFree)
-          Triple.apply(Some(left),None,None)
-        else
-          Triple.apply(None,Some(left),None)
-    }
-    
-    //Recurse structurally on the right, and handle the base case.
-    val rightResult = right match {
-      case Sequence(_,_) => splitSequence(right.asInstanceOf[Sequence])
-      case _ => 
-        if(right.isSynchronizationFree) 
-          Triple.apply(Some(right), None, None)
-        else
-          Triple.apply(None,Some(right), None)
-    }
-    
-    //Extract out the options on the left and right sides.
-    val (lpredOpt,lsyncOpt,lsucOpt) = Triple.unapply(leftResult) match {
-      case None          => (None,None,None)
-      case Some((a,b,c)) => (a,b,c)
-    }
-    
-    val (rpredOpt,rsyncOpt,rsucOpt) = Triple.unapply(rightResult) match {
-      case None          => (None,None,None)
-      case Some((a,b,c)) => (a,b,c)
-    }
-    
-    /* Merge the left and right results.
-     * 
-     * In this explanation, ? indicates we don't care if the place is defined or
-     * not, and _ indicates we expect that it is not defined. A name indicates
-     * we expect the place is defined.
-     * 
-     * We consider 5 possible cases for the results of recursion on the left and
-     * right hand sides.
-     * 
-     * The first sync will be on the left, on the right, or nowhere (in a sync-free
-     * sequence). If a sync does occur, then we have to compose the entire right
-     * with the suc of left, or the entire left with the pred of right. So we
-     * have 5 cases to consider:
-     *  - no sync
-     *  - sync on left, left.suc defined
-     *  - sync on left, left.suc not defined
-     *  - sync on right, right.pred defined
-     *  - sync on right, right.pred not defined
-     * 
-     * If left.sync is defined, then we want to compose the left successor with
-     * the right side:
-     *     Case 1: left = [?, lsync, _]     ---> [?, lsync, right].
-     *     Case 2: left = [?, lsync, lsuc] ---> [?, lsync, lsuc; right].
-     *     
-     * If left.sync is not defined, then we know that the entire left hand side
-     * is sync free. Now we have to consider right.sync. If
-     * right.sync is not defined, then there is no sync on the left or the right
-     * In this case, we can simply put everything in the first position:
-     *     Case 3: right = [?, _, _] --> [left;right, _, _]
-     * 
-     * However, if right.sync is defined then we want to put right.pred and left
-     * into pred. To do this, we have to consider whether right.pred is defineD:
-     *     case 4: right = [rpred, rsync, ?] --> [left;rpred, rsync, ?]
-     *     case 5: right = [_, rsync, ?] --> [left, rsync, ?]
-     */
+    if(left.isInstanceOf[Sequence]) throw new Exception("s not in normal form.")
 
-    //left = [pred, sync, succ] ---> 
-    lsyncOpt match {
-      case Some(_) => lsucOpt match {
-        case None => Triple.apply(lpredOpt, lsyncOpt, Some(right)) //case 1
-        case Some(lsuc) => Triple.apply(lpredOpt, lsyncOpt, Some(Sequence(lsuc,right))) //case 2
+    val tripleWithLeft  = addToTriple(left, triple)
+    val tripleWithLeftAndRight = addToTriple(right, tripleWithLeft) //recursive
+    
+    tripleWithLeftAndRight
+  }
+  
+  /**
+   * @param triple A sequential prefix of p
+   * @param p The suffix of p
+   * @returns the program triple for invsplit(triple);p
+   * 
+   * Adds a program to the correct place in a triple. It suffices to consider 
+   * whether p is synchronization free and 2 is defined.
+   * 
+   * If p is not synchronization free, then we should place p in the center if
+   * the center is not defined (00). However, if the center is defined, we 
+   * should instead place p on the right (01).
+   * 
+   * If p is synchronization free, then we should place p on the left if the 
+   * center is not defined (10). Otherwise, p must go on the right (11).
+   * 
+   * This is tested by the L2 rule rewrite tests.
+   */
+  private def addToTriple(p:Program, triple:ProgramTriple):ProgramTriple = p match {
+    case Sequence(l,r) => splitSequence(Sequence(l,r), triple)
+    case _             => {
+      if(!p.isSynchronizationFree && !triple._2.isDefined) {
+        (triple._1, Some(p), triple._3)
       }
-      case None    => rsyncOpt match {
-        case None        => Triple.apply(Some(s),None,None) //case 3
-        case Some(rsync) => {
-          //Choose the value of predecessor for cases 4 and 5.
-          val pred = rpredOpt match {
-            case None        => left //case 4
-            case Some(rpred) => Sequence(left, rpred) //case 5
-          }
-          Triple.apply(rpredOpt, rsyncOpt, Some(pred)) //finish up cases 4&5
+      else if(!p.isSynchronizationFree && triple._2.isDefined) {
+        val suffix = triple._3 match {
+          case Some(Sequence(_,_)) => triple._3.get.asInstanceOf[Sequence].append(p)
+          case Some(_)             => Sequence(triple._3.get, p)
         }
+        (triple._1, Some(p), Some(suffix))
+      }
+      else if(p.isSynchronizationFree && !triple._2.isDefined) {
+        val prefix = triple._1 match {
+          case Some(Sequence(_,_)) => triple._1.get.asInstanceOf[Sequence].append(p)
+          case Some(_)             => Sequence(triple._1.get, p)
+          case None                => p
+        }
+        (Some(prefix), triple._2, triple._3)
+      }
+      else if(p.isSynchronizationFree && triple._2.isDefined) {
+        val suffix = triple._3 match {
+          case Some(Sequence(l3,r3)) => Sequence(l3,r3).append(p)
+          case Some(threePrime)      => Sequence(threePrime, p)
+          case None                  => p
+        }
+        (triple._1, triple._2, Some(suffix))
+      }
+      else {
+        throw new Exception("Unreachable code (00 01 10 11)")
       }
     }
-//    
-//    //Finally, ensure that the result's sync is not a sequence.
-//    //This should never hapen for normal sequences, but could happen if the 
-//    //sequence is preceeded by some number of cursors.
-//    val(predOpt, syncOpt, sucOpt) = Triple.unapply(result) match {
-//      case Some((a,b,c)) => (a,b,c)
-//      case None          => (None,None,None)
-//    }
-//    
-//    val syncIsSequence = syncOpt match {
-//      case Some(CursorBefore(Sequence(l,r))) => true
-//      case Some(Sequence(l,r)) => throw new Exception("split doesn't meet spec.")
-//    }
-//    
-//    if(syncIsSequence) {
-//      val syncResult = syncOpt.get match {
-//        case CursorBefore(Sequence(l,r)) => splitSequence(Sequence(l,r)) 
-//      }
-//      
-//      val (syncpred, syncsync, syncsuc) = Triple.unapply(syncResult) match {
-//        case Some((a,b,c)) => (a,b,c)
-//        case None          => (None,None,None)
-//      }
-//      
-//      
-//    }
-//    else {
-//      result
-//    }
   }
 
   /**
    * Rewrites a program p -> (cursor-free portion, g). Strips the leading
    * cursor.
+   * Not convinced that this is bug-free.
    */
   def cursorRewriteSubprogram(p:Program, ctx:Set[Channel]) = {
+//    //Ensure that the passed-in program has a cursor; if it doesn't, insert one
+//    //at the beginning of the program.
+//    val p = if(pInput.isCursorFree) CursorBefore(pInput) else pInput
+    if(p.isCursorFree) {
+      throw new Exception("Trying to re-write a cursor-free subprogram. This will fail. Are you sure you didn't meant to insert a cursor at the beginning?")
+    }
+    
     val rewriteResult = CursorRewrite.rewrite(p, ctx) 
     
     val combinedResult = rewriteResult match {
@@ -261,6 +221,7 @@ sealed trait LFRule {
         val (v,pPrime1, pPrime2) = splitSequence(Sequence(l,r))
         (v, sequenceOfOptions(pPrime1, pPrime2))
       }
+      case CursorAfter(pPrime) => (Some(pPrime), None)
       case _ => throw new LRDoesNotApply
     }
     
@@ -283,7 +244,7 @@ sealed trait LFRule {
    * Projects out the defined portions of a list of program options, then 
    * combines them in a sequence. Examples:
    * [None, P1, P2] => Sequence(P1,P2)
-   * [P1, None, P2, P2] => Sequence(Sequence(p1,p2),p3)
+   * [P1, None, P2, P2] => Sequence(p1,Sequence(p2,p3))
    */
   def sequentializeDefined(l : List[Option[Program]]) = {
     val filtered = l.filter(_.isDefined).map(x => x match {
@@ -294,7 +255,7 @@ sealed trait LFRule {
   }
 }
 
-case class L1 extends LFRule {
+object L1 extends LFRule {
   def apply(cp:Program, ctx:Set[Channel]) = cp match {
     case CursorAfter(program) => 
       new LinearForm(Some(program), Some(Bottom()), None, None)
@@ -307,8 +268,9 @@ case class L1 extends LFRule {
   }
 }
 
-case class L2 extends LFRule {
+object L2 extends LFRule {
   def apply(p:Program, ctx:Set[Channel]) = {
+    LFRewrite.log("Applying L2 to " + p.prettyString); //TODO remove.
     p match {
       case CursorBefore(syncOrEpsilon) => syncOrEpsilon match {
         case Send(_,_,_)    => LinearForm(None,Some(syncOrEpsilon),None,None)
@@ -331,11 +293,27 @@ case class L2 extends LFRule {
         //cursor-rewrite anything after the sync operation.
         //Note: cursorRewriteSubprogram strips the leading cursor from gamma.
         val (v,gammaPrime) = sucOpt match {
-          case Some(gamma)               => cursorRewriteSubprogram(gamma, ctx)
+          case Some(gamma)               => cursorRewriteSubprogram(CursorBefore(gamma), ctx)
           case None                      => (None,None)
         }
 
-        LinearForm(predOpt, Some(sync), v, gammaPrime)
+        val remainder:Option[Program] = if(!v.isDefined && !gammaPrime.isDefined) {
+          None
+        }
+        else if(!v.isDefined && gammaPrime.isDefined) {
+          Some(gammaPrime.get)
+        }
+        else if(v.isDefined && !gammaPrime.isDefined) {
+          Some(v.get)
+        }
+        else if(v.isDefined && gammaPrime.isDefined) {
+          Some(Sequence(v.get, gammaPrime.get))
+        }
+        else {
+          None
+        }
+        
+        LinearForm(predOpt, Some(sync), None, remainder)
       } 
       
       case _ => throw new LRDoesNotApply //non-cursor and non-sequence
@@ -373,15 +351,15 @@ case class L2 extends LFRule {
 }
 
 
-case class L3 extends LFRule {
+object L3 extends LFRule {
   def applyWith(u:Option[Program], p:CursorBefore, ctx:Set[Channel], gamma:Option[Program]) = {
     val (a,b) = p match {
       case CursorBefore(Choice(l,r)) => (l,r)
       case _           => throw new LRDoesNotApply
     }
     
-    val (v,aPrime) = cursorRewriteSubprogram(a, ctx)
-    val (w,bPrime) = cursorRewriteSubprogram(b, ctx)
+    val (v,aPrime) = cursorRewriteSubprogram(CursorBefore(a), ctx)
+    val (w,bPrime) = cursorRewriteSubprogram(CursorBefore(b), ctx)
     
     //Filter out all the nones and convert the list to a sequence.
     val left  = sequentializeDefined(u :: v :: aPrime :: gamma :: Nil)

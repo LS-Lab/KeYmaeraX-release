@@ -72,7 +72,7 @@ object PrettyPrinter {
    */
   def programToString(p:Program):String = p match {
     case PVar(v) => v.name
-    case Assignment(v,p)	=> programToString(v) + ASSIGN + programToString(p)
+    case Assignment(v,f)	=> programToString(v) + ASSIGN + formulaToString(f)
     case NonDetAssignment(v)	=> programToString(v) + ASSIGN + KSTAR
     case STClosure(p)		=> 
       if(p.isAtomic)	programToString(p) + KSTAR
@@ -114,13 +114,26 @@ object PrettyPrinter {
     case Parallel(p1,p2) => programToString(p1) + PCOMP + programToString(p2) 
     case JoinedParallel(p1,p2) => programToString(p1) + PCOMP_JOINED + programToString(p2)
     
-    case CursorBefore(program) => CURSOR + programToString(program)
-    case CursorAfter(program) => programToString(program) + CURSOR
+    case CursorBefore(program) => CURSOR + "[[" + programToString(program) + "]]"
+    case CursorAfter(program) => "[[" + programToString(program) + "]]" + CURSOR
     case NoCursor(program) => "cursorfree(" + programToString(p) + ")"
     case null => throw new Exception("Found a null program somehow")
     
     case Epsilon() => "ε"
     case Deadlock() => "DEADLOCK"
     case Bottom() => "BOT"
+  }
+  
+  def LFResultToString(result:LFResult):String = result match {
+    case LinearForm(a,b,c,d) => {
+      val aStr = if(a.isDefined) a.get.prettyString else "_"
+      val bStr = if(b.isDefined) b.get.prettyString else "_"
+      val cStr = if(c.isDefined) c.get.prettyString else "_"
+      val dStr = if(d.isDefined) d.get.prettyString else "_"
+      "(" + (aStr::bStr::cStr::dStr::Nil).reduce(_ + "," + _) + ")"
+    }
+    case LFChoice(l,r) => 
+      "LFCHOICE(" + LFResultToString(l) + "," + LFResultToString(r) + ")"
+
   }
 }

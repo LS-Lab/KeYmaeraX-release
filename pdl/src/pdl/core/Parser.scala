@@ -41,7 +41,7 @@ class Parser extends RegexParsers with PackratParsers {
   // Global stuff regarding grammar
   ////////////////////////////////////////////////////////////////////////////
   protected override val whiteSpace = """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\))+""".r
-  protected val identifier = """[a-zA-Z]+[a-zA-Z0-9\_]*""".r
+  protected val identifier = """[a-zA-Z][a-zA-Z0-9\_]*""".r
   
   ////////////////////////////////////////////////////////////////////////////
   // Utility Methods for Precedence Lists
@@ -353,6 +353,9 @@ class Parser extends RegexParsers with PackratParsers {
       }
     }
     
+    /**
+     * TDOO should this be an associative parser?
+     */
     lazy val parallelP:SubprogramParser = {
       lazy val subPattern = asTightAsParsers(precedence, parallelP).reduce(_|_)
       lazy val pattern = subPattern ~ Symbols.PCOMP ~ subPattern
@@ -405,19 +408,16 @@ class Parser extends RegexParsers with PackratParsers {
     }
     
     lazy val sequenceP:SubprogramParser = {
-      lazy val pattern = leftAssociative(precedence,sequenceP,Some(Symbols.SCOLON))
+      lazy val pattern = rightAssociative(precedence,sequenceP,Some(Symbols.SCOLON))
       log(pattern)(Symbols.SCOLON) ^^ {
         case left ~ _ ~ right => Sequence(left,right)
       }
     }
     
     lazy val assignmentP:SubprogramParser = {
-      lazy val pattern = leftAssociative(precedence,assignmentP,Some(Symbols.ASSIGN))
+      lazy val pattern = pvarP ~ Symbols.ASSIGN ~ FormulaParser.parser
       log(pattern)(Symbols.ASSIGN) ^^ {
-        case left ~ _ ~ right => left match {
-          case PVar(s) => Assignment(PVar(s),right)
-          case _ => throw new Exception("Assignment to non-programvariable detected!")
-        }
+        case variable ~ _ ~ formula => Assignment(variable, formula)
       }
     }
     
@@ -465,7 +465,7 @@ class Parser extends RegexParsers with PackratParsers {
      * This should never be called.
      */
     private def ignoreMe(p:Program) = {p match {
-      case Assignment(v:PVar,p:Program) => false
+      case Assignment(v:PVar,f:Formula) => false
       case STClosure(p:Program) => false
       case PVar(v:Var) => false
       case Sequence(l:Program,r:Program) => false
