@@ -4,27 +4,45 @@ class MRDoesNotApply extends Exception
 /**
  * MRDoesNotApply is truly exceptional and unexpected, whereas DeadlockOnMerge
  * is an expected error.
+ * TODO this is bad name. Basically it expressed a result where the merge
+ * rules do not apply.
  */
 class DeadlockOnMerge extends Exception
+
+class EncounteredVInMergeRewrite extends Exception
 
 
 @throws(classOf[DeadlockOnMerge])
 object MergeRewrite {
+//  def log(s:String) = println(s)
+  def log(s:String) = null
+  
   def rewrite(left:LinearForm, right:LinearForm, left_ctx:Set[Channel], right_ctx:Set[Channel]) : Program = {
+    if(left.v.isDefined || right.v.isDefined)
+      throw new EncounteredVInMergeRewrite
+      
     //Don't even know if context matters? TODO-nrf if so, use the correct one.
     val ctx = left_ctx
 
-    if(M1().applies(left, right, ctx)) {
-      M1().apply(left,right,ctx)
+    if(M1.applies(left, right, ctx)) {
+      log("Applying M1");
+      M1.apply(left,right,ctx)
     }
-    else if(M2().applies(left,right,ctx)) {
-      M2().apply(left,right,ctx)
+    else if(M2.applies(left,right,ctx)) {
+      log("Applying M2");
+      M2.apply(left,right,ctx)
     }
     else if(M3().applies(left,right,ctx)) {
+      log("Applying M3");
       M3().apply(left,right,ctx)
     }
-    else if(M4().applies(left,right,ctx)) {
-      M4().apply(left,right,ctx)
+    else if(M4.applies(left,right,ctx)) {
+      log("Applying M4");
+      M4.apply(left,right,ctx)
+    }
+    else if(M5.applies(left,right,ctx)) {
+      log("Applying M5")
+      M5.apply(left,right,ctx)
     }
     else {
       throw new DeadlockOnMerge
@@ -63,19 +81,19 @@ sealed trait MergeRule {
   }
 }
 
-case class M1 extends MergeRule {
+object M1 extends MergeRule {
   def apply(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
     val send = pl.sync match {
-      case Some(Send(c,vs,v)) => Send(c,vs,v)
+      case Some(Send(c,v)) => Send(c,v)
       case _                  => throw new MRDoesNotApply
     }
     
-    val receive = pl.sync match {
+    val receive = pr.sync match {
       case Some(Receive(c,v)) => Receive(c,v)
       case _                  => throw new MRDoesNotApply
     }
     
-    val commProgram = new Forward(send.channel, send.vars.union(receive.vars), send.value)
+    val commProgram = new Forward(send.channel, receive.vars, send.term)
     
     val sequence =  parallelCompose(pl.u, pr.u)  ::
                     Some(commProgram)            ::
@@ -85,16 +103,16 @@ case class M1 extends MergeRule {
       case Some(p) => p
       case None    => throw new Exception("unreacable.")
     })
-    filteredSequence.reduce((a,b) => Sequence(a,b))
+    filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
   
   def applies(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
     val sendOpt = pl.sync match {
-      case Some(Send(c,vs,v)) => Some(Send(c,vs,v))
+      case Some(Send(c,v)) => Some(Send(c,v))
       case _                  => None
     }
     
-    val receiveOpt = pl.sync match {
+    val receiveOpt = pr.sync match {
       case Some(Receive(c,v)) => Some(Receive(c,v))
       case _                  => None
     }
@@ -110,14 +128,14 @@ case class M1 extends MergeRule {
 }
 
 
-case class M2 extends MergeRule {
+object M2 extends MergeRule {
   def apply(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
     val rcvLeft = pl.sync match {
       case Some(Receive(c,v)) => Receive(c,v)
       case _                  => throw new MRDoesNotApply
     }
     
-    val rcvRight = pl.sync match {
+    val rcvRight = pr.sync match {
       case Some(Receive(c,v)) => Receive(c,v)
       case _                  => throw new MRDoesNotApply
     }
@@ -132,7 +150,7 @@ case class M2 extends MergeRule {
       case Some(p) => p
       case None    => throw new Exception("Scala's filter function is broken if we get here.")
     })
-    filteredSequence.reduce((a,b) => Sequence(a,b))
+    filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
   
   def applies(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
@@ -141,7 +159,7 @@ case class M2 extends MergeRule {
       case _                  => None
     }
     
-    val rcvRightOpt = pl.sync match {
+    val rcvRightOpt = pr.sync match {
       case Some(Receive(c,v)) => Some(Receive(c,v))
       case _                  => None
     }
@@ -149,7 +167,7 @@ case class M2 extends MergeRule {
     rcvLeftOpt match {
       case None             => false
       case Some(rcvLeft)    => rcvRightOpt match {
-        case Some(rcvRight)   => rcvLeft.channel.equals(rcvLeft.channel)
+        case Some(rcvRight)   => rcvLeft.channel.equals(rcvRight.channel)
         case None             => false
       }
     }
@@ -193,11 +211,11 @@ case class M3 extends MergeRule {
       case Some(p) => p
       case None    => throw new Exception("Scala's filter function is broken if we get here.")
     })
-    filteredSequence.reduce((a,b) => Sequence(a,b))
+    filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
 }
   
-case class M4 extends MergeRule {
+object M4 extends MergeRule {
   def applies(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
     val leftIsBottom = left.sync match {
       case Some(Bottom()) => true
@@ -223,16 +241,16 @@ case class M4 extends MergeRule {
       case _          => throw new MRDoesNotApply
     }
     
-    val u = parallelCompose(left.u, right.u) match {
-      case Some(u) => u
-      case None    => throw new MRDoesNotApply //Actually probably malformed from bug in previous rewrite.
-    }
+    val uOpt = parallelCompose(left.u, right.u)
     
-    Sequence(u, Bottom())
+    uOpt match {
+      case Some(u) => Sequence(u, Bottom())
+      case None    => Bottom()
+    }
   }
 }
 
-case class M5 extends MergeRule {
+object M5 extends MergeRule {
   def apply(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
     val leftSystem = left.sync match {
       case Some(Evolution(a,b)) => Evolution(a,b)
@@ -257,7 +275,7 @@ case class M5 extends MergeRule {
       case Some(p) => p
       case None    => throw new Exception("Scala's filter function is broken if we get here.")
     })
-    filteredSequence.reduce((a,b) => Sequence(a,b))
+    filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
 
   def applies(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {

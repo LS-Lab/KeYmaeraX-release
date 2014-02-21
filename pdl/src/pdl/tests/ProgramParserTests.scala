@@ -110,9 +110,9 @@ object ProgramParserTests {
     val program = Receive(new Channel("c"), Set(pA,pB))
   }
   
-  object sendABonC extends ProgramTestCase {
-    val s       = "c" + SEND + OPEN_CBRACKET + "a" + COMMA + "b" + CLOSE_CBRACKET + "1"
-    val program = Send(new Channel("c"), Set(pA,pB), Number("1"))
+  object sendOnC extends ProgramTestCase {
+    val s       = "c" + SEND + "1"
+    val program = Send(new Channel("c"), Number("1"))
   }
   
   def tests = 
@@ -125,7 +125,7 @@ object ProgramParserTests {
             ndassign             ::
             AparallelB           ::
             receiveABonC         ::
-            sendABonC            ::
+            sendOnC            ::
             sequenceIsRightAssoc ::
             Nil
   

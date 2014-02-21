@@ -15,7 +15,7 @@ object CursorRewriteTests {
   val cfp   = sendx(new Channel("NOT_IN_CTX")) //communication-free program.
   val nosyncP  = NonDetAssignment(x)
   
-  def sendx(c:Channel)  = Send(c, Set(x), Number("1"))
+  def sendx(c:Channel)  = Send(c, Number("1"))
   def receivex(c:Channel) = Receive(c, Set(x))
       
   

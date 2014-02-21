@@ -92,7 +92,7 @@ object C1 extends CursorRule {
     case NoCursor(program)     => false
     case CursorBefore(program) => program match {
       case CursorBefore(p)      => applies(p,ctx)
-      case Send(c,_,_)          => !ctx.contains(c)
+      case Send(c,_)            => !ctx.contains(c)
       case Receive(c,_)         => !ctx.contains(c)
       case Epsilon()            => true //TODO-nrf warning: allowing Epsilons as input for testing.
       case Assignment(v,p)      => true

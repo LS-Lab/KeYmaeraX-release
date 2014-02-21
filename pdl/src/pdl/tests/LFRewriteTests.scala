@@ -16,14 +16,14 @@ object LFRewriteTests {
   /**
    * A program with a non-contextual sync operation.
    */
-  val cfP = Send(new Channel("cfc"), Set(xP), Number("1"))
+  val cfP = Send(new Channel("cfc"), Number("1"))
   
   val c = new Channel("c")
   
   /**
    * A contextual program
    */
-  val sendOnC = Send(c, Set(xP), Number("1"))
+  val sendOnC = Send(c, Number("1"))
   
   abstract class LFRewriteTest extends TestCase {
     val original : Program

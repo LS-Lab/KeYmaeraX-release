@@ -100,10 +100,8 @@ object PrettyPrinter {
       vars.foldLeft(OPEN_CBRACKET)((s,v) => s + programToString(v)) + 
       CLOSE_CBRACKET
     
-    case Send(channel, vars, value) => channel.name + 
+    case Send(channel, value) => channel.name + 
       SEND + 
-      vars.foldLeft(OPEN_CBRACKET)((s,v) => s + programToString(v)) + 
-      CLOSE_CBRACKET +
       formulaToString(value)
       
     case Forward(channel, vars, value) => channel.name.toUpperCase() +

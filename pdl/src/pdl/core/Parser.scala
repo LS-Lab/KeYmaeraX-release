@@ -383,14 +383,14 @@ class Parser extends RegexParsers with PackratParsers {
     lazy val sendP:SubprogramParser = {
       lazy val pattern = channelP ~
                          Symbols.SEND ~
-                         Symbols.OPEN_CBRACKET ~
-                         rep1sep(pvarP, Symbols.COMMA) ~
-                         Symbols.CLOSE_CBRACKET ~
+//                         Symbols.OPEN_CBRACKET ~
+//                         rep1sep(pvarP, Symbols.COMMA) ~
+//                         Symbols.CLOSE_CBRACKET ~
                          FormulaParser.value
       
       log(pattern)(Symbols.SEND + "(" + Symbols.PCOMP + ")") ^^ {
-        case c ~ Symbols.SEND ~ Symbols.OPEN_CBRACKET ~ variables ~ Symbols.CLOSE_CBRACKET ~ v => 
-          Send(c, variables.toSet, v)
+        case c ~ Symbols.SEND ~ v => 
+          Send(c, v)
       }
     }
     
@@ -475,7 +475,7 @@ class Parser extends RegexParsers with PackratParsers {
       case Test(f:Formula) => false
       case Parallel(l:Program, r:Program) => false
       case Receive(c:Channel, sv:Set[PVar]) => false
-      case Send(c:Channel, vs:Set[PVar], v:Formula) => false
+      case Send(c:Channel, v:Formula) => false
       
       //These are all internal representations and do not need to be parsed:
       case Bottom() => true

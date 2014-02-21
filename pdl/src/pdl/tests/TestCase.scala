@@ -8,7 +8,7 @@ object TestHarness {
     println("TEST FAILURES: " + 
         results.filter(!_).size.toString() + 
         " / " + 
-        results.filter(_==true).size.toString())
+        results.size.toString())
   }
 }
   

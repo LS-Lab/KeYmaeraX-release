@@ -30,6 +30,8 @@ object LFRewrite {
  * The result of a rewrite of lf[program]
  */
 sealed trait LFResult {
+  def prettyString = PrettyPrinter.LFResultToString(this)
+  
   def toSet:Set[LinearForm] = this match {
     case LinearForm(_,_,_,_)        => Set(this.asInstanceOf[LinearForm])
     case LFChoice(left,right)       => left.toSet.union(right.toSet)
@@ -285,7 +287,7 @@ object L2 extends LFRule {
     LFRewrite.log("Applying L2 to " + p.prettyString); //TODO remove.
     p match {
       case CursorBefore(syncOrEpsilon) => syncOrEpsilon match {
-        case Send(_,_,_)    => LinearForm(None,Some(syncOrEpsilon),None,None)
+        case Send(_,_)    => LinearForm(None,Some(syncOrEpsilon),None,None)
         case Receive(_,_)   => LinearForm(None,Some(syncOrEpsilon),None,None)
         case Epsilon()      => LinearForm(None,Some(syncOrEpsilon),None,None)
         case Evolution(_,_) => LinearForm(None,Some(syncOrEpsilon),None,None)
@@ -340,7 +342,7 @@ object L2 extends LFRule {
   def applies(p:Program, ctx:Set[Channel]) = {
     p match {
       case CursorBefore(syncOrEpsilon) => syncOrEpsilon match {
-        case Send(_,_,_)    => true
+        case Send(_,_)    => true
         case Receive(_,_)   => true
         case Epsilon()      => true
         case Evolution(_,_) => true
@@ -352,7 +354,7 @@ object L2 extends LFRule {
         syncOpt match {
           case None => false
           case Some(CursorBefore(sync)) => sync match {
-            case Send(_,_,_) => true
+            case Send(_,_) => true
             case Receive(_,_) => true
             case Epsilon() => true
             case Evolution(_,_) => true

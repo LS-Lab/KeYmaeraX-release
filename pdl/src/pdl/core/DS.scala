@@ -101,7 +101,7 @@ sealed trait Program {
 	  case Evolution(_,_)	=> false
 	  case NonDetAssignment(_) => true
 	  case Receive(_,_) => false
-	  case Send(_,_,_) => false
+	  case Send(_,_) => false
 	  case CursorAfter(_) => false
 	  case CursorBefore(_) => false
 	  case NoCursor(_) => false
@@ -130,7 +130,7 @@ sealed trait Program {
 	  case PVar(v) => true
 	  case Parallel(a,b) => a.isCursorFree && b.isCursorFree
 	  case Receive(c,v) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
-	  case Send(c,v,f) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
+	  case Send(c,t) => true
 	  case Forward(c,v,f) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
 	  case Sequence(l,r) => l.isCursorFree && r.isCursorFree
 	  case Test(f) => true
@@ -145,7 +145,12 @@ sealed trait Program {
 	 * Syntactic equivalence for programs.
 	 * TODO epsilon-stutter-equivalence of programs.
 	 */
-	override def equals(other : Any):Boolean = this match {
+	override def equals(other:Any) = if(other.isInstanceOf[Program])
+	  equalsOtherProgram(other.asInstanceOf[Program])
+	else
+	  super.equals(other)
+	  
+	def equalsOtherProgram(other : Program):Boolean = this match {
 	  case PVar(n) 			=> other match {
 	    case PVar(other_n) => n.equals(other_n)
 	    case _			  => false
@@ -174,9 +179,11 @@ sealed trait Program {
 	  }
 	  case Evolution(l,r) => other match {
 	    case Evolution(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
+	    case _							=> false
 	  }
 	  case Parallel(l,r) => other match {
 	    case Parallel(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
+	    case _							=> false
 	  }
 	  case Test(f) => other match {
 	    case Test(f_o) => f.equals(f_o)
@@ -186,13 +193,9 @@ sealed trait Program {
 	    case NonDetAssignment(p_o) => p.equals(p_o)
 	    case _                     => false
 	  }
-	  case Send(c,varSet:Set[PVar],value) => other match {
-	    case Send(c_o,vs_o,v_v) => {
-	      val varSetsMutuallyInclusive = 
-	        varSet.filterNot(vs_o.contains(_)).isEmpty &&
-            vs_o.filterNot(varSet.contains(_)).isEmpty
-            
-	      c.equals(c_o) && varSetsMutuallyInclusive && v_v.equals(v_v)
+	  case Send(c,value) => other match {
+	    case Send(c_o,v_v) => {
+	      c.equals(c_o)
 	    }
 	    case _                  => false
 	  }
@@ -256,7 +259,8 @@ sealed trait Program {
 	}
 	
 	/**
-	 * Code clone if isCursorFree.
+	 * Code clone of isCursorFree with CursorAfter changed to true, so the name
+	 * is very misleading. TODO figure out exactly how this is being used.
 	 */
 	def isSynchronizationFree:Boolean = this match {
 	  case CursorAfter(a) => true //only difference b/w this and cursor-free.
@@ -271,7 +275,7 @@ sealed trait Program {
 	  case PVar(v) => true
 	  case Parallel(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
 	  case Receive(c,v) => v.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
-	  case Send(c,v,f) => v.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
+	  case Send(c,f) => true //TODO e.g. this should be contextual.
 	  case Forward(c,vs,f) => vs.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
 	  case Sequence(l,r) => l.isSynchronizationFree && r.isSynchronizationFree
 	  case Test(f) => true
@@ -305,7 +309,7 @@ sealed trait Program {
 	  case Forward(a,b,c) => this
 	  case PVar(v) => this
 	  case Receive(_,_) => this
-	  case Send(_,_,_) => this
+	  case Send(_,_) => this
 	  case Test(p) => this
 	  case Label(p) => this
 	  case NonDetAssignment(p) => this
@@ -328,7 +332,7 @@ case class Sequence(left : Program, right : Program)             extends Program
 {
   if(left.isInstanceOf[Sequence]) 
     throw new Exception("Sequences look like S(1, S(2, 3))."
-        + "Left should never be sequence.")
+        + "Left should never be sequence:" + left.prettyString)
   
   def append(newProgram:Program):Sequence = Sequence(left, right match {
     case Sequence(rl,rr) => Sequence(rl,rr).append(newProgram)
@@ -344,7 +348,7 @@ case class Choice(left : Program, right : Program)               extends Program
 case class Evolution(diffEq : Set[Formula], domain : Formula)    extends Program
 
 case class Parallel(left : Program, right : Program)             extends Program
-case class Send(channel:Channel, vars:Set[PVar], value:Formula)  extends Program
+case class Send(channel:Channel, term:Formula)  extends Program
 case class Receive(channel:Channel, vars:Set[PVar])              extends Program
 case class Forward(channel:Channel, vars:Set[PVar], value:Formula)              extends Program
 case class Epsilon()                                             extends Program
