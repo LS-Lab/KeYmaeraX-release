@@ -115,6 +115,16 @@ object LFRewriteTests {
     val expected = LinearForm(None, Some(sendOnC), None, None)
     val context  = Set(c)
   }
+
+  /**
+   * .[[c!{x}1]];ε;(c!{x}1)*
+   */
+  object L2_hangingCursor extends LFRewriteTest {
+    val orig = Sequence(CursorBefore(sendOnC),Sequence(Epsilon(),sendOnC))
+    val original = CursorRewrite.rewrite(orig, Set(c))
+    val expected = LinearForm(None, Some(sendOnC), None, Some(Sequence(Epsilon(),sendOnC)))
+    val context  = Set(c)
+  }
   
   /**
    * Originally failed -- nosyncP occurred twice due to typo in Sequence.append
@@ -181,6 +191,28 @@ object LFRewriteTests {
     val context = Set[Channel](c)
   }
   
+  //TODO test something with a gamma.
+  
+  //TODO test something with an intermediate
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // L4
+  //////////////////////////////////////////////////////////////////////////////
+  
+  
+  object L4_noUOrV extends LFRewriteTest {
+    val orig = CursorBefore(STClosure(sendOnC))
+    
+    val context  = Set(c)
+    val original = CursorRewrite.rewrite(orig, context)
+    val expected = LFChoice(
+        LinearForm(None, Some(sendOnC), None, Some(Sequence(Epsilon(), STClosure(sendOnC)))),
+        LinearForm(None, Some(Epsilon()), None, None))
+  }
+  
+  //TODO L4_noU
+  //TODO L4_noV
+  
   
   //////////////////////////////////////////////////////////////////////////////
   // Run tests
@@ -193,10 +225,12 @@ object LFRewriteTests {
                L2_dna              ::
                L2_sendOnC          ::
                L1_L2_split         ::
+               L2_hangingCursor    ::
                L2_final            :: 
                L3_vanillaEps       ::
                L3_epsWithU         ::
                L3_sendsyncWithU    ::
+               L4_noUOrV           ::
                Nil
   
   def main(args:Array[String]):Unit = {

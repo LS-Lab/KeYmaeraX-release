@@ -56,6 +56,7 @@ case class JoinedParallel(a:Program,b:Program) extends CursorProgram
  */
 sealed trait Program {
   def prettyString = PrettyPrinter.programToString(this)
+  override def toString = prettyString //might not want this so that you can get the IR to string. However, it's useful in debugging.
   
   def communicationType : Set[Channel] = null //TODO
   

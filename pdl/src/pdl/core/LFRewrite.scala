@@ -20,8 +20,8 @@ object LFRewrite {
       {log("Applying L2 to " + PrettyPrinter.programToString(p));(L2.apply(p,ctx))}
     else if(L3.applies(p, ctx))
       {log("Applying L3");(L3.apply(p,ctx))}
-    else if(L4().applies(p, ctx))
-      {log("Applying L4");(L4().apply(p,ctx))}
+    else if(L4.applies(p, ctx))
+      {log("Applying L4");(L4.apply(p,ctx))}
     else {log("No LF rules are applicable to " + PrettyPrinter.programToString(p));(LinearForm(None, Some(p), None,None))}
   }
 }
@@ -117,8 +117,8 @@ sealed trait LFRule {
   type ProgramTriple = Triple[Option[Program],Option[Program],Option[Program]]
   
   /**
-   * Splits a Sequence into three parts: a precursor, a synch operation, and a 
-   * successor or remainder. E.g.:
+   * Splits a Sequence into three parts: a precursor, a cursor operation, and a 
+   * postcursor or remainder. E.g.:
    * a;!b;c => [a, b, c]
    * !b;c => [NONE, b, c]
    * a;!b => [a,b,MPME]
@@ -151,7 +151,7 @@ sealed trait LFRule {
    * @returns the program triple for invsplit(triple);p
    * 
    * Adds a program to the correct place in a triple. It suffices to consider 
-   * whether p is synchronization free and 2 is defined.
+   * whether p is cursor free and 2 is defined.
    * 
    * If p is not synchronization free, then we should place p in the center if
    * the center is not defined (00). However, if the center is defined, we 
@@ -165,17 +165,17 @@ sealed trait LFRule {
   private def addToTriple(p:Program, triple:ProgramTriple):ProgramTriple = p match {
     case Sequence(l,r) => splitSequence(Sequence(l,r), triple)
     case _             => {
-      if(!p.isSynchronizationFree && !triple._2.isDefined) {
+      if(!p.isCursorFree && !triple._2.isDefined) {
         (triple._1, Some(p), triple._3)
       }
-      else if(!p.isSynchronizationFree && triple._2.isDefined) {
+      else if(!p.isCursorFree && triple._2.isDefined) {
         val suffix = triple._3 match {
           case Some(Sequence(_,_)) => triple._3.get.asInstanceOf[Sequence].append(p)
           case Some(_)             => Sequence(triple._3.get, p)
         }
         (triple._1, Some(p), Some(suffix))
       }
-      else if(p.isSynchronizationFree && !triple._2.isDefined) {
+      else if(p.isCursorFree && !triple._2.isDefined) {
         val prefix = triple._1 match {
           case Some(Sequence(_,_)) => triple._1.get.asInstanceOf[Sequence].append(p)
           case Some(_)             => Sequence(triple._1.get, p)
@@ -183,7 +183,7 @@ sealed trait LFRule {
         }
         (Some(prefix), triple._2, triple._3)
       }
-      else if(p.isSynchronizationFree && triple._2.isDefined) {
+      else if(p.isCursorFree && triple._2.isDefined) {
         val suffix = triple._3 match {
           case Some(Sequence(l3,r3)) => Sequence(l3,r3).append(p)
           case Some(threePrime)      => Sequence(threePrime, p)
@@ -197,6 +197,18 @@ sealed trait LFRule {
     }
   }
 
+  /**
+   * Removes all cursors from a subprogram.
+   * TODO in principle should this even be allowed?
+   */
+  def decurse(p:Program):Program = p match {
+    case CursorBefore(p_) => decurse(p_)
+    case CursorAfter(p_)  => decurse(p_)
+    case NoCursor(p_)     => decurse(p_)
+    
+    case _                => p.applyToSubprograms(decurse)
+  }
+  
   /**
    * Rewrites a program p -> (cursor-free portion, g). Strips the leading
    * cursor.
@@ -249,9 +261,9 @@ sealed trait LFRule {
   def sequentializeDefined(l : List[Option[Program]]) = {
     val filtered = l.filter(_.isDefined).map(x => x match {
       case Some(x) => x
-      case _ => throw new Exception //won't get here.
+      case _ => throw new Exception("Unreachable.") //won't get here.
     })
-    filtered.reduce((a,b) => Sequence(a,b))
+    filtered.reduceRight((a,b) => Sequence(a,b))
   }
 }
 
@@ -296,18 +308,23 @@ object L2 extends LFRule {
           case Some(gamma)               => cursorRewriteSubprogram(CursorBefore(gamma), ctx)
           case None                      => (None,None)
         }
+        
+//        if(v.isDefined && !v.get.isCursorFree)
+//          throw new LRDoesNotApply("Failed assertion: v should be CF")
+//        if(gammaPrime.isDefined && !gammaPrime.get.isCursorFree)
+//          throw new LRDoesNotApply("Failed assertion: v should be CF")
 
         val remainder:Option[Program] = if(!v.isDefined && !gammaPrime.isDefined) {
           None
         }
         else if(!v.isDefined && gammaPrime.isDefined) {
-          Some(gammaPrime.get)
+          Some(decurse(gammaPrime.get))
         }
         else if(v.isDefined && !gammaPrime.isDefined) {
-          Some(v.get)
+          Some(decurse(v.get))
         }
         else if(v.isDefined && gammaPrime.isDefined) {
-          Some(Sequence(v.get, gammaPrime.get))
+          Some(Sequence(decurse(v.get), decurse(gammaPrime.get)))
         }
         else {
           None
@@ -341,7 +358,10 @@ object L2 extends LFRule {
             case Evolution(_,_) => true
             case _ => false
           }
-          case _ => throw new Exception("split is implemented incorrectly.") //non-cursor sync. shouldn't even get here.
+          case _ => false
+          //Justification for returning false and not raising error: (.a)* is not cursor
+          //free but does not have a cursor at the beginning.
+//          case _ => throw new Exception("split is implemented incorrectly: " + syncOpt.getOrElse[Program](PVar(new Var("SYNC WAS NONE"))).prettyString) //non-cursor sync. shouldn't even get here.
         }
       } 
       
@@ -394,18 +414,28 @@ object L3 extends LFRule {
 }
 
 
-case class L4 extends LFRule {
+object L4 extends LFRule {
+  /**
+   * applyWith does the action of apply with an optionally defined u and gamma.
+   */
   def applyWith(u:Option[Program], p:CursorBefore, ctx:Set[Channel], gamma:Option[Program]) = p match {
     case CursorBefore(STClosure(a)) => {
       val (v,aPrimeOpt) = cursorRewriteSubprogram(a, ctx)
       
-      val aPrime = aPrimeOpt match {
+      val aPrimeWithC = aPrimeOpt match {
         case Some(CursorBefore(_)) => aPrimeOpt
         case Some(_) => Some(CursorBefore(aPrimeOpt.get))
         case None => aPrimeOpt
       }
       
-      val left = sequentializeDefined(u::v::aPrime::Some(Epsilon())::Some(STClosure(a))::gamma::Nil)
+      val aNoCursor = a match{
+        case CursorBefore(ap) => ap
+        case _                => a
+      }
+      if(!aNoCursor.isCursorFree) 
+        throw new LRDoesNotApply("Cursor found where it shouldn't be.") //bad exception class
+      
+      val left = sequentializeDefined(u::v::aPrimeWithC::Some(Epsilon())::Some(STClosure(aNoCursor))::gamma::Nil)
       val right = sequentializeDefined(u::Some(CursorBefore(Epsilon()))::gamma::Nil)
       
       LFChoice(LFRewrite.rewrite(left, ctx), LFRewrite.rewrite(right,ctx))
