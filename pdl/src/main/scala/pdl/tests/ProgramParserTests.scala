@@ -267,6 +267,18 @@ object ProgramParserTests {
     val program = null
   }
   
+  object emp6 extends ProgramTestCase {
+    val x = PVar(new Var("x"))
+    val s="x:=1"
+    val program = Assignment(x, Number("1"))
+  }
+  object emp7 extends ProgramTestCase {
+    val s="c!1 || c?x"
+    val c = new Channel("c")
+    val x = PVar(new Var("x"))
+    val program = Parallel(Send(c,Number("1")), Receive(c,Set(x)))
+  }
+  
   
   
   def tests = 
@@ -299,6 +311,8 @@ object ProgramParserTests {
             emp3::
             emp4::
             emp5::
+            emp6::
+            emp7::
             Nil
   
   def main(args:Array[String]):Unit = {

@@ -9,8 +9,8 @@ extends Exception {
 }
 
 object CursorRewrite {
-//  def log(s:String) = println(s)
-  def log(s:String) = null
+  def log(s:String) = println(s)
+//  def log(s:String) = null
   
   def rewrite(p:Program, ctx:Set[Channel]):Program = rewriter(p,ctx,false)
   

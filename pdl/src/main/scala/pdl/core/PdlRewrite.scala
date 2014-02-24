@@ -3,8 +3,14 @@ package pdl.core
 import scala.xml.transform.RewriteRule
 
 object PdlRewrite {
-  def rewrite(p:Program):Program = 
-    CursorRewrite.rewriteWithJoin(p, Set[Channel]())
+  def rewrite(p:Program):Program = {
+    if(p.isCursorFree) {
+      CursorRewrite.rewriteWithJoin(CursorBefore(p), Set[Channel]())
+    }
+    else {
+      CursorRewrite.rewriteWithJoin(p, Set[Channel]())
+    }
+  }
   
   //////////////////////////////////////////////////////////////////////////////
   // Begin join algorithm implementation.
@@ -121,7 +127,6 @@ object PdlRewrite {
     var H = Set[HMember](); 
     var R = initializeR(u,v,aPrime,bPrime, firstLabel)
     var S = initializeS(aPrime, bPrime, firstLabel)
-    val intialSMember = S.last
     val initialRMember = R.last
     
     //Line 6..26
@@ -357,6 +362,7 @@ object PdlRewrite {
         
   /**
    * Inserts u||v => a||b into R.
+   * @returns non-null.
    */
   private def initializeR(u:Option[Program], v:Option[Program], a:Option[Program], b:Option[Program], firstLabel:Int):Set[RMember] = {
     val key:RValue = u match {

@@ -3,7 +3,15 @@ package pdl.tests
 //////////////////////////////////////////////////////////////////////////////
 object TestHarness {
   def runSuite(tests:Iterable[TestCase]) = {
-    val results = tests.map(_.runTest)
+    //Enforce an ordering on the tests, because later tests assume earlier tests
+    //e.g. the multi-stage tests assume cursor rules work, and cursor rules 
+    //assume that parsing works.
+    var results = List[Boolean]()
+    for(test <- tests) {
+      results = results :+ test.runTest
+    }
+      
+//      tests.map(_.runTest)
     
     println("TEST FAILURES: " + 
         results.filter(!_).size.toString() + 
