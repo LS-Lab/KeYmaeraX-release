@@ -146,10 +146,17 @@ object ProgramParserTests {
     val program = Parallel(pA, pB)
   }
   
+  object receiveAonC extends ProgramTestCase {
+    val s       = "c" + RECEIVE + "a" 
+    val program = Receive(new Channel("c"), Set(pA))
+  }
+  
   object receiveABonC extends ProgramTestCase {
-    val s       = "c" + RECEIVE + OPEN_CBRACKET + "a" + COMMA + "b" + CLOSE_CBRACKET
+    val s       = "c" + RECEIVE + OPEN_CBRACKET + "a" + COMMA + "b" + CLOSE_CBRACKET 
     val program = Receive(new Channel("c"), Set(pA,pB))
   }
+  
+  
   
   object sendOnC extends ProgramTestCase {
     val s       = "c" + SEND + "1"
@@ -273,6 +280,7 @@ object ProgramParserTests {
             assign               ::
             ndassign             ::
             AparallelB           ::
+            receiveAonC          ::
             receiveABonC         ::
             sendOnC              ::
             sequenceIsRightAssoc ::
