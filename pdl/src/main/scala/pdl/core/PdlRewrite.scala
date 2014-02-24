@@ -116,7 +116,9 @@ object PdlRewrite {
     }
   }
 
-  
+  /**
+   * The join algorithm.
+   */
   def join(a:Program, b:Program):Program = {
     val Ca = a.communicationType; val Cb = b.communicationType
     val (u,aPrime) = CursorRewrite.rewrite(a, Cb).splitAtCursor

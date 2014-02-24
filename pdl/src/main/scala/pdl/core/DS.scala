@@ -71,7 +71,39 @@ sealed trait Program {
   def prettyString = PrettyPrinter.programToString(this)
   override def toString = prettyString //might not want this so that you can get the IR to string. However, it's useful in debugging.
   
-  def communicationType : Set[Channel] = null //TODO
+  def communicationType : Set[Channel] = this match {
+      //Part 1
+	  case PVar(v)			   => Set()
+	  case Assignment(_,_) 	   => Set()
+	  case Test(p)			   => Set()
+	  case Evolution(d,c)      => Set()
+	  case NonDetAssignment(v) => Set()
+	  case Epsilon()           => Set()
+	  case Deadlock()          => Set()
+
+      //Part 2
+	  case Receive(c,x)       => Set(c)
+	  case Send(c,x)          => Set(c)
+	  case Forward(c,v,value) => Set(c)
+	  
+	  //Part 3
+	  case Choice(l,r)		   => l.communicationType ++ r.communicationType
+	  case Sequence(l,r)	   => l.communicationType ++ r.communicationType
+	  case Parallel(l,r)	   => l.communicationType ++ r.communicationType
+	  case JoinedParallel(l,r) => l.communicationType ++ r.communicationType
+	  
+	  //Part 4
+      case STClosure(p)	   => p.communicationType
+	  
+      //Compatibility - other. Should these throw an exception?
+      case CursorAfter(p)  => p.communicationType
+	  case CursorBefore(p) => p.communicationType
+	  case NoCursor(p)     => p.communicationType
+	  case Remainder(p)    => p.communicationType
+	  case Bottom()        => Set()
+	  case Label(int)      => Set()
+
+  }
   
   /**
    * @returns pair of programs split at the cursor, with the cursor removed.
