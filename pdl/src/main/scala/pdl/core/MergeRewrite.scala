@@ -17,32 +17,29 @@ object MergeRewrite {
 //  def log(s:String) = println(s)
   def log(s:String) = null
   
-  def rewrite(left:LinearForm, right:LinearForm, left_ctx:Set[Channel], right_ctx:Set[Channel]) : Program = {
+  def rewrite(left:LinearForm, right:LinearForm) : Program = {
     if(left.v.isDefined || right.v.isDefined)
       throw new EncounteredVInMergeRewrite
-      
-    //Don't even know if context matters? TODO-nrf if so, use the correct one.
-    val ctx = left_ctx
 
-    if(M1.applies(left, right, ctx)) {
+    if(M1.applies(left, right)) {
       log("Applying M1");
-      M1.apply(left,right,ctx)
+      M1.apply(left,right)
     }
-    else if(M2.applies(left,right,ctx)) {
+    else if(M2.applies(left,right)) {
       log("Applying M2");
-      M2.apply(left,right,ctx)
+      M2.apply(left,right)
     }
-    else if(M3.applies(left,right,ctx)) {
+    else if(M3.applies(left,right)) {
       log("Applying M3");
-      M3.apply(left,right,ctx)
+      M3.apply(left,right)
     }
-    else if(M4.applies(left,right,ctx)) {
+    else if(M4.applies(left,right)) {
       log("Applying M4");
-      M4.apply(left,right,ctx)
+      M4.apply(left,right)
     }
-    else if(M5.applies(left,right,ctx)) {
+    else if(M5.applies(left,right)) {
       log("Applying M5")
-      M5.apply(left,right,ctx)
+      M5.apply(left,right)
     }
     else {
       throw new DeadlockOnMerge
@@ -58,8 +55,8 @@ object MergeRewrite {
  * Question 2: What about the dotted potions of the rules?
  */
 sealed trait MergeRule {
-  def apply(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) : Program
-  def applies(p:LinearForm, pr:LinearForm, ctx:Set[Channel]) : Boolean
+  def apply(pl:LinearForm, pr:LinearForm) : Program
+  def applies(p:LinearForm, pr:LinearForm) : Boolean
   
   def parallelCompose(leftOpt:Option[Program], rightOpt:Option[Program]) = {
     leftOpt match {
@@ -82,7 +79,7 @@ sealed trait MergeRule {
 }
 
 object M1 extends MergeRule {
-  def apply(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
+  def apply(pl:LinearForm, pr:LinearForm) = {
     val send = pl.sync match {
       case Some(Send(c,v)) => Send(c,v)
       case _                  => throw new MRDoesNotApply
@@ -106,7 +103,7 @@ object M1 extends MergeRule {
     filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
   
-  def applies(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
+  def applies(pl:LinearForm, pr:LinearForm) = {
     val sendOpt = pl.sync match {
       case Some(Send(c,v)) => Some(Send(c,v))
       case _                  => None
@@ -129,7 +126,7 @@ object M1 extends MergeRule {
 
 
 object M2 extends MergeRule {
-  def apply(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
+  def apply(pl:LinearForm, pr:LinearForm) = {
     val rcvLeft = pl.sync match {
       case Some(Receive(c,v)) => Receive(c,v)
       case _                  => throw new MRDoesNotApply
@@ -153,7 +150,7 @@ object M2 extends MergeRule {
     filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
   
-  def applies(pl:LinearForm, pr:LinearForm, ctx:Set[Channel]) = {
+  def applies(pl:LinearForm, pr:LinearForm) = {
     val rcvLeftOpt = pl.sync match {
       case Some(Receive(c,vs)) => Some(Receive(c,vs))
       case _                  => None
@@ -175,7 +172,7 @@ object M2 extends MergeRule {
 }
 
 object M3 extends MergeRule {
-  def applies(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
+  def applies(left:LinearForm, right:LinearForm) = {
     left.sync match {
       case Some(Forward(c,vs,f)) => right.sync match {
         case Some(Receive(c2,vs2)) => c.equals(c2)
@@ -185,7 +182,7 @@ object M3 extends MergeRule {
     }
   }
   
-  def apply(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
+  def apply(left:LinearForm, right:LinearForm) = {
     val leftSync = left.sync match {
       case Some(Forward(c,vs,f)) => Forward(c,vs,f)
       case None                  => throw new MRDoesNotApply
@@ -216,7 +213,7 @@ object M3 extends MergeRule {
 }
   
 object M4 extends MergeRule {
-  def applies(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
+  def applies(left:LinearForm, right:LinearForm) = {
     val leftIsBottom = left.sync match {
       case Some(Bottom()) => true
       case _          => false
@@ -230,7 +227,7 @@ object M4 extends MergeRule {
     leftIsBottom && rightIsBottom
   }
   
-  def apply(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
+  def apply(left:LinearForm, right:LinearForm) = {
     val leftSync = left.sync match {
       case Some(Bottom()) => Bottom()
       case _          => throw new MRDoesNotApply
@@ -251,7 +248,7 @@ object M4 extends MergeRule {
 }
 
 object M5 extends MergeRule {
-  def apply(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
+  def apply(left:LinearForm, right:LinearForm) = {
     val leftSystem = left.sync match {
       case Some(Evolution(a,b)) => Evolution(a,b)
       case None                 => throw new MRDoesNotApply 
@@ -278,7 +275,7 @@ object M5 extends MergeRule {
     filteredSequence.reduceRight((a,b) => Sequence(a,b))
   }
 
-  def applies(left:LinearForm, right:LinearForm, ctx:Set[Channel]) = {
+  def applies(left:LinearForm, right:LinearForm) = {
     val leftSystem = left.sync match {
       case Some(Evolution(a,b)) => true
       case None                 => false 

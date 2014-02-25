@@ -13,7 +13,7 @@ object MergeRewriteTests {
     val expected : Program
     val context  : Set[Channel]
     
-    def rewriteResult = MergeRewrite.rewrite(left, right, context, context)
+    def rewriteResult = MergeRewrite.rewrite(left, right)
     def result        = rewriteResult.equals(expected)
     
     def message = "Original: " + left.prettyString + "~" + right.prettyString + "\t" +

@@ -55,6 +55,7 @@ object Symbols {
   //** Provability relations
   val TUNSTILE  = "⊢"
   val DTURNSTILE= "⊨"
+  val EQUIV        = "≡"
   val PROGRAM_META = "P"
   val FORMULA_META = "F"
   

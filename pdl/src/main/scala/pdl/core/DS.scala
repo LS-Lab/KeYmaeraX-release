@@ -18,6 +18,8 @@ class Var(val name:String) {
  * In addition, we need a collection of channels.
  */
 sealed class Channel(val name:String) {
+  override def toString = "Channel(" + name + ")"
+  def prettyString = name
   override def equals(other : Any) = 
     if(other.isInstanceOf[Channel]) 
       name.equals(other.asInstanceOf[Channel].name)
@@ -70,6 +72,38 @@ object ProgramHelpers {
 sealed trait Program {  
   def prettyString = PrettyPrinter.programToString(this)
   override def toString = prettyString //might not want this so that you can get the IR to string. However, it's useful in debugging.
+
+//  def contains(subProgram:Program):Boolean = this match {
+//    throw new Exception("unimplemented.")
+//  }
+  
+  /**
+   * Returns the result of recusively apply the function to subprograms.
+   * Variables are skipped.
+   */
+  def apply(fn:Function[Program, Program]):Program = this match {
+	  case PVar(v)			   => fn(this)
+	  case Assignment(_,_) 	   => fn(this)
+	  case Test(f)			   => fn(this)
+	  case Evolution(d,c)      => fn(this)
+	  case NonDetAssignment(pv) => fn(this)
+	  case Epsilon()           => fn(this)
+	  case Deadlock()          => fn(this)
+	  case Receive(c,x)       => fn(this)
+	  case Send(c,x)          => fn(this)
+	  case Forward(c,v,value) => fn(this)
+	  case STClosure(p)	   => fn(STClosure(p.apply(fn)))
+      case CursorAfter(p)  => fn(CursorAfter(p.apply(fn)))
+	  case CursorBefore(p) => fn(CursorBefore(p.apply(fn)))
+	  case NoCursor(p)     => fn(NoCursor(p.apply(fn)))
+	  case Remainder(p)    => fn(Remainder(p.apply(fn)))
+	  case Bottom()        => fn(this)
+	  case Label(int)      => fn(this)
+	  case Choice(l,r)		   => fn(Choice(l.apply(fn), r.apply(fn)))
+	  case Sequence(l,r)	   => fn(Sequence(l.apply(fn), r.apply(fn)))
+	  case Parallel(l,r)	   => fn(Parallel(l.apply(fn), r.apply(fn)))
+	  case JoinedParallel(l,r) => fn(JoinedParallel(l.apply(fn), r.apply(fn)))
+  }
   
   def communicationType : Set[Channel] = this match {
       //Part 1
@@ -102,7 +136,33 @@ sealed trait Program {
 	  case Remainder(p)    => p.communicationType
 	  case Bottom()        => Set()
 	  case Label(int)      => Set()
+  }
 
+  /**
+   * recurse into compound expressions.
+   */
+  def map[T](fn:Function[Program, T], join:Function[(Program,Program),T]) = this match {
+	  case PVar(v)			   => fn(this)
+	  case Assignment(_,_) 	   => fn(this)
+	  case Test(p)			   => fn(this)
+	  case Evolution(d,c)      => fn(this)
+	  case NonDetAssignment(v) => fn(this)
+	  case Epsilon()           => fn(this)
+	  case Deadlock()          => fn(this)
+	  case Receive(c,x)       => fn(this)
+	  case Send(c,x)          => fn(this)
+	  case Forward(c,v,value) => fn(this)
+	  case STClosure(p)	   => fn(this)
+      case CursorAfter(p)  => fn(this)
+	  case CursorBefore(p) => fn(this)
+	  case NoCursor(p)     => fn(this)
+	  case Remainder(p)    => fn(this)
+	  case Bottom()        => fn(this)
+	  case Label(int)      => fn(this)
+	  case Choice(l,r)		   => join(l,r)
+	  case Sequence(l,r)	   => join(l,r)
+	  case Parallel(l,r)	   => join(l,r)
+	  case JoinedParallel(l,r) => join(l,r)
   }
   
   /**

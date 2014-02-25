@@ -71,6 +71,30 @@ case class LinearForm(val u:Option[Program], val sync:Option[Program], val v:Opt
     "(" + ts(u) + "," + ts(sync) + "," + ts(v) + "," + ts(gamma) + ")"
   }
    
+   
+   /**
+    * Apply fn to each of the elements, if it's defined.
+    */
+  def apply(fn:Function[Program, Program]) = {
+    val new_u = this.u match {
+      case Some(uPrime) => Some(fn(uPrime))
+      case None         => None
+    }
+    val new_sync = this.sync match {
+      case Some(sync) => Some(fn(sync))
+      case None       => None
+    }
+    val new_v = this.v match {
+      case Some(vPrime) => Some(fn(vPrime))
+      case None   => None
+    }
+    val new_gamma = this.gamma match {
+      case Some(gammaPrime) => Some(fn(gammaPrime))
+      case None             => None
+    }
+    
+    new LinearForm(new_u, new_sync, new_v, new_gamma)
+  }
 }
 /**
  * A partial result of a rewrite.
