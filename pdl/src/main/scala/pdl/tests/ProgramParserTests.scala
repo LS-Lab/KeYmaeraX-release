@@ -198,9 +198,22 @@ object ProgramParserTests {
                            Assignment(px, Number("2"))
                            )))
   }
-  
-  
-  
+
+
+  object whileTest extends ProgramTestCase {
+    val one = Number("1")
+    val two = Number("2")
+    val px = PVar(new Var("x"))
+    val fx = FVar(new Var("x"))
+
+    val s = "while(x>1) x := 2 end"
+    val program = Sequence(
+      STClosure(
+        Sequence(Test(Gt(fx, one)), Assignment(px, two))
+      ),
+      Test(Not(Gt(fx, one)))
+    )
+  }
   
   /////////////////////////////////////
   // Minimal formula parsing necessary for program parsing to succeed.
@@ -305,6 +318,7 @@ object ProgramParserTests {
             domainConstraint1    ::
             domainConstraint2    ::
             domainConstraintNeg  ::
+            whileTest            ::
             //these were for debugging and could be removed probably
             emp1::
             emp2::

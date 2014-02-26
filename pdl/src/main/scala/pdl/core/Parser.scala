@@ -440,7 +440,10 @@ class Parser extends RegexParsers with PackratParsers {
     lazy val whileP:SubprogramParser = {
       lazy val pattern = "while(" ~ FormulaParser.parser ~ ")" ~ parser ~ "end"
       log(pattern)("while") ^^ {
-        case _ ~ test ~ alpha ~ _ => alpha //TODO look up correct translation in book
+        case "while(" ~ test ~ ")" ~ alpha ~ "end" => Sequence(
+          STClosure( Sequence( Test(test), alpha ) ),
+          Test(Not(test))
+        )
       }
     }
     
