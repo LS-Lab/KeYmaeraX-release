@@ -73,96 +73,106 @@ sealed trait Program {
   def prettyString = PrettyPrinter.programToString(this)
   override def toString = prettyString //might not want this so that you can get the IR to string. However, it's useful in debugging.
 
-//  def contains(subProgram:Program):Boolean = this match {
-//    throw new Exception("unimplemented.")
-//  }
+  def contains(subProgram:Program):Boolean = {
+    def fn(p:Program):Boolean = p.equals(subProgram)
+    def join(pair:Pair[Program,Program]) = fn(pair._1) || fn(pair._2)
+    map(fn, join)
+  }
+  def contains(cmpFn:Function[Program,Boolean]):Boolean = {
+    def join(pair:Pair[Program,Program]) = cmpFn(pair._1) || cmpFn(pair._2)
+    map(cmpFn, join)
+  }
+  
+  def replace(target:Program, replacement:Program):Program = apply(p => {
+    if(p.equals(target)) replacement else p
+  })
   
   /**
    * Returns the result of recusively apply the function to subprograms.
    * Variables are skipped.
    */
   def apply(fn:Function[Program, Program]):Program = this match {
-	  case PVar(v)			   => fn(this)
-	  case Assignment(_,_) 	   => fn(this)
-	  case Test(f)			   => fn(this)
-	  case Evolution(d,c)      => fn(this)
-	  case NonDetAssignment(pv) => fn(this)
-	  case Epsilon()           => fn(this)
-	  case Deadlock()          => fn(this)
-	  case Receive(c,x)       => fn(this)
-	  case Send(c,x)          => fn(this)
-	  case Forward(c,v,value) => fn(this)
-	  case STClosure(p)	   => fn(STClosure(p.apply(fn)))
+    case PVar(v)         => fn(this)
+    case Assignment(_,_)      => fn(this)
+    case Test(f)         => fn(this)
+    case Evolution(d,c)      => fn(this)
+    case NonDetAssignment(pv) => fn(this)
+    case Epsilon()           => fn(this)
+    case Deadlock()          => fn(this)
+    case Receive(c,x)       => fn(this)
+    case Send(c,x)          => fn(this)
+    case Forward(c,v,value) => fn(this)
+    case STClosure(p)     => fn(STClosure(p.apply(fn)))
       case CursorAfter(p)  => fn(CursorAfter(p.apply(fn)))
-	  case CursorBefore(p) => fn(CursorBefore(p.apply(fn)))
-	  case NoCursor(p)     => fn(NoCursor(p.apply(fn)))
-	  case Remainder(p)    => fn(Remainder(p.apply(fn)))
-	  case Bottom()        => fn(this)
-	  case Label(int)      => fn(this)
-	  case Choice(l,r)		   => fn(Choice(l.apply(fn), r.apply(fn)))
-	  case Sequence(l,r)	   => fn(Sequence(l.apply(fn), r.apply(fn)))
-	  case Parallel(l,r)	   => fn(Parallel(l.apply(fn), r.apply(fn)))
-	  case JoinedParallel(l,r) => fn(JoinedParallel(l.apply(fn), r.apply(fn)))
+    case CursorBefore(p) => fn(CursorBefore(p.apply(fn)))
+    case NoCursor(p)     => fn(NoCursor(p.apply(fn)))
+    case Remainder(p)    => fn(Remainder(p.apply(fn)))
+    case Bottom()        => fn(this)
+    case Label(int)      => fn(this)
+    case Choice(l,r)       => fn(Choice(l.apply(fn), r.apply(fn)))
+    case Sequence(l,r)     => fn(Sequence(l.apply(fn), r.apply(fn)))
+    case Parallel(l,r)     => fn(Parallel(l.apply(fn), r.apply(fn)))
+    case JoinedParallel(l,r) => fn(JoinedParallel(l.apply(fn), r.apply(fn)))
   }
   
   def communicationType : Set[Channel] = this match {
-      //Part 1
-	  case PVar(v)			   => Set()
-	  case Assignment(_,_) 	   => Set()
-	  case Test(p)			   => Set()
-	  case Evolution(d,c)      => Set()
-	  case NonDetAssignment(v) => Set()
-	  case Epsilon()           => Set()
-	  case Deadlock()          => Set()
+    //Part 1
+    case PVar(v)         => Set()
+    case Assignment(_,_)      => Set()
+    case Test(p)         => Set()
+    case Evolution(d,c)      => Set()
+    case NonDetAssignment(v) => Set()
+    case Epsilon()           => Set()
+    case Deadlock()          => Set()
 
-      //Part 2
-	  case Receive(c,x)       => Set(c)
-	  case Send(c,x)          => Set(c)
-	  case Forward(c,v,value) => Set(c)
-	  
-	  //Part 3
-	  case Choice(l,r)		   => l.communicationType ++ r.communicationType
-	  case Sequence(l,r)	   => l.communicationType ++ r.communicationType
-	  case Parallel(l,r)	   => l.communicationType ++ r.communicationType
-	  case JoinedParallel(l,r) => l.communicationType ++ r.communicationType
-	  
-	  //Part 4
-      case STClosure(p)	   => p.communicationType
-	  
-      //Compatibility - other. Should these throw an exception?
-      case CursorAfter(p)  => p.communicationType
-	  case CursorBefore(p) => p.communicationType
-	  case NoCursor(p)     => p.communicationType
-	  case Remainder(p)    => p.communicationType
-	  case Bottom()        => Set()
-	  case Label(int)      => Set()
+    //Part 2
+    case Receive(c,x)       => Set(c)
+    case Send(c,x)          => Set(c)
+    case Forward(c,v,value) => Set(c)
+    
+    //Part 3
+    case Choice(l,r)       => l.communicationType ++ r.communicationType
+    case Sequence(l,r)     => l.communicationType ++ r.communicationType
+    case Parallel(l,r)     => l.communicationType ++ r.communicationType
+    case JoinedParallel(l,r) => l.communicationType ++ r.communicationType
+    
+    //Part 4
+      case STClosure(p)     => p.communicationType
+    
+    //Compatibility - other. Should these throw an exception?
+    case CursorAfter(p)  => p.communicationType
+    case CursorBefore(p) => p.communicationType
+    case NoCursor(p)     => p.communicationType
+    case Remainder(p)    => p.communicationType
+    case Bottom()        => Set()
+    case Label(int)      => Set()
   }
 
   /**
    * recurse into compound expressions.
    */
   def map[T](fn:Function[Program, T], join:Function[(Program,Program),T]) = this match {
-	  case PVar(v)			   => fn(this)
-	  case Assignment(_,_) 	   => fn(this)
-	  case Test(p)			   => fn(this)
-	  case Evolution(d,c)      => fn(this)
-	  case NonDetAssignment(v) => fn(this)
-	  case Epsilon()           => fn(this)
-	  case Deadlock()          => fn(this)
-	  case Receive(c,x)       => fn(this)
-	  case Send(c,x)          => fn(this)
-	  case Forward(c,v,value) => fn(this)
-	  case STClosure(p)	   => fn(this)
+    case PVar(v)         => fn(this)
+    case Assignment(_,_)      => fn(this)
+    case Test(p)         => fn(this)
+    case Evolution(d,c)      => fn(this)
+    case NonDetAssignment(v) => fn(this)
+    case Epsilon()           => fn(this)
+    case Deadlock()          => fn(this)
+    case Receive(c,x)       => fn(this)
+    case Send(c,x)          => fn(this)
+    case Forward(c,v,value) => fn(this)
+    case STClosure(p)     => fn(this)
       case CursorAfter(p)  => fn(this)
-	  case CursorBefore(p) => fn(this)
-	  case NoCursor(p)     => fn(this)
-	  case Remainder(p)    => fn(this)
-	  case Bottom()        => fn(this)
-	  case Label(int)      => fn(this)
-	  case Choice(l,r)		   => join(l,r)
-	  case Sequence(l,r)	   => join(l,r)
-	  case Parallel(l,r)	   => join(l,r)
-	  case JoinedParallel(l,r) => join(l,r)
+    case CursorBefore(p) => fn(this)
+    case NoCursor(p)     => fn(this)
+    case Remainder(p)    => fn(this)
+    case Bottom()        => fn(this)
+    case Label(int)      => fn(this)
+    case Choice(l,r)       => join(l,r)
+    case Sequence(l,r)     => join(l,r)
+    case Parallel(l,r)     => join(l,r)
+    case JoinedParallel(l,r) => join(l,r)
   }
   
   /**
@@ -181,249 +191,249 @@ sealed trait Program {
   
   
 //Moved to C1 where it belongs.
-//	/**
-//	 * This is a transliteration of the #^1 footnote in the cursor rules, and
-//	 * captures the "additional" assumptions of the C1 rewrite rule.
-//	 */
-//	def primitiveIn(channels:Set[Channel]) = this match {
-//	  case Assignment(v,p)     => true
-//	  case NonDetAssignment(p) => true
-//	  case Test(f)             => true
-//	  case Send(c,_,_)         => !channels.contains(c)
-//	  case Receive(c,_)        => !channels.contains(c)
-//	  case _                   => false
-//	}
-	
+//  /**
+//   * This is a transliteration of the #^1 footnote in the cursor rules, and
+//   * captures the "additional" assumptions of the C1 rewrite rule.
+//   */
+//  def primitiveIn(channels:Set[Channel]) = this match {
+//    case Assignment(v,p)     => true
+//    case NonDetAssignment(p) => true
+//    case Test(f)             => true
+//    case Send(c,_,_)         => !channels.contains(c)
+//    case Receive(c,_)        => !channels.contains(c)
+//    case _                   => false
+//  }
+  
 
   /**
    * Not even sure what this means anymore.
    */
-	def isAtomic:Boolean = this match {
-	  case PVar(_)			=> true
-	  case STClosure(_)		=> true //?
-	  case Assignment(_,_) 	=> false
-	  case Choice(_,_)		=> false
-	  case Sequence(_,_)	=> false
-	  case Parallel(_,_)	=> false
-	  case Test(_)			=> false
-	  case Evolution(_,_)	=> false
-	  case NonDetAssignment(_) => true
-	  case Receive(_,_) => false
-	  case Send(_,_) => false
-	  case CursorAfter(_) => false
-	  case CursorBefore(_) => false
-	  case NoCursor(_) => false
-	  case JoinedParallel(_,_) => false
-	  case Epsilon() => true
-	  case Deadlock() => true
-	  case Bottom() => true
-	  case Forward(_,_,_) => false 
-	  case Label(_) => false
-	  case Remainder(p:Program) => p.isAtomic
-//	  case CursorBefore(p:Program) => p.isAtomic //?
-//	  case CursorAfter(p:Program) => p.isAtomic
-//	  case NoCursor(p:Program) => p.isAtomic
-	}
-	
-	def isCursorFree:Boolean = this match {
-	  case CursorAfter(a) => false
-	  case CursorBefore(a) => false
-	  case Assignment(v,f) => true
-	  case Choice(a,b) => a.isCursorFree && b.isCursorFree
-	  case NoCursor(a) => true
-	  case STClosure(p) => p.isCursorFree
-	  case Evolution(a,b) => true
-	  case JoinedParallel(a,b) => a.isCursorFree && b.isCursorFree
-	  case NonDetAssignment(a) => a.isCursorFree
-	  case PVar(v) => true
-	  case Parallel(a,b) => a.isCursorFree && b.isCursorFree
-	  case Receive(c,v) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
-	  case Send(c,t) => true
-	  case Forward(c,v,f) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
-	  case Sequence(l,r) => l.isCursorFree && r.isCursorFree
-	  case Test(f) => true
-	  case Epsilon() => true
-	  case Deadlock() => true
-	  case Bottom() => true
-	  case Label(_) => true
-	  case Remainder(p:Program) => p.isCursorFree
+  def isAtomic:Boolean = this match {
+    case PVar(_)      => true
+    case STClosure(_)    => true //?
+    case Assignment(_,_)   => false
+    case Choice(_,_)    => false
+    case Sequence(_,_)  => false
+    case Parallel(_,_)  => false
+    case Test(_)      => false
+    case Evolution(_,_)  => false
+    case NonDetAssignment(_) => true
+    case Receive(_,_) => false
+    case Send(_,_) => false
+    case CursorAfter(_) => false
+    case CursorBefore(_) => false
+    case NoCursor(_) => false
+    case JoinedParallel(_,_) => false
+    case Epsilon() => true
+    case Deadlock() => true
+    case Bottom() => true
+    case Forward(_,_,_) => false 
+    case Label(_) => false
+    case Remainder(p:Program) => p.isAtomic
+//    case CursorBefore(p:Program) => p.isAtomic //?
+//    case CursorAfter(p:Program) => p.isAtomic
+//    case NoCursor(p:Program) => p.isAtomic
+  }
+  
+  def isCursorFree:Boolean = this match {
+    case CursorAfter(a) => false
+    case CursorBefore(a) => false
+    case Assignment(v,f) => true
+    case Choice(a,b) => a.isCursorFree && b.isCursorFree
+    case NoCursor(a) => true
+    case STClosure(p) => p.isCursorFree
+    case Evolution(a,b) => true
+    case JoinedParallel(a,b) => a.isCursorFree && b.isCursorFree
+    case NonDetAssignment(a) => a.isCursorFree
+    case PVar(v) => true
+    case Parallel(a,b) => a.isCursorFree && b.isCursorFree
+    case Receive(c,v) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
+    case Send(c,t) => true
+    case Forward(c,v,f) => v.map(_.isCursorFree).foldLeft(true)((x,y) => x && y)
+    case Sequence(l,r) => l.isCursorFree && r.isCursorFree
+    case Test(f) => true
+    case Epsilon() => true
+    case Deadlock() => true
+    case Bottom() => true
+    case Label(_) => true
+    case Remainder(p:Program) => p.isCursorFree
     }
-	
-	/**
-	 * Syntactic equivalence for programs.
-	 * TODO epsilon-stutter-equivalence of programs.
-	 */
-	override def equals(other:Any) = if(other.isInstanceOf[Program])
-	  equalsOtherProgram(other.asInstanceOf[Program])
-	else
-	  super.equals(other)
-	  
-	def equalsOtherProgram(other : Program):Boolean = this match {
-	  case PVar(n) 			=> other match {
-	    case PVar(other_n) => n.equals(other_n)
-	    case _			  => false
-	  }
-	  case Assignment(v,p)	=> other match {
-	    case Assignment(other_v, other_p)	=> v match {
-	      case PVar(v) => other_v match {
-	        case PVar(v_o) => v.equals(v_o)
-	        case _ => false
-	      }
-	      case _ => false
-	    }
-	    case _								=> false
-	  }
-	  case STClosure(p)		=> other match {
-	    case STClosure(other_p)	=> p.equals(other_p)
-	    case _					=> false
-	  }
-	  case Choice(l,r)		=> other match {
-	    case Choice(other_l,other_r)	=> l.equals(other_l) && r.equals(other_r)
-	    case _							=> false
-	  }
-	  case Sequence(l,r)	=> other match {
-	    case Sequence(other_l, other_r)	=> l.equals(other_l) && r.equals(other_r)
-	    case _							=> false
-	  }
-	  case Evolution(l,r) => other match {
-	    case Evolution(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
-	    case _							=> false
-	  }
-	  case Parallel(l,r) => other match {
-	    case Parallel(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
-	    case _							=> false
-	  }
-	  case Test(f) => other match {
-	    case Test(f_o) => f.equals(f_o)
-	    case _         => false
-	  }
-	  case NonDetAssignment(p) => other match {
-	    case NonDetAssignment(p_o) => p.equals(p_o)
-	    case _                     => false
-	  }
-	  case Send(c,value) => other match {
-	    case Send(c_o,v_v) => {
-	      c.equals(c_o)
-	    }
-	    case _                  => false
-	  }
-	  case Receive(c:Channel,v:Set[PVar]) => other match {
-	    case Receive(c_o,v_o) => {
-	      val varSetsMutuallyInclusive = 
-	        v.filterNot(v_o.contains(_)).isEmpty &&
+  
+  /**
+   * Syntactic equivalence for programs.
+   * TODO epsilon-stutter-equivalence of programs.
+   */
+  override def equals(other:Any) = if(other.isInstanceOf[Program])
+    equalsOtherProgram(other.asInstanceOf[Program])
+  else
+    super.equals(other)
+    
+  def equalsOtherProgram(other : Program):Boolean = this match {
+    case PVar(n)       => other match {
+      case PVar(other_n) => n.equals(other_n)
+      case _        => false
+    }
+    case Assignment(v,p)  => other match {
+      case Assignment(other_v, other_p)  => v match {
+        case PVar(v) => other_v match {
+          case PVar(v_o) => v.equals(v_o)
+          case _ => false
+        }
+        case _ => false
+      }
+      case _                => false
+    }
+    case STClosure(p)    => other match {
+      case STClosure(other_p)  => p.equals(other_p)
+      case _          => false
+    }
+    case Choice(l,r)    => other match {
+      case Choice(other_l,other_r)  => l.equals(other_l) && r.equals(other_r)
+      case _              => false
+    }
+    case Sequence(l,r)  => other match {
+      case Sequence(other_l, other_r)  => l.equals(other_l) && r.equals(other_r)
+      case _              => false
+    }
+    case Evolution(l,r) => other match {
+      case Evolution(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
+      case _              => false
+    }
+    case Parallel(l,r) => other match {
+      case Parallel(other_l,other_r) => l.equals(other_l) && r.equals(other_r)
+      case _              => false
+    }
+    case Test(f) => other match {
+      case Test(f_o) => f.equals(f_o)
+      case _         => false
+    }
+    case NonDetAssignment(p) => other match {
+      case NonDetAssignment(p_o) => p.equals(p_o)
+      case _                     => false
+    }
+    case Send(c,value) => other match {
+      case Send(c_o,v_v) => {
+        c.equals(c_o)
+      }
+      case _                  => false
+    }
+    case Receive(c:Channel,v:Set[PVar]) => other match {
+      case Receive(c_o,v_o) => {
+        val varSetsMutuallyInclusive = 
+          v.filterNot(v_o.contains(_)).isEmpty &&
             v_o.filterNot(v.contains(_)).isEmpty
             
-	      c.equals(c_o) && varSetsMutuallyInclusive
-	    }
-	    case _                => false
-	  }
-	  case Forward(c, vs:Set[PVar], f:Formula) => other match {
-	    case Forward(c_o, vs_o, f_o) => {
-	      val varSetsMI = 
-	        vs.filterNot(vs_o.contains(_)).isEmpty &&
-	        vs_o.filterNot(vs.contains(_)).isEmpty
-	      
-	      varSetsMI && f.equals(f_o) && c.equals(c_o)
-	    }
-	    case _ => false
-	  }
-	  //Should each of these cases return yes for all cursors?
-	  case CursorAfter(p) => other match {
-	    case CursorAfter(p_o) => p.equals(p_o)
-	    case _                => false
-	  }
-	  case CursorBefore(p) => other match {
-	    case CursorBefore(p_o) => p.equals(p_o)
-	    case _                => false
-	  }
-	  case NoCursor(p) => other match {
-	    case NoCursor(p_o) => p.equals(p_o)
-	    case _ => false
-	  }
-	  case JoinedParallel(a,b) => other match {
-	    case JoinedParallel(a_o, b_o) => a.equals(a_o) && b.equals(b_o)
-	    case _ => false
-	  }
-	  case Epsilon() => other match {
-	    case Epsilon() => true
-	    case _ => false
-	  }
-	  case Deadlock() => other match {
-	    case Deadlock() => true
-	    case _ => false
-	  }
-	  case Bottom() => other match {
-	    case Bottom() => true
-	    case _ => false
-	  }
-	  case Label(x:Int) => other match {
-	    case Label(y:Int) => x==y
-	    case _ => false
-	  }
-	  case Remainder(p:Program) => other match{
-	    case Remainder(p2:Program) => p.equals(p2)
-	    case _ => false
-	  }
-	}
-	
-	/**
-	 * Code clone of isCursorFree with CursorAfter changed to true, so the name
-	 * is very misleading. TODO figure out exactly how this is being used.
-	 */
-	def isSynchronizationFree:Boolean = this match {
-	  case CursorAfter(a) => true //only difference b/w this and cursor-free.
-	  case CursorBefore(a) => false
-	  case Assignment(v,f) => true
-	  case Choice(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
-	  case NoCursor(a) => true
-	  case STClosure(p) => p.isSynchronizationFree
-	  case Evolution(a,b) => true
-	  case JoinedParallel(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
-	  case NonDetAssignment(a) => a.isSynchronizationFree
-	  case PVar(v) => true
-	  case Parallel(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
-	  case Receive(c,v) => v.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
-	  case Send(c,f) => true //TODO e.g. this should be contextual.
-	  case Forward(c,vs,f) => vs.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
-	  case Sequence(l,r) => l.isSynchronizationFree && r.isSynchronizationFree
-	  case Test(f) => true
-	  case Epsilon() => true
-	  case Deadlock() => true
-	  case Bottom() => true
-	  case Label(_) => true
-	  case Remainder(p) => p.isSynchronizationFree
+        c.equals(c_o) && varSetsMutuallyInclusive
+      }
+      case _                => false
     }
-	
-	
-	/**
-	 * TODO: Add a specification which explains exactly what this does. It does
-	 * not appear to do the correct thing.
-	 */
-	def applyToSubprograms(fn:Function[Program, Program]):Program = this match {
-	  case Assignment(v,f) => Assignment(v,f)
-	  case Choice(l,r) => Choice(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
-	  case JoinedParallel(l,r) => JoinedParallel(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
-	  case Parallel(l,r) => Parallel(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
-	  case Sequence(l,r) => Sequence(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
-	  
-	  case CursorAfter(p) => CursorAfter(p.applyToSubprograms(fn))
-	  case CursorBefore(p) => CursorBefore(p.applyToSubprograms(fn))
-	  case NoCursor(p) => NoCursor(p.applyToSubprograms(fn))
-	  case Remainder(p) => Remainder(p.applyToSubprograms(fn))
-	  case STClosure(p) => STClosure(p.applyToSubprograms(fn))
-	  
-	  case Deadlock() => this
-	  case Epsilon() => this
-	  case Forward(a,b,c) => this
-	  case PVar(v) => this
-	  case Receive(_,_) => this
-	  case Send(_,_) => this
-	  case Test(p) => this
-	  case Label(p) => this
-	  case NonDetAssignment(p) => this
-	  case Evolution(l,r) => this
-	  case Bottom() => fn(this)
-	}
+    case Forward(c, vs:Set[PVar], f:Formula) => other match {
+      case Forward(c_o, vs_o, f_o) => {
+        val varSetsMI = 
+          vs.filterNot(vs_o.contains(_)).isEmpty &&
+          vs_o.filterNot(vs.contains(_)).isEmpty
+        
+        varSetsMI && f.equals(f_o) && c.equals(c_o)
+      }
+      case _ => false
+    }
+    //Should each of these cases return yes for all cursors?
+    case CursorAfter(p) => other match {
+      case CursorAfter(p_o) => p.equals(p_o)
+      case _                => false
+    }
+    case CursorBefore(p) => other match {
+      case CursorBefore(p_o) => p.equals(p_o)
+      case _                => false
+    }
+    case NoCursor(p) => other match {
+      case NoCursor(p_o) => p.equals(p_o)
+      case _ => false
+    }
+    case JoinedParallel(a,b) => other match {
+      case JoinedParallel(a_o, b_o) => a.equals(a_o) && b.equals(b_o)
+      case _ => false
+    }
+    case Epsilon() => other match {
+      case Epsilon() => true
+      case _ => false
+    }
+    case Deadlock() => other match {
+      case Deadlock() => true
+      case _ => false
+    }
+    case Bottom() => other match {
+      case Bottom() => true
+      case _ => false
+    }
+    case Label(x:Int) => other match {
+      case Label(y:Int) => x==y
+      case _ => false
+    }
+    case Remainder(p:Program) => other match{
+      case Remainder(p2:Program) => p.equals(p2)
+      case _ => false
+    }
+  }
+  
+  /**
+   * Code clone of isCursorFree with CursorAfter changed to true, so the name
+   * is very misleading. TODO figure out exactly how this is being used.
+   */
+  def isSynchronizationFree:Boolean = this match {
+    case CursorAfter(a) => true //only difference b/w this and cursor-free.
+    case CursorBefore(a) => false
+    case Assignment(v,f) => true
+    case Choice(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
+    case NoCursor(a) => true
+    case STClosure(p) => p.isSynchronizationFree
+    case Evolution(a,b) => true
+    case JoinedParallel(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
+    case NonDetAssignment(a) => a.isSynchronizationFree
+    case PVar(v) => true
+    case Parallel(a,b) => a.isSynchronizationFree && b.isSynchronizationFree
+    case Receive(c,v) => v.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
+    case Send(c,f) => true //TODO e.g. this should be contextual.
+    case Forward(c,vs,f) => vs.map(_.isSynchronizationFree).foldLeft(true)((x,y) => x && y)
+    case Sequence(l,r) => l.isSynchronizationFree && r.isSynchronizationFree
+    case Test(f) => true
+    case Epsilon() => true
+    case Deadlock() => true
+    case Bottom() => true
+    case Label(_) => true
+    case Remainder(p) => p.isSynchronizationFree
+    }
+  
+  
+  /**
+   * TODO: Add a specification which explains exactly what this does. It does
+   * not appear to do the correct thing.
+   */
+  def applyToSubprograms(fn:Function[Program, Program]):Program = this match {
+    case Assignment(v,f) => Assignment(v,f)
+    case Choice(l,r) => Choice(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
+    case JoinedParallel(l,r) => JoinedParallel(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
+    case Parallel(l,r) => Parallel(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
+    case Sequence(l,r) => Sequence(l.applyToSubprograms(fn), r.applyToSubprograms(fn))
+    
+    case CursorAfter(p) => CursorAfter(p.applyToSubprograms(fn))
+    case CursorBefore(p) => CursorBefore(p.applyToSubprograms(fn))
+    case NoCursor(p) => NoCursor(p.applyToSubprograms(fn))
+    case Remainder(p) => Remainder(p.applyToSubprograms(fn))
+    case STClosure(p) => STClosure(p.applyToSubprograms(fn))
+    
+    case Deadlock() => this
+    case Epsilon() => this
+    case Forward(a,b,c) => this
+    case PVar(v) => this
+    case Receive(_,_) => this
+    case Send(_,_) => this
+    case Test(p) => this
+    case Label(p) => this
+    case NonDetAssignment(p) => this
+    case Evolution(l,r) => this
+    case Bottom() => fn(this)
+  }
 }
 
 //  x | x := p | ?F | p* | p;p 
@@ -486,49 +496,49 @@ sealed trait Formula {
   def prettyString = PrettyPrinter.formulaToString(this)
   
   def isTerm:Boolean = this match {
-    case Not(f)			=> false
-    case True()			=> false //?
-    case False()		=> false //?
-//    case Derivative(_)	=> false 
-    case Impl(_,_)		=> false
-    case And(_,_)		=> false
-    case Or(_,_)		=> false
-    case Box(_,_)		=> false
-    case Diamond(_,_)	=> false
-    case Eq(_,_)		=> false
-    case Geq(_,_)		=> false
-    case Leq(_,_)		=> false
-    case Gt(_,_)		=> false
-    case Lt(_,_)		=> false
+    case Not(f)      => false
+    case True()      => false //?
+    case False()    => false //?
+//    case Derivative(_)  => false 
+    case Impl(_,_)    => false
+    case And(_,_)    => false
+    case Or(_,_)    => false
+    case Box(_,_)    => false
+    case Diamond(_,_)  => false
+    case Eq(_,_)    => false
+    case Geq(_,_)    => false
+    case Leq(_,_)    => false
+    case Gt(_,_)    => false
+    case Lt(_,_)    => false
     
     case Number(_)      => true
     case Sum(_,_)       => true
     case Difference(_,_)=> true
     case Product(_,_)   => true
     case Quotient(_,_)  => true
-    case FVar(_)		=> true //?
+    case FVar(_)    => true //?
     case Derivative(v:PVar) => true //?
     case Negative(f) => f.isTerm
     case Symbol(_,args) => args.map(_.isTerm).reduce(_|_)
   }
   
   def isAtomic:Boolean = this match {
-    case Not(f)			=> f.isAtomic
+    case Not(f)      => f.isAtomic
     case Number(_)      => true
-    case FVar(_)			=> true
-    case True()			=> true
-    case False()		=> true
-    case Derivative(_)	=> true 
-    case Impl(_,_)		=> false
-    case And(_,_)		=> false
-    case Or(_,_)		=> false
-    case Box(_,_)		=> false
-    case Diamond(_,_)	=> false
-    case Eq(_,_)		=> false
-    case Geq(_,_)		=> false
-    case Leq(_,_)		=> false
-    case Gt(_,_)		=> false
-    case Lt(_,_)		=> false
+    case FVar(_)      => true
+    case True()      => true
+    case False()    => true
+    case Derivative(_)  => true 
+    case Impl(_,_)    => false
+    case And(_,_)    => false
+    case Or(_,_)    => false
+    case Box(_,_)    => false
+    case Diamond(_,_)  => false
+    case Eq(_,_)    => false
+    case Geq(_,_)    => false
+    case Leq(_,_)    => false
+    case Gt(_,_)    => false
+    case Lt(_,_)    => false
     case Sum(_,_)       => false
     case Difference(_,_)=> false
     case Product(_,_)   => false
@@ -554,41 +564,41 @@ sealed trait Formula {
       }  
       case _ => false
     }
-    case Impl(l,r)	=> other match {
+    case Impl(l,r)  => other match {
       case Impl(o_l,o_r) => l.equals(o_l) && r.equals(o_r)
-      case _			 => false
+      case _       => false
     }
-    case And(l,r)	=> other match {
-      case And(o_l,o_r)	=> l.equals(o_l) && r.equals(o_r)
-      case _			=> false
+    case And(l,r)  => other match {
+      case And(o_l,o_r)  => l.equals(o_l) && r.equals(o_r)
+      case _      => false
     }
-    case Or(l,r)	=> other match {
-      case Or(o_l,o_r)	=> l.equals(o_l) && r.equals(o_r)
-      case _			=> false
+    case Or(l,r)  => other match {
+      case Or(o_l,o_r)  => l.equals(o_l) && r.equals(o_r)
+      case _      => false
     }
-    case Not(f)		=> other match {
-      case Not(o_f)	=> f.equals(o_f)
-      case _		=> false
+    case Not(f)    => other match {
+      case Not(o_f)  => f.equals(o_f)
+      case _    => false
     }
     case FVar(v:Var) => other match {
       case FVar(v_o) => v.equals(v_o)
-      case _				=> false
+      case _        => false
     }
-    case Box(p:Program,f:Formula)	=> other match{
+    case Box(p:Program,f:Formula)  => other match{
       case Box(o_p:Program, o_f:Formula) => p.equals(o_p) && f.equals(o_f)
-      case _							 => false
+      case _               => false
     }
-    case Diamond(p:Program,f:Formula)	=> other match{
+    case Diamond(p:Program,f:Formula)  => other match{
       case Diamond(o_p:Program, o_f:Formula) => p.equals(o_p) && f.equals(o_f)
-      case _							 => false
+      case _               => false
     }
-    case True()		=> other match {
-      case True()	=> true
-      case _		=> false
+    case True()    => other match {
+      case True()  => true
+      case _    => false
     }
-    case False()	=> other match {
-      case False()	=> true
-      case _		=> false
+    case False()  => other match {
+      case False()  => true
+      case _    => false
     }
     case Eq(l,r) => other match { 
       case Eq(l_o, r_o) => l.equals(l_o) && r.equals(r_o)
@@ -612,7 +622,7 @@ sealed trait Formula {
     }
 //    case Derivative(e) => other match {
 //      case Derivative(other_e) => e.equals(other_e)
-//      case _					=> false
+//      case _          => false
 //    }
     case FVar(v) => other match {
       case FVar(v_o) => v.equals(v_o)

@@ -139,9 +139,9 @@ object PrettyPrinter {
       formulaToString(value)
       
     case Forward(channel, vars, value) => channel.name.toUpperCase() +
-      RECEIVE + vars.foldLeft(OPEN_CBRACKET)((s,v) => s + programToString(v)) + 
-      CLOSE_CBRACKET +
-      formulaToString(value)
+        paren( formulaToString(value) + COMMA +
+        vars.foldLeft(OPEN_CBRACKET)((s,v) => s + programToString(v)) + 
+        CLOSE_CBRACKET )
     
     case Parallel(p1,p2) => programToString(p1) + PCOMP + programToString(p2) 
     case JoinedParallel(p1,p2) => programToString(p1) + PCOMP_JOINED + programToString(p2)

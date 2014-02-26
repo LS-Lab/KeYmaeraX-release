@@ -9,29 +9,24 @@ object PdlRewrite {
       CursorRewrite.rewriteWithJoin(p, Set[Channel]())
     }
     
-    val cleanedResult = ExtraRewrites.cleanup(result) 
-    
-    //Remove the trailing cursor.
-    cleanedResult match {
-      case CursorAfter(p) => p
-      case _              => cleanedResult
-    }
+    ExtraRewrites.cleanup(result) 
   }
   
   def join(a:Program,b:Program):Program = JoinAlgorithm.join(a,b)
 }
 
 object JoinAlgorithm {
-  def join(alpha:Program, beta:Program)	 = {
+  def join(alpha:Program, beta:Program):Program	 = {
     //line 2
     val alpha_type = alpha.communicationType
     val beta_type  = beta.communicationType
     
     //Line 3
+    val alphaParallelbeta = JoinedParallel(alpha,beta)
     val initialR = 
-      new Element(JoinedParallel(alpha,beta), Label(LabelFactory.consume))
+      new Element(alphaParallelbeta, Label(LabelFactory.consume))
     val initialS = 
-      new Element(Label(LabelFactory.current), JoinedParallel(alpha,beta))
+      new Element(Label(LabelFactory.current), alphaParallelbeta)
     var H = List[Element]()
     var R = List[Element](initialR)
     var S = List[Element](initialS)
@@ -133,7 +128,7 @@ object JoinAlgorithm {
       //This deviates from the algorithm in the paper. We need to convert P
       //into a program.
       val PasProgram = P.map(_.asProgram).reduce(Choice(_,_))
-        
+
       //Line 22 - 24
       H = H :+ e
       R = R :+ new Element(S_m, PasProgram)
@@ -142,23 +137,25 @@ object JoinAlgorithm {
     }
     
     //Temporary: show what we have after line 24.
-    println("After line 24:")
-    println(H.map(_.toString).foldLeft("H=")((a,b) => a + b.toString +", "))
-    println(R.map(_.toString).foldLeft("R=")((a,b) => a + b.toString+", "))
-    println(S.map(_.toString).foldLeft("S=")((a,b) => a + b.toString+", "))
-    println("beginning transformation into loop form.")
+    log("After line 24:")
+    logSets(H,R,S)
+    log("beginning transformation into loop form.")
     
     /* transformation back into loop form */
     //line 25
-    while(!transformCandidates(R,initialR).isEmpty)
+    while(!candidatesForTransform(R,initialR).isEmpty)
     {
+      //Temporary
+      log("Beginning of outer while loop:")
+      logSets(H,R,S)
+   
       //line 26
-      while(!line26filter(R,initialR).isEmpty) {
-        val elementToRemove = line26filter(R,initialR).last
-        //line 27
-        H = H.map(_.replace(elementToRemove.lhs, elementToRemove.rhs))
+      while(!line26filter(R,alphaParallelbeta).isEmpty) {
+        val elementToRemove = line26filter(R,alphaParallelbeta).last
         //line 28
         R = R.filter(!_.equals(elementToRemove))
+        //line 27
+        R = R.map(_.replace(elementToRemove.lhs, elementToRemove.rhs))        
       }
       
       //The rest of the while loop is a series of complicated rewrites, implemented
@@ -169,47 +166,200 @@ object JoinAlgorithm {
     }
     
     //Temporary: show what we have after the algorithm completes..
-    println("Exiting the algorithm:")
-    println(H.map(_.toString).foldLeft("H=")((a,b) => a + b.toString +", "))
-    println(R.map(_.toString).foldLeft("R=")((a,b) => a + b.toString+", "))
-    println(S.map(_.toString).foldLeft("S=")((a,b) => a + b.toString+", "))
+    log("Exiting the algorithm:")
+    logSets(H,R,S)
     
     //Line 32: return the right hand side of S_alpha||beta
-    throw new Exception("unimplemented.")
+    R.filterNot(_.rhs.equals(alphaParallelbeta)).last.rhs
   }
 
   //////////////////////////////////////////////////////////////////////////////
+  // Section: STD OUT logging.
+  //////////////////////////////////////////////////////////////////////////////
+  val LOGGING_ENABLED = true
+  def log(s:String) = if(LOGGING_ENABLED) println(s) else null
+  def logSets(H:List[Element], R:List[Element], S:List[Element]):Unit = {
+    log(H.map(_.toString).foldLeft("H=")((a,b) => a + b.toString +", "))
+    log(R.map(_.toString).foldLeft("R=")((a,b) => a + b.toString+", "))
+    log(S.map(_.toString).foldLeft("S=")((a,b) => a + b.toString+", "))
+  }
+    
+  
+  //////////////////////////////////////////////////////////////////////////////
   // Section: Helper methods for join.
   //////////////////////////////////////////////////////////////////////////////
-  
-  private def transformCandidates(R:List[Element], initialR:Element) = {
+  /**
+   * @returns All elements of R whose LHS is S(a||b)
+   */
+  private def candidatesForTransform(R:List[Element], initialR:Element) = {
     R.filter(!_.lhs.equals(initialR.lhs))
   }
   
-  private def line26filter(R:List[Element], initialR:Element) = {
-    val candidates = transformCandidates(R,initialR)
-    
-    /**
-     * @returns  true iff form matches ++(as++g)
-     */
-    def hasCorrectForm(p:Program):Boolean = p match {
-      case Choice(l,r) => l match {
-        case Choice(ll,lr)     => hasCorrectForm(l)
-        case Sequence(a_i,s_i) => !s_i.equals(initialR.lhs)
-        case _                 => false
-      }
-      case _           => false
-    }
-    
-    candidates.filter(c => hasCorrectForm(c.rhs))
+  private def line26filter(R:List[Element], alphaParallelbeta:Program):List[Element] = {
+    R.filter(r => {
+      log(r.lhs + "\t" + r.rhs)
+      !r.lhs.equals(alphaParallelbeta) && !r.rhs.contains(r.lhs)
+    })
   }
   
-  //TODO
-  private def line29rewrite(R:List[Element]) = R
-  //TODO
-  private def line30rewrite(R:List[Element]) = R
-  //TODO
-  private def line31rewrite(H:List[Element],R:List[Element],initialR:Element)=H
+  /**
+   * Implements the rewrite on line 29 of the join algorithm in the PDL paper.
+   * 
+   * Applies the rewriting following to **both sides** of each equation in R:
+   *   left_l;s_n U right_l;s_n |--> (left_l U right_l); s_n
+   */
+  private def line29rewrite(R:List[Element]):List[Element] = {
+    /**
+     * The rewrite implementation for a single program.
+     * Below, we apply this to both sides of each equation in R.
+     */
+    def rewrite(p:Program) = p match{
+      case Choice(left,right) => {
+        //Extract the s_n component of each side, as well as any prefix.
+        val (left_l:Option[Program], s_left:Program) = left match {
+          case Sequence(ll, lr) => (Some(ll), lr)
+          case _                => (None, left)
+        }
+        val (right_l:Option[Program], s_right:Program) = right match {
+          case Sequence(rl,rr) => (Some(rl), rr)
+          case _               => (None, right)
+        }
+        
+        //If the rewrite applies, construct the new left-hand side.
+        if(s_left.equals(s_right)) {
+          //construct the left hand side (might be nothing)
+          val newLhsOpt:Option[Program] = left_l match {
+            case Some(ll) => right_l match {
+              case Some(rl) => Some(Sequence(ll,rl))
+              case None     => Some(ll)
+            }
+            case None => right_l match {
+              case Some(rl) => Some(rl)
+              case None     => None
+            }
+          }
+          
+          //Return the final result.
+          newLhsOpt match {
+            case Some(newLhs) => Sequence(newLhs, s_left) //or s_right, doesn't matter.
+            case None         => s_left
+          }
+        }
+        else {
+          p //the S_n's on the left and right don't match, so do not rewrite.
+        }
+      }
+      case _                  => p //The program is not a choice at the top-level, so do not rewrite.
+    }
+    
+    //Apply the rewrite to **both sides** of each element in R
+    R.map(r => new Element(rewrite(r.lhs), rewrite(r.rhs)))
+  }
+  
+  /**
+   * Rewrite equations containing terms of the form a;a* U \eps into a* U \eps
+   * and collapse a* U eps into a* where no other terms B;B* remain.
+   */
+  private def line30rewrite(R:List[Element]) = {
+    //We break the rewrite into two passes -- one to roll up the loop and another
+    //to remove the epsilons.
+    def reroll(p:Program) = p match {
+      case Choice(Sequence(alpha, STClosure(alsoAlpha)), Epsilon()) => {
+        if(alpha.equals(alsoAlpha)) {
+          Choice(STClosure(alpha), Epsilon())
+        }
+        else {
+          p
+        }
+      }
+      case _                   => p
+    }
+    
+    def ignoreEpsilonChoices(p:Program) = p match {
+      case Choice(STClosure(alpha), Epsilon()) => {
+        //TODO-MarcusQuestion: only when no other B;B* exist...?
+        STClosure(alpha)
+      }
+      case _                                   => p
+    }
+    
+    //TODO-MarcusQuestion should we iterate ``reroll" until a fixed point?
+    //TODO-MarcusQuestion Same question for ``ignoreEpsilonChoices"
+    def rewrite(p:Program) = ignoreEpsilonChoices(reroll(p))
+    
+    //Apply the rewrite
+    R.map(r => new Element(rewrite(r.lhs), rewrite(r.rhs)))
+  }
+  
+  /**
+   * If an equation S_m != S_a||b of the form S_m==a_m;S_m U gamma'
+   */
+  private def line31rewrite(H:List[Element],R:List[Element],initialR:Element):List[Element]= {
+    /**
+     * used in rewrite.
+     */
+    def checkGammaForm(gammaPrime:Program, S_m:Program):Boolean = gammaPrime match {
+      case Choice(left,right) => checkGammaForm(left,S_m) && !right.equals(S_m)
+      case Sequence(a_i,s_i)  => !s_i.equals(S_m)
+      case _                  => !gammaPrime.equals(S_m)
+    }
+    
+    /**
+     * Rewrites a single element.
+     */
+    def rewrite(eqn:Element):Option[Element] = {
+      val S_m = eqn.lhs
+      
+      eqn.rhs match {
+        case Choice(rhs_left, gamma)         => {
+          //Ensure that gamma has the expected form, and then recurse on the left.
+          if(checkGammaForm(gamma, S_m)) {
+            rewrite(new Element(eqn.lhs, rhs_left))
+          }
+          else {
+            None //Rewrite does not apply
+          }
+        }
+        case Sequence(a_m, s_m_candidate) => {
+          if(S_m.equals(s_m_candidate)) {
+            Some(new Element(eqn.lhs, STClosure(a_m)))
+          }
+          else {
+            //rewrite does not apply.
+            None
+          }
+        }
+        case _                            => {
+          if(eqn.rhs.equals(S_m)) {
+            None //This should not be allowed TODO-MarcusQuestion correct?
+            //We return instead of throwing an exn because we simply don't apply
+            //the rewrite where it does not apply. This way we can pass stuff in
+            //from R at will. TODO not sure if that's really OK.
+          }
+          else {
+            //rewrite does not apply.
+            None
+          }
+        }
+      }
+    }
+    
+    var HResult = H
+    
+    //Rewrite relevant elements of H
+    for(r <- R) {
+      val resultOpt = rewrite(r)
+      
+      resultOpt match {
+        case Some(result) => {
+          HResult = HResult.map(h => if(h.lhs.equals(result.lhs)) result else h)
+        }
+        case None => //okay
+      }
+    }
+    
+    HResult
+  }
   
   //////////////////////////////////////////////////////////////////////////////
   // Section: Data structures for join.

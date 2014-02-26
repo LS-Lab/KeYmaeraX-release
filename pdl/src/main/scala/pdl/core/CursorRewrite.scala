@@ -367,8 +367,7 @@ object C7 extends CursorRule {
   def apply(p:Program, ctx:Set[Channel]) = p match {
     case CursorBefore(program) => program match {
       case Parallel(a,b) => {
-        val result = CursorBefore(PdlRewrite.join(a, b))
-        CursorRewrite.rewrite(result, ctx)
+        CursorBefore(PdlRewrite.join(a, b))
       }
       case _ => throw new CRDoesNotApply
     }
