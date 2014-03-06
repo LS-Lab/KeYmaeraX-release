@@ -36,6 +36,8 @@ abstract class PositionRule extends (Position => Rule)
 
 abstract class AssumptionRule extends (Position => PositionRule)
 
+abstract class TwoPositionRule extends ((Position,Position) => Rule)
+
 class Position(val ante: Boolean, val index: Int) {
   def isAnte = ante
   def getIndex: Int = index
@@ -53,8 +55,26 @@ object Sequent {
 // proof rules:
 
 // reorder antecedent
+object AnteSwitch extends TwoPositionRule {
+  def apply(p1: Position, p2: Position) = new AnteSwitchRule(p1, p2)
+
+  private class AnteSwitch(p1: Position, p2: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = if(p1.isAnte && p2.isAnte)
+      Seq(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
+    else
+      throw new IllegalArgumentException("This rule is only applicable to two positions in the antecedent")
+}
 
 // reorder succedent
+object SuccSwitch extends TwoPositionRule {
+  def apply(p1: Position, p2: Position) = new SuccSwitchRule(p1, p2)
+
+  private class SuccSwitch(p1: Position, p2: Position) extends Rule {
+    def apply(s: Sequent): Seq[Sequent] = if(!p1.isAnte && !p2.isAnte)
+      Seq(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
+    else
+      throw new IllegalArgumentException("This rule is only applicable to two positions in the succedent")
+}
 
 // cut
 object Cut {
