@@ -58,7 +58,7 @@ object Sequent {
 object AnteSwitch extends TwoPositionRule {
   def apply(p1: Position, p2: Position) = new AnteSwitchRule(p1, p2)
 
-  private class AnteSwitch(p1: Position, p2: Position) extends Rule {
+  private class AnteSwitchRule(p1: Position, p2: Position) extends Rule {
     def apply(s: Sequent): Seq[Sequent] = if(p1.isAnte && p2.isAnte)
       Seq(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
     else
@@ -69,7 +69,7 @@ object AnteSwitch extends TwoPositionRule {
 object SuccSwitch extends TwoPositionRule {
   def apply(p1: Position, p2: Position) = new SuccSwitchRule(p1, p2)
 
-  private class SuccSwitch(p1: Position, p2: Position) extends Rule {
+  private class SuccSwitchRule(p1: Position, p2: Position) extends Rule {
     def apply(s: Sequent): Seq[Sequent] = if(!p1.isAnte && !p2.isAnte)
       Seq(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
@@ -96,17 +96,31 @@ object Cut {
 
 class SubstitutionPair[A <: Sort] (val n: Name[A], val t: Term[A]) 
 
-class Substitution(l: List[SubstitutionPair[_]])
+class Substitution(l: List[SubstitutionPair[_]]) extends (Formula => Formula) {
+  def apply(f: Formula) = throw new UnsupportedOperationException("Not implemented yet")
+}
 
 // uniform substitution
-// this rule performs a backward substitution step. That is the substition applied to the conclusion yields the premise
+// this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
 object UniformSubstition {
-  def apply(substitution: Substitution) : Rule = new UniformSubstition(substitution)
+  def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstition(substitution, origin)
 
-  private class UniformSubstition(subst: Substitution) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = Vector(s)
+  private class UniformSubstition(subst: Substitution, origin: Sequent) extends Rule {
+    // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+    // require explicit rule applications)
+    def apply(s: Sequent): Seq[Sequent] = {
+      val eqt = ((acc: Boolean, p: (Formula, Formula)) => subst(p._1) == p._2) // TODO: do we need to allow renaming of bounded variables?
+      if(s.pref == origin.pref // universal prefix is identical
+        && (origin.ante.zip(s.ante)).foldLeft(true)(eqt)  // formulas in ante results from substitution
+        && (origin.succ.zip(s.succ)).foldLeft(true)(eqt)) // formulas in succ results from substitution
+        Vector(origin)
+      else
+        throw new IllegalStateException("Substitution did not yield the expected result")
+    }
+
   }
 }
+
 
 // AX close
 object AxiomClose extends AssumptionRule {

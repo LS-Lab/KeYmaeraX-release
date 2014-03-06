@@ -27,7 +27,7 @@ trait Quantifiable
 /**
  * Builtin sorts
  */
-sealed abstract class BuiltInSort extends Sort
+abstract class BuiltInSort extends Sort
 
 object Bool extends BuiltInSort with Quantifiable
 object Real extends BuiltInSort with Quantifiable
@@ -40,12 +40,12 @@ object ProgramSort extends BuiltInSort
 /**
  * User defined sorts
  */
-sealed class UserDefinedSort(name : String) extends Sort with Quantifiable
-sealed class UserDefinedEnum(name : String, elements : List[String]) extends UserDefinedSort(name)
+class UserDefinedSort(name : String) extends Sort with Quantifiable
+class UserDefinedEnum(name : String, elements : Seq[String]) extends UserDefinedSort(name)
 
 /* ??? We could perhaps just create "Constant" objects for every element of an enum */
 
-sealed case class Pair(val l: Sort, val r: Sort) extends Sort
+sealed case class Pair[A <: Sort, B <: Sort](val l: A, val r: B) extends Sort
 
 /**
  * Trait for adding annotations
@@ -71,24 +71,10 @@ trait UnaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
   def construct(e: Expr[A]): Expr[T]
 }
 
-object UnaryExpr {
-  def unapply[A](e: Expr[T]) : Option[Expr[A]] = e match {
-    case e: UnaryExpr[T, A] => Some(e.child)
-    case _ => None
-  }
-}
-
 trait BinaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
   val left: Expr[A]
   val right: Expr[A]
-  def constuct(l: Expr[A], r: Expr[A])
-}
-
-object BinaryExpr {
-  def unapply[A](e: Expr[T]) : Option[(Expr[A], Expr[A])] = e match {
-    case e: BinaryExpr[T, A] => Some((e.left, e.right))
-    case _ => None
-  }
+  def construct(l: Expr[A], r: Expr[A])
 }
 
 case object True  extends Expr[Bool.type]
