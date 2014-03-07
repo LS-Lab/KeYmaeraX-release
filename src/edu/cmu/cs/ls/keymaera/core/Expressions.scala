@@ -2,215 +2,348 @@
  * @author Marcus Völp
  * @author Jan-David Quesel
  */
- package edu.cmu.cs.ls.keymaera.core
+//package edu.cmu.cs.ls.keymaera.core
 
+/**
+ * Abbreviations
+ *===============
+ *
+ * The following abbreviations are relevant for the core:
+ *
+ * C = codomain sort
+ * D = domain sort
+ * L = left child sort
+ * R = right child sort
+ *
+ * sort   : C = Sort object for codomain C
+ * domain : D = Sort object for domain D
+ */
+
+/**
+ * Todos
+ *=======
+ * 1) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
+ * 2) Assignment Expressions:   := as assign(Expr, Expr) (e.g., assign(apply(f, param), term) but also (x)' := 42
+ *                                    assign(x, term) resp. assign(f, param, term)
+ *                                    quant. assign vs. vector assign with "large" vector
+ *                                    quant. assign as function update f = g with [x := y]
+ * 3) [HELP ME] differential equations in some normal form (I don't remember the details)
+ */
+
+/**
+ * Points to Discuss
+ *===================
+ * 1) Currently we support efficicent type based mapping but no constructor patterns
+ *    (i.e., case e : Add[_] instead of case Add(sort, left, right). Members are still
+ *    accessible (e.g., through e.sort). Alternatively we could add apply / unapply
+ *    methods which degrade performance and increase codesize or turn some classes into
+ *    case classes, which increases their memory footprint mainly due to successive
+ *    overwrite.
+ * 2) Modality tracks variables that are bound in game / program: simplifies building
+ *    up context but may require modality to change more often
+ */
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
 
-/**
- * Sorts
- * =====
- *
- * The rational behind the below type hierarchy Sort is to let scala
- * discarge ill typed terms whenever this is possible. That is, scala
- * will automatically check type safety for builtin sorts. However,
- * because Sorts can be user defined. We have to support the creation
- * of new Sorts, which prevents compile time checks for these sorts.
- * We therefore equipped terms over user defined sorts with runtime
- * checks to assert type safety.
- */
-sealed abstract class Sort
-
-trait Quantifiable
+import scala.math
+import scala.math._
 
 /**
- * Builtin sorts
- */
-abstract class BuiltInSort extends Sort
-
-object Bool extends BuiltInSort with Quantifiable
-object Real extends BuiltInSort with Quantifiable
-object Unit extends BuiltInSort with Quantifiable
-
-object GameSort    extends BuiltInSort
-object ProgramSort extends BuiltInSort
-//object FormulaSort extends BuiltInSort
-
-/**
- * User defined sorts
- */
-class UserDefinedSort(name : String) extends Sort with Quantifiable
-class UserDefinedEnum(name : String, elements : Seq[String]) extends UserDefinedSort(name)
-
-/* ??? We could perhaps just create "Constant" objects for every element of an enum */
-
-sealed case class Pair[A <: Sort, B <: Sort](val l: A, val r: B) extends Sort
-
-/**
- * Trait for adding annotations
- * ============================
- * 
- * They are no longer required in the proof checker. Hence this trait may be empty.
+ * External functions imported in core but not used in proof check mode
  */
 trait Annotable
 
 /**
- * Term
- * ====
+ * Prover Core
+ */
+
+/**
+ * Sorts
+ *=======
+ * Class hierarchy defining builtin and user defined sorts. Because user defined
+ * sorts are only known at runtime, we use instances of the below classes to
+ * identify the sorts on which the dynamic logic expressions operate. (See
+ * TypeSafety.scala for a description how typechecking works)
+ */
+sealed abstract class Sort
+abstract class S[T <: Sort] extends Sort
+
+/* sort of booleans: true, false */
+class BoolT                                                    extends S[BoolT]
+
+/* sort of reals: 0, 1, 2.73 */
+class RealT                                                    extends S[RealT]
+
+/* sort of games */
+class GameT                                                    extends S[GameT]
+
+/* sort of hybrid probrams */
+class ProgramT                                                 extends S[ProgramT]
+
+/* user defined sort */
+class UserT(name : String)                                     extends S[UserT]
+/* user defined enum sort. values is the list of named constants of this enum */
+class EnumT(name : String, values : List[String])              extends S[EnumT]
+
+/* used to define pairs of sorts. That is the pair sort is of type L x R */
+class TupleT[L <: Sort, R <: Sort](val left : L, val right : R) extends S[TupleT[L,R]] {
+  override def equals(other : Any) = other match {
+    case that : TupleT[L, R] => left == that.left && right == that.right
+    case _ => false
+  }
+}
+
+/* subtype of a given type; for example TimeT = Subtype("the time that passes", Real) */
+class Subtype[C <: Sort](name : String, sort : C)              extends S[C]
+
+object PredefinedSorts {
+  val Bool    = new BoolT
+  val Real    = new RealT
+  val Game    = new GameT
+  val Program = new ProgramT
+
+  val RealXReal       = new TupleT(Real, Real)
+  val BoolXBool       = new TupleT(Bool, Bool)
+  val GameXBool       = new TupleT(Game, Bool)
+  val GameXGame       = new TupleT(Game, Game)
+  val ProgramXProgram = new TupleT(Program, Program)
+}
+
+import PredefinedSorts._
+
+class Core {
+
+  /**
+   * Expression infrastructure
+   *===========================
+   * (see TypeSafety.scala for an explaination how the Expression builtin typechecking
+   * mechanism works. Each expression may replicate itself with apply and adheres to the
+   * generic recursion structure via the function reduce.
+   */
+  sealed abstract class Expr(val sort : Sort) extends Annotable
+
+  /* atom / leaf expression */
+  abstract class Atom(sort : Sort) extends Expr(sort)
+
+  /* unary expression */
+  abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends Expr(sort) {
+
+    applicable
+
+    @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
+
+  }
+
+  /* binary expression (n-ary is encoded as binary of binary of ... */
+  abstract class Binary(sort : Sort, val domain : Sort, val left : Expr, val right : Expr) extends Expr(sort) {
+
+    applicable
+
+    @elidable(ASSERTION) def applicable = 
+          require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
+
+  }
+
+  /*********************************************************************************
+   * Differential Logic
+   *********************************************************************************
+   */
+
+  /**
+   * Variables and Functions
+   *=========================
+   */
+  object NameCounter {
+    private var next_id : Int = 0
+
+    @elidable(ASSERTION) def applicable = require(next_id < Int.MaxValue, "Error: too many variable objects; counter overflow")
+
+    def next() : Int = {
+      this.synchronized {
+        applicable
+        next_id = next_id + 1;
+        return next_id;
+      }
+    }
+  }
+
+  abstract class NamedSymbol(val name : String, val sort : Sort) {
+
+    private val id : Int = NameCounter.next()
+
+    def deepName = name + "_" + id;
+
+    def flatEquals(x : Variable[Sort]) =
+      this.name == x.name && this.sort == x.sort
+
+    def deepEquals(x : Variable[Sort]) =
+      flatEquals(x) && this.id == x.id
+  }
+
+  class Variable(name : String, sort : Sort) extends NamedSymbol(name, sort)
+
+  class FunctionVar (name : String, val domain : Sort, sort : Sort) extends NamedSymbol(name, sort)
+
+  /**
+   * Constant, Variable and Function Expressions
+   *=============================================
+   */
+
+  /* The * in nondet. assignments */
+  // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
+
+  /* Constant of scala type A cast into sort C */
+  class Constant(sort : Sort, val value : Sort) extends Atom(sort)
+
+  /* convenience wrappers for boolean / real constants */
+  val TrueEx  = new Constant(Bool, true)
+  val FalseEx = new Constant(Bool, false)
+
+  class Number(sort : Sort, value : BigDecimal) extends Constant(sort, value)
+
+  /* value of variable */
+  class Value(val variable : Variable) extends Atom(variable.sort)
+
+  /* function application */
+  class Apply(val function : FunctionVar, child : Expr)
+             extends Unary(function.sort, function.domain, child)
+
+  /* combine subexpressions into a vector */
+  class Pair(domain : TupleT, left : Expr, right : Expr) extends Binary(domain, domain, left, right)
+
+  /* extract elements from a vector expression */
+  class Left (domain : TupleT, child : Expr) extends Unary(domain.left, domain, child)
+  class Right(domain : TupleT, child : Expr) extends Unary(domain.right, domain, child)
+
+  /**
+   * Formulas (aka Terms)
+   *======================
+   */
+  /* Bool -> Bool */
+  abstract class UnaryFormula(child : Expr) extends Unary(Bool, Bool, child)
+  /* Bool x Bool -> Bool */
+  abstract class BinaryFormula(left : Expr, right : Expr) extends Binary(Bool, BoolXBool, left, right)
+
+  class Not   (child : Expr) extends UnaryFormula(child)
+  class And   (left : Expr, right : Expr) extends BinaryFormula(left, right)
+  class Or    (left : Expr, right : Expr) extends BinaryFormula(left, right)
+  class Imply (left : Expr, right : Expr) extends BinaryFormula(left, right)
+  class Equiv (left : Expr, right : Expr) extends BinaryFormula(left, right)
+
+  abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
+    extends Binary(Bool, new TupleT(domain, domain), left, right)
+
+  /* equality */
+  class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+  class NotEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+
+  /* comparisson */
+  class GreaterThan  (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+  class LessThan     (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+  class GreaterEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+  class LessEquals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+
+  /* temporal */
+  class Globally (child : Expr) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
+  class Finally  (child : Expr) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
+
+  /**
+   * Real Expressions
+   *==================
+   */
+
+  class Neg     (sort : Sort, child : Expr) extends Unary(sort, sort, child)
+  class Add     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
+  class Subtract(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
+  class Multiply(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
+  class Divide  (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
+  class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right) /* x^y (for "nice" y only) */
+
+  class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child)
+  class FormulaDerivative        (child : Expr)       extends UnaryFormula(child)
+
+  /**
+   * Games
+   *=======
+   */
+
+  /* Modality */
+  class Modality (left : Expr, right : Expr) extends Binary(Bool, GameXBool, left, right) {
+    def variables: List[NamedSymbol]
+  }
+
+  abstract class UnaryGame  (child : Expr) extends Unary(Game, Game, child)
+  abstract class BinaryGame (left : Expr, right : Expr) extends Binary(Game, GameXGame, left, right)
+
+  /* Games */
+  class BoxModality     (child : Expr) extends Unary(Game, Program, child)
+  class DiamondModality (child : Expr) extends Unary(Game, Program, child)
+
+  class BoxStar         (child : Expr)    extends UnaryGame(child)
+  class DiamondStar     (child : Expr)    extends UnaryGame(child)
+  class SequenceGame    (left  : Expr, right : Expr[GameT]) extends BinaryGame(left, right)
+  class DisjunctGame    (left  : Expr, right : Expr[GameT]) extends BinaryGame(left, right)
+  class ConjunctGame    (left  : Expr, right : Expr[GameT]) extends BinaryGame(left, right)
+
+  /**
+   * Programs
+   *==========
+   */
+
+  abstract class UnaryProgram  (child : Expr) extends Unary(Program, Program, child) 
+  abstract class BinaryProgram (left  : Expr, right : Expr) extends Binary(Program, ProgramXProgram, left, right)
+
+  class Sequence(left  : Expr, right : Expr) extends BinaryProgram(left, right)
+  class Choice  (left  : Expr, right : Expr) extends BinaryProgram(left, right)
+  class Parallel(left  : Expr, right : Expr) extends BinaryProgram(left, right)
+  class Loop    (child : Expr)               extends UnaryProgram(child)
+
+/* TODO:
  *
- * Data structure for representing terms in (quantified) differential dynamic logic
+ * - Assign(func, parameter, value) vs. Assign(Apply(func, parameter), value)
+ * - need QAssign
+ * - nondeterministic assign vs. Assign(Var, Random)
  *
- * Type checking works automatically for builtin terms. For user defined types and
- * for pairs, the trait TypeCheck asserts 
+  class Assign[C <: Sort](val variable : Variable[C], child : Expr[C]) extends Unary(Program, variable.sort, child)
+
+  class AssignFn[D <: Sort, C <: Sort](val function : FunctionVar[D, C], left : Expr[D], right : Expr[C])
+    extends Binary(Program, new TupleT(function.domain, function.sort), left, right)
+
+  class QAssign ...
+  class QAssignFn ...
  */
-sealed abstract class Expr[+T <: Sort] extends Annotable
 
-trait UnaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
-  val child: Expr[A]
-  def construct(e: Expr[A]): Expr[T]
-}
 
-trait BinaryExpr[T <: Sort, A <: Sort] extends Expr[T] {
-  val left: Expr[A]
-  val right: Expr[A]
-  def construct(l: Expr[A], r: Expr[A])
-}
+  class Test(child : Expr) extends Unary(Program, Bool, child)
 
-case object True  extends Expr[Bool.type]
-case object False extends Expr[Bool.type]
+  /* child = differential algebraic formula */
+  class ContEvolve(child : Expr) extends Unary(Program, Bool, child)
 
-case class Equals   [T <: Sort](left : Expr[T], right : Expr[T]) extends Expr[Bool.type] with BinaryExpr[Bool.type,T] {
-  def construct(a: Expr[T], b: Expr[T]) = new Equals[T](a,b) 
-}
+  /* TODO: normal form ODE data structures */
+  class NFContEvolve(xvector: Expr, thetavector: Expr, evolutionDomain: Expr)
 
-case class NotEquals[T <: Sort](left : Expr[T], right : Expr[T]) extends Expr[Bool.type]
-                                                                    with BinaryExpr[Bool.type,T] {
-  def construct(a: Expr[T], b: Expr[T]) = new NotEquals[T](a,b) 
-}
+  /**
+   * Quantifiers
+   *=============
+   */
 
-case class GreaterThan (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new GreaterThan(a,b) 
-}
-case class GreaterEquals (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new GreaterEquals(a,b) 
-}
-case class LessEquals (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new LessEquals(a,b) 
-}
-case class LessThan (left : Expr[Real.type], right : Expr[Real.type]) extends Expr[Bool.type] with BinaryExpr[Bool.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new LessThan(a,b) 
-}
+  abstract class Quantifier(val variable : NamedSymbol, child : Expr) extends UnaryFormula(child)
 
-case class Not         (child : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] {
-  def construct(e: Expr[Bool.type]) = new Not(e)
-}
+  class Forall(variable : NamedSymbol, child : Expr) extends Quantifier(variable, child)
+  class Exists(variable : NamedSymbol, child : Expr) extends Quantifier(variable, child)
 
-case class And         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with BinaryExpr[Bool.type,Bool.type]  {
-  def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new And(a,b) 
-}
-case class Or         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with BinaryExpr[Bool.type,Bool.type] {
-  def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new Or(a,b) 
-}
-case class Implies         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with BinaryExpr[Bool.type, Bool.type] {
-  def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new Implies(a,b) 
-}
-case class Equivalent         (left : Expr[Bool.type], right : Expr[Bool.type]) extends Expr[Bool.type]
-                                                            with BinaryExpr[Bool.type,Bool.type] {
-  def construct(a: Expr[Bool.type], b: Expr[Bool.type]) = new Equivalent(a,b) 
-}
+  class Sequent(val pref: Seq[(String, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+
+  object Sequent {
+    def apply(pref: Seq[(String, Sort)], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+  }
+
+
+
+} /* Core */
 
 /**
- * Temporal Expr[Bool.type](Bool)s
+ *==================================================================================
+ *==================================================================================
  */
-case class Globally  (child : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] { /* []\Phi e.g., in [\alpha] []\Phi */
-  def construct(e: Expr[Bool.type]) = new Globally(e)
-}
-case class Finally  (child : Expr[Bool.type]) extends Expr[Bool.type] with UnaryExpr[Bool.type, Bool.type] { /* <>\Phi e.g., in [\alpha] <>\Phi */
-  def construct(e: Expr[Bool.type]) = new Finally(e)
-}
-
-/**
- * Modality
- */
-case class Modality[A <: Sort]        (val game : Expr[GameSort.type], val term : Expr[A]) extends Expr[A] /* G   \Phi */
-// TODO: this is a binary expression with two _different_ types as parameters
-
-/**
- * Games
- * =====
- */
-case class BoxModality     (child : Expr[ProgramSort.type]) extends Expr[GameSort.type] with UnaryExpr[GameSort.type, ProgramSort.type] /* \[ \alpha \] */ {
-  def construct(e: Expr[ProgramSort.type]) = new BoxModality(e)
-}
-case class DiamondModality (child : Expr[ProgramSort.type]) extends Expr[GameSort.type] with UnaryExpr[GameSort.type, ProgramSort.type] /* \< \alpha \> */
-case class SequenceGame    (val left : Expr[GameSort.type], val right : Expr[GameSort.type]) extends Expr[GameSort.type]
-case class DisjunctGame    (val left : Expr[GameSort.type], val right : Expr[GameSort.type]) extends Expr[GameSort.type]
-case class ConjunctGame    (val left : Expr[GameSort.type], val right : Expr[GameSort.type]) extends Expr[GameSort.type]
-case class BoxStarGame     (val game : Expr[GameSort.type]) extends Expr[GameSort.type]
-case class DiamondStarGame (val game : Expr[GameSort.type]) extends Expr[GameSort.type]
-
-/**
- * Programs
- * ========
- */
-
-/* !!! quantified assign / quantified evolve missing */
-
-case class SequenceProgram (val left : Expr[ProgramSort.type], val right : Expr[ProgramSort.type]) extends Expr[ProgramSort.type]
-case class ChoiceProgram   (val left : Expr[ProgramSort.type], val right : Expr[ProgramSort.type]) extends Expr[ProgramSort.type]
-case class ParallelProgram   (val left : Expr[ProgramSort.type], val right : Expr[ProgramSort.type]) extends Expr[ProgramSort.type]
-case class Loop            (val program : Expr[ProgramSort.type]) extends Expr[ProgramSort.type]
-case class Assign[T <: Sort]          (val n: Name[T], val t : Expr[T]) extends Expr[ProgramSort.type]
-case class QuantifiedAssign[T <: Sort, A <: Sort]          (val n: Name[A], val f: Function[T, A], val t : Expr[T]) extends Expr[ProgramSort.type]
-case class NonDeterminsticAssign[T <: Sort] (val n: Name[T]) extends Expr[ProgramSort.type]
-case class QuantifiedNonDeterministicAssign[T <: Sort, A <: Sort]   (val n: Name[A], val f: Function[T, A]) extends Expr[ProgramSort.type]
-case class StateCheck      (val term : Expr[Bool.type])        extends Expr[ProgramSort.type]
-
-/* !!! identifier handling missing */
-/* !!! binders missing */
-
-sealed abstract class Binder[T <: Sort](val variableName : String) extends Expr[T]
-
-case class Forall[T <: Sort](override val variableName : String) extends Binder[T](variableName)
-case class Exists[T <: Sort](override val variableName : String) extends Binder[T](variableName)
-
-sealed class Bind[C <: Sort, T <: Sort](val binder : Binder[C], val term : Expr[T]) extends Expr[T]
-sealed class Name[C <: Sort](val name : String) extends Expr[C]
-
-sealed class Function[R <: Sort](val name: String) 
-
-sealed class Application[C <: Sort](val f: Function[C], val args: Expr[_]) extends Expr[C]
-
-sealed class Vector[A <: Sort, B <: Sort](val a: Expr[A], val b: Expr[B]) extends Expr[Pair[A,B]]
-
-sealed class Left[A <: Sort, B <: Sort] (val v: Vector[A,B]) extends Application[A](new Function[A]("left"), v)
-
-sealed class Right[A <: Sort, B <: Sort](val v: Vector[A,B]) extends Application[B](new Function[B]("right"), v)
-
-case class Neg(child: Expr[Real.type]) extends Expr[Real.type] with UnaryExpr[Real.type, Real.type] {
-  def construct(a: Expr[Real.type]) = new Neg(a,b)
-}
-
-case class Add(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Add(a,b)
-}
-
-case class Sub(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Sub(a,b)
-}
-
-case class Mult(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Mult(a,b)
-}
-
-case class Div(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Div(a,b)
-}
-
-case class Exp(left: Expr[Real.type], right: Expr[Real.type]) extends Expr[Real.type] with BinaryExpr[Real.type, Real.type] {
-  def construct(a: Expr[Real.type], b: Expr[Real.type]) = new Div(a,b)
-}

@@ -1,57 +1,32 @@
 package edu.cmu.cs.ls.keymaera.core
 
-/*--------------------------------------------------------------------------------*/
-/*--------------------------------------------------------------------------------*/
+// how do we represent Signatures? We have to be able to determine when a new name got introduced.
+object Proof {
+  type Formula = Term[Bool.type]
 
-  sealed abstract class Rule extends (Sequent => Seq[Sequent])
+sealed class ProofNode protected (val s: Sequent, val p: ProofNode) {
+  /**
+  * The rule that has been applied to the current node
+  */
+  private[this] var rule: Rule = null
 
   /**
-   * Proof Tree
-   *============
-   */
+  * The resulting sub goals from the rule application
+  */
+  private[this] var children: Seq[ProofNode] = Nil
 
-  sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
-
-    case class ProofStep(rule : Rule, subgoals : List[ProofNode])
-
-    @volatile private var alternatives : List[ProofStep] = Nil
-
-    /* must not be invoked when there is no alternative */
-    def getStep : ProofStep = alternatives match {
-      case List(h, t) => h
-      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
-    }
-
-    private def prepend(r : Rule, s : List[ProofNode]) {
-      this.synchronized {
-        alternatives = ProofStep(r, s) :: alternatives;
-      }
-    }
-
-    def prune(n : Int) {
-      this.synchronized {
-        if (n < alternatives.length)
-          alternatives = alternatives.take(n-1) ++ alternatives.drop(n)
-        else
-          throw new IllegalArgumentException("Pruning an alternative from a proof tree requires this alternative to exists.")
-      }
-    }
-
-    def apply(rule : Rule) : ProofNode = {
-      val result = rule.apply(sequent).map(new ProofNode(_, this))
-      prepend(rule, result)
-      return this
-    }
+  def apply(rule: Rule) = null
+  def apply(r: PositionRule, p: Position): Seq[ProofNode] = {
+    rule = r(p)
+    children = for (ns <- rule(s)) 
+      yield new ProofNode(ns, this)
+    children
   }
+  def apply(rule: AssumptionRule, assumption: Position, p: Position) = null
 
-  class RootNode(sequent : Sequent) extends ProofNode(sequent, null) {
-
-  }
-
-  /*********************************************************************************
-   * Proof Rules
-   *********************************************************************************
-   */
+  def getRule = rule
+  def getChildren = children
+}
 
 class RootNode(override val s: Sequent) extends ProofNode(s, null)
 
@@ -136,7 +111,6 @@ object UniformSubstition {
     def apply(s: Sequent): Seq[Sequent] = {
       val eqt = ((acc: Boolean, p: (Formula, Formula)) => subst(p._1) == p._2) // TODO: do we need to allow renaming of bounded variables?
       if(s.pref == origin.pref // universal prefix is identical
-        && origin.ante.length == s.ante.length && origin.succ.length == s.succ.length
         && (origin.ante.zip(s.ante)).foldLeft(true)(eqt)  // formulas in ante results from substitution
         && (origin.succ.zip(s.succ)).foldLeft(true)(eqt)) // formulas in succ results from substitution
         Vector(origin)
@@ -367,6 +341,4 @@ class Hide(p: Position) extends Rule {
 
 
 }
-
-
 // vim: set ts=4 sw=4 et:
