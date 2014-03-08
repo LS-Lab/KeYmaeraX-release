@@ -2,7 +2,7 @@
  * @author Marcus Völp
  * @author Jan-David Quesel
  */
-//package edu.cmu.cs.ls.keymaera.core
+package edu.cmu.cs.ls.keymaera.core
 
 /**
  * Abbreviations
@@ -282,9 +282,9 @@ class Core {
 
   class BoxStar         (child : Expr)    extends UnaryGame(child)
   class DiamondStar     (child : Expr)    extends UnaryGame(child)
-  class SequenceGame    (left  : Expr, right : Expr[GameT]) extends BinaryGame(left, right)
-  class DisjunctGame    (left  : Expr, right : Expr[GameT]) extends BinaryGame(left, right)
-  class ConjunctGame    (left  : Expr, right : Expr[GameT]) extends BinaryGame(left, right)
+  class SequenceGame    (left  : Expr, right : Expr) extends BinaryGame(left, right)
+  class DisjunctGame    (left  : Expr, right : Expr) extends BinaryGame(left, right)
+  class ConjunctGame    (left  : Expr, right : Expr) extends BinaryGame(left, right)
 
   /**
    * Programs

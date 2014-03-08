@@ -111,6 +111,7 @@ object UniformSubstition {
     def apply(s: Sequent): Seq[Sequent] = {
       val eqt = ((acc: Boolean, p: (Formula, Formula)) => subst(p._1) == p._2) // TODO: do we need to allow renaming of bounded variables?
       if(s.pref == origin.pref // universal prefix is identical
+        && origin.ante.length == s.ante.length && origin.succ.length == s.succ.length
         && (origin.ante.zip(s.ante)).foldLeft(true)(eqt)  // formulas in ante results from substitution
         && (origin.succ.zip(s.succ)).foldLeft(true)(eqt)) // formulas in succ results from substitution
         Vector(origin)
