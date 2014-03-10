@@ -88,10 +88,15 @@ case class UserSort(name : String) extends Sort
 case class EnumT(name : String, values : List[String]) extends Sort
 
 /* used to define pairs of sorts. That is the pair sort is of type L x R */
-case class TupleT(val left : Sort, val right : Sort) extends Sort {
-  override def equals(other : Any) = other match {
-    case that : TupleT => left == that.left && right == that.right
-    case _ => false
+object TupleT {
+  def apply(left: Sort, right: Sort): TupleT = left match {
+
+  }
+  case class TupleT(val left : Sort, val right : Sort) extends Sort {
+    override def equals(other : Any) = other match {
+      case that : TupleT => left == that.left && right == that.right
+      case _ => false
+    }
   }
 }
 
@@ -99,13 +104,13 @@ case class TupleT(val left : Sort, val right : Sort) extends Sort {
 case class Subtype(name : String, sort : Sort) extends Sort
 
 object PredefinedSorts {
-  val RealXReal       = new TupleT(Real, Real)
-  val BoolXBool       = new TupleT(Bool, Bool)
-  val GameXBool       = new TupleT(GameSort, Bool)
-  val BoolXProgram    = new TupleT(Bool, ProgramSort)
-  val GameXGame       = new TupleT(GameSort, GameSort)
-  val ProgramXProgram = new TupleT(ProgramSort, ProgramSort)
-  val BoolXProgramXProgram    = new TupleT(Bool, ProgramXProgram)
+  val RealXReal       = TupleT(Real, Real)
+  val BoolXBool       = TupleT(Bool, Bool)
+  val GameXBool       = TupleT(GameSort, Bool)
+  val BoolXProgram    = TupleT(Bool, ProgramSort)
+  val GameXGame       = TupleT(GameSort, GameSort)
+  val ProgramXProgram = TupleT(ProgramSort, ProgramSort)
+  val BoolXProgramXProgram    = TupleT(Bool, ProgramXProgram)
 }
 
 import PredefinedSorts._
@@ -332,8 +337,8 @@ class Core {
   trait Game extends Expr
   /* Modality */
   class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
-    def reads: List[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
-    def writes: List[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+    def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+    def writes: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
   }
 
   abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
