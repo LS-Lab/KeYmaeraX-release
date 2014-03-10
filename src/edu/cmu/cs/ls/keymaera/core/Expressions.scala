@@ -67,47 +67,42 @@ trait Annotable
  * TypeSafety.scala for a description how typechecking works)
  */
 sealed abstract class Sort
-abstract class S[T <: Sort] extends Sort
 
 /* sort of booleans: true, false */
-class BoolT                                                    extends S[BoolT]
+object Bool extends Sort
 
 /* sort of reals: 0, 1, 2.73 */
-class RealT                                                    extends S[RealT]
+object Real extends Sort
 
 /* sort of games */
-class GameT                                                    extends S[GameT]
+object GameSort extends Sort
 
 /* sort of hybrid probrams */
-class ProgramT                                                 extends S[ProgramT]
+object ProgramSort extends Sort
 
 /* user defined sort */
-class UserT(name : String)                                     extends S[UserT]
+case class UserSort(name : String) extends Sort
 /* user defined enum sort. values is the list of named constants of this enum */
-class EnumT(name : String, values : List[String])              extends S[EnumT]
+case class EnumT(name : String, values : List[String]) extends Sort
 
 /* used to define pairs of sorts. That is the pair sort is of type L x R */
-class TupleT[L <: Sort, R <: Sort](val left : L, val right : R) extends S[TupleT[L,R]] {
+case class TupleT(val left : Sort, val right : Sort) extends Sort {
   override def equals(other : Any) = other match {
-    case that : TupleT[L, R] => left == that.left && right == that.right
+    case that : TupleT => left == that.left && right == that.right
     case _ => false
   }
 }
 
 /* subtype of a given type; for example TimeT = Subtype("the time that passes", Real) */
-class Subtype[C <: Sort](name : String, sort : C)              extends S[C]
+case class Subtype(name : String, sort : Sort) extends Sort
 
 object PredefinedSorts {
-  val Bool    = new BoolT
-  val Real    = new RealT
-  val Game    = new GameT
-  val Program = new ProgramT
-
   val RealXReal       = new TupleT(Real, Real)
   val BoolXBool       = new TupleT(Bool, Bool)
-  val GameXBool       = new TupleT(Game, Bool)
-  val GameXGame       = new TupleT(Game, Game)
-  val ProgramXProgram = new TupleT(Program, Program)
+  val GameXBool       = new TupleT(GameSort, Bool)
+  val ProgramXBool    = new TupleT(ProgramSort, Bool)
+  val GameXGame       = new TupleT(GameSort, GameSort)
+  val ProgramXProgram = new TupleT(ProgramSort, ProgramSort)
 }
 
 import PredefinedSorts._
@@ -136,7 +131,7 @@ class Core {
   }
 
   /* binary expression (n-ary is encoded as binary of binary of ... */
-  abstract class Binary(sort : Sort, val domain : Sort, val left : Expr, val right : Expr) extends Expr(sort) {
+  abstract class Binary(sort : Sort, val domain : TupleT, val left : Expr, val right : Expr) extends Expr(sort) {
 
     applicable
 
@@ -194,7 +189,7 @@ class Core {
   // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
   /* Constant of scala type A cast into sort C */
-  class Constant(sort : Sort, val value : Sort) extends Atom(sort)
+  class Constant(sort : Sort, val value : Any) extends Atom(sort)
 
   /* convenience wrappers for boolean / real constants */
   val TrueEx  = new Constant(Bool, true)
@@ -220,19 +215,21 @@ class Core {
    * Formulas (aka Terms)
    *======================
    */
-  /* Bool -> Bool */
-  abstract class UnaryFormula(child : Expr) extends Unary(Bool, Bool, child)
-  /* Bool x Bool -> Bool */
-  abstract class BinaryFormula(left : Expr, right : Expr) extends Binary(Bool, BoolXBool, left, right)
 
-  class Not   (child : Expr) extends UnaryFormula(child)
-  class And   (left : Expr, right : Expr) extends BinaryFormula(left, right)
-  class Or    (left : Expr, right : Expr) extends BinaryFormula(left, right)
-  class Imply (left : Expr, right : Expr) extends BinaryFormula(left, right)
-  class Equiv (left : Expr, right : Expr) extends BinaryFormula(left, right)
+  trait Formula extends Expr
+  /* Bool -> Bool */
+  abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
+  /* Bool x Bool -> Bool */
+  abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, BoolXBool, left, right) with Formula
+
+  class Not   (child : Formula) extends UnaryFormula(child)
+  class And   (left : Formula, right : Formula) extends BinaryFormula(left, right)
+  class Or    (left : Formula, right : Formula) extends BinaryFormula(left, right)
+  class Imply (left : Formula, right : Formula) extends BinaryFormula(left, right)
+  class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, right)
 
   abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
-    extends Binary(Bool, new TupleT(domain, domain), left, right)
+    extends Binary(Bool, new TupleT(domain, domain), left, right) with Formula
 
   /* equality */
   class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
@@ -245,59 +242,74 @@ class Core {
   class LessEquals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
 
   /* temporal */
-  class Globally (child : Expr) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
-  class Finally  (child : Expr) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
+  class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
+  class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
 
   /**
    * Real Expressions
    *==================
    */
 
-  class Neg     (sort : Sort, child : Expr) extends Unary(sort, sort, child)
-  class Add     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
-  class Subtract(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
-  class Multiply(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
-  class Divide  (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right)
-  class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, sort, left, right) /* x^y (for "nice" y only) */
+  class Neg     (sort : Sort, child : Expr) extends Unary(sort, sort, child) with Formula
+  class Add     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
+  class Subtract(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
+  class Multiply(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
+  class Divide  (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
+  class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
 
   class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child)
-  class FormulaDerivative        (child : Expr)       extends UnaryFormula(child)
+  class FormulaDerivative        (child : Formula)       extends UnaryFormula(child)
 
   /**
    * Games
    *=======
    */
 
+  trait Game extends Expr
   /* Modality */
-  class Modality (left : Expr, right : Expr) extends Binary(Bool, GameXBool, left, right) {
-    def variables: List[NamedSymbol]
+  class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
+    def variables: List[NamedSymbol] = Nil
   }
 
-  abstract class UnaryGame  (child : Expr) extends Unary(Game, Game, child)
-  abstract class BinaryGame (left : Expr, right : Expr) extends Binary(Game, GameXGame, left, right)
+  abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
+  abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
 
   /* Games */
-  class BoxModality     (child : Expr) extends Unary(Game, Program, child)
-  class DiamondModality (child : Expr) extends Unary(Game, Program, child)
+  class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child)
+  class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child)
 
-  class BoxStar         (child : Expr)    extends UnaryGame(child)
-  class DiamondStar     (child : Expr)    extends UnaryGame(child)
-  class SequenceGame    (left  : Expr, right : Expr) extends BinaryGame(left, right)
-  class DisjunctGame    (left  : Expr, right : Expr) extends BinaryGame(left, right)
-  class ConjunctGame    (left  : Expr, right : Expr) extends BinaryGame(left, right)
+  class BoxStar         (child : Game)    extends UnaryGame(child)
+  class DiamondStar     (child : Game)    extends UnaryGame(child)
+  class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right)
+  class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
+  class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
 
   /**
    * Programs
    *==========
    */
 
-  abstract class UnaryProgram  (child : Expr) extends Unary(Program, Program, child) 
-  abstract class BinaryProgram (left  : Expr, right : Expr) extends Binary(Program, ProgramXProgram, left, right)
+  trait Program extends Expr
 
-  class Sequence(left  : Expr, right : Expr) extends BinaryProgram(left, right)
-  class Choice  (left  : Expr, right : Expr) extends BinaryProgram(left, right)
-  class Parallel(left  : Expr, right : Expr) extends BinaryProgram(left, right)
-  class Loop    (child : Expr)               extends UnaryProgram(child)
+  abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
+  abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
+
+  class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right)
+  class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right)
+  class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right)
+  class Loop    (child : Program)               extends UnaryProgram(child)
+
+  class IfThen(val cond: Formula, val then: Program) extends Expr(ProgramSort) with Program {
+    applicable
+
+    @elidable(ASSERTION) def applicable = require(cond.sort == Bool, "Sort mismatch in if then else condition: " + cond.sort + " is not Bool")
+  }
+
+  class IfThenElse(cond: Formula, left: Program, right: Program) extends Expr(ProgramSort) with Program {
+    applicable
+
+    @elidable(ASSERTION) def applicable = require(cond.sort == Bool, "Sort mismatch in if then else condition: " + cond.sort + " is not Bool")
+  }
 
 /* TODO:
  *
@@ -314,24 +326,27 @@ class Core {
   class QAssignFn ...
  */
 
+  trait AtomicProgram extends Program
 
-  class Test(child : Expr) extends Unary(Program, Bool, child)
+  class Assign(left: Expr, right: Expr) extends Binary(ProgramSort, new TupleT(left.sort, left.sort), left, right) with AtomicProgram
+
+  class Test(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
   /* child = differential algebraic formula */
-  class ContEvolve(child : Expr) extends Unary(Program, Bool, child)
+  class ContEvolve(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
   /* TODO: normal form ODE data structures */
-  class NFContEvolve(xvector: Expr, thetavector: Expr, evolutionDomain: Expr)
+  class NFContEvolve(xvector: Expr, thetavector: Expr, evolutionDomain: Formula) extends Expr(ProgramSort) with AtomicProgram
 
   /**
    * Quantifiers
    *=============
    */
 
-  abstract class Quantifier(val variable : NamedSymbol, child : Expr) extends UnaryFormula(child)
+  abstract class Quantifier(val variable : NamedSymbol, child : Formula) extends UnaryFormula(child)
 
-  class Forall(variable : NamedSymbol, child : Expr) extends Quantifier(variable, child)
-  class Exists(variable : NamedSymbol, child : Expr) extends Quantifier(variable, child)
+  class Forall(variable : NamedSymbol, child : Formula) extends Quantifier(variable, child)
+  class Exists(variable : NamedSymbol, child : Formula) extends Quantifier(variable, child)
 
   class Sequent(val pref: Seq[(String, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
 
