@@ -203,11 +203,8 @@ class Core {
   /* The * in nondet. assignments */
   // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
-  object True extends Expr(Bool) with Formula with Atom
-  object False extends Expr(Bool) with Formula with Atom
-
-  object TrueTerm extends Expr(Bool) with Term with Atom
-  object FalseTerm extends Expr(Bool) with Term with Atom
+  object True extends Expr(Bool) with Formula with Term with Atom
+  object False extends Expr(Bool) with Formula with Term with Atom
 
   /*
    * - Make sure that there are no constants for negative numbers
@@ -262,11 +259,11 @@ class Core {
   }
 
   /* combine subexpressions into a vector */
-  class Pair(domain : TupleT, left : Expr, right : Expr) extends Binary(domain, domain, left, right) with Term
+  class Pair(domain : TupleT, left : Term, right : Term) extends Binary(domain, domain, left, right) with Term
 
   /* extract elements from a vector expression */
-  class Left (domain : TupleT, child : Expr) extends Unary(domain.left, domain, child) with Term
-  class Right(domain : TupleT, child : Expr) extends Unary(domain.right, domain, child) with Term
+  class Left (domain : TupleT, child : Term) extends Unary(domain.left, domain, child) with Term
+  class Right(domain : TupleT, child : Term) extends Unary(domain.right, domain, child) with Term
 
   /**
    * Formulas (aka Terms)
@@ -302,6 +299,8 @@ class Core {
   class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
   class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
 
+  class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
+
   /**
    * Real Expressions
    *==================
@@ -316,10 +315,9 @@ class Core {
   class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
   class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
 
-  class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child) with Term
-  class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
+  class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
 
-  class IfThenElseTerm(cond: Formula, then: Expr, elseT: Expr)
+  class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
     extends Ternary(then.sort, new TupleT(Bool, new TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
     applicable
 
@@ -342,8 +340,8 @@ class Core {
   abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
 
   /* Games */
-  class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child)
-  class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child)
+  class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
+  class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
 
   class BoxStar         (child : Game)    extends UnaryGame(child)
   class DiamondStar     (child : Game)    extends UnaryGame(child)
@@ -422,10 +420,10 @@ class Core {
    * Sequent notation
    */
 
-  class Sequent(val pref: Seq[(NamedSymbol, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+  class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
 
   object Sequent {
-    def apply(pref: Seq[(NamedSymbol, Sort)], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+    def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
   }
 
 
