@@ -385,18 +385,24 @@ class Core {
   /* child = differential algebraic formula */
   class ContEvolve(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
-  /* TODO: normal form ODE data structures */
-  class NFContEvolve(xvector: Expr, thetavector: Expr, evolutionDomain: Formula) extends Expr(ProgramSort) with AtomicProgram
+  /* Normal form ODE data structures
+   * \exists R a,b,c. (\D{x} = \theta & F)
+   */
+  class NFContEvolve(val vars: Seq[NamedSymbol], val x: Expr, val theta: Expr, val f: Formula) extends Expr(ProgramSort) with AtomicProgram
 
   /**
    * Quantifiers
    *=============
    */
 
-  abstract class Quantifier(val variable : NamedSymbol, child : Formula) extends UnaryFormula(child)
+  abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
 
-  class Forall(variable : NamedSymbol, child : Formula) extends Quantifier(variable, child)
-  class Exists(variable : NamedSymbol, child : Formula) extends Quantifier(variable, child)
+  class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+  class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+
+  /**
+   * Sequent notation
+   */
 
   class Sequent(val pref: Seq[(String, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
 
