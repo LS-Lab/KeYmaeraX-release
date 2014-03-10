@@ -162,7 +162,7 @@ class Core {
   abstract class Ternary(sort: Sort, val domain: TupleT, val fst: Expr, val snd: Expr, val thd: Expr) extends Expr(sort) {
     applicable
 
-    @elidable(ASSERTION) def applicable = require(domain.left == fst
+    @elidable(ASSERTION) def applicable = require(domain.left == fst.sort
       && (domain.right match { case TupleT(a,b) => snd.sort == a && thd.sort == b case _ => false}),
       "Sort Mismatch in Binary Expr")
   }
@@ -249,7 +249,7 @@ class Core {
       case _ => None
     }
     private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
-      def ==(e: Any): Boolean = e match {
+      override def equals(e: Any): Boolean = e match {
         case Number(a, b) => a == sort && b == value
         case _ => false
       }
