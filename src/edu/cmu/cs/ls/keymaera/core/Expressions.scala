@@ -206,7 +206,39 @@ class Core {
   val TrueEx  = new Constant(Bool, true)
   val FalseEx = new Constant(Bool, false)
 
-  class Number(sort : Sort, value : BigDecimal) extends Constant(sort, value)
+  /*
+   * - Make sure that there are no constants for negative numbers
+   * - Strip all the trailing zeros
+   */
+  object Number {
+    def apply(value: BigDecimal) : Expr = Number(Real, value)
+    def apply(sort: Sort, number: BigDecimal) : Expr = {
+      var n = number.underlying.stripTrailingZeros.toPlainString
+      // bugfix for 0.0 and so on (will be fixed in BigDecimal in Java 8
+      // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6480539
+      while(n.contains(".") && (n.endsWith("0") || n.endsWith("."))) {
+        n = n.substring(0, n.length() - 1)
+      }
+      require(BigDecimal(n).underlying.compareTo(number.underlying()) == 0,
+        "Stripping trailing zeros should not change the value of a number " + number + " != " + n)
+      val value = BigDecimal(n)
+      if(value < 0)
+        new Neg(sort, new NumberObj(sort, value.abs))
+      else
+        new NumberObj(sort, value)
+    }
+
+    def unapply(e: Expr): Option[(Sort, BigDecimal)] = e match {
+      case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
+      case _ => None
+    }
+    private class NumberObj(sort : Sort, value : BigDecimal) extends Constant(sort, value) {
+      def ==(e: Any): Boolean = e match {
+        case Number(a, b) => a == sort && b == value
+        case _ => false
+      }
+    }
+  }
 
   /* function application */
   class Apply(val function : Function, child : Expr)
