@@ -88,17 +88,28 @@ case class UserSort(name : String) extends Sort
 case class EnumT(name : String, values : List[String]) extends Sort
 
 /* used to define pairs of sorts. That is the pair sort is of type L x R */
+sealed trait TupleT extends Sort {
+  val left: Sort
+  val right: Sort
+}
 object TupleT {
+  // Currying of sorts such that left is never a TupleT
   def apply(left: Sort, right: Sort): TupleT = left match {
-
+    case TupleTImpl(l, r) => TupleT(l, TupleT(r, right))
+    case _ => new TupleTImpl(left, right)
   }
-  case class TupleT(val left : Sort, val right : Sort) extends Sort {
+  def unapply(e: Sort): Option[(Sort, Sort)] = e match {
+    case TupleTImpl(l, r) => Some((l,r))
+    case _ => None
+  }
+  private case class TupleTImpl(val left : Sort, val right : Sort) extends TupleT {
     override def equals(other : Any) = other match {
       case that : TupleT => left == that.left && right == that.right
       case _ => false
     }
   }
 }
+
 
 /* subtype of a given type; for example TimeT = Subtype("the time that passes", Real) */
 case class Subtype(name : String, sort : Sort) extends Sort
@@ -288,7 +299,7 @@ class Core {
   class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, right)
 
   abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
-    extends Binary(Bool, new TupleT(domain, domain), left, right) with Formula
+    extends Binary(Bool, TupleT(domain, domain), left, right) with Formula
 
   /* equality */
   class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
@@ -314,16 +325,16 @@ class Core {
   trait Term extends Expr
 
   class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
-  class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
-  class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
-  class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
-  class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
-  class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
+  class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+  class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+  class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+  class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+  class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
 
   class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
 
   class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
-    extends Ternary(then.sort, new TupleT(Bool, new TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
+    extends Ternary(then.sort, TupleT(Bool, TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
     applicable
 
     @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseT.sort, "Sort mismatch" +
@@ -397,7 +408,7 @@ class Core {
    * f(i) := 5
    * (x,y) := (5,5)
    */
-  class Assign(left: Term, right: Term) extends Binary(ProgramSort, new TupleT(left.sort, left.sort), left, right) with AtomicProgram
+  class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram
 
   class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
 
