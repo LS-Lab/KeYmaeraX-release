@@ -100,9 +100,10 @@ object PredefinedSorts {
   val RealXReal       = new TupleT(Real, Real)
   val BoolXBool       = new TupleT(Bool, Bool)
   val GameXBool       = new TupleT(GameSort, Bool)
-  val ProgramXBool    = new TupleT(ProgramSort, Bool)
+  val BoolXProgram    = new TupleT(Bool, ProgramSort)
   val GameXGame       = new TupleT(GameSort, GameSort)
   val ProgramXProgram = new TupleT(ProgramSort, ProgramSort)
+  val BoolXProgramXProgram    = new TupleT(Bool, ProgramXProgram)
 }
 
 import PredefinedSorts._
@@ -119,7 +120,7 @@ class Core {
   sealed abstract class Expr(val sort : Sort) extends Annotable
 
   /* atom / leaf expression */
-  abstract class Atom(sort : Sort) extends Expr(sort)
+  trait Atom extends Expr
 
   /* unary expression */
   abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends Expr(sort) {
@@ -138,6 +139,14 @@ class Core {
     @elidable(ASSERTION) def applicable = 
           require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
 
+  }
+
+  abstract class Ternary(sort: Sort, val domain: TupleT, val fst: Expr, val snd: Expr, val thd: Expr) extends Expr(sort) {
+    applicable
+
+    @elidable(ASSERTION) def applicable = require(domain.left == fst
+      && (domain.right match { case TupleT(a,b) => snd.sort == a && thd.sort == b case _ => false}),
+      "Sort Mismatch in Binary Expr")
   }
 
   /*********************************************************************************
@@ -163,22 +172,24 @@ class Core {
     }
   }
 
-  abstract class NamedSymbol(val name : String, val sort : Sort) {
+  abstract class NamedSymbol(val name : String, sort : Sort) extends Expr(sort) {
 
     private val id : Int = NameCounter.next()
 
     def deepName = name + "_" + id;
 
-    def flatEquals(x : Variable[Sort]) =
+    def flatEquals(x : Variable) =
       this.name == x.name && this.sort == x.sort
 
-    def deepEquals(x : Variable[Sort]) =
+    def deepEquals(x : Variable) =
       flatEquals(x) && this.id == x.id
   }
 
-  class Variable(name : String, sort : Sort) extends NamedSymbol(name, sort)
+  class Variable(name : String, sort : Sort) extends NamedSymbol(name, sort) with Atom
 
-  class FunctionVar (name : String, val domain : Sort, sort : Sort) extends NamedSymbol(name, sort)
+  class PredicateConstant(name : String) extends NamedSymbol(name, Bool) with Formula
+
+  class Function (name : String, val domain : Sort, sort : Sort) extends NamedSymbol(name, sort)
 
   /**
    * Constant, Variable and Function Expressions
@@ -189,7 +200,7 @@ class Core {
   // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
   /* Constant of scala type A cast into sort C */
-  class Constant(sort : Sort, val value : Any) extends Atom(sort)
+  class Constant(sort : Sort, val value : Any) extends Expr(sort) with Atom
 
   /* convenience wrappers for boolean / real constants */
   val TrueEx  = new Constant(Bool, true)
@@ -197,12 +208,23 @@ class Core {
 
   class Number(sort : Sort, value : BigDecimal) extends Constant(sort, value)
 
-  /* value of variable */
-  class Value(val variable : Variable) extends Atom(variable.sort)
-
   /* function application */
-  class Apply(val function : FunctionVar, child : Expr)
+  class Apply(val function : Function, child : Expr)
              extends Unary(function.sort, function.domain, child)
+
+  /*
+   * Predicate application
+   *
+   * Note that this is necessary to ensure that predicates actually implement
+   * the trait Formula
+   */
+  class ApplyPredicate(val function : Function, child : Expr)
+    extends Unary(Bool, function.domain, child) with Formula {
+    applicable
+
+    @elidable(ASSERTION) override def applicable = super.applicable; require(function.sort == Bool,
+      "Sort mismatch in if then else condition: "  + function.sort + " is not Bool")
+  }
 
   /* combine subexpressions into a vector */
   class Pair(domain : TupleT, left : Expr, right : Expr) extends Binary(domain, domain, left, right)
@@ -258,7 +280,7 @@ class Core {
   class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
 
   class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child)
-  class FormulaDerivative        (child : Formula)       extends UnaryFormula(child)
+  class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
 
   /**
    * Games
@@ -268,7 +290,8 @@ class Core {
   trait Game extends Expr
   /* Modality */
   class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
-    def variables: List[NamedSymbol] = Nil
+    def reads: List[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+    def writes: List[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
   }
 
   abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
@@ -299,17 +322,10 @@ class Core {
   class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right)
   class Loop    (child : Program)               extends UnaryProgram(child)
 
-  class IfThen(val cond: Formula, val then: Program) extends Expr(ProgramSort) with Program {
-    applicable
+  class IfThen(val cond: Formula, val then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program
 
-    @elidable(ASSERTION) def applicable = require(cond.sort == Bool, "Sort mismatch in if then else condition: " + cond.sort + " is not Bool")
-  }
-
-  class IfThenElse(cond: Formula, left: Program, right: Program) extends Expr(ProgramSort) with Program {
-    applicable
-
-    @elidable(ASSERTION) def applicable = require(cond.sort == Bool, "Sort mismatch in if then else condition: " + cond.sort + " is not Bool")
-  }
+  class IfThenElse(cond: Formula, then: Program, elseP: Program)
+    extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program
 
 /* TODO:
  *
@@ -329,6 +345,8 @@ class Core {
   trait AtomicProgram extends Program
 
   class Assign(left: Expr, right: Expr) extends Binary(ProgramSort, new TupleT(left.sort, left.sort), left, right) with AtomicProgram
+
+  class NonDetAssign(child: Expr) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
 
   class Test(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
