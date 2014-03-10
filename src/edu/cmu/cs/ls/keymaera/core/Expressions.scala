@@ -187,7 +187,7 @@ class Core {
     //  flatEquals(x) && this.id == x.id
   }
 
-  class Variable(name : String, index: Option[Int], sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom
+  class Variable(name : String, index: Option[Int], sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
   class PredicateConstant(name : String, index: Option[Int]) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
@@ -203,16 +203,19 @@ class Core {
   /* The * in nondet. assignments */
   // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
-  object True extends Expr(Bool) with Atom
-  object False extends Expr(Bool) with Atom
+  object True extends Expr(Bool) with Formula with Atom
+  object False extends Expr(Bool) with Formula with Atom
+
+  object TrueTerm extends Expr(Bool) with Term with Atom
+  object FalseTerm extends Expr(Bool) with Term with Atom
 
   /*
    * - Make sure that there are no constants for negative numbers
    * - Strip all the trailing zeros
    */
   object Number {
-    def apply(value: BigDecimal) : Expr = Number(Real, value)
-    def apply(sort: Sort, number: BigDecimal) : Expr = {
+    def apply(value: BigDecimal) : Term = Number(Real, value)
+    def apply(sort: Sort, number: BigDecimal) : Term = {
       var n = number.underlying.stripTrailingZeros.toPlainString
       // bugfix for 0.0 and so on (will be fixed in BigDecimal in Java 8
       // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6480539
@@ -232,7 +235,7 @@ class Core {
       case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
       case _ => None
     }
-    private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom {
+    private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
       def ==(e: Any): Boolean = e match {
         case Number(a, b) => a == sort && b == value
         case _ => false
@@ -242,7 +245,7 @@ class Core {
 
   /* function application */
   class Apply(val function : Function, child : Expr)
-             extends Unary(function.sort, function.domain, child)
+             extends Unary(function.sort, function.domain, child) with Term
 
   /*
    * Predicate application
@@ -259,11 +262,11 @@ class Core {
   }
 
   /* combine subexpressions into a vector */
-  class Pair(domain : TupleT, left : Expr, right : Expr) extends Binary(domain, domain, left, right)
+  class Pair(domain : TupleT, left : Expr, right : Expr) extends Binary(domain, domain, left, right) with Term
 
   /* extract elements from a vector expression */
-  class Left (domain : TupleT, child : Expr) extends Unary(domain.left, domain, child)
-  class Right(domain : TupleT, child : Expr) extends Unary(domain.right, domain, child)
+  class Left (domain : TupleT, child : Expr) extends Unary(domain.left, domain, child) with Term
+  class Right(domain : TupleT, child : Expr) extends Unary(domain.right, domain, child) with Term
 
   /**
    * Formulas (aka Terms)
@@ -290,10 +293,10 @@ class Core {
   class NotEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
 
   /* comparison */
-  class GreaterThan  (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
-  class LessThan     (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
-  class GreaterEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
-  class LessEquals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+  class GreaterThan  (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+  class LessThan     (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+  class GreaterEquals(domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+  class LessEquals   (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
 
   /* temporal */
   class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
@@ -304,22 +307,24 @@ class Core {
    *==================
    */
 
-  class Neg     (sort : Sort, child : Expr) extends Unary(sort, sort, child)
-  class Add     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
-  class Subtract(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
-  class Multiply(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
-  class Divide  (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
-  class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
+  trait Term extends Expr
 
-  class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child)
+  class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
+  class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
+  class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
+  class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
+  class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
+  class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, new TupleT(sort, sort), left, right) with Term
+
+  class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child) with Term
   class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
 
-  class IfThenElseExpr(cond: Formula, then: Expr, elseE: Expr)
-    extends Ternary(then.sort, new TupleT(Bool, new TupleT(then.sort, elseE.sort)), cond, then, elseE) {
+  class IfThenElseTerm(cond: Formula, then: Expr, elseT: Expr)
+    extends Ternary(then.sort, new TupleT(Bool, new TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
     applicable
 
-    @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseE.sort, "Sort mismatch" +
-      "in if-then-else statement: " + then.sort + " != " + elseE.sort)
+    @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseT.sort, "Sort mismatch" +
+      "in if-then-else statement: " + then.sort + " != " + elseT.sort)
   }
   /**
    * Games
@@ -384,24 +389,24 @@ class Core {
   trait AtomicProgram extends Program
 
   /*
-   * Expr -> Expr in order to allow for the following cases:
+   * Term -> Term in order to allow for the following cases:
    * x := 5
    * f(i) := 5
    * (x,y) := (5,5)
    */
-  class Assign(left: Expr, right: Expr) extends Binary(ProgramSort, new TupleT(left.sort, left.sort), left, right) with AtomicProgram
+  class Assign(left: Term, right: Term) extends Binary(ProgramSort, new TupleT(left.sort, left.sort), left, right) with AtomicProgram
 
-  class NDetAssign(child: Expr) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
+  class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
 
-  class Test(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+  class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
   /* child = differential algebraic formula */
-  class ContEvolve(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+  class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
   /* Normal form ODE data structures
    * \exists R a,b,c. (\D{x} = \theta & F)
    */
-  class NFContEvolve(val vars: Seq[NamedSymbol], val x: Expr, val theta: Expr, val f: Formula) extends Expr(ProgramSort) with AtomicProgram
+  class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram
 
   /**
    * Quantifiers
