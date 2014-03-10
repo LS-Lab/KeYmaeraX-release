@@ -68,6 +68,8 @@ trait Annotable
  */
 sealed abstract class Sort
 
+object Unit extends Sort
+
 /* sort of booleans: true, false */
 object Bool extends Sort
 
@@ -172,24 +174,26 @@ class Core {
     }
   }
 
-  abstract class NamedSymbol(val name : String, sort : Sort) extends Expr(sort) {
+  abstract class NamedSymbol(val name : String, val index: Option[Int], val domain: Sort, sort : Sort) extends Expr(sort) {
 
-    private val id : Int = NameCounter.next()
+    //private val id : Int = NameCounter.next()
 
-    def deepName = name + "_" + id;
+    //def deepName = name + "_" + index + "_" + id;
 
-    def flatEquals(x : Variable) =
-      this.name == x.name && this.sort == x.sort
+    def flatEquals(x : NamedSymbol) =
+      this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
 
-    def deepEquals(x : Variable) =
-      flatEquals(x) && this.id == x.id
+    //def deepEquals(x : NamedSymbol) =
+    //  flatEquals(x) && this.id == x.id
   }
 
-  class Variable(name : String, sort : Sort) extends NamedSymbol(name, sort) with Atom
+  class Variable(name : String, index: Option[Int], sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom
 
-  class PredicateConstant(name : String) extends NamedSymbol(name, Bool) with Formula
+  class PredicateConstant(name : String, index: Option[Int]) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
-  class Function (name : String, val domain : Sort, sort : Sort) extends NamedSymbol(name, sort)
+  class ProgramConstant(name : String, index: Option[Int]) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
+
+  class Function (name : String, index: Option[Int], domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
 
   /**
    * Constant, Variable and Function Expressions
@@ -199,12 +203,8 @@ class Core {
   /* The * in nondet. assignments */
   // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
-  /* Constant of scala type A cast into sort C */
-  class Constant(sort : Sort, val value : Any) extends Expr(sort) with Atom
-
-  /* convenience wrappers for boolean / real constants */
-  val TrueEx  = new Constant(Bool, true)
-  val FalseEx = new Constant(Bool, false)
+  object True extends Expr(Bool) with Atom
+  object False extends Expr(Bool) with Atom
 
   /*
    * - Make sure that there are no constants for negative numbers
@@ -232,7 +232,7 @@ class Core {
       case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
       case _ => None
     }
-    private class NumberObj(sort : Sort, value : BigDecimal) extends Constant(sort, value) {
+    private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom {
       def ==(e: Any): Boolean = e match {
         case Number(a, b) => a == sort && b == value
         case _ => false
@@ -289,7 +289,7 @@ class Core {
   class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
   class NotEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
 
-  /* comparisson */
+  /* comparison */
   class GreaterThan  (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
   class LessThan     (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
   class GreaterEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
