@@ -376,9 +376,15 @@ class Core {
 
   trait AtomicProgram extends Program
 
+  /*
+   * Expr -> Expr in order to allow for the following cases:
+   * x := 5
+   * f(i) := 5
+   * (x,y) := (5,5)
+   */
   class Assign(left: Expr, right: Expr) extends Binary(ProgramSort, new TupleT(left.sort, left.sort), left, right) with AtomicProgram
 
-  class NonDetAssign(child: Expr) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
+  class NDetAssign(child: Expr) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
 
   class Test(child : Expr) extends Unary(ProgramSort, Bool, child) with AtomicProgram
 
@@ -404,10 +410,10 @@ class Core {
    * Sequent notation
    */
 
-  class Sequent(val pref: Seq[(String, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+  class Sequent(val pref: Seq[(NamedSymbol, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
 
   object Sequent {
-    def apply(pref: Seq[(String, Sort)], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+    def apply(pref: Seq[(NamedSymbol, Sort)], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
   }
 
 
