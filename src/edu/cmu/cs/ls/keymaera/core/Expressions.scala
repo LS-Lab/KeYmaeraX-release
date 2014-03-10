@@ -304,16 +304,23 @@ class Core {
    *==================
    */
 
-  class Neg     (sort : Sort, child : Expr) extends Unary(sort, sort, child) with Formula
-  class Add     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
-  class Subtract(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
-  class Multiply(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
-  class Divide  (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
-  class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right) with Formula
+  class Neg     (sort : Sort, child : Expr) extends Unary(sort, sort, child)
+  class Add     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
+  class Subtract(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
+  class Multiply(sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
+  class Divide  (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
+  class Exp     (sort : Sort, left  : Expr, right : Expr) extends Binary(sort, new TupleT(sort, sort), left, right)
 
   class Derivative(sort : Sort, child : Expr) extends Unary(sort, sort, child)
   class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
 
+  class IfThenElseExpr(cond: Formula, then: Expr, elseE: Expr)
+    extends Ternary(then.sort, new TupleT(Bool, new TupleT(then.sort, elseE.sort)), cond, then, elseE) {
+    applicable
+
+    @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseE.sort, "Sort mismatch" +
+      "in if-then-else statement: " + then.sort + " != " + elseE.sort)
+  }
   /**
    * Games
    *=======
