@@ -201,12 +201,40 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
   //  flatEquals(x) && this.id == x.id
 }
 
+object Variable {
+  def apply(name : String, index: Option[Int] = None, sort : Sort): Variable = new Variable(name, index, sort)
+  def unapply(e: Expr): Option[(String, Option[Int], Sort)] = e match {
+    case x: Variable => Some((x.name, x.index, x.sort))
+    case _ => None
+  }
+}
 class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
+object PredicateConstant {
+  def apply(name : String, index: Option[Int] = None, sort : Sort): PredicateConstant = new PredicateConstant(name, index, sort)
+  def unapply(e: Expr): Option[(String, Option[Int], Sort)] = e match {
+    case x: PredicateConstant => Some((x.name, x.index, x.sort))
+    case _ => None
+  }
+}
 class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
+object ProgramConstant {
+  def apply(name : String, index: Option[Int] = None, sort : Sort): ProgramConstant = new ProgramConstant(name, index, sort)
+  def unapply(e: Expr): Option[(String, Option[Int], Sort)] = e match {
+    case x: ProgramConstant => Some((x.name, x.index, x.sort))
+    case _ => None
+  }
+}
 class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
 
+object Function {
+  def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Function = new Function(name, index, domain, sort)
+  def unapply(e: Expr): Option[(String, Option[Int], Sort, Sort)] = e match {
+    case x: Function => Some((x.name, x.index, x.domain, x.sort))
+    case _ => None
+  }
+}
 class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
 
 /**
@@ -335,14 +363,73 @@ abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
   extends Binary(Bool, TupleT(domain, domain), left, right) with Formula
 
 /* equality */
-class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
-class NotEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+object Equals {
+  def apply(domain : Sort = RealXReal, left : Expr, right : Expr): Equals = new Equals(domain, left, right)
+  def unapply(e: Expr): Option[(Sort, Expr, Expr)] = e match {
+    case x: Equals => Some((x.domain, x.left, x.right))
+    case _ => None
+  }
+}
+class Equals   (domain : Sort = RealXReal, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+
+object NotEquals {
+  def apply(domain : Sort = RealXReal, left : Expr, right : Expr): NotEquals = new NotEquals(domain, left, right)
+  def unapply(e: Expr): Option[(Sort, Expr, Expr)] = e match {
+    case x: NotEquals => Some((x.domain, x.left, x.right))
+    case _ => None
+  }
+}
+class NotEquals(domain : Sort = RealXReal, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
 
 /* comparison */
-class GreaterThan  (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-class LessThan     (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-class GreaterEquals(domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-class LessEquals   (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+object GreaterThan {
+  def apply(domain : Sort = RealXReal, left : Term, right : Term): GreaterThan = new GreaterThan(domain, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: GreaterThan => (x.left, x.right) match {
+      case (a: Term, b: Term) => Some((x.domain, a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class GreaterThan  (domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+
+object GreaterEquals {
+  def apply(domain : Sort = RealXReal, left : Term, right : Term): GreaterEquals = new GreaterEquals(domain, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: GreaterEquals => (x.left, x.right) match {
+      case (a: Term, b: Term) => Some((x.domain, a, b))
+      case _ => None
+    }
+    case _ => None
+    case _ => None
+  }
+}
+class GreaterEquals(domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+
+object LessEquals {
+  def apply(domain : Sort = RealXReal, left : Term, right : Term): LessEquals = new LessEquals(domain, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: LessEquals => (x.left, x.right) match {
+      case (a: Term, b: Term) => Some((x.domain, a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class LessEquals   (domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+
+object LessThan {
+  def apply(domain : Sort = RealXReal, left : Term, right : Term): LessThan = new LessThan(domain, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: LessThan => (x.left, x.right) match {
+      case (a: Term, b: Term) => Some((x.domain, a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class LessThan     (domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
 
 /* temporal */
 class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */

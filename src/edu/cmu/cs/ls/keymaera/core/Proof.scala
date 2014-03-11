@@ -1,5 +1,8 @@
 package edu.cmu.cs.ls.keymaera.core
 
+import scala.annotation.elidable
+import scala.annotation.elidable._
+
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
@@ -14,7 +17,7 @@ package edu.cmu.cs.ls.keymaera.core
 
     case class ProofStep(rule : Rule, subgoals : List[ProofNode])
 
-    @volatile private var alternatives : List[ProofStep] = Nil
+    @volatile private[this] var alternatives : List[ProofStep] = Nil
 
     /* must not be invoked when there is no alternative */
     def getStep : ProofStep = alternatives match {
@@ -122,10 +125,62 @@ object Cut {
 
 // equality/equivalence rewriting
 
-class SubstitutionPair (val n: NamedSymbol, val t: Term)
+/**
+ * specific interpretation for variables that start and end with _
+ * these are used for binding
+ *
+ * @param n can have one of the following forms:
+ *          - Variable
+ *          - ProgramConstant
+ *          - Predicate
+ *          - Apply(Function, Expr)
+ *          - ApplyPredicate(Function, Expr)
+ */
+class SubstitutionPair (val n: Expr, val t: Expr) {
+  applicable
+
+  @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
+    + n.sort + " != " + t.sort)
+}
 
 class Substitution(l: Seq[SubstitutionPair]) extends (Formula => Formula) {
-  def apply(f: Formula): Formula = throw new UnsupportedOperationException("Not implemented yet")
+  def apply(f: Formula): Formula = f match {
+    case Not(c) => Not(this(c))
+    case And(l, r) => And(this(l), this(r))
+    case Or(l, r) => Or(this(l), this(r))
+    case Imply(l, r) => Imply(this(l), this(r))
+    case Equiv(l, r) => Equiv(this(l), this(r))
+
+    case Equals(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => Equals(d, this(a), this(b))
+      case (a: Program,b: Program) => Equals(d, this(a), this(b))
+    }
+    case NotEquals(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => NotEquals(d, this(a), this(b))
+      case (a: Program,b: Program) => NotEquals(d, this(a), this(b))
+    }
+    case GreaterThan(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => GreaterEquals(d, this(a), this(b))
+    }
+    case GreaterEquals(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => GreaterEquals(d, this(a), this(b))
+    }
+    case LessEquals(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => LessEquals(d, this(a), this(b))
+    }
+    case LessThan(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => LessThan(d, this(a), this(b))
+    }
+    case _ => throw new UnsupportedOperationException("Not implemented yet")
+  }
+  def apply(t: Term): Term = t match {
+    case Variable(name, idx, sort) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    case _ => throw new UnsupportedOperationException("Not implemented yet")
+  }
+
+  def apply(p: Program) = p match {
+    case _ => throw new UnsupportedOperationException("Not implemented yet")
+  }
 }
 
 // uniform substitution
