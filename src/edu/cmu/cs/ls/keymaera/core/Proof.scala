@@ -287,6 +287,11 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Parallel(a, b) => Parallel(this(a), this(b))
     case IfThen(a, b) => IfThen(this(a), this(b))
     case IfThenElse(a, b, c) => IfThenElse(this(a), this(b), this(c))
+    case Assign(a, b) => Assign(a, this(b))
+    case NDetAssign(a) => p
+    case Test(a) => Test(this(a))
+    case ContEvolve(a) => ContEvolve(this(a))
+    case NFContEvolve(v, x, t, f) => NFContEvolve(v, x, this(t), this(f))
     case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
