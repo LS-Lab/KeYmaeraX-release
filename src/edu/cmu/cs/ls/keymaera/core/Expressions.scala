@@ -785,8 +785,9 @@ object Assign {
 }
 class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram {
   def reads = ???
-  def writes = ???
+  def writes = VSearch.modified(left)
 }
+
 
 object NDetAssign {
   def apply(child: Term): NDetAssign = new NDetAssign(child)
@@ -800,7 +801,7 @@ object NDetAssign {
 }
 class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram {
   def reads = Nil
-  def writes = ???
+  def writes = VSearch.modified(child)
 }
 
 object Test {
@@ -831,7 +832,7 @@ object ContEvolve {
 }
 class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
   def reads = ???
-  def writes = ???
+  def writes = VSearch.primed(child)
 }
 
 /* Normal form ODE data structures
@@ -846,7 +847,7 @@ object NFContEvolve {
 }
 class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
   def reads = ???
-  def writes = ???
+  def writes = VSearch.primed(x)
 }
 
 /**
@@ -892,5 +893,45 @@ object Sequent {
 
 /**
  *==================================================================================
+ * Helpers
  *==================================================================================
  */
+
+private object VSearch {
+  def modified(e: Term): Seq[NamedSymbol] = e match {
+    case Pair(dom, a, b) => modified(a) ++ modified(b)
+    case Apply(f, args) => Seq(f)
+    case x:Variable => Seq(x)
+    case Neg(_, a) => modified(a)
+    case Add(_, a, b) => modified(a) ++ modified(b)
+    case Subtract(_, a, b) => modified(a) ++ modified(b)
+    case Multiply(_, a, b) => modified(a) ++ modified(b)
+    case Divide(_, a, b) => modified(a) ++ modified(b)
+    case Exp(_, a, b) => modified(a) ++ modified(b)
+    case _ => throw new IllegalArgumentException("Unexpected form" + e)
+  }
+
+  def primed(f: Formula): Seq[NamedSymbol] = f match {
+    case Not(a) => primed(a)
+    case And(a, b) => primed(a) ++ primed(b)
+    case Or(a, b) => primed(a) ++ primed(b)
+    case Imply(a, b) => primed(a) ++ primed(b)
+    case Equiv(a, b) => primed(a) ++ primed(b)
+    case ApplyPredicate(_, arg) => primed(arg)
+    case _ => ???
+  }
+
+  def primed(t: Term): Seq[NamedSymbol] = t match {
+    case Pair(_, a, b) => primed(a) ++ primed(b)
+    case Derivative(_, x) => modified(x)
+    case Neg(_, a) => primed(a)
+    case Add(_, a, b) => primed(a) ++ primed(b)
+    case Subtract(_, a, b) => primed(a) ++ primed(b)
+    case Multiply(_, a, b) => primed(a) ++ primed(b)
+    case Divide(_, a, b) => primed(a) ++ primed(b)
+    case Exp(_, a, b) => primed(a) ++ primed(b)
+    case Apply(f, args) => primed(args)
+    case _ => ???
+  }
+}
+
