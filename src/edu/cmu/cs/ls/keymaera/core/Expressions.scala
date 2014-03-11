@@ -136,7 +136,7 @@ import PredefinedSorts._
 sealed abstract class Expr(val sort : Sort) extends Annotable
 
 /* atom / leaf expression */
-trait Atom extends Expr
+sealed trait Atom extends Expr
 
 /* unary expression */
 abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends Expr(sort) {
@@ -343,7 +343,7 @@ class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, c
  *======================
  */
 
-trait Formula extends Expr
+sealed trait Formula extends Expr
 /* Bool -> Bool */
 abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
 /* Bool x Bool -> Bool */
@@ -472,7 +472,7 @@ class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
  *==================
  */
 
-trait Term extends Expr
+sealed trait Term extends Expr
 
 object Neg {
   def apply(sort: Sort, child: Term): Neg = new Neg(sort, child)
@@ -570,7 +570,7 @@ class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
  *=======
  */
 
-trait Game extends Expr
+sealed trait Game extends Expr
 /* Modality */
 class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
   def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
@@ -595,7 +595,7 @@ class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, righ
  *==========
  */
 
-trait Program extends Expr
+sealed trait Program extends Expr
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
 abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
@@ -625,7 +625,7 @@ class QAssign ...
 class QAssignFn ...
 */
 
-trait AtomicProgram extends Program
+sealed trait AtomicProgram extends Program
 
 /*
  * Term -> Term in order to allow for the following cases:
@@ -654,7 +654,28 @@ class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val
 
 abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
 
+object Forall {
+  def apply(variables : Seq[NamedSymbol], child : Formula): Forall = new Forall(variables, child)
+  def unapply(e: Expr): Option[(Seq[NamedSymbol], Formula)] = e match {
+    case x: Forall => x.child match {
+      case f: Formula => Some((x.variables, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+
+object Exists {
+  def apply(variables : Seq[NamedSymbol], child : Formula): Exists = new Exists(variables, child)
+  def unapply(e: Expr): Option[(Seq[NamedSymbol], Formula)] = e match {
+    case x: Exists => x.child match {
+      case f: Formula => Some((x.variables, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
 
 /**
