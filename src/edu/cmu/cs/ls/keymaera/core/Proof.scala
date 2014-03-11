@@ -212,6 +212,12 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, this(form))
     else throw new IllegalArgumentException("There is a name class in a substitution " + vars + " and " + l)
 
+    case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
+      case BoxModality(p, f) => BoxModality(this(p), this(f))
+      case DiamondModality(p, f) => DiamondModality(this(p), this(f))
+      case _ => ???
+    } else throw new IllegalArgumentException("There is a name class in a substitution " + x.writes + " and " + l)
+
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
 
     // if we find a match, we bind the arguments of our match to what is in the current term
@@ -275,6 +281,12 @@ class Substitution(l: Seq[SubstitutionPair]) {
   }
 
   def apply(p: Program): Program = p match {
+    case Loop(c) => Loop(this(c))
+    case Sequence(a, b) => Sequence(this(a), this(b))
+    case Choice(a, b) => Choice(this(a), this(b))
+    case Parallel(a, b) => Parallel(this(a), this(b))
+    case IfThen(a, b) => IfThen(this(a), this(b))
+    case IfThenElse(a, b, c) => IfThenElse(this(a), this(b), this(c))
     case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
