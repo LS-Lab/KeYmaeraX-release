@@ -133,10 +133,11 @@ object Cut {
  *          - Variable
  *          - Predicate
  *          - ApplyPredicate(Function, Expr)
- *          TODO:
- *          - ProgramConstant
  *          - Apply(Function, Expr)
+ *          - ProgramConstant
  *          - Derivative(...)
+ *  TODO: - deal with modalities (similar to quantifers)
+ *        - walk through programs
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -168,18 +169,18 @@ class Substitution(l: Seq[SubstitutionPair]) {
 
   def names(pairs: Seq[SubstitutionPair]): Seq[NamedSymbol] = (for(p <- pairs) yield names(p)).flatten.distinct
 
+  def names(pair: SubstitutionPair): Seq[NamedSymbol] = (names(pair.n) ++ names(pair.t)).filter(!boundNames(pair.n).contains(_))
+
   /**
    * This method returns the names that are bound in the source of a substitution
-   * @param expr
-   * @return
+   * @param n the source of a substitution
+   * @return the names bound on the source side of a substitution
    */
   def boundNames(n: Expr): Seq[NamedSymbol] = n match {
     case ApplyPredicate(_, args) => names(args)
     case Apply(_, args) => names(args)
     case _ => Nil
   }
-
-  def names(pair: SubstitutionPair): Seq[NamedSymbol] = (names(pair.n) ++ names(pair.t)).filter(!boundNames(pair.n).contains(_))
 
   /**
    * Return all the named elements in a sequent
@@ -259,7 +260,8 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Divide(s, l, r) => Divide(s, this(l), this(r))
     case Exp(s, l, r) => Exp(s, this(l), this(r))
     case Pair(dom, l, r) => Pair(dom, this(l), this(r))
-    case Variable(name, idx, sort) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    case Derivative(_, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    case Variable(_, _, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
     // if we find a match, we bind the arguments of our match to what is in the current term
     // then we apply it to the codomain of the substitution
     case Apply(func, arg) => for(p <- l) {
@@ -272,7 +274,8 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
 
-  def apply(p: Program) = p match {
+  def apply(p: Program): Program = p match {
+    case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
 
