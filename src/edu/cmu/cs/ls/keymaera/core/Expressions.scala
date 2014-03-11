@@ -126,325 +126,354 @@ object PredefinedSorts {
 
 import PredefinedSorts._
 
-class Core {
+/**
+ * Expression infrastructure
+ *===========================
+ * (see TypeSafety.scala for an explaination how the Expression builtin typechecking
+ * mechanism works. Each expression may replicate itself with apply and adheres to the
+ * generic recursion structure via the function reduce.
+ */
+sealed abstract class Expr(val sort : Sort) extends Annotable
 
-  /**
-   * Expression infrastructure
-   *===========================
-   * (see TypeSafety.scala for an explaination how the Expression builtin typechecking
-   * mechanism works. Each expression may replicate itself with apply and adheres to the
-   * generic recursion structure via the function reduce.
-   */
-  sealed abstract class Expr(val sort : Sort) extends Annotable
+/* atom / leaf expression */
+trait Atom extends Expr
 
-  /* atom / leaf expression */
-  trait Atom extends Expr
+/* unary expression */
+abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends Expr(sort) {
 
-  /* unary expression */
-  abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends Expr(sort) {
+  applicable
 
-    applicable
+  @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
 
-    @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
+}
 
-  }
+/* binary expression (n-ary is encoded as binary of binary of ... */
+abstract class Binary(sort : Sort, val domain : TupleT, val left : Expr, val right : Expr) extends Expr(sort) {
 
-  /* binary expression (n-ary is encoded as binary of binary of ... */
-  abstract class Binary(sort : Sort, val domain : TupleT, val left : Expr, val right : Expr) extends Expr(sort) {
+  applicable
 
-    applicable
+  @elidable(ASSERTION) def applicable =
+        require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
 
-    @elidable(ASSERTION) def applicable = 
-          require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
+}
 
-  }
+abstract class Ternary(sort: Sort, val domain: TupleT, val fst: Expr, val snd: Expr, val thd: Expr) extends Expr(sort) {
+  applicable
 
-  abstract class Ternary(sort: Sort, val domain: TupleT, val fst: Expr, val snd: Expr, val thd: Expr) extends Expr(sort) {
-    applicable
+  @elidable(ASSERTION) def applicable = require(domain.left == fst.sort
+    && (domain.right match { case TupleT(a,b) => snd.sort == a && thd.sort == b case _ => false}),
+    "Sort Mismatch in Binary Expr")
+}
 
-    @elidable(ASSERTION) def applicable = require(domain.left == fst.sort
-      && (domain.right match { case TupleT(a,b) => snd.sort == a && thd.sort == b case _ => false}),
-      "Sort Mismatch in Binary Expr")
-  }
-
-  /*********************************************************************************
-   * Differential Logic
-   *********************************************************************************
-   */
-
-  /**
-   * Variables and Functions
-   *=========================
-   */
-  object NameCounter {
-    private var next_id : Int = 0
-
-    @elidable(ASSERTION) def applicable = require(next_id < Int.MaxValue, "Error: too many variable objects; counter overflow")
-
-    def next() : Int = {
-      this.synchronized {
-        applicable
-        next_id = next_id + 1;
-        return next_id;
-      }
-    }
-  }
-
-  abstract class NamedSymbol(val name : String, val index: Option[Int], val domain: Sort, sort : Sort) extends Expr(sort) {
-
-    //private val id : Int = NameCounter.next()
-
-    //def deepName = name + "_" + index + "_" + id;
-
-    def flatEquals(x : NamedSymbol) =
-      this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
-
-    //def deepEquals(x : NamedSymbol) =
-    //  flatEquals(x) && this.id == x.id
-  }
-
-  class Variable(name : String, index: Option[Int], sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
-
-  class PredicateConstant(name : String, index: Option[Int]) extends NamedSymbol(name, index, Unit, Bool) with Formula
-
-  class ProgramConstant(name : String, index: Option[Int]) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
-
-  class Function (name : String, index: Option[Int], domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
-
-  /**
-   * Constant, Variable and Function Expressions
-   *=============================================
-   */
-
-  /* The * in nondet. assignments */
-  // class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
-
-  object True extends Expr(Bool) with Formula with Term with Atom
-  object False extends Expr(Bool) with Formula with Term with Atom
-
-  /*
-   * - Make sure that there are no constants for negative numbers
-   * - Strip all the trailing zeros
-   */
-  object Number {
-    def apply(value: BigDecimal) : Term = Number(Real, value)
-    def apply(sort: Sort, number: BigDecimal) : Term = {
-      var n = number.underlying.stripTrailingZeros.toPlainString
-      // bugfix for 0.0 and so on (will be fixed in BigDecimal in Java 8
-      // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6480539
-      while(n.contains(".") && (n.endsWith("0") || n.endsWith("."))) {
-        n = n.substring(0, n.length() - 1)
-      }
-      require(BigDecimal(n).underlying.compareTo(number.underlying()) == 0,
-        "Stripping trailing zeros should not change the value of a number " + number + " != " + n)
-      val value = BigDecimal(n)
-      if(value < 0)
-        new Neg(sort, new NumberObj(sort, value.abs))
-      else
-        new NumberObj(sort, value)
-    }
-
-    def unapply(e: Expr): Option[(Sort, BigDecimal)] = e match {
-      case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
-      case _ => None
-    }
-    private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
-      override def equals(e: Any): Boolean = e match {
-        case Number(a, b) => a == sort && b == value
-        case _ => false
-      }
-    }
-  }
-
-  /* function application */
-  class Apply(val function : Function, child : Expr)
-             extends Unary(function.sort, function.domain, child) with Term
-
-  /*
-   * Predicate application
-   *
-   * Note that this is necessary to ensure that predicates actually implement
-   * the trait Formula
-   */
-  class ApplyPredicate(val function : Function, child : Expr)
-    extends Unary(Bool, function.domain, child) with Formula {
-    applicable
-
-    @elidable(ASSERTION) override def applicable = super.applicable; require(function.sort == Bool,
-      "Sort mismatch in if then else condition: "  + function.sort + " is not Bool")
-  }
-
-  /* combine subexpressions into a vector */
-  class Pair(domain : TupleT, left : Term, right : Term) extends Binary(domain, domain, left, right) with Term
-
-  /* extract elements from a vector expression */
-  class Left (domain : TupleT, child : Term) extends Unary(domain.left, domain, child) with Term
-  class Right(domain : TupleT, child : Term) extends Unary(domain.right, domain, child) with Term
-
-  /**
-   * Formulas (aka Terms)
-   *======================
-   */
-
-  trait Formula extends Expr
-  /* Bool -> Bool */
-  abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
-  /* Bool x Bool -> Bool */
-  abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, BoolXBool, left, right) with Formula
-
-  class Not   (child : Formula) extends UnaryFormula(child)
-  class And   (left : Formula, right : Formula) extends BinaryFormula(left, right)
-  class Or    (left : Formula, right : Formula) extends BinaryFormula(left, right)
-  class Imply (left : Formula, right : Formula) extends BinaryFormula(left, right)
-  class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, right)
-
-  abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
-    extends Binary(Bool, TupleT(domain, domain), left, right) with Formula
-
-  /* equality */
-  class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
-  class NotEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
-
-  /* comparison */
-  class GreaterThan  (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-  class LessThan     (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-  class GreaterEquals(domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-  class LessEquals   (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
-
-  /* temporal */
-  class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
-  class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
-
-  class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
-
-  /**
-   * Real Expressions
-   *==================
-   */
-
-  trait Term extends Expr
-
-  class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
-  class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
-  class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
-  class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
-  class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
-  class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
-
-  class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
-
-  class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
-    extends Ternary(then.sort, TupleT(Bool, TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
-    applicable
-
-    @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseT.sort, "Sort mismatch" +
-      "in if-then-else statement: " + then.sort + " != " + elseT.sort)
-  }
-  /**
-   * Games
-   *=======
-   */
-
-  trait Game extends Expr
-  /* Modality */
-  class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
-    def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
-    def writes: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
-  }
-
-  abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
-  abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
-
-  /* Games */
-  class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
-  class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
-
-  class BoxStar         (child : Game)    extends UnaryGame(child)
-  class DiamondStar     (child : Game)    extends UnaryGame(child)
-  class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right)
-  class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
-  class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
-
-  /**
-   * Programs
-   *==========
-   */
-
-  trait Program extends Expr
-
-  abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
-  abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
-
-  class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right)
-  class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right)
-  class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right)
-  class Loop    (child : Program)               extends UnaryProgram(child)
-
-  class IfThen(val cond: Formula, val then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program
-
-  class IfThenElse(cond: Formula, then: Program, elseP: Program)
-    extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program
-
-/* TODO:
- *
- * - Assign(func, parameter, value) vs. Assign(Apply(func, parameter), value)
- * - need QAssign
- * - nondeterministic assign vs. Assign(Var, Random)
- *
-  class Assign[C <: Sort](val variable : Variable[C], child : Expr[C]) extends Unary(Program, variable.sort, child)
-
-  class AssignFn[D <: Sort, C <: Sort](val function : FunctionVar[D, C], left : Expr[D], right : Expr[C])
-    extends Binary(Program, new TupleT(function.domain, function.sort), left, right)
-
-  class QAssign ...
-  class QAssignFn ...
+/*********************************************************************************
+ * Differential Logic
+ *********************************************************************************
  */
 
-  trait AtomicProgram extends Program
+/**
+ * Variables and Functions
+ *=========================
+ */
+object NameCounter {
+  private var next_id : Int = 0
 
-  /*
-   * Term -> Term in order to allow for the following cases:
-   * x := 5
-   * f(i) := 5
-   * (x,y) := (5,5)
-   */
-  class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram
+  @elidable(ASSERTION) def applicable = require(next_id < Int.MaxValue, "Error: too many variable objects; counter overflow")
 
-  class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
+  def next() : Int = {
+    this.synchronized {
+      applicable
+      next_id = next_id + 1;
+      return next_id;
+    }
+  }
+}
 
-  class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+abstract class NamedSymbol(val name : String, val index: Option[Int], val domain: Sort, sort : Sort) extends Expr(sort) {
 
-  /* child = differential algebraic formula */
-  class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+  //private val id : Int = NameCounter.next()
 
-  /* Normal form ODE data structures
-   * \exists R a,b,c. (\D{x} = \theta & F)
-   */
-  class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram
+  //def deepName = name + "_" + index + "_" + id;
 
-  /**
-   * Quantifiers
-   *=============
-   */
+  def flatEquals(x : NamedSymbol) =
+    this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
 
-  abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
+  //def deepEquals(x : NamedSymbol) =
+  //  flatEquals(x) && this.id == x.id
+}
 
-  class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
-  class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
-  /**
-   * Sequent notation
-   */
+class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
-  class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
 
-  object Sequent {
-    def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
+
+/**
+ * Constant, Variable and Function Expressions
+ *=============================================
+ */
+
+/* The * in nondet. assignments */
+// class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
+
+object True extends Expr(Bool) with Formula with Term with Atom
+object False extends Expr(Bool) with Formula with Term with Atom
+
+/*
+ * - Make sure that there are no constants for negative numbers
+ * - Strip all the trailing zeros
+ */
+object Number {
+  def apply(value: BigDecimal) : Term = Number(Real, value)
+  def apply(sort: Sort, number: BigDecimal) : Term = {
+    var n = number.underlying.stripTrailingZeros.toPlainString
+    // bugfix for 0.0 and so on (will be fixed in BigDecimal in Java 8
+    // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6480539
+    while(n.contains(".") && (n.endsWith("0") || n.endsWith("."))) {
+      n = n.substring(0, n.length() - 1)
+    }
+    require(BigDecimal(n).underlying.compareTo(number.underlying()) == 0,
+      "Stripping trailing zeros should not change the value of a number " + number + " != " + n)
+    val value = BigDecimal(n)
+    if(value < 0)
+      new Neg(sort, new NumberObj(sort, value.abs))
+    else
+      new NumberObj(sort, value)
   }
 
+  def unapply(e: Expr): Option[(Sort, BigDecimal)] = e match {
+    case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
+    case _ => None
+  }
+  private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
+    override def equals(e: Any): Boolean = e match {
+      case Number(a, b) => a == sort && b == value
+      case _ => false
+    }
+  }
+}
 
+/* function application */
+class Apply(val function : Function, child : Expr)
+           extends Unary(function.sort, function.domain, child) with Term
 
-} /* Core */
+/*
+ * Predicate application
+ *
+ * Note that this is necessary to ensure that predicates actually implement
+ * the trait Formula
+ */
+class ApplyPredicate(val function : Function, child : Expr)
+  extends Unary(Bool, function.domain, child) with Formula {
+  applicable
+
+  @elidable(ASSERTION) override def applicable = super.applicable; require(function.sort == Bool,
+    "Sort mismatch in if then else condition: "  + function.sort + " is not Bool")
+}
+
+/* combine subexpressions into a vector */
+class Pair(domain : TupleT, left : Term, right : Term) extends Binary(domain, domain, left, right) with Term
+
+/* extract elements from a vector expression */
+class Left (domain : TupleT, child : Term) extends Unary(domain.left, domain, child) with Term
+class Right(domain : TupleT, child : Term) extends Unary(domain.right, domain, child) with Term
+
+/**
+ * Formulas (aka Terms)
+ *======================
+ */
+
+trait Formula extends Expr
+/* Bool -> Bool */
+abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
+/* Bool x Bool -> Bool */
+abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, BoolXBool, left, right) with Formula
+
+object Not {
+  def apply(child: Formula): Formula = new Not(child)
+  def unapply(e: Expr): Option[Formula] = e match {
+    case x: Not => Some(x.child.asInstanceOf[Formula])
+    case _ => None
+  }
+}
+class Not   (child : Formula) extends UnaryFormula(child)
+object And {
+  def apply(left: Formula, right: Formula): Formula = new And(left, right)
+  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+    case x: And => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
+    case _ => None
+  }
+}
+class And   (left : Formula, right : Formula) extends BinaryFormula(left, right)
+object Or {
+  def apply(left: Formula, right: Formula): Formula = new Or(left, right)
+  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+    case x: Or => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
+    case _ => None
+  }
+}
+class Or    (left : Formula, right : Formula) extends BinaryFormula(left, right)
+object Imply {
+  def apply(left: Formula, right: Formula): Formula = new Imply(left, right)
+  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+    case x: Imply => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
+    case _ => None
+  }
+}
+class Imply (left : Formula, right : Formula) extends BinaryFormula(left, right)
+object Equiv {
+  def apply(left: Formula, right: Formula): Formula = new Imply(left, right)
+  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+    case x: Equiv => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
+    case _ => None
+  }
+}
+class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, right)
+
+abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
+  extends Binary(Bool, TupleT(domain, domain), left, right) with Formula
+
+/* equality */
+class Equals   (domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+class NotEquals(domain : Sort, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+
+/* comparison */
+class GreaterThan  (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+class LessThan     (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+class GreaterEquals(domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+class LessEquals   (domain : Sort, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+
+/* temporal */
+class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
+class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
+
+class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
+
+/**
+ * Real Expressions
+ *==================
+ */
+
+trait Term extends Expr
+
+class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
+class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+
+class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
+
+class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
+  extends Ternary(then.sort, TupleT(Bool, TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
+  applicable
+
+  @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseT.sort, "Sort mismatch" +
+    "in if-then-else statement: " + then.sort + " != " + elseT.sort)
+}
+/**
+ * Games
+ *=======
+ */
+
+trait Game extends Expr
+/* Modality */
+class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
+  def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+  def writes: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+}
+
+abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
+abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
+
+/* Games */
+class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
+class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
+
+class BoxStar         (child : Game)    extends UnaryGame(child)
+class DiamondStar     (child : Game)    extends UnaryGame(child)
+class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right)
+class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
+class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
+
+/**
+ * Programs
+ *==========
+ */
+
+trait Program extends Expr
+
+abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
+abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
+
+class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right)
+class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right)
+class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right)
+class Loop    (child : Program)               extends UnaryProgram(child)
+
+class IfThen(val cond: Formula, val then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program
+
+class IfThenElse(cond: Formula, then: Program, elseP: Program)
+  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program
+
+/* TODO:
+*
+* - Assign(func, parameter, value) vs. Assign(Apply(func, parameter), value)
+* - need QAssign
+* - nondeterministic assign vs. Assign(Var, Random)
+*
+class Assign[C <: Sort](val variable : Variable[C], child : Expr[C]) extends Unary(Program, variable.sort, child)
+
+class AssignFn[D <: Sort, C <: Sort](val function : FunctionVar[D, C], left : Expr[D], right : Expr[C])
+  extends Binary(Program, new TupleT(function.domain, function.sort), left, right)
+
+class QAssign ...
+class QAssignFn ...
+*/
+
+trait AtomicProgram extends Program
+
+/*
+ * Term -> Term in order to allow for the following cases:
+ * x := 5
+ * f(i) := 5
+ * (x,y) := (5,5)
+ */
+class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram
+
+class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
+
+class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+
+/* child = differential algebraic formula */
+class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+
+/* Normal form ODE data structures
+ * \exists R a,b,c. (\D{x} = \theta & F)
+ */
+class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram
+
+/**
+ * Quantifiers
+ *=============
+ */
+
+abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
+
+class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+
+/**
+ * Sequent notation
+ */
+
+class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+
+object Sequent {
+  def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+}
 
 /**
  *==================================================================================

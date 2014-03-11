@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaera.core
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
-  sealed abstract class Rule extends (Sequent => Seq[Sequent])
+  sealed abstract class Rule extends (Sequent => List[Sequent])
 
   /**
    * Proof Tree
@@ -37,10 +37,22 @@ package edu.cmu.cs.ls.keymaera.core
       }
     }
 
-    def apply(rule : Rule) : ProofNode = {
-      val result = rule.apply(sequent).map(new ProofNode(_, this))
+    def apply(rule : Rule) : List[ProofNode] = {
+      val result = rule(sequent).map(new ProofNode(_, this))
       prepend(rule, result)
-      return this
+      result
+    }
+
+    def apply(rule: PositionRule, pos: Position) : List[ProofNode] = {
+      val result = rule(pos)(sequent).map(new ProofNode(_, this))
+      prepend(rule(pos), result)
+      result
+    }
+
+    def apply(rule: AssumptionRule, aPos: Position, pos: Position) : List[ProofNode] = {
+      val result = rule(aPos)(pos)(sequent).map(new ProofNode(_, this))
+      prepend(rule(aPos)(pos), result)
+      result
     }
   }
 
@@ -52,10 +64,6 @@ package edu.cmu.cs.ls.keymaera.core
    * Proof Rules
    *********************************************************************************
    */
-
-class RootNode(override val s: Sequent) extends ProofNode(s, null)
-
-sealed abstract class Rule extends (Sequent => Seq[Sequent])
 
 abstract class PositionRule extends (Position => Rule)
 
@@ -70,42 +78,37 @@ class Position(val ante: Boolean, val index: Int) {
 
 abstract class Signature
 
-// this only works if all quantifiers are the same, otherwise we have distinguish here
-class Sequent(val pref: Seq[(String, Sort)], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
-
-object Sequent {
-  def apply(pref: Seq[(String, Sort)], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
-}
-
 // proof rules:
 
 // reorder antecedent
-object AnteSwitch extends TwoPositionRule {
-  def apply(p1: Position, p2: Position) = new AnteSwitchRule(p1, p2)
+object AnteSwitch {
+  def apply(p1: Position, p2: Position): Rule = new AnteSwitchRule(p1, p2)
 
   private class AnteSwitchRule(p1: Position, p2: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = if(p1.isAnte && p2.isAnte)
-      Seq(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
+    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p2.isAnte)
+      List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the antecedent")
+  }
 }
 
 // reorder succedent
-object SuccSwitch extends TwoPositionRule {
-  def apply(p1: Position, p2: Position) = new SuccSwitchRule(p1, p2)
+object SuccSwitch {
+  def apply(p1: Position, p2: Position): Rule = new SuccSwitchRule(p1, p2)
 
   private class SuccSwitchRule(p1: Position, p2: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = if(!p1.isAnte && !p2.isAnte)
-      Seq(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
+    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && !p2.isAnte)
+      List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the succedent")
+  }
 }
 
 // cut
 object Cut {
   def apply(f: Formula) : Rule = new Cut(f)
   private class Cut(f: Formula) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val l = new Sequent(s.pref, s.ante :+ f, s.succ)
       val r = new Sequent(s.pref, s.ante, s.succ :+ f)
       List(l, r)
@@ -119,10 +122,10 @@ object Cut {
 
 // equality/equivalence rewriting
 
-class SubstitutionPair[A <: Sort] (val n: Name[A], val t: Term[A]) 
+class SubstitutionPair (val n: NamedSymbol, val t: Term)
 
-class Substitution(l: List[SubstitutionPair[_]]) extends (Formula => Formula) {
-  def apply(f: Formula) = throw new UnsupportedOperationException("Not implemented yet")
+class Substitution(l: Seq[SubstitutionPair]) extends (Formula => Formula) {
+  def apply(f: Formula): Formula = throw new UnsupportedOperationException("Not implemented yet")
 }
 
 // uniform substitution
@@ -133,13 +136,13 @@ object UniformSubstition {
   private class UniformSubstition(subst: Substitution, origin: Sequent) extends Rule {
     // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
     // require explicit rule applications)
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val eqt = ((acc: Boolean, p: (Formula, Formula)) => subst(p._1) == p._2) // TODO: do we need to allow renaming of bounded variables?
       if(s.pref == origin.pref // universal prefix is identical
         && origin.ante.length == s.ante.length && origin.succ.length == s.succ.length
         && (origin.ante.zip(s.ante)).foldLeft(true)(eqt)  // formulas in ante results from substitution
         && (origin.succ.zip(s.succ)).foldLeft(true)(eqt)) // formulas in succ results from substitution
-        Vector(origin)
+        List(origin)
       else
         throw new IllegalStateException("Substitution did not yield the expected result")
     }
@@ -161,7 +164,7 @@ object AxiomClose extends AssumptionRule {
 
   private class AxiomClose(ass: Position, p: Position) extends Rule {
 
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       if(ass.isAnte) {
         if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
           // close
@@ -189,10 +192,10 @@ object ImplRight extends PositionRule {
     new ImplRight(p)
   }
   private class ImplRight(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
-        case Implies(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+        case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
         case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
       }
     }
@@ -206,10 +209,10 @@ object ImplLeft extends PositionRule {
     new ImplLeft(p)
   }
   private class ImplLeft(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
-        case Implies(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+        case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
         case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
       }
     }
@@ -223,7 +226,7 @@ object NotRight extends PositionRule {
     new NotRight(p)
   }
   private class NotRight(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
         case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
@@ -240,7 +243,7 @@ object NotLeft extends PositionRule {
     new NotLeft(p)
   }
   private class NotLeft(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
         case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
@@ -257,7 +260,7 @@ object AndRight extends PositionRule {
     new AndRight(p)
   }
   private class AndRight(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
         case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
@@ -274,7 +277,7 @@ object AndLeft extends PositionRule {
     new AndLeft(p)
   }
   private class AndLeft(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
         case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
@@ -291,7 +294,7 @@ object OrRight extends PositionRule {
     new OrRight(p)
   }
   private class OrRight(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
         case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
@@ -308,7 +311,7 @@ object OrLeft extends PositionRule {
     new OrLeft(p)
   }
   private class OrLeft(p: Position) extends Rule {
-    def apply(s: Sequent): Seq[Sequent] = {
+    def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
         case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
@@ -336,7 +339,7 @@ object HideRight extends PositionRule {
   }
 }
 class Hide(p: Position) extends Rule {
-  def apply(s: Sequent): Seq[Sequent] = 
+  def apply(s: Sequent): List[Sequent] =
     if(p.isAnte)
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
@@ -364,9 +367,6 @@ class Hide(p: Position) extends Rule {
 
 // merge sequent (or is this derived?)
 
-
-
-}
 
 
 // vim: set ts=4 sw=4 et:
