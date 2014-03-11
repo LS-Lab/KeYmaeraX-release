@@ -183,7 +183,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
     // then we apply it to the codomain of the substitution
     case ApplyPredicate(func, arg) => for(p <- l) {
       p.n match {
-        case ApplyPredicate(pf, parg) => if(func == p.n) return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
+        case ApplyPredicate(pf, parg) => if(func == pf) return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
         case _ =>
       }
     }; return ApplyPredicate(func, this(arg))
@@ -223,7 +223,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
     // then we apply it to the codomain of the substitution
     case Apply(func, arg) => for(p <- l) {
       p.n match {
-        case Apply(pf, parg) => if(func == p.n) return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
+        case Apply(pf, parg) => if(func == pf) return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
         case _ =>
       }
     }; return Apply(func, this(arg))
