@@ -5,48 +5,20 @@
 package edu.cmu.cs.ls.keymaera.core
 
 /**
- * Abbreviations
- *===============
- *
- * The following abbreviations are relevant for the core:
- *
- * C = codomain sort
- * D = domain sort
- * L = left child sort
- * R = right child sort
- *
- * sort   : C = Sort object for codomain C
- * domain : D = Sort object for domain D
- */
-
-/**
  * Todos
  *=======
- * 1) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
- * 2) Assignment Expressions:   := as assign(Expr, Expr) (e.g., assign(apply(f, param), term) but also (x)' := 42
- *                                    assign(x, term) resp. assign(f, param, term)
- *                                    quant. assign vs. vector assign with "large" vector
- *                                    quant. assign as function update f = g with [x := y]
- * 3) [HELP ME] differential equations in some normal form (I don't remember the details)
  */
 
 /**
  * Points to Discuss
  *===================
- * 1) Currently we support efficicent type based mapping but no constructor patterns
- *    (i.e., case e : Add[_] instead of case Add(sort, left, right). Members are still
- *    accessible (e.g., through e.sort). Alternatively we could add apply / unapply
- *    methods which degrade performance and increase codesize or turn some classes into
- *    case classes, which increases their memory footprint mainly due to successive
- *    overwrite.
- * 2) Modality tracks variables that are bound in game / program: simplifies building
- *    up context but may require modality to change more often
+ * 1) Generic traversal and rewriting function necessary
+ * 2) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
  */
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
 
-import scala.math
 import scala.math._
 
 /**
@@ -61,10 +33,6 @@ trait Annotable
 /**
  * Sorts
  *=======
- * Class hierarchy defining builtin and user defined sorts. Because user defined
- * sorts are only known at runtime, we use instances of the below classes to
- * identify the sorts on which the dynamic logic expressions operate. (See
- * TypeSafety.scala for a description how typechecking works)
  */
 sealed abstract class Sort
 
@@ -129,9 +97,6 @@ import PredefinedSorts._
 /**
  * Expression infrastructure
  *===========================
- * (see TypeSafety.scala for an explaination how the Expression builtin typechecking
- * mechanism works. Each expression may replicate itself with apply and adheres to the
- * generic recursion structure via the function reduce.
  */
 sealed abstract class Expr(val sort : Sort) extends Annotable
 
@@ -246,12 +211,12 @@ class Function (name : String, index: Option[Int] = None, domain : Sort, sort : 
  */
 
 /* The * in nondet. assignments */
-// class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
+// class Random(sort : Sort) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
 object True extends Expr(Bool) with Formula with Term with Atom
 object False extends Expr(Bool) with Formula with Term with Atom
 
-/*
+/**
  * - Make sure that there are no constants for negative numbers
  * - Strip all the trailing zeros
  */
@@ -342,7 +307,7 @@ class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, c
 
 
 /**
- * Formulas (aka Terms)
+ * Formulas
  *======================
  */
 
@@ -471,7 +436,7 @@ class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in 
 class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
 
 /**
- * Real Expressions
+ * Terms
  *==================
  */
 
@@ -752,22 +717,13 @@ class IfThenElse(cond: Formula, then: Program, elseP: Program)
 
 /* TODO:
 *
-* - Assign(func, parameter, value) vs. Assign(Apply(func, parameter), value)
 * - need QAssign
 * - nondeterministic assign vs. Assign(Var, Random)
-*
-class Assign[C <: Sort](val variable : Variable[C], child : Expr[C]) extends Unary(Program, variable.sort, child)
-
-class AssignFn[D <: Sort, C <: Sort](val function : FunctionVar[D, C], left : Expr[D], right : Expr[C])
-  extends Binary(Program, new TupleT(function.domain, function.sort), left, right)
-
-class QAssign ...
-class QAssignFn ...
 */
 
 sealed trait AtomicProgram extends Program
 
-/*
+/**
  * Term -> Term in order to allow for the following cases:
  * x := 5
  * f(i) := 5
@@ -835,7 +791,7 @@ class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with A
   def writes = VSearch.primed(child)
 }
 
-/* Normal form ODE data structures
+/** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
 object NFContEvolve {
