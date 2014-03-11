@@ -131,10 +131,12 @@ object Cut {
  *
  * @param n can have one of the following forms:
  *          - Variable
- *          - ProgramConstant
  *          - Predicate
- *          - Apply(Function, Expr)
  *          - ApplyPredicate(Function, Expr)
+ *          TODO:
+ *          - ProgramConstant
+ *          - Apply(Function, Expr)
+ *          - Derivative(...)
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -143,13 +145,48 @@ class SubstitutionPair (val n: Expr, val t: Expr) {
     + n.sort + " != " + t.sort)
 }
 
-class Substitution(l: Seq[SubstitutionPair]) extends (Formula => Formula) {
+class Substitution(l: Seq[SubstitutionPair]) {
+
+  /**
+   *
+   * @param source should be a tuple of substitutable things
+   * @param target should be a tuple of the same dimension donating the right sides
+   * @return
+   */
+  private def constructSubst(source: Expr, target: Expr): Substitution = new Substitution(collectSubstPairs(source, target))
+
+  private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] = source match {
+    case Pair(dom, a, b) => target match {
+      case Pair(dom2, c, d) => collectSubstPairs(a, c) ++ collectSubstPairs(b, d)
+      case _ => throw new IllegalArgumentException("A pair: " + source + " must not be replaced by a non pair: " + target)
+    }
+    case _: Variable => List(new SubstitutionPair(source, target))
+    case _: PredicateConstant => List(new SubstitutionPair(source, target))
+    case _: ProgramConstant => List(new SubstitutionPair(source, target))
+    case _ => throw new IllegalArgumentException("Unknown base case " + source + " of sort " + source.sort)
+  }
+
   def apply(f: Formula): Formula = f match {
     case Not(c) => Not(this(c))
     case And(l, r) => And(this(l), this(r))
     case Or(l, r) => Or(this(l), this(r))
     case Imply(l, r) => Imply(this(l), this(r))
     case Equiv(l, r) => Equiv(this(l), this(r))
+
+    /*
+     * For quantifiers just check that there is no name clash, throw an exception if there is
+     */
+
+    case PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
+
+    // if we find a match, we bind the arguments of our match to what is in the current term
+    // then we apply it to the codomain of the substitution
+    case ApplyPredicate(func, arg) => for(p <- l) {
+      p.n match {
+        case ApplyPredicate(pf, parg) => if(func == p.n) return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
+        case _ =>
+      }
+    }; return ApplyPredicate(func, this(arg))
 
     case Equals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => Equals(d, this(a), this(b))
@@ -174,13 +211,30 @@ class Substitution(l: Seq[SubstitutionPair]) extends (Formula => Formula) {
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
   def apply(t: Term): Term = t match {
+    case Neg(s, c) => Neg(s, this(c))
+    case Add(s, l, r) => Add(s, this(l), this(r))
+    case Subtract(s, l, r) => Subtract(s, this(l), this(r))
+    case Multiply(s, l, r) => Multiply(s, this(l), this(r))
+    case Divide(s, l, r) => Divide(s, this(l), this(r))
+    case Exp(s, l, r) => Exp(s, this(l), this(r))
+    case Pair(dom, l, r) => Pair(dom, this(l), this(r))
     case Variable(name, idx, sort) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    // if we find a match, we bind the arguments of our match to what is in the current term
+    // then we apply it to the codomain of the substitution
+    case Apply(func, arg) => for(p <- l) {
+      p.n match {
+        case Apply(pf, parg) => if(func == p.n) return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
+        case _ =>
+      }
+    }; return Apply(func, this(arg))
+
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
 
   def apply(p: Program) = p match {
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
+
 }
 
 // uniform substitution

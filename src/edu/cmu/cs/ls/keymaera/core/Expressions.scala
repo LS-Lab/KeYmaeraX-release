@@ -211,18 +211,18 @@ object Variable {
 class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
 object PredicateConstant {
-  def apply(name : String, index: Option[Int] = None, sort : Sort): PredicateConstant = new PredicateConstant(name, index, sort)
-  def unapply(e: Expr): Option[(String, Option[Int], Sort)] = e match {
-    case x: PredicateConstant => Some((x.name, x.index, x.sort))
+  def apply(name : String, index: Option[Int] = None): PredicateConstant = new PredicateConstant(name, index)
+  def unapply(e: Expr): Option[(String, Option[Int])] = e match {
+    case x: PredicateConstant => Some((x.name, x.index))
     case _ => None
   }
 }
 class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
 object ProgramConstant {
-  def apply(name : String, index: Option[Int] = None, sort : Sort): ProgramConstant = new ProgramConstant(name, index, sort)
-  def unapply(e: Expr): Option[(String, Option[Int], Sort)] = e match {
-    case x: ProgramConstant => Some((x.name, x.index, x.sort))
+  def apply(name : String, index: Option[Int] = None): ProgramConstant = new ProgramConstant(name, index)
+  def unapply(e: Expr): Option[(String, Option[Int])] = e match {
+    case x: ProgramConstant => Some((x.name, x.index))
     case _ => None
   }
 }
@@ -283,7 +283,17 @@ object Number {
 }
 
 /* function application */
-class Apply(val function : Function, child : Expr)
+object Apply {
+  def apply(function: Function, child: Term): Apply = new Apply(function, child)
+  def unapply(e: Expr): Option[(Function, Term)] = e match {
+    case x: Apply => x.child match {
+      case t: Term => Some((x.function, t))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Apply(val function : Function, child : Term)
            extends Unary(function.sort, function.domain, child) with Term
 
 /*
@@ -292,7 +302,17 @@ class Apply(val function : Function, child : Expr)
  * Note that this is necessary to ensure that predicates actually implement
  * the trait Formula
  */
-class ApplyPredicate(val function : Function, child : Expr)
+object ApplyPredicate {
+  def apply(function: Function, child: Term): ApplyPredicate = new ApplyPredicate(function, child)
+  def unapply(e: Expr): Option[(Function, Term)] = e match {
+    case x: ApplyPredicate => x.child match {
+      case t: Term => Some((x.function, t))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class ApplyPredicate(val function : Function, child : Term)
   extends Unary(Bool, function.domain, child) with Formula {
   applicable
 
@@ -301,11 +321,22 @@ class ApplyPredicate(val function : Function, child : Expr)
 }
 
 /* combine subexpressions into a vector */
+object Pair {
+  def apply(domain : TupleT, left : Term, right : Term) = new Pair(domain, left, right)
+  def unapply(e: Expr): Option[(TupleT, Term, Term)] = e match {
+    case x: Pair => (x.left, x.right) match {
+      case (a: Term, b: Term) => Some((x.domain, a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Pair(domain : TupleT, left : Term, right : Term) extends Binary(domain, domain, left, right) with Term
 
 /* extract elements from a vector expression */
-class Left (domain : TupleT, child : Term) extends Unary(domain.left, domain, child) with Term
-class Right(domain : TupleT, child : Term) extends Unary(domain.right, domain, child) with Term
+class Left (domain : TupleT, child : Pair) extends Unary(domain.left, domain, child) with Term
+class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, child) with Term
+
 
 /**
  * Formulas (aka Terms)
@@ -402,7 +433,6 @@ object GreaterEquals {
       case _ => None
     }
     case _ => None
-    case _ => None
   }
 }
 class GreaterEquals(domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
@@ -444,13 +474,88 @@ class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
 
 trait Term extends Expr
 
+object Neg {
+  def apply(sort: Sort, child: Term): Neg = new Neg(sort, child)
+  def unapply(e: Expr): Option[(Sort, Term)] = e match {
+    case x: Neg => x.child match {
+      case c: Term => Some((x.sort, c))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
+
+object Add {
+  def apply(sort: Sort, left: Term, right: Term): Add = new Add(sort, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: Add => (x.left, x.right) match {
+      case (l: Term, r: Term) => Some((x.sort, l, r))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+
+object Subtract {
+  def apply(sort: Sort, left: Term, right: Term): Subtract = new Subtract(sort, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: Subtract => (x.left, x.right) match {
+      case (l: Term, r: Term) => Some((x.sort, l, r))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+
+object Multiply {
+  def apply(sort: Sort, left: Term, right: Term): Multiply = new Multiply(sort, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: Multiply => (x.left, x.right) match {
+      case (l: Term, r: Term) => Some((x.sort, l, r))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+
+object Divide {
+  def apply(sort: Sort, left: Term, right: Term): Divide = new Divide(sort, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: Divide => (x.left, x.right) match {
+      case (l: Term, r: Term) => Some((x.sort, l, r))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+
+object Exp {
+  def apply(sort: Sort, left: Term, right: Term): Exp = new Exp(sort, left, right)
+  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+    case x: Exp => (x.left, x.right) match {
+      case (l: Term, r: Term) => Some((x.sort, l, r))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
 
+object Derivative {
+  def apply(sort: Sort, child: Term): Derivative = new Derivative(sort, child)
+  def unapply(e: Expr): Option[(Sort, Term)] = e match {
+    case x: Derivative => x.child match {
+      case c: Term => Some((x.sort, c))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
 
 class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
