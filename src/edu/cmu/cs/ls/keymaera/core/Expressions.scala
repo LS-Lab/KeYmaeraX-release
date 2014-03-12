@@ -470,7 +470,7 @@ final class GreaterThan  (domain : Sort = Real, left : Term, right : Term) exten
 object GreaterEquals {
   def apply(domain : Sort = Real, left : Term, right : Term): GreaterEquals = new GreaterEquals(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: GreaterEquals => (x.left, x.right) match {
+    case x: GreaterEquals => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
@@ -487,7 +487,7 @@ final class GreaterEquals(domain : Sort = Real, left : Term, right : Term) exten
 object LessEquals {
   def apply(domain : Sort = Real, left : Term, right : Term): LessEquals = new LessEquals(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: LessEquals => (x.left, x.right) match {
+    case x: LessEquals => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
@@ -504,7 +504,7 @@ final class LessEquals   (domain : Sort = Real, left : Term, right : Term) exten
 object LessThan {
   def apply(domain : Sort = Real, left : Term, right : Term): LessThan = new LessThan(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: LessThan => (x.left, x.right) match {
+    case x: LessThan => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
@@ -672,7 +672,7 @@ final class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
     "in if-then-else statement: " + then.sort + " != " + elseT.sort)
 
   override def equals(e: Any): Boolean = e match {
-    case x: IfThenElseTerm => cond == x.cond && then == x.then && elseT == x.elseT
+    case x: IfThenElseTerm => fst == x.fst && snd == x.snd && thd == x.thd
     case _ => false
   }
 }
@@ -771,7 +771,7 @@ final class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left
   def writes = left.writes ++ left.writes
 
   override def equals(e: Any): Boolean = e match {
-    case x: SequenceGame => x.child == child
+    case x: SequenceGame => x.left == left && x.right == right
     case _ => false
   }
 }
@@ -780,7 +780,7 @@ final class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left
   def writes = left.writes ++ left.writes
 
   override def equals(e: Any): Boolean = e match {
-    case x: DisjunctGame => x.child == child
+    case x: DisjunctGame => x.left == left && x.right == right
     case _ => false
   }
 }
@@ -789,7 +789,7 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
   def writes = left.writes ++ left.writes
 
   override def equals(e: Any): Boolean = e match {
-    case x: ConjunctGame => x.child == child
+    case x: ConjunctGame => x.left == left && x.right == right
     case _ => false
   }
 }
@@ -903,7 +903,7 @@ final class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, Boo
   def writes = then.writes
 
   override def equals(e: Any): Boolean = e match {
-    case x: IfThen => x.cond == cond && x.then == then
+    case x: IfThen => x.left == left && x.right == right
     case _ => false
   }
 }
@@ -924,7 +924,7 @@ final class IfThenElse(cond: Formula, then: Program, elseP: Program)
   def writes = then.writes ++ elseP.writes
 
   override def equals(e: Any): Boolean = e match {
-    case x: IfThenElse => x.cond == cond && x.then == then && x.elseP == elseP
+    case x: IfThenElse => x.fst == fst && x.snd == snd && x.thd == thd
     case _ => false
   }
 }
