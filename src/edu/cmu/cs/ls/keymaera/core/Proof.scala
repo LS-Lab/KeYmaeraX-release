@@ -13,11 +13,12 @@ import scala.annotation.elidable._
    *============
    */
 
+  sealed case class ProofStep(rule : Rule, subgoals : List[ProofNode])
   sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
 
-    case class ProofStep(rule : Rule, subgoals : List[ProofNode])
-
     @volatile private[this] var alternatives : List[ProofStep] = Nil
+
+    def children: List[ProofStep] = alternatives
 
     /* must not be invoked when there is no alternative */
     def getStep : ProofStep = alternatives match {

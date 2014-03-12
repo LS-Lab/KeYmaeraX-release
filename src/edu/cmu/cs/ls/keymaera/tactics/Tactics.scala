@@ -72,7 +72,7 @@ object Tactics {
   // choice, repetition and other helper functions for conditional execution.
   // Further there are methods for generating terms/programelements that will be used
   // to instantiate schema variables in the rules.
-  abstract class Tactic(name: String)
+  abstract class Tactic(val name: String)
     extends ((ProofNode, Limit) => Either[Option[Seq[ProofNode]], Timeout]) {
     // repeat tactic until a fixed point is reached
     def * : Tactic = repeatT(this)
@@ -87,7 +87,7 @@ object Tactics {
     override def toString: String = name
   }
 
-  abstract class PositionTactic(name: String) extends (Position => Tactic) {
+  abstract class PositionTactic(val name: String) extends (Position => Tactic) {
     def applies(s: Sequent, p: Position): Boolean
   }
 
@@ -122,6 +122,7 @@ object Tactics {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       // create a stream that contains the elements of the given sequence and repeats the last one infinitly often
       def stutter[A](idx: Int, lst: Seq[A]): Stream[A] = Stream.cons(lst(idx), stutter(math.min(idx + 1, lst.length), lst))
+      println("Applying " + name)
       t(p, l) match {
         // timeout
         case x @ Right(_) => x
@@ -249,7 +250,7 @@ object Tactics {
    * Basic Tactics
    *********************************************/
 
-  def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos") {
+  def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       for(i <- 0 until p.sequent.ante.length) {
         val pos = new Position(true, i)
@@ -259,7 +260,7 @@ object Tactics {
     }
   }
 
-  def findPosSucc(posT: PositionTactic): Tactic = new Tactic("FindPos") {
+  def findPosSucc(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       for(i <- 0 until p.sequent.succ.length) {
         val pos = new Position(false, i)
@@ -299,7 +300,7 @@ object Tactics {
     }
   }
 
-  def AndRightFindT: Tactic = findPosAnte(AndLeftT)
+  def AndRightFindT: Tactic = findPosSucc(AndRightT)
 
   def OrLeftT: PositionTactic = new PositionTactic ("OrLeft") {
     def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
@@ -331,7 +332,7 @@ object Tactics {
     }
   }
 
-  def OrRightFindT: Tactic = findPosAnte(OrLeftT)
+  def OrRightFindT: Tactic = findPosSucc(OrRightT)
 
   def ImplyLeftT: PositionTactic = new PositionTactic ("ImplyLeft") {
     def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
@@ -363,7 +364,7 @@ object Tactics {
     }
   }
 
-  def ImplyRightFindT: Tactic = findPosAnte(ImplyLeftT)
+  def ImplyRightFindT: Tactic = findPosSucc(ImplyRightT)
 
   def NotLeftT: PositionTactic = new PositionTactic ("NotLeft") {
     def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
@@ -395,7 +396,7 @@ object Tactics {
     }
   }
 
-  def NotRightFindT: Tactic = findPosAnte(NotLeftT)
+  def NotRightFindT: Tactic = findPosSucc(NotRightT)
 
   def AxiomCloseT: Tactic = new Tactic("AxiomClose") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPositions(p.sequent) match {

@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.tests
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 
 object TermTests {
 
@@ -31,13 +32,20 @@ object TermTests {
     val q = new PredicateConstant("q")
     val i = Imply(p, q)
     val i2 = Imply(q, i)
-    println(i)
+    println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     println(r.isClosed)
-    val tactic: Tactic = (ImplyRightFindT*) & AxiomCloseT
+    println(print(r))
+    val tactic: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
     tactic(r, new Limit(None, None))
+    println(print(r))
     r.isClosed
   }
+
+  def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f)).foldLeft("")(_ + "," + _)
+  def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
+  def print(p: ProofNode): String = print(p.sequent) + "\n" + p.children.map(print).foldLeft("")(_ + "," + _)
+  def print(ps: ProofStep): String = ps.rule.toString + " -- [" + ps.subgoals.map(print) + "]"
 
 }
 
