@@ -69,8 +69,10 @@ object TermTests {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     println(r.isClosed)
     println(print(r))
-    val tactic: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
+    val tactic: Tactic = (ImplyRightFindT*) & ImplyLeftFindT
+    val tactic2: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
     tactic(r, new Limit(None, None))
+    tactic2(r, new Limit(None, None))
     val tree =  print(r)
     println(tree)
     writeToFile(new File(output), tree)
