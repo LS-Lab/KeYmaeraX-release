@@ -34,7 +34,7 @@ object TermTests {
     println(i)
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     println(r.isClosed)
-    val tactic: Tactic = (ImplyRightT*) & AxiomCloseT
+    val tactic: Tactic = (ImplyRightFindT*) & AxiomCloseT
     tactic(r, new Limit(None, None))
     r.isClosed
   }
