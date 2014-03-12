@@ -234,9 +234,6 @@ object Tactics {
   }
   */
 
-
-  def cutT(g: ((Rule, ProofNode) => Option[Either[Term, Program]])): Tactic = ???
-
   // interface for generating instances
   type Generator[T] = ((Rule, ProofNode, String) => Option[T])
 
@@ -409,5 +406,23 @@ object Tactics {
       None
     }
   }
+
+  def hideT: PositionTactic = new PositionTactic("Hide") {
+    def applies(s: Sequent, p: Position) = true
+    def apply(pos: Position): Tactic = new Tactic("Hide") {
+      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] =
+        Some(if(pos.isAnte) p(HideLeft(pos)) else p(HideRight(pos)))
+    }
+  }
+
+  def cutT(g: (ProofNode => Option[Formula])): Tactic = new Tactic("Cut") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = g(p) match {
+      case Some(t) => Some(p(Cut(t)))
+      case _ => None
+    }
+  }
+
+  def cutT(f: Formula): Tactic = cutT((x:ProofNode) => Some(f))
+
 }
 
