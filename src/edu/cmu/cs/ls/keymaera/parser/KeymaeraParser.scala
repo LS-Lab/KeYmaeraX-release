@@ -6,9 +6,11 @@ import scala.util.parsing.combinator.syntactical._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.Add
 
+import scala.util.matching.Regex
+
 
 /**
- * The KeyMaera Parser
+ * The KeYmaera Parser
  * @author Nathan Fulton
  */
 class KeYmaeraParser extends RegexParsers with PackratParsers {    
@@ -24,7 +26,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       parser.parseAll(parser.fileParser, s) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
-        case parser.Error(_,_) => throw new Exception("parse errored.")
+        case parser.Error(_,_) => throw new Exception("parse error.")
       }
     
     //Parse problem.
@@ -32,7 +34,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
-        case parser.Error(_,_) => throw new Exception("parse errored.")
+        case parser.Error(_,_) => throw new Exception("parse error.")
     }
   }
   
@@ -63,12 +65,16 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   /**
    * @returns A list of defined function sorts.
    */
-  lazy val functionsP = "\\functions" ~ "{" ~ repsep(funcdefP, ";") ~ "}" ^^ {
-    case  "\\functions" ~ "{" ~ definitions ~ "}" => definitions
+  lazy val functionsP = {
+    lazy val pattern = "\\functions" ~ "{" ~ rep1sep(funcdefP, ";") ~ ";".? ~ "}" 
+    log(pattern)("Functions section") ^^ {
+      case  "\\functions" ~ "{" ~ definitions ~ extraScolon ~ "}" => definitions
+    }
   }
 
-  lazy val funcdefP = ident ~ ident ~ "(" ~ repsep(ident, ",") ~ ")" ^^ {
-    case rsort ~ name ~ _ ~ argsorts ~ _ => 
+  //TODO-nrf throwing away the external annotation. Is this ok?
+  lazy val funcdefP = "\\external".?  ~ ident ~ ident ~ "(" ~ rep1sep(ident, ",") ~ ")" ^^ {
+    case external ~ rsort ~ name ~ _ ~ argsorts ~ _ => 
       if(argsorts.length > 0)
         Function(name, None, identsToSorts(argsorts), identToSort(rsort))
       else
@@ -82,10 +88,13 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   /**
    * @returns A list of defined program sorts.
    */
-  lazy val programVariablesP = 
-    "\\programVariables" ~ "{" ~ repsep(vardefP, ";") ~ "}" ^^ {
-      case "\\programVariables" ~ "{" ~ variables ~ "}" => variables
+  lazy val programVariablesP = {
+    lazy val pattern = "\\programVariables" ~ "{" ~ rep1sep(vardefP, ";") ~ ";".? ~ "}"
+    
+    log(pattern)("\\programVariables section.") ^^ {
+      case "\\programVariables" ~ "{" ~ variables ~ extraScolon ~ "}" => variables
     }
+  }
 
   lazy val vardefP = ident ~ ident ^^ {
     //Note: it might be necessary to give these arguments indices.
@@ -95,10 +104,12 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   // Problem Section.
   //////////////////////////////////////////////////////////////////////////////
-  lazy val problemP = 
-    "\\problem" ~ "{" ~> """*""".r <~ "}" ^^ {
-      case programText => programText
+  lazy val problemP = {
+    lazy val pattern = "\\problem" ~ "{" ~> """[\w\W\s\S\d\D]+}""".r 
+    log(pattern)("\\problem section (extract a string)") ^^ {
+      case programText => programText.substring(0, programText.length()-1) //remove trailig }
     }
+  } 
     
   lazy val fileParser = functionsP.? ~ programVariablesP.? ~ problemP ^^ {
     case functionSection ~ programVarsSection ~ problemText => {
@@ -121,20 +132,6 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   /* ***************************************************************************
    * Begin parsing actual programs and formulas.
    * **************************************************************************/
-
-  def makeExprParser(variables:List[Variable], functions:List[Function],
-      predicates:List[PredicateConstant]):PackratParser[Expr] =
-  {
-    val programs = List[ProgramConstant]()
-    
-    lazy val termParser = new TermParser(variables,functions).parser
-    lazy val formulaParser = new FormulaParser(variables,functions,predicates).parser
-    lazy val programParser = new ProgramParser(variables,functions,predicates,programs).parser
-    lazy val ret = termParser | formulaParser | programParser ^^ {
-      case e => e
-    }
-    ret
-  }
   
   //////////////////////////////////////////////////////////////////////////////
   // Terms.
@@ -198,7 +195,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     //Function application
     
     lazy val applyP:SubtermParser = {
-      lazy val pattern = functionP(functions,parser) ~ "(" ~ repsep(parser, ",") ~ ")"
+      lazy val pattern = functionP(functions,parser) ~ "(" ~ rep1sep(parser, ",") ~ ")"
       log(pattern)("Function Application") ^^ {
         case function ~ "(" ~ args ~ ")" => 
           Apply(function, 
@@ -230,14 +227,22 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   class FormulaParser(variables:List[Variable],
       functions:List[Function],
-      predicates:List[PredicateConstant]) 
+      predicates:List[PredicateConstant],
+      programVariables:List[ProgramConstant]) 
   {
     type SubformulaParser = PackratParser[Formula]
+    
+    lazy val programParser = 
+      new ProgramParser(variables,functions,predicates,programVariables).parser
     
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubformulaParser] =
+      boxP   ::
+      diamondP ::
       implP  ::
+      andP ::
+      orP ::
       equivP ::
       leP    ::
       geP    ::
@@ -250,6 +255,21 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       trueP ::
       falseP ::
       Nil
+    
+    //Modalities
+    lazy val boxP : SubformulaParser = {
+      lazy val pattern = BOX_OPEN ~ programParser ~ BOX_CLOSE ~ parser
+      log(pattern)(BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
+        case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => BoxModality(p,f)
+      }
+    }
+    
+    lazy val diamondP : SubformulaParser = {
+      lazy val pattern = DIA_OPEN ~ programParser ~ DIA_CLOSE ~ parser
+      log(pattern)(DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
+        case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
+      }
+    }
     
     //Predicates
     
@@ -300,15 +320,15 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     
     lazy val andP : SubformulaParser = {
-      lazy val pattern = leftAssociative(precedence, andP, Some(OR))
-      log(pattern)(AND) ^^ {
+      lazy val pattern = leftAssociative(precedence, andP, Some(AND))
+      log(pattern)(AND + " parser") ^^ {
         case left ~ _ ~ right => And(left,right)
       }
     }
     
     lazy val orP : SubformulaParser = {
       lazy val pattern = leftAssociative(precedence, orP, Some(OR))
-      log(pattern)(OR) ^^ {
+      log(pattern)(OR + " parser") ^^ {
         case left ~ _ ~ right => Or(left,right)
       }
     }
@@ -342,7 +362,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     lazy val ltP:SubformulaParser = {
       lazy val pattern = termParser ~ LT ~ termParser
-      log(pattern)(LT) ^^ {
+      log(pattern)(LT + " parser") ^^ {
         case left ~ LT ~ right =>  
           LessThan(left.sort,left,right)
       }
@@ -385,7 +405,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
-    lazy val formulaParser = new FormulaParser(variables, functions, predicates).parser
+    lazy val formulaParser = new FormulaParser(variables, functions, predicates,programVariables).parser
     lazy val termParser = new TermParser(variables,functions).parser
     
     val precedence : List[SubprogramParser] =
@@ -402,25 +422,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       pvarP       ::
       groupP      ::
       Nil
-      
-//      parallelP ::
-//      choiceP ::
-//      sequenceP ::
-//      ifElseP ::
-//      ifP ::
-//      whileP ::
-//      closureP ::
-//      assignmentP ::
-//      nonDetAssignmentP ::
-//      evolutionP ::
-//      testP ::
-//      receiveP ::
-//      receiveMultipleP ::
-//      sendP :: 
-//      pvarP ::
-//      groupP     ::
-//      Nil  
-    
+
     lazy val sequenceP:SubprogramParser = {
       lazy val pattern = rightAssociativeOptional(precedence,sequenceP,Some(SCOLON))
       log(pattern)("program" + SCOLON + "program") ^^ {
@@ -524,8 +526,52 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         case "(" ~ p ~ ")" => p
       }
     }
+    
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Expressions.
+  //////////////////////////////////////////////////////////////////////////////
+//  class ExprParser(variables:List[Variable], 
+//      functions:List[Function],
+//      predicates:List[PredicateConstant],
+//      programVariables:List[ProgramConstant])
+//  {
+//    type SubexprParser = PackratParser[Expr]
+//    
+//    val programParser = 
+//      new ProgramParser(variables,functions,predicates,programVariables).parser
+//    val formulaParser = 
+//      new FormulaParser(variables,functions,predicates,programVariables).parser
+//
+//    
+//    val precedence : List[SubexprParser] =
+//      boxP ::
+//      diamondP ::
+//      formulaParser ::
+//      programParser ::
+//      Nil
+//    
+//    val parser = precedence.reduce(_|_)
+//
+//
+//  }
+  
+  /**
+   * Gets an expression parser based upon the function and programVariable sections.
+   */
+  def makeExprParser(variables:List[Variable], functions:List[Function],
+      predicates:List[PredicateConstant]):PackratParser[Expr] =
+  {
+    val programs = List[ProgramConstant]()
+    
+    lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs).parser
+    lazy val ret = formulaParser ^^ {
+      case e => e
+    }
+    ret
+  }
+  
   //////////////////////////////////////////////////////////////////////////////
   // Utility methods for converting strings into relevant portions of the core.
   //////////////////////////////////////////////////////////////////////////////

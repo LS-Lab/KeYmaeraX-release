@@ -99,10 +99,10 @@ object ParseSymbols extends KeYmaeraSymbols {
   val DIA    = "<>" //⋄
   
   //** Dynamic Modalities
-  val BOX_OPEN  = "["
-  val BOX_CLOSE  = "]"
-  val DIA_OPEN  = "<" //〈
-  val DIA_CLOSE  = ">" //〉
+  val BOX_OPEN  = "\\["
+  val BOX_CLOSE  = "\\]"
+  val DIA_OPEN  = "\\<" //〈
+  val DIA_CLOSE  = "\\>" //〉
   
   //** Programs
   val ASSIGN = ":="
