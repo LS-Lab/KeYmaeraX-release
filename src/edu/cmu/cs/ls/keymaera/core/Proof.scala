@@ -133,10 +133,11 @@ object Cut {
  *          - Variable
  *          - Predicate
  *          - ApplyPredicate(Function, Expr)
- *          TODO:
- *          - ProgramConstant
  *          - Apply(Function, Expr)
+ *          - ProgramConstant
  *          - Derivative(...)
+ *  TODO: - deal with modalities (similar to quantifers)
+ *        - walk through programs
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -166,6 +167,35 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case _ => throw new IllegalArgumentException("Unknown base case " + source + " of sort " + source.sort)
   }
 
+  def names(pairs: Seq[SubstitutionPair]): Seq[NamedSymbol] = (for(p <- pairs) yield names(p)).flatten.distinct
+
+  def names(pair: SubstitutionPair): Seq[NamedSymbol] = (names(pair.n) ++ names(pair.t)).filter(!boundNames(pair.n).contains(_))
+
+  /**
+   * This method returns the names that are bound in the source of a substitution
+   * @param n the source of a substitution
+   * @return the names bound on the source side of a substitution
+   */
+  def boundNames(n: Expr): Seq[NamedSymbol] = n match {
+    case ApplyPredicate(_, args) => names(args)
+    case Apply(_, args) => names(args)
+    case _ => Nil
+  }
+
+  /**
+   * Return all the named elements in a sequent
+   * @param e
+   * @return
+   */
+  def names(e: Expr): Seq[NamedSymbol] = e match {
+    case x: NamedSymbol => Vector(x)
+    case x: Unary => names(x.child)
+    case x: Binary => names(x.left) ++ names(x.right)
+    case x: Ternary => names(x.fst) ++ names(x.snd) ++ names(x.thd)
+    case x: NFContEvolve => x.vars ++ names(x.x) ++ names(x.theta) ++ names(x.f)
+    case x: Atom => Nil
+  }
+
   def apply(f: Formula): Formula = f match {
     case Not(c) => Not(this(c))
     case And(l, r) => And(this(l), this(r))
@@ -176,14 +206,25 @@ class Substitution(l: Seq[SubstitutionPair]) {
     /*
      * For quantifiers just check that there is no name clash, throw an exception if there is
      */
+    case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, this(form))
+    else throw new IllegalArgumentException("There is a name class in a substitution " + vars + " and " + l)
 
-    case PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
+    case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, this(form))
+    else throw new IllegalArgumentException("There is a name class in a substitution " + vars + " and " + l)
+
+    case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
+      case BoxModality(p, f) => BoxModality(this(p), this(f))
+      case DiamondModality(p, f) => DiamondModality(this(p), this(f))
+      case _ => ???
+    } else throw new IllegalArgumentException("There is a name class in a substitution " + x.writes + " and " + l)
+
+    case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
 
     // if we find a match, we bind the arguments of our match to what is in the current term
     // then we apply it to the codomain of the substitution
     case ApplyPredicate(func, arg) => for(p <- l) {
       p.n match {
-        case ApplyPredicate(pf, parg) => if(func == p.n) return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
+        case ApplyPredicate(pf, parg) => if(func == pf) return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
         case _ =>
       }
     }; return ApplyPredicate(func, this(arg))
@@ -191,23 +232,30 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Equals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => Equals(d, this(a), this(b))
       case (a: Program,b: Program) => Equals(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case NotEquals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => NotEquals(d, this(a), this(b))
       case (a: Program,b: Program) => NotEquals(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterThan(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => GreaterEquals(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterEquals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => GreaterEquals(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case LessEquals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => LessEquals(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case LessThan(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => LessThan(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
+    case x: Atom => x
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
   def apply(t: Term): Term = t match {
@@ -218,20 +266,33 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Divide(s, l, r) => Divide(s, this(l), this(r))
     case Exp(s, l, r) => Exp(s, this(l), this(r))
     case Pair(dom, l, r) => Pair(dom, this(l), this(r))
-    case Variable(name, idx, sort) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    case Derivative(_, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    case Variable(_, _, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
     // if we find a match, we bind the arguments of our match to what is in the current term
     // then we apply it to the codomain of the substitution
     case Apply(func, arg) => for(p <- l) {
       p.n match {
-        case Apply(pf, parg) => if(func == p.n) return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
+        case Apply(pf, parg) => if(func == pf) return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
         case _ =>
       }
     }; return Apply(func, this(arg))
-
+    case x: Atom => x
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
 
-  def apply(p: Program) = p match {
+  def apply(p: Program): Program = p match {
+    case Loop(c) => Loop(this(c))
+    case Sequence(a, b) => Sequence(this(a), this(b))
+    case Choice(a, b) => Choice(this(a), this(b))
+    case Parallel(a, b) => Parallel(this(a), this(b))
+    case IfThen(a, b) => IfThen(this(a), this(b))
+    case IfThenElse(a, b, c) => IfThenElse(this(a), this(b), this(c))
+    case Assign(a, b) => Assign(a, this(b))
+    case NDetAssign(a) => p
+    case Test(a) => Test(this(a))
+    case ContEvolve(a) => ContEvolve(this(a))
+    case NFContEvolve(v, x, t, f) => NFContEvolve(v, x, this(t), this(f))
+    case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
 

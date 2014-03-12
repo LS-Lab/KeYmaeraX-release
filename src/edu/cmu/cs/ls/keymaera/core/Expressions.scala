@@ -5,48 +5,20 @@
 package edu.cmu.cs.ls.keymaera.core
 
 /**
- * Abbreviations
- *===============
- *
- * The following abbreviations are relevant for the core:
- *
- * C = codomain sort
- * D = domain sort
- * L = left child sort
- * R = right child sort
- *
- * sort   : C = Sort object for codomain C
- * domain : D = Sort object for domain D
- */
-
-/**
  * Todos
  *=======
- * 1) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
- * 2) Assignment Expressions:   := as assign(Expr, Expr) (e.g., assign(apply(f, param), term) but also (x)' := 42
- *                                    assign(x, term) resp. assign(f, param, term)
- *                                    quant. assign vs. vector assign with "large" vector
- *                                    quant. assign as function update f = g with [x := y]
- * 3) [HELP ME] differential equations in some normal form (I don't remember the details)
  */
 
 /**
  * Points to Discuss
  *===================
- * 1) Currently we support efficicent type based mapping but no constructor patterns
- *    (i.e., case e : Add[_] instead of case Add(sort, left, right). Members are still
- *    accessible (e.g., through e.sort). Alternatively we could add apply / unapply
- *    methods which degrade performance and increase codesize or turn some classes into
- *    case classes, which increases their memory footprint mainly due to successive
- *    overwrite.
- * 2) Modality tracks variables that are bound in game / program: simplifies building
- *    up context but may require modality to change more often
+ * 1) Generic traversal and rewriting function necessary
+ * 2) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
  */
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
 
-import scala.math
 import scala.math._
 
 /**
@@ -61,10 +33,6 @@ trait Annotable
 /**
  * Sorts
  *=======
- * Class hierarchy defining builtin and user defined sorts. Because user defined
- * sorts are only known at runtime, we use instances of the below classes to
- * identify the sorts on which the dynamic logic expressions operate. (See
- * TypeSafety.scala for a description how typechecking works)
  */
 sealed abstract class Sort
 
@@ -129,14 +97,11 @@ import PredefinedSorts._
 /**
  * Expression infrastructure
  *===========================
- * (see TypeSafety.scala for an explaination how the Expression builtin typechecking
- * mechanism works. Each expression may replicate itself with apply and adheres to the
- * generic recursion structure via the function reduce.
  */
 sealed abstract class Expr(val sort : Sort) extends Annotable
 
 /* atom / leaf expression */
-trait Atom extends Expr
+sealed trait Atom extends Expr
 
 /* unary expression */
 abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends Expr(sort) {
@@ -226,7 +191,10 @@ object ProgramConstant {
     case _ => None
   }
 }
-class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
+class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram {
+  def reads = Nil
+  def writes = Nil
+}
 
 object Function {
   def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Function = new Function(name, index, domain, sort)
@@ -243,12 +211,12 @@ class Function (name : String, index: Option[Int] = None, domain : Sort, sort : 
  */
 
 /* The * in nondet. assignments */
-// class Random[C <: Sort](sort : C) extends Atom(sort) /* SOONISH BUT NOT NOW */
+// class Random(sort : Sort) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
 object True extends Expr(Bool) with Formula with Term with Atom
 object False extends Expr(Bool) with Formula with Term with Atom
 
-/*
+/**
  * - Make sure that there are no constants for negative numbers
  * - Strip all the trailing zeros
  */
@@ -339,11 +307,11 @@ class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, c
 
 
 /**
- * Formulas (aka Terms)
+ * Formulas
  *======================
  */
 
-trait Formula extends Expr
+sealed trait Formula extends Expr
 /* Bool -> Bool */
 abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
 /* Bool x Bool -> Bool */
@@ -468,11 +436,11 @@ class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in 
 class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
 
 /**
- * Real Expressions
+ * Terms
  *==================
  */
 
-trait Term extends Expr
+sealed trait Term extends Expr
 
 object Neg {
   def apply(sort: Sort, child: Term): Neg = new Neg(sort, child)
@@ -570,9 +538,21 @@ class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
  *=======
  */
 
-trait Game extends Expr
+sealed trait Game extends Expr {
+  def reads: Seq[NamedSymbol]
+  def writes: Seq[NamedSymbol]
+}
 /* Modality */
-class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) {
+object Modality {
+  def unapply(e: Expr): Option[(Game, Formula)] = e match {
+    case x: Modality => (x.left, x.right) match {
+      case (a: Game, b: Formula) => Some((a,b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) with Formula {
   def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
   def writes: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
 }
@@ -581,71 +561,250 @@ abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child
 abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
 
 /* Games */
-class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
-class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game
+object BoxModality {
+  def apply(child: Program, f: Formula): Modality = new Modality(new BoxModality(child), f)
+  def unapply(e: Expr): Option[(Program, Formula)] = e match {
+    case Modality(x: BoxModality, f) => x.child match {
+      case p: Program => Some((p, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
+  def reads = child.reads
+  def writes = child.writes
+}
+object DiamondModality {
+  def apply(child: Program, f: Formula): Modality = new Modality(new DiamondModality(child), f)
+  def unapply(e: Expr): Option[(Program, Formula)] = e match {
+    case Modality(x: DiamondModality, f) => x.child match {
+      case p: Program => Some((p, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
+  def reads = child.reads
+  def writes = child.writes
+}
 
-class BoxStar         (child : Game)    extends UnaryGame(child)
-class DiamondStar     (child : Game)    extends UnaryGame(child)
-class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right)
-class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
-class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right)
+class BoxStar         (child : Game)    extends UnaryGame(child){
+  def reads = child.reads
+  def writes = child.writes
+}
+class DiamondStar     (child : Game)    extends UnaryGame(child) {
+  def reads = child.reads
+  def writes = child.writes
+}
+class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
+  def reads = left.reads ++ right.reads
+  def writes = left.writes ++ left.writes
+}
+class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
+  def reads = left.reads ++ right.reads
+  def writes = left.writes ++ left.writes
+}
+class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
+  def reads = left.reads ++ right.reads
+  def writes = left.writes ++ left.writes
+}
 
 /**
  * Programs
  *==========
  */
 
-trait Program extends Expr
+sealed trait Program extends Expr {
+  def reads: Seq[NamedSymbol]
+  def writes: Seq[NamedSymbol]
+}
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
 abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
 
-class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right)
-class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right)
-class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right)
-class Loop    (child : Program)               extends UnaryProgram(child)
+object Sequence {
+  def apply(left: Program, right: Program) = new Sequence(left, right)
+  def unapply(e: Expr): Option[(Program, Program)] = e match {
+    case x: Sequence => (x.left, x.right) match {
+      case (a: Program, b: Program) => Some((a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right) {
+  def reads = left.reads ++ right.reads
+  def writes = left.writes ++ left.writes
+}
 
-class IfThen(val cond: Formula, val then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program
+object Choice {
+  def apply(left: Program, right: Program) = new Choice(left, right)
+  def unapply(e: Expr): Option[(Program, Program)] = e match {
+    case x: Choice => (x.left, x.right) match {
+      case (a: Program, b: Program) => Some((a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right) {
+  def reads = left.reads ++ right.reads
+  def writes = left.writes ++ left.writes
+}
 
+object Parallel {
+  def apply(left: Program, right: Program) = new Parallel(left, right)
+  def unapply(e: Expr): Option[(Program, Program)] = e match {
+    case x: Parallel => (x.left, x.right) match {
+      case (a: Program, b: Program) => Some((a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right) {
+  def reads = left.reads ++ right.reads
+  def writes = left.writes ++ left.writes
+}
+
+object Loop {
+  def apply(child: Program) = new Loop(child)
+  def unapply(e: Expr): Option[Program] = e match {
+    case x: Loop => x.child match {
+      case a: Program => Some(a)
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Loop    (child : Program)               extends UnaryProgram(child) {
+  def reads = child.reads
+  def writes = child.writes
+}
+
+object IfThen {
+  def apply(cond: Formula, then: Program) = new IfThen(cond, then)
+  def unapply(e: Expr): Option[(Formula, Program)] = e match {
+    case x: IfThen => (x.left, x.right) match {
+      case (a: Formula, b: Program) => Some((a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program {
+  def reads = ???
+  def writes = then.writes
+}
+
+object IfThenElse {
+  def apply(cond: Formula, then: Program, elseP: Program) = new IfThenElse(cond, then, elseP)
+  def unapply(e: Expr): Option[(Formula, Program, Program)] = e match {
+    case x: IfThenElse => (x.fst, x.snd, x.thd) match {
+      case (a: Formula, b: Program, c: Program) => Some((a, b, c))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class IfThenElse(cond: Formula, then: Program, elseP: Program)
-  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program
+  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program {
+  def reads = ???
+  def writes = then.writes ++ elseP.writes
+}
 
 /* TODO:
 *
-* - Assign(func, parameter, value) vs. Assign(Apply(func, parameter), value)
 * - need QAssign
 * - nondeterministic assign vs. Assign(Var, Random)
-*
-class Assign[C <: Sort](val variable : Variable[C], child : Expr[C]) extends Unary(Program, variable.sort, child)
-
-class AssignFn[D <: Sort, C <: Sort](val function : FunctionVar[D, C], left : Expr[D], right : Expr[C])
-  extends Binary(Program, new TupleT(function.domain, function.sort), left, right)
-
-class QAssign ...
-class QAssignFn ...
 */
 
-trait AtomicProgram extends Program
+sealed trait AtomicProgram extends Program
 
-/*
+/**
  * Term -> Term in order to allow for the following cases:
  * x := 5
  * f(i) := 5
  * (x,y) := (5,5)
  */
-class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram
+object Assign {
+  def apply(left: Term, right: Term): Assign = new Assign(left, right)
+  def unapply(e: Expr): Option[(Term, Term)] = e match {
+    case x: Assign => (x.left, x.right) match {
+      case (a: Term, b: Term) => Some((a, b))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram {
+  def reads = ???
+  def writes = VSearch.modified(left)
+}
 
-class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram
 
-class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+object NDetAssign {
+  def apply(child: Term): NDetAssign = new NDetAssign(child)
+  def unapply(e: Expr): Option[Term] = e match {
+    case x: NDetAssign => x.child match {
+      case a: Term => Some(a)
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram {
+  def reads = Nil
+  def writes = VSearch.modified(child)
+}
+
+object Test {
+  def apply(child: Formula): Test = new Test(child)
+  def unapply(e: Expr): Option[Formula] = e match {
+    case x: Test => x.child match {
+      case a: Formula => Some(a)
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
+  def reads = ???
+  def writes = Nil
+}
 
 /* child = differential algebraic formula */
-class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram
+object ContEvolve {
+  def apply(child: Formula): ContEvolve = new ContEvolve(child)
+  def unapply(e: Expr): Option[Formula] = e match {
+    case x: ContEvolve => x.child match {
+      case a: Formula => Some(a)
+      case _ => None
+    }
+    case _ => None
+  }
+}
+class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
+  def reads = ???
+  def writes = VSearch.primed(child)
+}
 
-/* Normal form ODE data structures
+/** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
-class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram
+object NFContEvolve {
+  def apply(vars: Seq[NamedSymbol], x: Term, theta: Term, f: Formula): NFContEvolve = new NFContEvolve(vars, x, theta, f)
+  def unapply(e: Expr): Option[(Seq[NamedSymbol], Term, Term, Formula)] = e match {
+    case x: NFContEvolve => Some((x.vars, x.x, x.theta, x.f))
+    case _ => None
+  }
+}
+class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
+  def reads = ???
+  def writes = VSearch.primed(x)
+}
 
 /**
  * Quantifiers
@@ -654,7 +813,28 @@ class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val
 
 abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
 
+object Forall {
+  def apply(variables : Seq[NamedSymbol], child : Formula): Forall = new Forall(variables, child)
+  def unapply(e: Expr): Option[(Seq[NamedSymbol], Formula)] = e match {
+    case x: Forall => x.child match {
+      case f: Formula => Some((x.variables, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+
+object Exists {
+  def apply(variables : Seq[NamedSymbol], child : Formula): Exists = new Exists(variables, child)
+  def unapply(e: Expr): Option[(Seq[NamedSymbol], Formula)] = e match {
+    case x: Exists => x.child match {
+      case f: Formula => Some((x.variables, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
 
 /**
@@ -669,5 +849,45 @@ object Sequent {
 
 /**
  *==================================================================================
+ * Helpers
  *==================================================================================
  */
+
+private object VSearch {
+  def modified(e: Term): Seq[NamedSymbol] = e match {
+    case Pair(dom, a, b) => modified(a) ++ modified(b)
+    case Apply(f, args) => Seq(f)
+    case x:Variable => Seq(x)
+    case Neg(_, a) => modified(a)
+    case Add(_, a, b) => modified(a) ++ modified(b)
+    case Subtract(_, a, b) => modified(a) ++ modified(b)
+    case Multiply(_, a, b) => modified(a) ++ modified(b)
+    case Divide(_, a, b) => modified(a) ++ modified(b)
+    case Exp(_, a, b) => modified(a) ++ modified(b)
+    case _ => throw new IllegalArgumentException("Unexpected form" + e)
+  }
+
+  def primed(f: Formula): Seq[NamedSymbol] = f match {
+    case Not(a) => primed(a)
+    case And(a, b) => primed(a) ++ primed(b)
+    case Or(a, b) => primed(a) ++ primed(b)
+    case Imply(a, b) => primed(a) ++ primed(b)
+    case Equiv(a, b) => primed(a) ++ primed(b)
+    case ApplyPredicate(_, arg) => primed(arg)
+    case _ => ???
+  }
+
+  def primed(t: Term): Seq[NamedSymbol] = t match {
+    case Pair(_, a, b) => primed(a) ++ primed(b)
+    case Derivative(_, x) => modified(x)
+    case Neg(_, a) => primed(a)
+    case Add(_, a, b) => primed(a) ++ primed(b)
+    case Subtract(_, a, b) => primed(a) ++ primed(b)
+    case Multiply(_, a, b) => primed(a) ++ primed(b)
+    case Divide(_, a, b) => primed(a) ++ primed(b)
+    case Exp(_, a, b) => primed(a) ++ primed(b)
+    case Apply(f, args) => primed(args)
+    case _ => ???
+  }
+}
+
