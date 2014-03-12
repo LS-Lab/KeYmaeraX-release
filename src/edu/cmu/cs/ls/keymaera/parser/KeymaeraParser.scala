@@ -244,6 +244,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       andP ::
       orP ::
       equivP ::
+      equalsP ::
       leP    ::
       geP    ::
       gtP    ::
@@ -306,9 +307,16 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     //Binary Formulas
     
     lazy val equivP:SubformulaParser = {
-      lazy val pattern = rightAssociative(precedence, equivP, Some(ARROW))
-      log(pattern)(ARROW) ^^ {
-        case left ~ _ ~ right => Imply(left,right)
+      lazy val pattern = rightAssociative(precedence, equivP, Some(EQUIV))
+      log(pattern)(EQUIV) ^^ {
+        case left ~ _ ~ right => Equiv(left,right)
+      }
+    }
+    
+    lazy val equalsP:SubformulaParser = {
+      lazy val pattern = rightAssociative(precedence, equalsP, Some(EQ))
+      log(pattern)(EQ) ^^ {
+        case left ~ _ ~ right => Equals(left.sort,left,right)//TODO?
       }
     }
     
