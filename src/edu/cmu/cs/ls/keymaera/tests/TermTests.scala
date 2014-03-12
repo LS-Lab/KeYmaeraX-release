@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tests
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 object TermTests {
 
@@ -15,9 +16,9 @@ object TermTests {
       val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
       val pos = new Position(false, 0)
       val pos2 = new Position(true, 0)
-      val c = r(ImplRight, pos) 
+      val c = r(ImplyRight, pos)
       for(n <- c) {
-        val c2 = n(ImplRight, pos)
+        val c2 = n(ImplyRight, pos)
         for(n2 <- c2) {
           val end = n2(AxiomClose(pos2), pos)
           println(end)
@@ -26,7 +27,16 @@ object TermTests {
   }
 
   def test2 = {
-    
+    val p = new PredicateConstant("p")
+    val q = new PredicateConstant("q")
+    val i = Imply(p, q)
+    val i2 = Imply(q, i)
+    println(i)
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
+    println(r.isClosed)
+    val tactic: Tactic = (ImplyRightT*) & AxiomCloseT
+    tactic(r, new Limit(None, None))
+    r.isClosed
   }
 
 }

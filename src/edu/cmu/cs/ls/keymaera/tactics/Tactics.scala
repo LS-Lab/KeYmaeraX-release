@@ -9,7 +9,11 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import scala.Option.option2Iterable
-import edu.cmu.cs.ls.keymaera.core.{Program, Rule, Term, ProofNode}
+import edu.cmu.cs.ls.keymaera.core._
+import scala.Left
+import scala.Right
+import scala.Some
+import scala.Unit
 
 /**
  * @author jdq
@@ -82,6 +86,8 @@ object Tactics {
     def <(tcts: (() => Tactic)*) = branchT((() => this) :: tcts.toList: _*)
     override def toString: String = name
   }
+
+  abstract class PositionTactic(name: String, pos: Position) extends Tactic(name)
 
   def repeatT(t: Tactic): Tactic = new Tactic("repeat " + t.toString) {
     def apply(g: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
@@ -181,12 +187,14 @@ object Tactics {
   }
 
   def ifT(cond: ProofNode => Boolean, t: Tactic): Tactic = ifElseT(cond, t, NilT)
+  //def ifT(cond: Sequent => Boolean, t: Tactic): Tactic = ifElseT(cond, t, NilT)
 
   def ifElseT(cond: ProofNode => Boolean, t: Tactic, ot: Tactic): Tactic = new Tactic("conditional " + t + " else " + ot) {
     def apply(g: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       if (cond(g)) t(g, l) else ot(g, l)
     }
   }
+  //def ifElseT(cond: Sequent => Boolean, t: Tactic, ot: Tactic): Tactic = ifElseT(((p: ProofNode) => cond(p.sequent)), t, ot)
 
 
   /*
@@ -234,30 +242,205 @@ object Tactics {
   // eventually halt
   def branchRepeatT(t: Tactic): Tactic = branchT(t, () => branchRepeatT(t))
 
-  def isApplicableRule(r: String, g: ProofNode): Boolean = ???
 
-  def isApplicableHeuristics(h: String, g: ProofNode): Boolean = ???
+  /*********************************************
+   * Basic Tactics
+   *********************************************/
 
-  // check whether the given rule r is applicable on the current goal and if it is
-  // apply the given tactic t
-  def ifApplicableRuleT(r: String, t: Tactic): Tactic = ifT(isApplicableRule(r, _), t)
+  def AndLeftT(pos: Position): PositionTactic = new PositionTactic("AndLeft", pos) {
+    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
+      case And(_, _) => true
+      case _ => false
+    } else false
 
-  // check whether some rule in the given heuristic group h is applicable on
-  // the current goal and if it is apply the given tactic t
-  def ifApplicableHeuristicsT(h: String, t: Tactic): Tactic = ifT(isApplicableHeuristics(h, _), t)
-
-  def withMathematicaQE(t: Tactic): Tactic = useQEMethod("Mathematica", t)
-
-  def withRedlogQE(t: Tactic): Tactic = useQEMethod("Reduce", t)
-
-  def withSMTQE(t: Tactic): Tactic = useQEMethod("SMT", t)
-
-  // use a specific method for QE in the sub tactic
-  // FIXME: this can cause issues with stoppen as the MathSolverManger does not know about this
-  // FIXME: this needs to be saved along with the proof!
-  def useQEMethod(qe: String, t: Tactic): Tactic = new Tactic("QE= " + qe + " in " + t) {
-    def apply(g: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = ???
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(AndLeft(pos)))
+      case false => Left(Some(Seq(p)))
+    }
   }
 
+  def AndLeftT: Tactic = new Tactic("AndLeft") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(AndLeft(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.ante) f match {
+      case And(_, _) => return Some(new Position(true, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def AndRightT(pos: Position): PositionTactic = new PositionTactic("AndRight", pos) {
+    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
+      case And(_, _) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(AndRight(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def AndRightT: Tactic = new Tactic("AndRight") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(AndRight(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.succ) f match {
+      case And(_, _) => return Some(new Position(false, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def OrLeftT(pos: Position): PositionTactic = new PositionTactic("OrLeft", pos) {
+    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
+      case Or(_, _) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(OrLeft(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def OrLeftT: Tactic = new Tactic("OrLeft") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(OrLeft(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.ante) f match {
+      case Or(_, _) => return Some(new Position(true, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def OrRightT(pos: Position): PositionTactic = new PositionTactic("OrRight", pos) {
+    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
+      case Or(_, _) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(OrRight(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def OrRightT: Tactic = new Tactic("OrRight") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(OrRight(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.succ) f match {
+      case Or(_, _) => return Some(new Position(false, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def ImplyLeftT(pos: Position): PositionTactic = new PositionTactic("ImplyLeft", pos) {
+    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
+      case Imply(_, _) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(ImplyLeft(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def ImplyLeftT: Tactic = new Tactic("ImplyLeft") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(ImplyLeft(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.ante) f match {
+      case Imply(_, _) => return Some(new Position(true, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def ImplyRightT(pos: Position): PositionTactic = new PositionTactic("ImplyRight", pos) {
+    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
+      case Imply(_, _) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(ImplyRight(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def ImplyRightT: Tactic = new Tactic("ImplyRight") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(ImplyRight(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.succ) f match {
+      case Imply(_, _) => return Some(new Position(false, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def NotLeftT(pos: Position): PositionTactic = new PositionTactic("NotLeft", pos) {
+    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
+      case Not(_) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(NotLeft(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def NotLeftT: Tactic = new Tactic("NotLeft") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(NotLeft(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.ante) f match {
+      case Not(_) => return Some(new Position(true, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def NotRightT(pos: Position): PositionTactic = new PositionTactic("NotRight", pos) {
+    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
+      case Not(_) => true
+      case _ => false
+    } else false
+
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
+      case true => Some(p.apply(NotRight(pos)))
+      case false => Left(Some(Seq(p)))
+    }
+  }
+
+  def NotRightT: Tactic = new Tactic("NotRight") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPosition(p.sequent) match {
+      case Some(pos) => Some(p.apply(NotRight(pos)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPosition(s: Sequent): Option[Position] = { for(f <- s.succ) f match {
+      case Not(_) => return Some(new Position(false, s.succ.indexOf(f)))
+      case _ =>
+    }; return None }
+  }
+
+  def AxiomCloseT: Tactic = new Tactic("AxiomClose") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPositions(p.sequent) match {
+      case Some((a, b)) => Some(p.apply(AxiomClose(a)(b)))
+      case None => Left(Some(Seq(p)))
+    }
+    def findPositions(s: Sequent): Option[(Position,Position)] = {
+      for(f <- s.ante; g <- s.succ)
+        if(f == g) return Some((new Position(true, s.ante.indexOf(f)), new Position(false, s.succ.indexOf(g))))
+      None
+    }
+  }
 }
 
