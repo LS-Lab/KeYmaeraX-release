@@ -6,7 +6,9 @@ import scala.annotation.elidable._
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
-  sealed abstract class Rule extends (Sequent => List[Sequent])
+  sealed abstract class Rule(val name: String) extends (Sequent => List[Sequent]) {
+    override def toString: String = name
+  }
 
   /**
    * Proof Tree
@@ -94,7 +96,7 @@ abstract class Signature
 object AnteSwitch {
   def apply(p1: Position, p2: Position): Rule = new AnteSwitchRule(p1, p2)
 
-  private class AnteSwitchRule(p1: Position, p2: Position) extends Rule {
+  private class AnteSwitchRule(p1: Position, p2: Position) extends Rule("AnteSwitch") {
     def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p2.isAnte)
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
     else
@@ -106,7 +108,7 @@ object AnteSwitch {
 object SuccSwitch {
   def apply(p1: Position, p2: Position): Rule = new SuccSwitchRule(p1, p2)
 
-  private class SuccSwitchRule(p1: Position, p2: Position) extends Rule {
+  private class SuccSwitchRule(p1: Position, p2: Position) extends Rule("SuccSwitch") {
     def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && !p2.isAnte)
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
@@ -117,14 +119,12 @@ object SuccSwitch {
 // cut
 object Cut {
   def apply(f: Formula) : Rule = new Cut(f)
-  private class Cut(f: Formula) extends Rule {
+  private class Cut(f: Formula) extends Rule("cut") {
     def apply(s: Sequent): List[Sequent] = {
       val l = new Sequent(s.pref, s.ante :+ f, s.succ)
       val r = new Sequent(s.pref, s.ante, s.succ :+ f)
       List(l, r)
     }
-
-    def name: String = "cut"
 
     def parameter: Formula = f
   }
@@ -310,7 +310,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
 object UniformSubstition {
   def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstition(substitution, origin)
 
-  private class UniformSubstition(subst: Substitution, origin: Sequent) extends Rule {
+  private class UniformSubstition(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
     // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
     // require explicit rule applications)
     def apply(s: Sequent): List[Sequent] = {
@@ -323,7 +323,6 @@ object UniformSubstition {
       else
         throw new IllegalStateException("Substitution did not yield the expected result")
     }
-
   }
 }
 
@@ -339,7 +338,7 @@ object AxiomClose extends AssumptionRule {
     }
   }
 
-  private class AxiomClose(ass: Position, p: Position) extends Rule {
+  private class AxiomClose(ass: Position, p: Position) extends Rule("AxiomClose") {
 
     def apply(s: Sequent): List[Sequent] = {
       if(ass.isAnte) {
@@ -368,7 +367,7 @@ object ImplyRight extends PositionRule {
     assert(!p.isAnte)
     new ImplRight(p)
   }
-  private class ImplRight(p: Position) extends Rule {
+  private class ImplRight(p: Position) extends Rule("Imply Right") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
@@ -385,7 +384,7 @@ object ImplyLeft extends PositionRule {
     assert(p.isAnte)
     new ImplLeft(p)
   }
-  private class ImplLeft(p: Position) extends Rule {
+  private class ImplLeft(p: Position) extends Rule("Imply Left") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
@@ -402,7 +401,7 @@ object NotRight extends PositionRule {
     assert(!p.isAnte)
     new NotRight(p)
   }
-  private class NotRight(p: Position) extends Rule {
+  private class NotRight(p: Position) extends Rule("Not Right") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
@@ -419,7 +418,7 @@ object NotLeft extends PositionRule {
     assert(p.isAnte)
     new NotLeft(p)
   }
-  private class NotLeft(p: Position) extends Rule {
+  private class NotLeft(p: Position) extends Rule("Not Left") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
@@ -436,7 +435,7 @@ object AndRight extends PositionRule {
     assert(!p.isAnte)
     new AndRight(p)
   }
-  private class AndRight(p: Position) extends Rule {
+  private class AndRight(p: Position) extends Rule("And Right") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
@@ -453,7 +452,7 @@ object AndLeft extends PositionRule {
     assert(p.isAnte)
     new AndLeft(p)
   }
-  private class AndLeft(p: Position) extends Rule {
+  private class AndLeft(p: Position) extends Rule("And Left") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
@@ -470,7 +469,7 @@ object OrRight extends PositionRule {
     assert(!p.isAnte)
     new OrRight(p)
   }
-  private class OrRight(p: Position) extends Rule {
+  private class OrRight(p: Position) extends Rule("Or Right") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.succ(p.getIndex)
       f match {
@@ -487,7 +486,7 @@ object OrLeft extends PositionRule {
     assert(p.isAnte)
     new OrLeft(p)
   }
-  private class OrLeft(p: Position) extends Rule {
+  private class OrLeft(p: Position) extends Rule("Or Left") {
     def apply(s: Sequent): List[Sequent] = {
       val f = s.ante(p.getIndex)
       f match {
@@ -515,7 +514,7 @@ object HideRight extends PositionRule {
     new Hide(p)
   }
 }
-class Hide(p: Position) extends Rule {
+class Hide(p: Position) extends Rule("Hide") {
   def apply(s: Sequent): List[Sequent] =
     if(p.isAnte)
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
