@@ -40,6 +40,12 @@ import scala.annotation.elidable._
       }
     }
 
+    def isClosed: Boolean = {
+      for(ps <- alternatives)
+        if(ps.subgoals.foldLeft(true)((s: Boolean, p: ProofNode) => s && p.isClosed)) return true
+      false
+    }
+
     def apply(rule : Rule) : List[ProofNode] = {
       val result = rule(sequent).map(new ProofNode(_, this))
       prepend(rule, result)
@@ -356,7 +362,7 @@ object AxiomClose extends AssumptionRule {
 
 // Impl right
 
-object ImplRight extends PositionRule {
+object ImplyRight extends PositionRule {
   def apply(p: Position): Rule = {
     assert(!p.isAnte)
     new ImplRight(p)
@@ -373,7 +379,7 @@ object ImplRight extends PositionRule {
 }
 
 // Impl left
-object ImplLeft extends PositionRule {
+object ImplyLeft extends PositionRule {
   def apply(p: Position): Rule = {
     assert(p.isAnte)
     new ImplLeft(p)
