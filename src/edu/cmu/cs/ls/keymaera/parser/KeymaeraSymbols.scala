@@ -46,7 +46,7 @@ trait KeYmaeraSymbols {
   val TEST:String
   val PRIME:String
     
-  val PCOMP:String
+  val PARALLEL:String
   val SEND:String
   val RECEIVE:String
   
@@ -63,6 +63,14 @@ trait KeYmaeraSymbols {
   
   //Abbreviations
   def paren(s:String):String
+  
+  
+  val EXP:String
+  val NEQ:String
+  val PAIR_OPEN:String
+  val PAIR_CLOSE:String
+  val EXISTS:String
+  val FORALL:String
 }
 
 /**
@@ -81,6 +89,8 @@ object ParseSymbols extends KeYmaeraSymbols {
   val MINUS = "-"
   val DIVIDE = "/"
   val NEGATIVE = "-"
+  val EXP = "^"
+  val NEQ = "!="
     
   val OPEN_CBRACKET = "{"
   val CLOSE_CBRACKET = "}"
@@ -112,7 +122,7 @@ object ParseSymbols extends KeYmaeraSymbols {
   val TEST = "?"
   val PRIME = "'" //derivative of
     
-  val PCOMP    = "||" //∥
+  val PARALLEL    = "||" //∥
   val SEND = "!"
   val RECEIVE = "?"
   
@@ -126,6 +136,13 @@ object ParseSymbols extends KeYmaeraSymbols {
   val EQUIV        = "≡"
   val PROGRAM_META = "P"
   val FORMULA_META = "F"
+
+    
+  val PAIR_OPEN = "("
+  val PAIR_CLOSE = ")"
+    
+  val EXISTS = "\\exists"
+  val FORALL = "\\forall"  
   
   //Abbreviations
   //Parens are always defined in the normal way..
