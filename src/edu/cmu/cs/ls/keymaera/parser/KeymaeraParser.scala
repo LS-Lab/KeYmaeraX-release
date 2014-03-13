@@ -22,15 +22,27 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     val parser = new KeYmaeraParser()
     
     //Parse file.
-    val (functions,predicateConstants,variables,problemText) = 
+    val (functions,predicateConstantsTemp,variablesTemp,problemText) = 
       parser.parseAll(parser.fileParser, s) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
       }
     
-    //Parse problem.
-    val exprParser = parser.makeExprParser(variables, functions, predicateConstants)
+//    //Copy all predicateConstants into the variables list and vice versa.
+//    val predicateConstants = predicateConstantsTemp ++ 
+//      variablesTemp.map(v => Variable.unapply(v) match {
+//        case Some((name, index, sort)) => new PredicateConstant(name,index)
+//        case None => ???
+//      })
+//    val variables:List[Variable] = variablesTemp ++ 
+//    	predicateConstantsTemp.map(p => PredicateConstant.unapply(p) match {
+//    	  case Some((name,index)) => new Variable(name,index,Real) //TODO?
+//    	  case None => ???
+//    	})
+      
+    //Parse the problem.
+    val exprParser = parser.makeExprParser(variablesTemp, functions, predicateConstantsTemp)
     parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
@@ -47,15 +59,16 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   
   protected override val whiteSpace = 
-    """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\)|/\*(.)*?\*/)+""".r
+    """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\)|/\*(.)*?\*/|\/\*[\w\W\s\S\d\D]+?\*\/)+""".r
   protected val space               = """[\ \t\n]*""".r
+  
   /**
    * ``ident" should match function, variable and sort names.
    */
   protected val ident               = """[a-zA-Z][a-zA-Z0-9\_]*""".r
   
-  //TODO-nrf not sure what this is for.
   val lexical = new StdLexical
+  //TODO should we add the rest of the \\'s to the delimiters list?
   lexical.delimiters ++= List("\\functions", "{", "}", "(", ")", "+", "-", "*", "/")
   
   //////////////////////////////////////////////////////////////////////////////
@@ -150,21 +163,47 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       subtractP ::
       negativeP ::
       applyP ::
-      variableP(variables) ::
+      variableP ::
       numberP   ::
       groupP    ::
       Nil
     
+      
+    //variable parser
+    lazy val variableP:PackratParser[Term] = {
+      lazy val pattern = {
+        val stringList =  variables.map(Variable.unapply(_) match {
+          case Some(t) => t._1
+          case None => ???
+        })
+        if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
+        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+      }
+      
+      log(pattern)("Variable") ^^ {
+        case name => {
+          variables.find(Variable.unapply(_) match {
+            case Some(p) => p._1.equals(name)
+            case None => false
+          }) match {
+            case Some(p) => p
+            case None => 
+              throw new Exception("Predicate was mentioned out of context: " + name)
+          }
+        }
+      } 
+    }
+    
     //Compound terms
       
     lazy val multiplyP:SubtermParser = {
-      lazy val pattern = leftAssociative(precedence, addP, Some(MULTIPLY))
+      lazy val pattern = leftAssociative(precedence, multiplyP, Some(MULTIPLY))
       log(pattern)("Multiplication") ^^ {
         case left ~ MULTIPLY ~ right => Multiply(left.sort, left,right)
       }
     }
     lazy val divP:SubtermParser = {
-      lazy val pattern = leftAssociative(precedence, addP, Some(DIVIDE))
+      lazy val pattern = leftAssociative(precedence, divP, Some(DIVIDE))
       log(pattern)("Division") ^^ {
         case left ~ DIVIDE ~ right => Divide(left.sort, left,right)
       }
@@ -186,7 +225,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     //Unary term operators
     
     lazy val negativeP:SubtermParser = {
-      lazy val pattern = NEGATIVE ~ parser
+      lazy val pattern = NEGATIVE ~ asTightAsParsers(precedence, negativeP).reduce(_|_)
       log(pattern)("negate") ^^ {
         case NEGATIVE ~ term => Neg(term.sort, term)
       }
@@ -194,11 +233,12 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     //Function application
     
-    lazy val applyP:SubtermParser = {
-      lazy val pattern = functionP(functions,parser) ~ "(" ~ rep1sep(parser, ",") ~ ")"
+    lazy val applyP:SubtermParser = {      
+      lazy val pattern = ident ~ "(" ~ rep1sep(tighterParsers(precedence,applyP).reduce(_|_), ",") ~ ")"
+      
       log(pattern)("Function Application") ^^ {
-        case function ~ "(" ~ args ~ ")" => 
-          Apply(function, 
+        case name ~ "(" ~ args ~ ")" => 
+          Apply(functionFromName(name, functions), 
               args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
       }
     }
@@ -238,9 +278,9 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubformulaParser] =
+      implP  ::
       boxP   ::
       diamondP ::
-      implP  ::
       andP ::
       orP ::
       equivP ::
@@ -248,34 +288,73 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       leP    ::
       geP    ::
       gtP    ::
-      ltP    :: 
+      ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
       notP ::
       derivativeP ::
       predicateP ::
-      groupP ::
       trueP ::
       falseP ::
+      groupP ::
       Nil
+    
+      
+   lazy val variableP:PackratParser[Term] = {
+      lazy val pattern = {
+        val stringList =  variables.map(Variable.unapply(_) match {
+          case Some(t) => t._1
+          case None => ???
+        })
+        if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
+        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+      }
+      
+      log(pattern)("Variable") ^^ {
+        case name => {
+          variables.find(Variable.unapply(_) match {
+            case Some(p) => p._1.equals(name)
+            case None => false
+          }) match {
+            case Some(p) => p
+            case None => 
+              throw new Exception("Predicate was mentioned out of context: " + name)
+          }
+        }
+      } 
+    }
+      
+    val tightestComparisonOperator = ltP
+    val tighterThanComparison = tighterParsers(precedence, tightestComparisonOperator).reduce(_|_)
     
     //Modalities
     lazy val boxP : SubformulaParser = {
-      lazy val pattern = BOX_OPEN ~ programParser ~ BOX_CLOSE ~ parser
+      lazy val pattern = BOX_OPEN ~ 
+    		  			 programParser ~ 
+    		  			 BOX_CLOSE ~ 
+    		  			 tighterParsers(precedence, boxP).reduce(_|_)
       log(pattern)(BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
-        case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => BoxModality(p,f)
+        case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => println("here!");BoxModality(p,f)
       }
     }
     
     lazy val diamondP : SubformulaParser = {
-      lazy val pattern = DIA_OPEN ~ programParser ~ DIA_CLOSE ~ parser
+      lazy val pattern = DIA_OPEN ~ programParser ~ DIA_CLOSE ~ tighterParsers(precedence, diamondP).reduce(_|_)
       log(pattern)(DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }
     }
     
     //Predicates
-    
     lazy val predicateP:SubformulaParser = {
-      log(ident)("Predicate") ^^ {
+      lazy val pattern = {
+        val stringList =  predicates.map(PredicateConstant.unapply(_) match {
+          case Some(t) => t._1
+          case None => ???
+        })
+        if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
+        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+      }
+      
+      log(pattern)("Predicate") ^^ {
         case name => {
           predicates.find(PredicateConstant.unapply(_) match {
             case Some(p) => p._1.equals(name)
@@ -286,9 +365,9 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
               throw new Exception("Predicate was mentioned out of context: " + name)
           }
         }
-      }
+      } 
     }
-      
+
     //Unary Formulas
     
     lazy val notP:SubformulaParser = {
@@ -299,24 +378,33 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     
     lazy val derivativeP:SubformulaParser = {
-      log(parser ~ PRIME)("Formula derivative") ^^ {
-        case v ~ "'" => new FormulaDerivative(v)
+      log(tighterParsers(precedence, derivativeP).reduce(_|_) ~ PRIME)("Formula derivative") ^^ {
+        case v ~ PRIME => new FormulaDerivative(v)
       }
     }
     
     //Binary Formulas
     
     lazy val equivP:SubformulaParser = {
-      lazy val pattern = rightAssociative(precedence, equivP, Some(EQUIV))
+      lazy val pattern = 
+        (tighterThanComparison) ~ 
+        EQUIV ~
+        (tighterThanComparison)
+        
       log(pattern)(EQUIV) ^^ {
         case left ~ _ ~ right => Equiv(left,right)
       }
     }
     
+    
     lazy val equalsP:SubformulaParser = {
-      lazy val pattern = rightAssociative(precedence, equalsP, Some(EQ))
-      log(pattern)(EQ) ^^ {
-        case left ~ _ ~ right => Equals(left.sort,left,right)//TODO?
+      lazy val pattern = 
+        (tighterThanComparison|termParser) ~ 
+        EQ ~
+        (tighterThanComparison|termParser)
+        
+      log(pattern)(EQ + " formula parser") ^^ {
+        case left ~ _ ~ right => Equals(right.sort,left,right)//TODO?
       }
     }
     
@@ -427,7 +515,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       ndassignP   ::
 //      evolutionP ::
       testP       ::
-      pvarP       ::
+//      pvarP       ::
       groupP      ::
       Nil
 
@@ -449,15 +537,20 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     
     lazy val ifThenP:SubprogramParser = {
-      lazy val pattern = "if" ~ formulaParser ~ "then" ~ parser
+      lazy val pattern = "if" ~ formulaParser ~ "then" ~ tighterParsers(precedence,ifThenP).reduce(_|_)
       log(pattern)("if-then") ^^ {
         case "if" ~ f ~ "then" ~ p => new IfThen(f,p)
       }
     }
     
     lazy val ifThenElseP:SubprogramParser = {
-      lazy val pattern = "if" ~ formulaParser ~ "then" ~ parser ~ "else" ~ parser
-      log(pattern)("if-then") ^^ {
+      lazy val pattern =
+        "if" ~ formulaParser ~ "then" ~ 
+        tighterParsers(precedence,ifThenP).reduce(_|_) ~ 
+        "else" ~ 
+        tighterParsers(precedence,ifThenP).reduce(_|_)
+        
+      log(pattern)("if-then-else") ^^ {
         case "if" ~ f ~ "then" ~ p1 ~ "else" ~ p2 => new IfThenElse(f,p1,p2)
       }
     }
@@ -516,17 +609,18 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       }
     }
     
-    lazy val pvarP:SubprogramParser = {
-      log(ident)("Program Variable") ^^ {
-        case name => programVariables.find(ProgramConstant.unapply(_) match {
-          case Some(t) => t._1.equals(name)
-          case None    => false
-        }) match {
-          case Some(p ) => p
-          case None     => throw new Exception("Program variable was mentioned but not in context: " + name)
-        }
-      }
-    }
+    //this need rewriting, but we dont suppor these at the moment anyway.
+//    lazy val pvarP:SubprogramParser = {
+//      log(ident)("Program Variable") ^^ {
+//        case name => programVariables.find(ProgramConstant.unapply(_) match {
+//          case Some(t) => t._1.equals(name)
+//          case None    => false
+//        }) match {
+//          case Some(p ) => p
+//          case None     => throw new Exception("Program variable was mentioned but not in context: " + name)
+//        }
+//      }
+//    }
     
     lazy val groupP:SubprogramParser = {
       lazy val pattern = "(" ~ precedence.reduce(_|_) ~ ")"
@@ -536,34 +630,6 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     
   }
-
-  //////////////////////////////////////////////////////////////////////////////
-  // Expressions.
-  //////////////////////////////////////////////////////////////////////////////
-//  class ExprParser(variables:List[Variable], 
-//      functions:List[Function],
-//      predicates:List[PredicateConstant],
-//      programVariables:List[ProgramConstant])
-//  {
-//    type SubexprParser = PackratParser[Expr]
-//    
-//    val programParser = 
-//      new ProgramParser(variables,functions,predicates,programVariables).parser
-//    val formulaParser = 
-//      new FormulaParser(variables,functions,predicates,programVariables).parser
-//
-//    
-//    val precedence : List[SubexprParser] =
-//      boxP ::
-//      diamondP ::
-//      formulaParser ::
-//      programParser ::
-//      Nil
-//    
-//    val parser = precedence.reduce(_|_)
-//
-//
-//  }
   
   /**
    * Gets an expression parser based upon the function and programVariable sections.
@@ -651,38 +717,19 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   
   
   //////////////////////////////////////////////////////////////////////////////
-  // Utility Methods for variables
+  // Misc helper methods
   //////////////////////////////////////////////////////////////////////////////
-    def variableP(variables:List[Variable]):PackratParser[Term] = {
-      lazy val ret = log(ident)("Variable") ^^ {
-        case name => variables.find(Variable.unapply(_) match {
-          case Some(t) => t._1.equals(name)
-          case None    => false
-        }) match {
-          case Some(v) => v
-          case None    => 
-            throw new Exception("Variable " + name + " not in context.")
-        }
-      }
-      ret
-    }
-  def functionP(functions:List[Function],subtermP:PackratParser[Expr]):PackratParser[Function] = {
-      lazy val ret = log(ident ~ "(" ~> repsep(subtermP, ",") <~ ")")("Function") ^^ 
-      {
-        case name => functions.find(Function.unapply(_) match {
-          case Some(t) => t._1.equals(name)
-          case None    => false
-        }) match {
-          case Some(f) => f
-          case None    => 
-            throw new Exception("Variable " + name + " not in context.")
-        }
-      }
-      ret
-    }   
   
-
-
+  def functionFromName(name:String, functions:List[Function]) = {
+    functions.find(Function.unapply(_) match {
+      case Some(f) => f._1.equals(name)
+      case None    => false
+    }) match {
+      case Some(function) => function
+      case None           => ??? //create a new function?
+    }
+  }
+  
 }
 
 // vim: set ts=4 sw=4 et:
