@@ -537,21 +537,22 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     
     lazy val ifThenP:SubprogramParser = {
-      lazy val pattern = "if" ~ formulaParser ~ "then" ~ tighterParsers(precedence,ifThenP).reduce(_|_)
+      lazy val pattern = "if" ~ ("(" ~> formulaParser <~ ")") ~ "then" ~ parser ~ "fi"
       log(pattern)("if-then") ^^ {
-        case "if" ~ f ~ "then" ~ p => new IfThen(f,p)
+        case "if" ~ f ~ "then" ~ p ~ "fi" => new IfThen(f,p)
       }
     }
     
     lazy val ifThenElseP:SubprogramParser = {
       lazy val pattern =
-        "if" ~ formulaParser ~ "then" ~ 
-        tighterParsers(precedence,ifThenP).reduce(_|_) ~ 
+        "if" ~ ("(" ~> formulaParser <~ ")") ~ "then" ~ 
+        parser ~ 
         "else" ~ 
-        tighterParsers(precedence,ifThenP).reduce(_|_)
+        parser ~
+        "fi"
         
       log(pattern)("if-then-else") ^^ {
-        case "if" ~ f ~ "then" ~ p1 ~ "else" ~ p2 => new IfThenElse(f,p1,p2)
+        case "if" ~ f ~ "then" ~ p1 ~ "else" ~ p2 ~ "fi" => new IfThenElse(f,p1,p2)
       }
     }
     
@@ -604,7 +605,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     lazy val testP:SubprogramParser = {
       lazy val pattern = TEST ~ formulaParser
-      log(pattern)(TEST) ^^ {
+      log(pattern)(TEST + " parser") ^^ {
         case TEST ~ f => new Test(f)
       }
     }

@@ -70,7 +70,7 @@ object KeYmaeraPrettyPrinter {
     case ApplyPredicate(function,child) => 
       prettyPrinter(function) + "(" + prettyPrinter(child) + ")"
 
-    case Assign(l,r) => prettyPrinter(l) + ASSIGN + recurse(r)
+    case Assign(l,r) => prettyPrinter(l) + ASSIGN + prettyPrinter(r)
     
     case BoxModality(p,f) => BOX_OPEN + prettyPrinter(p) + BOX_CLOSE + prettyPrinter(f)
     case ContEvolve(child) => OPEN_CBRACKET + prettyPrinter(child) + CLOSE_CBRACKET
@@ -126,11 +126,10 @@ object KeYmaeraPrettyPrinter {
     case GreaterThan(s,l,r) => prettyPrinter(l) + GT + prettyPrinter(r)
     case NotEquals(s,l,r) => prettyPrinter(l) + NEQ + prettyPrinter(r)
     
-    case IfThen(l,r) => "if " + recInfix(l,r," then ")
-    case IfThenElse(test,l,r) => "if " + 
-      recInfix(test,l," then ") + 
-      " else " + 
-      recurse(r)
+    case IfThen(l,r) => "if " + "(" + prettyPrinter(l) + ") then " + prettyPrinter(r) + " fi"
+    case IfThenElse(test,l,r) => 
+      "if " + "(" + prettyPrinter(test) + ") then " + 
+      prettyPrinter(l) + " else " + prettyPrinter(r) + " fi"
       
     case Pair(s,l,r) => PAIR_OPEN + recInfix(l,r,COMMA) + PAIR_CLOSE
     
@@ -159,7 +158,7 @@ object KeYmaeraPrettyPrinter {
     
     
     case Neg(s,e) => NEGATIVE + recurse(e)
-    case Test(e) => TEST + recurse(e)
+    case Test(e) => TEST + prettyPrinter(e)
     
     case Loop(p) => recurse(p) + KSTAR
     
@@ -202,35 +201,36 @@ object KeYmaeraPrettyPrinter {
     case ProgramConstant(name, _) => true
     case Variable(name, _,_) => true
     case NFContEvolve(vars,x,theta,f) => true
-    case Number(n) => true
+    case Number(_) => true
+    case Number(_,_) => true
     case Loop(p) => true 
     case Neg(s,e) => isAtomic(e)
     case Test(e) => isAtomic(e)
     case Not(e) => isAtomic(e)
     
       //arith
-  	case Add(s,l,r) => false
-    case Multiply(s,l,r) => false
-    case Divide(s,l,r) => false
-    case Subtract(s,l,r) => false
+  	case Add(s,l,r) => isAtomic(l) && isAtomic(r)
+    case Multiply(s,l,r) => isAtomic(l) && isAtomic(r)
+    case Divide(s,l,r) => isAtomic(l) && isAtomic(r)
+    case Subtract(s,l,r) => isAtomic(l) && isAtomic(r)
     
     //boolean ops
-    case And(l,r) => false
-    case Or(l,r) => false
+    case And(l,r) => isAtomic(l) && isAtomic(r)
+    case Or(l,r) => isAtomic(l) && isAtomic(r)
     
-    case Imply(l,r) =>  false
+    case Imply(l,r) =>  isAtomic(l) && isAtomic(r)
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
     case Apply(function,child) => false
     case ApplyPredicate(function,child) => false
     
-    case Assign(l,r) => false
+    case Assign(l,r) => isAtomic(l) && isAtomic(r)
     
-    case BoxModality(p,f) => false
-    case ContEvolve(child) => false
-    case Derivative(s, child) => false
-    case DiamondModality(p,f) => false
+    case BoxModality(p,f) => true
+    case ContEvolve(child) => true
+    case Derivative(s, child) => true
+    case DiamondModality(p,f) => true
     case Equiv(l,r) => false
     
     case Exp(s,l,r) => false
@@ -256,6 +256,7 @@ object KeYmaeraPrettyPrinter {
     
     case Function(name,index,domain,argSorts) => false
     
+    case _ => ???
     /** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
