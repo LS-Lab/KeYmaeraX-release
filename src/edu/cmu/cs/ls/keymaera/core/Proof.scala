@@ -2,6 +2,8 @@ package edu.cmu.cs.ls.keymaera.core
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
+import scala.collection.immutable.HashMap
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
@@ -86,6 +88,12 @@ abstract class TwoPositionRule extends ((Position,Position) => Rule)
 class Position(val ante: Boolean, val index: Int) {
   def isAnte = ante
   def getIndex: Int = index
+
+  def isDefined(s: Sequent): Boolean =
+    if(isAnte)
+      s.ante.length > getIndex
+    else
+      s.succ.length > getIndex
 }
 
 abstract class Signature
@@ -113,6 +121,29 @@ object SuccSwitch {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the succedent")
+  }
+}
+
+object Axiom {
+  val axioms: Map[String, Formula] = getAxioms
+
+  private def getAxioms: Map[String, Formula] = {
+    var m = new HashMap[String, Formula]
+    val a = ProgramConstant("$a")
+    val b = ProgramConstant("$b")
+    val p = PredicateConstant("$p")
+    val pair = ("Choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
+    m = m + pair
+    m
+  }
+
+  def apply(id: String): Rule = new Rule("Axiom " + id) {
+    def apply(s: Sequent): List[Sequent] = {
+      axioms.get(id) match {
+        case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
+        case _ => List(s)
+      }
+    }
   }
 }
 
@@ -247,7 +278,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterThan(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => GreaterEquals(d, this(a), this(b))
+      case (a: Term,b: Term) => GreaterThan(d, this(a), this(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterEquals(d, l, r) => (l,r) match {
@@ -314,7 +345,7 @@ object UniformSubstition {
     // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
     // require explicit rule applications)
     def apply(s: Sequent): List[Sequent] = {
-      val eqt = ((acc: Boolean, p: (Formula, Formula)) => subst(p._1) == p._2) // TODO: do we need to allow renaming of bounded variables?
+      val eqt = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println(KeYmaeraPrettyPrinter.stringify(a)); println(KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
       if(s.pref == origin.pref // universal prefix is identical
         && origin.ante.length == s.ante.length && origin.succ.length == s.succ.length
         && (origin.ante.zip(s.ante)).foldLeft(true)(eqt)  // formulas in ante results from substitution

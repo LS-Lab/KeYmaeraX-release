@@ -411,18 +411,37 @@ object Tactics {
     def applies(s: Sequent, p: Position) = true
     def apply(pos: Position): Tactic = new Tactic("Hide") {
       def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] =
+      if(pos.isDefined(p.sequent))
         Some(if(pos.isAnte) p(HideLeft(pos)) else p(HideRight(pos)))
+      else
+        Some(Seq(p))
     }
   }
 
   def cutT(g: (ProofNode => Option[Formula])): Tactic = new Tactic("Cut") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = g(p) match {
       case Some(t) => Some(p(Cut(t)))
-      case _ => None
+      case _ => Some(Seq(p))
     }
   }
 
   def cutT(f: Formula): Tactic = cutT((x:ProofNode) => Some(f))
+
+  def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = Axiom.axioms.get(id) match {
+      case Some(_) => Some(p(Axiom(id)))
+      case _ => Some(Seq(p))
+    }
+  }
+
+  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new Tactic("Uniform Substitution") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
+      val ante = for(f <- p.sequent.ante) yield delta.get(f) match { case Some(frm) => frm case _ => f}
+      val succ = for(f <- p.sequent.succ) yield delta.get(f) match { case Some(frm) => frm case _ => f}
+      Some(p(UniformSubstition(subst, Sequent(p.sequent.pref, ante, succ))))
+    }
+
+  }
 
 }
 

@@ -696,8 +696,8 @@ object Modality {
   }
 }
 final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) with Formula {
-  def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
-  def writes: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+  def reads: Seq[NamedSymbol] = ???
+  def writes: Seq[NamedSymbol] = left.writes
 
   override def equals(e: Any): Boolean = e match {
     case Modality(a, b) => a == left && b == right
