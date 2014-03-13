@@ -398,7 +398,7 @@ final class Imply (left : Formula, right : Formula) extends BinaryFormula(left, 
   }
 }
 object Equiv {
-  def apply(left: Formula, right: Formula): Formula = new Imply(left, right)
+  def apply(left: Formula, right: Formula): Equiv = new Equiv(left, right)
   def unapply(e: Any): Option[(Formula,Formula)] = e match {
     case x: Equiv => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
     case _ => None
