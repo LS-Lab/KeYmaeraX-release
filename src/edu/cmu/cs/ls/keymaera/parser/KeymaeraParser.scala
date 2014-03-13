@@ -8,6 +8,9 @@ import edu.cmu.cs.ls.keymaera.core.Add
 
 import scala.util.matching.Regex
 
+import scala.annotation.elidable
+import scala.annotation.elidable._
+
 
 /**
  * The KeYmaera Parser
@@ -22,34 +25,53 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     val parser = new KeYmaeraParser()
     
     //Parse file.
-    val (functions,predicateConstantsTemp,variablesTemp,problemText) = 
+    val (functions,predicateConstants,variables,problemText) = 
       parser.parseAll(parser.fileParser, s) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
       }
     
-//    //Copy all predicateConstants into the variables list and vice versa.
-//    val predicateConstants = predicateConstantsTemp ++ 
-//      variablesTemp.map(v => Variable.unapply(v) match {
-//        case Some((name, index, sort)) => new PredicateConstant(name,index)
-//        case None => ???
-//      })
-//    val variables:List[Variable] = variablesTemp ++ 
-//    	predicateConstantsTemp.map(p => PredicateConstant.unapply(p) match {
-//    	  case Some((name,index)) => new Variable(name,index,Real) //TODO?
-//    	  case None => ???
-//    	})
-      
+    
+    val programs = List[ProgramConstant]() //TODO support these.
+    
     //Parse the problem.
-    val exprParser = parser.makeExprParser(variablesTemp, functions, predicateConstantsTemp)
-    parser.parseAll(exprParser, problemText) match {
+    val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programs)
+    val parseResult = parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
     }
+    
+    //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
+    val printOfParse = KeYmaeraPrettyPrinter.stringify(parseResult)
+    checkParser(functions, predicateConstants, variables, programs,parseResult,printOfParse)
+    
+    parseResult
   }
   
+  /**
+   * Ensures that parse( print(parse(input)) ) = parse(input)
+   */
+  @elidable(ASSERTION) 
+  def checkParser(functions:List[Function],
+    predicateConstants:List[PredicateConstant],
+    variables:List[Variable],
+    programVariables:List[ProgramConstant],
+    parse:Expr,
+    printOfParse:String) = 
+  {
+    val parser = new KeYmaeraParser()
+    val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programVariables)
+    val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
+        case parser.Success(result,next) => result
+        case parser.Failure(_,_) => throw new Exception("parse failed.")
+        case parser.Error(_,_) => throw new Exception("parse error.")
+    }
+    
+    require(parse.equals(printofparseParse))
+  }
+   
   import edu.cmu.cs.ls.keymaera.parser.ParseSymbols._
   
   type Tokens = StdLexical
@@ -657,9 +679,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
    * Gets an expression parser based upon the function and programVariable sections.
    */
   def makeExprParser(variables:List[Variable], functions:List[Function],
-      predicates:List[PredicateConstant]):PackratParser[Expr] =
+      predicates:List[PredicateConstant],programs:List[ProgramConstant]):PackratParser[Expr] =
   {
-    val programs = List[ProgramConstant]()
     
     lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs).parser
     lazy val ret = formulaParser ^^ {
