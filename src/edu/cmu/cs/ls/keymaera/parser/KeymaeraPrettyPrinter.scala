@@ -78,6 +78,7 @@ object KeYmaeraPrettyPrinter {
     case DiamondModality(p,f) => DIA_OPEN + prettyPrinter(p) + DIA_CLOSE + prettyPrinter(f)
     case Equiv(l,r) => recInfix(l,r,EQUIV)
     
+
     case Exp(s,l,r) => recInfix(l,r,EXP)
     
     //BinaryProgram
@@ -183,7 +184,7 @@ object KeYmaeraPrettyPrinter {
   private def recInfix(l:Expr,r:Expr,sign:String):String = 
     groupIfNotAtomic(l,prettyPrinter(l)) + 
     sign + 
-    groupIfNotAtomic(l,prettyPrinter(r)) 
+    groupIfNotAtomic(r,prettyPrinter(r)) 
   
   private def recPostfix(e:Expr, sign:String):String = 
     groupIfNotAtomic(e, prettyPrinter(e)) + sign
@@ -209,23 +210,23 @@ object KeYmaeraPrettyPrinter {
     case Not(e) => isAtomic(e)
     
       //arith
-  	case Add(s,l,r) => isAtomic(l) && isAtomic(r)
-    case Multiply(s,l,r) => isAtomic(l) && isAtomic(r)
-    case Divide(s,l,r) => isAtomic(l) && isAtomic(r)
-    case Subtract(s,l,r) => isAtomic(l) && isAtomic(r)
+  	case Add(s,l,r) => false
+    case Multiply(s,l,r) => false
+    case Divide(s,l,r) => false
+    case Subtract(s,l,r) => false
     
     //boolean ops
-    case And(l,r) => isAtomic(l) && isAtomic(r)
-    case Or(l,r) => isAtomic(l) && isAtomic(r)
+    case And(l,r) => false
+    case Or(l,r) => false
     
-    case Imply(l,r) =>  isAtomic(l) && isAtomic(r)
+    case Imply(l,r) =>  false
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
     case Apply(function,child) => false
     case ApplyPredicate(function,child) => false
     
-    case Assign(l,r) => isAtomic(l) && isAtomic(r)
+    case Assign(l,r) => false
     
     case BoxModality(p,f) => true
     case ContEvolve(child) => true
@@ -256,7 +257,6 @@ object KeYmaeraPrettyPrinter {
     
     case Function(name,index,domain,argSorts) => false
     
-    case _ => ???
     /** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */

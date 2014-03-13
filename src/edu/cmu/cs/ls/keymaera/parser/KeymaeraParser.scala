@@ -157,12 +157,14 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubtermParser] =
+      expP ::
       multiplyP ::
       divP ::
       addP ::
       subtractP ::
       negativeP ::
       applyP ::
+      termDerivativeP ::
       variableP ::
       numberP   ::
       groupP    ::
@@ -194,6 +196,13 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       } 
     }
     
+    lazy val termDerivativeP:SubtermParser = {
+      lazy val pattern = tighterParsers(precedence, termDerivativeP).reduce(_|_)
+      log(pattern ~ PRIME)(PRIME + " parser") ^^ {
+        case t ~ PRIME => new Derivative(t.sort, t)
+      }
+    }
+    
     //Compound terms
       
     lazy val multiplyP:SubtermParser = {
@@ -209,6 +218,12 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       }
     }
     
+    lazy val expP:SubtermParser = {
+      lazy val pattern = parser ~ EXP ~ parser //?
+      log(pattern)("Exponentiation") ^^ {
+        case left ~ EXP ~ right => Exp(left.sort, left,right)
+      }
+    }
     lazy val addP:SubtermParser = {
       lazy val pattern = leftAssociative(precedence, addP, Some(PLUS))
       log(pattern)("Addition") ^^ {
@@ -281,8 +296,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       implP  ::
       boxP   ::
       diamondP ::
-      andP ::
       orP ::
+      andP ::
       equivP ::
       equalsP ::
       leP    ::
@@ -290,7 +305,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       gtP    ::
       ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
       notP ::
-      derivativeP ::
+      formulaDerivativeP ::
       predicateP ::
       trueP ::
       falseP ::
@@ -371,17 +386,18 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     //Unary Formulas
     
     lazy val notP:SubformulaParser = {
-      lazy val pattern = NEGATE ~ parser
+      lazy val pattern = NEGATE ~ tighterParsers(precedence, notP).reduce(_|_)
       log(pattern)(NEGATE) ^^ {
         case NEGATE ~ f => Not(f.asInstanceOf[Formula])
       }
     }
     
-    lazy val derivativeP:SubformulaParser = {
-      log(tighterParsers(precedence, derivativeP).reduce(_|_) ~ PRIME)("Formula derivative") ^^ {
+    lazy val formulaDerivativeP:SubformulaParser = {
+      log(tighterParsers(precedence, formulaDerivativeP).reduce(_|_) ~ PRIME)("Formula derivative") ^^ {
         case v ~ PRIME => new FormulaDerivative(v)
       }
     }
+    
     
     //Binary Formulas
     
@@ -587,24 +603,24 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         case t ~ ASSIGN ~ KSTAR => new NDetAssign(t)
       }
     }
- 
-    lazy val evolutionP:SubprogramParser = {
-      //TODO Per Jan's email, use N.F. constructor if v is a var.
-      lazy val diffEqP:SubprogramParser = termParser ~ PRIME ~ EQ ~ termParser ^^ {
-        case v ~ PRIME ~ EQ ~ t => ContEvolve(Equals(Real,Derivative(v.sort,v),t))
-      }
-    
+
+//   // TODO Per Jan's email, use N.F. constructor if v is a var.
+//    lazy val nfEvolutionP:SubprogramParser = {
+////      lazy val diffEqP:SubprogramParser = termParser ~ PRIME ~ EQ ~ termParser ^^ {
+////        case v ~ PRIME ~ EQ ~ t => ContEvolve(Equals(Real,Derivative(v.sort,v),t))
+////      }     
+//    }
+
+    lazy val evolutionP:SubprogramParser = {      
       lazy val pattern = (OPEN_CBRACKET ~
-                          repsep(diffEqP, ",") ~
-                          CLOSE_CBRACKET) | 
-                         (OPEN_CBRACKET ~ 
-                          repsep(diffEqP, ",") ~
-                          COMMA ~
-                          formulaParser ~
-                          CLOSE_CBRACKET) 
+                          rep1sep(formulaParser, AND) ~
+                          AND.? ~ formulaParser.? ~
+                          CLOSE_CBRACKET)
       log(pattern)("Cont Evolution") ^^ {
-        case OPEN_CBRACKET ~ des ~ CLOSE_CBRACKET => ???
-        case OPEN_CBRACKET ~ des ~ COMMA ~ constraint ~ CLOSE_CBRACKET => ???
+        case OPEN_CBRACKET ~ des ~ andOption ~ constraintOption ~ CLOSE_CBRACKET => constraintOption match {
+          case Some(constraint) => ContEvolve( And(des.reduceRight(And(_,_)) , constraint) )
+          case None => ContEvolve( des.reduceRight(And(_,_)) )
+        }
       }
     }
     
