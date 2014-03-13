@@ -88,12 +88,12 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   }
 
   //TODO-nrf throwing away the external annotation. Is this ok?
-  lazy val funcdefP = "\\external".?  ~ ident ~ ident ~ "(" ~ rep1sep(ident, ",") ~ ")" ^^ {
-    case external ~ rsort ~ name ~ _ ~ argsorts ~ _ => 
-      if(argsorts.length > 0)
-        Function(name, None, identsToSorts(argsorts), identToSort(rsort))
-      else
-        PredicateConstant(name)
+  lazy val funcdefP = "\\external".?  ~ ident ~ ident ~ ("(" ~ rep1sep(ident, ",") ~ ")").? ^^ {
+    case external ~ rsort ~ name ~ tail =>
+      tail match {
+        case Some(_ ~ argsorts ~ _) => Function(name, None, identsToSorts(argsorts), identToSort(rsort))
+        case None =>  PredicateConstant(name)
+      }
   }
   
   //////////////////////////////////////////////////////////////////////////////

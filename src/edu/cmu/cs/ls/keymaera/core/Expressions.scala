@@ -159,8 +159,10 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
 
   //def deepName = name + "_" + index + "_" + id;
 
-  def flatEquals(x : NamedSymbol) =
-    this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
+  override def equals(e : Any) = e match {
+    case x: NamedSymbol => this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
+    case _ => false
+  }
 
   //def deepEquals(x : NamedSymbol) =
   //  flatEquals(x) && this.id == x.id
@@ -168,25 +170,25 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
 
 object Variable {
   def apply(name : String, index: Option[Int] = None, sort : Sort): Variable = new Variable(name, index, sort)
-  def unapply(e: Expr): Option[(String, Option[Int], Sort)] = e match {
+  def unapply(e: Any): Option[(String, Option[Int], Sort)] = e match {
     case x: Variable => Some((x.name, x.index, x.sort))
     case _ => None
   }
 }
-class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
+final class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
 object PredicateConstant {
   def apply(name : String, index: Option[Int] = None): PredicateConstant = new PredicateConstant(name, index)
-  def unapply(e: Expr): Option[(String, Option[Int])] = e match {
+  def unapply(e: Any): Option[(String, Option[Int])] = e match {
     case x: PredicateConstant => Some((x.name, x.index))
     case _ => None
   }
 }
-class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
+final class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
 object ProgramConstant {
   def apply(name : String, index: Option[Int] = None): ProgramConstant = new ProgramConstant(name, index)
-  def unapply(e: Expr): Option[(String, Option[Int])] = e match {
+  def unapply(e: Any): Option[(String, Option[Int])] = e match {
     case x: ProgramConstant => Some((x.name, x.index))
     case _ => None
   }
@@ -198,12 +200,12 @@ class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSym
 
 object Function {
   def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Function = new Function(name, index, domain, sort)
-  def unapply(e: Expr): Option[(String, Option[Int], Sort, Sort)] = e match {
+  def unapply(e: Any): Option[(String, Option[Int], Sort, Sort)] = e match {
     case x: Function => Some((x.name, x.index, x.domain, x.sort))
     case _ => None
   }
 }
-class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
+final class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
 
 /**
  * Constant, Variable and Function Expressions
@@ -238,11 +240,11 @@ object Number {
       new NumberObj(sort, value)
   }
 
-  def unapply(e: Expr): Option[(Sort, BigDecimal)] = e match {
+  def unapply(e: Any): Option[(Sort, BigDecimal)] = e match {
     case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
     case _ => None
   }
-  private class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
+  private final class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
     override def equals(e: Any): Boolean = e match {
       case Number(a, b) => a == sort && b == value
       case _ => false
@@ -253,7 +255,7 @@ object Number {
 /* function application */
 object Apply {
   def apply(function: Function, child: Term): Apply = new Apply(function, child)
-  def unapply(e: Expr): Option[(Function, Term)] = e match {
+  def unapply(e: Any): Option[(Function, Term)] = e match {
     case x: Apply => x.child match {
       case t: Term => Some((x.function, t))
       case _ => None
@@ -261,8 +263,13 @@ object Apply {
     case _ => None
   }
 }
-class Apply(val function : Function, child : Term)
-           extends Unary(function.sort, function.domain, child) with Term
+final class Apply(val function : Function, child : Term)
+           extends Unary(function.sort, function.domain, child) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Apply(f, t) => f == function && t == child
+    case _ => false
+  }
+}
 
 /*
  * Predicate application
@@ -272,7 +279,7 @@ class Apply(val function : Function, child : Term)
  */
 object ApplyPredicate {
   def apply(function: Function, child: Term): ApplyPredicate = new ApplyPredicate(function, child)
-  def unapply(e: Expr): Option[(Function, Term)] = e match {
+  def unapply(e: Any): Option[(Function, Term)] = e match {
     case x: ApplyPredicate => x.child match {
       case t: Term => Some((x.function, t))
       case _ => None
@@ -280,18 +287,23 @@ object ApplyPredicate {
     case _ => None
   }
 }
-class ApplyPredicate(val function : Function, child : Term)
+final class ApplyPredicate(val function : Function, child : Term)
   extends Unary(Bool, function.domain, child) with Formula {
   applicable
 
   @elidable(ASSERTION) override def applicable = super.applicable; require(function.sort == Bool,
     "Sort mismatch in if then else condition: "  + function.sort + " is not Bool")
+
+  override def equals(e: Any): Boolean = e match {
+    case ApplyPredicate(f, t) => f == function && t == child
+    case _ => false
+  }
 }
 
 /* combine subexpressions into a vector */
 object Pair {
   def apply(domain : TupleT, left : Term, right : Term) = new Pair(domain, left, right)
-  def unapply(e: Expr): Option[(TupleT, Term, Term)] = e match {
+  def unapply(e: Any): Option[(TupleT, Term, Term)] = e match {
     case x: Pair => (x.left, x.right) match {
       case (a: Term, b: Term) => Some((x.domain, a, b))
       case _ => None
@@ -299,11 +311,27 @@ object Pair {
     case _ => None
   }
 }
-class Pair(domain : TupleT, left : Term, right : Term) extends Binary(domain, domain, left, right) with Term
+final class Pair(domain : TupleT, left : Term, right : Term) extends Binary(domain, domain, left, right) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Pair(a, b, c) => domain == a && left == b && right == c
+    case _ => false
+  }
+}
 
 /* extract elements from a vector expression */
-class Left (domain : TupleT, child : Pair) extends Unary(domain.left, domain, child) with Term
-class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, child) with Term
+final class Left (domain : TupleT, child : Pair) extends Unary(domain.left, domain, child) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case x: Left => domain == x.domain && child  == x.child
+    case _ => false
+  }
+}
+final class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, child) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case x: Right => domain == x.domain && child  == x.child
+    case _ => false
+  }
+
+}
 
 
 /**
@@ -319,121 +347,197 @@ abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Boo
 
 object Not {
   def apply(child: Formula): Formula = new Not(child)
-  def unapply(e: Expr): Option[Formula] = e match {
+  def unapply(e: Any): Option[Formula] = e match {
     case x: Not => Some(x.child.asInstanceOf[Formula])
     case _ => None
   }
 }
-class Not   (child : Formula) extends UnaryFormula(child)
+final class Not   (child : Formula) extends UnaryFormula(child) {
+  override def equals(e: Any): Boolean = e match {
+    case Not(a) => a == child
+    case _ => false
+  }
+}
 object And {
   def apply(left: Formula, right: Formula): Formula = new And(left, right)
-  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+  def unapply(e: Any): Option[(Formula,Formula)] = e match {
     case x: And => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
     case _ => None
   }
 }
-class And   (left : Formula, right : Formula) extends BinaryFormula(left, right)
+final class And   (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case And(a, b) => left == a && right == b
+    case _ => false
+  }
+}
 object Or {
   def apply(left: Formula, right: Formula): Formula = new Or(left, right)
-  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+  def unapply(e: Any): Option[(Formula,Formula)] = e match {
     case x: Or => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
     case _ => None
   }
 }
-class Or    (left : Formula, right : Formula) extends BinaryFormula(left, right)
+final class Or    (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case Or(a, b) => left == a && right == b
+    case _ => false
+  }
+}
 object Imply {
   def apply(left: Formula, right: Formula): Formula = new Imply(left, right)
-  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+  def unapply(e: Any): Option[(Formula,Formula)] = e match {
     case x: Imply => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
     case _ => None
   }
 }
-class Imply (left : Formula, right : Formula) extends BinaryFormula(left, right)
+final class Imply (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case Imply(a, b) => left == a && right == b
+    case _ => false
+  }
+}
 object Equiv {
   def apply(left: Formula, right: Formula): Formula = new Imply(left, right)
-  def unapply(e: Expr): Option[(Formula,Formula)] = e match {
+  def unapply(e: Any): Option[(Formula,Formula)] = e match {
     case x: Equiv => Some((x.left.asInstanceOf[Formula],x.right.asInstanceOf[Formula]))
     case _ => None
   }
 }
-class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, right)
+final class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case Equiv(a, b) => left == a && right == b
+    case _ => false
+  }
+}
 
 abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
   extends Binary(Bool, TupleT(domain, domain), left, right) with Formula
 
 /* equality */
 object Equals {
-  def apply(domain : Sort = RealXReal, left : Expr, right : Expr): Equals = new Equals(domain, left, right)
-  def unapply(e: Expr): Option[(Sort, Expr, Expr)] = e match {
-    case x: Equals => Some((x.domain, x.left, x.right))
+  def apply(domain : Sort = Real, left : Expr, right : Expr): Equals = new Equals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
+    case x: Equals => x.domain match {
+      case TupleT(a, b) if (a == b) => Some((x.domain, x.left, x.right))
+      case _ => None
+    }
     case _ => None
   }
 }
-class Equals   (domain : Sort = RealXReal, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+final class Equals   (domain : Sort = Real, left : Expr, right : Expr) extends BinaryRelation(domain, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case Equals(d, a, b) => d == domain && left == a && right == b
+    case _ => false
+  }
+}
 
 object NotEquals {
-  def apply(domain : Sort = RealXReal, left : Expr, right : Expr): NotEquals = new NotEquals(domain, left, right)
-  def unapply(e: Expr): Option[(Sort, Expr, Expr)] = e match {
-    case x: NotEquals => Some((x.domain, x.left, x.right))
+  def apply(domain : Sort = Real, left : Expr, right : Expr): NotEquals = new NotEquals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
+    case x: NotEquals => x.domain match {
+      case TupleT(a, b) if (a == b) => Some((x.domain, x.left, x.right))
+      case _ => None
+    }
     case _ => None
   }
 }
-class NotEquals(domain : Sort = RealXReal, left : Expr, right : Expr) extends BinaryRelation(domain, left, right)
+final class NotEquals(domain : Sort = Real, left : Expr, right : Expr) extends BinaryRelation(domain, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case NotEquals(d, a, b) => d == domain && left == a && right == b
+    case _ => false
+  }
+}
 
 /* comparison */
 object GreaterThan {
-  def apply(domain : Sort = RealXReal, left : Term, right : Term): GreaterThan = new GreaterThan(domain, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
-    case x: GreaterThan => (x.left, x.right) match {
-      case (a: Term, b: Term) => Some((x.domain, a, b))
+  def apply(domain : Sort = Real, left : Term, right : Term): GreaterThan = new GreaterThan(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: GreaterThan => (x.domain, x.left, x.right) match {
+      case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-class GreaterThan  (domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+final class GreaterThan  (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case GreaterThan(d, a, b)  => d == domain && left == a && right == b
+    case _ => false
+  }
+}
 
 object GreaterEquals {
-  def apply(domain : Sort = RealXReal, left : Term, right : Term): GreaterEquals = new GreaterEquals(domain, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
-    case x: GreaterEquals => (x.left, x.right) match {
-      case (a: Term, b: Term) => Some((x.domain, a, b))
+  def apply(domain : Sort = Real, left : Term, right : Term): GreaterEquals = new GreaterEquals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: GreaterEquals => (x.domain, x.left, x.right) match {
+      case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-class GreaterEquals(domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+final class GreaterEquals(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case GreaterEquals(d, a, b) => d == domain && left == a && right == b
+    case _ => false
+  }
+}
 
 object LessEquals {
-  def apply(domain : Sort = RealXReal, left : Term, right : Term): LessEquals = new LessEquals(domain, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
-    case x: LessEquals => (x.left, x.right) match {
-      case (a: Term, b: Term) => Some((x.domain, a, b))
+  def apply(domain : Sort = Real, left : Term, right : Term): LessEquals = new LessEquals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: LessEquals => (x.domain, x.left, x.right) match {
+      case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-class LessEquals   (domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+final class LessEquals   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case LessEquals(d, a, b) => d == domain && left == a && right == b
+    case _ => false
+  }
+}
 
 object LessThan {
-  def apply(domain : Sort = RealXReal, left : Term, right : Term): LessThan = new LessThan(domain, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
-    case x: LessThan => (x.left, x.right) match {
-      case (a: Term, b: Term) => Some((x.domain, a, b))
+  def apply(domain : Sort = Real, left : Term, right : Term): LessThan = new LessThan(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: LessThan => (x.domain, x.left, x.right) match {
+      case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-class LessThan     (domain : Sort = RealXReal, left : Term, right : Term) extends BinaryRelation(domain, left, right)
+final class LessThan     (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case LessThan(d, a, b) => d == domain && left == a && right == b
+    case _ => false
+  }
+}
 
 /* temporal */
-class Globally (child : Formula) extends UnaryFormula(child) /* []\Phi e.g., in [\alpha] []\Phi */
-class Finally  (child : Formula) extends UnaryFormula(child) /* <>\Phi e.g., in [\alpha] <>\Phi */
+final class Globally (child : Formula) extends UnaryFormula(child) { /* []\Phi e.g., in [\alpha] []\Phi */
+  override def equals(e: Any): Boolean = e match {
+    case x: Globally => child == x.child
+    case _ => false
+  }
+}
+final class Finally  (child : Formula) extends UnaryFormula(child) {/* <>\Phi e.g., in [\alpha] <>\Phi */
+  override def equals(e: Any): Boolean = e match {
+    case x: Finally => child == x.child
+    case _ => false
+  }
+}
 
-class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
+final class FormulaDerivative(child : Formula)    extends UnaryFormula(child) {
+  override def equals(e: Any): Boolean = e match {
+    case x: FormulaDerivative => child == x.child
+    case _ => false
+  }
+}
 
 /**
  * Terms
@@ -441,10 +545,9 @@ class FormulaDerivative(child : Formula)    extends UnaryFormula(child)
  */
 
 sealed trait Term extends Expr
-
 object Neg {
   def apply(sort: Sort, child: Term): Neg = new Neg(sort, child)
-  def unapply(e: Expr): Option[(Sort, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term)] = e match {
     case x: Neg => x.child match {
       case c: Term => Some((x.sort, c))
       case _ => None
@@ -452,11 +555,16 @@ object Neg {
     case _ => None
   }
 }
-class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
+final class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Neg(a, b) => a == sort && b == child
+    case _ => false
+  }
+}
 
 object Add {
   def apply(sort: Sort, left: Term, right: Term): Add = new Add(sort, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
     case x: Add => (x.left, x.right) match {
       case (l: Term, r: Term) => Some((x.sort, l, r))
       case _ => None
@@ -464,11 +572,16 @@ object Add {
     case _ => None
   }
 }
-class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+final class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Add(a, b, c) => a == sort && b == left && c == right
+    case _ => false
+  }
+}
 
 object Subtract {
   def apply(sort: Sort, left: Term, right: Term): Subtract = new Subtract(sort, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
     case x: Subtract => (x.left, x.right) match {
       case (l: Term, r: Term) => Some((x.sort, l, r))
       case _ => None
@@ -476,11 +589,16 @@ object Subtract {
     case _ => None
   }
 }
-class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+final class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Subtract(a, b, c) => a == sort && b == left && c == right
+    case _ => false
+  }
+}
 
 object Multiply {
   def apply(sort: Sort, left: Term, right: Term): Multiply = new Multiply(sort, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
     case x: Multiply => (x.left, x.right) match {
       case (l: Term, r: Term) => Some((x.sort, l, r))
       case _ => None
@@ -488,11 +606,16 @@ object Multiply {
     case _ => None
   }
 }
-class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+final class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Multiply(a, b, c) => a == sort && b == left && c == right
+    case _ => false
+  }
+}
 
 object Divide {
   def apply(sort: Sort, left: Term, right: Term): Divide = new Divide(sort, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
     case x: Divide => (x.left, x.right) match {
       case (l: Term, r: Term) => Some((x.sort, l, r))
       case _ => None
@@ -500,11 +623,16 @@ object Divide {
     case _ => None
   }
 }
-class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+final class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Divide(a, b, c) => a == sort && b == left && c == right
+    case _ => false
+  }
+}
 
 object Exp {
   def apply(sort: Sort, left: Term, right: Term): Exp = new Exp(sort, left, right)
-  def unapply(e: Expr): Option[(Sort, Term, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
     case x: Exp => (x.left, x.right) match {
       case (l: Term, r: Term) => Some((x.sort, l, r))
       case _ => None
@@ -512,11 +640,16 @@ object Exp {
     case _ => None
   }
 }
-class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term
+final class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Exp(a, b, c) => a == sort && b == left && c == right
+    case _ => false
+  }
+}
 
 object Derivative {
   def apply(sort: Sort, child: Term): Derivative = new Derivative(sort, child)
-  def unapply(e: Expr): Option[(Sort, Term)] = e match {
+  def unapply(e: Any): Option[(Sort, Term)] = e match {
     case x: Derivative => x.child match {
       case c: Term => Some((x.sort, c))
       case _ => None
@@ -524,14 +657,24 @@ object Derivative {
     case _ => None
   }
 }
-class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term
+final class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term {
+  override def equals(e: Any): Boolean = e match {
+    case Derivative(a, b) => a == sort && b == child
+    case _ => false
+  }
+}
 
-class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
+final class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
   extends Ternary(then.sort, TupleT(Bool, TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
   applicable
 
   @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseT.sort, "Sort mismatch" +
     "in if-then-else statement: " + then.sort + " != " + elseT.sort)
+
+  override def equals(e: Any): Boolean = e match {
+    case x: IfThenElseTerm => fst == x.fst && snd == x.snd && thd == x.thd
+    case _ => false
+  }
 }
 /**
  * Games
@@ -544,7 +687,7 @@ sealed trait Game extends Expr {
 }
 /* Modality */
 object Modality {
-  def unapply(e: Expr): Option[(Game, Formula)] = e match {
+  def unapply(e: Any): Option[(Game, Formula)] = e match {
     case x: Modality => (x.left, x.right) match {
       case (a: Game, b: Formula) => Some((a,b))
       case _ => None
@@ -552,9 +695,14 @@ object Modality {
     case _ => None
   }
 }
-class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) with Formula {
-  def reads: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
-  def writes: Seq[NamedSymbol] = throw new UnsupportedOperationException("not implemented yet")
+final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) with Formula {
+  def reads: Seq[NamedSymbol] = ???
+  def writes: Seq[NamedSymbol] = left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case Modality(a, b) => a == left && b == right
+    case _ => false
+  }
 }
 
 abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
@@ -563,7 +711,7 @@ abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, G
 /* Games */
 object BoxModality {
   def apply(child: Program, f: Formula): Modality = new Modality(new BoxModality(child), f)
-  def unapply(e: Expr): Option[(Program, Formula)] = e match {
+  def unapply(e: Any): Option[(Program, Formula)] = e match {
     case Modality(x: BoxModality, f) => x.child match {
       case p: Program => Some((p, f))
       case _ => None
@@ -571,9 +719,14 @@ object BoxModality {
     case _ => None
   }
 }
-class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
+final class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
   def reads = child.reads
   def writes = child.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: BoxModality => x.child == child
+    case _ => false
+  }
 }
 object DiamondModality {
   def apply(child: Program, f: Formula): Modality = new Modality(new DiamondModality(child), f)
@@ -585,30 +738,60 @@ object DiamondModality {
     case _ => None
   }
 }
-class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
+final class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
   def reads = child.reads
   def writes = child.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: DiamondModality => x.child == child
+    case _ => false
+  }
 }
 
-class BoxStar         (child : Game)    extends UnaryGame(child){
+final class BoxStar         (child : Game)    extends UnaryGame(child){
   def reads = child.reads
   def writes = child.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: BoxStar => x.child == child
+    case _ => false
+  }
 }
-class DiamondStar     (child : Game)    extends UnaryGame(child) {
+final class DiamondStar     (child : Game)    extends UnaryGame(child) {
   def reads = child.reads
   def writes = child.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: DiamondStar => x.child == child
+    case _ => false
+  }
 }
-class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
+final class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
   def reads = left.reads ++ right.reads
   def writes = left.writes ++ left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: SequenceGame => x.left == left && x.right == right
+    case _ => false
+  }
 }
-class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
+final class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
   def reads = left.reads ++ right.reads
   def writes = left.writes ++ left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: DisjunctGame => x.left == left && x.right == right
+    case _ => false
+  }
 }
-class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
+final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
   def reads = left.reads ++ right.reads
   def writes = left.writes ++ left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: ConjunctGame => x.left == left && x.right == right
+    case _ => false
+  }
 }
 
 /**
@@ -626,7 +809,7 @@ abstract class BinaryProgram (left  : Program, right : Program) extends Binary(P
 
 object Sequence {
   def apply(left: Program, right: Program) = new Sequence(left, right)
-  def unapply(e: Expr): Option[(Program, Program)] = e match {
+  def unapply(e: Any): Option[(Program, Program)] = e match {
     case x: Sequence => (x.left, x.right) match {
       case (a: Program, b: Program) => Some((a, b))
       case _ => None
@@ -634,14 +817,19 @@ object Sequence {
     case _ => None
   }
 }
-class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right) {
+final class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right) {
   def reads = left.reads ++ right.reads
   def writes = left.writes ++ left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: Sequence => x.left == left && x.right == right
+    case _ => false
+  }
 }
 
 object Choice {
   def apply(left: Program, right: Program) = new Choice(left, right)
-  def unapply(e: Expr): Option[(Program, Program)] = e match {
+  def unapply(e: Any): Option[(Program, Program)] = e match {
     case x: Choice => (x.left, x.right) match {
       case (a: Program, b: Program) => Some((a, b))
       case _ => None
@@ -649,14 +837,19 @@ object Choice {
     case _ => None
   }
 }
-class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right) {
+final class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right) {
   def reads = left.reads ++ right.reads
   def writes = left.writes ++ left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: Choice => x.left == left && x.right == right
+    case _ => false
+  }
 }
 
 object Parallel {
   def apply(left: Program, right: Program) = new Parallel(left, right)
-  def unapply(e: Expr): Option[(Program, Program)] = e match {
+  def unapply(e: Any): Option[(Program, Program)] = e match {
     case x: Parallel => (x.left, x.right) match {
       case (a: Program, b: Program) => Some((a, b))
       case _ => None
@@ -664,14 +857,20 @@ object Parallel {
     case _ => None
   }
 }
-class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right) {
+final class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right) {
   def reads = left.reads ++ right.reads
   def writes = left.writes ++ left.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: Parallel => x.left == left && x.right == right
+    case _ => false
+  }
 }
+
 
 object Loop {
   def apply(child: Program) = new Loop(child)
-  def unapply(e: Expr): Option[Program] = e match {
+  def unapply(e: Any): Option[Program] = e match {
     case x: Loop => x.child match {
       case a: Program => Some(a)
       case _ => None
@@ -679,14 +878,19 @@ object Loop {
     case _ => None
   }
 }
-class Loop    (child : Program)               extends UnaryProgram(child) {
+final class Loop    (child : Program)               extends UnaryProgram(child) {
   def reads = child.reads
   def writes = child.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: Loop => x.child == child
+    case _ => false
+  }
 }
 
 object IfThen {
   def apply(cond: Formula, then: Program) = new IfThen(cond, then)
-  def unapply(e: Expr): Option[(Formula, Program)] = e match {
+  def unapply(e: Any): Option[(Formula, Program)] = e match {
     case x: IfThen => (x.left, x.right) match {
       case (a: Formula, b: Program) => Some((a, b))
       case _ => None
@@ -694,14 +898,19 @@ object IfThen {
     case _ => None
   }
 }
-class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program {
+final class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program {
   def reads = ???
   def writes = then.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: IfThen => x.left == left && x.right == right
+    case _ => false
+  }
 }
 
 object IfThenElse {
   def apply(cond: Formula, then: Program, elseP: Program) = new IfThenElse(cond, then, elseP)
-  def unapply(e: Expr): Option[(Formula, Program, Program)] = e match {
+  def unapply(e: Any): Option[(Formula, Program, Program)] = e match {
     case x: IfThenElse => (x.fst, x.snd, x.thd) match {
       case (a: Formula, b: Program, c: Program) => Some((a, b, c))
       case _ => None
@@ -709,10 +918,15 @@ object IfThenElse {
     case _ => None
   }
 }
-class IfThenElse(cond: Formula, then: Program, elseP: Program)
+final class IfThenElse(cond: Formula, then: Program, elseP: Program)
   extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program {
   def reads = ???
   def writes = then.writes ++ elseP.writes
+
+  override def equals(e: Any): Boolean = e match {
+    case x: IfThenElse => x.fst == fst && x.snd == snd && x.thd == thd
+    case _ => false
+  }
 }
 
 /* TODO:
@@ -731,7 +945,7 @@ sealed trait AtomicProgram extends Program
  */
 object Assign {
   def apply(left: Term, right: Term): Assign = new Assign(left, right)
-  def unapply(e: Expr): Option[(Term, Term)] = e match {
+  def unapply(e: Any): Option[(Term, Term)] = e match {
     case x: Assign => (x.left, x.right) match {
       case (a: Term, b: Term) => Some((a, b))
       case _ => None
@@ -739,15 +953,20 @@ object Assign {
     case _ => None
   }
 }
-class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram {
+final class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram {
   def reads = ???
   def writes = VSearch.modified(left)
+
+  override def equals(e: Any): Boolean = e match {
+    case x: Assign => x.left == left && x.right == right
+    case _ => false
+  }
 }
 
 
 object NDetAssign {
   def apply(child: Term): NDetAssign = new NDetAssign(child)
-  def unapply(e: Expr): Option[Term] = e match {
+  def unapply(e: Any): Option[Term] = e match {
     case x: NDetAssign => x.child match {
       case a: Term => Some(a)
       case _ => None
@@ -755,14 +974,19 @@ object NDetAssign {
     case _ => None
   }
 }
-class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram {
+final class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram {
   def reads = Nil
   def writes = VSearch.modified(child)
+
+  override def equals(e: Any): Boolean = e match {
+    case x: NDetAssign => x.child == child
+    case _ => false
+  }
 }
 
 object Test {
   def apply(child: Formula): Test = new Test(child)
-  def unapply(e: Expr): Option[Formula] = e match {
+  def unapply(e: Any): Option[Formula] = e match {
     case x: Test => x.child match {
       case a: Formula => Some(a)
       case _ => None
@@ -770,15 +994,20 @@ object Test {
     case _ => None
   }
 }
-class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
+final class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
   def reads = ???
   def writes = Nil
+
+   override def equals(e: Any): Boolean = e match {
+    case x: Test => x.child == child
+    case _ => false
+  }
 }
 
 /* child = differential algebraic formula */
 object ContEvolve {
   def apply(child: Formula): ContEvolve = new ContEvolve(child)
-  def unapply(e: Expr): Option[Formula] = e match {
+  def unapply(e: Any): Option[Formula] = e match {
     case x: ContEvolve => x.child match {
       case a: Formula => Some(a)
       case _ => None
@@ -786,9 +1015,14 @@ object ContEvolve {
     case _ => None
   }
 }
-class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
+final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
   def reads = ???
   def writes = VSearch.primed(child)
+
+  override def equals(e: Any): Boolean = e match {
+    case x: ContEvolve => x.child == child
+    case _ => false
+  }
 }
 
 /** Normal form ODE data structures
@@ -796,14 +1030,19 @@ class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with A
  */
 object NFContEvolve {
   def apply(vars: Seq[NamedSymbol], x: Term, theta: Term, f: Formula): NFContEvolve = new NFContEvolve(vars, x, theta, f)
-  def unapply(e: Expr): Option[(Seq[NamedSymbol], Term, Term, Formula)] = e match {
+  def unapply(e: Any): Option[(Seq[NamedSymbol], Term, Term, Formula)] = e match {
     case x: NFContEvolve => Some((x.vars, x.x, x.theta, x.f))
     case _ => None
   }
 }
-class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
+final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
   def reads = ???
   def writes = VSearch.primed(x)
+
+  override def equals(e: Any): Boolean = e match {
+    case o: NFContEvolve => o.vars == vars && o.x == x && o.theta == theta && o.f == f
+    case _ => false
+  }
 }
 
 /**
@@ -815,7 +1054,7 @@ abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) ext
 
 object Forall {
   def apply(variables : Seq[NamedSymbol], child : Formula): Forall = new Forall(variables, child)
-  def unapply(e: Expr): Option[(Seq[NamedSymbol], Formula)] = e match {
+  def unapply(e: Any): Option[(Seq[NamedSymbol], Formula)] = e match {
     case x: Forall => x.child match {
       case f: Formula => Some((x.variables, f))
       case _ => None
@@ -823,11 +1062,17 @@ object Forall {
     case _ => None
   }
 }
-class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+final class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+
+  override def equals(e: Any): Boolean = e match {
+    case x: Forall => x.variables == variables && x.child == child
+    case _ => false
+  }
+}
 
 object Exists {
   def apply(variables : Seq[NamedSymbol], child : Formula): Exists = new Exists(variables, child)
-  def unapply(e: Expr): Option[(Seq[NamedSymbol], Formula)] = e match {
+  def unapply(e: Any): Option[(Seq[NamedSymbol], Formula)] = e match {
     case x: Exists => x.child match {
       case f: Formula => Some((x.variables, f))
       case _ => None
@@ -835,13 +1080,18 @@ object Exists {
     case _ => None
   }
 }
-class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child)
+final class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+  override def equals(e: Any): Boolean = e match {
+    case x: Exists => x.variables == variables && x.child == child
+    case _ => false
+  }
+}
 
 /**
  * Sequent notation
  */
 
-class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
 
 object Sequent {
   def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)

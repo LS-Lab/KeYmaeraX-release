@@ -72,7 +72,7 @@ object Tactics {
   // choice, repetition and other helper functions for conditional execution.
   // Further there are methods for generating terms/programelements that will be used
   // to instantiate schema variables in the rules.
-  abstract class Tactic(name: String)
+  abstract class Tactic(val name: String)
     extends ((ProofNode, Limit) => Either[Option[Seq[ProofNode]], Timeout]) {
     // repeat tactic until a fixed point is reached
     def * : Tactic = repeatT(this)
@@ -87,7 +87,7 @@ object Tactics {
     override def toString: String = name
   }
 
-  abstract class PositionTactic(name: String) extends (Position => Tactic) {
+  abstract class PositionTactic(val name: String) extends (Position => Tactic) {
     def applies(s: Sequent, p: Position): Boolean
   }
 
@@ -122,6 +122,7 @@ object Tactics {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       // create a stream that contains the elements of the given sequence and repeats the last one infinitly often
       def stutter[A](idx: Int, lst: Seq[A]): Stream[A] = Stream.cons(lst(idx), stutter(math.min(idx + 1, lst.length), lst))
+      println("Applying " + name)
       t(p, l) match {
         // timeout
         case x @ Right(_) => x
@@ -233,9 +234,6 @@ object Tactics {
   }
   */
 
-
-  def cutT(g: ((Rule, ProofNode) => Option[Either[Term, Program]])): Tactic = ???
-
   // interface for generating instances
   type Generator[T] = ((Rule, ProofNode, String) => Option[T])
 
@@ -249,7 +247,7 @@ object Tactics {
    * Basic Tactics
    *********************************************/
 
-  def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos") {
+  def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       for(i <- 0 until p.sequent.ante.length) {
         val pos = new Position(true, i)
@@ -259,7 +257,7 @@ object Tactics {
     }
   }
 
-  def findPosSucc(posT: PositionTactic): Tactic = new Tactic("FindPos") {
+  def findPosSucc(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       for(i <- 0 until p.sequent.succ.length) {
         val pos = new Position(false, i)
@@ -299,7 +297,7 @@ object Tactics {
     }
   }
 
-  def AndRightFindT: Tactic = findPosAnte(AndLeftT)
+  def AndRightFindT: Tactic = findPosSucc(AndRightT)
 
   def OrLeftT: PositionTactic = new PositionTactic ("OrLeft") {
     def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
@@ -331,7 +329,7 @@ object Tactics {
     }
   }
 
-  def OrRightFindT: Tactic = findPosAnte(OrLeftT)
+  def OrRightFindT: Tactic = findPosSucc(OrRightT)
 
   def ImplyLeftT: PositionTactic = new PositionTactic ("ImplyLeft") {
     def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
@@ -363,7 +361,7 @@ object Tactics {
     }
   }
 
-  def ImplyRightFindT: Tactic = findPosAnte(ImplyLeftT)
+  def ImplyRightFindT: Tactic = findPosSucc(ImplyRightT)
 
   def NotLeftT: PositionTactic = new PositionTactic ("NotLeft") {
     def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
@@ -395,7 +393,7 @@ object Tactics {
     }
   }
 
-  def NotRightFindT: Tactic = findPosAnte(NotLeftT)
+  def NotRightFindT: Tactic = findPosSucc(NotRightT)
 
   def AxiomCloseT: Tactic = new Tactic("AxiomClose") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPositions(p.sequent) match {
@@ -408,5 +406,42 @@ object Tactics {
       None
     }
   }
+
+  def hideT: PositionTactic = new PositionTactic("Hide") {
+    def applies(s: Sequent, p: Position) = true
+    def apply(pos: Position): Tactic = new Tactic("Hide") {
+      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] =
+      if(pos.isDefined(p.sequent))
+        Some(if(pos.isAnte) p(HideLeft(pos)) else p(HideRight(pos)))
+      else
+        Some(Seq(p))
+    }
+  }
+
+  def cutT(g: (ProofNode => Option[Formula])): Tactic = new Tactic("Cut") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = g(p) match {
+      case Some(t) => Some(p(Cut(t)))
+      case _ => Some(Seq(p))
+    }
+  }
+
+  def cutT(f: Formula): Tactic = cutT((x:ProofNode) => Some(f))
+
+  def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = Axiom.axioms.get(id) match {
+      case Some(_) => Some(p(Axiom(id)))
+      case _ => Some(Seq(p))
+    }
+  }
+
+  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new Tactic("Uniform Substitution") {
+    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
+      val ante = for(f <- p.sequent.ante) yield delta.get(f) match { case Some(frm) => frm case _ => f}
+      val succ = for(f <- p.sequent.succ) yield delta.get(f) match { case Some(frm) => frm case _ => f}
+      Some(p(UniformSubstition(subst, Sequent(p.sequent.pref, ante, succ))))
+    }
+
+  }
+
 }
 
