@@ -513,12 +513,13 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       closureP    ::
       assignP     ::
       ndassignP   ::
-//      evolutionP ::
+      evolutionP ::
       testP       ::
 //      pvarP       ::
       groupP      ::
       Nil
 
+     
     lazy val sequenceP:SubprogramParser = {
       lazy val pattern = rightAssociativeOptional(precedence,sequenceP,Some(SCOLON))
       log(pattern)("program" + SCOLON + "program") ^^ {
@@ -586,22 +587,26 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         case t ~ ASSIGN ~ KSTAR => new NDetAssign(t)
       }
     }
+ 
+    lazy val evolutionP:SubprogramParser = {
+      //TODO Per Jan's email, use N.F. constructor if v is a var.
+      lazy val diffEqP:SubprogramParser = termParser ~ PRIME ~ EQ ~ termParser ^^ {
+        case v ~ PRIME ~ EQ ~ t => ContEvolve(Equals(Real,Derivative(v.sort,v),t))
+      }
     
-//    lazy val nfodeP:SubprogramParser = null
-//    
-//    lazy val evolutionP:SubprogramParser = {
-//      lazy val pattern = (OPEN_CBRACKET ~
-//                          repsep(nfodeP, ",") ~
-//                          CLOSE_CBRACKET) |
-//                         (OPEN_CBRACKET ~ 
-//                          repsep(nfodeP, ",") ~
-//                          COMMA ~
-//                          formulaParser ~
-//                          CLOSE_CBRACKET)
-//      log(pattern)("Cont Evolution") ^^ {
-//        case OPEN_CBRACKET ~ odes ~ CLOSE_CBRACKET => 
-//      }
-//    }
+      lazy val pattern = (OPEN_CBRACKET ~
+                          repsep(diffEqP, ",") ~
+                          CLOSE_CBRACKET) | 
+                         (OPEN_CBRACKET ~ 
+                          repsep(diffEqP, ",") ~
+                          COMMA ~
+                          formulaParser ~
+                          CLOSE_CBRACKET) 
+      log(pattern)("Cont Evolution") ^^ {
+        case OPEN_CBRACKET ~ des ~ CLOSE_CBRACKET => ???
+        case OPEN_CBRACKET ~ des ~ COMMA ~ constraint ~ CLOSE_CBRACKET => ???
+      }
+    }
     
     lazy val testP:SubprogramParser = {
       lazy val pattern = TEST ~ formulaParser
