@@ -120,8 +120,8 @@ object TermTests {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = "\"" + print(s.ante) + " ==> " + print(s.succ) + "\""
-  def print(p: ProofNode): String = "{ \"name\":" + print(p.sequent) + ", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
-  def print(ps: ProofStep): String = "{\"name\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print).mkString(",") + "]" + "}"
+  def print(p: ProofNode): String = "{ \"sequent\":" + print(p.sequent) + ", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
+  def print(ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print).mkString(",") + "]" + "}"
 
 }
 
