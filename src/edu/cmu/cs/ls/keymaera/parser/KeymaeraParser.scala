@@ -59,9 +59,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   
   protected override val whiteSpace = 
-    // Add this before the last paren to handle multi-line comments:
-    // |\/\*[\w\W\s\S\d\D]+?\*\/
-    """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\)|/\*(.)*?\*/)+""".r
+    """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\)|/\*(.)*?\*/|\/\*[\w\W\s\S\d\D]+?\*\/)+""".r
   protected val space               = """[\ \t\n]*""".r
   
   /**
@@ -277,7 +275,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     lazy val programParser = 
       new ProgramParser(variables,functions,predicates,programVariables).parser
     
-    lazy val parser = equalsP//precedence.reduce(_|_)
+    lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubformulaParser] =
       implP  ::
