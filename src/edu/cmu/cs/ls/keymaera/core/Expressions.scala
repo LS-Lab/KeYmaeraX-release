@@ -30,6 +30,22 @@ trait Annotable
  * Prover Core
  */
 
+object HashFn {
+  /**
+   * Next free prime is 239
+   * @param prime
+   * @param a
+   * @return
+   */
+  def hash(prime: Int, a: Any*): Int = a.length match {
+    case 0 => prime
+    case 1 => prime + a.head.hashCode
+    case _ => (prime * hash(prime, a.tail)) + hash(prime, a.head)
+  }
+}
+
+import HashFn.hash
+
 /**
  * Sorts
  *=======
@@ -75,6 +91,7 @@ object TupleT {
       case that : TupleT => left == that.left && right == that.right
       case _ => false
     }
+    override def hashCode: Int = hash(3, left, right)
   }
 }
 
@@ -163,6 +180,7 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
     case x: NamedSymbol => this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
     case _ => false
   }
+  override def hashCode: Int = hash(5, name, index, domain)
 
   //def deepEquals(x : NamedSymbol) =
   //  flatEquals(x) && this.id == x.id
@@ -249,6 +267,7 @@ object Number {
       case Number(a, b) => a == sort && b == value
       case _ => false
     }
+    override def hashCode: Int = hash(7, sort, value)
   }
 }
 
@@ -269,6 +288,7 @@ final class Apply(val function : Function, child : Term)
     case Apply(f, t) => f == function && t == child
     case _ => false
   }
+  override def hashCode: Int = hash(11, function, child)
 }
 
 /*
@@ -298,6 +318,7 @@ final class ApplyPredicate(val function : Function, child : Term)
     case ApplyPredicate(f, t) => f == function && t == child
     case _ => false
   }
+  override def hashCode: Int = hash(13, function, child)
 }
 
 /* combine subexpressions into a vector */
@@ -316,6 +337,7 @@ final class Pair(domain : TupleT, left : Term, right : Term) extends Binary(doma
     case Pair(a, b, c) => domain == a && left == b && right == c
     case _ => false
   }
+  override def hashCode: Int = hash(17, domain, left, right)
 }
 
 /* extract elements from a vector expression */
@@ -324,13 +346,14 @@ final class Left (domain : TupleT, child : Pair) extends Unary(domain.left, doma
     case x: Left => domain == x.domain && child  == x.child
     case _ => false
   }
+  override def hashCode: Int = hash(19, domain, child)
 }
 final class Right(domain : TupleT, child : Pair) extends Unary(domain.right, domain, child) with Term {
   override def equals(e: Any): Boolean = e match {
     case x: Right => domain == x.domain && child  == x.child
     case _ => false
   }
-
+  override def hashCode: Int = hash(23, domain, child)
 }
 
 
@@ -357,6 +380,7 @@ final class Not   (child : Formula) extends UnaryFormula(child) {
     case Not(a) => a == child
     case _ => false
   }
+  override def hashCode: Int = hash(29, domain, child)
 }
 object And {
   def apply(left: Formula, right: Formula): Formula = new And(left, right)
@@ -370,6 +394,7 @@ final class And   (left : Formula, right : Formula) extends BinaryFormula(left, 
     case And(a, b) => left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(31, left, right)
 }
 object Or {
   def apply(left: Formula, right: Formula): Formula = new Or(left, right)
@@ -383,6 +408,7 @@ final class Or    (left : Formula, right : Formula) extends BinaryFormula(left, 
     case Or(a, b) => left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(37, left, right)
 }
 object Imply {
   def apply(left: Formula, right: Formula): Formula = new Imply(left, right)
@@ -396,6 +422,7 @@ final class Imply (left : Formula, right : Formula) extends BinaryFormula(left, 
     case Imply(a, b) => left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(41, left, right)
 }
 object Equiv {
   def apply(left: Formula, right: Formula): Equiv = new Equiv(left, right)
@@ -409,6 +436,7 @@ final class Equiv (left : Formula, right : Formula) extends BinaryFormula(left, 
     case Equiv(a, b) => left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(43, left, right)
 }
 
 abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
@@ -430,6 +458,7 @@ final class Equals   (domain : Sort = Real, left : Expr, right : Expr) extends B
     case Equals(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(47, domain, left, right)
 }
 
 object NotEquals {
@@ -447,6 +476,7 @@ final class NotEquals(domain : Sort = Real, left : Expr, right : Expr) extends B
     case NotEquals(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(53, domain, left, right)
 }
 
 /* comparison */
@@ -465,6 +495,7 @@ final class GreaterThan  (domain : Sort = Real, left : Term, right : Term) exten
     case GreaterThan(d, a, b)  => d == domain && left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(59, domain, left, right)
 }
 
 object GreaterEquals {
@@ -482,6 +513,7 @@ final class GreaterEquals(domain : Sort = Real, left : Term, right : Term) exten
     case GreaterEquals(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(61, domain, left, right)
 }
 
 object LessEquals {
@@ -499,6 +531,7 @@ final class LessEquals   (domain : Sort = Real, left : Term, right : Term) exten
     case LessEquals(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(67, domain, left, right)
 }
 
 object LessThan {
@@ -516,6 +549,7 @@ final class LessThan     (domain : Sort = Real, left : Term, right : Term) exten
     case LessThan(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
+  override def hashCode: Int = hash(71, domain, left, right)
 }
 
 /* temporal */
@@ -530,6 +564,7 @@ final class Finally  (child : Formula) extends UnaryFormula(child) {/* <>\Phi e.
     case x: Finally => child == x.child
     case _ => false
   }
+  override def hashCode: Int = hash(73, child)
 }
 
 final class FormulaDerivative(child : Formula)    extends UnaryFormula(child) {
@@ -537,6 +572,7 @@ final class FormulaDerivative(child : Formula)    extends UnaryFormula(child) {
     case x: FormulaDerivative => child == x.child
     case _ => false
   }
+  override def hashCode: Int = hash(79, child)
 }
 
 /**
@@ -560,6 +596,7 @@ final class Neg     (sort : Sort, child : Term) extends Unary(sort, sort, child)
     case Neg(a, b) => a == sort && b == child
     case _ => false
   }
+  override def hashCode: Int = hash(83, sort, child)
 }
 
 object Add {
@@ -577,6 +614,7 @@ final class Add     (sort : Sort, left  : Term, right : Term) extends Binary(sor
     case Add(a, b, c) => a == sort && b == left && c == right
     case _ => false
   }
+  override def hashCode: Int = hash(89, sort, left, right)
 }
 
 object Subtract {
@@ -594,6 +632,7 @@ final class Subtract(sort : Sort, left  : Term, right : Term) extends Binary(sor
     case Subtract(a, b, c) => a == sort && b == left && c == right
     case _ => false
   }
+  override def hashCode: Int = hash(97, sort, left, right)
 }
 
 object Multiply {
@@ -611,6 +650,7 @@ final class Multiply(sort : Sort, left  : Term, right : Term) extends Binary(sor
     case Multiply(a, b, c) => a == sort && b == left && c == right
     case _ => false
   }
+  override def hashCode: Int = hash(101, sort, left, right)
 }
 
 object Divide {
@@ -628,6 +668,7 @@ final class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sor
     case Divide(a, b, c) => a == sort && b == left && c == right
     case _ => false
   }
+  override def hashCode: Int = hash(103, sort, left, right)
 }
 
 object Exp {
@@ -645,6 +686,7 @@ final class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sor
     case Exp(a, b, c) => a == sort && b == left && c == right
     case _ => false
   }
+  override def hashCode: Int = hash(107, sort, left, right)
 }
 
 object Derivative {
@@ -662,6 +704,7 @@ final class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, chil
     case Derivative(a, b) => a == sort && b == child
     case _ => false
   }
+  override def hashCode: Int = hash(109, sort, child)
 }
 
 final class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
@@ -675,6 +718,7 @@ final class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
     case x: IfThenElseTerm => fst == x.fst && snd == x.snd && thd == x.thd
     case _ => false
   }
+  override def hashCode: Int = hash(113, cond, then, elseT)
 }
 /**
  * Games
@@ -703,6 +747,7 @@ final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBo
     case Modality(a, b) => a == left && b == right
     case _ => false
   }
+  override def hashCode: Int = hash(127, left, right)
 }
 
 abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
@@ -727,6 +772,7 @@ final class BoxModality     (child : Program) extends Unary(GameSort, ProgramSor
     case x: BoxModality => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(131, child)
 }
 object DiamondModality {
   def apply(child: Program, f: Formula): Modality = new Modality(new DiamondModality(child), f)
@@ -746,6 +792,7 @@ final class DiamondModality (child : Program) extends Unary(GameSort, ProgramSor
     case x: DiamondModality => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(137, child)
 }
 
 final class BoxStar         (child : Game)    extends UnaryGame(child){
@@ -756,6 +803,7 @@ final class BoxStar         (child : Game)    extends UnaryGame(child){
     case x: BoxStar => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(139, child)
 }
 final class DiamondStar     (child : Game)    extends UnaryGame(child) {
   def reads = child.reads
@@ -765,6 +813,7 @@ final class DiamondStar     (child : Game)    extends UnaryGame(child) {
     case x: DiamondStar => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(149, child)
 }
 final class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
   def reads = left.reads ++ right.reads
@@ -774,6 +823,7 @@ final class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left
     case x: SequenceGame => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(151, left, right)
 }
 final class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
   def reads = left.reads ++ right.reads
@@ -783,6 +833,7 @@ final class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left
     case x: DisjunctGame => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(157, left, right)
 }
 final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
   def reads = left.reads ++ right.reads
@@ -792,6 +843,7 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
     case x: ConjunctGame => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(163, left, right)
 }
 
 /**
@@ -825,6 +877,7 @@ final class Sequence(left  : Program, right : Program) extends BinaryProgram(lef
     case x: Sequence => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(167, left, right)
 }
 
 object Choice {
@@ -845,6 +898,7 @@ final class Choice  (left  : Program, right : Program) extends BinaryProgram(lef
     case x: Choice => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(173, left, right)
 }
 
 object Parallel {
@@ -865,6 +919,7 @@ final class Parallel(left  : Program, right : Program) extends BinaryProgram(lef
     case x: Parallel => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(179, left, right)
 }
 
 
@@ -886,6 +941,7 @@ final class Loop    (child : Program)               extends UnaryProgram(child) 
     case x: Loop => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(181, child)
 }
 
 object IfThen {
@@ -906,6 +962,7 @@ final class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, Boo
     case x: IfThen => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(191, cond, then)
 }
 
 object IfThenElse {
@@ -927,6 +984,7 @@ final class IfThenElse(cond: Formula, then: Program, elseP: Program)
     case x: IfThenElse => x.fst == fst && x.snd == snd && x.thd == thd
     case _ => false
   }
+  override def hashCode: Int = hash(193, cond, then, elseP)
 }
 
 /* TODO:
@@ -961,6 +1019,7 @@ final class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(l
     case x: Assign => x.left == left && x.right == right
     case _ => false
   }
+  override def hashCode: Int = hash(197, left, right)
 }
 
 
@@ -982,6 +1041,7 @@ final class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child
     case x: NDetAssign => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(199, child)
 }
 
 object Test {
@@ -1002,6 +1062,7 @@ final class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with A
     case x: Test => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(211, child)
 }
 
 /* child = differential algebraic formula */
@@ -1023,6 +1084,7 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
     case x: ContEvolve => x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(223, child)
 }
 
 /** Normal form ODE data structures
@@ -1043,6 +1105,7 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Ter
     case o: NFContEvolve => o.vars == vars && o.x == x && o.theta == theta && o.f == f
     case _ => false
   }
+  override def hashCode: Int = hash(227, vars, x, theta, f)
 }
 
 /**
@@ -1068,6 +1131,7 @@ final class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quanti
     case x: Forall => x.variables == variables && x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(229, variables, child)
 }
 
 object Exists {
@@ -1085,6 +1149,7 @@ final class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quanti
     case x: Exists => x.variables == variables && x.child == child
     case _ => false
   }
+  override def hashCode: Int = hash(233, variables, child)
 }
 
 /**
