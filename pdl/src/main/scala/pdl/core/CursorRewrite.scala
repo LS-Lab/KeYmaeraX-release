@@ -37,7 +37,7 @@ object CursorRewrite {
       else if(C9.applies(p,ctx))
         {log("Applying C9");(C9.apply(p, ctx))}
       else 
-      {log("No cursor rules are applicable");(p)}
+      {log("No cursor rules are applicable to " + p.prettyString);(p)}
     }
         
     //This saturates iff a one-step progress lemma holds  for rewriteStep
@@ -165,7 +165,14 @@ object C2 extends CursorRule {
       } 
       leftHasCursor && right.isCursorFree
     }
-    case CursorBefore(sequence) => false
+    case CursorBefore(sequence) => sequence match {
+      case Sequence(l,r) => l match {
+        case CursorBefore(lWithoutCursor) => lWithoutCursor.isSynchronizationFree && r.isCursorFree
+        case CursorAfter(lWithoutCursor) => r.isCursorFree
+        case _ => l.isSynchronizationFree && r.isCursorFree
+      }
+      case _ => false
+    }
 //      sequence match {
 //        case Sequence(a,b) => true
 //        case _ => false
@@ -173,16 +180,16 @@ object C2 extends CursorRule {
     case _ => false
   }
   
-  def apply(p:Program, ctx:Set[Channel]) = p match {
+  def apply(p:Program, ctx:Set[Channel]):Program = p match {
     case Sequence(l_cursor, right) => {
       val left = l_cursor match {
         case CursorAfter(leftWithoutCursor) => leftWithoutCursor
         case _ => throw new CRDoesNotApply(p.prettyString)
       }
-      if(!right.isCursorFree) 
-        throw new CRDoesNotApply
-      else {
-        val rightResult = right match {
+      
+      val rightResult = 
+        if(!right.isCursorFree) throw new CRDoesNotApply
+        else right match {
           case Sequence(rl,rr) => Sequence(CursorBefore(rl), rr)
           case _               => CursorBefore(right)
         }
@@ -195,19 +202,20 @@ object C2 extends CursorRule {
         rewrittenRightResult match {
           case CursorAfter(rightResultWithoutCursor) => 
             CursorAfter(Sequence(left,rightResultWithoutCursor))
-          case _ => Sequence(left, rightResult)
+          case _ => ProgramHelpers.normalize(left::rightResult::Nil)//Sequence(left, rightResult)
         }
       }
-    }
+
     //Note: we want that .(a;b) --> (.a;b) because otherwise rewriting is
-    //stuck off the bat.
-    case CursorBefore(sequence) => sequence match {
-      case Sequence(a,b) => {
-        val aResult = CursorRewrite.rewrite(CursorBefore(a), ctx)
-        apply(Sequence(aResult, b), ctx)       
-      }
-      case _ => throw new CRDoesNotApply
-    }
+    //stuck off the bat. Note that applies() ensure that moving the cursor is safe.
+    case CursorBefore(Sequence(l,r)) => apply( Sequence(CursorAfter(l),r), ctx )
+//    case CursorBefore(sequence) => sequence match {
+//      case Sequence(a,b) => {
+//        val aResult = CursorRewrite.rewrite(CursorBefore(a), ctx)
+//        apply(Sequence(aResult, b), ctx)       
+//      }
+//      case _ => throw new CRDoesNotApply
+//    }
     case _ => throw new CRDoesNotApply
   }
 }

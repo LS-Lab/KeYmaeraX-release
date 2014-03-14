@@ -96,7 +96,13 @@ object FormulaParserTests {
     val s = "Sin(x)"
     val f = Symbol("Sin", FVar(new Var("x"))::Nil)
   }
-  
+
+
+  object eqTest extends TermParserTest {
+    val one = Number("1")
+    val s = "a=1"
+    val f = Eq(a,one)
+    }
   
   
   
@@ -115,6 +121,7 @@ object FormulaParserTests {
 	  		  negTightNeg      ::
 	  		  longVarNegate    ::
 	  		  symbolTest       ::
+	  		  eqTest           ::
 	  		  Nil
   
   

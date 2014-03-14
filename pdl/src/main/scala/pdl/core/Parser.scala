@@ -201,7 +201,7 @@ class Parser extends RegexParsers with PackratParsers {
       lazy val leftOfEqP = derivativeP
       lazy val rightOfEqP = derivativeP | termP | groupP
       
-      lazy val patternP = leftOfEqP ~ Symbols.EQ ~ rightOfEqP ^^ {
+      lazy val patternP = (leftOfEqP ~ Symbols.EQ ~ rightOfEqP) ^^ {
         case left ~ Symbols.EQ ~ right => Eq(left,right)
       }
       
@@ -417,9 +417,18 @@ class Parser extends RegexParsers with PackratParsers {
       receiveP ::
       receiveMultipleP ::
       sendP :: 
+      progVarP ::
       pvarP ::
       groupP     ::
       Nil
+    
+    lazy val progVarP:SubprogramParser = {
+      lazy val pattern = """PROG_""".r ~ identifier
+      log(pattern)("Program Variable") ^^ {
+        case _ ~ id => 
+          ProgramVariable(id)
+      }
+    }
     
     lazy val ifP:SubprogramParser = {
       lazy val pattern = "if(" ~ FormulaParser.parser ~ ")" ~ space ~ "then" ~ parser ~ "fi"

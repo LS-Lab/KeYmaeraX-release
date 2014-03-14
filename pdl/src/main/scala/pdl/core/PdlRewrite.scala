@@ -42,7 +42,18 @@ object JoinAlgorithm {
       }
       
       //line 6: apply (Li) rewrites to compute Ll=lf[.l] and Lr=lf[.r]
+      //REVISION: Actually, we begin by cursor-rewriting...
+//      val cursorRewritel = CursorRewrite.rewrite(l, beta_type)
+//      val cursorRewriter = CursorRewrite.rewrite(r, alpha_type)
+//      
+//      log("Linear form rewriting: " + cursorRewritel.prettyString)
+//      val Ll = LFRewrite.rewrite(cursorRewritel, beta_type)
+//      log("Linear form rewriting: " + cursorRewriter.prettyString)
+//      val Lr = LFRewrite.rewrite(cursorRewriter, alpha_type)
+      
+      log("Linear form rewriting: " + l.prettyString)
       val Ll = LFRewrite.rewrite(CursorBefore(l), beta_type)
+      log("Linear form rewriting: " + r.prettyString)
       val Lr = LFRewrite.rewrite(CursorBefore(r), alpha_type)
       
       //Line 7: P = \epsilon

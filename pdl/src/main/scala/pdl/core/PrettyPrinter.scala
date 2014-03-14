@@ -96,6 +96,7 @@ object PrettyPrinter {
    * (that is, anything except PVar or STClsure).
    */
   def programToString(p:Program):String = p match {
+    case ProgramVariable(v) => v
     case PVar(v) => v.name
     case Assignment(v,f)	=> programToString(v) + ASSIGN + formulaToString(f)
     case NonDetAssignment(v)	=> programToString(v) + ASSIGN + KSTAR

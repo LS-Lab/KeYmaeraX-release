@@ -57,9 +57,9 @@ object ProgramHelpers {
   /**
    * @returns programs as a normalized sequence.
    */
-  def normalize(programs:List[Program]) = {
+  def normalize(programs:List[Program]):Program = {
     programs.reduceRight((left,right) => left match {
-      case Sequence(ll,lr) => Sequence(ll,Sequence(lr,right))
+      case Sequence(ll,lr) => normalize(ll::lr::right::Nil)
       case _               => Sequence(left,right)
     })
   }
@@ -92,6 +92,7 @@ sealed trait Program {
    * Variables are skipped.
    */
   def apply(fn:Function[Program, Program]):Program = this match {
+    case ProgramVariable(id) => fn(this)
     case PVar(v)         => fn(this)
     case Assignment(_,_)      => fn(this)
     case Test(f)         => fn(this)
@@ -117,6 +118,7 @@ sealed trait Program {
   
   def communicationType : Set[Channel] = this match {
     //Part 1
+    case ProgramVariable(id) => Set()
     case PVar(v)         => Set()
     case Assignment(_,_)      => Set()
     case Test(p)         => Set()
@@ -152,6 +154,7 @@ sealed trait Program {
    * recurse into compound expressions.
    */
   def map[T](fn:Function[Program, T], join:Function[(Program,Program),T]) = this match {
+    case ProgramVariable(v) => fn(this)
     case PVar(v)         => fn(this)
     case Assignment(_,_)      => fn(this)
     case Test(p)         => fn(this)
@@ -209,6 +212,7 @@ sealed trait Program {
    * Not even sure what this means anymore.
    */
   def isAtomic:Boolean = this match {
+    case ProgramVariable(_) => true
     case PVar(_)      => true
     case STClosure(_)    => true //?
     case Assignment(_,_)   => false
@@ -236,6 +240,7 @@ sealed trait Program {
   }
   
   def isCursorFree:Boolean = this match {
+    case ProgramVariable(_) => true
     case CursorAfter(a) => false
     case CursorBefore(a) => false
     case Assignment(v,f) => true
@@ -269,6 +274,10 @@ sealed trait Program {
     super.equals(other)
     
   def equalsOtherProgram(other : Program):Boolean = this match {
+    case ProgramVariable(v) => other match {
+      case ProgramVariable(v2) => v.equals(v2)
+      case _ => false
+    }
     case PVar(n)       => other match {
       case PVar(other_n) => n.equals(other_n)
       case _        => false
@@ -402,6 +411,7 @@ sealed trait Program {
     case Bottom() => true
     case Label(_) => true
     case Remainder(p) => p.isSynchronizationFree
+    case ProgramVariable(_) => true
     }
   
   
@@ -421,6 +431,7 @@ sealed trait Program {
     case NoCursor(p) => NoCursor(p.applyToSubprograms(fn))
     case Remainder(p) => Remainder(p.applyToSubprograms(fn))
     case STClosure(p) => STClosure(p.applyToSubprograms(fn))
+    case ProgramVariable(v) => this 
     
     case Deadlock() => this
     case Epsilon() => this
@@ -483,6 +494,7 @@ case class Remainder(p:Program)                                  extends Program
  * Labels used in the Merge algorithm.
  */
 case class Label(label:Int)                                      extends Program
+case class ProgramVariable(label:String) extends Program
 ////////////////////////////////////////////////////////////////////////////////
 // Formulas and Terms of dL (identical to PdL)
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,8 +1,8 @@
 package pdl.core
 
 object LFRewrite {
-//  def log(s:String) = {println(s)}
-  def log(s:String) = null
+  def log(s:String) = {println(s)}
+//  def log(s:String) = null
   
   def rewrite(p:Program,ctx:Set[Channel]):LFResult = {
     //This saturates iff a one-step progress lemma holds  for rewriteStep
@@ -246,7 +246,8 @@ sealed trait LFRule {
 //    //at the beginning of the program.
 //    val p = if(pInput.isCursorFree) CursorBefore(pInput) else pInput
     if(p.isCursorFree) {
-      throw new Exception("Trying to re-write a cursor-free subprogram. This will fail. Are you sure you didn't meant to insert a cursor at the beginning?")
+      throw new Exception("Trying to re-write a cursor-free subprogram. This will fail: " +
+          p.prettyString)
     }
     
     val rewriteResult = CursorRewrite.rewrite(p, ctx) 
@@ -280,7 +281,7 @@ sealed trait LFRule {
   }
   
   /**
-   * Projects out the defined portions of a list of program options, then 
+   * Projects the defined portions of a list of program options, then 
    * combines them in a sequence. Examples:
    * [None, P1, P2] => Sequence(P1,P2)
    * [P1, None, P2, P2] => Sequence(p1,Sequence(p2,p3))
@@ -290,7 +291,7 @@ sealed trait LFRule {
       case Some(x) => x
       case _ => throw new Exception("Unreachable.") //won't get here.
     })
-    filtered.reduceRight((a,b) => Sequence(a,b))
+    ProgramHelpers.normalize(filtered)
   }
 }
 
@@ -447,11 +448,14 @@ object L4 extends LFRule {
    */
   def applyWith(u:Option[Program], p:CursorBefore, ctx:Set[Channel], gamma:Option[Program]) = p match {
     case CursorBefore(STClosure(a)) => {
-      val (v,aPrimeOpt) = cursorRewriteSubprogram(a, ctx)
-      
+      val (v,aPrimeOpt) = if(!a.isCursorFree)
+        cursorRewriteSubprogram(a, ctx)
+        else
+          cursorRewriteSubprogram(CursorBefore(a), ctx)
+
       val aPrimeWithC = aPrimeOpt match {
         case Some(CursorBefore(_)) => aPrimeOpt
-        case Some(_) => Some(CursorBefore(aPrimeOpt.get))
+        case Some(_) => Some(aPrimeOpt.get)
         case None => aPrimeOpt
       }
       
