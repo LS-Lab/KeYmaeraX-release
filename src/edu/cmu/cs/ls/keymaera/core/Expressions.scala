@@ -419,7 +419,7 @@ object Equals {
   def apply(domain : Sort = Real, left : Expr, right : Expr): Equals = new Equals(domain, left, right)
   def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
     case x: Equals => x.domain match {
-      case TupleT(a, b) if (a == b) => Some((x.domain, x.left, x.right))
+      case TupleT(a, b) if (a == b) => Some((a, x.left, x.right))
       case _ => None
     }
     case _ => None
@@ -436,7 +436,7 @@ object NotEquals {
   def apply(domain : Sort = Real, left : Expr, right : Expr): NotEquals = new NotEquals(domain, left, right)
   def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
     case x: NotEquals => x.domain match {
-      case TupleT(a, b) if (a == b) => Some((x.domain, x.left, x.right))
+      case TupleT(a, b) if (a == b) => Some((a, x.left, x.right))
       case _ => None
     }
     case _ => None

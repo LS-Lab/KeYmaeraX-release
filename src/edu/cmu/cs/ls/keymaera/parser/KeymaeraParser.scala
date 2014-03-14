@@ -68,8 +68,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
     }
-    
-    require(parse.equals(printofparseParse))
+
+    require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_)))" )
   }
    
   import edu.cmu.cs.ls.keymaera.parser.ParseSymbols._
