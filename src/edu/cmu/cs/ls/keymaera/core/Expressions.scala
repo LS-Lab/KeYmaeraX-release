@@ -707,6 +707,16 @@ final class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, chil
   override def hashCode: Int = hash(109, sort, child)
 }
 
+object IfThenElseTerm {
+  def apply(cond: Formula, then: Term, elseT: Term): Term = new IfThenElseTerm(cond, then, elseT)
+  def unapply(e: Any): Option[(Formula, Term, Term)] = e match {
+    case x: IfThenElseTerm => (x.fst, x.snd, x.thd) match {
+      case (a: Formula, b: Term, c: Term) => Some((a, b, c))
+      case _ => None
+    }
+    case _ => None
+  }
+}
 final class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
   extends Ternary(then.sort, TupleT(Bool, TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
   applicable
@@ -756,6 +766,7 @@ abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, G
 
 /* Games */
 object BoxModality {
+  def apply(child: Program): Game = new BoxModality(child)
   def apply(child: Program, f: Formula): Modality = new Modality(new BoxModality(child), f)
   def unapply(e: Any): Option[(Program, Formula)] = e match {
     case Modality(x: BoxModality, f) => x.child match {
@@ -776,6 +787,7 @@ final class BoxModality     (child : Program) extends Unary(GameSort, ProgramSor
   override def hashCode: Int = hash(131, child)
 }
 object DiamondModality {
+  def apply(child: Program): Game = new DiamondModality(child)
   def apply(child: Program, f: Formula): Modality = new Modality(new DiamondModality(child), f)
   def unapply(e: Expr): Option[(Program, Formula)] = e match {
     case Modality(x: DiamondModality, f) => x.child match {

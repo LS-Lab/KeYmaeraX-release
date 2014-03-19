@@ -9,6 +9,9 @@ object ExpressionTraversal {
   trait PosInExpr
   trait StopTraversal
 
+  /**
+   * TODO: Maybe we need to relax this interface to just the cases: Formula -> Formula, Term -> Term, Program -> Program, Game -> Game in order to make it implementable
+   */
   trait ExpressionTraversalFunction {
     def pre[A <: Expr](p: PosInExpr, e: A): Either[Option[StopTraversal], A]
     def in[A <: Expr](p: PosInExpr, e: A): Either[Option[StopTraversal], A]
@@ -21,7 +24,7 @@ object ExpressionTraversal {
       case Right(x) => Some(x)
     }
 
-  def matchOne[A <: Expr, B <: Formula](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[Formula] = traverse(p, f, a) match {
+  def matchOne[A <: Expr, B <: Expr](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p, f, a) match {
     case Some(na: A) => val res = c(na); matchZero(p, f, res)
     case None => None
   }
@@ -83,6 +86,8 @@ object ExpressionTraversal {
         case Imply(a, b) => matchTwo(p, Imply.apply, f, a, b)
         case Equiv(a, b) => matchTwo(p, Equiv.apply, f, a, b)
         case Modality(a, b) => matchTwo(p, Modality.apply, f, a, b)
+        case Forall(v, a) => matchOne(p, Forall(v, _: Formula), f, a)
+        case Exists(v, a) => matchOne(p, Exists(v, _: Formula), f, a)
         case _ => fail(e)
       }
       case Right(n) => Some(n)
@@ -92,6 +97,17 @@ object ExpressionTraversal {
     f.pre(p, e) match {
       case Left(Some(_)) => None
       case Left(None) =>  e match {
+        case x: Variable => matchZero(p, f, e)
+        case Apply(a, b) => matchTwo(p, Apply.apply, f, a, b)
+        case Derivative(d, a) => matchOne(p, Derivative.apply(d, _: Term), f, a)
+        case Neg(d, a) => matchOne(p, Neg.apply(d, _: Term), f, a)
+        case Add(d, a, b) => matchTwo(p, Add.apply(d, _: Term, _: Term), f, a, b)
+        case Subtract(d, a, b) => matchTwo(p, Subtract.apply(d, _: Term, _: Term), f, a, b)
+        case Multiply(d, a, b) => matchTwo(p, Multiply.apply(d, _: Term, _: Term), f, a, b)
+        case Divide(d, a, b) => matchTwo(p, Divide.apply(d, _: Term, _: Term), f, a, b)
+        case Exp(d, a, b) => matchTwo(p, Exp.apply(d, _: Term, _: Term), f, a, b)
+        case IfThenElseTerm(a, b, c) => matchThree(p, IfThenElseTerm.apply, f, a, b, c)
+        case Pair(d, a, b) => matchTwo(p, Pair.apply(d, _: Term, _: Term), f, a, b)
         case _ => fail(e)
       }
       case Right(n) => Some(n)
@@ -101,6 +117,8 @@ object ExpressionTraversal {
     f.pre(p, e) match {
       case Left(Some(_)) => None
       case Left(None) =>  e match {
+        case x: BoxModality => matchOne(p, BoxModality(_: Program), f, x.child)
+        case x: DiamondModality => matchOne(p, DiamondModality(_: Program), f, x.child)
         case _ => fail(e)
       }
       case Right(n) => Some(n)
@@ -111,8 +129,16 @@ object ExpressionTraversal {
     f.pre(p, e) match {
       case Left(Some(_)) => None
       case Left(None) =>  e match {
+        case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
+        case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
+        case Test(a) => matchOne(p, Test.apply, f, a)
+        case ContEvolve(a) => matchOne(p, ContEvolve.apply, f, a)
         case IfThen(a, b) => matchTwo(p, IfThen.apply, f, a, b)
         case IfThenElse(a, b, c) => matchThree(p, IfThenElse.apply, f, a, b, c)
+        case Sequence(a, b) => matchTwo(p, Sequence.apply, f, a, b)
+        case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
+        case Parallel(a, b) => matchTwo(p, Parallel.apply, f, a, b)
+        case Loop(a) => matchOne(p, Loop.apply, f, a)
         case _ => fail(e)
       }
       case Right(n) => Some(n)
