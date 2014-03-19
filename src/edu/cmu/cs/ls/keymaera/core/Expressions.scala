@@ -731,6 +731,7 @@ sealed trait Game extends Expr {
 }
 /* Modality */
 object Modality {
+  def apply(g: Game, f: Formula): Formula = new Modality(g, f)
   def unapply(e: Any): Option[(Game, Formula)] = e match {
     case x: Modality => (x.left, x.right) match {
       case (a: Game, b: Formula) => Some((a,b))
@@ -945,7 +946,7 @@ final class Loop    (child : Program)               extends UnaryProgram(child) 
 }
 
 object IfThen {
-  def apply(cond: Formula, then: Program) = new IfThen(cond, then)
+  def apply(cond: Formula, then: Program): Program = new IfThen(cond, then)
   def unapply(e: Any): Option[(Formula, Program)] = e match {
     case x: IfThen => (x.left, x.right) match {
       case (a: Formula, b: Program) => Some((a, b))
@@ -966,7 +967,7 @@ final class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, Boo
 }
 
 object IfThenElse {
-  def apply(cond: Formula, then: Program, elseP: Program) = new IfThenElse(cond, then, elseP)
+  def apply(cond: Formula, then: Program, elseP: Program): Program = new IfThenElse(cond, then, elseP)
   def unapply(e: Any): Option[(Formula, Program, Program)] = e match {
     case x: IfThenElse => (x.fst, x.snd, x.thd) match {
       case (a: Formula, b: Program, c: Program) => Some((a, b, c))
