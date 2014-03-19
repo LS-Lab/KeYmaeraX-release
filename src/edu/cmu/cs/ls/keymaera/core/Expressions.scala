@@ -32,7 +32,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 239
+   * Next free prime is 251
    * @param prime
    * @param a
    * @return
@@ -444,16 +444,16 @@ abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
 
 /* equality */
 object Equals {
-  def apply(domain : Sort = Real, left : Expr, right : Expr): Equals = new Equals(domain, left, right)
-  def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
-    case x: Equals => x.domain match {
-      case TupleT(a, b) if (a == b) => Some((a, x.left, x.right))
+  def apply(domain : Sort = Real, left : Term, right : Term): Equals = new Equals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: Equals => (x.domain, x.left, x.right) match {
+      case (TupleT(a, b), c: Term, d: Term) if (a == b) => Some((a, c, d))
       case _ => None
     }
     case _ => None
   }
 }
-final class Equals   (domain : Sort = Real, left : Expr, right : Expr) extends BinaryRelation(domain, left, right) {
+final class Equals   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
     case Equals(d, a, b) => d == domain && left == a && right == b
     case _ => false
@@ -461,22 +461,58 @@ final class Equals   (domain : Sort = Real, left : Expr, right : Expr) extends B
   override def hashCode: Int = hash(47, domain, left, right)
 }
 
-object NotEquals {
-  def apply(domain : Sort = Real, left : Expr, right : Expr): NotEquals = new NotEquals(domain, left, right)
-  def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
-    case x: NotEquals => x.domain match {
-      case TupleT(a, b) if (a == b) => Some((a, x.left, x.right))
+object ProgramEquals {
+  def apply(left : Program, right : Program): ProgramEquals = new ProgramEquals(left, right)
+  def unapply(e: Any): Option[(Program, Program)] = e match {
+    case x: ProgramEquals => (x.left, x.right) match {
+      case (c: Program, d: Program) => Some((c, d))
       case _ => None
     }
     case _ => None
   }
 }
-final class NotEquals(domain : Sort = Real, left : Expr, right : Expr) extends BinaryRelation(domain, left, right) {
+final class ProgramEquals   (left : Program, right : Program) extends BinaryRelation(ProgramSort, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case ProgramEquals(a, b) => left == a && right == b
+    case _ => false
+  }
+  override def hashCode: Int = hash(239, domain, left, right)
+}
+
+object NotEquals {
+  def apply(domain : Sort = Real, left : Term, right : Term): NotEquals = new NotEquals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: NotEquals => (x.domain, x.left, x.right) match {
+      case (TupleT(a, b), c: Term, d: Term) if (a == b) => Some((a, c, d))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+final class NotEquals(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
     case NotEquals(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
   override def hashCode: Int = hash(53, domain, left, right)
+}
+
+object ProgramNotEquals {
+  def apply(left : Program, right : Program): ProgramNotEquals = new ProgramNotEquals(left, right)
+  def unapply(e: Any): Option[(Program, Program)] = e match {
+    case x: ProgramNotEquals => (x.left, x.right) match {
+      case (c: Program, d: Program) => Some((c, d))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+final class ProgramNotEquals   (left : Program, right : Program) extends BinaryRelation(ProgramSort, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case ProgramNotEquals(a, b) => left == a && right == b
+    case _ => false
+  }
+  override def hashCode: Int = hash(241, domain, left, right)
 }
 
 /* comparison */

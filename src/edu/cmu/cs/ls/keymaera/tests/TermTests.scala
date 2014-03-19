@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import java.io._
 import edu.cmu.cs.ls.keymaera.core.ProofStep
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, PosInExpr, ExpressionTraversalFunction}
 
 object TermTests {
 
@@ -96,6 +97,18 @@ object TermTests {
     println(tree)
     writeToFile(new File(output), tree)
     r.isClosed
+  }
+
+  def test5 {
+    import ExpressionTraversal.FTPG
+    val f = new ExpressionTraversalFunction {
+      override def pre[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+        case x : Formula => Right(PredicateConstant("p").asInstanceOf[A])
+        case x: Program => Right(PredicateConstant("p").asInstanceOf[A])
+      }
+      override def in[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = ???
+      override def post[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = ???
+    }
   }
 
   def readFile(input: String): String = try {
