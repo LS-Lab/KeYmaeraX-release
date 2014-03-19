@@ -99,18 +99,6 @@ object TermTests {
     r.isClosed
   }
 
-  def test5 {
-    import ExpressionTraversal.FTPG
-    val f = new ExpressionTraversalFunction {
-      override def pre[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
-        case x : Formula => Right(PredicateConstant("p").asInstanceOf[A])
-        case x: Program => Right(PredicateConstant("p").asInstanceOf[A])
-      }
-      override def in[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = ???
-      override def post[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = ???
-    }
-  }
-
   def readFile(input: String): String = try {
     val fr = new BufferedReader(new FileReader(input))
     var result = ""

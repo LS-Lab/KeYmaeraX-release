@@ -28,27 +28,57 @@ object ExpressionTraversal {
    * TODO: Maybe we need to relax this interface to just the cases: Formula -> Formula, Term -> Term, Program -> Program, Game -> Game in order to make it implementable
    */
   trait ExpressionTraversalFunction {
-    def pre[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = Left(None)
-    def in[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = Left(None)
-    def post[A : FTPG](p: PosInExpr, e: A): Either[Option[StopTraversal], A] = Left(None)
+    def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
+    def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
+    def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
+    def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
+    def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
+    def inP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
+    def inT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
+    def inG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
+    def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
+    def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
+    def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
+    def postG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
   }
 
-  def matchZero[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, a: A): Option[A] = f.post(p, a) match {
+  final def pre[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+    case x: Formula => Right(f.preF(p, x).asInstanceOf[A])
+    case x: Program => Right(f.preP(p, x).asInstanceOf[A])
+    case x: Term => Right(f.preT(p, x).asInstanceOf[A])
+    case x: Game => Right(f.preG(p, x).asInstanceOf[A])
+  }
+
+  final def in[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+    case x: Formula => Right(f.inF(p, x).asInstanceOf[A])
+    case x: Program => Right(f.inP(p, x).asInstanceOf[A])
+    case x: Term => Right(f.inT(p, x).asInstanceOf[A])
+    case x: Game => Right(f.inG(p, x).asInstanceOf[A])
+  }
+
+  final def post[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
+    case x: Formula => Right(f.postF(p, x).asInstanceOf[A])
+    case x: Program => Right(f.postP(p, x).asInstanceOf[A])
+    case x: Term => Right(f.postT(p, x).asInstanceOf[A])
+    case x: Game => Right(f.postG(p, x).asInstanceOf[A])
+  }
+
+  def matchZero[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, a: A): Option[A] = post(f, p, a) match {
     case Left(Some(_)) => None
     case Left(None) => Some(a)
     case Right(x) => Some(x)
   }
 
   def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p, f, a) match {
-    case Some(na) => val res = c(na.asInstanceOf[A]); matchZero(p, f, res)
+    case Some(na) => val res = c(na); matchZero(p, f, res)
     case None => None
   }
 
   def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p, f, a) match {
-    case Some(na) => f.in(p, c(na.asInstanceOf[A], b)) match {
+    case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
       case Left(None) => traverse(p, f, b) match {
-        case Some(nb) => val res = c(na.asInstanceOf[A], nb.asInstanceOf[B]); matchZero(p, f, res)
+        case Some(nb) => val res = c(na, nb); matchZero(p, f, res)
         case None => None
       }
       case Right(n) => Some(n)
@@ -57,13 +87,13 @@ object ExpressionTraversal {
   }
 
   def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p, f, a) match {
-    case Some(na) => f.in(p, const(na.asInstanceOf[A], b, c)) match {
+    case Some(na) => in(f, p, const(na, b, c)) match {
       case Left(Some(_)) => None
       case Left(None) => traverse(p, f, b) match {
-        case Some(nb) => f.in(p, const(na.asInstanceOf[A], nb.asInstanceOf[B], c)) match {
+        case Some(nb) => in(f, p, const(na, nb, c)) match {
           case Left(Some(_)) => None
           case Left(None) => traverse(p, f, c) match {
-            case Some(nc) => val res = const(na.asInstanceOf[A], nb.asInstanceOf[B], nc.asInstanceOf[C]); matchZero(p, f, res)
+            case Some(nc) => val res = const(na, nb, nc); matchZero(p, f, res)
             case None => None
           }
         }
