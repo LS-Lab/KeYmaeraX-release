@@ -21,7 +21,6 @@ object ExpressionTraversal {
   def fail(x: Expr) = throw new IllegalStateException("Unimplemented case in Expr traversal: " + x)
   def failFTPG[T, A : FTPG](x: A) = throw new IllegalStateException("Unimplemented case in Expr traversal: " + x)
 
-  trait PosInExpr
   trait StopTraversal
 
   /**
@@ -69,15 +68,15 @@ object ExpressionTraversal {
     case Right(x) => Some(x)
   }
 
-  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p, f, a) match {
+  def matchOne[A : FTPG, B : FTPG](p: PosInExpr, c: A => B, f: ExpressionTraversalFunction, a: A): Option[B] = traverse(p.first, f, a) match {
     case Some(na) => val res = c(na); matchZero(p, f, res)
     case None => None
   }
 
-  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p, f, a) match {
+  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p.third, f, a) match {
     case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
-      case Left(None) => traverse(p, f, b) match {
+      case Left(None) => traverse(p.second, f, b) match {
         case Some(nb) => val res = c(na, nb); matchZero(p, f, res)
         case None => None
       }
@@ -86,13 +85,13 @@ object ExpressionTraversal {
     case None => None
   }
 
-  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p, f, a) match {
+  def matchThree[A : FTPG, B : FTPG, C : FTPG, D : FTPG](p: PosInExpr, const: (A, B, C) => D, f: ExpressionTraversalFunction, a: A, b: B, c: C): Option[D] = traverse(p.first, f, a) match {
     case Some(na) => in(f, p, const(na, b, c)) match {
       case Left(Some(_)) => None
-      case Left(None) => traverse(p, f, b) match {
+      case Left(None) => traverse(p.second, f, b) match {
         case Some(nb) => in(f, p, const(na, nb, c)) match {
           case Left(Some(_)) => None
-          case Left(None) => traverse(p, f, c) match {
+          case Left(None) => traverse(p.third, f, c) match {
             case Some(nc) => val res = const(na, nb, nc); matchZero(p, f, res)
             case None => None
           }
@@ -103,14 +102,10 @@ object ExpressionTraversal {
     }
     case None => None
   }
+  def traverse[A : FTPG](f: ExpressionTraversalFunction, e: A): Option[A] = traverse(HereP, f, e)
 
   def traverse[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, e: A): Option[A] = {
     (e match {
-//      case x: Formula => traverseF(p, f, x)
-//      case x: Term => traverseT(p, f, x)
-//      case x: Game => traverseG(p, f, x)
-//      case x: Program => traverseP(p, f, x)
-
         // Formulas
       case PredicateConstant(n, i) => matchZero(p, f, e)
       case ApplyPredicate(a, b) => matchOne(p, ApplyPredicate.apply(a, _: Term), f, b)
@@ -167,80 +162,4 @@ object ExpressionTraversal {
     }
   }
 
-//  def traverseF[T, S, R](p: PosInExpr, f: ExpressionTraversalFunction, e: Formula): Option[Formula] = {
-//    f.pre(p, e) match {
-//      case Left(Some(_)) => None
-//      case Left(None) => e match {
-//        case PredicateConstant(n, i) => matchZero(p, f, e)
-//        case ApplyPredicate(a, b) => matchTwo(p, ApplyPredicate.apply, f, a, b)
-//        case Equals(d, a, b) => matchTwo(p, Equals.apply(d, _: Expr, _: Expr), f, a, b)
-//        case NotEquals(d, a, b) => matchTwo(p, NotEquals.apply(d, _: Expr, _: Expr), f, a, b)
-//        case LessThan(d, a, b) => matchTwo(p, LessThan.apply(d, _: Term, _: Term), f, a, b)
-//        case LessEquals(d, a, b) => matchTwo(p, LessEquals.apply(d, _: Term, _: Term), f, a, b)
-//        case GreaterEquals(d, a, b) => matchTwo(p, GreaterEquals.apply(d, _: Term, _: Term), f, a, b)
-//        case GreaterThan(d, a, b) => matchTwo(p, GreaterThan.apply(d, _: Term, _: Term), f, a, b)
-//        case Not(a) => matchOne(p, Not.apply, f, a)
-//        case And(a, b) => matchTwo(p, And.apply, f, a, b)
-//        case Or(a, b) => matchTwo(p, Or.apply, f, a, b)
-//        case Imply(a, b) => matchTwo(p, Imply.apply, f, a, b)
-//        case Equiv(a, b) => matchTwo(p, Equiv.apply, f, a, b)
-//        case Modality(a, b) => matchTwo(p, Modality.apply, f, a, b)
-//        case Forall(v, a) => matchOne(p, Forall(v, _: Formula), f, a)
-//        case Exists(v, a) => matchOne(p, Exists(v, _: Formula), f, a)
-//        case _ => fail(e)
-//      }
-//      case Right(n) => Some(n)
-//    }
-//  }
-//  def traverseT(p: PosInExpr, f: ExpressionTraversalFunction, e: Term): Option[Term] = {
-//    f.pre(p, e) match {
-//      case Left(Some(_)) => None
-//      case Left(None) =>  e match {
-//        case x: Variable => matchZero(p, f, e)
-//        case Apply(a, b) => matchTwo(p, Apply.apply, f, a, b)
-//        case Derivative(d, a) => matchOne(p, Derivative.apply(d, _: Term), f, a)
-//        case Neg(d, a) => matchOne(p, Neg.apply(d, _: Term), f, a)
-//        case Add(d, a, b) => matchTwo(p, Add.apply(d, _: Term, _: Term), f, a, b)
-//        case Subtract(d, a, b) => matchTwo(p, Subtract.apply(d, _: Term, _: Term), f, a, b)
-//        case Multiply(d, a, b) => matchTwo(p, Multiply.apply(d, _: Term, _: Term), f, a, b)
-//        case Divide(d, a, b) => matchTwo(p, Divide.apply(d, _: Term, _: Term), f, a, b)
-//        case Exp(d, a, b) => matchTwo(p, Exp.apply(d, _: Term, _: Term), f, a, b)
-//        case IfThenElseTerm(a, b, c) => matchThree(p, IfThenElseTerm.apply, f, a, b, c)
-//        case Pair(d, a, b) => matchTwo(p, Pair.apply(d, _: Term, _: Term), f, a, b)
-//        case _ => fail(e)
-//      }
-//      case Right(n) => Some(n)
-//    }
-//  }
-//  def traverseG(p: PosInExpr, f: ExpressionTraversalFunction, e: Game): Option[Game] = {
-//    f.pre(p, e) match {
-//      case Left(Some(_)) => None
-//      case Left(None) =>  e match {
-//        case x: BoxModality => matchOne(p, BoxModality(_: Program), f, x.child.asInstanceOf[Program])
-//        case x: DiamondModality => matchOne(p, DiamondModality(_: Program), f, x.child.asInstanceOf[Program])
-//        case _ => fail(e)
-//      }
-//      case Right(n) => Some(n)
-//    }
-//  }
-//
-//  def traverseP(p: PosInExpr, f: ExpressionTraversalFunction, e: Program): Option[Program] = {
-//    f.pre(p, e) match {
-//      case Left(Some(_)) => None
-//      case Left(None) =>  e match {
-//        case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
-//        case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
-//        case Test(a) => matchOne(p, Test.apply, f, a)
-//        case ContEvolve(a) => matchOne(p, ContEvolve.apply, f, a)
-//        case IfThen(a, b) => matchTwo(p, IfThen.apply, f, a, b)
-//        case IfThenElse(a, b, c) => matchThree(p, IfThenElse.apply, f, a, b, c)
-//        case Sequence(a, b) => matchTwo(p, Sequence.apply, f, a, b)
-//        case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
-//        case Parallel(a, b) => matchTwo(p, Parallel.apply, f, a, b)
-//        case Loop(a) => matchOne(p, Loop.apply, f, a)
-//        case _ => fail(e)
-//      }
-//      case Right(n) => Some(n)
-//    }
-//  }
 }

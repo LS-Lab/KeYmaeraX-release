@@ -87,7 +87,19 @@ abstract class AssumptionRule extends (Position => PositionRule)
 
 abstract class TwoPositionRule extends ((Position,Position) => Rule)
 
-class Position(val ante: Boolean, val index: Int) {
+abstract class PosInExpr {
+  def first: PosInExpr = FirstP(this)
+  def second: PosInExpr = SecondP(this)
+  def third: PosInExpr = ThirdP(this)
+}
+
+case object HereP extends PosInExpr
+
+case class FirstP(val sub: PosInExpr) extends PosInExpr
+case class SecondP(val sub: PosInExpr) extends PosInExpr
+case class ThirdP(val sub: PosInExpr) extends PosInExpr
+
+class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr) {
   def isAnte = ante
   def getIndex: Int = index
 
@@ -107,7 +119,7 @@ object AnteSwitch {
   def apply(p1: Position, p2: Position): Rule = new AnteSwitchRule(p1, p2)
 
   private class AnteSwitchRule(p1: Position, p2: Position) extends Rule("AnteSwitch") {
-    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p2.isAnte)
+    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP )
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the antecedent")
@@ -119,7 +131,7 @@ object SuccSwitch {
   def apply(p1: Position, p2: Position): Rule = new SuccSwitchRule(p1, p2)
 
   private class SuccSwitchRule(p1: Position, p2: Position) extends Rule("SuccSwitch") {
-    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && !p2.isAnte)
+    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the succedent")
@@ -376,6 +388,7 @@ object AxiomClose extends AssumptionRule {
   private class AxiomClosePos(ass: Position) extends PositionRule {
     def apply(p: Position): Rule = {
       require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
+      require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
       new AxiomClose(ass, p)
     }
   }
@@ -406,7 +419,7 @@ object AxiomClose extends AssumptionRule {
 
 object ImplyRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new ImplRight(p)
   }
   private class ImplRight(p: Position) extends Rule("Imply Right") {
@@ -423,7 +436,7 @@ object ImplyRight extends PositionRule {
 // Impl left
 object ImplyLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new ImplLeft(p)
   }
   private class ImplLeft(p: Position) extends Rule("Imply Left") {
@@ -440,7 +453,7 @@ object ImplyLeft extends PositionRule {
 // Not right
 object NotRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new NotRight(p)
   }
   private class NotRight(p: Position) extends Rule("Not Right") {
@@ -457,7 +470,7 @@ object NotRight extends PositionRule {
 // Not left
 object NotLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new NotLeft(p)
   }
   private class NotLeft(p: Position) extends Rule("Not Left") {
@@ -474,7 +487,7 @@ object NotLeft extends PositionRule {
 // And right
 object AndRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new AndRight(p)
   }
   private class AndRight(p: Position) extends Rule("And Right") {
@@ -491,7 +504,7 @@ object AndRight extends PositionRule {
 // And left
 object AndLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new AndLeft(p)
   }
   private class AndLeft(p: Position) extends Rule("And Left") {
@@ -508,7 +521,7 @@ object AndLeft extends PositionRule {
 // Or right
 object OrRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new OrRight(p)
   }
   private class OrRight(p: Position) extends Rule("Or Right") {
@@ -525,7 +538,7 @@ object OrRight extends PositionRule {
 // Or left
 object OrLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new OrLeft(p)
   }
   private class OrLeft(p: Position) extends Rule("Or Left") {
@@ -546,22 +559,24 @@ object OrLeft extends PositionRule {
 // hide
 object HideLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
 object HideRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
 class Hide(p: Position) extends Rule("Hide") {
-  def apply(s: Sequent): List[Sequent] =
-    if(p.isAnte)
+  def apply(s: Sequent): List[Sequent] = {
+    assert(p.inExpr == HereP)
+    if (p.isAnte)
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
       List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+  }
 }
 
 
