@@ -205,6 +205,47 @@ object Cut {
 }
 
 // equality/equivalence rewriting
+/**
+ * FIXME: check that we are not replace below a quantifier or similar!
+ */
+class EqualityRewriting extends AssumptionRule {
+  override def apply(ass: Position): PositionRule = new PositionRule() {
+    override def apply(p: Position): Rule = new Rule("Equality Rewriting") {
+      override def apply(s: Sequent): List[Sequent] = {
+        require(ass.isAnte && ass.inExpr == HereP)
+        val fn = s.ante(ass.getIndex) match {
+          case Equals(d, a, b) =>
+            new ExpressionTraversalFunction {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
+                if(e == a) Right(b)
+                else if(e == b) Right(a)
+                else throw new IllegalArgumentException("Equality Rewriting not applicable")
+            }
+          case ProgramEquals(a, b) =>
+            new ExpressionTraversalFunction {
+              override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
+                if(e == a) Right(b)
+                else if(e == b) Right(a)
+                else throw new IllegalArgumentException("Equality Rewriting not applicable")
+            }
+          case Equiv(a, b) =>
+            new ExpressionTraversalFunction {
+              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
+                if(e == a) Right(b)
+                else if(e == b) Right(a)
+                else throw new IllegalArgumentException("Equality Rewriting not applicable")
+            }
+          case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+        }
+        val trav = TraverseToPosition(p.inExpr, fn)
+        ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
+          case x: Formula => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+          case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+        }
+      }
+    }
+  }
+}
 
 /**
  * specific interpretation for variables that start and end with _
