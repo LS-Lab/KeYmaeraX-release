@@ -99,7 +99,7 @@ case class FirstP(val sub: PosInExpr) extends PosInExpr
 case class SecondP(val sub: PosInExpr) extends PosInExpr
 case class ThirdP(val sub: PosInExpr) extends PosInExpr
 
-class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr) {
+class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte = ante
   def getIndex: Int = index
 
