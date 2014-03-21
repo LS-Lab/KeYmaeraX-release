@@ -22,6 +22,7 @@ object ExpressionTraversal {
   def failFTPG[T, A : FTPG](x: A) = throw new IllegalStateException("Unimplemented case in Expr traversal: " + x)
 
   trait StopTraversal
+  val stop = new StopTraversal {}
 
   /**
    * TODO: Maybe we need to relax this interface to just the cases: Formula -> Formula, Term -> Term, Program -> Program, Game -> Game in order to make it implementable
@@ -39,6 +40,45 @@ object ExpressionTraversal {
     def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
     def postG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
+  }
+
+  object TraverseToPosition {
+    def apply(t: PosInExpr, cont: ExpressionTraversalFunction): ExpressionTraversalFunction = TraverseToPosition(t, cont)
+  }
+
+  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction) extends ExpressionTraversalFunction {
+    override def preF(p: PosInExpr, e: Formula) = if(p == t)
+      traverse(p, cont, e) match { case x: Formula => Right(x) case _ => Left(Some(stop))}
+    else if(p.isPrefixOf(t))
+      // proceed
+      Left(None)
+    else
+      // return id to ignore this branch
+      Right(e)
+    override def preP(p: PosInExpr, e: Program) = if(p == t)
+      traverse(p, cont, e) match { case x: Program => Right(x) case _ => Left(Some(stop))}
+    else if(p.isPrefixOf(t))
+    // proceed
+      Left(None)
+    else
+    // return id to ignore this branch
+      Right(e)
+    override def preT(p: PosInExpr, e: Term) = if(p == t)
+      traverse(p, cont, e) match { case x: Term => Right(x) case _ => Left(Some(stop))}
+    else if(p.isPrefixOf(t))
+    // proceed
+      Left(None)
+    else
+    // return id to ignore this branch
+      Right(e)
+    override def preG(p: PosInExpr, e: Game) = if(p == t)
+      traverse(p, cont, e) match { case x: Game => Right(x) case _ => Left(Some(stop))}
+    else if(p.isPrefixOf(t))
+    // proceed
+      Left(None)
+    else
+    // return id to ignore this branch
+      Right(e)
   }
 
   final def pre[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {

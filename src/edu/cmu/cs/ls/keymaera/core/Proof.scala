@@ -4,6 +4,7 @@ import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
@@ -91,13 +92,32 @@ abstract class PosInExpr {
   def first: PosInExpr = FirstP(this)
   def second: PosInExpr = SecondP(this)
   def third: PosInExpr = ThirdP(this)
+
+  def isPrefixOf(p: PosInExpr): Boolean
 }
 
-case object HereP extends PosInExpr
+case object HereP extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = true
+}
 
-case class FirstP(val sub: PosInExpr) extends PosInExpr
-case class SecondP(val sub: PosInExpr) extends PosInExpr
-case class ThirdP(val sub: PosInExpr) extends PosInExpr
+case class FirstP(val sub: PosInExpr) extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = p match {
+    case FirstP(s) => s.isPrefixOf(sub)
+    case _ => false
+  }
+}
+case class SecondP(val sub: PosInExpr) extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = p match {
+    case SecondP(s) => s.isPrefixOf(sub)
+    case _ => false
+  }
+}
+case class ThirdP(val sub: PosInExpr) extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = p match {
+    case ThirdP(s) => s.isPrefixOf(sub)
+    case _ => false
+  }
+}
 
 class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte = ante
@@ -579,12 +599,83 @@ class Hide(p: Position) extends Rule("Hide") {
   }
 }
 
+// alpha conversion
+
+/**
+ * Alpha conversion works on exactly three positions:
+ * (1) Forall(v, phi)
+ * (2) Exists(v, phi)
+ * (3) Modality(BoxModality(Assign(x, e)), phi)
+ *
+ * It always replaces _every_ occurrence of the name in phi
+ * @param tPos
+ * @param name
+ * @param idx
+ * @param target
+ * @param tIdx
+ */
+class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
+  def apply(s: Sequent): List[Sequent] = {
+    val f = if(tPos.isAnte) s.ante(tPos.getIndex) else s.succ(tPos.getIndex)
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
+        if(tPos == p) {
+          e match {
+            case Forall(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+            case Exists(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+            case BoxModality(Assign(a, b), c) => require((a match {
+              case Variable(n, _, _) => n
+              case Apply(Function(n, _, _, _), _) => n
+              case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+            }) == name, "Symbol to be renamed must be bound in " + e)
+          }
+          Left(None)
+        } else (e match {
+          case v: Variable => renameVar(v)
+          case x: PredicateConstant => renamePred(x)
+          case x: ProgramConstant => renameProg(x)
+          case Apply(a, b) => Apply(renameFunc(a), b)
+          case ApplyPredicate(a, b) => ApplyPredicate(renameFunc(a), b)
+        }) match {
+          case x: Formula => Right(x)
+          case a: Either[Option[StopTraversal], Formula] => a
+        }
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+        case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
+        case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
+        case BoxModality(Assign(a, b), c) => Right(BoxModality(Assign((a match {
+          case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
+          case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
+          case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+        }), b), c))
+      }
+    }
+    ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), f) match {
+      case x: Formula => if(tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case _ => throw new IllegalStateException("No alpha renaming possible in " + f)
+    }
+  }
+
+  def renameVar(e: Variable): Variable = if(e.name == name && e.index == idx) Variable(target, tIdx, e.domain) else e
+
+  def renamePred(e: PredicateConstant): PredicateConstant = if(e.name == name && e.index == idx) PredicateConstant(target, tIdx) else e
+
+  def renameProg(e: ProgramConstant): ProgramConstant = if(e.name == name && e.index == idx) ProgramConstant(target, tIdx) else e
+
+  def renameFunc(e: Function): Function = if(e.name == name && e.index == idx) Function(target, tIdx, e.domain, e.sort) else e
+
+  def rename(e: NamedSymbol): NamedSymbol = e match {
+    case v: Variable => renameVar(v)
+    case p: PredicateConstant => renamePred(p)
+    case p: ProgramConstant => renameProg(p)
+    case f: Function => renameFunc(f)
+  }
+}
+
 
 // maybe:
 
 // close by true (do we need this or is this derived?)
-
-// alpha conversion
 
 // quantifier instantiation
 
