@@ -4,7 +4,7 @@ import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
@@ -205,45 +205,70 @@ object Cut {
 }
 
 // equality/equivalence rewriting
-/**
- * FIXME: check that we are not replace below a quantifier or similar!
- */
 class EqualityRewriting extends AssumptionRule {
   override def apply(ass: Position): PositionRule = new PositionRule() {
     override def apply(p: Position): Rule = new Rule("Equality Rewriting") {
       override def apply(s: Sequent): List[Sequent] = {
         require(ass.isAnte && ass.inExpr == HereP)
-        val fn = s.ante(ass.getIndex) match {
+        val (blacklist, fn) = s.ante(ass.getIndex) match {
           case Equals(d, a, b) =>
+            (variables(a) ++ variables(b),
             new ExpressionTraversalFunction {
               override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
                 if(e == a) Right(b)
                 else if(e == b) Right(a)
                 else throw new IllegalArgumentException("Equality Rewriting not applicable")
-            }
+            })
           case ProgramEquals(a, b) =>
+            (variables(a) ++ variables(b),
             new ExpressionTraversalFunction {
               override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
                 if(e == a) Right(b)
                 else if(e == b) Right(a)
                 else throw new IllegalArgumentException("Equality Rewriting not applicable")
-            }
+            })
           case Equiv(a, b) =>
+            (variables(a) ++ variables(b),
             new ExpressionTraversalFunction {
               override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
                 if(e == a) Right(b)
                 else if(e == b) Right(a)
                 else throw new IllegalArgumentException("Equality Rewriting not applicable")
-            }
+            })
           case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
         }
-        val trav = TraverseToPosition(p.inExpr, fn)
+        val trav = TraverseToPosition(p.inExpr, fn, blacklist)
         ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
           case x: Formula => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
           case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
         }
       }
     }
+  }
+  def variables[A: FTPG](a: A): Set[NamedSymbol] = {
+    var vars: Set[NamedSymbol] = Set.empty
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        e match {
+          case x: Variable => vars += x
+          case x: ProgramConstant => vars += x
+          case Apply(f, _) => vars += f
+          case _ =>
+        };
+        Left(None)
+      }
+
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        e match {
+          case x: PredicateConstant => vars += x
+          case ApplyPredicate(f, _) => vars += f
+          case _ =>
+        };
+        Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, a)
+    vars
   }
 }
 
@@ -258,8 +283,6 @@ class EqualityRewriting extends AssumptionRule {
  *          - Apply(Function, Expr)
  *          - ProgramConstant
  *          - Derivative(...)
- *  TODO: - deal with modalities (similar to quantifers)
- *        - walk through programs
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -643,10 +666,11 @@ class Hide(p: Position) extends Rule("Hide") {
 // alpha conversion
 
 /**
- * Alpha conversion works on exactly three positions:
+ * Alpha conversion works on exactly four positions:
  * (1) Forall(v, phi)
  * (2) Exists(v, phi)
  * (3) Modality(BoxModality(Assign(x, e)), phi)
+ * (4) Modality(DiamondModality(Assign(x, e)), phi)
  *
  * It always replaces _every_ occurrence of the name in phi
  * @param tPos
@@ -669,6 +693,11 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
               case Apply(Function(n, _, _, _), _) => n
               case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
             }) == name, "Symbol to be renamed must be bound in " + e)
+            case DiamondModality(Assign(a, b), c) => require((a match {
+              case Variable(n, _, _) => n
+              case Apply(Function(n, _, _, _), _) => n
+              case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+            }) == name, "Symbol to be renamed must be bound in " + e)
           }
           Left(None)
         } else (e match {
@@ -685,6 +714,11 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
         case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
         case BoxModality(Assign(a, b), c) => Right(BoxModality(Assign((a match {
+          case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
+          case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
+          case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+        }), b), c))
+        case DiamondModality(Assign(a, b), c) => Right(DiamondModality(Assign((a match {
           case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
           case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
           case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)

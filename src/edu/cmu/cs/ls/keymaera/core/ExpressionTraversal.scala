@@ -42,19 +42,29 @@ object ExpressionTraversal {
     def postG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
   }
 
+  /**
+   * blacklist is a set of symbols that most not be bound
+   */
   object TraverseToPosition {
-    def apply(t: PosInExpr, cont: ExpressionTraversalFunction): ExpressionTraversalFunction = TraverseToPosition(t, cont)
+    def apply(t: PosInExpr, cont: ExpressionTraversalFunction): ExpressionTraversalFunction = new TraverseToPosition(t, cont, Set.empty)
+    def apply(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]): ExpressionTraversalFunction = new TraverseToPosition(t, cont, blacklist)
   }
 
-  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction) extends ExpressionTraversalFunction {
-    override def preF(p: PosInExpr, e: Formula) = if(p == t)
-      traverse(p, cont, e) match { case x: Formula => Right(x) case _ => Left(Some(stop))}
-    else if(p.isPrefixOf(t))
+  class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]) extends ExpressionTraversalFunction {
+    override def preF(p: PosInExpr, e: Formula) = {
+      case Forall(v, phi) => if(blacklist.map(v.contains).foldLeft(false)(_||_)) return Left(Some(stop))
+      case Exists(v, phi) => if(blacklist.map(v.contains).foldLeft(false)(_||_)) return Left(Some(stop))
+      case BoxModality(a, c) => if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) return Left(Some(stop))
+      case DiamondModality(a, c) => if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) return Left(Some(stop))
+      if(p == t)
+        traverse(p, cont, e) match { case x: Formula => Right(x) case _ => Left(Some(stop))}
+      else if(p.isPrefixOf(t))
       // proceed
-      Left(None)
-    else
+        Left(None)
+      else
       // return id to ignore this branch
-      Right(e)
+        Right(e)
+    }
     override def preP(p: PosInExpr, e: Program) = if(p == t)
       traverse(p, cont, e) match { case x: Program => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
