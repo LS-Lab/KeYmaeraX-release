@@ -206,6 +206,7 @@ object Cut {
 
 // equality/equivalence rewriting
 class EqualityRewriting extends AssumptionRule {
+  import Helper._
   override def apply(ass: Position): PositionRule = new PositionRule() {
     override def apply(p: Position): Rule = new Rule("Equality Rewriting") {
       override def apply(s: Sequent): List[Sequent] = {
@@ -244,31 +245,6 @@ class EqualityRewriting extends AssumptionRule {
         }
       }
     }
-  }
-  def variables[A: FTPG](a: A): Set[NamedSymbol] = {
-    var vars: Set[NamedSymbol] = Set.empty
-    val fn = new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        e match {
-          case x: Variable => vars += x
-          case x: ProgramConstant => vars += x
-          case Apply(f, _) => vars += f
-          case _ =>
-        };
-        Left(None)
-      }
-
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        e match {
-          case x: PredicateConstant => vars += x
-          case ApplyPredicate(f, _) => vars += f
-          case _ =>
-        };
-        Left(None)
-      }
-    }
-    ExpressionTraversal.traverse(fn, a)
-    vars
   }
 }
 
@@ -747,6 +723,46 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
   }
 }
 
+// skolemize
+/**
+ * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
+ * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ */
+class Skolemize extends PositionRule {
+  import Helper._
+  override def apply(p: Position): Rule = new Rule("Skolemize") {
+    override def apply(s: Sequent): List[Sequent] = {
+      require(p.inExpr == HereP, "We can only skolemize top level formulas");
+      var vars: Set[NamedSymbol] = Set.empty
+      for(i <- 0 to s.ante.length) {
+        if(!p.isAnte || i != p.getIndex) {
+          vars ++= variables(s.ante(i))
+        }
+      }
+      for(i <- 0 to s.succ.length) {
+        if(p.isAnte || i != p.getIndex) {
+          vars ++= variables(s.ante(i))
+        }
+      }
+      val (v,phi) = if(p.isAnte) {
+        val form = s.ante(p.getIndex)
+        form match {
+          case Exists(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+            throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
+          case _ => throw new IllegalArgumentException("Skolemization is only applicable to existential quantifiers in the antecedent")
+        }
+      } else {
+        val form = s.succ(p.getIndex)
+        form match {
+          case Forall(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+            throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
+          case _ => throw new IllegalArgumentException("Skolemization is only applicable to universal quantifiers in the succedent")
+        }
+      }
+      List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
+    }
+  }
+}
 
 // maybe:
 
@@ -755,8 +771,6 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 // quantifier instantiation
 
 // remove known
-
-// skolemize
 
 // unskolemize
 
@@ -767,5 +781,33 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 // merge sequent (or is this derived?)
 
 
+object Helper {
+  def variables[A: FTPG](a: A): Set[NamedSymbol] = {
+    var vars: Set[NamedSymbol] = Set.empty
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        e match {
+          case x: Variable => vars += x
+          case x: ProgramConstant => vars += x
+          case Apply(f, _) => vars += f
+          case _ =>
+        };
+        Left(None)
+      }
+
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        e match {
+          case x: PredicateConstant => vars += x
+          case ApplyPredicate(f, _) => vars += f
+          case _ =>
+        };
+        Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, a)
+    vars
+  }
+
+}
 
 // vim: set ts=4 sw=4 et:
