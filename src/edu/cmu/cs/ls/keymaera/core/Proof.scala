@@ -713,16 +713,16 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
         case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
-        case BoxModality(Assign(a, b), c) => Right(BoxModality(Assign((a match {
+        case BoxModality(Assign(a, b), c) => Right(BoxModality(Assign(a match {
           case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
           case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
           case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
-        }), b), c))
-        case DiamondModality(Assign(a, b), c) => Right(DiamondModality(Assign((a match {
+        }, b), c))
+        case DiamondModality(Assign(a, b), c) => Right(DiamondModality(Assign(a match {
           case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
           case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
           case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
-        }), b), c))
+        }, b), c))
       }
     }
     ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), f) match {
