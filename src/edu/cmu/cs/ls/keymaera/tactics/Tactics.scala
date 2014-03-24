@@ -450,7 +450,7 @@ object Tactics {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       val ante = for(f <- p.sequent.ante) yield delta.get(f) match { case Some(frm) => frm case _ => f}
       val succ = for(f <- p.sequent.succ) yield delta.get(f) match { case Some(frm) => frm case _ => f}
-      Some(p(UniformSubstition(subst, Sequent(p.sequent.pref, ante, succ))))
+      Some(p(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))))
     }
 
   }

@@ -421,10 +421,10 @@ class Substitution(l: Seq[SubstitutionPair]) {
 
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-object UniformSubstition {
-  def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstition(substitution, origin)
+object UniformSubstitution {
+  def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
 
-  private class UniformSubstition(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
+  private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
     // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
     // require explicit rule applications)
     def apply(s: Sequent): List[Sequent] = {
