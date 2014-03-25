@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import java.io._
 import edu.cmu.cs.ls.keymaera.core.ProofStep
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, PosInExpr, ExpressionTraversalFunction}
+import scala.language.postfixOps
 
 object TermTests {
 
@@ -107,7 +107,7 @@ object TermTests {
     }
     result
   } catch {
-    case e => throw new IllegalArgumentException(e)
+    case e: IOException => throw new IllegalArgumentException(e)
   }
 
   def writeToFile(f: File, s: String) = try {
@@ -116,7 +116,7 @@ object TermTests {
     fw.flush
     fw.close
   } catch {
-    case _ =>
+    case _: IOException =>
   }
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")

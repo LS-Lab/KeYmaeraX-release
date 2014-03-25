@@ -14,6 +14,7 @@ import scala.Left
 import scala.Right
 import scala.Some
 import scala.Unit
+import scala.language.implicitConversions
 
 /**
  * @author jdq
