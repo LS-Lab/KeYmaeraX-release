@@ -677,7 +677,6 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
           }
           Left(None)
         } else (e match {
-          case v: Variable => renameVar(v)
           case x: PredicateConstant => renamePred(x)
           case x: ProgramConstant => renameProg(x)
           case Apply(a, b) => Apply(renameFunc(a), b)

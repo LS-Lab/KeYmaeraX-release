@@ -51,21 +51,26 @@ object ExpressionTraversal {
   }
 
   class TraverseToPosition(t: PosInExpr, cont: ExpressionTraversalFunction, blacklist: Set[NamedSymbol]) extends ExpressionTraversalFunction {
-    override def preF(p: PosInExpr, e: Formula) = {
-      case Forall(v, phi) => if(blacklist.map(v.contains).foldLeft(false)(_||_)) return Left(Some(stop))
-      case Exists(v, phi) => if(blacklist.map(v.contains).foldLeft(false)(_||_)) return Left(Some(stop))
-      case BoxModality(a, c) => if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) return Left(Some(stop))
-      case DiamondModality(a, c) => if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) return Left(Some(stop))
-      if(p == t)
-        traverse(p, cont, e) match { case x: Formula => Right(x) case _ => Left(Some(stop))}
-      else if(p.isPrefixOf(t))
-      // proceed
-        Left(None)
-      else
-      // return id to ignore this branch
-        Right(e)
+    override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+      case Forall(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
+      case Exists(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
+      case BoxModality(a, c) if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) => Left(Some(stop))
+      case DiamondModality(a, c) if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) =>  Left(Some(stop))
+      case _ => {
+        if (p == t)
+          traverse(p, cont, e) match {
+            case x: Formula => Right(x)
+            case _ => Left(Some(stop))
+          }
+        else if (p.isPrefixOf(t))
+        // proceed
+          Left(None)
+        else
+        // return id to ignore this branch
+          Right(e)
+      }
     }
-    override def preP(p: PosInExpr, e: Program) = if(p == t)
+    override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if(p == t)
       traverse(p, cont, e) match { case x: Program => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
@@ -73,7 +78,7 @@ object ExpressionTraversal {
     else
     // return id to ignore this branch
       Right(e)
-    override def preT(p: PosInExpr, e: Term) = if(p == t)
+    override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if(p == t)
       traverse(p, cont, e) match { case x: Term => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
@@ -81,7 +86,7 @@ object ExpressionTraversal {
     else
     // return id to ignore this branch
       Right(e)
-    override def preG(p: PosInExpr, e: Game) = if(p == t)
+    override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if(p == t)
       traverse(p, cont, e) match { case x: Game => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
