@@ -1,0 +1,34 @@
+Ideas:
+- JavaScript based GUI
+- Communicates with webserver through a thin interface:
+-- JSON representation of proof tree and expressions
+-- Expressions contain positions
+-- Ask for what tactics are applicable
+-- Supply new tactic files
+-- Asychronously append to tactics menu
+- Webserver communicates with KeYmaera instance through secure channel
+- Webserver should be password protected if it's not accessed from localhost
+
+
+The design allows for the following scenarios:
+- Access GUI locally
+- Access GUI remotely, e.g. from phone or tablet
+
+Security measures are only neccessary on the webserver part. Once on the
+webpage, you can currently send scala code to the server, compile it, and run
+it within KeYmaera. This must only be possible for authenticated users.
+It might as well suggest to move to an interpreted tactic language in the long
+run.
+
+
+GUI website can use standard techniques like ajax/jquery/socket.io in order to
+communicate with the webserver.
+The webserver can communicate through standard sockets with KeYmaera.
+The same sockets could be used to communicate with a swing GUI.
+Stefan suggested that, alternatively, the API that is underlying the socket layer could be exposed
+and a swing GUI could attach there.
+
+
+Links:
+Highlighting in JavaScript (Could also be done with cascading divs):
+http://jsfiddle.net/gFTrS/2/
