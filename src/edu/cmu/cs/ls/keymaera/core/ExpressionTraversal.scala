@@ -97,24 +97,72 @@ object ExpressionTraversal {
   }
 
   final def pre[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
-    case x: Formula => Right(f.preF(p, x).asInstanceOf[A])
-    case x: Program => Right(f.preP(p, x).asInstanceOf[A])
-    case x: Term => Right(f.preT(p, x).asInstanceOf[A])
-    case x: Game => Right(f.preG(p, x).asInstanceOf[A])
+    case x: Formula => f.preF(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Program => f.preP(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Term => f.preT(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Game => f.preG(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
   }
 
   final def in[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
-    case x: Formula => Right(f.inF(p, x).asInstanceOf[A])
-    case x: Program => Right(f.inP(p, x).asInstanceOf[A])
-    case x: Term => Right(f.inT(p, x).asInstanceOf[A])
-    case x: Game => Right(f.inG(p, x).asInstanceOf[A])
+    case x: Formula => f.inF(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Program => f.inP(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Term => f.inT(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Game => f.inG(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
   }
 
   final def post[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
-    case x: Formula => Right(f.postF(p, x).asInstanceOf[A])
-    case x: Program => Right(f.postP(p, x).asInstanceOf[A])
-    case x: Term => Right(f.postT(p, x).asInstanceOf[A])
-    case x: Game => Right(f.postG(p, x).asInstanceOf[A])
+    case x: Formula => f.postF(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Program => f.postP(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Term => f.postT(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
+    case x: Game => f.postG(p, x) match {
+      case a@Left(Some(_)) => Left(Some(stop))
+      case Left(None) => Left(None)
+      case Right(a) => Right(a.asInstanceOf[A])
+    }
   }
 
   def matchZero[A : FTPG](p: PosInExpr, f: ExpressionTraversalFunction, a: A): Option[A] = post(f, p, a) match {
