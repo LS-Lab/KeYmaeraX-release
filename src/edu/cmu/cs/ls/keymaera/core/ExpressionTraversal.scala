@@ -234,7 +234,7 @@ object ExpressionTraversal {
         case Exists(v, a) => matchOne(p, Exists(v, _: Formula), f, a)
 
         // Terms
-        case _: Number => matchZero(p, f, e)
+        case Number(_, _) => matchZero(p, f, e)
         case _: Variable => matchZero(p, f, e)
         case Apply(a, b) => matchOne(p, Apply.apply(a, _: Term), f, b)
         case Derivative(d, a) => matchOne(p, Derivative.apply(d, _: Term), f, a)

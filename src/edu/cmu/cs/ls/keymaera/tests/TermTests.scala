@@ -238,7 +238,7 @@ object TermTests {
           case Multiply(_, a, b) => "]}"
           case Divide(_, a, b) => "]}"
           case Exp(_, a, b) => "]}"
-          case _ => ???
+          case _ =>""
         })
         Left(None)
       }
