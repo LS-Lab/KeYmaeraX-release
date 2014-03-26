@@ -437,17 +437,12 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     lazy val equalsP:SubformulaParser = {
       lazy val pattern = 
-        (tighterThanComparison|termParser) ~ 
+        termParser ~ 
         EQ ~
-        (tighterThanComparison|termParser)
+        termParser 
         
-      log(pattern)(EQ + " formula parser") ^^ {
-        case left ~ _ ~ right => {
-          if(left.isInstanceOf[Term] && right.isInstanceOf[Term])
-            Equals(right.sort,left.asInstanceOf[Term],right.asInstanceOf[Term])
-          else
-            ??? //Probably a parse failure.
-        }
+      log(pattern)(EQ + " formula parser (on terms)") ^^ {
+        case left ~ _ ~ right => Equals(right.sort,left,right)
       }
     }
     
