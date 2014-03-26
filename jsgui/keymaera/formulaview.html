@@ -25,17 +25,92 @@
 			document.getElementById("formula").innerHTML=handle(data);
 		});
 
+		function span(id, cont) { 
+			return "<span onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + id + "'>" + cont + "</span>"	
+		}
+
 		function handle(json) {
 		  var items = [];
-		  if(json.name == "imply") {
+		  if(json.name == "not") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  items.push(span(json.id, "!" + left));
+			  }
+		  } else if(json.name == "and") {
 			  var c = json.children;
 			  if($.isArray(c)) {
 				  var left = handle(c[0]);
 				  var right = handle(c[1]);
-				  items.push("<span onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + json.id + "'>" + left + " -&gt; " + right + "</span>");
+				  items.push(span(json.id, left + " &#8743; " + right));
+			  }
+		  } else if(json.name == "or") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " &#8744; " + right));
+			  }
+		  } else if(json.name == "imply") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " → " + right));
+			  }
+		  } else if(json.name == "lt") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " &lt; " + right));
+			  }
+		  } else if(json.name == "leq") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " &leq; " + right));
+			  }
+		  } else if(json.name == "equal") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " = " + right));
+			  }
+		  } else if(json.name == "notEqual") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " &neq; " + right));
+			  }
+		  } else if(json.name == "geq") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " &geq; " + right));
+			  }
+		  } else if(json.name == "gt") {
+			  var c = json.children;
+			  if($.isArray(c)) {
+				  var left = handle(c[0]);
+				  var right = handle(c[1]);
+				  items.push(span(json.id, left + " &gt; " + right));
 			  }
 		  } else {
-			  items.push("<span onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + json.id + "'>" + json.name + "</span>");
+			  var chil = "";
+			  if(json.hasOwnProperty("children")) {
+				var strs = []
+				var c = json.children;
+				for(int i = 0; i < c.length; i++) {
+					strs.push(handle(c[i]));	
+				}
+				chil = "(" + strs.join(", ") + ")";
+			  }
+			  items.push(span(json.id, json.name + chil));
 		  }
 		  return items.join("");
 		}
