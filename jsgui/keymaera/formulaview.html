@@ -103,9 +103,9 @@
 		  } else {
 			  var chil = "";
 			  if(json.hasOwnProperty("children")) {
-				var strs = []
+				var strs = [];
 				var c = json.children;
-				for(int i = 0; i < c.length; i++) {
+				for(var i = 0; i < c.length; i++) {
 					strs.push(handle(c[i]));	
 				}
 				chil = "(" + strs.join(", ") + ")";
