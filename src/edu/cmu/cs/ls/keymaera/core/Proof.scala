@@ -12,6 +12,8 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
     override def toString: String = name
   }
 
+  trait OracleRule extends Rule
+
   /**
    * Proof Tree
    *============
@@ -143,6 +145,15 @@ object Axiom {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
         case _ => List(s)
       }
+    }
+  }
+}
+
+object Oracle {
+  def mathematicaReduce: Rule = new Rule("Oracle Mathematica") with OracleRule {
+    def apply(s: Sequent): List[Sequent] = {
+      //TODO: implement
+      List(s)
     }
   }
 }

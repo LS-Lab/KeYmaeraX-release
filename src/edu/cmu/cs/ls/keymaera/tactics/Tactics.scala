@@ -85,6 +85,18 @@ object Tactics {
     // create an or-branch for each given tactic
     def <(tcts: (() => Tactic)*) = branchT((() => this) :: tcts.toList: _*)
     override def toString: String = name
+
+    def apply(tool : Tool) {}
+  }
+
+  class HuhuTactic(name : String) extends Tactic(name) {
+    override def apply(tool : Tool) {
+      println("Huhu, I'm: " + name)
+    }
+
+    def apply(g: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] =      None
+
+
   }
 
   abstract class PositionTactic(val name: String) extends (Position => Tactic) {
