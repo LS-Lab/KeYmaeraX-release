@@ -54,7 +54,7 @@ object TermTests {
       }
   }
 
-  def test2 = {
+/*  def test2 = {
     val i2 = getTautology
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
@@ -97,6 +97,7 @@ object TermTests {
     writeToFile(new File(output), tree)
     r.isClosed
   }
+*/
 
   def readFile(input: String): String = try {
     val fr = new BufferedReader(new FileReader(input))

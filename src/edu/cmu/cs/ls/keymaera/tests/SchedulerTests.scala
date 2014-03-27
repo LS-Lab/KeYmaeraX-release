@@ -2,37 +2,54 @@ package edu.cmu.cs.ls.keymaera.tests
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.KeYmaera
-import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tactics.Scheduler
 
 object SchedulerTests {
 
-  val tool = Array(KeYmaera, KeYmaera, KeYmaera, KeYmaera)
-  val scheduler = new Scheduler(tool)
+  val sched = new Scheduler(Seq(KeYmaera, KeYmaera, KeYmaera))
 
+  class Huhu(val id : String) extends Tactic("Huhu " + id, 
+      new RootNode(new Sequent(IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty))) {
+    scheduler = sched
+    def applies(tool : Tool) : Boolean = true
+    def apply  (tool : Tool) = {
+//      println (name + " got applied")
+    }
+  }
 
   def test = {
+    val a = new Huhu("a")
+    val b = new Huhu("b")
+    val c = new Huhu("c")
+    val d = new Huhu("d")
+    val e = new Huhu("e")
+    val f = new Huhu("f")
+    val g = new Huhu("g")
+    val h = new Huhu("h")
 
-    val a = new TacticsWrapper(new HuhuTactic("A"))
-    val b = new TacticsWrapper(new HuhuTactic("B"))
-    val c = new TacticsWrapper(new HuhuTactic("C"))
-    val d = new TacticsWrapper(new HuhuTactic("D"))
-    val e = new TacticsWrapper(new HuhuTactic("E"))
-    val f = new TacticsWrapper(new HuhuTactic("F"))
-    val g = new TacticsWrapper(new HuhuTactic("G"))
-    val h = new TacticsWrapper(new HuhuTactic("H"))
+    val l = (x : Tactic) => new TacticsListener(x, (s, t) => {
+      println ("applying and redispatching " + t)
+      s ++ x
+    })
 
-    a.listener += new TacticsListener(a.tactic, (t : Tactic) => scheduler.dispatch(a))
+    a.listeners += l(a)
+    b.listeners += l(b)
+    c.listeners += l(c)
+    d.listeners += l(d)
+    e.listeners += l(e)
+    f.listeners += l(f)
+    g.listeners += l(g)
 
-    scheduler.dispatch(h)
-    scheduler.dispatch(g)
-    scheduler.dispatch(f)
-    scheduler.dispatch(e)
-    scheduler.dispatch(d)
-    scheduler.dispatch(c)
-    scheduler.dispatch(b)
-    scheduler.dispatch(a)
+    h.listeners += new TacticsListener(h, (s, t) => {
+       println ("interrupting")
+       scheduler.thread(0).interrupt
+       scheduler.thread(1).interrupt
+       scheduler.thread(2).interrupt
+       s ++ h
+    })
 
+    scheduler ++ a ++ b ++ c ++ d ++ e ++ f ++ g ++ h
   }
 
 }

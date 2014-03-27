@@ -11,9 +11,8 @@
 package edu.cmu.cs.ls.keymaera.core
 
 /**
- * Tool instance (e.g., mathematica kernel)
+ * Tool instance (e.g., a specific mathematica kernel)
  */
-
 abstract class Tool {
 
   /**
@@ -29,5 +28,4 @@ abstract class Tool {
 
 }
 
-object KeYmaera extends Tool {
-}
+object KeYmaera extends Tool {}
