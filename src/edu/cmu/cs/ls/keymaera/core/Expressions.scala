@@ -32,7 +32,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 239
+   * Next free prime is 251
    * @param prime
    * @param a
    * @return
@@ -233,8 +233,15 @@ final class Function (name : String, index: Option[Int] = None, domain : Sort, s
 /* The * in nondet. assignments */
 // class Random(sort : Sort) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
-object True extends Expr(Bool) with Formula with Term with Atom
-object False extends Expr(Bool) with Formula with Term with Atom
+object True extends Expr(Bool) with Formula with Term with Atom {
+  def unapply(e: Any): Boolean = e.isInstanceOf[True.type]
+//  def unapply(e: Any): Option[Any] = {
+//    if(e.isInstanceOf[True.type]) Some("") else None
+//  }
+}
+object False extends Expr(Bool) with Formula with Term with Atom {
+  def unapply(e: Any): Boolean = e.isInstanceOf[False.type]
+}
 
 /**
  * - Make sure that there are no constants for negative numbers
@@ -444,16 +451,16 @@ abstract class BinaryRelation(domain : Sort, left : Expr, right : Expr)
 
 /* equality */
 object Equals {
-  def apply(domain : Sort = Real, left : Expr, right : Expr): Equals = new Equals(domain, left, right)
-  def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
-    case x: Equals => x.domain match {
-      case TupleT(a, b) if (a == b) => Some((a, x.left, x.right))
+  def apply(domain : Sort = Real, left : Term, right : Term): Equals = new Equals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: Equals => (x.domain, x.left, x.right) match {
+      case (TupleT(a, b), c: Term, d: Term) if (a == b) => Some((a, c, d))
       case _ => None
     }
     case _ => None
   }
 }
-final class Equals   (domain : Sort = Real, left : Expr, right : Expr) extends BinaryRelation(domain, left, right) {
+final class Equals   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
     case Equals(d, a, b) => d == domain && left == a && right == b
     case _ => false
@@ -461,22 +468,58 @@ final class Equals   (domain : Sort = Real, left : Expr, right : Expr) extends B
   override def hashCode: Int = hash(47, domain, left, right)
 }
 
-object NotEquals {
-  def apply(domain : Sort = Real, left : Expr, right : Expr): NotEquals = new NotEquals(domain, left, right)
-  def unapply(e: Any): Option[(Sort, Expr, Expr)] = e match {
-    case x: NotEquals => x.domain match {
-      case TupleT(a, b) if (a == b) => Some((a, x.left, x.right))
+object ProgramEquals {
+  def apply(left : Program, right : Program): ProgramEquals = new ProgramEquals(left, right)
+  def unapply(e: Any): Option[(Program, Program)] = e match {
+    case x: ProgramEquals => (x.left, x.right) match {
+      case (c: Program, d: Program) => Some((c, d))
       case _ => None
     }
     case _ => None
   }
 }
-final class NotEquals(domain : Sort = Real, left : Expr, right : Expr) extends BinaryRelation(domain, left, right) {
+final class ProgramEquals   (left : Program, right : Program) extends BinaryRelation(ProgramSort, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case ProgramEquals(a, b) => left == a && right == b
+    case _ => false
+  }
+  override def hashCode: Int = hash(239, domain, left, right)
+}
+
+object NotEquals {
+  def apply(domain : Sort = Real, left : Term, right : Term): NotEquals = new NotEquals(domain, left, right)
+  def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
+    case x: NotEquals => (x.domain, x.left, x.right) match {
+      case (TupleT(a, b), c: Term, d: Term) if (a == b) => Some((a, c, d))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+final class NotEquals(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
     case NotEquals(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
   override def hashCode: Int = hash(53, domain, left, right)
+}
+
+object ProgramNotEquals {
+  def apply(left : Program, right : Program): ProgramNotEquals = new ProgramNotEquals(left, right)
+  def unapply(e: Any): Option[(Program, Program)] = e match {
+    case x: ProgramNotEquals => (x.left, x.right) match {
+      case (c: Program, d: Program) => Some((c, d))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+final class ProgramNotEquals   (left : Program, right : Program) extends BinaryRelation(ProgramSort, left, right) {
+  override def equals(e: Any): Boolean = e match {
+    case ProgramNotEquals(a, b) => left == a && right == b
+    case _ => false
+  }
+  override def hashCode: Int = hash(241, domain, left, right)
 }
 
 /* comparison */
@@ -708,7 +751,7 @@ final class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, chil
 }
 
 object IfThenElseTerm {
-  def apply(cond: Formula, then: Term, elseT: Term): Term = new IfThenElseTerm(cond, then, elseT)
+  def apply(cond: Formula, thenT: Term, elseT: Term): Term = new IfThenElseTerm(cond, thenT, elseT)
   def unapply(e: Any): Option[(Formula, Term, Term)] = e match {
     case x: IfThenElseTerm => (x.fst, x.snd, x.thd) match {
       case (a: Formula, b: Term, c: Term) => Some((a, b, c))
@@ -717,18 +760,18 @@ object IfThenElseTerm {
     case _ => None
   }
 }
-final class IfThenElseTerm(cond: Formula, then: Term, elseT: Term)
-  extends Ternary(then.sort, TupleT(Bool, TupleT(then.sort, elseT.sort)), cond, then, elseT) with Term {
+final class IfThenElseTerm(cond: Formula, thenT: Term, elseT: Term)
+  extends Ternary(thenT.sort, TupleT(Bool, TupleT(thenT.sort, elseT.sort)), cond, thenT, elseT) with Term {
   applicable
 
-  @elidable(ASSERTION) override def applicable = super.applicable; require(then.sort == elseT.sort, "Sort mismatch" +
-    "in if-then-else statement: " + then.sort + " != " + elseT.sort)
+  @elidable(ASSERTION) override def applicable = super.applicable; require(thenT.sort == elseT.sort, "Sort mismatch" +
+    "in if-then-else statement: " + thenT.sort + " != " + elseT.sort)
 
   override def equals(e: Any): Boolean = e match {
     case x: IfThenElseTerm => fst == x.fst && snd == x.snd && thd == x.thd
     case _ => false
   }
-  override def hashCode: Int = hash(113, cond, then, elseT)
+  override def hashCode: Int = hash(113, cond, thenT, elseT)
 }
 /**
  * Games
@@ -958,7 +1001,7 @@ final class Loop    (child : Program)               extends UnaryProgram(child) 
 }
 
 object IfThen {
-  def apply(cond: Formula, then: Program): Program = new IfThen(cond, then)
+  def apply(cond: Formula, thenT: Program): Program = new IfThen(cond, thenT)
   def unapply(e: Any): Option[(Formula, Program)] = e match {
     case x: IfThen => (x.left, x.right) match {
       case (a: Formula, b: Program) => Some((a, b))
@@ -967,19 +1010,19 @@ object IfThen {
     case _ => None
   }
 }
-final class IfThen(cond: Formula, then: Program) extends Binary(ProgramSort, BoolXProgram, cond, then) with Program {
+final class IfThen(cond: Formula, thenP: Program) extends Binary(ProgramSort, BoolXProgram, cond, thenP) with Program {
   def reads = ???
-  def writes = then.writes
+  def writes = thenP.writes
 
   override def equals(e: Any): Boolean = e match {
     case x: IfThen => x.left == left && x.right == right
     case _ => false
   }
-  override def hashCode: Int = hash(191, cond, then)
+  override def hashCode: Int = hash(191, cond, thenP)
 }
 
 object IfThenElse {
-  def apply(cond: Formula, then: Program, elseP: Program): Program = new IfThenElse(cond, then, elseP)
+  def apply(cond: Formula, thenP: Program, elseP: Program): Program = new IfThenElse(cond, thenP, elseP)
   def unapply(e: Any): Option[(Formula, Program, Program)] = e match {
     case x: IfThenElse => (x.fst, x.snd, x.thd) match {
       case (a: Formula, b: Program, c: Program) => Some((a, b, c))
@@ -988,16 +1031,16 @@ object IfThenElse {
     case _ => None
   }
 }
-final class IfThenElse(cond: Formula, then: Program, elseP: Program)
-  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, then, elseP) with Program {
+final class IfThenElse(cond: Formula, thenP: Program, elseP: Program)
+  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, thenP, elseP) with Program {
   def reads = ???
-  def writes = then.writes ++ elseP.writes
+  def writes = thenP.writes ++ elseP.writes
 
   override def equals(e: Any): Boolean = e match {
     case x: IfThenElse => x.fst == fst && x.snd == snd && x.thd == thd
     case _ => false
   }
-  override def hashCode: Int = hash(193, cond, then, elseP)
+  override def hashCode: Int = hash(193, cond, thenP, elseP)
 }
 
 /* TODO:

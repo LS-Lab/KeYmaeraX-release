@@ -4,6 +4,7 @@ import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
@@ -13,6 +14,14 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
   }
 
   trait OracleRule extends Rule
+
+  sealed abstract class Status
+    case object Success       extends Status
+    case object Failed        extends Status // counterexample found
+    case object Unfinished    extends Status
+    case object LimitExceeded extends Status
+    case object Pruned        extends Status
+    case object ParentClosed  extends Status
 
   /**
    * Proof Tree
@@ -47,12 +56,6 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
       }
     }
 
-    def isClosed: Boolean = {
-      for(ps <- alternatives)
-        if(ps.subgoals.foldLeft(true)((s: Boolean, p: ProofNode) => s && p.isClosed)) return true
-      false
-    }
-
     def apply(rule : Rule) : List[ProofNode] = {
       val result = rule(sequent).map(new ProofNode(_, this))
       prepend(rule, result)
@@ -69,6 +72,34 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
       val result = rule(aPos)(pos)(sequent).map(new ProofNode(_, this))
       prepend(rule(aPos)(pos), result)
       result
+    }
+
+    @volatile private[this] var closed : Boolean = false
+    @volatile var status               : Status  = Unfinished
+
+    def isLocalClosed: Boolean = closed
+
+    def closeNode(s : Status) =
+      this.synchronized {
+        if (!closed) {
+          closed = true
+          status = s
+        }
+      }
+
+    def checkParentClosed : Boolean = {
+      node = this
+      while (node != null && !node.isLocalClosed) node = node.parent
+      if (node == null) {
+        return false
+      } else {
+        node = this
+        while (node != null && !node.isLocalClosed) {
+          node.closeNode(ParentClosed)
+          node = node.parent
+        }
+        return true
+      }
     }
   }
 
@@ -87,7 +118,38 @@ abstract class AssumptionRule extends (Position => PositionRule)
 
 abstract class TwoPositionRule extends ((Position,Position) => Rule)
 
-class Position(val ante: Boolean, val index: Int) {
+abstract class PosInExpr {
+  def first:  PosInExpr = FirstP(this)
+  def second: PosInExpr = SecondP(this)
+  def third:  PosInExpr = ThirdP(this)
+
+  def isPrefixOf(p: PosInExpr): Boolean
+}
+
+case object HereP extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = true
+}
+
+case class FirstP(val sub: PosInExpr) extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = p match {
+    case FirstP(s) => s.isPrefixOf(sub)
+    case _ => false
+  }
+}
+case class SecondP(val sub: PosInExpr) extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = p match {
+    case SecondP(s) => s.isPrefixOf(sub)
+    case _ => false
+  }
+}
+case class ThirdP(val sub: PosInExpr) extends PosInExpr {
+  def isPrefixOf(p: PosInExpr) = p match {
+    case ThirdP(s) => s.isPrefixOf(sub)
+    case _ => false
+  }
+}
+
+class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte = ante
   def getIndex: Int = index
 
@@ -107,7 +169,7 @@ object AnteSwitch {
   def apply(p1: Position, p2: Position): Rule = new AnteSwitchRule(p1, p2)
 
   private class AnteSwitchRule(p1: Position, p2: Position) extends Rule("AnteSwitch") {
-    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p2.isAnte)
+    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP )
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the antecedent")
@@ -119,7 +181,7 @@ object SuccSwitch {
   def apply(p1: Position, p2: Position): Rule = new SuccSwitchRule(p1, p2)
 
   private class SuccSwitchRule(p1: Position, p2: Position) extends Rule("SuccSwitch") {
-    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && !p2.isAnte)
+    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
       throw new IllegalArgumentException("This rule is only applicable to two positions in the succedent")
@@ -173,6 +235,48 @@ object Cut {
 }
 
 // equality/equivalence rewriting
+class EqualityRewriting extends AssumptionRule {
+  import Helper._
+  override def apply(ass: Position): PositionRule = new PositionRule() {
+    override def apply(p: Position): Rule = new Rule("Equality Rewriting") {
+      override def apply(s: Sequent): List[Sequent] = {
+        require(ass.isAnte && ass.inExpr == HereP)
+        val (blacklist, fn) = s.ante(ass.getIndex) match {
+          case Equals(d, a, b) =>
+            (variables(a) ++ variables(b),
+            new ExpressionTraversalFunction {
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
+                if(e == a) Right(b)
+                else if(e == b) Right(a)
+                else throw new IllegalArgumentException("Equality Rewriting not applicable")
+            })
+          case ProgramEquals(a, b) =>
+            (variables(a) ++ variables(b),
+            new ExpressionTraversalFunction {
+              override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
+                if(e == a) Right(b)
+                else if(e == b) Right(a)
+                else throw new IllegalArgumentException("Equality Rewriting not applicable")
+            })
+          case Equiv(a, b) =>
+            (variables(a) ++ variables(b),
+            new ExpressionTraversalFunction {
+              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
+                if(e == a) Right(b)
+                else if(e == b) Right(a)
+                else throw new IllegalArgumentException("Equality Rewriting not applicable")
+            })
+          case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+        }
+        val trav = TraverseToPosition(p.inExpr, fn, blacklist)
+        ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
+          case x: Formula => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+          case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+        }
+      }
+    }
+  }
+}
 
 /**
  * specific interpretation for variables that start and end with _
@@ -185,8 +289,6 @@ object Cut {
  *          - Apply(Function, Expr)
  *          - ProgramConstant
  *          - Derivative(...)
- *  TODO: - deal with modalities (similar to quantifers)
- *        - walk through programs
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -349,10 +451,10 @@ class Substitution(l: Seq[SubstitutionPair]) {
 
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-object UniformSubstition {
-  def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstition(substitution, origin)
+object UniformSubstitution {
+  def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
 
-  private class UniformSubstition(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
+  private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
     // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
     // require explicit rule applications)
     def apply(s: Sequent): List[Sequent] = {
@@ -376,6 +478,7 @@ object AxiomClose extends AssumptionRule {
   private class AxiomClosePos(ass: Position) extends PositionRule {
     def apply(p: Position): Rule = {
       require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
+      require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
       new AxiomClose(ass, p)
     }
   }
@@ -406,7 +509,7 @@ object AxiomClose extends AssumptionRule {
 
 object ImplyRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new ImplRight(p)
   }
   private class ImplRight(p: Position) extends Rule("Imply Right") {
@@ -423,7 +526,7 @@ object ImplyRight extends PositionRule {
 // Impl left
 object ImplyLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new ImplLeft(p)
   }
   private class ImplLeft(p: Position) extends Rule("Imply Left") {
@@ -440,7 +543,7 @@ object ImplyLeft extends PositionRule {
 // Not right
 object NotRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new NotRight(p)
   }
   private class NotRight(p: Position) extends Rule("Not Right") {
@@ -457,7 +560,7 @@ object NotRight extends PositionRule {
 // Not left
 object NotLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new NotLeft(p)
   }
   private class NotLeft(p: Position) extends Rule("Not Left") {
@@ -474,7 +577,7 @@ object NotLeft extends PositionRule {
 // And right
 object AndRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new AndRight(p)
   }
   private class AndRight(p: Position) extends Rule("And Right") {
@@ -491,7 +594,7 @@ object AndRight extends PositionRule {
 // And left
 object AndLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new AndLeft(p)
   }
   private class AndLeft(p: Position) extends Rule("And Left") {
@@ -508,7 +611,7 @@ object AndLeft extends PositionRule {
 // Or right
 object OrRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new OrRight(p)
   }
   private class OrRight(p: Position) extends Rule("Or Right") {
@@ -525,7 +628,7 @@ object OrRight extends PositionRule {
 // Or left
 object OrLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new OrLeft(p)
   }
   private class OrLeft(p: Position) extends Rule("Or Left") {
@@ -546,36 +649,157 @@ object OrLeft extends PositionRule {
 // hide
 object HideLeft extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(p.isAnte)
+    assert(p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
 object HideRight extends PositionRule {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte)
+    assert(!p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
 class Hide(p: Position) extends Rule("Hide") {
-  def apply(s: Sequent): List[Sequent] =
-    if(p.isAnte)
+  def apply(s: Sequent): List[Sequent] = {
+    assert(p.inExpr == HereP)
+    if (p.isAnte)
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
       List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+  }
 }
 
+// alpha conversion
+
+/**
+ * Alpha conversion works on exactly four positions:
+ * (1) Forall(v, phi)
+ * (2) Exists(v, phi)
+ * (3) Modality(BoxModality(Assign(x, e)), phi)
+ * (4) Modality(DiamondModality(Assign(x, e)), phi)
+ *
+ * It always replaces _every_ occurrence of the name in phi
+ * @param tPos
+ * @param name
+ * @param idx
+ * @param target
+ * @param tIdx
+ */
+class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
+  def apply(s: Sequent): List[Sequent] = {
+    val f = if(tPos.isAnte) s.ante(tPos.getIndex) else s.succ(tPos.getIndex)
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
+        if(tPos == p) {
+          e match {
+            case Forall(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+            case Exists(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+            case BoxModality(Assign(a, b), c) => require((a match {
+              case Variable(n, _, _) => n
+              case Apply(Function(n, _, _, _), _) => n
+              case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+            }) == name, "Symbol to be renamed must be bound in " + e)
+            case DiamondModality(Assign(a, b), c) => require((a match {
+              case Variable(n, _, _) => n
+              case Apply(Function(n, _, _, _), _) => n
+              case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+            }) == name, "Symbol to be renamed must be bound in " + e)
+          }
+          Left(None)
+        } else (e match {
+          case x: PredicateConstant => renamePred(x)
+          case x: ProgramConstant => renameProg(x)
+          case Apply(a, b) => Apply(renameFunc(a), b)
+          case ApplyPredicate(a, b) => ApplyPredicate(renameFunc(a), b)
+        }) match {
+          case x: Formula => Right(x)
+          case a: Either[Option[StopTraversal], Formula] => a
+        }
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+        case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
+        case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
+        case BoxModality(Assign(a, b), c) => Right(BoxModality(Assign(a match {
+          case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
+          case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
+          case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+        }, b), c))
+        case DiamondModality(Assign(a, b), c) => Right(DiamondModality(Assign(a match {
+          case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
+          case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
+          case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+        }, b), c))
+      }
+    }
+    ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), f) match {
+      case x: Formula => if(tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case _ => throw new IllegalStateException("No alpha renaming possible in " + f)
+    }
+  }
+
+  def renameVar(e: Variable): Variable = if(e.name == name && e.index == idx) Variable(target, tIdx, e.domain) else e
+
+  def renamePred(e: PredicateConstant): PredicateConstant = if(e.name == name && e.index == idx) PredicateConstant(target, tIdx) else e
+
+  def renameProg(e: ProgramConstant): ProgramConstant = if(e.name == name && e.index == idx) ProgramConstant(target, tIdx) else e
+
+  def renameFunc(e: Function): Function = if(e.name == name && e.index == idx) Function(target, tIdx, e.domain, e.sort) else e
+
+  def rename(e: NamedSymbol): NamedSymbol = e match {
+    case v: Variable => renameVar(v)
+    case p: PredicateConstant => renamePred(p)
+    case p: ProgramConstant => renameProg(p)
+    case f: Function => renameFunc(f)
+  }
+}
+
+// skolemize
+/**
+ * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
+ * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ */
+class Skolemize extends PositionRule {
+  import Helper._
+  override def apply(p: Position): Rule = new Rule("Skolemize") {
+    override def apply(s: Sequent): List[Sequent] = {
+      require(p.inExpr == HereP, "We can only skolemize top level formulas");
+      var vars: Set[NamedSymbol] = Set.empty
+      for(i <- 0 to s.ante.length) {
+        if(!p.isAnte || i != p.getIndex) {
+          vars ++= variables(s.ante(i))
+        }
+      }
+      for(i <- 0 to s.succ.length) {
+        if(p.isAnte || i != p.getIndex) {
+          vars ++= variables(s.ante(i))
+        }
+      }
+      val (v,phi) = if(p.isAnte) {
+        val form = s.ante(p.getIndex)
+        form match {
+          case Exists(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+            throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
+          case _ => throw new IllegalArgumentException("Skolemization is only applicable to existential quantifiers in the antecedent")
+        }
+      } else {
+        val form = s.succ(p.getIndex)
+        form match {
+          case Forall(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+            throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
+          case _ => throw new IllegalArgumentException("Skolemization is only applicable to universal quantifiers in the succedent")
+        }
+      }
+      List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
+    }
+  }
+}
 
 // maybe:
 
 // close by true (do we need this or is this derived?)
 
-// alpha conversion
-
 // quantifier instantiation
 
 // remove known
-
-// skolemize
 
 // unskolemize
 
@@ -586,5 +810,33 @@ class Hide(p: Position) extends Rule("Hide") {
 // merge sequent (or is this derived?)
 
 
+object Helper {
+  def variables[A: FTPG](a: A): Set[NamedSymbol] = {
+    var vars: Set[NamedSymbol] = Set.empty
+    val fn = new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        e match {
+          case x: Variable => vars += x
+          case x: ProgramConstant => vars += x
+          case Apply(f, _) => vars += f
+          case _ =>
+        };
+        Left(None)
+      }
+
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        e match {
+          case x: PredicateConstant => vars += x
+          case ApplyPredicate(f, _) => vars += f
+          case _ =>
+        };
+        Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, a)
+    vars
+  }
+
+}
 
 // vim: set ts=4 sw=4 et:

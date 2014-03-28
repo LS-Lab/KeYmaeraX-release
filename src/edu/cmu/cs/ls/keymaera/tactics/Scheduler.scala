@@ -59,9 +59,20 @@ import java.util.NoSuchElementException
  */
 class TacticsWrapper(val tactic : Tactic, val node : ProofNode) {
 
+
+
   def compare(that : TacticWrapper) = this.tactic.priority - that.tactic.priority
 
-  def execute(tool : Tool) = tactic(tool, node)
+  def execute(tool : Tool) = {
+    tactic.incTacs()
+    if (tactic.tacs > tacThres) {
+      tactic.tacs = 0
+      node.checkParentClosed
+    }
+    if (!node.isLocalClosed) {
+      tactic(tool, node)
+    }
+  }
 
 }
 
