@@ -9,47 +9,27 @@ object SchedulerTests {
 
   val sched = new Scheduler(Seq(KeYmaera, KeYmaera, KeYmaera))
 
-  class Huhu(val id : String) extends Tactic("Huhu " + id, 
-      new RootNode(new Sequent(IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty))) {
+  def huhu(id : String) = new Tactic("Huhu " + id) {
     scheduler = sched
-    def applies(tool : Tool) : Boolean = true
-    def apply  (tool : Tool) = {
+    def applicable(node : ProofNode) : Boolean = true
+    def apply  (tool : Tool, node : ProofNode) {
 //      println (name + " got applied")
+      incRule()
     }
   }
 
-  def test = {
-    val a = new Huhu("a")
-    val b = new Huhu("b")
-    val c = new Huhu("c")
-    val d = new Huhu("d")
-    val e = new Huhu("e")
-    val f = new Huhu("f")
-    val g = new Huhu("g")
-    val h = new Huhu("h")
+  def test() {
+    val r = new RootNode(new Sequent(IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty))
 
-    val l = (x : Tactic) => new TacticsListener(x, (s, t) => {
-      println ("applying and redispatching " + t)
-      s ++ x
-    })
+    val a = huhu("a")
+    val b = huhu("b")
+    val c = huhu("c")
+    val d = huhu("d")
+    val e = huhu("e")
+    val f = huhu("f")
+    val g = huhu("g")
+    val h = huhu("h")
 
-    a.listeners += l(a)
-    b.listeners += l(b)
-    c.listeners += l(c)
-    d.listeners += l(d)
-    e.listeners += l(e)
-    f.listeners += l(f)
-    g.listeners += l(g)
-
-    h.listeners += new TacticsListener(h, (s, t) => {
-       println ("interrupting")
-       scheduler.thread(0).interrupt
-       scheduler.thread(1).interrupt
-       scheduler.thread(2).interrupt
-       s ++ h
-    })
-
-    scheduler ++ a ++ b ++ c ++ d ++ e ++ f ++ g ++ h
   }
 
 }

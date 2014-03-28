@@ -43,6 +43,8 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.Tool
+import edu.cmu.cs.ls.keymaera.core.Config._
+import edu.cmu.cs.ls.keymaera.core.ProofNode
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import scala.Array
@@ -57,9 +59,7 @@ import java.util.NoSuchElementException
 /**
  * The thread that traverses the prioList to find and execute tactics
  */
-class TacticsWrapper(val tactic : Tactic, val node : ProofNode) {
-
-
+class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[TacticWrapper] {
 
   def compare(that : TacticWrapper) = this.tactic.priority - that.tactic.priority
 
@@ -76,7 +76,7 @@ class TacticsWrapper(val tactic : Tactic, val node : ProofNode) {
 
 }
 
-class TacticsExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) extends java.lang.Runnable {
+class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) extends java.lang.Runnable {
 
   override def run() {
     println ("I think I am " + id + " therefor I am: " + this)
@@ -127,7 +127,7 @@ class Scheduler(tools : Seq[Tool]) {
   @volatile var blocked  : Int = 0/* threads blocked on the scheduler */
 
   for (x <- 0 to maxThreads - 1)
-    thread.update(x, new java.lang.Thread(new TacticsExecutor(this, tools(x), x)))
+    thread.update(x, new java.lang.Thread(new TacticExecutor(this, tools(x), x)))
 
   thread.foreach(_.start())
 
@@ -141,8 +141,6 @@ class Scheduler(tools : Seq[Tool]) {
     }
     return this
   }
-
-  def ++ (t : TacticWrapper) : this.type = dispatch(t)
 }
 
 

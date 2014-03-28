@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 //import scala.Option.option2Iterable
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.Tool
+import edu.cmu.cs.ls.keymaera.core.Config._
 //import scala.Left
 //import scala.Right
 //import scala.Some
@@ -468,14 +469,17 @@ object Tactics {
 
 
 
-  class Stats(var time : Int, var branches : Int, var rules : Int) {
-    def time(fn : () => Unit) {
-      start = System.currentTimeMillis
-      fn
-      time = time + (start - System.currentTimeMillis) / 1000
-    }
-
+  class Stats(var executionTime : Int, var branches : Int, var rules : Int) {
     var tacs : Int = 0
+
+    def this() = this(0, 0, 0)
+
+    def measure[B](fn : => B) : B = {
+      val start = System.currentTimeMillis
+      val res = fn
+      executionTime = executionTime + ((start - System.currentTimeMillis) / 1000).toInt
+      return res
+    }
 
     def incTacs() { tacs = tacs + 1 }
 
@@ -484,18 +488,20 @@ object Tactics {
     def incBranch(n : Int) { branches = branches + n }
 
     def clear() {
-      rules    = 0
-      branches = 0
-      time     = 0
+      rules         = 0
+      branches      = 0
+      executionTime = 0
     }
   }
 
-  class Limits(val parent : Limits,
+  val nilStats : Stats = new Stats(0, 0, 0)
+
+  class Limits(val parent   : Limits,
                var timeout  : Option[Int],
                var branches : Option[Int],
                var rules    : Option[Int]) {
 
-    def min(x : Option[Int], y : Option[Int]) : Option[Int] =
+    def min(x : Option[Int], y : Option[Int]) : Option[Int] = {
       x match {
         case Some(valX) =>
           y match {
@@ -504,51 +510,55 @@ object Tactics {
           }
         case None => y
       }
+    }
 
     timeout  = min(timeout,  parent.timeout)
     branches = min(branches, parent.branches)
     rules    = min(rules,    parent.rules)
 
-    this(t : Option[Int], b : Option[Int], r : Option[Int]) = this(null, t, b, r)
+    def this(t : Option[Int], b : Option[Int], r : Option[Int]) = this(null, t, b, r)
 
     def checkLocal(s : Stats) : Boolean = 
       (timeout match {
-        case Some(tVal) => s.time > tVal
+        case Some(tVal) => s.executionTime > tVal
         case None       => false
       }) ||
       (branches match {
-        case Some(bVal) => s.branches > tVal
+        case Some(bVal) => s.branches > bVal
         case None       => false
       }) ||
       (rules match {
-        case Some(rVal) => s.rules > tVal
+        case Some(rVal) => s.rules > rVal
         case None       => false
       })
 
     def update(s : Stats) : Boolean =
       this.synchronized {
         timeout match {
-          case Some(tVal) => timeout = Some(tVal - s.time)
+          case Some(tVal) => timeout = Some(tVal - s.executionTime)
+          case None       =>
         }
         branches match {
           case Some(bVal) => timeout = Some(bVal - s.branches)
+          case None       =>
         }
         rules match {
           case Some(rVal) => timeout = Some(rVal - s.rules)
+          case None       =>
         }
-        return check(0, 0, 0)
+        return checkLocal(nilStats)
       }
 
     def propagate(s : Stats) : Boolean = {
-        p = this
-        r = false
+        var p = this
+        var r = false
         while (p != null) r = p.update(s) || r
         s.clear()
         return r
     }
 
-    def checkStats(s : Stats)(res : Status) : Status = 
-      if (t > timeThres || b > branchThres || r > ruleThres) {
+    def checkStats(s : Stats)(res : Status) : Status =
+      if (s.executionTime > timeThres || s.branches > branchThres || s.rules > ruleThres) {
         // propagate updates through all limit objects
         if (propagate(s)) {
           return LimitExceeded
@@ -558,7 +568,7 @@ object Tactics {
       } else {
         // check local breach only
         if (checkLocal(s)) {
-          propagata(s)
+          propagate(s)
           return LimitExceeded
         } else {
           return res
@@ -566,35 +576,38 @@ object Tactics {
       }
   }
 
-  abstract class Tactic(val name : String) extends Stats with Ordered[Tactic] {
+  // fix me if you want to start with configurable default limit
+  val defaultLimits : Limits = new Limits(None, None, None)
+
+  abstract class Tactic(val name : String) extends Stats { 
 
     var scheduler : Scheduler = KeYmaeraScheduler
 
-    var limit  : Limits
+    var limit  : Limits = defaultLimits
 
-    var continuation : (Tactic) => (Status, Seq[ProofNode]) => Unit
+    var continuation : (Tactic, Status, Seq[ProofNode]) => Unit = stop
 
     override def toString: String = name
 
     def applicable(node : ProofNode) : Boolean
     def apply  (tool : Tool, node : ProofNode)
 
-    def interitStats(s : Stats) {
-      tactics  = s.tactics
-      time     = s.time
-      branches = s.branches
-      rules    = s.rules
+    def inheritStats(s : Stats) {
+      tacs          = s.tacs
+      executionTime = s.executionTime
+      branches      = s.branches
+      rules         = s.rules
     }
 
     val priority : Int = 10
-
-    def dispatch(t : Tactic, node : ProofNode) = dispatch(t, t.limit, node)
 
     def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
       scheduler.dispatch(new TacticWrapper(this, node))
     }
+
+    def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }
 
     def checkStats(res : Status) : Status = limit.checkStats(this)(res)
 
@@ -621,25 +634,30 @@ object Tactics {
   def NilT = new Tactic("Nil") {
     def applicable(node : ProofNode) = true
     def apply(tool : Tool, node : ProofNode) = {
-      continuation(this)(Success, new Seq(root))
+      continuation(this, Success, Seq(node))
     }
   }
 
-  def onSuccess(tNext : Tactic)(tFrom : Tactic)
-                               (status : Status, result : Seq[ProofNode]) =
-    if (status = Success) result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    tFrom.limit.propagate(tFrom)
+    result.foreach(n => n.checkParentClosed())
+  }
 
-  def unconditionally(tNext : Tactic)(tFrom : Tactic)
-                                     (status : Status, result : Seq[ProofNode]) =
-    result.forearch((n : ProofNode) => tNext.dispatch(tFrom, n))
+  def onSuccess(tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (status == Success) result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  }
 
-  def onChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic)
-                                             (status : Status, result : Seq[ProofNode]) =
-    if (Seq(n) != result) result.foreach((n : ProofNode) => tFrom.dispatch(n))
+  def unconditionally(tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  }
 
-  def onNoChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic)
-                (status : Status, result : Seq[ProofNode]) =
-    if (Seq(n) = result) tNext.dispatch(tFrom, n)
+  def onChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (Seq(n) != result) result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  }
+
+  def onNoChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (Seq(n) == result) tNext.dispatch(tFrom, n)
+  }
 
 
   def SeqT(left : Tactic, right : Tactic) =
@@ -648,7 +666,7 @@ object Tactics {
 
       def apply(tool : Tool, node : ProofNode) = {
         right.continuation = continuation
-        left.continuation  = onSuccess(right)(left)
+        left.continuation  = onSuccess(right)
         left.dispatch(this, node)
       }
     }
@@ -659,7 +677,7 @@ object Tactics {
 
       def apply(tool : Tool, node : ProofNode) = {
         right.continuation = continuation
-        left.continuation = onNoChange(right)(left)
+        left.continuation = onNoChange(node, right)
         left.dispatch(this, node)
       }
     }
@@ -670,13 +688,13 @@ object Tactics {
 
       def apply(tool : Tool, node : ProofNode) = {
         right.continuation = continuation
-        left.continuation  = unconditionally(right)(left)
+        left.continuation  = unconditionally(right)
         left.dispatch(this, node)
       }
     }
 
   def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
-    new Tactic("Conditional " + thenT + " else " elseT) {
+    new Tactic("Conditional " + thenT + " else " + elseT) {
       def applicable(node : ProofNode) = true
 
       def apply(tool : Tool, node : ProofNode) = {
@@ -711,10 +729,10 @@ object Tactics {
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {
         incRule()
-        time(res = node(rule))
-        continuation(this)(checkStats(Success), res)
+        val res = measure(node(rule))
+        continuation(this, checkStats(Success), res)
       } else {
-        continuation(this)(Failed,  Seq(node))
+        continuation(this, Failed,  Seq(node))
       }
     }
 
@@ -729,10 +747,10 @@ object Tactics {
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {
         incRule()
-        time(res = node(rule, pos))
-        continuation(this)(checkStats(Success), node(rule, pos))
+        val res = measure(node(rule, pos))
+        continuation(this, checkStats(Success), res)
       } else {
-        continuation(this)(Failed,  Seq(node))
+        continuation(this, Failed,  Seq(node))
       }
     }
 
@@ -748,10 +766,10 @@ object Tactics {
     def apply(tool : Tool, node : ProofNode) {
       if (applicable(node)) {
         incRule()
-        time(res = node(rule, aPos, pos))
-        continuation(this)(checkStats(Success), node(rule, aPos, pos))
+        val res = measure(node(rule, aPos, pos))
+        continuation(this, checkStats(Success), res)
       } else {
-        continuation(this)(Failed,  Seq(node))
+        continuation(this, Failed,  Seq(node))
       }
     }
 

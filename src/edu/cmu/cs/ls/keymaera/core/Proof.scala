@@ -87,8 +87,8 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition
         }
       }
 
-    def checkParentClosed : Boolean = {
-      node = this
+    def checkParentClosed() : Boolean = {
+      var node = this
       while (node != null && !node.isLocalClosed) node = node.parent
       if (node == null) {
         return false
