@@ -1,36 +1,47 @@
 /**
  * *****************************************************************************
- * Copyright (c) 2014 Jan-David Quesel.
+ * Copyright (c) 2014 Jan-David Quesel, Marcus Völp
  *
  * Contributors:
  *     Jan-David Quesel - initial API and implementation
+ *     Marcus Völp      - parallel execution framework
  * ****************************************************************************
  */
 package edu.cmu.cs.ls.keymaera.tactics
 
-import scala.Option.option2Iterable
+//import scala.Option.option2Iterable
 import edu.cmu.cs.ls.keymaera.core._
-import scala.Left
-import scala.Right
-import scala.Some
+import edu.cmu.cs.ls.keymaera.core.Tool
+import edu.cmu.cs.ls.keymaera.core.Config._
+//import scala.Left
+//import scala.Right
+//import scala.Some
 import scala.Unit
+import scala.math.Ordered
+import scala.collection.mutable.SynchronizedQueue
+import scala.annotation.elidable
+import scala.annotation.elidable._
+
+import scala.language.implicitConversions
 
 /**
  * @author jdq
  *
  */
+/*
 object Tactics {
-  trait Timeout;
-  val timeout = new Timeout {};
+
+//  trait Timeout;
+//  val timeout = new Timeout {};
 
   // implicit conversions
   //implicit def immutableList2OptionList[T](l: ImmutableList[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
 
   //implicit def immutableList2List[T](l: ImmutableList[T]): List[T] = (for (i <- l.iterator) yield i).toList
 
-  implicit def ogl2Left(l: Option[Seq[ProofNode]]): Either[Option[Seq[ProofNode]], Timeout] = Left(l)
+//  implicit def ogl2Left(l: Option[Seq[ProofNode]]): Either[Option[Seq[ProofNode]], Timeout] = Left(l)
 
-  implicit def timeout2Right(l: Timeout): Either[Option[Seq[ProofNode]], Timeout] = Right(l)
+//  implicit def timeout2Right(l: Timeout): Either[Option[Seq[ProofNode]], Timeout] = Right(l)
 
   implicit def elgt2eolgt(l: Either[Seq[ProofNode], Timeout]): Either[Option[Seq[ProofNode]], Timeout] = l match {
     case Left(x) => Left(Some(x))
@@ -72,8 +83,11 @@ object Tactics {
   // choice, repetition and other helper functions for conditional execution.
   // Further there are methods for generating terms/programelements that will be used
   // to instantiate schema variables in the rules.
-  abstract class Tactic(val name: String)
-    extends ((ProofNode, Limit) => Either[Option[Seq[ProofNode]], Timeout]) {
+  abstract class Tactic(val name: String, val root : ProofNode) {
+    var result : Seq[ProofNode]
+
+/*    extends ((ProofNode, Limit) => Either[Option[Seq[ProofNode]], Timeout]) { */
+
     // repeat tactic until a fixed point is reached
     def * : Tactic = repeatT(this)
     // apply the first tactic applicable
@@ -87,21 +101,11 @@ object Tactics {
     override def toString: String = name
 
     def apply(tool : Tool) {}
-  }
+  
 
-  class HuhuTactic(name : String) extends Tactic(name) {
-    override def apply(tool : Tool) {
-      println("Huhu, I'm: " + name)
-    }
-
-    def apply(g: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] =      None
-
-
-  }
-
-  abstract class PositionTactic(val name: String) extends (Position => Tactic) {
-    def applies(s: Sequent, p: Position): Boolean
-  }
+//  abstract class PositionTactic(val name: String) extends (Position => Tactic) {
+//    def applies(s: Sequent, p: Position): Boolean
+//  }
 
   def repeatT(t: Tactic): Tactic = new Tactic("repeat " + t.toString) {
     def apply(g: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
@@ -257,7 +261,8 @@ object Tactics {
 
   /*********************************************
    * Basic Tactics
-   *********************************************/
+   ********************************************
+   */
 
   def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
@@ -450,10 +455,324 @@ object Tactics {
     def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
       val ante = for(f <- p.sequent.ante) yield delta.get(f) match { case Some(frm) => frm case _ => f}
       val succ = for(f <- p.sequent.succ) yield delta.get(f) match { case Some(frm) => frm case _ => f}
-      Some(p(UniformSubstition(subst, Sequent(p.sequent.pref, ante, succ))))
+      Some(p(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))))
     }
 
   }
 
 }
+*/
 
+object Tactics {
+
+  val KeYmaeraScheduler = new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
+
+
+
+  class Stats(var executionTime : Int, var branches : Int, var rules : Int) {
+    var tacs : Int = 0
+
+    def this() = this(0, 0, 0)
+
+    def measure[B](fn : => B) : B = {
+      val start = System.currentTimeMillis
+      val res = fn
+      executionTime = executionTime + ((start - System.currentTimeMillis) / 1000).toInt
+      return res
+    }
+
+    def incTacs() { tacs = tacs + 1 }
+
+    def incRule() { rules = rules + 1 }
+
+    def incBranch(n : Int) { branches = branches + n }
+
+    def clear() {
+      rules         = 0
+      branches      = 0
+      executionTime = 0
+    }
+  }
+
+  val nilStats : Stats = new Stats(0, 0, 0)
+
+  class Limits(val parent   : Limits,
+               var timeout  : Option[Int],
+               var branches : Option[Int],
+               var rules    : Option[Int]) {
+
+    def min(x : Option[Int], y : Option[Int]) : Option[Int] = {
+      x match {
+        case Some(valX) =>
+          y match {
+            case Some(valY) => if (valX < valY) Some(valX) else Some(valY)
+            case None       => Some(valX)
+          }
+        case None => y
+      }
+    }
+
+    timeout  = min(timeout,  parent.timeout)
+    branches = min(branches, parent.branches)
+    rules    = min(rules,    parent.rules)
+
+    def this(t : Option[Int], b : Option[Int], r : Option[Int]) = this(null, t, b, r)
+
+    def checkLocal(s : Stats) : Boolean = 
+      (timeout match {
+        case Some(tVal) => s.executionTime > tVal
+        case None       => false
+      }) ||
+      (branches match {
+        case Some(bVal) => s.branches > bVal
+        case None       => false
+      }) ||
+      (rules match {
+        case Some(rVal) => s.rules > rVal
+        case None       => false
+      })
+
+    def update(s : Stats) : Boolean =
+      this.synchronized {
+        timeout match {
+          case Some(tVal) => timeout = Some(tVal - s.executionTime)
+          case None       =>
+        }
+        branches match {
+          case Some(bVal) => timeout = Some(bVal - s.branches)
+          case None       =>
+        }
+        rules match {
+          case Some(rVal) => timeout = Some(rVal - s.rules)
+          case None       =>
+        }
+        return checkLocal(nilStats)
+      }
+
+    def propagate(s : Stats) : Boolean = {
+        var p = this
+        var r = false
+        while (p != null) r = p.update(s) || r
+        s.clear()
+        return r
+    }
+
+    def checkStats(s : Stats)(res : Status) : Status =
+      if (s.executionTime > timeThres || s.branches > branchThres || s.rules > ruleThres) {
+        // propagate updates through all limit objects
+        if (propagate(s)) {
+          return LimitExceeded
+        } else {
+          return res
+        }
+      } else {
+        // check local breach only
+        if (checkLocal(s)) {
+          propagate(s)
+          return LimitExceeded
+        } else {
+          return res
+        }
+      }
+  }
+
+  // fix me if you want to start with configurable default limit
+  val defaultLimits : Limits = new Limits(None, None, None)
+
+  abstract class Tactic(val name : String) extends Stats { 
+
+    var scheduler : Scheduler = KeYmaeraScheduler
+
+    var limit  : Limits = defaultLimits
+
+    var continuation : (Tactic, Status, Seq[ProofNode]) => Unit = stop
+
+    override def toString: String = name
+
+    def applicable(node : ProofNode) : Boolean
+    def apply  (tool : Tool, node : ProofNode)
+
+    def inheritStats(s : Stats) {
+      tacs          = s.tacs
+      executionTime = s.executionTime
+      branches      = s.branches
+      rules         = s.rules
+    }
+
+    val priority : Int = 10
+
+    def dispatch(t : Tactic, l : Limits, node : ProofNode) {
+      inheritStats(t)
+      limit = l
+      scheduler.dispatch(new TacticWrapper(this, node))
+    }
+
+    def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }
+
+    def checkStats(res : Status) : Status = limit.checkStats(this)(res)
+
+    /**
+     * Convenience wrappers
+     */
+  /*
+    // repeat tactic until a fixed point is reached
+    def * : Tactic = repeatT(this)
+    // apply the first tactic applicable
+    def |(o: () => Tactic): Tactic = eitherT(this, o)
+    // t1 ~ t2 = (t1 & t2) | t2
+    def ~(o: () => Tactic): Tactic = composeBothT(this, o)
+    // execute this tactic and the given tactics on the resulting branches
+    def &(o: (() => Tactic)*): Tactic = composeT(this, o: _*)
+    // create an or-branch for each given tactic
+    def <(tcts: (() => Tactic)*) = branchT((() => this) :: tcts.toList: _*)
+  */
+  }
+
+  /**
+   * do nothing
+   */
+  def NilT = new Tactic("Nil") {
+    def applicable(node : ProofNode) = true
+    def apply(tool : Tool, node : ProofNode) = {
+      continuation(this, Success, Seq(node))
+    }
+  }
+
+  def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    tFrom.limit.propagate(tFrom)
+    result.foreach(n => n.checkParentClosed())
+  }
+
+  def onSuccess(tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (status == Success) result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  }
+
+  def unconditionally(tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  }
+
+  def onChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (Seq(n) != result) result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  }
+
+  def onNoChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (Seq(n) == result) tNext.dispatch(tFrom, n)
+  }
+
+
+  def SeqT(left : Tactic, right : Tactic) =
+    new Tactic("Seq(" + left.name + "," + right.name + ")") {
+      def applicable(node : ProofNode) = left.applicable(node)
+
+      def apply(tool : Tool, node : ProofNode) = {
+        right.continuation = continuation
+        left.continuation  = onSuccess(right)
+        left.dispatch(this, node)
+      }
+    }
+
+  def EitherT(left : Tactic, right : Tactic) =
+    new Tactic("Seq(" + left.name + "," + right.name + ")") {
+      def applicable(node : ProofNode) = left.applicable(node)
+
+      def apply(tool : Tool, node : ProofNode) = {
+        right.continuation = continuation
+        left.continuation = onNoChange(node, right)
+        left.dispatch(this, node)
+      }
+    }
+
+  def WeakSeqT(left : Tactic, right : Tactic) =
+    new Tactic("WeakSeq(" + left.name + "," + right.name + ")") {
+      def applicable(node : ProofNode) = left.applicable(node)
+
+      def apply(tool : Tool, node : ProofNode) = {
+        right.continuation = continuation
+        left.continuation  = unconditionally(right)
+        left.dispatch(this, node)
+      }
+    }
+
+  def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
+    new Tactic("Conditional " + thenT + " else " + elseT) {
+      def applicable(node : ProofNode) = true
+
+      def apply(tool : Tool, node : ProofNode) = {
+        if (cond(node)) {
+           thenT.continuation = continuation
+           thenT.dispatch(this, node)
+        } else {
+           elseT.continuation = continuation
+           elseT.dispatch(this, node)
+        }
+      }
+    }
+
+  def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
+      ifElseT(cond, thenT, NilT)
+
+  // def branchT(tcts: (() => Tactic)*): Tactic = new Tactic("branch")
+  // def branchRepeatT(t: Tactic): Tactic = branchT(t, () => branchRepeatT(t))
+  // def repeatT(t: Tactic): Tactic = 
+
+
+  /********************************************************************************
+   * Rule application
+   ********************************************************************************
+   */
+
+  /**
+   * Apply rule
+   */
+  abstract class ApplyRule(val rule : Rule) extends Tactic("Apply rule " + rule) {
+
+    def apply(tool : Tool, node : ProofNode) {
+      if (applicable(node)) {
+        incRule()
+        val res = measure(node(rule))
+        continuation(this, checkStats(Success), res)
+      } else {
+        continuation(this, Failed,  Seq(node))
+      }
+    }
+
+  }
+
+  /**
+   * Apply position rule
+   */
+  abstract class ApplyPositionRule(val rule : PositionRule, val pos : Position)
+                                            extends Tactic("Apply rule " + rule) {
+
+    def apply(tool : Tool, node : ProofNode) {
+      if (applicable(node)) {
+        incRule()
+        val res = measure(node(rule, pos))
+        continuation(this, checkStats(Success), res)
+      } else {
+        continuation(this, Failed,  Seq(node))
+      }
+    }
+
+  }
+
+  /**
+   * Apply position rule
+   */
+  abstract class ApplyAssumptionRule(val rule : AssumptionRule,
+                                     val aPos : Position, val pos : Position)
+                                            extends Tactic("Apply rule " + rule) {
+
+    def apply(tool : Tool, node : ProofNode) {
+      if (applicable(node)) {
+        incRule()
+        val res = measure(node(rule, aPos, pos))
+        continuation(this, checkStats(Success), res)
+      } else {
+        continuation(this, Failed,  Seq(node))
+      }
+    }
+
+  }
+
+}

@@ -8,6 +8,15 @@
  * threads equalling the amount of parallelism that the tool provides,
  * for example, the number of licenses or the number of available
  * cores.
+ *
+ */
+
+
+/**
+ * Notes
+ * =====
+ *
+ * Adding additional listeners to a dispatched tactic is racy avoid at all costs.
  */
 
 
@@ -25,14 +34,18 @@
  *  the load they execute go up. It may be possible to pin external
  *  processes to CPUs.
  *
- * 2) 
+ * 2) foreach discouraged
+ * ----------------------
+ *  Although Java supports preemption points, foreach and other
+ *  iterators do not. We therefore have to rely on manual iterators.
  */
 
 package edu.cmu.cs.ls.keymaera.tactics
 
-//import edu.cmu.cs.ls.keymaera.tactics.TacticsWrapper
-//import edu.cmu.cs.ls.keymaera.tactics.TacticsListener
 import edu.cmu.cs.ls.keymaera.core.Tool
+import edu.cmu.cs.ls.keymaera.core.Config._
+import edu.cmu.cs.ls.keymaera.core.ProofNode
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import scala.Array
 import java.lang.Runnable
@@ -43,36 +56,59 @@ import scala.annotation.elidable._
 import java.lang.InterruptedException
 import java.util.NoSuchElementException
 
-class StopInterruptedException extends InterruptedException {}
-
 /**
  * The thread that traverses the prioList to find and execute tactics
  */
-class TacticsExecutor[T <: Tool](val scheduler : Scheduler[T], val id : Int, val tool : Tool) extends java.lang.Runnable {
+class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[TacticWrapper] {
+
+  def compare(that : TacticWrapper) = this.tactic.priority - that.tactic.priority
+
+  def execute(tool : Tool) = {
+    tactic.incTacs()
+    if (tactic.tacs > tacThres) {
+      tactic.tacs = 0
+      node.checkParentClosed
+    }
+    if (!node.isLocalClosed) {
+      tactic(tool, node)
+    }
+  }
+
+}
+
+class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) extends java.lang.Runnable {
 
   override def run() {
     println ("I think I am " + id + " therefor I am: " + this)
 
-    var runnable : Boolean = true
+    @volatile var runnable : Boolean = true
+    @volatile var stop     : Boolean = false
 
     while (runnable) {
       /* pick tactic; execute apply; wait for interrupts , ... */
       try {
         try {
-          scheduler.prioList.dequeue().apply(tool)
+          scheduler.prioList.dequeue().execute(tool)
+          if (Thread.interrupted) {
+            throw new InterruptedException()
+          }
         } catch {
           case ex : NoSuchElementException => {
-/*            println("list is empty")*/
-            /* poll */
+            /* poll vs. wait */
+            scheduler.synchronized {
+              scheduler.blocked = scheduler.blocked + 1
+              scheduler.wait()
+            }
           }
         }
       } catch {
-        case ex : StopInterruptedException => {
-          tool.shutdown()
-          runnable = false
-        }
         case ex : InterruptedException => {
-          tool.check_and_recover()
+          if (stop) {
+            tool.shutdown()
+            runnable = false
+          } else {
+            tool.check_and_recover()
+          }
         }
       }
     }
@@ -83,21 +119,29 @@ class TacticsExecutor[T <: Tool](val scheduler : Scheduler[T], val id : Int, val
 /**
  * Main scheduler class; contains prio list and starts scheduler threads upon creation
  */
-class Scheduler[T <: Tool](tools : Array[T]) {
+class Scheduler(tools : Seq[Tool]) {
 
-  val maxThreads = tools.size
-  var thread : Array[java.lang.Thread] = new Array(maxThreads)
-  var prioList : SynchronizedPriorityQueue[TacticsWrapper] = new SynchronizedPriorityQueue()
+  val maxThreads = tools.length
+  var thread   : Array[java.lang.Thread] = new Array(maxThreads)
+  var prioList : SynchronizedPriorityQueue[TacticWrapper] = new SynchronizedPriorityQueue()
+  @volatile var blocked  : Int = 0/* threads blocked on the scheduler */
 
-
-  for (x <- 0 to maxThreads - 1) {
-    thread.update(x, new java.lang.Thread(new TacticsExecutor(this, x, tools(x))))
-  }
+  for (x <- 0 to maxThreads - 1)
+    thread.update(x, new java.lang.Thread(new TacticExecutor(this, tools(x), x)))
 
   thread.foreach(_.start())
 
-  def dispatch(t : TacticsWrapper) = prioList += t
-
+  def dispatch(t : TacticWrapper) : this.type = {
+    prioList += t
+    this.synchronized {
+      if (blocked > 0) {
+        blocked = blocked - 1
+        notify() /* release one executor at a time to avoid trambling herd */
+      }
+    }
+    return this
+  }
 }
+
 
 
