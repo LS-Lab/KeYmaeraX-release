@@ -367,8 +367,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       lazy val pattern = BOX_OPEN ~ 
     		  			 programParser ~ 
     		  			 BOX_CLOSE ~ 
-    		  			 tighterParsers(precedence, boxP).reduce(_|_)
-      log(pattern)(BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
+    		  			 asTightAsParsers(precedence, boxP).reduce(_|_)
+      log(pattern)("box: " + BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
         case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => println("here!");BoxModality(p,f)
       }
     }
@@ -553,11 +553,35 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       ndassignP   ::
       evolutionP ::
       testP       ::
-//      pvarP       ::
+      pvarP       ::
       groupP      ::
       Nil
 
-     
+   
+    lazy val pvarP:PackratParser[Program] = {
+      lazy val pattern = {
+        val stringList =  programVariables.map(ProgramConstant.unapply(_) match {
+          case Some(t) => t._1
+          case None => ???
+        })
+        if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
+        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+      }
+      
+      log(pattern)("Program Variable") ^^ {
+        case name => {
+          programVariables.find(ProgramConstant.unapply(_) match {
+            case Some(p) => p._1.equals(name)
+            case None => false
+          }) match {
+            case Some(p) => p
+            case None => 
+              throw new Exception("Predicate was mentioned out of context: " + name)
+          }
+        }
+      } 
+    }
+    
     lazy val sequenceP:SubprogramParser = {
       lazy val pattern = rightAssociativeOptional(precedence,sequenceP,Some(SCOLON))
       log(pattern)("program" + SCOLON + "program") ^^ {
