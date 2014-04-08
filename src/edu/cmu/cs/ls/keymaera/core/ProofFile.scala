@@ -1,5 +1,5 @@
 /*
- * KeYmaera4 proof files
+ * This file contains data structures targeted by the KeYmaera proof parser.
  * @author Nathan Fulton
  */
 
@@ -8,26 +8,51 @@ package edu.cmu.cs.ls.keymaera.core
 import java.io.File
 
 sealed trait Evidence
-case class ProofEvidence(proof : ProofStep)            extends Evidence
+case class ProofEvidence(proof : List[LoadedBranch])   extends Evidence
 case class ToolEvidence(info : Map[String,String])     extends Evidence
 case class ExternalEvidence(file:File)                 extends Evidence
 
-sealed trait LoadedKnowledge
-case class LoadedAxiom(val name : String, val formula : Formula) extends LoadedKnowledge
-case class LoadedLemma(val name : String, formula : Formula, evidence : List[Evidence]) extends LoadedKnowledge
-
-class LoadedLemmaLibrary(lemmas : List[LoadedLemma], axioms : List[LoadedLemma]) {
-  def fromName(n : String) = {
-    //Prefer axioms to lemmas.
-    val someAxiom = axioms.find(ax => ax.name.equals(n))
-    val someLemma = lemmas.find(le => le.name.equals(n))
-    someAxiom match {
-      case Some(ax) => ax
-      case None     => someLemma match {
-        case Some(le) => le
-        case None     => ???
-      }
-    } 
+sealed trait LoadedKnowledge {
+  /**
+   * LoadedKnowledge List -> String -> LoadedKnowledge List
+   * @returns All evidence associated with the name.
+   */
+  def fromName(knowledge : List[LoadedKnowledge])(n:String) = {
+    knowledge.filter(_ match {
+      case LoadedAxiom(name, formula)           => n.equals(name)
+      case LoadedLemma(name, formula, evidence) => n.equals(name)
+    })
   }
 }
- 
+case class LoadedAxiom(val name : String, 
+    val formula : Formula) extends LoadedKnowledge
+
+case class LoadedLemma(val name : String, 
+    formula : Formula, 
+    evidence : List[Evidence]) extends LoadedKnowledge
+
+class LoadedBranch(val name : String, val rules : List[LoadedRule]) {
+  def getProof : ProofNode = ??? //TODO
+}
+
+class LoadedRule(val name : String, info : List[LoadedRuleInfo]) 
+{
+  def getProof : ProofNode = ???
+}
+
+sealed trait LoadedRuleInfo {
+  def fromName(name:String, value:String) = name match {
+    case "formula" => TargetedFormula(Integer.parseInt(value))
+    case "tool" => ToolUsed(value)
+    case "nodenum" => NodeNum(Integer.parseInt(value))
+    case "TargetedTerms" => {
+      val values = value.split(""",""").map(Integer.parseInt(_))
+      TargetedTerms(List() ++ values)
+    }
+  }
+}
+case class TargetedFormula(n : Int) extends LoadedRuleInfo
+case class ToolUsed(name : String) extends LoadedRuleInfo
+case class NodeNum(n : Int) extends LoadedRuleInfo
+case class TargetedTerms(ns : List[Int]) extends LoadedRuleInfo
+case class EmptyRule() extends LoadedRuleInfo

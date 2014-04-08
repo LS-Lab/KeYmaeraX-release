@@ -10,6 +10,10 @@ import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.util.parsing.input.Reader
 import scala.util.parsing.input.CharSequenceReader
+import edu.cmu.cs.ls.keymaera.core.LoadedRuleInfo
+import edu.cmu.cs.ls.keymaera.core.LoadedRule
+import edu.cmu.cs.ls.keymaera.core.Term
+import java.io.File
 
 
 /**
@@ -90,6 +94,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   protected val ident               = """[a-zA-Z][a-zA-Z0-9\_]*""".r
   
   protected val everything = """[\w\W\s\S\d\D\n\r]""".r
+  
+  protected val notDblQuote = """[^\"]*""".r
   
   val lexical = new StdLexical
   //TODO should we add the rest of the \\'s to the delimiters list?
@@ -799,7 +805,9 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   // Misc helper methods
   //////////////////////////////////////////////////////////////////////////////
-  
+  /**
+   * gets a Function object from the ``functions" list with name ``name"
+   */
   def functionFromName(name:String, functions:List[Function]) = {
     functions.find(Function.unapply(_) match {
       case Some(f) => f._1.equals(name)
@@ -811,7 +819,11 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   }
 
   //////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   // KeYmaera Proof files
+  // 	ProofFileParser -- Top-level parser for an axiom/lemma/proof file.
+  // 	ProofParser 	-- parser for a LISPy proof.
+  //////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////////////////////////////////////////////////
   object ProofFileParser {
     /**
@@ -907,7 +919,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
           formulas : List[PredicateConstant]) : ALPType  = 
     {
       //Names of lemmas and axioms may contain pretty much everything except "
-      val alName = """[^\"]*""".r
+      val alName = notDblQuote
       
       //Create the Formula and Evidence parsers.
       val formulaParser = new FormulaParser(List[Variable](),
@@ -916,9 +928,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
           programs)
       lazy val formulaP = formulaParser.parser
       
-      lazy val evidenceP : PackratParser[Evidence] = """.""".r ^^ {
-        case _ => new ToolEvidence(Map[String,String]())
-      } //TODO
+      lazy val evidenceP : PackratParser[Evidence] = EvidenceParser.evidenceParser
       
       lazy val axiomParser : ALPType = {
         lazy val pattern = ("Axiom" ~> "\"" ~> alName) ~ 
@@ -930,13 +940,13 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       } 
       
       /**
-       * Each Lemma block may have only one formula; we return a List of knowledge
-       * so that the axiom and lemma parsers have the same type; for lemmas, the
-       * list is always length 1.
+       * Each Lemma block may have only one formula
+       * The result type is a Parser[List[Formula]] so that lemma and axiom parse
+       * results are easy to combine.
        */
       lazy val lemmaParser : ALPType = {
         val pattern = ("Lemma" ~> "\"" ~> alName) ~ 
-                      (("\"" ~ ":") ~> formulaP) ~ 
+                      (("\"" ~ ":") ~> formulaP) ~ //only allow a single formula.
                       evidenceP.* 
 
         log(pattern)("Lemma Parser") ^^ {
@@ -950,6 +960,91 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
             List() 
           else 
             kList.reduce( (left,right) => left ++ right)
+      }
+    }
+  }
+  
+  object EvidenceParser {
+    lazy val evidenceParser = proofParser | 
+                              toolInfoParser | 
+                              externalInfoParser
+    
+    lazy val proofParser = {
+      lazy val pattern = "Proof." ~> ProofLanguageParser.proofParser <~ "End."
+      log(pattern)("Proof evidence") ^^ {
+        case proof => new ProofEvidence(proof)
+      }
+    }
+    
+    lazy val toolInfoParser = {
+      //Parses a single KVP
+      lazy val kvpParser =  {
+        lazy val pattern = ident ~ ("\"" ~> notDblQuote <~ "\"")
+        log(pattern)("Parsing tool info KVP") ^^ {
+          case name ~ value => (name, value)
+        }
+      }
+      
+      lazy val pattern = "Tool." ~> kvpParser.* <~ "End." 
+      
+      log(pattern)("KVPs containing tool info") ^^ {
+        case kvps => {
+          val toolInfo =
+            kvps.foldLeft(Map[String,String]())( (h,kvp) => h + kvp)
+          new ToolEvidence(toolInfo )
+        }
+      }
+    }
+    
+    lazy val externalInfoParser = {
+      lazy val pattern = "External." ~> """.*""".r <~ "." <~ "End."
+      log(pattern)("External Proof") ^^ {
+        case file => new ExternalEvidence(new File(file))
+      }
+    }
+  }
+  
+  /**
+   * Parser for LISPy serialized proofs
+   */
+  object ProofLanguageParser {
+    /**
+     * Type of parsers for proof steps.
+     */
+    type StepParser = PackratParser[ProofStep]
+    
+    lazy val parserList = 
+      branchP ::
+      ruleP ::
+      ruleInfoP ::
+      Nil
+      
+    lazy val proofParser = log(branchP.*)("Top-level proof tree parser -- searching for a sequence of branches") ^^ {
+      case branches => branches
+    }
+    
+    //branch ::= (branch "name" <expr>?)
+    lazy val branchP = {
+      lazy val pattern = ("(" ~> "branch" ~> "\"" ~> ident <~ "\"") ~ 
+                    ruleP.*  <~ ")"
+      log(pattern)("Proof branch parser") ^^ {
+        case name ~ rules => new LoadedBranch(name, rules)
+      }
+    }
+    
+    lazy val ruleP = {
+      lazy val pattern = ("(" ~> "rule" ~> "\"" ~> ident <~ "\"") ~
+    		  		ruleInfoP.*
+      log(pattern)("Proof rule parser") ^^ {
+        case name ~ ruleInfo => new LoadedRule(name, ruleInfo)
+      }
+    }
+    
+    lazy val ruleInfoP = {
+      lazy val pattern = "(" ~> ident ~
+                         ("\"" ~> notDblQuote <~ "\"") <~ ")"
+      log(pattern)("Rule Information parser") ^^ {
+        case name ~ info => EmptyRule().fromName(name, info)
       }
     }
   }
