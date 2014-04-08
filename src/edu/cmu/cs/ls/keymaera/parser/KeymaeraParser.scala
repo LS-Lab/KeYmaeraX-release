@@ -21,7 +21,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   // Public-facing interface.
   //////////////////////////////////////////////////////////////////////////////
 
-  def parse(s:String):Expr = {
+  def runParser(s:String):Expr = {
     val parser = new KeYmaeraParser()
     
     //Parse file.
@@ -318,8 +318,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     val precedence : List[SubformulaParser] =
       implP  ::
-      boxP   ::
-      diamondP ::
+      backwardImplP :: //makes writing axioms less painful.
       orP ::
       andP ::
       equivP ::
@@ -330,6 +329,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
       notP ::
       formulaDerivativeP ::
+      boxP   ::
+      diamondP ::
       predicateP ::
       trueP ::
       falseP ::
@@ -369,7 +370,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       lazy val pattern = BOX_OPEN ~ 
     		  			 programParser ~ 
     		  			 BOX_CLOSE ~ 
-    		  			 asTightAsParsers(precedence, boxP).reduce(_|_)
+    		  			 parser
       log(pattern)("box: " + BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
         case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => println("here!");BoxModality(p,f)
       }
@@ -379,7 +380,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       lazy val pattern = DIA_OPEN ~ 
                          programParser ~ 
                          DIA_CLOSE ~ 
-                         asTightAsParsers(precedence, diamondP).reduce(_|_)
+                         parser
       log(pattern)(DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }
@@ -458,6 +459,13 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       }
     }
     
+    lazy val backwardImplP:SubformulaParser = {
+      lazy val pattern = rightAssociative(precedence, backwardImplP, Some(LARROW))
+      log(pattern)(ARROW) ^^ {
+        case left ~ _ ~ right => Imply(right,left)
+      }
+    }
+    
     lazy val andP : SubformulaParser = {
       lazy val pattern = leftAssociative(precedence, andP, Some(AND))
       log(pattern)(AND + " parser") ^^ {
@@ -468,7 +476,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     lazy val orP : SubformulaParser = {
       lazy val pattern = leftAssociative(precedence, orP, Some(OR))
       log(pattern)(OR + " parser") ^^ {
-        case left ~ _ ~ right => Or(left,right)
+        case left ~ OR ~ right => Or(left,right)
       }
     }
     //Binary Relations

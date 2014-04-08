@@ -27,6 +27,7 @@ trait KeYmaeraSymbols {
   val AND:String
   val OR:String
   val ARROW:String
+  val LARROW:String
 
   //** Temporal Modealities
   val BOX:String
@@ -103,6 +104,7 @@ object ParseSymbols extends KeYmaeraSymbols {
   val AND       = "&" //∧
   val OR        = "|" //∨
   val ARROW     = "->" //⊃
+  val LARROW    = "<-"
 
   //** Temporal Modealities
   val BOX    = "[]" //◻

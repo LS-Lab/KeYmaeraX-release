@@ -103,7 +103,7 @@ object TermTests {
 
   def test5(input: String, output: String) {
     val parse = new KeYmaeraParser()
-    val i2: Formula = parse.parse(readFile(input)).asInstanceOf[Formula]
+    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val form = printForm(i2)
     writeToFile(new File(output), form)
