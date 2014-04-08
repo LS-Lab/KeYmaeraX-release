@@ -5,11 +5,11 @@ import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.syntactical._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.Add
-
 import scala.util.matching.Regex
-
 import scala.annotation.elidable
 import scala.annotation.elidable._
+import scala.util.parsing.input.Reader
+import scala.util.parsing.input.CharSequenceReader
 
 
 /**
@@ -88,6 +88,8 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
    * ``ident" should match function, variable and sort names.
    */
   protected val ident               = """[a-zA-Z][a-zA-Z0-9\_]*""".r
+  
+  protected val everything = """[\w\W\s\S\d\D\n\r]""".r
   
   val lexical = new StdLexical
   //TODO should we add the rest of the \\'s to the delimiters list?
@@ -374,7 +376,10 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     
     lazy val diamondP : SubformulaParser = {
-      lazy val pattern = DIA_OPEN ~ programParser ~ DIA_CLOSE ~ tighterParsers(precedence, diamondP).reduce(_|_)
+      lazy val pattern = DIA_OPEN ~ 
+                         programParser ~ 
+                         DIA_CLOSE ~ 
+                         asTightAsParsers(precedence, diamondP).reduce(_|_)
       log(pattern)(DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }
@@ -796,7 +801,150 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       case None           => ??? //create a new function?
     }
   }
+
+  //////////////////////////////////////////////////////////////////////////////
+  // KeYmaera Proof files
+  //////////////////////////////////////////////////////////////////////////////
+  object ProofFileParser {
+    /**
+     * Type of the Variable Parser
+     */
+    type VType = Either[ProgramConstant, PredicateConstant]
+    /**
+     * Type of the Axiom and Lemma parsers
+     */
+    type ALPType = PackratParser[List[LoadedKnowledge]]
+    
+    /**
+     * The main parser
+     */
+    def runParser(in:String) : List[LoadedKnowledge] = {
+      //The parse happens in two phases. First, we parse the program and formula
+      //variable definitions. Then, we parse the axioms and lemmas.
+      
+      val inReader = new PackratReader(new CharSequenceReader(in))
+      val (programs, formulas, nextIn) = parse(firstPassParser, inReader) match {
+        case Success(result, next) => (result._1, result._2, next)
+        case Failure(msg, next)    => 
+          throw new Exception("Failed to parse variables section:"  + msg)
+        case Error(msg,next)       =>
+          throw new Exception("Error while parsing variables section:" + msg)
+      }
+      
+      val alParser = makeAxiomLemmaParser(programs, formulas)
+      val knowledge = parseAll(alParser, nextIn) match {
+        case Success(result, next) => result
+        case Failure(msg, next)    => 
+          throw new Exception("Failed to parse Leamms & Axioms: "  + msg)
+        case Error(msg,next)       =>
+          throw new Exception("Error while parsing Leamms & Axioms:" + msg)
+      }
+      knowledge
+    }
   
+    /**
+     * This is the parser for the first pass
+     */
+    lazy val firstPassParser 
+    : PackratParser[(List[ProgramConstant], List[PredicateConstant])] = 
+    {
+      lazy val pattern = variablesP
+      log(pattern)("Parsing variable declarations in proof file.") ^^ {
+        case vars => {
+          val (programsE, formulasE) = vars.partition(v => v match {
+            case Left(_)  => true
+            case Right(_) => false
+          })
+          val programs = programsE.map(_ match {
+            case Left(l)  => l
+            case Right(r) => ???
+          })
+          val formulas = formulasE.map(_ match {
+            case Left(_)  => ???
+            case Right(r) => r
+          })
+          (programs, formulas)
+        }
+      }
+    }
+
+    /**
+     * Maps a string representation of a type and a name to an Expr
+     */
+    private def makeVariable(ty : String, name : String) : VType = ty match {
+      case "P" => Left(new ProgramConstant(name))
+      case "F" => Right(new PredicateConstant(name))
+      case _   => ???
+    }
+
+    /**
+     * Parses the Variables section of the file
+     */
+    lazy val variablesP = {
+      lazy val variablesP = ident ~ ident ^^ {
+        case ty ~ name => makeVariable(ty, name)
+      }
+      lazy val pattern = 
+        """Variables.""".r ~ ((repsep(variablesP, """\.""".r) <~ ".") <~ "End.")
+      log(pattern)("Variable declarations") ^^ {
+        case _ ~ variables => variables
+      }
+    }
+
+    /**
+     * Parses the lemmas/axioms section of the file
+     */
+    def makeAxiomLemmaParser(
+          programs : List[ProgramConstant], 
+          formulas : List[PredicateConstant]) : ALPType  = 
+    {
+      //Names of lemmas and axioms may contain pretty much everything except "
+      val alName = """[^\"]*""".r
+      
+      //Create the Formula and Evidence parsers.
+      val formulaParser = new FormulaParser(List[Variable](),
+          List[Function](),
+          formulas,
+          programs)
+      lazy val formulaP = formulaParser.parser
+      
+      lazy val evidenceP : PackratParser[Evidence] = """.""".r ^^ {
+        case _ => new ToolEvidence(Map[String,String]())
+      } //TODO
+      
+      lazy val axiomParser : ALPType = {
+        lazy val pattern = ("Axiom" ~> "\"" ~> alName) ~ 
+                           (("\"" ~ ".") ~> repsep(formulaP, ".") <~ ".") <~ "End."
+
+        log(pattern)("Axiom Parser") ^^ {
+          case name ~ formulas => formulas.map(f => new LoadedAxiom(name, f))
+        }
+      } 
+      
+      /**
+       * Each Lemma block may have only one formula; we return a List of knowledge
+       * so that the axiom and lemma parsers have the same type; for lemmas, the
+       * list is always length 1.
+       */
+      lazy val lemmaParser : ALPType = {
+        val pattern = ("Lemma" ~> "\"" ~> alName) ~ 
+                      (("\"" ~ ":") ~> formulaP) ~ 
+                      evidenceP.* 
+
+        log(pattern)("Lemma Parser") ^^ {
+          case name ~ formula ~ evidence => List(new LoadedLemma(name, formula, evidence))
+        }
+      }
+        
+      (axiomParser | lemmaParser).* ^^ { 
+        case kList => 
+          if(kList.isEmpty) 
+            List() 
+          else 
+            kList.reduce( (left,right) => left ++ right)
+      }
+    }
+  }
 }
 
 // vim: set ts=4 sw=4 et:
