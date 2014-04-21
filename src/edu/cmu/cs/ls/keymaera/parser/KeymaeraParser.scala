@@ -851,7 +851,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
           throw new Exception("Error while parsing variables section:" + msg)
       }
       
-      val alParser = makeAxiomLemmaParser(programs, formulas)
+      val alParser = makeAxiomLemmaParser(programs, formulas) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
         case Failure(msg, next)    => 
@@ -989,6 +989,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       
       log(pattern)("KVPs containing tool info") ^^ {
         case kvps => {
+          //Translate a list of KVPs into a map (left = key, right = value).
           val toolInfo =
             kvps.foldLeft(Map[String,String]())( (h,kvp) => h + kvp)
           new ToolEvidence(toolInfo )
@@ -1005,7 +1006,20 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   }
   
   /**
-   * Parser for LISPy serialized proofs
+   * Parser for LISPy serialized proofs. The target of the parse are the Loaded*
+   * types in core/ProofFile.scala.
+   * 
+   * The Lispy syntax follows:
+   * (branch "name"
+   *    (rule "name" <ruleInfo>)
+   *    ...(more rules)...
+   * )
+   * ...(more branches)...
+   * 
+   * where <ruleInfo> is like (identifier "value")
+   * The identifier of <ruleInfo> rules determines which subtype of 
+   * ``LoadedRuleInfo" in generated. This mapping is defined in 
+   * LoadedRuleInfo.fromName. 
    */
   object ProofLanguageParser {
     /**

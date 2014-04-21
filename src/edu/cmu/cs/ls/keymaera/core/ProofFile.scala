@@ -1,5 +1,6 @@
 /*
  * This file contains data structures targeted by the KeYmaera proof parser.
+ * This file probably belongs in the parser namespace instead of the core TODO
  * @author Nathan Fulton
  */
 
@@ -37,7 +38,34 @@ class LoadedBranch(val name : String, val rules : List[LoadedRule]) {
 
 class LoadedRule(val name : String, info : List[LoadedRuleInfo]) 
 {
-  def getProof : ProofNode = ???
+  /**
+   * Converts a LoadedRule into a proof (in the sense of the core data structure)
+   */
+  def getProof : ProofNode = {
+    //Proceed according to the name of the rule.
+    if(this.isAxiom) {
+      getAxiom
+    }
+    else {
+      ??? //TODO convert LoadedRuleInfo into a proof.
+    }
+  }
+  
+  val isAxiom = {
+    val matchingAxioms = Axiom.axioms.filter(ax => ax._1.equals(name))
+    !matchingAxioms.isEmpty
+  }
+  
+  def getAxiom : ProofNode = {
+    if(isAxiom) {
+      //formula
+      val ax = Axiom.axioms.filter(ax => ax._1.equals(name)).last._2
+      ??? //TODO
+    }
+    else {
+      throw new Exception("Requested axiom " + name + " but this is not an axiom")
+    }
+  }
 }
 
 sealed trait LoadedRuleInfo {
