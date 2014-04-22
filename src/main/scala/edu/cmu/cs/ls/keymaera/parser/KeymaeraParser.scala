@@ -354,15 +354,15 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubformulaParser] =
+      equivP ::
       forallP ::
       existsP ::
-      equivP ::
       implP  ::
       backwardImplP :: //makes writing axioms less painful.
-      boxP   ::
-      diamondP ::
       orP ::
       andP ::
+      boxP ::
+      diamondP ::
       equalsP ::
       leP    ::
       geP    ::
@@ -429,7 +429,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       lazy val pattern = BOX_OPEN ~ 
     		  			 programParser ~ 
     		  			 BOX_CLOSE ~ 
-    		  			 parser
+    		  			 asTightAsParsers(precedence, boxP).reduce(_|_)
       log(pattern)("box: " + BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
         case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => BoxModality(p,f)
       }
@@ -439,7 +439,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       lazy val pattern = DIA_OPEN ~ 
                          programParser ~ 
                          DIA_CLOSE ~ 
-                         parser
+                         asTightAsParsers(precedence, diamondP).reduce(_|_)
       log(pattern)("Diamond: " + DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }
@@ -490,9 +490,9 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     lazy val equivP:SubformulaParser = {
       lazy val pattern = 
-        (tighterThanComparison) ~ 
+        asTightAsParsers(precedence, equivP).reduce(_|_) ~ 
         EQUIV ~
-        (tighterThanComparison)
+        tighterParsers(precedence, equivP).reduce(_|_)
         
       log(pattern)(EQUIV) ^^ {
         case left ~ _ ~ right => Equiv(left,right)
