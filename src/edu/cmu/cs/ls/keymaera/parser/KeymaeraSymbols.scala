@@ -72,12 +72,26 @@ trait KeYmaeraSymbols {
   val PAIR_CLOSE:String
   val EXISTS:String
   val FORALL:String
+  
+  val FUNCTIONS_SECT:String
+  val PROBLEM_SECT:String
+  val EXTERNAL_FUNCTION : String
+  val PVARS_SECT : String
 }
+
+
 
 /**
  * Standard symbol table for the Parser
  */
 object ParseSymbols extends KeYmaeraSymbols {
+  
+  /** Section headers */
+  val FUNCTIONS_SECT = "Functions" //RigidVariables
+  val PROBLEM_SECT = "Problem" //Assignables
+  val EXTERNAL_FUNCTION = "external"
+  val PVARS_SECT = "ProgramVariables" //ProgramVariables
+    
   /** Constants */
   //**Terms
   val LEQ = "<=" //≤
@@ -111,10 +125,10 @@ object ParseSymbols extends KeYmaeraSymbols {
   val DIA    = "<>" //⋄
   
   //** Dynamic Modalities
-  val BOX_OPEN  = "\\["
-  val BOX_CLOSE  = "\\]"
-  val DIA_OPEN  = "\\<" //〈
-  val DIA_CLOSE  = "\\>" //〉
+  val BOX_OPEN  = "["
+  val BOX_CLOSE  = "]"
+  val DIA_OPEN  = "<" //〈
+  val DIA_CLOSE  = ">" //〉
   
   //** Programs
   val ASSIGN = ":="
@@ -135,7 +149,7 @@ object ParseSymbols extends KeYmaeraSymbols {
   //** Provability relations
   val TUNSTILE  = "⊢"
   val DTURNSTILE= "⊨"
-  val EQUIV        = "≡"
+  val EQUIV        = "<->" //"≡"
   val PROGRAM_META = "P"
   val FORMULA_META = "F"
 

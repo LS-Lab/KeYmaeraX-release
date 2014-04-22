@@ -15,10 +15,25 @@ object KeYmaeraPrettyPrinter {
     
   private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
     //arith
-  	case Add(s,l,r) => recInfix(l,r,PLUS)
-    case Multiply(s,l,r) => recInfix(l,r,MULTIPLY)
-    case Divide(s,l,r) => recInfix(l,r,DIVIDE)
-    case Subtract(s,l,r) => recInfix(l,r,MINUS)
+  	case Add(s,l,r) => recInfix(l,r,expressionToPrint,PLUS)
+    case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,MULTIPLY)
+    case Divide(s,l,r) => recInfix(l,r,expressionToPrint,DIVIDE)
+    case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,MINUS)
+    
+    //quantifiers
+    case Forall(variables, child) => {
+      FORALL + " " +
+      variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
+      "." + 
+      parensIfNeeded(child, expressionToPrint)
+    }
+    
+    case Exists(variables, child) => {
+      EXISTS + " " +
+      variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
+      "." + 
+      parensIfNeeded(child, expressionToPrint)
+    }
     
     //boolean ops
     case And(l,r) => {
@@ -49,37 +64,32 @@ object KeYmaeraPrettyPrinter {
       leftString + OR + rightString
     }
     
-    
     case Not(e) => recPrefix(e,NEGATE)
     
     case Imply(l,r) =>  {
-      val rightString = prettyPrinter(r) 
-      val leftString = l match {
-        case Imply(_,_)	=> paren(prettyPrinter(l))
-        case _				=> prettyPrinter(l)
-      }
-      leftString + ARROW + rightString
+      parensIfNeeded(l,expressionToPrint) + ARROW + 
+      parensIfNeeded(r,expressionToPrint)
     }
     
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
     case Apply(function,child) => 
-      prettyPrinter(function) + "(" + prettyPrinter(child) + ")"
+      parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
     
     case ApplyPredicate(function,child) => 
-      prettyPrinter(function) + "(" + prettyPrinter(child) + ")"
+      parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
 
-    case Assign(l,r) => prettyPrinter(l) + ASSIGN + prettyPrinter(r)
+    case Assign(l,r) => recInfix(l,r,expressionToPrint, ASSIGN)
     
-    case BoxModality(p,f) => BOX_OPEN + prettyPrinter(p) + BOX_CLOSE + prettyPrinter(f)
+    case BoxModality(p,f) => BOX_OPEN + parensIfNeeded(p,expressionToPrint) + BOX_CLOSE + parensIfNeeded(f,expressionToPrint)
     case ContEvolve(child) => OPEN_CBRACKET + prettyPrinter(child) + CLOSE_CBRACKET
     case Derivative(s, child) => recPostfix(child, PRIME)
-    case DiamondModality(p,f) => DIA_OPEN + prettyPrinter(p) + DIA_CLOSE + prettyPrinter(f)
-    case Equiv(l,r) => recInfix(l,r,EQUIV)
+    case DiamondModality(p,f) => DIA_OPEN + parensIfNeeded(p,expressionToPrint) + DIA_CLOSE +parensIfNeeded(f,expressionToPrint)
+    case Equiv(l,r) => recInfix(l,r,expressionToPrint,EQUIV)
     
 
-    case Exp(s,l,r) => recInfix(l,r,EXP)
+    case Exp(s,l,r) => recInfix(l,r,expressionToPrint,EXP)
     
     //BinaryProgram
     case Choice(l,r) => {
@@ -132,7 +142,7 @@ object KeYmaeraPrettyPrinter {
       "if " + "(" + prettyPrinter(test) + ") then " + 
       prettyPrinter(l) + " else " + prettyPrinter(r) + " fi"
       
-    case Pair(s,l,r) => PAIR_OPEN + recInfix(l,r,COMMA) + PAIR_CLOSE
+    case Pair(s,l,r) => PAIR_OPEN + recInfix(l,r,expressionToPrint,COMMA) + PAIR_CLOSE
     
     case False => FALSE
     case True => TRUE
@@ -181,10 +191,10 @@ object KeYmaeraPrettyPrinter {
   private def recPrefix(e:Expr, sign:String):String = 
     sign + groupIfNotAtomic(e,prettyPrinter(e))
     
-  private def recInfix(l:Expr,r:Expr,sign:String):String = 
-    groupIfNotAtomic(l,prettyPrinter(l)) + 
+  private def recInfix(l:Expr,r:Expr,parent:Expr,sign:String):String = 
+    parensIfNeeded(l,parent) + 
     sign + 
-    groupIfNotAtomic(r,prettyPrinter(r)) 
+    parensIfNeeded(r,parent) 
   
   private def recPostfix(e:Expr, sign:String):String = 
     groupIfNotAtomic(e, prettyPrinter(e)) + sign
@@ -192,6 +202,60 @@ object KeYmaeraPrettyPrinter {
   private def groupIfNotAtomic(e:Expr,s:String):String = 
     if(isAtomic(e)) s else "("+s+")"
   
+  private def parensIfNeeded(child:Expr, parent:Expr) = {
+    if(needsParens(parent,child)) {
+      "(" + prettyPrinter(child) + ")"
+    }
+    else {
+      prettyPrinter(child)
+    }
+  }
+  
+  private def needsParens(child : Expr, parent : Expr) = {
+    val precedence =    
+      //Terms.
+      //TODO expP?
+      Multiply.getClass() ::
+      Divide.getClass() ::
+      Add.getClass() ::
+      Subtract.getClass() ::
+      Neg.getClass() ::
+      Apply.getClass() ::
+      ProgramConstant.getClass() :: //real-valued.
+      Number.getClass()   ::
+      //Formulas
+      Forall.getClass() ::
+      Exists.getClass() ::
+      Equiv.getClass() ::
+      Imply.getClass()  ::
+      BoxModality.getClass()   ::
+      DiamondModality.getClass() ::
+      Or.getClass() ::
+      And.getClass() ::
+      Equals.getClass() ::
+      LessThan.getClass()    ::
+      GreaterEquals.getClass()    ::
+      GreaterThan.getClass()    ::
+      LessThan.getClass()    :: 
+      Not.getClass() :: 
+      Derivative.getClass() ::
+      PredicateConstant.getClass() ::
+      True.getClass() ::
+      False.getClass() ::
+      //Programs.
+      Choice.getClass()     ::
+      Sequence.getClass()   ::
+      Loop.getClass() ::
+      Assign.getClass() ::
+      NDetAssign.getClass() ::
+      Test.getClass() ::
+      ProgramConstant.getClass() ::
+      Nil 
+    
+    val childPrecedence = precedence.indexOf(child.getClass())
+    val parentPrecedence = precedence.indexOf(parent.getClass())
+    childPrecedence < parentPrecedence
+  }
   /**
    * Returns true if this expression does NOT need to be placed in parens.
    */

@@ -19,8 +19,14 @@ import java.io.File
 /**
  * The KeYmaera Parser
  * @author Nathan Fulton
+ * TODO:
+ *  * cleaner distinction between:
+ *  	predicates (boolean-valued, rigid)
+ *      rigid variables (currently predicateconstants, but that implies boolean-valued) 
+ *      "assignables" (non-rigid, currently called variables)
+ *      functions (terms that take arguments
  */
-class KeYmaeraParser extends RegexParsers with PackratParsers {    
+class KeYmaeraParser extends RegexParsers with PackratParsers {   
   //////////////////////////////////////////////////////////////////////////////
   // Public-facing interface.
   //////////////////////////////////////////////////////////////////////////////
@@ -67,13 +73,18 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   {
     val parser = new KeYmaeraParser()
     val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programVariables)
-    val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
+    try{
+      val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
+      }
+      require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_)))" )
+    }
+    catch {
+      case e : Exception => require(false, "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + KeYmaeraPrettyPrinter.stringify(parse))
     }
 
-    require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_)))" )
   }
    
   import edu.cmu.cs.ls.keymaera.parser.ParseSymbols._
@@ -99,7 +110,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   
   val lexical = new StdLexical
   //TODO should we add the rest of the \\'s to the delimiters list?
-  lexical.delimiters ++= List("\\functions", "{", "}", "(", ")", "+", "-", "*", "/")
+  lexical.delimiters ++= List("{", "}", "(", ")", "+", "-", "*", "/")
   
   //////////////////////////////////////////////////////////////////////////////
   // Function Definition Section.
@@ -108,15 +119,15 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   /**
    * @returns A list of defined function sorts.
    */
-  lazy val functionsP = {
-    lazy val pattern = "\\functions" ~ "{" ~ rep1sep(funcdefP, ";") ~ ";".? ~ "}" 
+  lazy val functionsP = {	
+    lazy val pattern = ParseSymbols.FUNCTIONS_SECT ~> "." ~> rep1sep(funcdefP, ".") <~ ".".? <~ "End." 
     log(pattern)("Functions section") ^^ {
-      case  "\\functions" ~ "{" ~ definitions ~ extraScolon ~ "}" => definitions
+      case  definitions => definitions
     }
   }
 
   //TODO-nrf throwing away the external annotation. Is this ok?
-  lazy val funcdefP = "\\external".?  ~ ident ~ ident ~ ("(" ~ rep1sep(ident, ",") ~ ")").? ^^ {
+  lazy val funcdefP = ParseSymbols.EXTERNAL_FUNCTION.?  ~ ident ~ ident ~ ("(" ~ rep1sep(ident, ",") ~ ")").? ^^ {
     case external ~ rsort ~ name ~ tail =>
       tail match {
         case Some(_ ~ argsorts ~ _) => Function(name, None, identsToSorts(argsorts), identToSort(rsort))
@@ -132,10 +143,10 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
    * @returns A list of defined program sorts.
    */
   lazy val programVariablesP = {
-    lazy val pattern = "\\programVariables" ~ "{" ~ rep1sep(vardefP, ";") ~ ";".? ~ "}"
+    lazy val pattern = PVARS_SECT ~> "." ~> rep1sep(vardefP, ".") <~ ".".? <~ "End."
     
-    log(pattern)("\\programVariables section.") ^^ {
-      case "\\programVariables" ~ "{" ~ variables ~ extraScolon ~ "}" => variables
+    log(pattern)("ProgramVariables section.") ^^ {
+      case variables => variables
     }
   }
 
@@ -148,9 +159,11 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   // Problem Section.
   //////////////////////////////////////////////////////////////////////////////
   lazy val problemP = {
-    lazy val pattern = "\\problem" ~ "{" ~> """[\w\W\s\S\d\D]+}""".r 
+    lazy val textP = """[\w\W\s\S\d\D]+End.""".r
+  
+    lazy val pattern = PROBLEM_SECT ~> "." ~> textP 
     log(pattern)("\\problem section (extract a string)") ^^ {
-      case programText => programText.substring(0, programText.length()-1) //remove trailig }
+      case programText => programText.replace("End.", "")
     }
   } 
     
@@ -160,6 +173,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         case Some(l) => l.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function])
         case None    => List[Function]()
       }
+      
       val predicateConstants:List[PredicateConstant] = functionSection match {
         case Some(l) => l.filter(_.isInstanceOf[PredicateConstant]).map(_.asInstanceOf[PredicateConstant])
         case None    => List[PredicateConstant]()
@@ -179,7 +193,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   // Terms.
   //////////////////////////////////////////////////////////////////////////////
-  class TermParser(variables:List[Variable], functions:List[Function]) {
+  class TermParser(variables:List[Variable], functions:List[Function], includeIdent:Boolean) {
     type SubtermParser = PackratParser[Term]
     
     //TODO-nrf Some of these parsers assign sorts somewhat arbitrarily, and I'm
@@ -195,12 +209,26 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       negativeP ::
       applyP ::
       termDerivativeP ::
-      variableP ::
+      variableP :: //real-valued.
       numberP   ::
+      identP :: //variableP should match first.
       groupP    ::
       Nil
     
-      
+    //non-variable ident parser
+    lazy val identP : PackratParser[Term] = {
+      if(includeIdent) {
+        lazy val pattern = ident
+        log(pattern)("UNDEFINED ident") ^^ {
+          case id => Variable.apply(id, None, Real) //TODO-nrf sort?; none?
+        }
+      }
+      else {
+        log("""$^""".r)("Never matches") ^^ {
+          case _ => ???
+        }
+      }
+    }
     //variable parser
     lazy val variableP:PackratParser[Term] = {
       lazy val pattern = {
@@ -279,10 +307,10 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     //Function application
     
     lazy val applyP:SubtermParser = {      
-      lazy val pattern = ident ~ "(" ~ rep1sep(tighterParsers(precedence,applyP).reduce(_|_), ",") ~ ")"
+      lazy val pattern = ident ~ ("(" ~> rep1sep(tighterParsers(precedence,applyP).reduce(_|_), ",") <~ ")")
       
       log(pattern)("Function Application") ^^ {
-        case name ~ "(" ~ args ~ ")" => 
+        case name ~ args => 
           Apply(functionFromName(name, functions), 
               args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
       }
@@ -320,31 +348,56 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     lazy val programParser = 
       new ProgramParser(variables,functions,predicates,programVariables).parser
     
+    lazy val termParserObj =
+      new TermParser(variables, functions, true)
+      
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubformulaParser] =
+      forallP ::
+      existsP ::
+      equivP ::
       implP  ::
       backwardImplP :: //makes writing axioms less painful.
+      boxP   ::
+      diamondP ::
       orP ::
       andP ::
-      equivP ::
       equalsP ::
       leP    ::
       geP    ::
       gtP    ::
       ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
-      notP ::
+      notP :: 
       formulaDerivativeP ::
-      boxP   ::
-      diamondP ::
       predicateP ::
       trueP ::
       falseP ::
       groupP ::
       Nil
     
-      
-   lazy val variableP:PackratParser[Term] = {
+    lazy val forallP : PackratParser[Formula] = {      
+      lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ parser
+      log(pattern)("Forall") ^^ {
+        case idents ~ formula => {
+          val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
+          new Forall(boundVariables, formula)
+        }
+      }
+    }
+    
+    lazy val existsP : PackratParser[Formula] = {      
+      lazy val pattern = (EXISTS ~> rep1sep(ident,",") <~ ".") ~ parser
+      log(pattern)("Exists") ^^ {
+        case idents ~ formula => {
+          val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
+          new Exists(boundVariables, formula)
+        }
+      }
+    }
+    
+    
+    lazy val variableP:PackratParser[Term] = {
       lazy val pattern = {
         val stringList =  variables.map(Variable.unapply(_) match {
           case Some(t) => t._1
@@ -378,7 +431,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     		  			 BOX_CLOSE ~ 
     		  			 parser
       log(pattern)("box: " + BOX_OPEN + PROGRAM_META + BOX_CLOSE + FORMULA_META) ^^ {
-        case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => println("here!");BoxModality(p,f)
+        case BOX_OPEN ~ p ~ BOX_CLOSE ~ f => BoxModality(p,f)
       }
     }
     
@@ -387,7 +440,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
                          programParser ~ 
                          DIA_CLOSE ~ 
                          parser
-      log(pattern)(DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
+      log(pattern)("Diamond: " + DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }
     }
@@ -487,7 +540,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     //Binary Relations
 
-    lazy val termParser = new TermParser(variables,functions).parser
+    lazy val termParser = new TermParser(variables,functions,false).parser
     
     lazy val leP:SubformulaParser = {
       lazy val pattern = termParser ~ LEQ ~ termParser
@@ -559,7 +612,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
     lazy val formulaParser = new FormulaParser(variables, functions, predicates,programVariables).parser
-    lazy val termParser = new TermParser(variables,functions).parser
+    lazy val termParser = new TermParser(variables,functions,false).parser
     
     val precedence : List[SubprogramParser] =
       choiceP     ::
@@ -894,7 +947,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     private def makeVariable(ty : String, name : String) : VType = ty match {
       case "P" => Left(new ProgramConstant(name))
       case "F" => Right(new PredicateConstant(name))
-      case _   => ???
+      case _   => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula)")
     }
 
     /**
