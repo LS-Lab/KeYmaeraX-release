@@ -9,8 +9,7 @@ import javax.swing.JOptionPane
 object ProofFileTest {
   def main(args:Array[String]):Unit = {
     val chooser = new FileChooser()
-    chooser.selectedFile_= (new File("/home/nfulton/dev/research/KeYmaera4/examples/lemmas/axioms2.key.alp"))
-//    chooser.showDialog(null, "Parse and print")
+    chooser.showDialog(null, "Parse and print Axiom/Lemma File")
     
     val fileContents = io.Source.fromFile(chooser.selectedFile).mkString
 
