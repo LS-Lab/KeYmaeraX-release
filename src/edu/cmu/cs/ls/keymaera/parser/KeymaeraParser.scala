@@ -120,7 +120,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
    * @returns A list of defined function sorts.
    */
   lazy val functionsP = {	
-    lazy val pattern = ParseSymbols.FUNCTIONS_SECT ~> "." ~> rep1sep(funcdefP, ".") <~ ".".? <~ "End." 
+    lazy val pattern = ParseSymbols.FUNCTIONS_SECT ~> START_SECT ~> rep1sep(funcdefP, ".") <~ ".".? <~ END_SECT 
     log(pattern)("Functions section") ^^ {
       case  definitions => definitions
     }
@@ -143,7 +143,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
    * @returns A list of defined program sorts.
    */
   lazy val programVariablesP = {
-    lazy val pattern = PVARS_SECT ~> "." ~> rep1sep(vardefP, ".") <~ ".".? <~ "End."
+    lazy val pattern = PVARS_SECT ~> START_SECT ~> rep1sep(vardefP, ".") <~ ".".? <~ END_SECT
     
     log(pattern)("ProgramVariables section.") ^^ {
       case variables => variables
@@ -159,11 +159,11 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   // Problem Section.
   //////////////////////////////////////////////////////////////////////////////
   lazy val problemP = {
-    lazy val textP = """[\w\W\s\S\d\D]+End.""".r
+    lazy val textP = ("""[\w\W\s\S\d\D]+""" + END_SECT).r
   
     lazy val pattern = PROBLEM_SECT ~> "." ~> textP 
     log(pattern)("\\problem section (extract a string)") ^^ {
-      case programText => programText.replace("End.", "")
+      case programText => programText.replace(END_SECT, "")
     }
   } 
     
@@ -958,9 +958,9 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         case ty ~ name => makeVariable(ty, name)
       }
       lazy val pattern = 
-        """Variables.""".r ~ ((repsep(variablesP, """\.""".r) <~ ".") <~ "End.")
+        VARIABLES_SECT ~> START_SECT ~> ((repsep(variablesP, """\.""".r) <~ ".".?) <~ END_SECT)
       log(pattern)("Variable declarations") ^^ {
-        case _ ~ variables => variables
+        case  variables => variables
       }
     }
 

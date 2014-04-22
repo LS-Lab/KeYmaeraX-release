@@ -77,6 +77,9 @@ trait KeYmaeraSymbols {
   val PROBLEM_SECT:String
   val EXTERNAL_FUNCTION : String
   val PVARS_SECT : String
+  val START_SECT : String
+  val END_SECT : String
+  val VARIABLES_SECT : String
 }
 
 
@@ -89,9 +92,12 @@ object ParseSymbols extends KeYmaeraSymbols {
   /** Section headers */
   val FUNCTIONS_SECT = "Functions" //RigidVariables
   val PROBLEM_SECT = "Problem" //Assignables
+  val VARIABLES_SECT = "Variables"
   val EXTERNAL_FUNCTION = "external"
   val PVARS_SECT = "ProgramVariables" //ProgramVariables
-    
+  val START_SECT = "."
+  val END_SECT   = "End."
+
   /** Constants */
   //**Terms
   val LEQ = "<=" //≤
