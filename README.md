@@ -6,6 +6,20 @@ This reimplementation should include parallel proof search and a simpler
 language to define strategies. Furthermore, there should be support for user
 defined strategies.
 
+Building
+========
+
+Step 1: Install Scala Build Toll
+
+a - Download sbt-launch.jar from scala-sbt.org and follow the setup
+intructions:
+  http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
+
+b - cd into this directory and run sbt to get a build prompt
+
+c - type run; all classes with a main : Array[String] -> Unit are listed at
+the prompt.
+
 Specification
 =============
 
