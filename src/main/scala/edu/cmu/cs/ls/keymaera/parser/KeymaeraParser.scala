@@ -887,7 +887,10 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     /**
      * Type of the Variable Parser
      */
-    type VType = Either[ProgramConstant, PredicateConstant]
+    sealed trait VType
+      case class VProgram(val variable:ProgramConstant) extends VType
+      case class VFormula(val variable:PredicateConstant) extends VType
+      case class VTerm(val variable:Variable) extends VType
     /**
      * Type of the Axiom and Lemma parsers
      */
@@ -901,15 +904,15 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       //variable definitions. Then, we parse the axioms and lemmas.
       
       val inReader = new PackratReader(new CharSequenceReader(in))
-      val (programs, formulas, nextIn) = parse(firstPassParser, inReader) match {
-        case Success(result, next) => (result._1, result._2, next)
+      val (programs, formulas, terms, nextIn) = parse(firstPassParser, inReader) match {
+        case Success(result, next) => (result._1, result._2, result._3, next)
         case Failure(msg, next)    => 
           throw new Exception("Failed to parse variables section:"  + msg)
         case Error(msg,next)       =>
           throw new Exception("Error while parsing variables section:" + msg)
       }
       
-      val alParser = makeAxiomLemmaParser(programs, formulas) //axiomlemmaParser
+      val alParser = makeAxiomLemmaParser(programs, formulas, terms) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
         case Failure(msg, next)    => 
@@ -924,24 +927,21 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
      * This is the parser for the first pass
      */
     lazy val firstPassParser 
-    : PackratParser[(List[ProgramConstant], List[PredicateConstant])] = 
+    : PackratParser[(List[ProgramConstant], List[PredicateConstant], List[Variable])] = 
     {
       lazy val pattern = variablesP
       log(pattern)("Parsing variable declarations in proof file.") ^^ {
         case vars => {
-          val (programsE, formulasE) = vars.partition(v => v match {
-            case Left(_)  => true
-            case Right(_) => false
-          })
-          val programs = programsE.map(_ match {
-            case Left(l)  => l
-            case Right(r) => ???
-          })
-          val formulas = formulasE.map(_ match {
-            case Left(_)  => ???
-            case Right(r) => r
-          })
-          (programs, formulas)
+          val programs = vars collect {
+            case VProgram(p) => p
+          }
+          val formulas = vars collect {
+            case VFormula(f) => f
+          }
+          val terms = vars collect {
+            case VTerm(t) => t
+          }
+          (programs, formulas, terms)
         }
       }
     }
@@ -950,8 +950,9 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
      * Maps a string representation of a type and a name to an Expr
      */
     private def makeVariable(ty : String, name : String) : VType = ty match {
-      case "P" => Left(new ProgramConstant(name))
-      case "F" => Right(new PredicateConstant(name))
+      case "P" => VProgram(new ProgramConstant(name))
+      case "F" => VFormula(new PredicateConstant(name))
+      case "T" => VTerm(new Variable(name,None,Real))
       case _   => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula)")
     }
 
@@ -974,13 +975,14 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
      */
     def makeAxiomLemmaParser(
           programs : List[ProgramConstant], 
-          formulas : List[PredicateConstant]) : ALPType  = 
+          formulas : List[PredicateConstant],
+          terms : List[Variable]) : ALPType  = 
     {
       //Names of lemmas and axioms may contain pretty much everything except "
       val alName = notDblQuote
       
       //Create the Formula and Evidence parsers.
-      val formulaParser = new FormulaParser(List[Variable](),
+      val formulaParser = new FormulaParser(terms,
           List[Function](),
           formulas,
           programs)
