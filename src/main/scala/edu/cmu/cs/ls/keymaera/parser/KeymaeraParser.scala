@@ -912,13 +912,17 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
           throw new Exception("Error while parsing variables section:" + msg)
       }
       
+      def posStr(msg:String, next : Input) = {
+        "(line: " + next.pos.line + ", column:" + next.pos.column + ")"
+      }
+      
       val alParser = makeAxiomLemmaParser(programs, formulas, terms) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
         case Failure(msg, next)    => 
-          throw new Exception("Failed to parse Leamms & Axioms: "  + msg)
+          throw new Exception("Failed to parse Lemmas & Axioms at " + posStr(msg,next) + ": "  + msg)
         case Error(msg,next)       =>
-          throw new Exception("Error while parsing Leamms & Axioms:" + msg)
+          throw new Exception("Error while parsing Lemmas & Axioms at " + posStr(msg,next) + ":" + msg)
       }
       knowledge
     }
