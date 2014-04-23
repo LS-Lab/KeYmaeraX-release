@@ -362,15 +362,16 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       backwardImplP :: //makes writing axioms less painful.
       orP ::
       andP ::
-      boxP ::
-      diamondP ::
-      forallP ::
-      existsP ::
       equalsP ::
+      notEqualsP ::
       leP    ::
       geP    ::
       gtP    ::
       ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
+      boxP :: //magic alert: don't change the relative order of box,diamond,forall and exists.
+      diamondP ::
+      forallP :: 
+      existsP :: //todo should we keep these with diamond and box?
       notP :: 
       formulaDerivativeP ::
       predicateP ::
@@ -380,7 +381,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       Nil
     
     lazy val forallP : PackratParser[Formula] = {      
-      lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ asTightAsParsers(precedence, forallP).reduce(_|_)
+      lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ asTightAsParsers(precedence, boxP).reduce(_|_)
       log(pattern)("Forall") ^^ {
         case idents ~ formula => {
           val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
@@ -391,7 +392,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     lazy val existsP : PackratParser[Formula] = { 
       lazy val fP = 
-        asTightAsParsers(precedence, forallP).reduce(_|_)
+        asTightAsParsers(precedence, boxP).reduce(_|_)
       lazy val pattern = (EXISTS ~> rep1sep(ident,",") <~ ".") ~ fP
       log(pattern)("Exists") ^^ {
         case idents ~ formula => {
@@ -513,6 +514,17 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
         
       log(pattern)(EQ + " formula parser (on terms)") ^^ {
         case left ~ _ ~ right => Equals(right.sort,left,right)
+      }
+    }
+    
+    lazy val notEqualsP:SubformulaParser = {
+      lazy val pattern = 
+        termParser ~ 
+        NEQ ~
+        termParser 
+        
+      log(pattern)(NEQ + " formula parser (on terms)") ^^ {
+        case left ~ _ ~ right => NotEquals(right.sort,left,right)
       }
     }
     
@@ -872,7 +884,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       case None    => false
     }) match {
       case Some(function) => function
-      case None           => ??? //create a new function?
+      case None           => throw new Exception("The function " + name + " is used but not declared.")
     }
   }
 

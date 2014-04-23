@@ -172,10 +172,10 @@ object KeYmaeraPrettyPrinter {
     case Test(e) => TEST + prettyPrinter(e)
     
     case Loop(p) => recurse(p) + KSTAR
-    
+   
+    case FormulaDerivative(f) => recPostfix(f, PRIME)
     //These we cannot pattern match on...
 //    case edu.cmu.cs.ls.keymaera.core.Quantifier(variables, child)
-//    case FormulaDerivative(f) => recPostfix(f, PRIME)
 //    case edu.cmu.cs.ls.keymaera.core.Finally(f) => BOX + recurse(e)
 //    case edu.cmu.cs.ls.keymaera.core.Globally(f) => DIA + recurse(e)
 //    case Left(domain,child) => ???
@@ -233,6 +233,7 @@ object KeYmaeraPrettyPrinter {
       Forall.getClass() ::
       Exists.getClass() ::
       Equals.getClass() ::
+      NotEquals.getClass() ::
       LessThan.getClass()    ::
       GreaterEquals.getClass()    ::
       GreaterThan.getClass()    ::
@@ -272,6 +273,7 @@ object KeYmaeraPrettyPrinter {
     case Neg(s,e) => isAtomic(e)
     case Test(e) => isAtomic(e)
     case Not(e) => isAtomic(e)
+    case FormulaDerivative(f) => isAtomic(f)
     
       //arith
   	case Add(s,l,r) => false
@@ -329,7 +331,6 @@ object KeYmaeraPrettyPrinter {
     
     //These we cannot pattern match on...
 //    case edu.cmu.cs.ls.keymaera.core.Quantifier(variables, child)
-//    case FormulaDerivative(f) => recPostfix(f, PRIME)
 //    case edu.cmu.cs.ls.keymaera.core.Finally(f) => BOX + recurse(e)
 //    case edu.cmu.cs.ls.keymaera.core.Globally(f) => DIA + recurse(e)
 //    case Left(domain,child) => ???

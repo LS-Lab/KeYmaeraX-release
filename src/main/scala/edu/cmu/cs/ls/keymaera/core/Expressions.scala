@@ -610,6 +610,13 @@ final class Finally  (child : Formula) extends UnaryFormula(child) {/* <>\Phi e.
   override def hashCode: Int = hash(73, child)
 }
 
+object FormulaDerivative {
+  def apply(child: Formula): Formula = new FormulaDerivative(child)
+  def unapply(e: Any): Option[Formula] = e match {
+    case x: FormulaDerivative => Some(x.child.asInstanceOf[Formula])
+    case _ => None
+  }
+}
 final class FormulaDerivative(child : Formula)    extends UnaryFormula(child) {
   override def equals(e: Any): Boolean = e match {
     case x: FormulaDerivative => child == x.child
