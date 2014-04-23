@@ -224,14 +224,14 @@ object KeYmaeraPrettyPrinter {
       ProgramConstant.getClass() :: //real-valued.
       Number.getClass()   ::
       //Formulas
-      Forall.getClass() ::
-      Exists.getClass() ::
       Equiv.getClass() ::
       Imply.getClass()  ::
-      BoxModality.getClass()   ::
-      DiamondModality.getClass() ::
       Or.getClass() ::
       And.getClass() ::
+      BoxModality.getClass()   ::
+      DiamondModality.getClass() ::
+      Forall.getClass() ::
+      Exists.getClass() ::
       Equals.getClass() ::
       LessThan.getClass()    ::
       GreaterEquals.getClass()    ::

@@ -4,7 +4,6 @@ import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.syntactical._
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.core.Add
 import scala.util.matching.Regex
 import scala.annotation.elidable
 import scala.annotation.elidable._
@@ -45,12 +44,21 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     val programs = List[ProgramConstant]() //TODO support these.
     
+    
+    /**
+     * The failure message for parse failures during problem parsing.
+     */
+    def failureMessage(result : String, next : parser.Input):String = {
+      "Failed to parse problem (line: " + next.pos.line + ", column: " + next.pos.column + ")\n" +
+      "Error message: " + result + " in:\n" + next.pos.longString
+    }
+    
     //Parse the problem.
     val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programs)
     val parseResult = parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result
-        case parser.Failure(_,_) => throw new Exception("parse failed.")
-        case parser.Error(_,_) => throw new Exception("parse error.")
+        case parser.Failure(result,next) => throw new Exception(failureMessage(result,next))
+        case parser.Error(result,next) => throw new Exception(failureMessage(result,next))
     }
     
     //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
@@ -59,6 +67,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     
     parseResult
   }
+  
   
   /**
    * Ensures that parse( print(parse(input)) ) = parse(input)
@@ -193,7 +202,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
   //////////////////////////////////////////////////////////////////////////////
   // Terms.
   //////////////////////////////////////////////////////////////////////////////
-  class TermParser(variables:List[Variable], functions:List[Function], includeIdent:Boolean) {
+  class TermParser(variables:List[Variable], functions:List[Function]) {
     type SubtermParser = PackratParser[Term]
     
     //TODO-nrf Some of these parsers assign sorts somewhat arbitrarily, and I'm
@@ -215,20 +224,14 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       groupP    ::
       Nil
     
-    //non-variable ident parser
+    //non-variable ident parser. TODO-nrf add logging and check anything
+    //parsed by identP is always bound.
     lazy val identP : PackratParser[Term] = {
-      if(includeIdent) {
-        lazy val pattern = ident
-        log(pattern)("UNDEFINED ident") ^^ {
-          case id => Variable.apply(id, None, Real) //TODO-nrf sort?; none?
-        }
-      }
-      else {
-        log("""$^""".r)("Never matches") ^^ {
-          case _ => ???
-        }
+      log(ident)("Arbitrary Identifier") ^^ {
+        case id => Variable.apply(id, None, Real)
       }
     }
+
     //variable parser
     lazy val variableP:PackratParser[Term] = {
       lazy val pattern = {
@@ -349,20 +352,20 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       new ProgramParser(variables,functions,predicates,programVariables).parser
     
     lazy val termParserObj =
-      new TermParser(variables, functions, true)
+      new TermParser(variables, functions)
       
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubformulaParser] =
       equivP ::
-      forallP ::
-      existsP ::
       implP  ::
       backwardImplP :: //makes writing axioms less painful.
       orP ::
       andP ::
       boxP ::
       diamondP ::
+      forallP ::
+      existsP ::
       equalsP ::
       leP    ::
       geP    ::
@@ -377,7 +380,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       Nil
     
     lazy val forallP : PackratParser[Formula] = {      
-      lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ parser
+      lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ asTightAsParsers(precedence, forallP).reduce(_|_)
       log(pattern)("Forall") ^^ {
         case idents ~ formula => {
           val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
@@ -386,8 +389,10 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       }
     }
     
-    lazy val existsP : PackratParser[Formula] = {      
-      lazy val pattern = (EXISTS ~> rep1sep(ident,",") <~ ".") ~ parser
+    lazy val existsP : PackratParser[Formula] = { 
+      lazy val fP = 
+        asTightAsParsers(precedence, forallP).reduce(_|_)
+      lazy val pattern = (EXISTS ~> rep1sep(ident,",") <~ ".") ~ fP
       log(pattern)("Exists") ^^ {
         case idents ~ formula => {
           val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
@@ -540,7 +545,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     }
     //Binary Relations
 
-    lazy val termParser = new TermParser(variables,functions,false).parser
+    lazy val termParser = new TermParser(variables,functions).parser
     
     lazy val leP:SubformulaParser = {
       lazy val pattern = termParser ~ LEQ ~ termParser
@@ -612,7 +617,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
     lazy val formulaParser = new FormulaParser(variables, functions, predicates,programVariables).parser
-    lazy val termParser = new TermParser(variables,functions,false).parser
+    lazy val termParser = new TermParser(variables,functions).parser
     
     val precedence : List[SubprogramParser] =
       choiceP     ::
