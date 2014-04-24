@@ -9,16 +9,16 @@ defined strategies.
 Building
 ========
 
-Step 1: Install Scala Build Toll
+We use the Scala Build Tool (sbt). Installation instructions are available
+at the link following:
 
-a - Download sbt-launch.jar from scala-sbt.org and follow the setup
-intructions:
-  http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
+http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-b - cd into this directory and run sbt to get a build prompt
+Instructions are available at that website as well. Briefly, run "sbt" in
+this directory to get an SBT prompt and then run "run" to run a main method
+or "test" to run the tests.
 
-c - type run; all classes with a main : Array[String] -> Unit are listed at
-the prompt.
+Source code is in src/main/scala and tests are in src/main/test.
 
 Specification
 =============
