@@ -9,23 +9,18 @@ class ParserParenTests extends FlatSpec with Matchers {
     "Problem." + program + "\nEnd."
   }
 
-  "left and right" should "match" in {
-    val parser = new KeYmaeraParser()
+  val equalPairs = 
+    ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
+    Nil
 
-    val pairs = 
-      ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
-      Nil
+  val parser = new KeYmaeraParser(false) //parser with logger.
 
-    for(pair <- pairs) {
+  for(pair <- equalPairs) {
+    pair._1 + " and " + pair._2 should "match" in {
       val left : Expr = parser.runParser(makeInput(pair._1))
       val right : Expr = parser.runParser(makeInput(pair._2))
       left should be (right)
     }
   }
 
-  it should "not match" in {
-    //counter-examples...
-  }
-
 }
-
