@@ -25,7 +25,8 @@ import java.io.File
  *      "assignables" (non-rigid, currently called variables)
  *      functions (terms that take arguments
  */
-class KeYmaeraParser extends RegexParsers with PackratParsers {   
+class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with PackratParsers {   
+  def log[T](p : Parser[T])(name : String) = if(enabledLogging) p else super.log(p)(name)
   //////////////////////////////////////////////////////////////////////////////
   // Public-facing interface.
   //////////////////////////////////////////////////////////////////////////////

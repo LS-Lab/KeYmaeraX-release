@@ -203,7 +203,7 @@ object KeYmaeraPrettyPrinter {
     if(isAtomic(e)) s else "("+s+")"
   
   private def parensIfNeeded(child:Expr, parent:Expr) = {
-    if(needsParens(parent,child)) {
+    if(needsParens(child,parent)) {
       "(" + prettyPrinter(child) + ")"
     }
     else {
@@ -211,50 +211,61 @@ object KeYmaeraPrettyPrinter {
     }
   }
   
+  /**
+   * @TODO-nrf this is incredible hacky and needs to be replaced!
+   */
   private def needsParens(child : Expr, parent : Expr) = {
-    val precedence =    
+    val precedenceDS =    
       //Terms.
       //TODO expP?
-      Multiply.getClass() ::
-      Divide.getClass() ::
-      Add.getClass() ::
-      Subtract.getClass() ::
-      Neg.getClass() ::
-      Apply.getClass() ::
-      ProgramConstant.getClass() :: //real-valued.
-      Number.getClass()   ::
+      Multiply.getClass().getCanonicalName() ::
+      Divide.getClass().getCanonicalName() ::
+      Add.getClass().getCanonicalName() ::
+      Subtract.getClass().getCanonicalName() ::
+      Neg.getClass().getCanonicalName() ::
+      Apply.getClass().getCanonicalName() ::
+      ProgramConstant.getClass().getCanonicalName() :: //real-valued.
+      Number.getClass().getCanonicalName()   ::
       //Formulas
-      Equiv.getClass() ::
-      Imply.getClass()  ::
-      Or.getClass() ::
-      And.getClass() ::
-      BoxModality.getClass()   ::
-      DiamondModality.getClass() ::
-      Forall.getClass() ::
-      Exists.getClass() ::
-      Equals.getClass() ::
-      NotEquals.getClass() ::
-      LessThan.getClass()    ::
-      GreaterEquals.getClass()    ::
-      GreaterThan.getClass()    ::
-      LessThan.getClass()    :: 
-      Not.getClass() :: 
-      Derivative.getClass() ::
-      PredicateConstant.getClass() ::
-      True.getClass() ::
-      False.getClass() ::
+      Equiv.getClass().getCanonicalName() ::
+      Imply.getClass().getCanonicalName()  ::
+      Or.getClass().getCanonicalName() ::
+      And.getClass().getCanonicalName() ::
+      Equals.getClass().getCanonicalName() ::
+      NotEquals.getClass().getCanonicalName() ::
+      LessThan.getClass().getCanonicalName()    ::
+      GreaterEquals.getClass().getCanonicalName()    ::
+      GreaterThan.getClass().getCanonicalName()    ::
+      LessThan.getClass().getCanonicalName()    :: 
+      BoxModality.getClass().getCanonicalName()   ::
+      DiamondModality.getClass().getCanonicalName() ::
+      Forall.getClass().getCanonicalName() ::
+      Exists.getClass().getCanonicalName() ::
+      Not.getClass().getCanonicalName() :: 
+      Derivative.getClass().getCanonicalName() ::
+      PredicateConstant.getClass().getCanonicalName() ::
+      True.getClass().getCanonicalName() ::
+      False.getClass().getCanonicalName() ::
       //Programs.
-      Choice.getClass()     ::
-      Sequence.getClass()   ::
-      Loop.getClass() ::
-      Assign.getClass() ::
-      NDetAssign.getClass() ::
-      Test.getClass() ::
-      ProgramConstant.getClass() ::
+      Choice.getClass().getCanonicalName()     ::
+      Sequence.getClass().getCanonicalName()   ::
+      Loop.getClass().getCanonicalName() ::
+      Assign.getClass().getCanonicalName() ::
+      NDetAssign.getClass().getCanonicalName() ::
+      Test.getClass().getCanonicalName() ::
+      ProgramConstant.getClass().getCanonicalName() ::
       Nil 
+    val precedence = precedenceDS.map(_.replace("$",""))
     
-    val childPrecedence = precedence.indexOf(child.getClass())
-    val parentPrecedence = precedence.indexOf(parent.getClass())
+    val childPrecedence = precedence.indexOf(child.getClass().getCanonicalName())
+    val parentPrecedence = precedence.indexOf(parent.getClass().getCanonicalName())
+    if(childPrecedence == -1) {
+      val classes = precedence.reduce(_ + "\n" + _)
+      throw new Exception("child not found in precedence list: " + child.getClass().getCanonicalName() + "in: " + "\n" + classes)
+    }
+    if(parentPrecedence == -1) {
+      throw new Exception("parent not found in precedence list: " + parent.getClass().getCanonicalName())
+    }
     childPrecedence < parentPrecedence
   }
   /**
