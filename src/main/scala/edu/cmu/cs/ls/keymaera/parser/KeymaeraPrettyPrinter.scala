@@ -255,6 +255,8 @@ object KeYmaeraPrettyPrinter {
       NDetAssign.getClass().getCanonicalName() ::
       Test.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() ::
+      Variable.getClass().getCanonicalName() ::
+      Number.NumberObj.getClass().getCanonicalName() ::
       Nil 
     val precedence = precedenceDS.map(_.replace("$",""))
     
@@ -262,10 +264,11 @@ object KeYmaeraPrettyPrinter {
     val parentPrecedence = precedence.indexOf(parent.getClass().getCanonicalName())
     if(childPrecedence == -1) {
       val classes = precedence.reduce(_ + "\n" + _)
-      throw new Exception("child not found in precedence list: " + child.getClass().getCanonicalName() + "in: " + "\n" + classes)
+      throw new Exception("child not found in precedence list: " + child.getClass().getCanonicalName() + " in: " + "\n" + classes)
     }
     if(parentPrecedence == -1) {
-      throw new Exception("parent not found in precedence list: " + parent.getClass().getCanonicalName())
+      val classes = precedence.reduce(_ + "\n" + _)
+      throw new Exception("parent not found in precedence list: " + parent.getClass().getCanonicalName() + " in: " + "\n" + classes)
     }
     childPrecedence < parentPrecedence
   }

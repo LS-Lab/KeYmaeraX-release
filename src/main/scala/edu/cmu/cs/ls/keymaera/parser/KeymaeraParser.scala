@@ -334,7 +334,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     lazy val numberP:SubtermParser = {
       lazy val pattern = """[0-9]+(\.[0-9]+)?""".r
       log(pattern)("NUMBER") ^^ {
-        case n => Number(BigDecimal(n))
+        case n => Number.apply(BigDecimal(n))
       }
     }
   }

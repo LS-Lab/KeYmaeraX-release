@@ -269,7 +269,14 @@ object Number {
     case x: NumberObj => Some((x.sort,x.value.asInstanceOf[BigDecimal]))
     case _ => None
   }
-  private final class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
+  object NumberObj {
+    def apply(sort : Sort, value : BigDecimal) : NumberObj = new NumberObj(sort,value)
+    def unapply(e : NumberObj) : Option[(Sort,BigDecimal)] = e match {
+      case NumberObj(s, v) => Some((s,v))
+      case _ => None
+    }
+  }
+  final class NumberObj(sort : Sort, val value : BigDecimal) extends Expr(sort) with Atom with Term {
     override def equals(e: Any): Boolean = e match {
       case Number(a, b) => a == sort && b == value
       case _ => false
