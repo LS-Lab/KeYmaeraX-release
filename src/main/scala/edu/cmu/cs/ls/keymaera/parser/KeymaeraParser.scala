@@ -1008,7 +1008,7 @@ class KeYmaeraParser extends RegexParsers with PackratParsers {
       
       lazy val axiomParser : ALPType = {
         lazy val pattern = ("Axiom" ~> "\"" ~> alName) ~ 
-                           (("\"" ~ ".") ~> repsep(formulaP, ".") <~ ".") <~ "End."
+                           (("\"" ~ ".") ~> repsep(formulaP, ".") <~ ".".?) <~ "End."
 
         log(pattern)("Axiom Parser") ^^ {
           case name ~ formulas => formulas.map(f => new LoadedAxiom(name, f))
