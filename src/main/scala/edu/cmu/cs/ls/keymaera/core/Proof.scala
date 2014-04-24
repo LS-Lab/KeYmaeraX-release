@@ -762,17 +762,7 @@ class Skolemize extends PositionRule {
   override def apply(p: Position): Rule = new Rule("Skolemize") {
     override def apply(s: Sequent): List[Sequent] = {
       require(p.inExpr == HereP, "We can only skolemize top level formulas");
-      var vars: Set[NamedSymbol] = Set.empty
-      for(i <- 0 to s.ante.length) {
-        if(!p.isAnte || i != p.getIndex) {
-          vars ++= variables(s.ante(i))
-        }
-      }
-      for(i <- 0 to s.succ.length) {
-        if(p.isAnte || i != p.getIndex) {
-          vars ++= variables(s.ante(i))
-        }
-      }
+      val vars = variablesWithout(s, p)
       val (v,phi) = if(p.isAnte) {
         val form = s.ante(p.getIndex)
         form match {
@@ -803,17 +793,7 @@ class AssignmentRule extends PositionRule {
   override def apply(p: Position): Rule = new Rule("AssignmentRule") {
     override def apply(s: Sequent): List[Sequent] = {
       // we need to make sure that the variable does not occur in any other formula in the sequent
-      var vars: Set[NamedSymbol] = Set.empty
-      for(i <- 0 to s.ante.length) {
-        if(!p.isAnte || i != p.getIndex) {
-          vars ++= variables(s.ante(i))
-        }
-      }
-      for(i <- 0 to s.succ.length) {
-        if(p.isAnte || i != p.getIndex) {
-          vars ++= variables(s.ante(i))
-        }
-      }
+      val vars = variablesWithout(s, p)
       // TODO: we have to make sure that the variable does not occur in the formula itself
       // if we want to have positions different from HereP
       require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
@@ -877,6 +857,21 @@ object Helper {
       }
     }
     ExpressionTraversal.traverse(fn, a)
+    vars
+  }
+
+  def variablesWithout(s: Sequent, p: Position): Set[NamedSymbol] = {
+    var vars: Set[NamedSymbol] = Set.empty
+    for(i <- 0 to s.ante.length) {
+      if(!p.isAnte || i != p.getIndex) {
+        vars ++= variables(s.ante(i))
+      }
+    }
+    for(i <- 0 to s.succ.length) {
+      if(p.isAnte || i != p.getIndex) {
+        vars ++= variables(s.ante(i))
+      }
+    }
     vars
   }
 
