@@ -239,6 +239,7 @@ object KeYmaeraPrettyPrinter {
       LessThan.getClass().getCanonicalName()    :: 
       BoxModality.getClass().getCanonicalName()   ::
       DiamondModality.getClass().getCanonicalName() ::
+      Modality.getClass().getCanonicalName() ::
       Forall.getClass().getCanonicalName() ::
       Exists.getClass().getCanonicalName() ::
       Not.getClass().getCanonicalName() :: 
