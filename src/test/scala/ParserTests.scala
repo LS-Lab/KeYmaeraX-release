@@ -1,6 +1,7 @@
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser._
+import java.io.File
 
 class ParserParenTests extends FlatSpec with Matchers {
   def makeInput(program : String) : String = {
@@ -10,6 +11,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
 
   val parser = new KeYmaeraParser(false) //parser with logger.
+  val alpParser = parser.ProofFileParser
 
   "The Parser" should "place implicit parens correctly" in {
     val equalPairs =
@@ -24,7 +26,7 @@ class ParserParenTests extends FlatSpec with Matchers {
     }
   }
 
-  it should "Fail to parse bad input" in {
+  it should "fail to parse bad input" in {
     val badInputs =
       "\\forall x . x > 2" ::
       Nil
@@ -32,6 +34,50 @@ class ParserParenTests extends FlatSpec with Matchers {
     for(badInput <- badInputs) {
       a [Exception] should be thrownBy {
         parser.runParser(makeInput(badInput))
+      }
+    }
+  }
+  
+  it should "parse all examples/t/positive files" in {
+    val positiveTestsDir = new File("./examples/dev/t/parsing/positive")
+    positiveTestsDir.isDirectory() should be (true)
+    for(testFile <- positiveTestsDir.listFiles()) {
+      val src = io.Source.fromFile(testFile).mkString
+      parser.runParser(src) //test fails on exception.
+    }
+  }
+  
+  it should "not parse any examples/t/negative files" in {
+    val negativeTestsDir = new File("./examples/dev/t/parsing/negative")
+    negativeTestsDir.isDirectory() should be (true)
+    for(testFile <- negativeTestsDir.listFiles()) {
+      val src = io.Source.fromFile(testFile).mkString
+      a [Exception] should be thrownBy {
+        parser.runParser(src)
+      }
+    }
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Begin ALP Parser tests
+  //////////////////////////////////////////////////////////////////////////////
+  
+  "The ALP Parser" should "parse all examples/t/positiveALP files" in {
+    val positiveTestsDir = new File("./examples/dev/t/parsing/positiveALP")
+    positiveTestsDir.isDirectory() should be (true)
+    for(testFile <- positiveTestsDir.listFiles()) {
+      val src = io.Source.fromFile(testFile).mkString
+      alpParser.runParser(src) //test fails on exception.
+    }
+  }
+  
+  it should "not parse any examples/t/negativeALP files" in {
+    val negativeTestsDir = new File("./examples/dev/t/parsing/negativeALP")
+    negativeTestsDir.isDirectory() should be (true)
+    for(testFile <- negativeTestsDir.listFiles()) {
+      val src = io.Source.fromFile(testFile).mkString
+      a [Exception] should be thrownBy {
+        alpParser.runParser(src)
       }
     }
   }
