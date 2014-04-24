@@ -793,6 +793,49 @@ class Skolemize extends PositionRule {
   }
 }
 
+/**
+ * Assignment as equation
+ * Assumptions: We assume that the variable has been made unique through alpha conversion first. That way, we can just
+ * replace the assignment by an equation without further checking
+ */
+class AssignmentRule extends PositionRule {
+  import Helper._
+  override def apply(p: Position): Rule = new Rule("AssignmentRule") {
+    override def apply(s: Sequent): List[Sequent] = {
+      // we need to make sure that the variable does not occur in any other formula in the sequent
+      var vars: Set[NamedSymbol] = Set.empty
+      for(i <- 0 to s.ante.length) {
+        if(!p.isAnte || i != p.getIndex) {
+          vars ++= variables(s.ante(i))
+        }
+      }
+      for(i <- 0 to s.succ.length) {
+        if(p.isAnte || i != p.getIndex) {
+          vars ++= variables(s.ante(i))
+        }
+      }
+      // TODO: we have to make sure that the variable does not occur in the formula itself
+      // if we want to have positions different from HereP
+      require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
+      val f = if(p.isAnte)  s.ante(p.getIndex)  else s.succ(p.getIndex)
+      val (exp, res) = f match {
+        case BoxModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
+        case DiamondModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
+        case _ => throw new IllegalArgumentException("The assigment rule is only applicable to box and diamond modalities" +
+          "containing a single assignment")
+      }
+      // check that v is not contained in any other formula
+      val v = exp match {
+        case x: Variable if(!vars.contains(x)) => x
+        case x: Variable if(vars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
+        case _ => throw new IllegalStateException("Assignment handling is only implemented for varibles right now, not for " + v)
+      }
+
+      List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, res)))
+    }
+  }
+}
+
 // maybe:
 
 // close by true (do we need this or is this derived?)
