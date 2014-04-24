@@ -18,7 +18,7 @@ Instructions are available at that website as well. Briefly, run "sbt" in
 this directory to get an SBT prompt and then run "run" to run a main method
 or "test" to run the tests.
 
-Source code is in src/main/scala and tests are in src/main/test.
+Source code is in src/main/scala and tests are in src/test/scala.
 
 Specification
 =============
