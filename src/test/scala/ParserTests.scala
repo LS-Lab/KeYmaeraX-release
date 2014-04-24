@@ -9,18 +9,29 @@ class ParserParenTests extends FlatSpec with Matchers {
     "Problem." + program + "\nEnd."
   }
 
-  "The Parser" should "place implicit parens correctly" in {
+  val parser = new KeYmaeraParser(false) //parser with logger.
 
-    val equalPairs = 
+  "The Parser" should "place implicit parens correctly" in {
+    val equalPairs =
       ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
       Nil
-
-    val parser = new KeYmaeraParser(false) //parser with logger.
 
     for(pair <- equalPairs) {
       val left : Expr = parser.runParser(makeInput(pair._1))
       val right : Expr = parser.runParser(makeInput(pair._2))
       left should be (right)
+    }
+  }
+
+  it should "Fail to parse bad input" in {
+    val badInputs =
+      "\\forall x . x > 2" ::
+      Nil
+
+    for(badInput <- badInputs) {
+      a [Exception] should be thrownBy {
+        parser.runParser(makeInput(badInput))
+      }
     }
   }
 }
