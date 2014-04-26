@@ -808,10 +808,10 @@ class AssignmentRule extends PositionRule {
       val v = exp match {
         case x: Variable if(!vars.contains(x)) => x
         case x: Variable if(vars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
-        case _ => throw new IllegalStateException("Assignment handling is only implemented for varibles right now, not for " + v)
+        case _ => throw new IllegalStateException("Assignment handling is only implemented for varibles right now, not for " + exp.toString()) //?
       }
 
-      List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, res)))
+      List(if(p.isAnte) Sequent(s.pref :+ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref :+ v, s.ante, s.succ.updated(p.index, res)))
     }
   }
 }
