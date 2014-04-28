@@ -80,7 +80,8 @@ object KeYmaeraPrettyPrinter {
     case ApplyPredicate(function,child) => 
       parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
 
-    case Assign(l,r) => recInfix(l,r,expressionToPrint, ASSIGN)
+    case Assign(l,r) => recInfix(l,r,expressionToPrint, ASSIGN) + SCOLON
+    case NDetAssign(l) => prettyPrinter(l) + ASSIGN + KSTAR + SCOLON
     
     case BoxModality(p,f) => BOX_OPEN + parensIfNeeded(p,expressionToPrint) + BOX_CLOSE + parensIfNeeded(f,expressionToPrint)
     case ContEvolve(child) => OPEN_CBRACKET + prettyPrinter(child) + CLOSE_CBRACKET
@@ -169,7 +170,7 @@ object KeYmaeraPrettyPrinter {
     
     
     case Neg(s,e) => NEGATIVE + recurse(e)
-    case Test(e) => TEST + prettyPrinter(e)
+    case Test(e) => TEST + prettyPrinter(e) + SCOLON
     
     case Loop(p) => recurse(p) + KSTAR
    
@@ -231,15 +232,15 @@ object KeYmaeraPrettyPrinter {
       Imply.getClass().getCanonicalName()  ::
       Or.getClass().getCanonicalName() ::
       And.getClass().getCanonicalName() ::
+      BoxModality.getClass().getCanonicalName()   ::
+      DiamondModality.getClass().getCanonicalName() ::
+      Modality.getClass().getCanonicalName() ::
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
       GreaterEquals.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
       LessThan.getClass().getCanonicalName()    :: 
-      BoxModality.getClass().getCanonicalName()   ::
-      DiamondModality.getClass().getCanonicalName() ::
-      Modality.getClass().getCanonicalName() ::
       Forall.getClass().getCanonicalName() ::
       Exists.getClass().getCanonicalName() ::
       Not.getClass().getCanonicalName() :: 

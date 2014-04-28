@@ -16,7 +16,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   "The Parser" should "place implicit parens correctly" in {
     val equalPairs =
       ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
-      ("< ?p>q >(p > 1)", "<?(p > q)>(p>1)") ::
+      ("< ?p>q; >(p > 1)", "<?(p > q);>(p>1)") ::
       Nil
 
     for(pair <- equalPairs) {
@@ -28,7 +28,7 @@ class ParserParenTests extends FlatSpec with Matchers {
 
   it should "fail to parse bad input" in {
     val badInputs =
-      "\\forall x . x > 2" ::
+      "\\forall x . x > 2 > 3" ::
       Nil
 
     for(badInput <- badInputs) {

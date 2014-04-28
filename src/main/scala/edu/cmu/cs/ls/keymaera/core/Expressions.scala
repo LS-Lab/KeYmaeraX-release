@@ -21,6 +21,8 @@ import scala.annotation.elidable._
 
 import scala.math._
 
+import edu.cmu.cs.ls.keymaera.parser._ //the pretty printer.
+
 /**
  * External functions imported in core but not used in proof check mode
  */
@@ -924,6 +926,10 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
 sealed trait Program extends Expr {
   def reads: Seq[NamedSymbol]
   def writes: Seq[NamedSymbol]
+
+  def prettyString() = {
+    KeYmaeraPrettyPrinter.stringify(this)
+  }
 }
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program

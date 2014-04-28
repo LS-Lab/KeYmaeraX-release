@@ -363,14 +363,14 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       backwardImplP :: //makes writing axioms less painful.
       orP ::
       andP ::
+      boxP :: //magic alert: don't change the relative order of box,diamond,forall and exists.
+      diamondP ::
       equalsP ::
       notEqualsP ::
       leP    ::
       geP    ::
       gtP    ::
       ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
-      boxP :: //magic alert: don't change the relative order of box,diamond,forall and exists.
-      diamondP ::
       forallP :: 
       existsP :: //todo should we keep these with diamond and box?
       notP :: 
@@ -624,14 +624,28 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
   {
     type SubprogramParser = PackratParser[Program]
     
-    lazy val parser = precedence.reduce(_|_)
+    lazy val parser = precedence.reduce(_|_) ~ ";".? ^^ {
+      case program ~ scolon => scolon match {
+        case Some(_) => program
+        case None    => {
+          val exn = new Exception("Expected trailing semicolon in " + program.prettyString())
+          program match {
+            case Test(_) => throw exn
+            case Assign(_,_) => throw exn
+            case NDetAssign(_) => throw exn
+            case _ => program
+          }
+      }
+      }
+    }
+    
     //TODO do we need to make the program variables into predicates so that they
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
     lazy val formulaParser = new FormulaParser(variables, functions, predicates,programVariables).parser
     lazy val termParser = new TermParser(variables,functions).parser
-    
+   
     val precedence : List[SubprogramParser] =
       choiceP     ::
       sequenceP   ::
@@ -641,7 +655,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       closureP    ::
       assignP     ::
       ndassignP   ::
-      evolutionP ::
+      evolutionP  ::
       testP       ::
       pvarP       ::
       groupP      ::
@@ -673,12 +687,9 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     }
     
     lazy val sequenceP:SubprogramParser = {
-      lazy val pattern = rightAssociativeOptional(precedence,sequenceP,Some(SCOLON))
+      lazy val pattern = rightAssociative(precedence,sequenceP,Some(SCOLON))
       log(pattern)("program" + SCOLON + "program") ^^ {
-        case left ~ SCOLON ~ right => right match {
-          case Some(rightDefined) => new Sequence(left,rightDefined)
-          case None               => left
-        }
+          case left ~ SCOLON ~ right => new Sequence(left,right)
       }
     }
     
@@ -781,7 +792,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
 //    }
     
     lazy val groupP:SubprogramParser = {
-      lazy val pattern = "(" ~ precedence.reduce(_|_) ~ ")"
+      lazy val pattern = "(" ~ parser ~ ")"
       log(pattern)("Subterm Grouping") ^^ {
         case "(" ~ p ~ ")" => p
       }
