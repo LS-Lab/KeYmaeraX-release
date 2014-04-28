@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyPositionTactic, PositionTactic, Tactic}
 import scala.Unit
 
 /**
@@ -11,20 +11,13 @@ import scala.Unit
  */
 object TacticLibrary {
 
-  trait PositionTactic {
-    val name: String
-
-    def applies(s: Sequent, p: Position): Boolean
-
-    def apply(p: Position): Tactic
-  }
 
   /** *******************************************
     * Basic Tactics
     * *******************************************
     */
 
-  def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
+  def findPosAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosAnte (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = {
       for (i <- 0 until p.sequent.ante.length) {
         val pos = new Position(true, i)
@@ -33,47 +26,38 @@ object TacticLibrary {
       return false
     }
 
-    override def apply(tool: Tool, p: ProofNode): Unit = {
-      for (i <- 0 until p.sequent.ante.length) {
+    override def findPosition(s: Sequent): Option[Position] = {
+      for (i <- 0 until s.ante.length) {
         val pos = new Position(true, i)
-        if (posT.applies(p.sequent, pos)) {
-          val t = posT(pos)
-          t.continuation = continuation
-          t.dispatch(t, p)
-        } else {
-          continuation(this, Failed, Seq(p))
+        if(posT.applies(s, pos)) {
+          return Some(pos)
         }
-
       }
+      return None
     }
   }
 
-  def findPosSucc(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
+  def findPosSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = {
       for (i <- 0 until p.sequent.succ.length) {
-        val pos = new Position(false, i)
+        val pos = new Position(true, i)
         if (posT.applies(p.sequent, pos)) return true
       }
       return false
     }
 
-    override def apply(tool: Tool, p: ProofNode): Unit = {
-      for (i <- 0 until p.sequent.succ.length) {
-        val pos = new Position(false, i)
-        if (posT.applies(p.sequent, pos)) {
-          val t = posT(pos)
-          t.continuation = continuation
-          t.dispatch(t, p)
-        } else {
-          continuation(this, Failed, Seq(p))
+    override def findPosition(s: Sequent): Option[Position] = {
+      for (i <- 0 until s.succ.length) {
+        val pos = new Position(true, i)
+        if(posT.applies(s, pos)) {
+          return Some(pos)
         }
       }
+      return None
     }
   }
 
-  def AndLeftT: PositionTactic = new PositionTactic {
-    override val name: String = "AndLeft"
-
+  def AndLeftT: PositionTactic = new PositionTactic("AndLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case And(_, _) => true
       case _ => false
@@ -86,9 +70,7 @@ object TacticLibrary {
 
   def AndLeftFindT: Tactic = findPosAnte(AndLeftT)
 
-  def AndRightT: PositionTactic = new PositionTactic {
-    override val name: String = "AndRight"
-
+  def AndRightT: PositionTactic = new PositionTactic("AndRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case And(_, _) => true
       case _ => false
@@ -101,9 +83,7 @@ object TacticLibrary {
 
   def AndRightFindT: Tactic = findPosSucc(AndRightT)
 
-  def OrLeftT: PositionTactic = new PositionTactic {
-    override val name: String = "OrLeft"
-
+  def OrLeftT: PositionTactic = new PositionTactic("OrLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Or(_, _) => true
       case _ => false
@@ -116,9 +96,7 @@ object TacticLibrary {
 
   def OrLeftFindT: Tactic = findPosAnte(OrLeftT)
 
-  def OrRightT: PositionTactic = new PositionTactic {
-    override val name: String = "OrRight"
-
+  def OrRightT: PositionTactic = new PositionTactic("OrRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case Or(_, _) => true
       case _ => false
@@ -131,9 +109,7 @@ object TacticLibrary {
 
   def OrRightFindT: Tactic = findPosSucc(OrRightT)
 
-  def ImplyLeftT: PositionTactic = new PositionTactic {
-    override val name: String = "ImplyLeft"
-
+  def ImplyLeftT: PositionTactic = new PositionTactic("ImplyLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Imply(_, _) => true
       case _ => false
@@ -146,9 +122,7 @@ object TacticLibrary {
 
   def ImplyLeftFindT: Tactic = findPosAnte(ImplyLeftT)
 
-  def ImplyRightT: PositionTactic = new PositionTactic {
-    override val name: String = "ImplyRight"
-
+  def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case Imply(_, _) => true
       case _ => false
@@ -161,9 +135,7 @@ object TacticLibrary {
 
   def ImplyRightFindT: Tactic = findPosSucc(ImplyRightT)
 
-  def NotLeftT: PositionTactic = new PositionTactic {
-    override val name: String = "NotLeft"
-
+  def NotLeftT: PositionTactic = new PositionTactic("NotLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Not(_) => true
       case _ => false
@@ -176,9 +148,7 @@ object TacticLibrary {
 
   def NotLeftFindT: Tactic = findPosAnte(NotLeftT)
 
-  def NotRightT: PositionTactic = new PositionTactic {
-    override val name: String = "NotRight"
-
+  def NotRightT: PositionTactic = new PositionTactic("NotRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case Not(_) => true
       case _ => false
@@ -191,9 +161,7 @@ object TacticLibrary {
 
   def NotRightFindT: Tactic = findPosSucc(NotRightT)
 
-  def hideT: PositionTactic = new PositionTactic {
-    override val name: String = "Hide"
-
+  def hideT: PositionTactic = new PositionTactic("Hide") {
     def applies(s: Sequent, p: Position) = true
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) HideLeft(pos) else HideRight(pos)) {

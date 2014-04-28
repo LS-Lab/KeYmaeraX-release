@@ -432,4 +432,26 @@ object Tactics {
 
   }
 
+  abstract class PositionTactic(val name: String) {
+    def applies(s: Sequent, p: Position): Boolean
+
+    def apply(p: Position): Tactic
+  }
+
+  abstract class ApplyPositionTactic(name: String, val t: PositionTactic) extends Tactic("Position tactic " + name + "(" + t.name + ")") {
+    def apply(tool: Tool, node: ProofNode) {
+      findPosition(node) match {
+        case Some(pos) => {
+          val tactic = t(pos)
+          tactic.continuation = continuation
+          tactic.dispatch(this, node)
+        }
+        case _ => continuation(this, Failed, Seq(node))
+      }
+    }
+
+    def findPosition(pn: ProofNode): Option[Position] = findPosition(pn.sequent)
+    def findPosition(s: Sequent): Option[Position]
+  }
+
 }
