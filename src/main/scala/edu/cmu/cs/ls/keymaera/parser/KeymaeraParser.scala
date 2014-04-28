@@ -26,13 +26,13 @@ import java.io.File
  *      functions (terms that take arguments
  */
 class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with PackratParsers {   
-  def log[T](p : Parser[T])(name : String) = if(enabledLogging) p else super.log(p)(name)
+  def log[T](p : Parser[T])(name : String) = if(!enabledLogging) p else super.log(p)(name)
   //////////////////////////////////////////////////////////////////////////////
   // Public-facing interface.
   //////////////////////////////////////////////////////////////////////////////
 
   def runParser(s:String):Expr = {
-    val parser = new KeYmaeraParser()
+    val parser = new KeYmaeraParser(enabledLogging)
     
     //Parse file.
     val (functions,predicateConstants,variables,problemText) = 
@@ -81,7 +81,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     parse:Expr,
     printOfParse:String) = 
   {
-    val parser = new KeYmaeraParser()
+    val parser = new KeYmaeraParser(enabledLogging)
     val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programVariables)
     try{
       val printofparseParse = parser.parseAll(exprParser, printOfParse) match {

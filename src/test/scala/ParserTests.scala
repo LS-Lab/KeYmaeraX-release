@@ -10,7 +10,7 @@ class ParserParenTests extends FlatSpec with Matchers {
     "Problem." + program + "\nEnd."
   }
 
-  val parser = new KeYmaeraParser(false) //parser with logger.
+  val parser = new KeYmaeraParser(false) 
   val alpParser = parser.ProofFileParser
 
   "The Parser" should "place implicit parens correctly" in {
