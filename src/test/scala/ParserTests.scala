@@ -21,6 +21,10 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
       ("[ p:=1; ] <p:=2; > p>0", "[p:=1;](<p:=2;>p>0)") ::
       ("< p:=1; > [p:=2; ] p>0", "<p:=1;>([p:=2;]p>0)") ::
+      ("-p + q = s", "(-p) + q = s") ::
+      ("p^2 >= 0", "p^2 >= 0") ::
+      ("p^2 + q^2 = s^2", "(p^2) + (q^2) = (s^2)") ::
+      ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0")::
       Nil
 
     for(pair <- equalPairs) {

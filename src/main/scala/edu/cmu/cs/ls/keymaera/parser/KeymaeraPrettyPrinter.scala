@@ -244,6 +244,7 @@ object KeYmaeraPrettyPrinter {
       Subtract.getClass().getCanonicalName() ::
       Multiply.getClass().getCanonicalName() ::
       Divide.getClass().getCanonicalName() ::
+      Exp.getClass().getCanonicalName() ::
       Neg.getClass().getCanonicalName() ::
       Apply.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() :: //real-valued.

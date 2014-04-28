@@ -281,7 +281,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     }
     
     lazy val expP:SubtermParser = {
-      lazy val pattern = parser ~ EXP ~ parser //?
+      lazy val pattern = tighterParsers(precedence,expP).reduce(_|_) ~ EXP ~ tighterParsers(precedence,expP).reduce(_|_) //?
       log(pattern)("Exponentiation") ^^ {
         case left ~ EXP ~ right => Exp(left.sort, left,right)
       }
