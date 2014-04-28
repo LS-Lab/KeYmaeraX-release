@@ -45,6 +45,10 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
       ("[ p:=1; ] <p:=2; > p>0", "[p:=1;](<p:=2;>p>0)") ::
       ("< p:=1; > [p:=2; ] p>0", "<p:=1;>([p:=2;]p>0)") ::
+      //[], <>, \forall, \exists magic.
+      ("\\forall x . [x:=1;]<x:=2;>x>0","\\forall x . ([x:=1;]<x:=2;>(x>0))") ::
+      ("\\exists x . [x:=1;]<x:=2;>x>0","\\exists x . ([x:=1;]<x:=2;>(x>0))") ::
+      ("[p:=0;]\\forall x . [x:=p;] \\exists y . [q := x + y; ] q > 0", "[p:=0;](\\forall  x . [x:=p;] (\\exists y . [q := x + y; ] q > 0))") ::
       // <> vs >.
       ("< ?p>q; > p > 1", "<?(p > q);>(p>1)") ::
       ("[ ?p>q; ] p > 1", "[?(p > q);](p>1)") ::
