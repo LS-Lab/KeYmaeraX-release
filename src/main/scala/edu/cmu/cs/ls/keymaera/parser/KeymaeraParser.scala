@@ -364,16 +364,16 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       orP ::
       andP ::
       notP ::
-      boxP :: //magic alert: don't change the relative order of box,diamond,forall and exists.
+      boxP :: //Magic: keep box before diamond.
       diamondP ::
       forallP :: 
-      existsP :: //todo should we keep these with diamond and box?
+      existsP :: 
       equalsP ::
       notEqualsP ::
       leP    ::
       geP    ::
       gtP    ::
-      ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
+      ltP    ::  
       formulaDerivativeP ::
       predicateP ::
       trueP ::
@@ -428,9 +428,6 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       } 
     }
       
-    val tightestComparisonOperator = ltP
-    val tighterThanComparison = tighterParsers(precedence, tightestComparisonOperator).reduce(_|_)
-    
     //Modalities
     lazy val boxP : SubformulaParser = {
       lazy val pattern = BOX_OPEN ~ 
