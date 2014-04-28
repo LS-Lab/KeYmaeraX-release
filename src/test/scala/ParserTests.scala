@@ -22,9 +22,11 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("! p > 0 | p < 5", "(!(p>0)) | (p<5)") ::
       ("! p > 0 -> p > 5", "(!(p>0)) -> (p>5)") ::
       ("! p > 0 <-> p > 5", "(!(p>0)) <-> (p>5)") ::
+      // quantifiers do not bind logical connectives but do bind inequalities.
       ("! \\forall x . x > 0 | p < 5", "(!(\\forall x . x>0)) | (p<5)") ::
       ("! \\exists x . x > 0 | p < 5", "(!(\\exists x . x>0)) | (p<5)") ::
       ("! \\forall x . [p:=x;]p >= x | p < 5", "(!(\\forall x . ([p:=x;](p>=x)))) | (p<5)") ::
+      // modalities do not bind logical connectives.
       ("[p:=1;] p>0 & p < 1", "([p:=1;](p>0)) & (p<1)") ::
       ("[p:=1;] p>0 | p < 1", "([p:=1;](p>0)) | (p<1)") ::
       ("[p:=1;] p>0 -> p < 1", "([p:=1;](p>0)) -> (p<1)") ::
@@ -39,9 +41,19 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("\\exists x . x > 2 | a", "(\\exists x . (x > 2)) | a") ::
       ("\\exists x . x > 2 -> a", "(\\exists x . (x > 2)) -> a") ::
       ("\\exists x . x > 2 <-> a", "(\\exists x . (x > 2)) <-> a") ::
-      //
+      //nested modalities
+      ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
+      ("[ p:=1; ] <p:=2; > p>0", "[p:=1;](<p:=2;>p>0)") ::
+      ("< p:=1; > [p:=2; ] p>0", "<p:=1;>([p:=2;]p>0)") ::
+      //[], <>, \forall, \exists magic.
+      ("\\forall x . [x:=1;]<x:=2;>x>0","\\forall x . ([x:=1;]<x:=2;>(x>0))") ::
+      ("\\exists x . [x:=1;]<x:=2;>x>0","\\exists x . ([x:=1;]<x:=2;>(x>0))") ::
+      ("[p:=0;]\\forall x . [x:=p;] \\exists y . [q := x + y; ] q > 0", "[p:=0;](\\forall  x . [x:=p;] (\\exists y . [q := x + y; ] q > 0))") ::
+      // <> vs >.
       ("< ?p>q; > p > 1", "<?(p > q);>(p>1)") ::
       ("[ ?p>q; ] p > 1", "[?(p > q);](p>1)") ::
+      ("< ?a; ++ ?a; > a", "< {?a;} ++ {?a;} > a") ::
+      //arith.
       ("p + q * r = s", "p + (q * r) = s") ::
       ("p * q + r = s", "(p * q) + r = s") ::
       ("p - q * r = s", "p - (q * r) = s") ::
@@ -54,9 +66,6 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("1^2 + 3^2 = s^2", "(1^2) + (3^2) = (s^2)") ::
       ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0")::
       ("p^2^5 >= 0", "p^(2^5) >= 0")::
-      ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
-      ("[ p:=1; ] <p:=2; > p>0", "[p:=1;](<p:=2;>p>0)") ::
-      ("< p:=1; > [p:=2; ] p>0", "<p:=1;>([p:=2;]p>0)") ::
       // implicit {} either assumed correctly or rejected
       ("[ p:=1; p:=2; ++ p:=3] p>0", "[ {p:=1; p:=2;} ++ p:=3] p>0") ::
       ("[ p:=1; ++ p:=2; p:=3] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ::
