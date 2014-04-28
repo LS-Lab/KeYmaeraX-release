@@ -829,7 +829,7 @@ class AbstractionRule extends PositionRule {
       val fn = new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
               case BoxModality(p, f) => Right(Forall(p.writes, f))
-              case DiamondModality(p, f) => Right(Exists(p.writes, f))
+              case DiamondModality(p, f) => Right(Forall(p.writes, f))
               case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
         }
       }
