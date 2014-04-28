@@ -8,6 +8,7 @@ import java.io._
 import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core.ProofStep
+import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, TacticLibrary, Tactics}
 
 object TermTests {
 
@@ -82,24 +83,30 @@ object TermTests {
     r.isClosed
   }
 
+*/
   def test4(input: String, output: String) = {
-    val parse = new KeYmaeraParser()
-    val i2: Formula = parse.parse(readFile(input)).asInstanceOf[Formula]
+    val i2: Formula = new KeYmaeraParser().runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    println(r.isClosed)
+    //println(r.isClosed)
     println(print(r))
     val (subst, delta) = getSubst
-    val tactic: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & cutT(getTautology2) & (hideT(new Position(true, 1)), (hideT(new Position(true, 0))*) & uniformSubstT(subst, delta) & axiomT("Choice") & AxiomCloseT)
-    val tactic2: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
-    tactic(r, new Limit(None, None))
-    tactic2(r, new Limit(None, None))
+    val tactic: Tactic = Tactics.weakSeqT(
+      Tactics.weakSeqT(
+        Tactics.weakSeqT(
+          Tactics.repeatT(TacticLibrary.ImplyRightFindT),
+          TacticLibrary.ImplyLeftFindT),
+        TacticLibrary.cutT(getTautology2))
+     , TacticLibrary.hideT(new Position(true, 1)))//, (hideT(new Position(true, 0))*) & uniformSubstT(subst, delta) & axiomT("Choice") & AxiomCloseT)
+    //val tactic2: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    //tactic2(r)
+    Thread.sleep(3000)
     val tree =  print(r)
     println(tree)
     writeToFile(new File(output), tree)
-    r.isClosed
+    //r.isClosed
   }
-*/
 
   def test5(input: String, output: String) {
     val parse = new KeYmaeraParser()
