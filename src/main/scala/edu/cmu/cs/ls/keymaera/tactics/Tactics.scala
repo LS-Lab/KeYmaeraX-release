@@ -259,208 +259,6 @@ object Tactics {
   def branchRepeatT(t: Tactic): Tactic = branchT(t, () => branchRepeatT(t))
 
 
-  /*********************************************
-   * Basic Tactics
-   ********************************************
-   */
-
-  def findPosAnte(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
-    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
-      for(i <- 0 until p.sequent.ante.length) {
-        val pos = new Position(true, i)
-        if(posT.applies(p.sequent, pos)) return posT(pos)(p, l)
-      }
-      Some(Seq(p))
-    }
-  }
-
-  def findPosSucc(posT: PositionTactic): Tactic = new Tactic("FindPos (" + posT.name + ")") {
-    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
-      for(i <- 0 until p.sequent.succ.length) {
-        val pos = new Position(false, i)
-        if(posT.applies(p.sequent, pos)) return posT(pos)(p, l)
-      }
-      Some(Seq(p))
-    }
-  }
-
-  def AndLeftT: PositionTactic = new PositionTactic ("AndLeft") {
-    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
-      case And(_, _) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("AndLeft") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(AndLeft(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def AndLeftFindT: Tactic = findPosAnte(AndLeftT)
-
-  def AndRightT: PositionTactic = new PositionTactic ("AndRight") {
-    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
-      case And(_, _) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("AndRight") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(AndRight(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def AndRightFindT: Tactic = findPosSucc(AndRightT)
-
-  def OrLeftT: PositionTactic = new PositionTactic ("OrLeft") {
-    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
-      case Or(_, _) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("OrLeft") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(OrLeft(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def OrLeftFindT: Tactic = findPosAnte(OrLeftT)
-
-  def OrRightT: PositionTactic = new PositionTactic ("OrRight") {
-    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
-      case Or(_, _) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("OrRight") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(OrRight(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def OrRightFindT: Tactic = findPosSucc(OrRightT)
-
-  def ImplyLeftT: PositionTactic = new PositionTactic ("ImplyLeft") {
-    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
-      case Imply(_, _) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("ImplyLeft") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(ImplyLeft(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def ImplyLeftFindT: Tactic = findPosAnte(ImplyLeftT)
-
-  def ImplyRightT: PositionTactic = new PositionTactic ("ImplyRight") {
-    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
-      case Imply(_, _) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("ImplyRight") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(ImplyRight(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def ImplyRightFindT: Tactic = findPosSucc(ImplyRightT)
-
-  def NotLeftT: PositionTactic = new PositionTactic ("NotLeft") {
-    def applies(s: Sequent, p: Position) = if(p.isAnte) s.ante(p.index) match {
-      case Not(_) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("NotLeft") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(NotLeft(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def NotLeftFindT: Tactic = findPosAnte(NotLeftT)
-
-  def NotRightT: PositionTactic = new PositionTactic ("NotRight") {
-    def applies(s: Sequent, p: Position) = if(!p.isAnte) s.succ(p.index) match {
-      case Not(_) => true
-      case _ => false
-    } else false
-
-    def apply(pos: Position): Tactic = new Tactic("NotRight") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = applies(p.sequent, pos) match {
-        case true => Some(p.apply(NotRight(pos)))
-        case false => Left(Some(Seq(p)))
-      }
-    }
-  }
-
-  def NotRightFindT: Tactic = findPosSucc(NotRightT)
-
-  def AxiomCloseT: Tactic = new Tactic("AxiomClose") {
-    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = findPositions(p.sequent) match {
-      case Some((a, b)) => Some(p.apply(AxiomClose(a)(b)))
-      case None => Left(Some(Seq(p)))
-    }
-    def findPositions(s: Sequent): Option[(Position,Position)] = {
-      for(f <- s.ante; g <- s.succ)
-        if(f == g) return Some((new Position(true, s.ante.indexOf(f)), new Position(false, s.succ.indexOf(g))))
-      None
-    }
-  }
-
-  def hideT: PositionTactic = new PositionTactic("Hide") {
-    def applies(s: Sequent, p: Position) = true
-    def apply(pos: Position): Tactic = new Tactic("Hide") {
-      def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] =
-      if(pos.isDefined(p.sequent))
-        Some(if(pos.isAnte) p(HideLeft(pos)) else p(HideRight(pos)))
-      else
-        Some(Seq(p))
-    }
-  }
-
-  def cutT(g: (ProofNode => Option[Formula])): Tactic = new Tactic("Cut") {
-    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = g(p) match {
-      case Some(t) => Some(p(Cut(t)))
-      case _ => Some(Seq(p))
-    }
-  }
-
-  def cutT(f: Formula): Tactic = cutT((x:ProofNode) => Some(f))
-
-  def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
-    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = Axiom.axioms.get(id) match {
-      case Some(_) => Some(p(Axiom(id)))
-      case _ => Some(Seq(p))
-    }
-  }
-
-  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new Tactic("Uniform Substitution") {
-    def apply(p: ProofNode, l: Limit): Either[Option[Seq[ProofNode]], Timeout] = {
-      val ante = for(f <- p.sequent.ante) yield delta.get(f) match { case Some(frm) => frm case _ => f}
-      val succ = for(f <- p.sequent.succ) yield delta.get(f) match { case Some(frm) => frm case _ => f}
-      Some(p(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))))
-    }
-
-  }
-
-}
 */
 
 object Tactics {
@@ -512,9 +310,11 @@ object Tactics {
       }
     }
 
-    timeout  = min(timeout,  parent.timeout)
-    branches = min(branches, parent.branches)
-    rules    = min(rules,    parent.rules)
+    if(parent != null) {
+      timeout = min(timeout, parent.timeout)
+      branches = min(branches, parent.branches)
+      rules = min(rules, parent.rules)
+    }
 
     def this(t : Option[Int], b : Option[Int], r : Option[Int]) = this(null, t, b, r)
 
@@ -659,8 +459,13 @@ object Tactics {
     if (Seq(n) == result) tNext.dispatch(tFrom, n)
   }
 
+  def onChangeAndOnNoChange(n : ProofNode, tChange : Tactic, noChange: (Tactic, Status, Seq[ProofNode]) => Unit)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (Seq(n) == result) noChange(tFrom, status, result)
+    else result.foreach((pn: ProofNode) => tChange.dispatch(tFrom, pn))
+  }
 
-  def SeqT(left : Tactic, right : Tactic) =
+
+  def seqT(left : Tactic, right : Tactic) =
     new Tactic("Seq(" + left.name + "," + right.name + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
 
@@ -671,7 +476,7 @@ object Tactics {
       }
     }
 
-  def EitherT(left : Tactic, right : Tactic) =
+  def eitherT(left : Tactic, right : Tactic) =
     new Tactic("Seq(" + left.name + "," + right.name + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
 
@@ -682,7 +487,7 @@ object Tactics {
       }
     }
 
-  def WeakSeqT(left : Tactic, right : Tactic) =
+  def weakSeqT(left : Tactic, right : Tactic) =
     new Tactic("WeakSeq(" + left.name + "," + right.name + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
 
@@ -713,7 +518,15 @@ object Tactics {
 
   // def branchT(tcts: (() => Tactic)*): Tactic = new Tactic("branch")
   // def branchRepeatT(t: Tactic): Tactic = branchT(t, () => branchRepeatT(t))
-  // def repeatT(t: Tactic): Tactic = 
+  def repeatT(t: Tactic): Tactic = new Tactic("Repeat(" + t.name + ")") {
+    def applicable(node: ProofNode) = t.applicable(node)
+
+    def apply(tool: Tool, node: ProofNode) = {
+      t.continuation = onChangeAndOnNoChange(node, this, continuation)
+      println("Dispatching " + t.name)
+      t.dispatch(this, node)
+    }
+  }
 
 
   /********************************************************************************
@@ -727,6 +540,7 @@ object Tactics {
   abstract class ApplyRule(val rule : Rule) extends Tactic("Apply rule " + rule) {
 
     def apply(tool : Tool, node : ProofNode) {
+      println("Trying to apply " + rule)
       if (applicable(node)) {
         incRule()
         val res = measure(node(rule))
