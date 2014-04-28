@@ -41,7 +41,7 @@ object TacticLibrary {
           t.continuation = continuation
           t.dispatch(t, p)
         } else {
-          continuation(this, Failed,  Seq(p))
+          continuation(this, Failed, Seq(p))
         }
 
       }
@@ -65,7 +65,7 @@ object TacticLibrary {
           t.continuation = continuation
           t.dispatch(t, p)
         } else {
-          continuation(this, Failed,  Seq(p))
+          continuation(this, Failed, Seq(p))
         }
       }
     }
@@ -193,8 +193,10 @@ object TacticLibrary {
 
   def hideT: PositionTactic = new PositionTactic {
     override val name: String = "Hide"
+
     def applies(s: Sequent, p: Position) = true
-    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if(pos.isAnte) HideLeft(pos) else HideRight(pos)) {
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) HideLeft(pos) else HideRight(pos)) {
       override def applicable(node: ProofNode): Boolean = true
     }
   }
@@ -204,23 +206,36 @@ object TacticLibrary {
       case Some(_) => true
       case _ => false
     }
+
     def apply(tool: Tool, p: ProofNode): Unit = g(p) match {
-      case Some(t) => p(Cut(t))
-      case _ =>
+      case Some(t) => {
+        val t = new Tactics.ApplyRule(Cut(t)) {
+          override def applicable(node: ProofNode): Boolean = node == p
+        };
+        t.continuation = continuation
+        t.dispatch(this, p)
+      }
+      case _ => continuation(this, Failed, Seq(p))
     }
   }
 
-  def cutT(f: Formula): Tactic = cutT((x:ProofNode) => Some(f))
-  /*
+  def cutT(f: Formula): Tactic = cutT((x: ProofNode) => Some(f))
+
   def AxiomCloseT: Tactic = new Tactic("AxiomClose") {
     def apply(tool: Tool, p: ProofNode): Unit = findPositions(p.sequent) match {
-      case Some((a, b)) => p.apply(AxiomClose(a)(b))
-      case None =>
+      case Some((a, b)) => {
+        val t = new Tactics.ApplyRule(AxiomClose(a)(b)) {
+          override def applicable(node: ProofNode): Boolean = node == p
+        }
+        t.continuation = continuation
+        t.dispatch(this, p)
+      }
+      case None => continuation(this, Failed, Seq(p))
     }
 
-    def findPositions(s: Sequent): Option[(Position,Position)] = {
-      for(f <- s.ante; g <- s.succ)
-        if(f == g) return Some((new Position(true, s.ante.indexOf(f)), new Position(false, s.succ.indexOf(g))))
+    def findPositions(s: Sequent): Option[(Position, Position)] = {
+      for (f <- s.ante; g <- s.succ)
+        if (f == g) return Some((new Position(true, s.ante.indexOf(f)), new Position(false, s.succ.indexOf(g))))
       None
     }
 
@@ -230,27 +245,37 @@ object TacticLibrary {
     }
   }
 
+  def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
+    def applicable(pn: ProofNode): Boolean = true
 
-
-
-
-    def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
-      def applicable(pn: ProofNode): Boolean = true
-      def apply(tool: Tool, p: ProofNode): Unit = Axiom.axioms.get(id) match {
-        case Some(_) => p(Axiom(id))
-        case _ =>
+    def apply(tool: Tool, p: ProofNode): Unit = Axiom.axioms.get(id) match {
+      case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
+        override def applicable(node: ProofNode): Boolean = (node == p)
       }
+      case _ => continuation(this, Failed, Seq(p))
+    }
+  }
+
+
+  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new Tactic("Uniform Substitution") {
+    def applicable(pn: ProofNode) = true
+
+    def apply(tool: Tool, p: ProofNode): Unit = {
+      val ante = for (f <- p.sequent.ante) yield delta.get(f) match {
+        case Some(frm) => frm
+        case _ => f
+      }
+      val succ = for (f <- p.sequent.succ) yield delta.get(f) match {
+        case Some(frm) => frm
+        case _ => f
+      }
+      val t = new Tactics.ApplyRule(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))) {
+        override def applicable(node: ProofNode): Boolean = node == p
+      }
+      t.continuation = continuation
+      t.dispatch(this, p)
     }
 
-    def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new Tactic("Uniform Substitution") {
-      def applicable(pn: ProofNode) = true
-      def apply(tool: Tool, p: ProofNode): Unit= {
-        val ante = for(f <- p.sequent.ante) yield delta.get(f) match { case Some(frm) => frm case _ => f}
-        val succ = for(f <- p.sequent.succ) yield delta.get(f) match { case Some(frm) => frm case _ => f}
-        p(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ)))
-      }
-
-    }
-    */
+  }
 
 }
