@@ -13,7 +13,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   val parser = new KeYmaeraParser(false) 
   val alpParser = parser.ProofFileParser
 
-  "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly))" in {
+  "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
     val equalPairs =
       ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
       ("< ?p>q; >(p > 1)", "<?(p > q);>(p>1)") ::
@@ -24,7 +24,7 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("-p + q = s", "(-p) + q = s") ::
       ("p^2 >= 0", "p^2 >= 0") ::
       ("p^2 + q^2 = s^2", "(p^2) + (q^2) = (s^2)") ::
-      ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0")::
+      ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0") ::
       Nil
 
     for(pair <- equalPairs) {
