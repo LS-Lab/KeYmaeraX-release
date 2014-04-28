@@ -12,7 +12,14 @@ object KeYmaeraPrettyPrinter {
   def stringify(e:Expr) = prettyPrinter(e)
   
   private def sortPrinter(s:Sort):String = "type" //TODO
-    
+
+  private def endsWithColon(e:Expr, parent:Expr)  = e match {
+    case Assign(_) => !needsParens(e,parent)
+    case NDetAssign(_) => !needsParens(e,parent)
+    case ContEvolve(_) => !needsParens(e,parent)
+    case _ => false
+  }
+
   private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
     //arith
   	case Add(s,l,r) => recInfix(l,r,expressionToPrint,PLUS)
@@ -84,7 +91,7 @@ object KeYmaeraPrettyPrinter {
     case NDetAssign(l) => prettyPrinter(l) + ASSIGN + KSTAR + SCOLON
     
     case BoxModality(p,f) => BOX_OPEN + parensIfNeeded(p,expressionToPrint) + BOX_CLOSE + parensIfNeeded(f,expressionToPrint)
-    case ContEvolve(child) => OPEN_CBRACKET + prettyPrinter(child) + CLOSE_CBRACKET
+    case ContEvolve(child) => prettyPrinter(child) + SCOLON 
     case Derivative(s, child) => recPostfix(child, PRIME)
     case DiamondModality(p,f) => DIA_OPEN + parensIfNeeded(p,expressionToPrint) + DIA_CLOSE +parensIfNeeded(f,expressionToPrint)
     case Equiv(l,r) => recInfix(l,r,expressionToPrint,EQUIV)
@@ -118,15 +125,14 @@ object KeYmaeraPrettyPrinter {
     } 
     
     case Sequence(l,r) => {
-      val leftString = l match {
-        case Sequence(ll,lr) => prettyPrinter(l)
-        case _ => recurse(l)
+      val leftString = parensIfNeeded(l, Sequence(l,r))
+      val rightString = parensIfNeeded(r, Sequence(l,r))
+      if(!endsWithColon(l,Sequence(l,r))) {
+        leftString + SCOLON + rightString
       }
-      val rightString = r match {
-        case Sequence(rl,rr) => prettyPrinter(r)
-        case _ => recurse(r)
+      else {
+        leftString + rightString
       }
-      leftString + SCOLON + rightString
     } 
     
     //BinaryRelation
@@ -200,12 +206,27 @@ object KeYmaeraPrettyPrinter {
   private def recPostfix(e:Expr, sign:String):String = 
     groupIfNotAtomic(e, prettyPrinter(e)) + sign
   
-  private def groupIfNotAtomic(e:Expr,s:String):String = 
-    if(isAtomic(e)) s else "("+s+")"
+  private def groupIfNotAtomic(e:Expr,s:String):String = {
+    val parens = 
+      if(e.isInstanceOf[Program]) {
+        ("{","}")
+      }
+      else {
+        ("(",")")
+      }
+    if(isAtomic(e)) s else parens._1+s+parens._2
+  }
   
   private def parensIfNeeded(child:Expr, parent:Expr) = {
+    val parens = 
+      if(child.isInstanceOf[Program]) {
+        ("{","}")
+      }
+      else {
+        ("(",")")
+      }
     if(needsParens(child,parent)) {
-      "(" + prettyPrinter(child) + ")"
+      parens._1 + prettyPrinter(child) + parens._2
     }
     else {
       prettyPrinter(child)

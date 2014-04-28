@@ -624,21 +624,11 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
   {
     type SubprogramParser = PackratParser[Program]
     
-    lazy val parser = precedence.reduce(_|_) ~ ";".? ^^ {
-      case program ~ scolon => scolon match {
-        case Some(_) => program
-        case None    => {
-          val exn = new Exception("Expected trailing semicolon in " + program.prettyString())
-          program match {
-            case Test(_) => throw exn
-            case Assign(_,_) => throw exn
-            case NDetAssign(_) => throw exn
-            case _ => program
-          }
-      }
-      }
-    }
-    
+    //This is not precedence.reduce(_|_) because some things need trailing ;
+    //This list should contain precedence in order, with all elements which
+    //require a trailing ; removed. These will be captured by sequenceP.
+    lazy val parser = choiceP | sequenceP | ifThenElseP | ifThenP | whileP | closureP | groupP
+
     //TODO do we need to make the program variables into predicates so that they
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
     // should all be put into the predicates in the first place because programVariables
@@ -687,12 +677,15 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     }
     
     lazy val sequenceP:SubprogramParser = {
-      lazy val pattern = rightAssociative(precedence,sequenceP,Some(SCOLON))
+      lazy val pattern = rightAssociativeOptional(precedence,sequenceP,Some(SCOLON))
       log(pattern)("program" + SCOLON + "program") ^^ {
-          case left ~ SCOLON ~ right => new Sequence(left,right)
+        case left ~ SCOLON ~ right => right match {
+          case Some(r) => new Sequence(left,r)
+          case None => left
+        }
       }
     }
-    
+ 
     lazy val choiceP:SubprogramParser = {
       lazy val pattern = rightAssociative(precedence,choiceP,Some(CHOICE))
       log(pattern)(CHOICE) ^^ {
@@ -759,12 +752,12 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
 //    }
 
     lazy val evolutionP:SubprogramParser = {      
-      lazy val pattern = (OPEN_CBRACKET ~
+      lazy val pattern = (
                           rep1sep(formulaParser, AND) ~
-                          AND.? ~ formulaParser.? ~
-                          CLOSE_CBRACKET)
+                          AND.? ~ formulaParser.?
+                         )
       log(pattern)("Cont Evolution") ^^ {
-        case OPEN_CBRACKET ~ des ~ andOption ~ constraintOption ~ CLOSE_CBRACKET => constraintOption match {
+        case des ~ andOption ~ constraintOption => constraintOption match {
           case Some(constraint) => ContEvolve( And(des.reduceRight(And(_,_)) , constraint) )
           case None => ContEvolve( des.reduceRight(And(_,_)) )
         }
@@ -792,9 +785,9 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
 //    }
     
     lazy val groupP:SubprogramParser = {
-      lazy val pattern = "(" ~ parser ~ ")"
+    lazy val pattern = "{" ~> parser <~ "}"
       log(pattern)("Subterm Grouping") ^^ {
-        case "(" ~ p ~ ")" => p
+        case  p => p
       }
     }
     
