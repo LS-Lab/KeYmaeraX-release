@@ -270,7 +270,7 @@ class EqualityRewriting extends AssumptionRule {
         }
         val trav = TraverseToPosition(p.inExpr, fn, blacklist)
         ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
-          case x: Formula => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+          case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
           case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
         }
       }
@@ -382,12 +382,18 @@ class Substitution(l: Seq[SubstitutionPair]) {
 
     case Equals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => Equals(d, this(a), this(b))
-      case (a: Program,b: Program) => Equals(d, this(a), this(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case NotEquals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => NotEquals(d, this(a), this(b))
-      case (a: Program,b: Program) => NotEquals(d, this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
+    }
+    case ProgramEquals(l, r) => (l,r) match {
+      case (a: Program,b: Program) => ProgramEquals(this(a), this(b))
+      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
+    }
+    case ProgramNotEquals(l, r) => (l,r) match {
+      case (a: Program,b: Program) => ProgramNotEquals(this(a), this(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterThan(d, l, r) => (l,r) match {
@@ -690,7 +696,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
     val f = if(tPos.isAnte) s.ante(tPos.getIndex) else s.succ(tPos.getIndex)
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
-        if(tPos == p) {
+        if(tPos.inExpr == p) {
           e match {
             case Forall(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
             case Exists(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
@@ -711,9 +717,9 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
           case x: ProgramConstant => renameProg(x)
           case Apply(a, b) => Apply(renameFunc(a), b)
           case ApplyPredicate(a, b) => ApplyPredicate(renameFunc(a), b)
+          case _ => return Left(None)
         }) match {
           case x: Formula => Right(x)
-          case a: Either[Option[StopTraversal], Formula] => a
         }
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
@@ -731,7 +737,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       }
     }
     ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), f) match {
-      case x: Formula => if(tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case Some(x: Formula) => if(tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
       case _ => throw new IllegalStateException("No alpha renaming possible in " + f)
     }
   }
@@ -814,6 +820,27 @@ class AssignmentRule extends PositionRule {
       List(if(p.isAnte) Sequent(s.pref :+ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref :+ v, s.ante, s.succ.updated(p.index, res)))
     }
   }
+}
+
+class AbstractionRule extends PositionRule {
+  override def apply(pos: Position): Rule = new Rule("AbstractionRule") {
+    override def apply(s: Sequent): List[Sequent] = {
+      val f = if(pos.isAnte) s.ante(pos.getIndex) else s.succ(pos.getIndex)
+      val fn = new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+              case BoxModality(p, f) => Right(Forall(p.writes, f))
+              case DiamondModality(p, f) => Right(Forall(p.writes, f))
+              case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
+        }
+      }
+      ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), f) match {
+        case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+        case _ => throw new IllegalStateException("No abstraction possible of " + f)
+      }
+
+    }
+  }
+
 }
 
 // maybe:
