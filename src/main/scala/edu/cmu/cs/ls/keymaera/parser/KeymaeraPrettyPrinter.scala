@@ -240,10 +240,10 @@ object KeYmaeraPrettyPrinter {
     val precedenceDS =    
       //Terms.
       //TODO expP?
-      Multiply.getClass().getCanonicalName() ::
-      Divide.getClass().getCanonicalName() ::
       Add.getClass().getCanonicalName() ::
       Subtract.getClass().getCanonicalName() ::
+      Multiply.getClass().getCanonicalName() ::
+      Divide.getClass().getCanonicalName() ::
       Neg.getClass().getCanonicalName() ::
       Apply.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() :: //real-valued.

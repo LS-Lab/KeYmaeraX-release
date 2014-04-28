@@ -211,11 +211,11 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     lazy val parser = precedence.reduce(_|_)
     
     val precedence : List[SubtermParser] =
-      expP ::
-      multiplyP ::
-      divP ::
       addP ::
       subtractP ::
+      multiplyP ::
+      divP ::
+      expP ::
       negativeP ::
       applyP ::
       termDerivativeP ::
@@ -446,7 +446,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       lazy val pattern = DIA_OPEN ~ 
                          programParser ~ 
                          DIA_CLOSE ~ 
-                         asTightAsParsers(precedence, diamondP).reduce(_|_)
+                         asTightAsParsers(precedence, boxP).reduce(_|_)
       log(pattern)("Diamond: " + DIA_OPEN + PROGRAM_META + DIA_CLOSE + FORMULA_META) ^^ {
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }

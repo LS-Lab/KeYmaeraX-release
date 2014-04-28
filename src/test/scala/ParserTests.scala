@@ -6,17 +6,21 @@ import java.io.File
 class ParserParenTests extends FlatSpec with Matchers {
   def makeInput(program : String) : String = {
     "Functions. B a. B b. B c. End." +
-    "ProgramVariables. R p. R q. R s. End." +
+    "ProgramVariables. R p. R q. R r. R s. End." +
     "Problem." + program + "\nEnd."
   }
 
   val parser = new KeYmaeraParser(false) 
   val alpParser = parser.ProofFileParser
 
-  "The Parser" should "place implicit parens correctly" in {
+  "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly))" in {
     val equalPairs =
       ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
       ("< ?p>q; >(p > 1)", "<?(p > q);>(p>1)") ::
+      ("p + q * r = s", "p + (q * r) = s") ::
+      ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
+      ("[ p:=1; ] <p:=2; > p>0", "[p:=1;](<p:=2;>p>0)") ::
+      ("< p:=1; > [p:=2; ] p>0", "<p:=1;>([p:=2;]p>0)") ::
       Nil
 
     for(pair <- equalPairs) {
