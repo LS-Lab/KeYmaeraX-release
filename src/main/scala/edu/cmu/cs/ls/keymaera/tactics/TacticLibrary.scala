@@ -209,11 +209,11 @@ object TacticLibrary {
 
     def apply(tool: Tool, p: ProofNode): Unit = g(p) match {
       case Some(t) => {
-        val t = new Tactics.ApplyRule(Cut(t)) {
+        val apTactic = new Tactics.ApplyRule(Cut(t)) {
           override def applicable(node: ProofNode): Boolean = node == p
         };
-        t.continuation = continuation
-        t.dispatch(this, p)
+        apTactic.continuation = continuation
+        apTactic.dispatch(this, p)
       }
       case _ => continuation(this, Failed, Seq(p))
     }
