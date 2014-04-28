@@ -363,11 +363,11 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       backwardImplP :: //makes writing axioms less painful.
       orP ::
       andP ::
+      notP ::
       boxP :: //magic alert: don't change the relative order of box,diamond,forall and exists.
       diamondP ::
       forallP :: 
       existsP :: //todo should we keep these with diamond and box?
-      notP ::
       equalsP ::
       notEqualsP ::
       leP    ::
