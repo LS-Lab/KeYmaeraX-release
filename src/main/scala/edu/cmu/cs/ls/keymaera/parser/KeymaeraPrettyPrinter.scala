@@ -257,6 +257,7 @@ object KeYmaeraPrettyPrinter {
       BoxModality.getClass().getCanonicalName()   ::
       DiamondModality.getClass().getCanonicalName() ::
       Modality.getClass().getCanonicalName() ::
+      Not.getClass().getCanonicalName() :: 
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
@@ -265,7 +266,6 @@ object KeYmaeraPrettyPrinter {
       LessThan.getClass().getCanonicalName()    :: 
       Forall.getClass().getCanonicalName() ::
       Exists.getClass().getCanonicalName() ::
-      Not.getClass().getCanonicalName() :: 
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
       True.getClass().getCanonicalName() ::
