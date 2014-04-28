@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.parser._
 import java.io.File
 
 class ParserParenTests extends FlatSpec with Matchers {
+  // type declaration header for tests
   def makeInput(program : String) : String = {
     "Functions. B a. B b. B c. End." +
     "ProgramVariables. R p. R q. R r. R s. End." +
@@ -13,9 +14,32 @@ class ParserParenTests extends FlatSpec with Matchers {
   val parser = new KeYmaeraParser(false) 
   val alpParser = parser.ProofFileParser
 
-  "The Parser" should "place implicit parens correctly (a.k.a. resolve ambiguities correctly))" in {
+  "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
     val equalPairs =
-      ("\\forall x . (x > 2) & a", "(\\forall x . (x > 2)) & a") ::
+      // unary operator binds stronger than binary operator
+      ("! p > 0 & p < 5", "(!(p>0)) & (p<5)") ::
+      ("! p = 0 & p = 5", "(!(p=0)) & (p=5)") ::
+      ("! p > 0 | p < 5", "(!(p>0)) | (p<5)") ::
+      ("! p > 0 -> p > 5", "(!(p>0)) -> (p>5)") ::
+      ("! p > 0 <-> p > 5", "(!(p>0)) <-> (p>5)") ::
+      ("! \\forall x . x > 0 | p < 5", "(!(\\forall x . x>0)) | (p<5)") ::
+      ("! \\exists x . x > 0 | p < 5", "(!(\\exists x . x>0)) | (p<5)") ::
+      ("! \\forall x . [p:=x;]p >= x | p < 5", "(!(\\forall x . ([p:=x;](p>=x)))) | (p<5)") ::
+      ("[p:=1;] p>0 & p < 1", "([p:=1;](p>0)) & (p<1)") ::
+      ("[p:=1;] p>0 | p < 1", "([p:=1;](p>0)) | (p<1)") ::
+      ("[p:=1;] p>0 -> p < 1", "([p:=1;](p>0)) -> (p<1)") ::
+      ("<p:=1;> p>0 & p < 1", "(<p:=1;>(p>0)) & (p<1)") ::
+      ("<p:=1;> p>0 | p < 1", "(<p:=1;>(p>0)) | (p<1)") ::
+      ("<p:=1;> p>0 -> p < 1", "(<p:=1;>(p>0)) -> (p<1)") ::
+      ("\\forall x . x > 2 & a", "(\\forall x . (x > 2)) & a") ::
+      ("\\forall x . x > 2 | a", "(\\forall x . (x > 2)) | a") ::
+      ("\\forall x . x > 2 -> a", "(\\forall x . (x > 2)) -> a") ::
+      ("\\forall x . x > 2 <-> a", "(\\forall x . (x > 2)) <-> a") ::
+      ("\\exists x . x > 2 & a", "(\\exists x . (x > 2)) & a") ::
+      ("\\exists x . x > 2 | a", "(\\exists x . (x > 2)) | a") ::
+      ("\\exists x . x > 2 -> a", "(\\exists x . (x > 2)) -> a") ::
+      ("\\exists x . x > 2 <-> a", "(\\exists x . (x > 2)) <-> a") ::
+      //
       ("< ?p>q; > p > 1", "<?(p > q);>(p>1)") ::
       ("[ ?p>q; ] p > 1", "[?(p > q);](p>1)") ::
       ("p + q * r = s", "p + (q * r) = s") ::
@@ -26,6 +50,8 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("p - q - s = 0", "(p-q) - s = 0") ::
       ("p^2 >= 0", "(p^2) >= 0") ::
       ("p^2 + q^2 = s^2", "(p^2) + (q^2) = (s^2)") ::
+      ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0") ::
+      ("1^2 + 3^2 = s^2", "(1^2) + (3^2) = (s^2)") ::
       ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0")::
       ("p^2^5 >= 0", "p^(2^5) >= 0")::
       ("< p:=1; > <p:=2; > p>0", "<p:=1;>(<p:=2;>p>0)") ::
@@ -34,7 +60,8 @@ class ParserParenTests extends FlatSpec with Matchers {
       // implicit {} either assumed correctly or rejected
       ("[ p:=1; p:=2; ++ p:=3] p>0", "[ {p:=1; p:=2;} ++ p:=3] p>0") ::
       ("[ p:=1; ++ p:=2; p:=3] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ::
-      ("[ p:=1; p:=2; p:=3*] p>0", "[ p:=1; p:=2; {p:=3;}*] p>0") ::
+      ("[ p:=1; p:=2; p:=3*] p>0", "[ p:=1; p:=2; {{p:=3;}*}] p>0") ::
+      ("[ p:=1; p:=2; ++ p:=3*] p>0", "[ {p:=1; p:=2;} ++ {{p:=3;}*}] p>0") ::
       Nil
 
     for(pair <- equalPairs) {

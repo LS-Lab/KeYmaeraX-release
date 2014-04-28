@@ -254,18 +254,18 @@ object KeYmaeraPrettyPrinter {
       Imply.getClass().getCanonicalName()  ::
       Or.getClass().getCanonicalName() ::
       And.getClass().getCanonicalName() ::
+      Not.getClass().getCanonicalName() :: 
       BoxModality.getClass().getCanonicalName()   ::
       DiamondModality.getClass().getCanonicalName() ::
       Modality.getClass().getCanonicalName() ::
+      Forall.getClass().getCanonicalName() ::
+      Exists.getClass().getCanonicalName() ::
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
       GreaterEquals.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
       LessThan.getClass().getCanonicalName()    :: 
-      Forall.getClass().getCanonicalName() ::
-      Exists.getClass().getCanonicalName() ::
-      Not.getClass().getCanonicalName() :: 
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
       True.getClass().getCanonicalName() ::
@@ -331,7 +331,9 @@ object KeYmaeraPrettyPrinter {
     case ApplyPredicate(function,child) => false
     
     case Assign(l,r) => false
-    
+
+    case Forall(_,_) => true
+    case Exists(_,_) => true
     case BoxModality(p,f) => true
     case ContEvolve(child) => true
     case Derivative(s, child) => true

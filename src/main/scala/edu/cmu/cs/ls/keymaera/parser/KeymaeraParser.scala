@@ -281,7 +281,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     }
     
     lazy val expP:SubtermParser = {
-      lazy val pattern = tighterParsers(precedence,expP).reduce(_|_) ~ EXP ~ tighterParsers(precedence,expP).reduce(_|_) //?
+      lazy val pattern = tighterParsers(precedence,expP).reduce(_|_) ~ EXP ~ asTightAsParsers(precedence,expP).reduce(_|_) 
       log(pattern)("Exponentiation") ^^ {
         case left ~ EXP ~ right => Exp(left.sort, left,right)
       }
@@ -363,17 +363,17 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
       backwardImplP :: //makes writing axioms less painful.
       orP ::
       andP ::
+      notP ::
       boxP :: //magic alert: don't change the relative order of box,diamond,forall and exists.
       diamondP ::
+      forallP :: 
+      existsP :: //todo should we keep these with diamond and box?
       equalsP ::
       notEqualsP ::
       leP    ::
       geP    ::
       gtP    ::
       ltP    ::  // magic alert: tightestComparisonOperator is the tightest comparison operator.
-      forallP :: 
-      existsP :: //todo should we keep these with diamond and box?
-      notP :: 
       formulaDerivativeP ::
       predicateP ::
       trueP ::
