@@ -706,6 +706,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
           case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
           case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
         }, b), c))
+        case _ => Left(None)
       }
     }
     ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), f) match {
