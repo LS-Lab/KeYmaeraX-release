@@ -774,16 +774,17 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
     // if we want to have positions different from HereP
     require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
     val f = if(p.isAnte)  s.ante(p.getIndex)  else s.succ(p.getIndex)
-    val (exp, res) = f match {
-      case BoxModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
-      case DiamondModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
+    val (exp, res, rhs) = f match {
+      case BoxModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post), r)
+      case DiamondModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post), r)
       case _ => throw new IllegalArgumentException("The assigment rule is only applicable to box and diamond modalities" +
         "containing a single assignment")
     }
     // check that v is not contained in any other formula
+    val rhsVars = variables(rhs)
     val v = exp match {
-      case x: Variable if(!vars.contains(x)) => x
-      case x: Variable if(vars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
+      case x: Variable if(!vars.contains(x) && !rhsVars.contains(x)) => x
+      case x: Variable if(vars.contains(x) || rhsVars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
       case _ => throw new IllegalStateException("Assignment handling is only implemented for varibles right now, not for " + exp.toString()) //?
     }
 
