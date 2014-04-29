@@ -679,6 +679,8 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
               case Apply(Function(n, _, _, _), _) => n
               case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
             }) == name, "Symbol to be renamed must be bound in " + e)
+            case _ => throw new IllegalArgumentException("We expect either a quantifier or a modality with a " +
+              "single assignment at this position " + e + " " + p)
           }
           Left(None)
         } else (e match {
@@ -689,6 +691,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
           case _ => return Left(None)
         }) match {
           case x: Formula => Right(x)
+          case a => throw new IllegalArgumentException("Expected a formula. Got " + a)
         }
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
