@@ -192,7 +192,7 @@ object TacticLibrary {
   def AxiomCloseT: Tactic = new Tactic("AxiomClose") {
     def apply(tool: Tool, p: ProofNode): Unit = findPositions(p.sequent) match {
       case Some((a, b)) => {
-        val t = new Tactics.ApplyRule(AxiomClose(a)(b)) {
+        val t = new Tactics.ApplyRule(AxiomClose(a, b)) {
           override def applicable(node: ProofNode): Boolean = node == p
         }
         t.continuation = continuation
@@ -245,5 +245,11 @@ object TacticLibrary {
     }
 
   }
+
+  // assignment tactic (alpha renaming and then assignment rule)
+
+  // exhaustive equality rewriting
+
+  // axiom wrappers
 
 }

@@ -395,43 +395,6 @@ object Tactics {
 
   }
 
-  /**
-   * Apply position rule
-   */
-  abstract class ApplyPositionRule(val rule : PositionRule, val pos : Position)
-                                            extends Tactic("Apply rule " + rule) {
-
-    def apply(tool : Tool, node : ProofNode) {
-      if (applicable(node)) {
-        incRule()
-        val res = measure(node(rule, pos))
-        continuation(this, checkStats(Success), res)
-      } else {
-        continuation(this, Failed,  Seq(node))
-      }
-    }
-
-  }
-
-  /**
-   * Apply position rule
-   */
-  abstract class ApplyAssumptionRule(val rule : AssumptionRule,
-                                     val aPos : Position, val pos : Position)
-                                            extends Tactic("Apply rule " + rule) {
-
-    def apply(tool : Tool, node : ProofNode) {
-      if (applicable(node)) {
-        incRule()
-        val res = measure(node(rule, aPos, pos))
-        continuation(this, checkStats(Success), res)
-      } else {
-        continuation(this, Failed,  Seq(node))
-      }
-    }
-
-  }
-
   abstract class PositionTactic(val name: String) {
     def applies(s: Sequent, p: Position): Boolean
 

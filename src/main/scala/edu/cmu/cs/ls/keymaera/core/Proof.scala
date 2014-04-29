@@ -62,18 +62,6 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition
       result
     }
 
-    def apply(rule: PositionRule, pos: Position) : List[ProofNode] = {
-      val result = rule(pos)(sequent).map(new ProofNode(_, this))
-      prepend(rule(pos), result)
-      result
-    }
-
-    def apply(rule: AssumptionRule, aPos: Position, pos: Position) : List[ProofNode] = {
-      val result = rule(aPos)(pos)(sequent).map(new ProofNode(_, this))
-      prepend(rule(aPos)(pos), result)
-      result
-    }
-
     @volatile private[this] var closed : Boolean = false
     @volatile var status               : Status  = Unfinished
 
@@ -112,11 +100,11 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition
    *********************************************************************************
    */
 
-abstract class PositionRule extends (Position => Rule)
+abstract class PositionRule(name: String, val pos: Position) extends Rule(name)
 
-abstract class AssumptionRule extends (Position => PositionRule)
+abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos)
 
-abstract class TwoPositionRule extends ((Position,Position) => Rule)
+abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name)
 
 abstract class PosInExpr {
   def first:  PosInExpr = FirstP(this)
@@ -235,45 +223,41 @@ object Cut {
 }
 
 // equality/equivalence rewriting
-class EqualityRewriting extends AssumptionRule {
+class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equality Rewriting", ass, p) {
   import Helper._
-  override def apply(ass: Position): PositionRule = new PositionRule() {
-    override def apply(p: Position): Rule = new Rule("Equality Rewriting") {
-      override def apply(s: Sequent): List[Sequent] = {
-        require(ass.isAnte && ass.inExpr == HereP)
-        val (blacklist, fn) = s.ante(ass.getIndex) match {
-          case Equals(d, a, b) =>
-            (variables(a) ++ variables(b),
-            new ExpressionTraversalFunction {
-              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
-                if(e == a) Right(b)
-                else if(e == b) Right(a)
-                else throw new IllegalArgumentException("Equality Rewriting not applicable")
-            })
-          case ProgramEquals(a, b) =>
-            (variables(a) ++ variables(b),
-            new ExpressionTraversalFunction {
-              override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
-                if(e == a) Right(b)
-                else if(e == b) Right(a)
-                else throw new IllegalArgumentException("Equality Rewriting not applicable")
-            })
-          case Equiv(a, b) =>
-            (variables(a) ++ variables(b),
-            new ExpressionTraversalFunction {
-              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
-                if(e == a) Right(b)
-                else if(e == b) Right(a)
-                else throw new IllegalArgumentException("Equality Rewriting not applicable")
-            })
-          case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-        }
-        val trav = TraverseToPosition(p.inExpr, fn, blacklist)
-        ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
-          case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-          case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-        }
-      }
+  override def apply(s: Sequent): List[Sequent] = {
+    require(ass.isAnte && ass.inExpr == HereP)
+    val (blacklist, fn) = s.ante(ass.getIndex) match {
+      case Equals(d, a, b) =>
+        (variables(a) ++ variables(b),
+        new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })
+      case ProgramEquals(a, b) =>
+        (variables(a) ++ variables(b),
+        new ExpressionTraversalFunction {
+          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })
+      case Equiv(a, b) =>
+        (variables(a) ++ variables(b),
+        new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })
+      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+    }
+    val trav = TraverseToPosition(p.inExpr, fn, blacklist)
+    ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
+      case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
     }
   }
 }
@@ -478,172 +462,157 @@ object UniformSubstitution {
 
 
 // AX close
-object AxiomClose extends AssumptionRule {
-  def apply(ass: Position): PositionRule = new AxiomClosePos(ass)
+object AxiomClose extends ((Position, Position) => Rule) {
+  def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
+}
 
-  private class AxiomClosePos(ass: Position) extends PositionRule {
-    def apply(p: Position): Rule = {
-      require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
-      require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
-      new AxiomClose(ass, p)
-    }
-  }
 
-  private class AxiomClose(ass: Position, p: Position) extends Rule("AxiomClose") {
+class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass, p) {
+  require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
+  require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
 
-    def apply(s: Sequent): List[Sequent] = {
-      if(ass.isAnte) {
-        if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
-          // close
-          Nil
-        } else {
-          throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
-        }
+  def apply(s: Sequent): List[Sequent] = {
+    if(ass.isAnte) {
+      if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
+        // close
+        Nil
       } else {
-        if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
-          // close
-          Nil
-        } else {
-          throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
-        }
+        throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
+      }
+    } else {
+      if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
+        // close
+        Nil
+      } else {
+        throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
       }
     }
   }
 }
 
 // Impl right
+object ImplyRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new ImplyRight(p)
+}
 
-object ImplyRight extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(!p.isAnte && p.inExpr == HereP)
-    new ImplRight(p)
-  }
-  private class ImplRight(p: Position) extends Rule("Imply Right") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.succ(p.getIndex)
-      f match {
-        case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
-        case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
-      }
+class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
     }
   }
 }
 
 // Impl left
-object ImplyLeft extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(p.isAnte && p.inExpr == HereP)
-    new ImplLeft(p)
-  }
-  private class ImplLeft(p: Position) extends Rule("Imply Left") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.ante(p.getIndex)
-      f match {
-        case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
-        case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
-      }
+object ImplyLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new ImplLeft(p)
+}
+class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
     }
   }
 }
 
 // Not right
-object NotRight extends PositionRule {
+object NotRight extends (Position => Rule) {
   def apply(p: Position): Rule = {
-    assert(!p.isAnte && p.inExpr == HereP)
     new NotRight(p)
   }
-  private class NotRight(p: Position) extends Rule("Not Right") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.succ(p.getIndex)
-      f match {
-        case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
-        case _ => throw new IllegalArgumentException("Not-Right can only be applied to negation. Tried to apply to: " + f)
-      }
+}
+
+class NotRight(p: Position) extends PositionRule("Not Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
+      case _ => throw new IllegalArgumentException("Not-Right can only be applied to negation. Tried to apply to: " + f)
     }
   }
 }
 
 // Not left
-object NotLeft extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(p.isAnte && p.inExpr == HereP)
-    new NotLeft(p)
-  }
-  private class NotLeft(p: Position) extends Rule("Not Left") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.ante(p.getIndex)
-      f match {
-        case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
-        case _ => throw new IllegalArgumentException("Not-Left can only be applied to negation. Tried to apply to: " + f)
-      }
+object NotLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new NotLeft(p)
+}
+
+class NotLeft(p: Position) extends PositionRule("Not Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      case _ => throw new IllegalArgumentException("Not-Left can only be applied to negation. Tried to apply to: " + f)
     }
   }
 }
 
 // And right
-object AndRight extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(!p.isAnte && p.inExpr == HereP)
-    new AndRight(p)
-  }
-  private class AndRight(p: Position) extends Rule("And Right") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.succ(p.getIndex)
-      f match {
-        case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
-        case _ => throw new IllegalArgumentException("And-Right can only be applied to conjunctions. Tried to apply to: " + f)
-      }
+object AndRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndRight(p)
+}
+class AndRight(p: Position) extends PositionRule("And Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
+      case _ => throw new IllegalArgumentException("And-Right can only be applied to conjunctions. Tried to apply to: " + f)
     }
   }
 }
 
 // And left
-object AndLeft extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(p.isAnte && p.inExpr == HereP)
-    new AndLeft(p)
-  }
-  private class AndLeft(p: Position) extends Rule("And Left") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.ante(p.getIndex)
-      f match {
-        case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
-        case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
-      }
+object AndLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndLeft(p)
+}
+
+class AndLeft(p: Position) extends PositionRule("And Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
+      case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
     }
   }
 }
 
 // Or right
-object OrRight extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(!p.isAnte && p.inExpr == HereP)
-    new OrRight(p)
-  }
-  private class OrRight(p: Position) extends Rule("Or Right") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.succ(p.getIndex)
-      f match {
-        case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
-        case _ => throw new IllegalArgumentException("Or-Right can only be applied to disjunctions. Tried to apply to: " + f)
-      }
+object OrRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new OrRight(p)
+}
+class OrRight(p: Position) extends PositionRule("Or Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
+      case _ => throw new IllegalArgumentException("Or-Right can only be applied to disjunctions. Tried to apply to: " + f)
     }
   }
 }
 
 // Or left
-object OrLeft extends PositionRule {
-  def apply(p: Position): Rule = {
-    assert(p.isAnte && p.inExpr == HereP)
-    new OrLeft(p)
-  }
-  private class OrLeft(p: Position) extends Rule("Or Left") {
-    def apply(s: Sequent): List[Sequent] = {
-      val f = s.ante(p.getIndex)
-      f match {
-        case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-        case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
-      }
+object OrLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new OrLeft(p)
+}
+
+class OrLeft(p: Position) extends PositionRule("Or Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
+      case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
     }
   }
 }
@@ -653,19 +622,19 @@ object OrLeft extends PositionRule {
 // remove duplicate antecedent (this should be a tactic)
 // remove duplicate succedent (this should be a tactic)
 // hide
-object HideLeft extends PositionRule {
+object HideLeft extends (Position => Rule) {
   def apply(p: Position): Rule = {
     assert(p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
-object HideRight extends PositionRule {
+object HideRight extends (Position => Rule) {
   def apply(p: Position): Rule = {
     assert(!p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
-class Hide(p: Position) extends Rule("Hide") {
+class Hide(p: Position) extends PositionRule("Hide", p) {
   def apply(s: Sequent): List[Sequent] = {
     assert(p.inExpr == HereP)
     if (p.isAnte)
@@ -763,29 +732,27 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
  */
-class Skolemize extends PositionRule {
+class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   import Helper._
-  override def apply(p: Position): Rule = new Rule("Skolemize") {
-    override def apply(s: Sequent): List[Sequent] = {
-      require(p.inExpr == HereP, "We can only skolemize top level formulas");
-      val vars = variablesWithout(s, p)
-      val (v,phi) = if(p.isAnte) {
-        val form = s.ante(p.getIndex)
-        form match {
-          case Exists(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
-            throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
-          case _ => throw new IllegalArgumentException("Skolemization is only applicable to existential quantifiers in the antecedent")
-        }
-      } else {
-        val form = s.succ(p.getIndex)
-        form match {
-          case Forall(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
-            throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
-          case _ => throw new IllegalArgumentException("Skolemization is only applicable to universal quantifiers in the succedent")
-        }
+  override def apply(s: Sequent): List[Sequent] = {
+    require(p.inExpr == HereP, "We can only skolemize top level formulas");
+    val vars = variablesWithout(s, p)
+    val (v,phi) = if(p.isAnte) {
+      val form = s.ante(p.getIndex)
+      form match {
+        case Exists(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+          throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
+        case _ => throw new IllegalArgumentException("Skolemization is only applicable to existential quantifiers in the antecedent")
       }
-      List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
+    } else {
+      val form = s.succ(p.getIndex)
+      form match {
+        case Forall(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+          throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
+        case _ => throw new IllegalArgumentException("Skolemization is only applicable to universal quantifiers in the succedent")
+      }
     }
+    List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
   }
 }
 
@@ -794,53 +761,48 @@ class Skolemize extends PositionRule {
  * Assumptions: We assume that the variable has been made unique through alpha conversion first. That way, we can just
  * replace the assignment by an equation without further checking
  */
-class AssignmentRule extends PositionRule {
+class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   import Helper._
-  override def apply(p: Position): Rule = new Rule("AssignmentRule") {
-    override def apply(s: Sequent): List[Sequent] = {
-      // we need to make sure that the variable does not occur in any other formula in the sequent
-      val vars = variablesWithout(s, p)
-      // TODO: we have to make sure that the variable does not occur in the formula itself
-      // if we want to have positions different from HereP
-      require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
-      val f = if(p.isAnte)  s.ante(p.getIndex)  else s.succ(p.getIndex)
-      val (exp, res) = f match {
-        case BoxModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
-        case DiamondModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
-        case _ => throw new IllegalArgumentException("The assigment rule is only applicable to box and diamond modalities" +
-          "containing a single assignment")
-      }
-      // check that v is not contained in any other formula
-      val v = exp match {
-        case x: Variable if(!vars.contains(x)) => x
-        case x: Variable if(vars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
-        case _ => throw new IllegalStateException("Assignment handling is only implemented for varibles right now, not for " + exp.toString()) //?
-      }
-
-      List(if(p.isAnte) Sequent(s.pref :+ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref :+ v, s.ante, s.succ.updated(p.index, res)))
+  override def apply(s: Sequent): List[Sequent] = {
+    // we need to make sure that the variable does not occur in any other formula in the sequent
+    val vars = variablesWithout(s, p)
+    // TODO: we have to make sure that the variable does not occur in the formula itself
+    // if we want to have positions different from HereP
+    require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
+    val f = if(p.isAnte)  s.ante(p.getIndex)  else s.succ(p.getIndex)
+    val (exp, res) = f match {
+      case BoxModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
+      case DiamondModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post))
+      case _ => throw new IllegalArgumentException("The assigment rule is only applicable to box and diamond modalities" +
+        "containing a single assignment")
     }
+    // check that v is not contained in any other formula
+    val v = exp match {
+      case x: Variable if(!vars.contains(x)) => x
+      case x: Variable if(vars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
+      case _ => throw new IllegalStateException("Assignment handling is only implemented for varibles right now, not for " + exp.toString()) //?
+    }
+
+    List(if(p.isAnte) Sequent(s.pref :+ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref :+ v, s.ante, s.succ.updated(p.index, res)))
   }
 }
 
-class AbstractionRule extends PositionRule {
-  override def apply(pos: Position): Rule = new Rule("AbstractionRule") {
-    override def apply(s: Sequent): List[Sequent] = {
-      val f = if(pos.isAnte) s.ante(pos.getIndex) else s.succ(pos.getIndex)
-      val fn = new ExpressionTraversalFunction {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
-              case BoxModality(p, f) => Right(Forall(p.writes, f))
-              case DiamondModality(p, f) => Right(Forall(p.writes, f))
-              case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
-        }
+class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
+  override def apply(s: Sequent): List[Sequent] = {
+    val f = if(pos.isAnte) s.ante(pos.getIndex) else s.succ(pos.getIndex)
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+            case BoxModality(p, f) => Right(Forall(p.writes, f))
+            case DiamondModality(p, f) => Right(Forall(p.writes, f))
+            case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
       }
-      ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), f) match {
-        case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-        case _ => throw new IllegalStateException("No abstraction possible of " + f)
-      }
-
     }
-  }
+    ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), f) match {
+      case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case _ => throw new IllegalStateException("No abstraction possible of " + f)
+    }
 
+  }
 }
 
 // maybe:

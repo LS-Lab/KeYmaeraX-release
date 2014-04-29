@@ -47,11 +47,11 @@ object TermTests {
       val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
       val pos = new Position(false, 0)
       val pos2 = new Position(true, 0)
-      val c = r(ImplyRight, pos)
+      val c = r(ImplyRight(pos))
       for(n <- c) {
-        val c2 = n(ImplyRight, pos)
+        val c2 = n(ImplyRight(pos))
         for(n2 <- c2) {
-          val end = n2(AxiomClose(pos2), pos)
+          val end = n2(AxiomClose(pos2, pos))
           println(end)
         }
       }
