@@ -248,6 +248,24 @@ object TacticLibrary {
 
   // assignment tactic (alpha renaming and then assignment rule)
 
+  //TODO: if we write a uniquify tactic we can have a very easy assignment tactic
+  def assignment = new PositionTactic("Assignment") {
+    // for now only on top level
+    override def applies(s: Sequent, p: Position): Boolean = {
+      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
+        case BoxModality(Assign(l, r)) => true
+        case DiamondModality(Assign(l, r)) => true
+        case _ => false
+      })
+    }
+
+    override def apply(p: Position): Tactic = new Tactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def apply(tool: Tool, node: ProofNode): Unit = ???
+    }
+  }
+
   // exhaustive equality rewriting
 
   // axiom wrappers
