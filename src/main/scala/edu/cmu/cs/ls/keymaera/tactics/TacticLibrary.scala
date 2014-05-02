@@ -288,18 +288,18 @@ object TacticLibrary {
           case DiamondModality(Assign(Variable(name, i, _), _)) => (name, i)
           case a => throw new UnsupportedOperationException("Cannot apply to " + a)
         }
-        val vars = Helper.variables(node.sequent, p) filter((ns: NamedSymbol) => ns.name == n)
+        val vars = Helper.variables(node.sequent).filter((ns: NamedSymbol) => ns.name == n)
         require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
         // we do not have to rename if there are no name clashes
         if(vars.size > 1) {
-          val maxIdx = (vars.map((ns: NamedSymbol) => ns.index)).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+          val maxIdx: Option[Int] = (vars.map((ns: NamedSymbol) => ns.index)).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
             case Some(a) => i match {
               case Some(b) => if (a < b) Some(b) else Some(a)
               case None => Some(a)
             }
             case None => i
           })
-          val tIdx = maxIdx match {
+          val tIdx: Option[Int] = maxIdx match {
             case None => Some(0)
             case Some(a) => Some(a+1)
           }
