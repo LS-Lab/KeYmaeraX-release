@@ -859,6 +859,12 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 
 
 object Helper {
+ def variables(s: Sequent): Set[NamedSymbol] = {
+   val a = for(f <- s.ante) yield variables(f)
+   val b = for(f <- s.succ) yield variables(f)
+   Set() ++ a.flatten ++ b.flatten
+  }
+
   def variables[A: FTPG](a: A): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     val fn = new ExpressionTraversalFunction {
