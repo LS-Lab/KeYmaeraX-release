@@ -263,16 +263,17 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
 }
 
 /**
- * specific interpretation for variables that start and end with _
- * these are used for binding
+ * Representation of a substitution replacing n with t.
  *
- * @param n can have one of the following forms:
+ * @param n the expression to be replaced. n can have one of the following forms:
  *          - Variable
  *          - Predicate
  *          - ApplyPredicate(Function, Expr)
  *          - Apply(Function, Expr)
  *          - ProgramConstant
  *          - Derivative(...)
+ * @param t the expression to be used in place of n
+ *@TODO Assert that n is of the above form only
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -281,7 +282,12 @@ class SubstitutionPair (val n: Expr, val t: Expr) {
     + n.sort + " != " + t.sort)
 }
 
+/**
+ * A Uniform Substitution.
+ * Implementation of applying uniform substitutions to terms, formulas, programs.
+ */
 class Substitution(l: Seq[SubstitutionPair]) {
+    //@TODO assert unique left hand side in l
 
   /**
    *
@@ -303,13 +309,13 @@ class Substitution(l: Seq[SubstitutionPair]) {
   }
 
   def names(pairs: Seq[SubstitutionPair]): Seq[NamedSymbol] = (for(p <- pairs) yield names(p)).flatten.distinct
-
   def names(pair: SubstitutionPair): Seq[NamedSymbol] = (names(pair.n) ++ names(pair.t)).filter(!boundNames(pair.n).contains(_))
 
   /**
    * This method returns the names that are bound in the source of a substitution
    * @param n the source of a substitution
    * @return the names bound on the source side of a substitution
+   * @TODO namesToBeBound or something like this for uniform substitution purposes could be a better name? Because it's not just the bound variables of a formula.
    */
   def boundNames(n: Expr): Seq[NamedSymbol] = n match {
     case ApplyPredicate(_, args) => names(args)
@@ -321,6 +327,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
    * Return all the named elements in a sequent
    * @param e
    * @return
+   * @TODO maybe rename to freeNames, but make naming compatible with boundNames
    */
   def names(e: Expr): Seq[NamedSymbol] = e match {
     case x: NamedSymbol => Vector(x)
@@ -331,42 +338,47 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case x: Atom => Nil
   }
 
+  // uniform substitution on formulas
   def apply(f: Formula): Formula = f match {
+      // homomorphic cases
     case Not(c) => Not(this(c))
     case And(l, r) => And(this(l), this(r))
     case Or(l, r) => Or(this(l), this(r))
     case Imply(l, r) => Imply(this(l), this(r))
     case Equiv(l, r) => Equiv(this(l), this(r))
 
+    // binding cases
     /*
      * For quantifiers just check that there is no name clash, throw an exception if there is
      */
     case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, this(form))
-    else throw new IllegalArgumentException("There is a name class in a substitution " + vars + " and " + l)
+    else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars + " and " + l + " applied on " + f)
 
     case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, this(form))
-    else throw new IllegalArgumentException("There is a name class in a substitution " + vars + " and " + l)
+    else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars + " and " + l + " applied on " + f)
 
     case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
       case BoxModality(p, f) => BoxModality(this(p), this(f))
       case DiamondModality(p, f) => DiamondModality(this(p), this(f))
       case _ => ???
-    } else throw new IllegalArgumentException("There is a name class in a substitution " + x.writes + " and " + l)
+    } else throw new IllegalArgumentException("There is a name clash in a substitution " + x.writes + " and " + l + " applied on " + f)
 
+    //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
 
     // if we find a match, we bind the arguments of our match to what is in the current term
     // then we apply it to the codomain of the substitution
     case ApplyPredicate(func, arg) => for(p <- l) {
       p.n match {
-        case ApplyPredicate(pf, parg) => if(func == pf) return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
+        case ApplyPredicate(pf, parg) if(func == pf) => return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
         case _ =>
       }
     }; return ApplyPredicate(func, this(arg))
 
+    // homomorphic cases
     case Equals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => Equals(d, this(a), this(b))
-      case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
+      case _ => throw new IllegalArgumentException("Don't know how to handle case " + f)
     }
     case NotEquals(d, l, r) => (l,r) match {
       case (a: Term,b: Term) => NotEquals(d, this(a), this(b))
@@ -399,7 +411,10 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case x: Atom => x
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
+  
+  // uniform substitution on terms
   def apply(t: Term): Term = t match {
+      // homomorphic cases
     case Neg(s, c) => Neg(s, this(c))
     case Add(s, l, r) => Add(s, this(l), this(r))
     case Subtract(s, l, r) => Subtract(s, this(l), this(r))
@@ -407,52 +422,68 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Divide(s, l, r) => Divide(s, this(l), this(r))
     case Exp(s, l, r) => Exp(s, this(l), this(r))
     case Pair(dom, l, r) => Pair(dom, this(l), this(r))
-    case Derivative(_, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
+    // applying uniform substitutions
+    case Derivative(_, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return this(t)
     case Variable(_, _, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
     // if we find a match, we bind the arguments of our match to what is in the current term
     // then we apply it to the codomain of the substitution
     case Apply(func, arg) => for(p <- l) {
       p.n match {
-        case Apply(pf, parg) => if(func == pf) return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
+        case Apply(pf, parg) if(func == pf) => return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
         case _ =>
       }
     }; return Apply(func, this(arg))
-    case x: Atom => x
+    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
 
-  def apply(p: Program): Program = p match {
-    case Loop(c) => Loop(this(c))
-    case Sequence(a, b) => Sequence(this(a), this(b))
-    case Choice(a, b) => Choice(this(a), this(b))
-    case Parallel(a, b) => Parallel(this(a), this(b))
-    case IfThen(a, b) => IfThen(this(a), this(b))
-    case IfThenElse(a, b, c) => IfThenElse(this(a), this(b), this(c))
-    case Assign(a, b) => Assign(a, this(b))
-    case NDetAssign(a) => p
-    case Test(a) => Test(this(a))
-    case ContEvolve(a) => ContEvolve(this(a))
-    case NFContEvolve(v, x, t, f) => NFContEvolve(v, x, this(t), this(f))
-    case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
-    case _ => throw new UnsupportedOperationException("Not implemented yet")
+  // uniform substitution on programs
+  def apply(p: Program): Program = {
+      require(p.writes.intersect(names(l)).isEmpty);
+      p match {
+        case Loop(c) => Loop(this(c))
+        case Sequence(a, b) => Sequence(this(a), this(b))
+        case Choice(a, b) => Choice(this(a), this(b))
+        case Parallel(a, b) => Parallel(this(a), this(b))
+        case IfThen(a, b) => IfThen(this(a), this(b))
+        case IfThenElse(a, b, c) => IfThenElse(this(a), this(b), this(c))
+        case Assign(a, b) => Assign(a, this(b))  //@TODO assert that a is a variable (so far) and assert that a not in names(l)
+        case NDetAssign(a) => p
+        case Test(a) => Test(this(a))
+        case ContEvolve(a) => ContEvolve(this(a))
+        case NFContEvolve(v, x, t, f) => if(v.intersect(names(l)).isEmpty) NFContEvolve(v, x, this(t), this(f))
+          else throw new IllegalArgumentException("There is a name clash in uniform substitution " + l + " applied on " + p + " because of quantified disturbance " + v)
+        case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
+        case _ => throw new UnsupportedOperationException("Not implemented yet")
+     }
   }
-
 }
 
+/**
+ * Uniform Substitution Rule.
+ * Applies a given uniform substitution to the given original premise (origin).
+ * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
+ * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
+ * @param substitution the uniform substitution to be applied to origin.
+ * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ */
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
 object UniformSubstitution {
   def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
 
   private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
-    // check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
-    // require explicit rule applications)
-    def apply(s: Sequent): List[Sequent] = {
-      val eqt = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println(KeYmaeraPrettyPrinter.stringify(a)); println(KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
-      if(s.pref == origin.pref // universal prefix is identical
-        && origin.ante.length == s.ante.length && origin.succ.length == s.succ.length
-        && (origin.ante.zip(s.ante)).foldLeft(true)(eqt)  // formulas in ante results from substitution
-        && (origin.succ.zip(s.succ)).foldLeft(true)(eqt)) // formulas in succ results from substitution
+    /**
+     * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+     * require explicit rule applications)
+     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+     */
+    def apply(conclusion: Sequent): List[Sequent] = {
+      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println(KeYmaeraPrettyPrinter.stringify(a)); println(KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      if(conclusion.pref == origin.pref // universal prefix is identical
+        && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
+        && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
+        && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
         List(origin)
       else
         throw new IllegalStateException("Substitution did not yield the expected result")
@@ -828,12 +859,6 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 
 
 object Helper {
-  def variables(s: Sequent): Set[NamedSymbol] = {
-    val a = for(f <- s.ante) yield variables(f)
-    val b = for(f <- s.succ) yield variables(f)
-    Set() ++ a.flatten ++ b.flatten
-  }
-
   def variables[A: FTPG](a: A): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     val fn = new ExpressionTraversalFunction {
@@ -869,7 +894,7 @@ object Helper {
     }
     for(i <- 0 to s.succ.length) {
       if(p.isAnte || i != p.getIndex) {
-        vars ++= variables(s.succ(i))
+        vars ++= variables(s.ante(i))
       }
     }
     vars
