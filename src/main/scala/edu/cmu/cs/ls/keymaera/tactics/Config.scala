@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaera.core
+package edu.cmu.cs.ls.keymaera.tactics
 
 object Config {
 

@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.Tool
-import edu.cmu.cs.ls.keymaera.core.Config._
+import Config._
 import scala.Unit
 import scala.language.implicitConversions
 

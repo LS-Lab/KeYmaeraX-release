@@ -43,7 +43,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.Tool
-import edu.cmu.cs.ls.keymaera.core.Config._
+import Config._
 import edu.cmu.cs.ls.keymaera.core.ProofNode
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 

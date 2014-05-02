@@ -9,10 +9,9 @@ import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.util.parsing.input.Reader
 import scala.util.parsing.input.CharSequenceReader
-import edu.cmu.cs.ls.keymaera.core.LoadedRuleInfo
-import edu.cmu.cs.ls.keymaera.core.LoadedRule
 import edu.cmu.cs.ls.keymaera.core.Term
 import java.io.File
+import edu.cmu.cs.ls.keymaera.parser.{LoadedRuleInfo, LoadedRule}
 
 
 /**

@@ -4,7 +4,7 @@
  * @author Nathan Fulton
  */
 
-package edu.cmu.cs.ls.keymaera.core
+package edu.cmu.cs.ls.keymaera.parser
 
 import java.io.File
 
