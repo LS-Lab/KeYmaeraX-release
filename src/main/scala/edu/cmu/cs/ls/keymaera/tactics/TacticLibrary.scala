@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyPositionTactic, PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ApplyPositionTactic, PositionTactic, Tactic}
 import scala.Unit
 
 /**
@@ -247,14 +247,31 @@ object TacticLibrary {
   }
 
   // assignment tactic (alpha renaming and then assignment rule)
+  def assignmentFindAnte = findPosAnte(assignment)
+  def assignmentFindSucc = findPosSucc(assignment)
+  def assignmentFind = assignmentFindSucc | assignmentFindAnte
 
-  //TODO: if we write a uniquify tactic we can have a very easy assignment tactic
   def assignment = new PositionTactic("Assignment") {
     // for now only on top level
     override def applies(s: Sequent, p: Position): Boolean = {
       (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Assign(l, r)) => true
-        case DiamondModality(Assign(l, r)) => true
+        case BoxModality(Variable(_, _, _), _) => true
+        case DiamondModality(Variable(_, _, _), _) => true
+        case _ => false
+      })
+    }
+
+    override def apply(p: Position): Tactic = Tactics.seqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
+      override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
+    })
+  }
+
+  def uniquify = new PositionTactic("Uniquify") {
+    // for now only on top level
+    override def applies(s: Sequent, p: Position): Boolean = {
+      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
+        case BoxModality(Variable(_, _, _), _) => true
+        case DiamondModality(Variable(_, _, _), _) => true
         case _ => false
       })
     }
@@ -262,8 +279,36 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = new Tactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def apply(tool: Tool, node: ProofNode): Unit = ???
+      override def apply(tool: Tool, node: ProofNode): Unit = {
+        val (n, idx) = (if (p.isAnte) node.sequent.ante else node.sequent.succ)(p.index) match {
+          case BoxModality(Assign(Variable(name, i, _), _)) => (name, i)
+          case DiamondModality(Assign(Variable(name, i, _), _)) => (name, i)
+          case a => throw new UnsupportedOperationException("Cannot apply to " + a)
+        }
+        val vars = Helper.variables(node.sequent, p) filter((ns: NamedSymbol) => ns.name == n)
+        require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
+        // we do not have to rename if there are no name clashes
+        if(vars.size > 1) {
+          val maxIdx = (vars.map((ns: NamedSymbol) => ns.index)).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+            case Some(a) => i match {
+              case Some(b) => if (a < b) Some(b) else Some(a)
+              case None => Some(a)
+            }
+            case None => i
+          })
+          val tIdx = maxIdx match {
+            case None => Some(0)
+            case Some(a) => Some(a+1)
+          }
+          // dispatch alpha conversion tactic
+          new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
+            override def applicable(n: ProofNode): Boolean = n == node
+          }.dispatch(this, node)
+        }
+
+      }
     }
+
   }
 
   // exhaustive equality rewriting
