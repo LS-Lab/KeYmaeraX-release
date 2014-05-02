@@ -7,6 +7,7 @@
 package edu.cmu.cs.ls.keymaera.parser
 
 import java.io.File
+import edu.cmu.cs.ls.keymaera.core._
 
 sealed trait Evidence
 case class ProofEvidence(proof : List[LoadedBranch])   extends Evidence
