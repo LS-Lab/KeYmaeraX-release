@@ -310,30 +310,38 @@ object Tactics {
     }
 
   def eitherT(left : Tactic, right : Tactic) =
-    new Tactic("Seq(" + left.name + "," + right.name + ")") {
-      def applicable(node : ProofNode) = left.applicable(node)
+    new Tactic("Either(" + left.name + "," + right.name + ")") {
+      def applicable(node : ProofNode) = left.applicable(node) || right.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
-        right.continuation = continuation
-        left.continuation = onNoChange(node, right)
-        left.dispatch(this, node)
+        if(left.applicable(node)) {
+          right.continuation = continuation
+          left.continuation = onNoChange(node, right)
+          left.dispatch(this, node)
+        } else {
+          right.dispatch(this, node)
+        }
       }
     }
 
   def weakSeqT(left : Tactic, right : Tactic) =
     new Tactic("WeakSeq(" + left.name + "," + right.name + ")") {
-      def applicable(node : ProofNode) = left.applicable(node)
+      def applicable(node : ProofNode) = left.applicable(node) || right.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
-        right.continuation = continuation
-        left.continuation  = unconditionally(right)
-        left.dispatch(this, node)
+        if(left.applicable(node)) {
+          right.continuation = continuation
+          left.continuation = unconditionally(right)
+          left.dispatch(this, node)
+        } else {
+          right.dispatch(this, node)
+        }
       }
     }
 
   def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
     new Tactic("Conditional " + thenT + " else " + elseT) {
-      def applicable(node : ProofNode) = true
+      def applicable(node : ProofNode) = if(cond(node)) thenT.applicable(node) else elseT.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
         if (cond(node)) {
@@ -399,6 +407,13 @@ object Tactics {
     def applies(s: Sequent, p: Position): Boolean
 
     def apply(p: Position): Tactic
+
+    def &(pt: PositionTactic) = new PositionTactic("Seq(" + this.name + ", " + pt.name) {
+      override def applies(s: Sequent, p: Position): Boolean = this.applies(s, p)
+
+      // this crucially relies on stable positions
+      override def apply(p: Position): Tactic = this.apply(p) & pt.apply(p)
+    }
   }
 
   abstract class ApplyPositionTactic(name: String, val t: PositionTactic) extends Tactic("Position tactic " + name + "(" + t.name + ")") {

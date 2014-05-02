@@ -250,6 +250,9 @@ object TacticLibrary {
   def assignmentFindAnte = findPosAnte(assignment)
   def assignmentFindSucc = findPosSucc(assignment)
   def assignmentFind = assignmentFindSucc | assignmentFindAnte
+  // it would be great if we could access the same position to apply the imply right rule
+  // FIXME: this only works for toplevel positions since there the positions are stable
+  def assignmentFindImpl = findPosSucc(assignment & ImplyRightT) | findPosAnte(assignment & ImplyLeftT)
 
   def assignment = new PositionTactic("Assignment") {
     // for now only on top level
