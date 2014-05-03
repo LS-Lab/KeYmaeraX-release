@@ -11,3 +11,15 @@ project/plugins/project/
 
 # Scala-IDE specific
 .scala_dependencies
+.idea/.name
+.idea/compiler.xml
+.idea/copyright/profiles_settings.xml
+.idea/encodings.xml
+.idea/libraries/scala_compiler.xml
+.idea/libraries/scala_library.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/scopes/scope_settings.xml
+.idea/vcs.xml
+.idea/workspace.xml
+4KeYmaera.iml
