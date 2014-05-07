@@ -17,7 +17,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   def snum(n : String) = Number(new BigDecimal(n))
 
   "MathematicaLink" should "connect" in {
-    ml = new MathematicaLink()
+    ml = new JLinkMathematicaLink()
   }
 
   it should "convert numbers" in {
