@@ -13,7 +13,7 @@ import scala.math.BigDecimal
  * 
  * @author Nathan Fulton
  */
-trait MathematicaLink extends Tool {
+trait MathematicaLink extends Tool with QETool {
   def run(cmd : String) : edu.cmu.cs.ls.keymaera.core.Expr
   def run(cmd : com.wolfram.jlink.Expr) : edu.cmu.cs.ls.keymaera.core.Expr
   
@@ -50,7 +50,7 @@ trait MathematicaLink extends Tool {
  * 
  * @author Nathan Fulton
  */
-class JLinkMathematicaLink extends MathematicaLink {
+class JLinkMathematicaLink extends  MathematicaLink {
   /** @TODO-nrf replace this with a function that works on something other
    * than unix.
    */
@@ -92,7 +92,9 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   def ready = ???
 
-  def cancel = ??
-    
+  def cancel = ???
+
+
+  def qe(f : Formula) : edu.cmu.cs.ls.keymaera.core.Expr = run("Resolve[" + toMathematica(f) + "]")
 }
 

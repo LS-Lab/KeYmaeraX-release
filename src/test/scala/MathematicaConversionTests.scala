@@ -24,7 +24,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
     ml.run("2+2") should be (Number(4))
   }
   
-   "Mathematic -> KeYmaera" should "convert simple quantifiers" in {
+   "Mathematica -> KeYmaera" should "convert simple quantifiers" in {
     val f = True //TODO handle true and false!
     ml.run("ForAll[{x}, x==x]") should be (True)
     ml.run("Exists[{x}, x==0]") should be (Exists(Seq(x), Equals(Real,x,zero)))
@@ -65,9 +65,13 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   }
 
   //The second thing causes a choke.
-  ignore should "not choke on real algebraic numbers" in {
+  ignore should "not choke on other reasonable numbers" in {
     ml.run("Rationalize[0.5/10]") should be (Divide(Real,num(1),num(20)))
     ml.run(".25/10")
+  }
+
+  ignore should "transcend" in {
+    ml.run("Sin[x]")
   }
 
   it should "convert arithmetic expressions correctly" in {
@@ -138,7 +142,12 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
     ml.run(math)
   }
 
-  "KeYmaera <-> Matehmatica converters" should "commute" in {
+  "Mathematica -> KeYmaera" should "convert inequalities" in {
+    val e = Forall(Seq(x), GreaterThan(Real,x,y))
+    roundTrip(e) should be (e)
+  }
+
+  "KeYmaera <-> Mathematica converters" should "commute" in {
     roundTrip(num(5)) should be (num(5))
   }
 }

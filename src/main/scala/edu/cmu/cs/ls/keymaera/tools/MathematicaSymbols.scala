@@ -4,6 +4,8 @@ import com.wolfram.jlink._
 
 /**
  * This is a symbol table used to check for matches using .equals()
+ * This is mostly copied from the original KeYmaera implementation by
+ * Jan-David.
  */
 private object MathematicaSymbols {
   type MExpr = com.wolfram.jlink.Expr
