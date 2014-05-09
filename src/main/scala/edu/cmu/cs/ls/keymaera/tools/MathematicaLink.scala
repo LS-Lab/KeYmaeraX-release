@@ -21,18 +21,18 @@ trait MathematicaLink extends Tool with QETool {
   def dispatch(cmd : com.wolfram.jlink.Expr) : Unit
 
   /**
-   * @returns true if the job is finished, false if it is still running.
+   * @return true if the job is finished, false if it is still running.
    */
   def ready : Boolean
 
   /**
-   * @returns The result of a dispatched job. This method blocks on
+   * @return The result of a dispatched job. This method blocks on
    * Mathematica.
    */
   def getAnswer : edu.cmu.cs.ls.keymaera.core.Expr
 
   /** Cancels the current request.
-   * @returns True if job is successfully cancelled, or False if the new
+   * @return True if job is successfully cancelled, or False if the new
    * status is unknown.
    */
   def cancel : Boolean
@@ -45,7 +45,7 @@ trait MathematicaLink extends Tool with QETool {
 }
 
 /**
- * Creating a MathematicaLink object insantiates a new connection to a
+ * Creating a MathematicaLink object instantiates a new connection to a
  * Mathematica Kernel.
  * 
  * @author Nathan Fulton
@@ -62,7 +62,7 @@ class JLinkMathematicaLink extends  MathematicaLink {
   ml.discardAnswer()
 
   /**
-   * Runs the command and then halts program execption until answer is returned.
+   * Runs the command and then halts program exception until answer is returned.
    */
   def run(cmd : String) = {
     dispatch(cmd);
@@ -70,7 +70,7 @@ class JLinkMathematicaLink extends  MathematicaLink {
   }
   
   def run(cmd:com.wolfram.jlink.Expr) = {
-    ml.evaluate(cmd);
+    dispatch(cmd);
     getAnswer()
   }
 

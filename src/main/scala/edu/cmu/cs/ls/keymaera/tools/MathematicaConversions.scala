@@ -13,6 +13,10 @@ class MathematicaComputationFailedException(e:com.wolfram.jlink.Expr)
 class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr) 
   extends ConversionException(e.toString())
 
+object TranslationConstants {
+
+}
+
 /**
  * Converts com.wolfram.jlink.Expr -> edu.cmu...keymaera.core.Expr
  * @TODO the correctness of quantifier handling is non-obvious
@@ -311,23 +315,26 @@ object KeYmaeraToMathematica {
   /** 
    * Converts a KeYmaera terms to a Mathematica expression.
    */
-  def convertTerm(t : Term) : MExpr = t match {
-    case t : Apply              => ???
-    case t : IfThenElseTerm     => ???
-    case t : Pair           	  => ???
-    case t : Right          	  => ???
-    case t : Left               => ???
-    case Add(s,l,r) 		        => convertAdd(l,r)
-    case Subtract(s,l,r) 	  	  => convertSubtract(l,r)
-    case Multiply(s,l,r) 	  	  => convertMultiply(l,r)
-    case Divide(s,l,r) 	  		  => convertDivide(l,r)
-    case Exp(s,l,r) 		  	    => convertExp(l,r)
-    case Derivative(s,c) 	  	  => convertDerivative(c)
-    case False() 			  	      => MathematicaSymbols.FALSE
-    case True()                 => MathematicaSymbols.TRUE
-    case Neg(s,c)               => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertTerm(c)))
-    case Number(s,n)            => new MExpr(n.underlying())
-    case t : Variable           => convertNS(t)
+  def convertTerm(t : Term) : MExpr = {
+    require(t.sort == Real, "Mathematica can only deal with reals not with sort " + t.sort)
+    t match {
+      case t: Apply => ???
+      case t: IfThenElseTerm => ???
+      case t: Pair => ???
+      case t: Right => ???
+      case t: Left => ???
+      case Add(s, l, r) => convertAdd(l, r)
+      case Subtract(s, l, r) => convertSubtract(l, r)
+      case Multiply(s, l, r) => convertMultiply(l, r)
+      case Divide(s, l, r) => convertDivide(l, r)
+      case Exp(s, l, r) => convertExp(l, r)
+      case Derivative(s, c) => convertDerivative(c)
+      case False() => MathematicaSymbols.FALSE
+      case True() => MathematicaSymbols.TRUE
+      case Neg(s, c) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertTerm(c)))
+      case Number(s, n) => new MExpr(n.underlying())
+      case t: Variable => convertNS(t)
+    }
   }
   
   /**
