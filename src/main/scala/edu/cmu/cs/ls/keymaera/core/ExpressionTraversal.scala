@@ -59,7 +59,7 @@ object ExpressionTraversal {
       case _ => {
         if (p == t)
           traverse(p, cont, e) match {
-            case x: Formula => Right(x)
+            case Some(x: Formula) => Right(x)
             case _ => Left(Some(stop))
           }
         else if (p.isPrefixOf(t))
@@ -71,7 +71,7 @@ object ExpressionTraversal {
       }
     }
     override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if(p == t)
-      traverse(p, cont, e) match { case x: Program => Right(x) case _ => Left(Some(stop))}
+      traverse(p, cont, e) match { case Some(x: Program) => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
       Left(None)
@@ -79,7 +79,7 @@ object ExpressionTraversal {
     // return id to ignore this branch
       Right(e)
     override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if(p == t)
-      traverse(p, cont, e) match { case x: Term => Right(x) case _ => Left(Some(stop))}
+      traverse(p, cont, e) match { case Some(x: Term) => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
       Left(None)
@@ -87,7 +87,7 @@ object ExpressionTraversal {
     // return id to ignore this branch
       Right(e)
     override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if(p == t)
-      traverse(p, cont, e) match { case x: Game => Right(x) case _ => Left(Some(stop))}
+      traverse(p, cont, e) match { case Some(x: Game) => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
       Left(None)

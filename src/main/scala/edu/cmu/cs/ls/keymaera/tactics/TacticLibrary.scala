@@ -521,11 +521,11 @@ object TacticLibrary {
       case _ => false
     }
 
-    override def apply(p: Position): Tactic = new Tactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    override def apply(pos: Position): Tactic = new Tactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       override def apply(tool: Tool, node: ProofNode): Unit = {
-        getFormula(node.sequent, p) match {
+        getFormula(node.sequent, pos) match {
           case f@BoxModality(Test(h), p) => {
             // construct substitution
             val aH = PredicateConstant("H")
@@ -534,10 +534,10 @@ object TacticLibrary {
             // [?H]p <-> (H -> p).
             val axiomInstance = Equiv(f, Imply(h, p))
             val axiom = Equiv(BoxModality(Test(aH), aP), Imply(aH, aP))
-            // TODO: implement branch1Tactic
-            val branch1Tactic = Tactics.NilT
-            // TODO: make sure that this substitution works
-            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiom -> axiomInstance)) & axiomT(this.name) & AxiomCloseT
+            val eqPos = new Position(true, node.sequent.ante.length, HereP)
+            val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+            // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT(this.name) & AxiomCloseT)
             val t = cutT(Equiv(f, Imply(h, p))) & (branch1Tactic, branch2Tactic)
             t.dispatch(this, node)
           }

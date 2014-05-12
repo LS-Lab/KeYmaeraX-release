@@ -247,17 +247,18 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
       case Equiv(a, b) =>
         (variables(a) ++ variables(b),
         new ExpressionTraversalFunction {
-          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
+            if (e == a) Right(b)
+            else if (e == b) Right(a)
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
+          }
         })
       case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
     }
     val trav = TraverseToPosition(p.inExpr, fn, blacklist)
     ExpressionTraversal.traverse(trav, if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)) match {
       case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+      case a => throw new IllegalArgumentException("Equality Rewriting not applicable. Result is " + a + " " + a.getClass)
     }
   }
 }
