@@ -414,12 +414,15 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
   }
 
-  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Position = {
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Position =
+    findPosInExpr(s, blacklist, _ == search, Some(ignore))
+
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], test: (Expr => Boolean), filterPos: Option[Position]): Position = {
     var posInExpr: PosInExpr = null
     val f = new ExpressionTraversalFunction {
       val stop = new StopTraversal {}
 
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if (e == search) {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if (test(e)) {
         posInExpr = p
         Left(Some(stop))
       } else {
@@ -432,25 +435,29 @@ object TacticLibrary {
         }
       }
 
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if (e == search) {
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if (test(e)) {
         posInExpr = p
         Left(Some(stop))
       } else Left(None)
 
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == search) {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (test(e)) {
         posInExpr = p
         Left(Some(stop))
       } else Left(None)
 
 
-      override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if (e == search) {
+      override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if (test(e)) {
           posInExpr = p
           Left(Some(stop))
         } else Left(None)
 
     }
+    val ignore = filterPos match {
+      case Some(p) => p
+      case None => null
+    }
     for(i <- 0 until s.ante.length) {
-      if(!(ignore.isAnte && ignore.getIndex == i)) {
+      if(ignore == null || !(ignore.isAnte && ignore.getIndex == i)) {
         ExpressionTraversal.traverse(f, s.ante(i))
         if (posInExpr != null) {
           return new Position(true, i, posInExpr)
@@ -458,7 +465,7 @@ object TacticLibrary {
       }
     }
     for(i <- 0 until s.succ.length) {
-      if(ignore.isAnte || ignore.getIndex != i) {
+      if(ignore == null || ignore.isAnte || ignore.getIndex != i) {
         ExpressionTraversal.traverse(f, s.succ(i))
         if (posInExpr != null) {
           return new Position(false, i, posInExpr)
@@ -512,6 +519,50 @@ object TacticLibrary {
   val eqRightFindExhaustive = findPosAnte(eqRight(true))
 
   // axiom wrappers
+  // TODO: Use findPosInExpr to find a position that matches the left side of the axiom and cut in the resulting instance
+  // we start with just using findPos to get a top level position
+
+  // [?] test
+  def boxTest: PositionTactic = new PositionTactic("[?] test") {
+    def getFormula(s: Sequent, p: Position): Formula = {
+      require(p.inExpr == HereP)
+      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+    }
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case BoxModality(Test(_), _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new Tactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def apply(tool: Tool, node: ProofNode): Unit = {
+        getFormula(node.sequent, p) match {
+          case f@BoxModality(Test(h), p) => {
+            // construct substitution
+            val aH = PredicateConstant("H")
+            val aP = PredicateConstant("p")
+            val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
+            // [?H]p <-> (H -> p).
+            val axiomInstance = Equiv(f, Imply(h, p))
+            val axiom = Equiv(BoxModality(Test(aH), aP), Imply(aH, aP))
+            // TODO: implement branch1Tactic
+            val branch1Tactic = Tactics.NilT
+            // TODO: make sure that this substitution works
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiom -> axiomInstance)) & axiomT(this.name) & AxiomCloseT
+            val t = cutT(Equiv(f, Imply(h, p))) & (branch1Tactic, branch2Tactic)
+            t.dispatch(this, node)
+          }
+          case _ =>
+        }
+      }
+    }
+  }
+
+
+  // [;] compose
+  // [++] choice
+  // I induction
 
 
 }
