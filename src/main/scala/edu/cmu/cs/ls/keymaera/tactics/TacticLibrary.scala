@@ -5,6 +5,8 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ApplyPositionTactic, P
 import scala.Unit
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 
+import scala.language.postfixOps
+
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
  *
@@ -412,7 +414,7 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
   }
 
-  def findPosInExpr[A: ExpressionTraversal.FTPG](s: Sequent, blacklist: Set[NamedSymbol], search: A, ignore: Position): Position = {
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Position = {
     var posInExpr: PosInExpr = null
     val f = new ExpressionTraversalFunction {
       val stop = new StopTraversal {}
@@ -469,7 +471,7 @@ object TacticLibrary {
   def findPosInExpr(left: Boolean, node: ProofNode, eqPos: Position): Position = {
     val eq = node.sequent.ante(eqPos.getIndex)
     val blacklist = Helper.variables(eq)
-    val search = eq match {
+    val search: Expr = eq match {
       case Equals(_, a, b) => if(left) a else b
       case ProgramEquals(a, b) => if(left) a else b
       case Equiv(a, b) => if(left) a else b
