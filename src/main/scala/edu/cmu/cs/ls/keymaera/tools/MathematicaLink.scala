@@ -8,6 +8,7 @@ import scala.math.BigDecimal
 /**
  * An abstract interface to Mathematica link implementations.
  * The link may be used syncrhonously or asychronously.
+ * Each MathematicaLink 
  * Multiple MathematicaLinks may be created by instantiating multiple copies
  * of implementing classes.
  * 
@@ -51,12 +52,9 @@ trait MathematicaLink extends Tool with QETool {
  * @author Nathan Fulton
  */
 class JLinkMathematicaLink extends  MathematicaLink {
-  /** @TODO-nrf replace this with a function that works on something other
-   * than unix.
-   */
   val ml : KernelLink = {
     MathLinkFactory.createKernelLink(Array[String](
-      "-linkmode", "create",
+      "-linkmode", "launch",
       "-linkname", "math -mathlink"))
   }
   ml.discardAnswer()
@@ -95,6 +93,14 @@ class JLinkMathematicaLink extends  MathematicaLink {
   def cancel = ???
 
 
-  def qe(f : Formula) : edu.cmu.cs.ls.keymaera.core.Expr = run("Resolve[" + toMathematica(f) + "]")
+  def qe(f : Formula) : Formula = {
+    val result = run("Reduce[" + toMathematica(f) + "]")
+    if(result.isInstanceOf[Formula]) {
+      result.asInstanceOf[Formula]
+    }
+    else {
+      throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+    }
+  }
 }
 

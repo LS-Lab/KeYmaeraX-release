@@ -117,7 +117,10 @@ import PredefinedSorts._
  * Expression infrastructure
  *===========================
  */
-sealed abstract class Expr(val sort : Sort) extends Annotable
+sealed abstract class Expr(val sort : Sort) extends Annotable {
+  override def toString = super.toString() + " (" + prettyString() + ")"
+  def prettyString() = KeYmaeraPrettyPrinter.stringify(this)
+}
 
 /* atom / leaf expression */
 sealed trait Atom extends Expr
@@ -926,10 +929,6 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
 sealed trait Program extends Expr {
   def reads: Seq[NamedSymbol]
   def writes: Seq[NamedSymbol]
-
-  def prettyString() = {
-    KeYmaeraPrettyPrinter.stringify(this)
-  }
 }
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program

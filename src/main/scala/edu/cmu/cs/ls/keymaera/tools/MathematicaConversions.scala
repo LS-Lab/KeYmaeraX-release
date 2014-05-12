@@ -18,6 +18,59 @@ object TranslationConstants {
 }
 
 /**
+ * Handles conversion to/from Mathematica.
+ * 
+ * TODO-nrf assertion that maskName and removeMask are inverses (compose to
+ * id).
+ *
+ * @author Nathan Fulton
+ */
+object NamedSymbolConversion {
+  private val PREFIX = "KeYmaera"
+  private val SEP    = "$beginIndex$"
+  private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
+
+  private def maskIdentifier(name : String) = {
+    //Ensure that none of the "special" strings occur in the variable name.
+    if(name.contains(MUNDERSCORE)) {
+      throw new ConversionException("Please do not use the string " + MUNDERSCORE + " in your variable names.")
+    }
+    
+    //Do replacements.
+    name.replace("_", MUNDERSCORE)
+  }
+
+  private def removeMask(name : String) = {
+    name.replace(PREFIX, "").replace(MUNDERSCORE, "_")
+  }
+
+  def toMathematica(ns : NamedSymbol) : com.wolfram.jlink.Expr = {
+    val identifier = PREFIX + maskIdentifier(ns.name)
+    val fullName   = ns.index match {
+      case Some(idx) => identifier + SEP + idx.toString()
+      case None      => identifier
+    }
+    new com.wolfram.jlink.Expr(com.wolfram.jlink.Expr.SYMBOL, fullName)
+  }
+
+  def toKeYmaera(e : com.wolfram.jlink.Expr) = {
+    val nameStr = e.asString() //Note: This cold be KeYmaeravarName or KeYmaeravarName$beginIndex$N
+    if(nameStr.contains(SEP)) {
+      val parts = nameStr.split(SEP)
+      if(parts.size != 2) {
+        throw new ConversionException("Received a non-masked name from Mathematica. Perhaps Mathematica returned an expression with bound variables?")
+      }
+      val (name, index) = (parts.head, parts.last)
+      Variable(removeMask(name), Some(Integer.parseInt(index)), Real)
+    }
+    else {
+      Variable(removeMask(nameStr), None, Real)
+    }
+  }
+
+}
+
+/**
  * Converts com.wolfram.jlink.Expr -> edu.cmu...keymaera.core.Expr
  * @TODO the correctness of quantifier handling is non-obvious
  * 
@@ -82,13 +135,17 @@ object MathematicaToKeYmaera {
     //and keywords that were not declared correctly in MathematicaSymbols (should be none)
     else if(e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString()))
     {
-      Variable(e.asString(), None, Real) //TODO should this be none?
+      convertName(e)
     }
     else {
       throw mathExn(e) //Other things to handle: integrate, rule, minussign, possibly some list.
     }
   }
   
+  def convertName(e : MExpr) = {
+    NamedSymbolConversion.toKeYmaera(e)
+  }
+
   def convertAddition(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
@@ -194,7 +251,7 @@ object MathematicaToKeYmaera {
   }
   
   /**
-   * @returns true if ``e" and ``thing" are .equals-related. 
+   * @return true if ``e" and ``thing" are .equals-related. 
    * 
    * This can be used in conjunction
    * with MathematicaSymbols to test if a given expression has a syntactic form.
@@ -214,12 +271,8 @@ object MathematicaToKeYmaera {
         
     if (quantifiedVariables.head().equals(MathematicaSymbols.LIST)) {
       //Convert the list of quantified variables  
-      val quantifiedVars = quantifiedVariables.args().map(nameAsExpr => {     
-        val nameAsString = nameAsExpr.toString()
-        //TODO masking?
-        Variable(nameAsString, None, Real)//Should None be the index?
-      })
-        
+      val quantifiedVars = quantifiedVariables.args().map(n => convertName(n))
+
       //Recurse on the body of the expression.
       val bodyAsExpr = fromMathematica(e.args().last)
       val bodyOfQuantifier = try {
@@ -395,9 +448,11 @@ object KeYmaeraToMathematica {
     new MExpr(MathematicaSymbols.DERIVATIVE, args)
   }
   
-  //TODO danger!!!
+  /**
+   * Converts a named symbol into Mathematica
+   */
   def convertNS(ns : NamedSymbol) = {
-    val result = new MExpr(Expr.SYMBOL,ns.name)
+    val result = NamedSymbolConversion.toMathematica(ns)
     if(!result.symbolQ()) {
       throw new Exception("Expected named symbol to be a symbol, but it was not.")
     }
