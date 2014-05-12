@@ -134,11 +134,21 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     }
   }
 
-  //TODO-nrf throwing away the external annotation. Is this ok?
   lazy val funcdefP = ParseSymbols.EXTERNAL_FUNCTION.?  ~ ident ~ ident ~ ("(" ~ rep1sep(ident, ",") ~ ")").? ^^ {
     case external ~ rsort ~ name ~ tail =>
       tail match {
-        case Some(_ ~ argsorts ~ _) => Function(name, None, identsToSorts(argsorts), identToSort(rsort))
+        case Some(_ ~ argsorts ~ _) => {
+          val isExternal = external match {
+            case Some(EXTERNAL_FUNCTION) => true
+            case Some(_) => throw new Exception("Parser combinator library is buggy...")
+            case None    => false
+          }
+          val result = Function(name, None, identsToSorts(argsorts), identToSort(rsort))
+          if(isExternal) {
+            result.markExternal()
+          }
+          result
+        }
         case None =>  PredicateConstant(name)
       }
   }

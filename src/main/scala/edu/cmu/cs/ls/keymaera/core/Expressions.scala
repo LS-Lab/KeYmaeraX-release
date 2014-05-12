@@ -228,7 +228,18 @@ object Function {
     case _ => None
   }
 }
-final class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort)
+final class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort) {
+  /**
+   * A function is marked as external by using the external input during
+   * function delcaration. External functions are passed as bare names to QE
+   * backends.
+   */
+  var external : Boolean = false
+  def markExternal() = {
+    external = true
+    this
+  }
+}
 
 /**
  * Constant, Variable and Function Expressions

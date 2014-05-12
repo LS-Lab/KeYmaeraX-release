@@ -31,39 +31,93 @@ private object NameConversion {
     if(name.contains(MUNDERSCORE)) {
       throw new ConversionException("Please do not use the string " + MUNDERSCORE + " in your variable names.")
     }
-    
     //Do replacements.
     name.replace("_", MUNDERSCORE)
   }
 
-  private def removeMask(name : String) = {
-    name.replace(PREFIX, "").replace(MUNDERSCORE, "_")
-  }
-
+  
   def toMathematica(ns : NamedSymbol) : com.wolfram.jlink.Expr = {
-    val identifier = PREFIX + maskIdentifier(ns.name)
-    val fullName   = ns.index match {
+    //The identifier (portion of name excluding index) has one of the forms:
+    //   name (for external functions)
+    //   KeYmaera + name
+    val identifier : String = 
+      if(ns.isInstanceOf[Function]) {
+        if(ns.asInstanceOf[Function].external) {
+          ns.name
+        }
+        else {
+          PREFIX + maskIdentifier(ns.name)
+        }
+      }
+      else {
+        PREFIX + maskIdentifier(ns.name)
+      }
+
+    //Add the index if it exists.
+    val fullName : String   = ns.index match {
       case Some(idx) => identifier + SEP + idx.toString()
       case None      => identifier
     }
     new com.wolfram.jlink.Expr(com.wolfram.jlink.Expr.SYMBOL, fullName)
   }
 
-  def toKeYmaera(e : com.wolfram.jlink.Expr) = {
-    val nameStr = e.asString() //Note: This cold be KeYmaeravarName or KeYmaeravarName$beginIndex$N
-    if(nameStr.contains(SEP)) {
-      val parts = nameStr.split(SEP)
-      if(parts.size != 2) {
-        throw new ConversionException("Received a non-masked name from Mathematica. Perhaps Mathematica returned an expression with bound variables?")
+  ////
+  // toKeYmaera section. We decompose by function vs. variable. In each case, we
+  // decompose based upon the possible forms of the name:
+  // PREFIX + base + SEP + index ---> name + index
+  // PREFIX + base               ---> name only
+  // base                        ---> external function
+  ///
+  def toKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
+    if(e.args().isEmpty) variableToKeYmaera(e)
+    else functionToKeYmaera(e)
+  }
+  
+  private def variableToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
+    val maskedName = e.asString()
+    if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
+      //Get the parts of the masked name.
+      val parts = maskedName.replace(PREFIX, "").split(SEP)
+      if(parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
+      val (name, unparsedIndex) = (parts.head, parts.last)
+      
+      val index = try {
+        Integer.parseInt(unparsedIndex)
+      } catch {
+        case e : NumberFormatException => throw new ConversionException("Expected number for index")
       }
-      val (name, index) = (parts.head, parts.last)
-      Variable(removeMask(name), Some(Integer.parseInt(index)), Real)
+      Variable(name, Some(index), Real)
+    }
+    else if(maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
+      Variable(maskedName.replace(PREFIX, ""), None, Real)
     }
     else {
-      Variable(removeMask(nameStr), None, Real)
+      Variable(maskedName, None, Real) //TODO um... this can happen (new quantified vars) but we need to be very careful.
     }
   }
-
+  
+  private def functionToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
+    val maskedName = e.asString()
+    if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
+      //Get the parts of the masked name.
+      val parts = maskedName.replace(PREFIX, "").split(SEP)
+      if(parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
+      val (name, unparsedIndex) = (parts.head, parts.last)
+      
+      val index = try {
+        Integer.parseInt(unparsedIndex)
+      } catch {
+        case e : NumberFormatException => throw new ConversionException("Expected number for index")
+      }
+      Function(name, Some(index), Real, Real) //TODO get the (co)domain correct
+    }
+    else if(maskedName.contains(PREFIX) && !maskedName.contains(SEP)) {
+      Function(maskedName.replace(PREFIX, ""), None, Real, Real) //TODO get the (co)domain correct.
+    }
+    else {
+      Function(maskedName, None, Real, Real) //TODO get the (co)domain correct. //TODO again we need to be very careful, as in the symmetric variable case.
+    }
+  }
 }
 
 /**
@@ -138,8 +192,31 @@ object MathematicaToKeYmaera {
     }
   }
   
-  def convertName(e : MExpr) = {
-    NameConversion.toKeYmaera(e)
+  def convertQuantifiedVariable(e : MExpr) : edu.cmu.cs.ls.keymaera.core.NamedSymbol = {
+    val result = NameConversion.toKeYmaera(e)
+    result match {
+      case result : NamedSymbol => result
+      case _ => throw new ConversionException("Expected variables but found non-variable:" + result.getClass().toString())
+    }
+  }
+  
+  def convertName(e : MExpr) : edu.cmu.cs.ls.keymaera.core.Expr = {
+    val result = NameConversion.toKeYmaera(e)
+    result match {
+      case result : Function => {
+        val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
+        if(!arguments.isEmpty) {
+          val argumentsAsPair = arguments.reduceRight[Term]( 
+            (l,r) => Pair(TupleT(l.sort,r.sort), l,r) 
+          )
+          Apply(result, argumentsAsPair)
+        }
+        else {
+          result
+        }
+      }
+      case _ => result
+    }
   }
 
   def convertAddition(e : MExpr) = {
@@ -267,7 +344,7 @@ object MathematicaToKeYmaera {
         
     if (quantifiedVariables.head().equals(MathematicaSymbols.LIST)) {
       //Convert the list of quantified variables  
-      val quantifiedVars = quantifiedVariables.args().map(n => convertName(n))
+      val quantifiedVars = quantifiedVariables.args().map(n => convertQuantifiedVariable(n))
 
       //Recurse on the body of the expression.
       val bodyAsExpr = fromMathematica(e.args().last)
