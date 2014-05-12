@@ -21,13 +21,7 @@ object TacticLibrary {
     */
 
   def findPosAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosAnte (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = {
-      for (i <- 0 until p.sequent.ante.length) {
-        val pos = new Position(true, i)
-        if (posT.applies(p.sequent, pos)) return true
-      }
-      return false
-    }
+    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.ante.length) {
@@ -41,17 +35,11 @@ object TacticLibrary {
   }
 
   def findPosSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosSucc (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = {
-      for (i <- 0 until p.sequent.succ.length) {
-        val pos = new Position(true, i)
-        if (posT.applies(p.sequent, pos)) return true
-      }
-      return false
-    }
+    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.succ.length) {
-        val pos = new Position(true, i)
+        val pos = new Position(false, i)
         if(posT.applies(s, pos)) {
           return Some(pos)
         }
