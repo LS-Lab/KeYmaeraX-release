@@ -11,7 +11,6 @@ import scala.util.parsing.input.Reader
 import scala.util.parsing.input.CharSequenceReader
 import edu.cmu.cs.ls.keymaera.core.Term
 import java.io.File
-import edu.cmu.cs.ls.keymaera.parser.{LoadedRuleInfo, LoadedRule}
 
 
 /**
