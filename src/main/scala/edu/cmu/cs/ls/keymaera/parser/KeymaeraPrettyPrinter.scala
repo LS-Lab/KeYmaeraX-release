@@ -15,6 +15,7 @@ object KeYmaeraPrettyPrinter {
 
   private def endsWithColon(e:Expr, parent:Expr)  = e match {
     case Assign(_) => !needsParens(e,parent)
+    case Test(_) => !needsParens(e,parent)
     case NDetAssign(_) => !needsParens(e,parent)
     case ContEvolve(_) => !needsParens(e,parent)
     case _ => false

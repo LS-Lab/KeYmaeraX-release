@@ -121,7 +121,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = TacticLibrary.findPosSucc(TacticLibrary.boxTest)
+    val tactic = TacticLibrary.findPosSucc(TacticLibrary.boxSeqT) & ((TacticLibrary.findPosSucc(TacticLibrary.boxTestT) & (TacticLibrary.ImplyRightFindT & TacticLibrary.findPosSucc(TacticLibrary.boxTestT))))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     val tree = print(r)

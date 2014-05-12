@@ -114,10 +114,10 @@ object TacticLibrary {
   def ImplyLeftFindT: Tactic = findPosAnte(ImplyLeftT)
 
   def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
-    def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
+    def applies(s: Sequent, p: Position) = !p.isAnte && (s.succ(p.index) match {
       case Imply(_, _) => true
       case _ => false
-    } else false
+    })
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(ImplyRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
@@ -511,7 +511,7 @@ object TacticLibrary {
   // we start with just using findPos to get a top level position
 
   // [?] test
-  def boxTest: PositionTactic = new PositionTactic("[?] test") {
+  def boxTestT: PositionTactic = new PositionTactic("[?] test") {
     def getFormula(s: Sequent, p: Position): Formula = {
       require(p.inExpr == HereP)
       if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
@@ -532,13 +532,15 @@ object TacticLibrary {
             val aP = PredicateConstant("p")
             val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
             // [?H]p <-> (H -> p).
-            val axiomInstance = Equiv(f, Imply(h, p))
+            val g = Imply(h, p)
+            val axiomInstance = Equiv(f, g)
             val axiom = Equiv(BoxModality(Test(aH), aP), Imply(aH, aP))
             val eqPos = new Position(true, node.sequent.ante.length, HereP)
             val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
             // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
             val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT(this.name) & AxiomCloseT)
-            val t = cutT(Equiv(f, Imply(h, p))) & (branch1Tactic, branch2Tactic)
+            val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
+            t.continuation = this.continuation
             t.dispatch(this, node)
           }
           case _ =>
@@ -547,8 +549,45 @@ object TacticLibrary {
     }
   }
 
-
   // [;] compose
+   def boxSeqT: PositionTactic = new PositionTactic("[;] compose") {
+    def getFormula(s: Sequent, p: Position): Formula = {
+      require(p.inExpr == HereP)
+      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+    }
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case BoxModality(Sequence(_), _) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new Tactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def apply(tool: Tool, node: ProofNode): Unit = {
+        getFormula(node.sequent, pos) match {
+          case f@BoxModality(Sequence(a, b), p) => {
+            // construct substitution
+            val aA = ProgramConstant("a")
+            val aB = ProgramConstant("b")
+            val aP = PredicateConstant("p")
+            val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
+            // [ a; b ]p <-> [a][b]p.
+            val g = BoxModality(a, BoxModality(b, p))
+            val axiomInstance = Equiv(f, g)
+            val axiom = Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP)))
+            val eqPos = new Position(true, node.sequent.ante.length, HereP)
+            val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+            // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT(this.name) & AxiomCloseT)
+            val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
+            t.continuation = this.continuation
+            t.dispatch(this, node)
+          }
+          case _ =>
+        }
+      }
+    }
+  }
   // [++] choice
   // I induction
 
