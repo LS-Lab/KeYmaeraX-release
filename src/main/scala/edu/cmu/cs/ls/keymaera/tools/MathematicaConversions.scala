@@ -13,10 +13,6 @@ class MathematicaComputationFailedException(e:com.wolfram.jlink.Expr)
 class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr) 
   extends ConversionException(e.toString())
 
-object TranslationConstants {
-
-}
-
 /**
  * Handles conversion to/from Mathematica.
  * 
@@ -25,7 +21,7 @@ object TranslationConstants {
  *
  * @author Nathan Fulton
  */
-object NamedSymbolConversion {
+private object NameConversion {
   private val PREFIX = "KeYmaera"
   private val SEP    = "$beginIndex$"
   private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
@@ -143,7 +139,7 @@ object MathematicaToKeYmaera {
   }
   
   def convertName(e : MExpr) = {
-    NamedSymbolConversion.toKeYmaera(e)
+    NameConversion.toKeYmaera(e)
   }
 
   def convertAddition(e : MExpr) = {
@@ -452,7 +448,7 @@ object KeYmaeraToMathematica {
    * Converts a named symbol into Mathematica
    */
   def convertNS(ns : NamedSymbol) = {
-    val result = NamedSymbolConversion.toMathematica(ns)
+    val result = NameConversion.toMathematica(ns)
     if(!result.symbolQ()) {
       throw new Exception("Expected named symbol to be a symbol, but it was not.")
     }
