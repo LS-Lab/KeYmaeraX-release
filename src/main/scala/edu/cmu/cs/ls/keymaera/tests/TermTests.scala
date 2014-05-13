@@ -122,7 +122,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = findPosSucc(boxSeqT) & ((findPosSucc(boxTestT) & (ImplyRightFindT & findPosSucc(boxTestT))))
+    val tactic = ((findPosSucc(boxSeqT) | findPosSucc(boxTestT) | ImplyRightFindT | assignmentFindSucc | eqLeftFind )*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     val tree = print(r)
@@ -151,13 +151,15 @@ object TermTests {
     case _: IOException =>
   }
 
-  def printPos(p: PosInExpr): Any = p match {
+  def printPos(p: PosInExpr): Any =
+   p.pos.mkString(",")
+   /*p match {
     case HereP => "h"
     case FirstP(s) => "f" + printPos(s) + ""
     case SecondP(s) => "s" + printPos(s) + ""
     case ThirdP(s) => "t" + printPos(s) + ""
     case _ => throw new UnsupportedOperationException("not implement for pos " + p)
-  }
+  }*/
 
   def printNamedSymbol(n: NamedSymbol): String = "\"" + n.name + (n.index match { case Some(j) => "_" + j case _ => "" }) + "\""
 
