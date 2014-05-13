@@ -55,7 +55,7 @@ class JLinkMathematicaLink extends  MathematicaLink {
   val ml : KernelLink = {
     MathLinkFactory.createKernelLink(Array[String](
       "-linkmode", "launch",
-      "-linkname", "math -mathlink"))
+      "-linkname", "MathKernel -mathlink"))
   }
   ml.discardAnswer()
 
