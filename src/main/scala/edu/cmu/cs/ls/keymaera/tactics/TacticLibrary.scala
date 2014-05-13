@@ -310,99 +310,71 @@ object TacticLibrary {
       case _ => false
     })
 
-  def equalityApplicableRight(eqPos: Position, p: Position, s: Sequent): Boolean = {
+  def equalityApplicable(left: Boolean, eqPos: Position, p: Position, s: Sequent): Boolean = {
     import Helper.variables
     var applicable = false
     val (blacklist, f) = s.ante(eqPos.getIndex) match {
-      case Equals(d, a, b) =>
+      case Equals(_, a, b) => val search = if(left) a else b; println("Searching for " + search)
         (variables(a) ++ variables(b),
           new ExpressionTraversalFunction {
             override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-              if (e == a) applicable = true
+              println("found " + e + " with " + e == search)
+              if (e == search) applicable = true
               Left(Some(new StopTraversal {}))
             }
           })
-      case ProgramEquals(a, b) =>
+      case ProgramEquals(a, b) => val search = if(left) a else b
         (variables(a) ++ variables(b),
           new ExpressionTraversalFunction {
             override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-              if (e == a) applicable = true
+              if (e == search) applicable = true
               Left(Some(new StopTraversal {}))
             }
           })
-      case Equiv(a, b) =>
+      case Equiv(a, b) => val search = if(left) a else b
         (variables(a) ++ variables(b),
           new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-              if (e == a) applicable = true
+              if (e == search) applicable = true
               Left(Some(new StopTraversal {}))
             }
           })
       case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
     }
     val trav = TraverseToPosition(p.inExpr, f, blacklist)
-    ExpressionTraversal.traverse(trav, (if (p.isAnte) s.ante else s.succ)(p.getIndex))
-    applicable
-  }
-
-  def equalityApplicableLeft(eqPos: Position, p: Position, s: Sequent): Boolean = {
-    import Helper.variables
-    var applicable = false
-    val (blacklist, f) = s.ante(eqPos.getIndex) match {
-      case Equals(d, a, b) =>
-        (variables(a) ++ variables(b),
-          new ExpressionTraversalFunction {
-            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-              if (e == b) applicable = true
-              Left(Some(new StopTraversal {}))
-            }
-          })
-      case ProgramEquals(a, b) =>
-        (variables(a) ++ variables(b),
-          new ExpressionTraversalFunction {
-            override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-              if (e == b) applicable = true
-              Left(Some(new StopTraversal {}))
-            }
-          })
-      case Equiv(a, b) =>
-        (variables(a) ++ variables(b),
-          new ExpressionTraversalFunction {
-            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-              if (e == b) applicable = true
-              Left(Some(new StopTraversal {}))
-            }
-          })
-      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-    }
-    val trav = TraverseToPosition(p.inExpr, f, blacklist)
-    ExpressionTraversal.traverse(trav, (if (p.isAnte) s.ante else s.succ)(p.getIndex))
+    val form = (if (p.isAnte) s.ante else s.succ)(p.getIndex)
+    println("Looking in " + form + " at " + p)
+    ExpressionTraversal.traverse(trav, form)
     applicable
   }
 
   def equalityRewriting(eqPos: Position, p: Position): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
-    override def applicable(node: ProofNode): Boolean =
-      isEquality(node.sequent, eqPos) && (equalityApplicableLeft(eqPos, p, node.sequent) || equalityApplicableRight(eqPos, p, node.sequent))
+    override def applicable(node: ProofNode): Boolean = {
+      println("IsEquality " + isEquality(node.sequent, eqPos))
+      println("Left app " + equalityApplicable(true, eqPos, p, node.sequent))
+      println("Right app " + equalityApplicable(false, eqPos, p, node.sequent))
+      isEquality(node.sequent, eqPos) && (equalityApplicable(true, eqPos, p, node.sequent) || equalityApplicable(false, eqPos, p, node.sequent))
+    }
   }
 
-  def equalityRewritingRight(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting") {
+  def equalityRewritingRight(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Right") {
 
-    override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos) && equalityApplicableRight(eqPos, p, s)
+    override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos) && equalityApplicable(false, eqPos, p, s)
 
     override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
   }
 
-  def equalityRewritingLeft(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting") {
+  def equalityRewritingLeft(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Left") {
 
-    override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos) && equalityApplicableLeft(eqPos, p, s)
+    override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos) && equalityApplicable(true, eqPos, p, s)
 
     override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
   }
 
-  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Position =
-    findPosInExpr(s, blacklist, _ == search, Some(ignore))
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Option[Position] =
+    findPosInExpr(s, blacklist, search == _, Some(ignore))
 
-  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], test: (Expr => Boolean), filterPos: Option[Position]): Position = {
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], test: (Expr => Boolean), filterPos: Option[Position]): Option[Position] = {
     var posInExpr: PosInExpr = null
     val f = new ExpressionTraversalFunction {
       val stop = new StopTraversal {}
@@ -425,10 +397,13 @@ object TacticLibrary {
         Left(Some(stop))
       } else Left(None)
 
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (test(e)) {
-        posInExpr = p
-        Left(Some(stop))
-      } else Left(None)
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+        println("Navigated to " + p + " " + e)
+        if (test(e)) {
+          posInExpr = p
+          Left(Some(stop))
+        } else Left(None)
+      }
 
 
       override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if (test(e)) {
@@ -442,10 +417,10 @@ object TacticLibrary {
       case None => null
     }
     for(i <- 0 until s.ante.length) {
-      if(ignore == null || !(ignore.isAnte && ignore.getIndex == i)) {
+      if(ignore == null || !ignore.isAnte || ignore.getIndex != i) {
         ExpressionTraversal.traverse(f, s.ante(i))
         if (posInExpr != null) {
-          return new Position(true, i, posInExpr)
+          return Some(new Position(true, i, posInExpr))
         }
       }
     }
@@ -453,15 +428,15 @@ object TacticLibrary {
       if(ignore == null || ignore.isAnte || ignore.getIndex != i) {
         ExpressionTraversal.traverse(f, s.succ(i))
         if (posInExpr != null) {
-          return new Position(false, i, posInExpr)
+          return Some(new Position(false, i, posInExpr))
         }
       }
     }
-    null
+    None
   }
 
-  def findPosInExpr(left: Boolean, node: ProofNode, eqPos: Position): Position = {
-    val eq = node.sequent.ante(eqPos.getIndex)
+  def findPosInExpr(left: Boolean, s: Sequent, eqPos: Position): Option[Position] = {
+    val eq = s.ante(eqPos.getIndex)
     val blacklist = Helper.variables(eq)
     val search: Expr = eq match {
       case Equals(_, a, b) => if(left) a else b
@@ -469,24 +444,29 @@ object TacticLibrary {
       case Equiv(a, b) => if(left) a else b
       case _ => throw new IllegalArgumentException("Equality Rewriting does not work for " + eq)
     }
-    findPosInExpr(node.sequent, blacklist, search, eqPos)
+    findPosInExpr(s, blacklist, search, eqPos)
   }
 
   def eqRewritePos(left: Boolean, eqPos: Position): Tactic = new Tactic("Apply Equality Left") {
     require(eqPos.isAnte && eqPos.inExpr == HereP, "Equalities for rewriting have to be in the antecedent")
 
-    override def applicable(node: ProofNode): Boolean = findPosInExpr(left, node, eqPos) != null
+    override def applicable(node: ProofNode): Boolean = findPosInExpr(left, node.sequent, eqPos).isDefined
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
-      val p = findPosInExpr(left, node, eqPos)
+      val p = findPosInExpr(left, node.sequent, eqPos) match {
+        case Some(pos) => pos
+        case None => throw new IllegalArgumentException("Equality rewriting is not applicable to " + node + " with eq at " + eqPos)
+      }
       val t = equalityRewriting(eqPos, p)
-      t.continuation = continuation
+      val hide = hideT(new Position(p.isAnte, p.getIndex, HereP))
+      hide.continuation = continuation
+      t.continuation = Tactics.onSuccess(hide)
       t.dispatch(this, node)
     }
   }
 
   def eqLeft(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Right to Left") {
-    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p)
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p) && findPosInExpr(true, s, p).isDefined
 
     override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(true, p)* else eqRewritePos(true, p)
   }
@@ -496,7 +476,7 @@ object TacticLibrary {
   val eqLeftFindExhaustive = findPosAnte(eqLeft(true))
 
   def eqRight(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Left to Right") {
-    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p)
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p) && findPosInExpr(false, s, p).isDefined
 
     override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(false, p)* else eqRewritePos(false, p)
   }

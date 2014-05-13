@@ -106,36 +106,38 @@ abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) e
 
 abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name)
 
-abstract class PosInExpr {
-  def first:  PosInExpr = FirstP(this)
-  def second: PosInExpr = SecondP(this)
-  def third:  PosInExpr = ThirdP(this)
+case class PosInExpr(val pos: List[Int] = Nil) {
+  def first:  PosInExpr = fromIntList(toIntList :+ 0)
+  def second: PosInExpr = fromIntList(toIntList :+ 1)
+  def third:  PosInExpr = fromIntList(toIntList :+ 2)
 
-  def isPrefixOf(p: PosInExpr): Boolean
+  def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
+  def toIntList: List[Int] = pos
+  def fromIntList(l: List[Int]): PosInExpr = new PosInExpr(l)
 }
 
-case object HereP extends PosInExpr {
-  def isPrefixOf(p: PosInExpr) = true
-}
+object HereP extends PosInExpr
 
-case class FirstP(val sub: PosInExpr) extends PosInExpr {
-  def isPrefixOf(p: PosInExpr) = p match {
-    case FirstP(s) => s.isPrefixOf(sub)
-    case _ => false
-  }
+
+/*object FirstP {
+  def unapply(p: PosInExpr): Boolean = p.pos.length > 0 && p.pos(0) == 0
 }
-case class SecondP(val sub: PosInExpr) extends PosInExpr {
+*/
+/*case class SecondP(val sub: PosInExpr) extends PosInExpr {
   def isPrefixOf(p: PosInExpr) = p match {
     case SecondP(s) => s.isPrefixOf(sub)
     case _ => false
   }
+  def toIntList: List[Int] = 1 :: sub.toIntList
 }
 case class ThirdP(val sub: PosInExpr) extends PosInExpr {
   def isPrefixOf(p: PosInExpr) = p match {
     case ThirdP(s) => s.isPrefixOf(sub)
     case _ => false
   }
+  def toIntList: List[Int] = 2 :: sub.toIntList
 }
+*/
 
 class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte = ante
