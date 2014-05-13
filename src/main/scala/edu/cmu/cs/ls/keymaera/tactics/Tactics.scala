@@ -265,6 +265,11 @@ object Tactics {
     else result.foreach((pn: ProofNode) => tChange.dispatch(tFrom, pn))
   }
 
+  def onChangeAndOnNoChange(n : ProofNode, tChange: (Tactic, Status, Seq[ProofNode]) => Unit, tNoChange : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if (Seq(n) == result) tNoChange.dispatch(tFrom, n)
+    else result.foreach((pn: ProofNode) => tChange(tFrom, status, result))
+  }
+
 
   def seqT(left : Tactic, right : Tactic) =
     new Tactic("Seq(" + left.name + "," + right.name + ")") {
@@ -314,9 +319,9 @@ object Tactics {
       def applicable(node : ProofNode) = left.applicable(node) || right.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
+        right.continuation = continuation
         if(left.applicable(node)) {
-          right.continuation = continuation
-          left.continuation = onNoChange(node, right)
+          left.continuation = onChangeAndOnNoChange(node, continuation, right)
           left.dispatch(this, node)
         } else {
           right.dispatch(this, node)
@@ -329,8 +334,8 @@ object Tactics {
       def applicable(node : ProofNode) = left.applicable(node) || right.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
+        right.continuation = continuation
         if(left.applicable(node)) {
-          right.continuation = continuation
           left.continuation = unconditionally(right)
           left.dispatch(this, node)
         } else {

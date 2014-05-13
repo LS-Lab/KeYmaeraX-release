@@ -63,13 +63,7 @@ object TacticLibrary {
     */
 
   def findPosAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosAnte (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = {
-      for (i <- 0 until p.sequent.ante.length) {
-        val pos = new Position(true, i)
-        if (posT.applies(p.sequent, pos)) return true
-      }
-      return false
-    }
+    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.ante.length) {
@@ -83,17 +77,11 @@ object TacticLibrary {
   }
 
   def findPosSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosSucc (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = {
-      for (i <- 0 until p.sequent.succ.length) {
-        val pos = new Position(true, i)
-        if (posT.applies(p.sequent, pos)) return true
-      }
-      return false
-    }
+    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.succ.length) {
-        val pos = new Position(true, i)
+        val pos = new Position(false, i)
         if(posT.applies(s, pos)) {
           return Some(pos)
         }
@@ -168,10 +156,10 @@ object TacticLibrary {
   def ImplyLeftFindT: Tactic = findPosAnte(ImplyLeftT)
 
   def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
-    def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
+    def applies(s: Sequent, p: Position) = !p.isAnte && (s.succ(p.index) match {
       case Imply(_, _) => true
       case _ => false
-    } else false
+    })
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(ImplyRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
@@ -258,15 +246,11 @@ object TacticLibrary {
     }
   }
 
-  def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
-    def applicable(pn: ProofNode): Boolean = true
-
-    def apply(tool: Tool, p: ProofNode): Unit = Axiom.axioms.get(id) match {
-      case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
-        override def applicable(node: ProofNode): Boolean = (node == p)
-      }
-      case _ => continuation(this, Failed, Seq(p))
+  def axiomT(id: String): Tactic = Axiom.axioms.get(id) match {
+    case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
+      override def applicable(node: ProofNode): Boolean = true
     }
+    case _ => throw new IllegalArgumentException("Unknown axiom " + id)
   }
 
 
@@ -303,35 +287,34 @@ object TacticLibrary {
     // for now only on top level
     override def applies(s: Sequent, p: Position): Boolean = {
       (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Variable(_, _, _), _) => true
-        case DiamondModality(Variable(_, _, _), _) => true
+        case BoxModality(Assign(Variable(_, _, _), _), _) => true
+        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
         case _ => false
       })
     }
 
-    override def apply(p: Position): Tactic = Tactics.seqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
+    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
       override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
     })
   }
 
   val uniquify = new PositionTactic("Uniquify") {
     // for now only on top level
-    override def applies(s: Sequent, p: Position): Boolean = {
-      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Variable(_, _, _), _) => true
-        case DiamondModality(Variable(_, _, _), _) => true
-        case _ => false
-      })
-    }
+    def getAssignment(s: Sequent, p: Position): Option[(String, Option[Int], Term)] = (if (p.isAnte) s.ante else s.succ)(p.index) match {
+        case BoxModality(Assign(Variable(name, i, _), e)) => Some(name, i, e)
+        case DiamondModality(Assign(Variable(name, i, _), e)) => Some(name, i, e)
+        case a => None
+      }
+    override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getAssignment(s, p).isDefined
+
 
     override def apply(p: Position): Tactic = new Tactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def apply(tool: Tool, node: ProofNode): Unit = {
-        val (n, idx) = (if (p.isAnte) node.sequent.ante else node.sequent.succ)(p.index) match {
-          case BoxModality(Assign(Variable(name, i, _), _)) => (name, i)
-          case DiamondModality(Assign(Variable(name, i, _), _)) => (name, i)
-          case a => throw new UnsupportedOperationException("Cannot apply to " + a)
+        val (n, idx) = getAssignment(node.sequent, p) match {
+          case Some((a, b, _)) => (a, b)
+          case None => throw new IllegalArgumentException("Cannot apply to " + node)
         }
         val vars = Helper.variables(node.sequent).filter((ns: NamedSymbol) => ns.name == n)
         require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
@@ -349,9 +332,11 @@ object TacticLibrary {
             case Some(a) => Some(a+1)
           }
           // dispatch alpha conversion tactic
-          new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
+          val app = new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
             override def applicable(n: ProofNode): Boolean = n == node
-          }.dispatch(this, node)
+          }
+          app.continuation = continuation
+          app.dispatch(this, node)
         }
 
       }
@@ -456,12 +441,15 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
   }
 
-  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Position = {
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Position =
+    findPosInExpr(s, blacklist, _ == search, Some(ignore))
+
+  def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], test: (Expr => Boolean), filterPos: Option[Position]): Position = {
     var posInExpr: PosInExpr = null
     val f = new ExpressionTraversalFunction {
       val stop = new StopTraversal {}
 
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if (e == search) {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if (test(e)) {
         posInExpr = p
         Left(Some(stop))
       } else {
@@ -474,25 +462,29 @@ object TacticLibrary {
         }
       }
 
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if (e == search) {
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if (test(e)) {
         posInExpr = p
         Left(Some(stop))
       } else Left(None)
 
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == search) {
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (test(e)) {
         posInExpr = p
         Left(Some(stop))
       } else Left(None)
 
 
-      override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if (e == search) {
+      override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if (test(e)) {
           posInExpr = p
           Left(Some(stop))
         } else Left(None)
 
     }
+    val ignore = filterPos match {
+      case Some(p) => p
+      case None => null
+    }
     for(i <- 0 until s.ante.length) {
-      if(!(ignore.isAnte && ignore.getIndex == i)) {
+      if(ignore == null || !(ignore.isAnte && ignore.getIndex == i)) {
         ExpressionTraversal.traverse(f, s.ante(i))
         if (posInExpr != null) {
           return new Position(true, i, posInExpr)
@@ -500,7 +492,7 @@ object TacticLibrary {
       }
     }
     for(i <- 0 until s.succ.length) {
-      if(ignore.isAnte || ignore.getIndex != i) {
+      if(ignore == null || ignore.isAnte || ignore.getIndex != i) {
         ExpressionTraversal.traverse(f, s.succ(i))
         if (posInExpr != null) {
           return new Position(false, i, posInExpr)
@@ -529,7 +521,9 @@ object TacticLibrary {
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       val p = findPosInExpr(left, node, eqPos)
-      equalityRewriting(eqPos, p).dispatch(this, node)
+      val t = equalityRewriting(eqPos, p)
+      t.continuation = continuation
+      t.dispatch(this, node)
     }
   }
 
@@ -554,6 +548,89 @@ object TacticLibrary {
   val eqRightFindExhaustive = findPosAnte(eqRight(true))
 
   // axiom wrappers
+  // TODO: Use findPosInExpr to find a position that matches the left side of the axiom and cut in the resulting instance
+  // we start with just using findPos to get a top level position
+
+  // [?] test
+  def boxTestT: PositionTactic = new PositionTactic("[?] test") {
+    def getFormula(s: Sequent, p: Position): Formula = {
+      require(p.inExpr == HereP)
+      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+    }
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case BoxModality(Test(_), _) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new Tactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def apply(tool: Tool, node: ProofNode): Unit = {
+        getFormula(node.sequent, pos) match {
+          case f@BoxModality(Test(h), p) => {
+            // construct substitution
+            val aH = PredicateConstant("H")
+            val aP = PredicateConstant("p")
+            val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
+            // [?H]p <-> (H -> p).
+            val g = Imply(h, p)
+            val axiomInstance = Equiv(f, g)
+            val axiom = Equiv(BoxModality(Test(aH), aP), Imply(aH, aP))
+            val eqPos = new Position(true, node.sequent.ante.length, HereP)
+            val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+            // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[?] test") & AxiomCloseT)
+            val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
+            t.continuation = this.continuation
+            t.dispatch(this, node)
+          }
+          case _ =>
+        }
+      }
+    }
+  }
+
+  // [;] compose
+   def boxSeqT: PositionTactic = new PositionTactic("[;] compose") {
+    def getFormula(s: Sequent, p: Position): Formula = {
+      require(p.inExpr == HereP)
+      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+    }
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case BoxModality(Sequence(_), _) => true
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new Tactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def apply(tool: Tool, node: ProofNode): Unit = {
+        getFormula(node.sequent, pos) match {
+          case f@BoxModality(Sequence(a, b), p) => {
+            // construct substitution
+            val aA = ProgramConstant("a")
+            val aB = ProgramConstant("b")
+            val aP = PredicateConstant("p")
+            val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
+            // [ a; b ]p <-> [a][b]p.
+            val g = BoxModality(a, BoxModality(b, p))
+            val axiomInstance = Equiv(f, g)
+            val axiom = Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP)))
+            val eqPos = new Position(true, node.sequent.ante.length, HereP)
+            val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+            // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[;] compose") & AxiomCloseT)
+            val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
+            t.continuation = this.continuation
+            t.dispatch(this, node)
+          }
+          case _ =>
+        }
+      }
+    }
+  }
+  // [++] choice
+  // I induction
 
 
 }
