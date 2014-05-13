@@ -14,9 +14,7 @@ at the link following:
 
 http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-Instructions are available at that website as well. Briefly, run "sbt" in
-this directory to get an SBT prompt and then run "run" to run a main method
-or "test" to run the tests.
+Instructions are available at that website as well. Briefly, type "sbt test" to run the regression test case suite. Type "sbt run" to run the KeYmaera prover. If you run into problems during the compilation process, use "sbt clean" for a fresh start to remove stale files.
 
 To make sure sbt does not throw java.lang.OutOfMemoryError: PermGen space
   edit ~/.sbtconfig
