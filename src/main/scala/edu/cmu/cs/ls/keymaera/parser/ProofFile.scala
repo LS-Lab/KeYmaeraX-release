@@ -27,12 +27,8 @@ object LoadedKnowledgeTools {
   }
 }
 sealed class LoadedKnowledge(val name : String, val formula : Formula)
-case class LoadedAxiom(val name : String, 
-    val formula : Formula) extends LoadedKnowledge(name,formula)
-
-case class LoadedLemma(val name : String, 
-    val formula : Formula, 
-    val evidence : List[Evidence]) extends LoadedKnowledge(name,formula)
+case class LoadedAxiom(n : String, f : Formula) extends LoadedKnowledge(n,f)
+case class LoadedLemma(n : String, f : Formula, evidence : List[Evidence]) extends LoadedKnowledge(n,f)
 
 class LoadedBranch(val name : String, val rules : List[LoadedRule]) {
   def getProof : ProofNode = ??? //TODO

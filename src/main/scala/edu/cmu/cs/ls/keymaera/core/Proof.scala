@@ -5,7 +5,8 @@ import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-
+import edu.cmu.cs.ls.keymaera.parser._
+    
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
@@ -234,11 +235,9 @@ object Cut {
 }
 
 object LookupLemma {
-  def apply(s : Sequent, file : java.io.File, name : String):Rule = new LookupLemma(s,file,name)
-  private class LookupLemma(s : Sequent, file : java.io.File, name : String) extends Rule("Lookup Lemma") {
-    import edu.cmu.cs.ls.keymaera.parser._
-    import edu.cmu.cs.ls.keymaera.parser.LoadedKnowledge
-    def apply(s : Sequent, file : java.io.File, name : String) = {
+  def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
+  private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
+    def apply(s : Sequent) = {
       val parser = new KeYmaeraParser()
       val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
       val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
