@@ -204,15 +204,11 @@ object TacticLibrary {
     }
   }
 
-  def axiomT(id: String): Tactic = new Tactic("Axiom " + id) {
-    def applicable(pn: ProofNode): Boolean = true
-
-    def apply(tool: Tool, p: ProofNode): Unit = Axiom.axioms.get(id) match {
-      case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
-        override def applicable(node: ProofNode): Boolean = (node == p)
-      }
-      case _ => continuation(this, Failed, Seq(p))
+  def axiomT(id: String): Tactic = Axiom.axioms.get(id) match {
+    case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
+      override def applicable(node: ProofNode): Boolean = true
     }
+    case _ => throw new IllegalArgumentException("Unknown axiom " + id)
   }
 
 
@@ -542,7 +538,7 @@ object TacticLibrary {
             val eqPos = new Position(true, node.sequent.ante.length, HereP)
             val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
             // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
-            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT(this.name) & AxiomCloseT)
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[?] test") & AxiomCloseT)
             val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
             t.continuation = this.continuation
             t.dispatch(this, node)
@@ -582,7 +578,7 @@ object TacticLibrary {
             val eqPos = new Position(true, node.sequent.ante.length, HereP)
             val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
             // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
-            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT(this.name) & AxiomCloseT)
+            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[;] compose") & AxiomCloseT)
             val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
             t.continuation = this.continuation
             t.dispatch(this, node)

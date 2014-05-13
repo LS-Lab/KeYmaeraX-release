@@ -186,6 +186,15 @@ object Axiom {
     val p = PredicateConstant("$p")
     val pair = ("Choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
     m = m + pair
+    val aA = ProgramConstant("a")
+    val aB = ProgramConstant("b")
+    val aP = PredicateConstant("p")
+    val pair2 = ("[;] compose", Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP))))
+    m = m + pair2
+    // [?H]p <-> (H -> p)
+    val aH = PredicateConstant("H")
+    val pair3 = ("[?] test", Equiv(BoxModality(Test(aH), aP), Imply(aH, aP)))
+    m = m + pair3
     m
   }
 
@@ -362,7 +371,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
       case BoxModality(p, f) => BoxModality(this(p), this(f))
       case DiamondModality(p, f) => DiamondModality(this(p), this(f))
       case _ => ???
-    } else throw new IllegalArgumentException("There is a name clash in a substitution " + x.writes + " and " + l + " applied on " + f)
+    } else throw new IllegalArgumentException("There is a name clash in a substitution " + x + " " + x.writes + " and " + l + " applied on " + f)
 
     //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
@@ -440,7 +449,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
 
   // uniform substitution on programs
   def apply(p: Program): Program = {
-      require(p.writes.intersect(names(l)).isEmpty);
+      require(p.writes.intersect(names(l)).isEmpty)
       p match {
         case Loop(c) => Loop(this(c))
         case Sequence(a, b) => Sequence(this(a), this(b))
