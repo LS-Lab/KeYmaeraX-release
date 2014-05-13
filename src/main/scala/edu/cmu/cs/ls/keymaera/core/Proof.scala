@@ -903,12 +903,12 @@ object Helper {
 
   def variablesWithout(s: Sequent, p: Position): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
-    for(i <- 0 to s.ante.length) {
+    for(i <- 0 until s.ante.length) {
       if(!p.isAnte || i != p.getIndex) {
         vars ++= variables(s.ante(i))
       }
     }
-    for(i <- 0 to s.succ.length) {
+    for(i <- 0 until s.succ.length) {
       if(p.isAnte || i != p.getIndex) {
         vars ++= variables(s.ante(i))
       }

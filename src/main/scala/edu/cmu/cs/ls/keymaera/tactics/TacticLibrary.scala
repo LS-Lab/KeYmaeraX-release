@@ -245,35 +245,34 @@ object TacticLibrary {
     // for now only on top level
     override def applies(s: Sequent, p: Position): Boolean = {
       (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Variable(_, _, _), _) => true
-        case DiamondModality(Variable(_, _, _), _) => true
+        case BoxModality(Assign(Variable(_, _, _), _), _) => true
+        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
         case _ => false
       })
     }
 
-    override def apply(p: Position): Tactic = Tactics.seqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
+    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
       override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
     })
   }
 
   val uniquify = new PositionTactic("Uniquify") {
     // for now only on top level
-    override def applies(s: Sequent, p: Position): Boolean = {
-      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Variable(_, _, _), _) => true
-        case DiamondModality(Variable(_, _, _), _) => true
-        case _ => false
-      })
-    }
+    def getAssignment(s: Sequent, p: Position): Option[(String, Option[Int], Term)] = (if (p.isAnte) s.ante else s.succ)(p.index) match {
+        case BoxModality(Assign(Variable(name, i, _), e)) => Some(name, i, e)
+        case DiamondModality(Assign(Variable(name, i, _), e)) => Some(name, i, e)
+        case a => None
+      }
+    override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getAssignment(s, p).isDefined
+
 
     override def apply(p: Position): Tactic = new Tactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def apply(tool: Tool, node: ProofNode): Unit = {
-        val (n, idx) = (if (p.isAnte) node.sequent.ante else node.sequent.succ)(p.index) match {
-          case BoxModality(Assign(Variable(name, i, _), _)) => (name, i)
-          case DiamondModality(Assign(Variable(name, i, _), _)) => (name, i)
-          case a => throw new UnsupportedOperationException("Cannot apply to " + a)
+        val (n, idx) = getAssignment(node.sequent, p) match {
+          case Some((a, b, _)) => (a, b)
+          case None => throw new IllegalArgumentException("Cannot apply to " + node)
         }
         val vars = Helper.variables(node.sequent).filter((ns: NamedSymbol) => ns.name == n)
         require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
