@@ -295,9 +295,11 @@ object TacticLibrary {
             case Some(a) => Some(a+1)
           }
           // dispatch alpha conversion tactic
-          new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
+          val app = new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
             override def applicable(n: ProofNode): Boolean = n == node
-          }.dispatch(this, node)
+          }
+          app.continuation = continuation
+          app.dispatch(this, node)
         }
 
       }
@@ -482,7 +484,9 @@ object TacticLibrary {
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       val p = findPosInExpr(left, node, eqPos)
-      equalityRewriting(eqPos, p).dispatch(this, node)
+      val t = equalityRewriting(eqPos, p)
+      t.continuation = continuation
+      t.dispatch(this, node)
     }
   }
 
