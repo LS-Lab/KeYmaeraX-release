@@ -18,7 +18,18 @@ Instructions are available at that website as well. Briefly, run "sbt" in
 this directory to get an SBT prompt and then run "run" to run a main method
 or "test" to run the tests.
 
+To make sure sbt does not throw java.lang.OutOfMemoryError: PermGen space
+  edit ~/.sbtconfig
+  export SBT_OPTS=-XX:MaxPermSize=256M 
+
 Source code is in src/main/scala and tests are in src/test/scala.
+
+Configuration
+=============
+
+If KeYmaera has difficulties finding the MathKernel throwing com.wolfram.jlink.MathLinkException: Could not find MathLink executable
+then choose some directory, say, ABC in your path and on Mac OS X run
+ln -s /Applications/Mathematica.app/Contents/MacOS/MathKernel ABC/math
 
 Specification
 =============
