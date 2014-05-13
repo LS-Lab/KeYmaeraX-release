@@ -222,6 +222,21 @@ object Cut {
   }
 }
 
+object LookupLemma {
+  def apply(s : Sequent, file : java.io.File, name : String):Rule = new LookupLemma(s,file,name)
+  private class LookupLemma(s : Sequent, file : java.io.File, name : String) extends Rule("Lookup Lemma") {
+    import edu.cmu.cs.ls.keymaera.parser._
+    import edu.cmu.cs.ls.keymaera.parser.LoadedKnowledge
+    def apply(s : Sequent, file : java.io.File, name : String) = {
+      val parser = new KeYmaeraParser()
+      val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
+      val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
+      val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
+      List(newSequent)
+    }
+  }
+}
+
 // equality/equivalence rewriting
 class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equality Rewriting", ass, p) {
   import Helper._

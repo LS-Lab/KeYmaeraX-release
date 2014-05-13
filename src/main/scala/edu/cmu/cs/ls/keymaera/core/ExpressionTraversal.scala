@@ -271,5 +271,4 @@ object ExpressionTraversal {
       case Right(n) => Some(n)
     }
   }
-
 }
