@@ -176,7 +176,7 @@ object ExpressionTraversal {
     case None => None
   }
 
-  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p.third, f, a) match {
+  def matchTwo[A : FTPG, B : FTPG, C : FTPG](p: PosInExpr, c: (A, B) => C, f: ExpressionTraversalFunction, a: A, b: B): Option[C] = traverse(p.first, f, a) match {
     case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
       case Left(None) => traverse(p.second, f, b) match {
