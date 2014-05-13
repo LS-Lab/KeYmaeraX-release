@@ -180,7 +180,7 @@ object ExpressionTraversal {
     case Some(na) => in(f, p, c(na, b)) match {
       case Left(Some(_)) => None
       case Left(None) => traverse(p.second, f, b) match {
-        case Some(nb) => val res = c(na, nb); matchZero(p, f, res)
+        case Some(nb) => matchZero(p, f, c(na, nb))
         case None => None
       }
       case Right(n) => Some(n)
