@@ -14,7 +14,7 @@ case class ProofEvidence(proof : List[LoadedBranch])   extends Evidence
 case class ToolEvidence(info : Map[String,String])     extends Evidence
 case class ExternalEvidence(file:File)                 extends Evidence
 
-sealed trait LoadedKnowledge {
+object LoadedKnowledgeTools {
   /**
    * LoadedKnowledge List -> String -> LoadedKnowledge List
    * @returns All evidence associated with the name.
@@ -26,12 +26,9 @@ sealed trait LoadedKnowledge {
     })
   }
 }
-case class LoadedAxiom(val name : String, 
-    val formula : Formula) extends LoadedKnowledge
-
-case class LoadedLemma(val name : String, 
-    formula : Formula, 
-    evidence : List[Evidence]) extends LoadedKnowledge
+sealed class LoadedKnowledge(val name : String, val formula : Formula)
+case class LoadedAxiom(n : String, f : Formula) extends LoadedKnowledge(n,f)
+case class LoadedLemma(n : String, f : Formula, evidence : List[Evidence]) extends LoadedKnowledge(n,f)
 
 class LoadedBranch(val name : String, val rules : List[LoadedRule]) {
   def getProof : ProofNode = ??? //TODO

@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.parser
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics._
 
 /**
  * Usage: KeYmaeraPrettyPrinter.stringify(e);
@@ -10,8 +11,16 @@ object KeYmaeraPrettyPrinter {
   import edu.cmu.cs.ls.keymaera.parser.ParseSymbols._
   
   def stringify(e:Expr) = prettyPrinter(e)
-  
-  private def sortPrinter(s:Sort):String = "type" //TODO
+      
+  def header(ns : List[NamedSymbol]) : String = "asdf"
+    
+  private def sortPrinter(s:Sort):String = s match {
+    case Bool => "B"
+    case s : EnumT => s.name
+    case GameSort => ???
+    case ProgramSort => "P"
+    case Real => "R"
+  }
 
   private def endsWithColon(e:Expr, parent:Expr)  = e match {
     case Assign(_) => !needsParens(e,parent)
@@ -380,6 +389,34 @@ object KeYmaeraPrettyPrinter {
     //And these we can pattern match on but are not implemented yet.
     case Modality(_,_) => false
     case Exists(_,_) => false    
+  }
+  
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // Proofs
+  //////////////////////////////////////////////////////////////////////////////
+  def saveProof(file : java.io.File, f : Formula) = {
+    val namesToDeclare = SimpleExprRecursion.getFreeVariables(f)
+    val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
+    val fString = KeYmaeraPrettyPrinter.stringify(f)
+    
+    val fileContents = header + fString
+    
+    val pw = new java.io.PrintWriter(file)
+    pw.write(fileContents)
+    pw.close()
+  }
+  
+  def proofHeader(ns : List[NamedSymbol]) : String = {
+    val varDecls = ns.map(symbol => sortProofPrinter(symbol.domain) + symbol.name)
+    "Variables.\n" + varDecls.reduce(_ + "\n" + _) + "\nEnd.\n"
+  }
+  private def sortProofPrinter(s:Sort):String = s match {
+    case Bool => "T"
+    case s : EnumT => s.name
+    case GameSort => ???
+    case ProgramSort => "P"
+    case Real => "T"
   }
 
 }

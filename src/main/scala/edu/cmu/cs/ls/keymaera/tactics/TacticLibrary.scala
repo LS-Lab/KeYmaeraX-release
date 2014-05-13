@@ -1,11 +1,12 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.parser._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ApplyPositionTactic, PositionTactic, Tactic}
 import scala.Unit
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-
 import scala.language.postfixOps
+import edu.cmu.cs.ls.keymaera.tools.JLinkMathematicaLink
 
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
@@ -14,6 +15,47 @@ import scala.language.postfixOps
  */
 object TacticLibrary {
 
+  /**
+   * Tactics for real arithmetic
+   */
+  
+  def desequentialization(s : Sequent) = {
+    //TODO-nrf Not sure what to do with pref.
+    val assumption = 
+      if(s.ante.isEmpty) ??? //TODO not sure what to do here.
+      else s.ante.reduce( (l,r) => And(l,r) )
+
+    val implicant =
+      if(s.succ.isEmpty) ??? //TODO not sure what to do here.
+      else s.succ.reduce( (l,r) => Or(l,r) )
+
+    Imply(assumption, implicant)
+  }
+
+  //????
+  def deskolemize(f : Formula) = {
+    val FV = SimpleExprRecursion.getFreeVariables(f)
+    Forall(FV, f)
+  }
+  
+  def addRealArithLemma (f : Formula) : (java.io.File, Formula) = {
+    //Find the solution
+    val solution = new JLinkMathematicaLink().qe(f)
+    val result = Equiv(f,solution)
+    
+    //Save the solution to a file.
+    val file = getUniqueLemmaFile()
+    KeYmaeraPrettyPrinter.saveProof(file, result)
+    
+    //Return the file where the result is saved, together with the result.
+    (file, result)
+  }
+  
+  private def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+    val f = new java.io.File("QE" + idx.toString() + ".alp")
+    if(f.exists()) getUniqueLemmaFile(idx+1)
+    else f
+  }
 
   /** *******************************************
     * Basic Tactics
@@ -571,4 +613,70 @@ object TacticLibrary {
   // I induction
 
 
+}
+
+/**
+ * Simple recursion schemes for expressions.
+ * @author Nathan Fulton
+ */
+object SimpleExprRecursion {
+  /**
+   * A very simple recusion principle for expressions.
+   * I couldn't figure out how to do this using the epxression traversal library.
+   * @param T the return type.
+   * @param e The expression to recurse on
+   * @param f A function for processing stopping points in the recursion (nullary expressions and anything specified by partialStop)
+   * @param join A function for joining a list of T's returned from binary or ternary expressions.
+   * @param partialStop A function specifying where recursion should be cut short.
+   */
+  def ePartRec[T](e : Expr, f : Expr => T, join : List[T] => T, partialStop : Expr => Boolean) : T = {
+    if(partialStop(e)) f(e) //note: we also return f(e) when e in nullary and no recursion is possible.
+    else e match {
+      case e : Unary   => ePartRec(e.child, f, join, partialStop)
+      case e : Binary  => {
+        val l = ePartRec(e.left,f,join,partialStop)
+        val r = ePartRec(e.right,f,join,partialStop)
+        join(List(l,r))
+      }
+      case e : Ternary => {
+        val one = ePartRec(e.fst,f,join,partialStop)
+        val two = ePartRec(e.snd,f,join,partialStop)
+        val three = ePartRec(e.thd,f,join,partialStop)
+        join(List(one,two,three))
+      }
+      case True()      => f(e)
+      case False()     => f(e)
+      case e : NamedSymbol => f(e)
+      case e : Number.NumberObj => f(e)
+      case NFContEvolve(vars: Seq[NamedSymbol], x: Term, theta: Term, formula: Formula) => {
+        val varsResult    = vars.map(v => ePartRec(v, f, join, partialStop)).toList
+        val xResult       = ePartRec(x,f,join,partialStop)
+        val thetaResult   = ePartRec(theta,f,join,partialStop)
+        val formulaResult = ePartRec(formula,f,join,partialStop)
+        join(varsResult ++ List(xResult, thetaResult, formulaResult))
+      }
+    }
+  }
+
+  /**
+   * Example: get free variables using the recursion mechanism.
+   */
+  def getFreeVariables(e : Expr) : List[NamedSymbol] = {
+    type T = List[NamedSymbol]
+    
+    def f(expr : Expr) : T = expr match {
+      case expr : NamedSymbol => List(expr)
+      case _ => List()
+    }
+    
+    def join(list : List[T]) = list.reduce(_ ++ _)
+    
+    //The partialStop function must prevent recursion into binding sites.
+    def partialStop(expr : Expr) : Boolean = expr match {
+      case expr : Quantifier => true
+      case _ => false //TODO-nrf anything else?
+    }
+    
+    ePartRec(e, f, join, partialStop)
+  }
 }
