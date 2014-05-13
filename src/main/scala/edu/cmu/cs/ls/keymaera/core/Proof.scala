@@ -146,6 +146,8 @@ class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP)
       s.ante.length > getIndex
     else
       s.succ.length > getIndex
+
+  override def toString: String = "(" + isAnte + ", " + getIndex + ", " + inExpr + ")"
 }
 
 abstract class Signature
