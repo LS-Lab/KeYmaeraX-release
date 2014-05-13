@@ -396,7 +396,7 @@ object KeYmaeraPrettyPrinter {
   // Proofs
   //////////////////////////////////////////////////////////////////////////////
   def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
-    val namesToDeclare = SimpleExprRecursion.getFreeVariables(f)
+    val namesToDeclare = ExpressionRecursor.getFreeVariables(f)
     val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
     val fString = KeYmaeraPrettyPrinter.stringify(f)
     
