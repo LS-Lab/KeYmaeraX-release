@@ -74,11 +74,12 @@ object TacticLibrary {
                       val resG = reInst(g)
                       if (v.isEmpty) resG
                       else {
-                        val tac = (for (n <- v) yield instantiateT(n, n)(pos)).reduce(seqT)
-                        resG match {
-                          case Some(t) => Some(tac & t)
-                          case None => Some(tac)
-                        }
+                        throw new UnsupportedOperationException("Not yet implemented")
+//                        val tac = (for (n <- v) yield instantiateT(n, n)(pos)).reduce(seqT)
+//                        resG match {
+//                          case Some(t) => Some(tac & t)
+//                          case None => Some(tac)
+//                        }
                       }
                     }
                     case _ => None
@@ -694,6 +695,7 @@ object TacticLibrary {
     })
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       def replace(f: Formula)(o: Variable, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
