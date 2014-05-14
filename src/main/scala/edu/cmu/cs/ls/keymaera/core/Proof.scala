@@ -694,6 +694,37 @@ class OrLeft(p: Position) extends PositionRule("Or Left", p) {
   }
 }
 
+// Equiv right
+object EquivRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new EquivRight(p)
+}
+class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Equiv(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)), Sequent(s.pref, s.ante :+ b, s.succ.updated(p.getIndex, a)))
+      case _ => throw new IllegalArgumentException("Equiv-Right can only be applied to equivalences. Tried to apply to: " + f)
+    }
+  }
+}
+
+// Equiv left
+object EquivLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new EquivLeft(p)
+}
+
+class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Equiv(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,And(a,b)), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex,And(Not(a),Not(b))), s.succ))
+      case _ => throw new IllegalArgumentException("Equiv-Left can only be applied to equivalences. Tried to apply to: " + f)
+    }
+  }
+}
+
 // Lookup Lemma (different justifications: Axiom, Lemma with proof, Oracle Lemma)
 
 // remove duplicate antecedent (this should be a tactic)

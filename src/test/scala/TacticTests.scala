@@ -15,7 +15,7 @@ class TacticTests extends FlatSpec with Matchers {
   def num(n : Integer) = Number(new BigDecimal(n.toString()))
   def snum(n : String) = Number(new BigDecimal(n))
 
-  "We" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
+  "Tactics" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
     val f = TacticLibrary.universalClosure(Imply(And(GreaterThan(Real, x, zero), GreaterThan(Real, y, x)), GreaterEquals(Real, x, zero)))
     qet.qe(f) should be (True)
     LookupLemma.addRealArithLemma(new Mathematica, f) match {
