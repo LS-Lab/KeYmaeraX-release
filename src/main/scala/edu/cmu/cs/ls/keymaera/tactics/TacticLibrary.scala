@@ -560,84 +560,86 @@ object TacticLibrary {
   // TODO: Use findPosInExpr to find a position that matches the left side of the axiom and cut in the resulting instance
   // we start with just using findPos to get a top level position
 
-  // [?] test
-  def boxTestT: PositionTactic = new PositionTactic("[?] test") {
+  abstract class AxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
+    val axiom = Axiom.axioms.get(axiomName)
     def getFormula(s: Sequent, p: Position): Formula = {
       require(p.inExpr == HereP)
       if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
     }
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+
+    def applies(f: Formula): Boolean
+    final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
+
+    def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)]
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        axiom match {
+          case Some(a) =>
+            constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
+              case Some((axiomInstance, subst)) =>
+                val eqPos = new Position(true, node.sequent.ante.length, HereP)
+                val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
+                val branch2Tactic = uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT)
+                Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
+              case None => None
+            }
+          case None => None
+        }
+      }
+    }
+
+  }
+
+  // [?] test
+  def boxTestT: PositionTactic = new AxiomTactic("[?] test", "[?] test") {
+    override def applies(f: Formula): Boolean = f match {
       case BoxModality(Test(_), _) => true
       case _ => false
     }
 
-    override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        getFormula(node.sequent, pos) match {
-          case f@BoxModality(Test(h), p) => {
-            // construct substitution
-            val aH = PredicateConstant("H")
-            val aP = PredicateConstant("p")
-            val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
-            // [?H]p <-> (H -> p).
-            val g = Imply(h, p)
-            val axiomInstance = Equiv(f, g)
-            val axiom = Equiv(BoxModality(Test(aH), aP), Imply(aH, aP))
-            val eqPos = new Position(true, node.sequent.ante.length, HereP)
-            val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
-            // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
-            val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[?] test") & AxiomCloseT)
-            Some(cutT(axiomInstance) & (branch1Tactic, branch2Tactic))
-          }
-          case _ => None
-        }
-      }
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case BoxModality(Test(h), p) =>
+        // construct substitution
+        val aH = PredicateConstant("H")
+        val aP = PredicateConstant("p")
+        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
+        // construct axiom instance: [?H]p <-> (H -> p).
+        val g = Imply(h, p)
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, new Substitution(l))
+      case _ => None
     }
+
   }
 
   // [;] compose
-   def boxSeqT: PositionTactic = new PositionTactic("[;] compose") {
-    def getFormula(s: Sequent, p: Position): Formula = {
-      require(p.inExpr == HereP)
-      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
-    }
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+  def boxSeqT: PositionTactic = new AxiomTactic("[;] compose", "[;] compose") {
+    override def applies(f: Formula): Boolean = f match {
       case BoxModality(Sequence(_), _) => true
       case _ => false
     }
 
-    override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        getFormula(node.sequent, pos) match {
-          case f@BoxModality(Sequence(a, b), p) => {
-            // construct substitution
-            val aA = ProgramConstant("a")
-            val aB = ProgramConstant("b")
-            val aP = PredicateConstant("p")
-            val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
-            // [ a; b ]p <-> [a][b]p.
-            val g = BoxModality(a, BoxModality(b, p))
-            val axiomInstance = Equiv(f, g)
-            Axiom.axioms.get("[;] compose") match {
-              case Some(axiom) => {
-                val eqPos = new Position(true, node.sequent.ante.length, HereP)
-                val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
-                // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
-                val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[;] compose") & AxiomCloseT)
-                Some(cutT(axiomInstance) & (branch1Tactic, branch2Tactic))
-              }
-              case None => None
-            }
-          }
-          case _ => None
-        }
-      }
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case BoxModality(Sequence(a, b), p) =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aB = ProgramConstant("b")
+        val aP = PredicateConstant("p")
+        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
+        // construct axiom instance: [ a; b ]p <-> [a][b]p.
+        val g = BoxModality(a, BoxModality(b, p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, new Substitution(l))
+      case _ => None
     }
+
   }
+
+
   // [++] choice
   // I induction
 
