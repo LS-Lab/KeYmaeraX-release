@@ -47,6 +47,7 @@ import scala.language.implicitConversions
 object Tactics {
 
   val KeYmaeraScheduler = new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
+  val MathematicaScheduler = new Scheduler(for (i <- 0 until Config.mathlicenses) yield new Mathematica)
 
 
 
@@ -379,11 +380,12 @@ object Tactics {
 
     def apply(tool: Tool, node: ProofNode) = {
       t.continuation = onChangeAndOnNoChange(node, this, continuation)
-      println("Dispatching " + t.name)
       t.dispatch(this, node)
     }
   }
 
+  // do left tactic with high priority, and right with low priority.
+  // raise priority of right tactic when left finished
 
   /********************************************************************************
    * Rule application
@@ -435,6 +437,20 @@ object Tactics {
 
     def findPosition(pn: ProofNode): Option[Position] = findPosition(pn.sequent)
     def findPosition(s: Sequent): Option[Position]
+  }
+
+  abstract class ConstructionTactic(name: String) extends Tactic("Construct " + name) {
+    final def apply(tool: Tool, node: ProofNode) {
+      constructTactic(tool, node) match {
+        case Some(t) => {
+          t.continuation = continuation
+          t.dispatch(this, node)
+        }
+        case None => continuation(this, Failed, Seq(node))
+      }
+    }
+
+    def constructTactic(tool: Tool, node: ProofNode): Option[Tactic]
   }
 
 }

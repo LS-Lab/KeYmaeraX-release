@@ -10,6 +10,8 @@
 
 package edu.cmu.cs.ls.keymaera.core
 
+import edu.cmu.cs.ls.keymaera.tools.{JLinkMathematicaLink, QETool}
+
 /**
  * Tool instance (e.g., a specific mathematica kernel)
  */
@@ -29,3 +31,7 @@ abstract class Tool {
 }
 
 object KeYmaera extends Tool {}
+
+class Mathematica extends Tool {
+  val cricitalQE: QETool = new JLinkMathematicaLink
+}
