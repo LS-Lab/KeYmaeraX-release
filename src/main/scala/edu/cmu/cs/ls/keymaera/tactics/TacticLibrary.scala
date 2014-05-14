@@ -575,8 +575,10 @@ object TacticLibrary {
     def applies(f: Formula): Boolean
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
+    //@TODO Add contract that applies(f) <=> \result.isDefined
     def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)]
 
+    //@TODO Add contract that applies()=>\result fine
     override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
