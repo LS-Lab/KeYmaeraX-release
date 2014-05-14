@@ -33,5 +33,5 @@ abstract class Tool {
 object KeYmaera extends Tool {}
 
 class Mathematica extends Tool {
-  val cricitalQE: QETool = new JLinkMathematicaLink
+  private[core] val cricitalQE: QETool = new JLinkMathematicaLink
 }

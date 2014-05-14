@@ -53,28 +53,7 @@ object TacticLibrary {
 //    val FV = SimpleExprRecursion.getFreeVariables(f)
 //    Forall(FV, f)
 //  }
-  
-  def addRealArithLemma (t : QETool, f : Formula) : (java.io.File, String, Formula) = {
-    //Find the solution
-    val solution = t.qe(f)
-    val result = Equiv(f,solution)
-    
-    //Save the solution to a file.
-    //TODO-nrf create an interface for databases.
-    def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-      val f = new java.io.File("QE" + idx.toString() + ".alp")
-      if(f.exists()) getUniqueLemmaFile(idx+1)
-      else f
-    }
-    val file = getUniqueLemmaFile()
-    
-    val evidence = new ToolEvidence(Map(
-        "input" -> f.prettyString(), "output" -> result.prettyString()))
-    KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-    
-    //Return the file where the result is saved, together with the result.
-    (file, file.getName, result)
-  }
+
 
   def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
     override def applicable(node: ProofNode): Boolean = ??? // isFirstOrder
@@ -84,9 +63,8 @@ object TacticLibrary {
         override def applicable(node: ProofNode): Boolean = true
 
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-          tool match {
-            case x: Mathematica => {
-              val (file, id, f) = addRealArithLemma(x.cricitalQE, universalClosure(desequentialization(node.sequent)))
+          LookupLemma.addRealArithLemma(tool, universalClosure(desequentialization(node.sequent))) match {
+            case Some((file, id, f)) =>
               f match {
                 case Equiv(_, True) => {
                   val t = new ApplyRule(LookupLemma(file, id)) {
@@ -96,7 +74,6 @@ object TacticLibrary {
                 }
                 case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
               }
-            }
             case _ => None
           }
         }
@@ -575,8 +552,10 @@ object TacticLibrary {
     def applies(f: Formula): Boolean
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
+    //@TODO Add contract that applies(f) <=> \result.isDefined
     def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)]
 
+    //@TODO Add contract that applies()=>\result fine
     override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
@@ -587,8 +566,13 @@ object TacticLibrary {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
                 val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
-                // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
-                val branch2Tactic = uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT)
+                //@TODO Check position. Hiding i makes i disappear.
+                val hideAllAnte = for(i <- 0 until node.sequent.ante.length) yield hideT(new Position(true, i))
+                // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
+                val hideAllSuccButLast = for(i <- 0 until node.sequent.succ.length) yield hideT(new Position(false, i))
+                //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
+                //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
+                val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
               case None => None
             }
@@ -648,7 +632,7 @@ object TacticLibrary {
   // [++] choice
   // I induction
 
-  /*
+  /**
    * Tactic that executes "correct" tactic based on top-level operator
    */
   def indecisive(beta: Boolean, simplifyProg: Boolean): PositionTactic = new PositionTactic("Indecisive") {

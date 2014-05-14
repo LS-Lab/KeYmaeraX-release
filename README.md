@@ -22,13 +22,6 @@ To make sure sbt does not throw java.lang.OutOfMemoryError: PermGen space
 
 Source code is in src/main/scala and tests are in src/test/scala.
 
-Configuration
-=============
-
-If KeYmaera has difficulties finding the MathKernel throwing com.wolfram.jlink.MathLinkException: Could not find MathLink executable
-then choose some directory, say, ABC in your path and on Mac OS X run
-ln -s /Applications/Mathematica.app/Contents/MacOS/MathKernel ABC/math
-
 Specification
 =============
 

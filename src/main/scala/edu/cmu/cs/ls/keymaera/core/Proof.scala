@@ -14,8 +14,6 @@ import edu.cmu.cs.ls.keymaera.parser._
     override def toString: String = name
   }
 
-  trait OracleRule extends Rule
-
   sealed abstract class Status
     case object Success       extends Status
     case object Failed        extends Status // counterexample found
@@ -214,15 +212,6 @@ object Axiom {
   }
 }
 
-object Oracle {
-  def mathematicaReduce: Rule = new Rule("Oracle Mathematica") with OracleRule {
-    def apply(s: Sequent): List[Sequent] = {
-      //TODO: implement
-      List(s)
-    }
-  }
-}
-
 // cut
 object Cut {
   def apply(f: Formula) : Rule = new Cut(f)
@@ -246,6 +235,32 @@ object LookupLemma {
       val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
       val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
       List(newSequent)
+    }
+  }
+
+  def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
+    //Find the solution
+    t match {
+      case x: Mathematica =>
+        val (solution, input, output) = x.cricitalQE.qeInOut(f)
+        val result = Equiv(f,solution)
+
+        //Save the solution to a file.
+        //TODO-nrf create an interface for databases.
+        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+          val f = new java.io.File("QE" + idx.toString() + ".alp")
+          if(f.exists()) getUniqueLemmaFile(idx+1)
+          else f
+        }
+        val file = getUniqueLemmaFile()
+
+        val evidence = new ToolEvidence(Map(
+          "input" -> input, "output" -> output))
+        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+        //Return the file where the result is saved, together with the result.
+        Some((file, file.getName, result))
+      case _ => None
     }
   }
 }
@@ -309,6 +324,8 @@ class SubstitutionPair (val n: Expr, val t: Expr) {
 
   @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
     + n.sort + " != " + t.sort)
+
+  override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
 }
 
 /**
@@ -390,7 +407,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
       case BoxModality(p, f) => BoxModality(this(p), this(f))
       case DiamondModality(p, f) => DiamondModality(this(p), this(f))
       case _ => ???
-    } else throw new IllegalArgumentException("There is a name clash in a substitution " + x + " " + x.writes + " and " + l + " applied on " + f)
+    } else throw new IllegalArgumentException("There is a name clash in a substitution with pairs " + l + " to " + f.prettyString() + " since it writes " + x.writes)
 
     //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
