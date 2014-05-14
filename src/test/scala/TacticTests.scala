@@ -18,14 +18,17 @@ class TacticTests extends FlatSpec with Matchers {
   "We" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
     val f = TacticLibrary.universalClosure(Imply(And(GreaterThan(Real, x, zero), GreaterThan(Real, y, x)), GreaterEquals(Real, x, zero)))
     qet.qe(f) should be (True)
-    val (file, id, res) = TacticLibrary.addRealArithLemma(qet, f)
-    (res match {
-      case Equiv(_, True) => true
-      case _ => false
-    }) should be (true)
-    val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-    val t = LookupLemma(file,id)
-    val nr = r.apply(t).head
-    nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+    LookupLemma.addRealArithLemma(new Mathematica, f) match {
+      case Some((file, id, res)) => 
+        (res match {
+          case Equiv(_, True) => true
+          case _ => false
+        }) should be (true)
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val t = LookupLemma(file,id)
+        val nr = r.apply(t).head
+        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+      case None => "Lemma creation" should be ("successful")
+    }
   }
 }

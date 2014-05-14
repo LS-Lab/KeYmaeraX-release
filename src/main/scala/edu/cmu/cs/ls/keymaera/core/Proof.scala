@@ -237,6 +237,32 @@ object LookupLemma {
       List(newSequent)
     }
   }
+
+  def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
+    //Find the solution
+    t match {
+      case x: Mathematica =>
+        val (solution, input, output) = x.cricitalQE.qeInOut(f)
+        val result = Equiv(f,solution)
+
+        //Save the solution to a file.
+        //TODO-nrf create an interface for databases.
+        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+          val f = new java.io.File("QE" + idx.toString() + ".alp")
+          if(f.exists()) getUniqueLemmaFile(idx+1)
+          else f
+        }
+        val file = getUniqueLemmaFile()
+
+        val evidence = new ToolEvidence(Map(
+          "input" -> input, "output" -> output))
+        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+        //Return the file where the result is saved, together with the result.
+        Some((file, file.getName, result))
+      case _ => None
+    }
+  }
 }
 
 // equality/equivalence rewriting

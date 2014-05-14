@@ -4,4 +4,5 @@ import edu.cmu.cs.ls.keymaera.core._
 
 trait QETool {
   def qe(formula : Formula) : Formula
+  def qeInOut(formula: Formula): (Formula, String, String)
 }

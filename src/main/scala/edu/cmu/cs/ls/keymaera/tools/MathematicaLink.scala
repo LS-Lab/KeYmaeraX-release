@@ -15,8 +15,8 @@ import scala.math.BigDecimal
  * @author Nathan Fulton
  */
 trait MathematicaLink extends Tool with QETool {
-  def run(cmd : String) : edu.cmu.cs.ls.keymaera.core.Expr
-  def run(cmd : com.wolfram.jlink.Expr) : edu.cmu.cs.ls.keymaera.core.Expr
+  def run(cmd : String) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
+  def run(cmd : com.wolfram.jlink.Expr) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
   
   def dispatch(cmd : String) : Unit
   def dispatch(cmd : com.wolfram.jlink.Expr) : Unit
@@ -30,7 +30,7 @@ trait MathematicaLink extends Tool with QETool {
    * @return The result of a dispatched job. This method blocks on
    * Mathematica.
    */
-  def getAnswer : edu.cmu.cs.ls.keymaera.core.Expr
+  def getAnswer : (String, edu.cmu.cs.ls.keymaera.core.Expr)
 
   /** Cancels the current request.
    * @return True if job is successfully cancelled, or False if the new
@@ -86,19 +86,22 @@ class JLinkMathematicaLink extends  MathematicaLink {
   def getAnswer() = {
     ml.waitForAnswer()
     val res = ml.getExpr
-    println("Converting " + res.toString)
-    MathematicaToKeYmaera.fromMathematica(res)
+    (res.toString, MathematicaToKeYmaera.fromMathematica(res))
   }
 
   def ready = ???
 
   def cancel = ???
 
-
   def qe(f : Formula) : Formula = {
-    val result = run("Reduce[" + toMathematica(f) + ",{}, Reals" + "]")
+    qeInOut(f)._1
+  }
+
+  def qeInOut(f : Formula) : (Formula, String, String) = {
+    val input = "Reduce[" + toMathematica(f) + ",{}, Reals" + "]"
+    val (output, result) = run(input)
     if(result.isInstanceOf[Formula]) {
-      result.asInstanceOf[Formula]
+      (result.asInstanceOf[Formula], input, output)
     }
     else {
       throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
