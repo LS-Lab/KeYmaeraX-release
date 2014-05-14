@@ -1032,7 +1032,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
        */
       lazy val lemmaParser : ALPType = {
         val pattern = ("Lemma" ~> "\"" ~> alName) ~ 
-                      (("\"" ~ ".") ~> formulaP) ~ //only allow a single formula.
+                      (("\"" ~ ".") ~> formulaP <~ "End.") ~ //only allow a single formula.
                       evidenceP.* 
 
         log(pattern)("Lemma Parser") ^^ {
