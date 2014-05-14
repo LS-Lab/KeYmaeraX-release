@@ -15,8 +15,8 @@ import scala.math.BigDecimal
  * @author Nathan Fulton
  */
 trait MathematicaLink extends Tool with QETool {
-  def run(cmd : String) : edu.cmu.cs.ls.keymaera.core.Expr
-  def run(cmd : com.wolfram.jlink.Expr) : edu.cmu.cs.ls.keymaera.core.Expr
+  def run(cmd : String) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
+  def run(cmd : com.wolfram.jlink.Expr) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
   
   def dispatch(cmd : String) : Unit
   def dispatch(cmd : com.wolfram.jlink.Expr) : Unit
@@ -30,7 +30,7 @@ trait MathematicaLink extends Tool with QETool {
    * @return The result of a dispatched job. This method blocks on
    * Mathematica.
    */
-  def getAnswer : edu.cmu.cs.ls.keymaera.core.Expr
+  def getAnswer : (String, edu.cmu.cs.ls.keymaera.core.Expr)
 
   /** Cancels the current request.
    * @return True if job is successfully cancelled, or False if the new
@@ -44,8 +44,6 @@ trait MathematicaLink extends Tool with QETool {
   def toKeYmaera(expr : com.wolfram.jlink.Expr) =
     MathematicaToKeYmaera.fromMathematica(expr)
 }
-
-////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Creating a MathematicaLink object instantiates a new connection to a
@@ -87,28 +85,23 @@ class JLinkMathematicaLink extends  MathematicaLink {
    */
   def getAnswer() = {
     ml.waitForAnswer()
-    MathematicaToKeYmaera.fromMathematica(ml.getExpr())
+    val res = ml.getExpr
+    (res.toString, MathematicaToKeYmaera.fromMathematica(res))
   }
 
   def ready = ???
 
   def cancel = ???
 
-
   def qe(f : Formula) : Formula = {
     qeInOut(f)._1
   }
-  
-  def qeInOut(f : Formula) = {
-    val inputString = "Reduce[" + toMathematica(f) + "]"
-    
-    dispatch(inputString)
-    
-    val result = getAnswer()
-    val outputString = ml.getString()
-    
+
+  def qeInOut(f : Formula) : (Formula, String, String) = {
+    val input = "Reduce[" + toMathematica(f) + ",{}, Reals" + "]"
+    val (output, result) = run(input)
     if(result.isInstanceOf[Formula]) {
-      (result.asInstanceOf[Formula], inputString, outputString)
+      (result.asInstanceOf[Formula], input, output)
     }
     else {
       throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
