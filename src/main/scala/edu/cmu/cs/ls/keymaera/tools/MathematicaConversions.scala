@@ -549,11 +549,11 @@ object KeYmaeraToMathematica {
   }
   def convertGreaterEquals(left:Term,right:Term) = {
     val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.LESS_EQUALS, args)
+    new MExpr(MathematicaSymbols.GREATER_EQUALS, args)
   }
   def convertLessEquals(left:Term,right:Term) = {
     val args = Array[MExpr](convertTerm(left), convertTerm(right))
-    new MExpr(MathematicaSymbols.GREATER_EQUALS, args)
+    new MExpr(MathematicaSymbols.LESS_EQUALS, args)
   }
   def convertNotEquals(left:Term,right:Term) = {
     val args = Array[MExpr](convertTerm(left), convertTerm(right))

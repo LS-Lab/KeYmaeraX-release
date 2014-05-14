@@ -161,8 +161,8 @@ object KeYmaeraPrettyPrinter {
       
     case Pair(s,l,r) => PAIR_OPEN + recInfix(l,r,expressionToPrint,COMMA) + PAIR_CLOSE
     
-    case False => FALSE
-    case True => TRUE
+    case False() => FALSE
+    case True() => TRUE
     
     case PredicateConstant(name,_) => name
     case ProgramConstant(name, _) => name
@@ -411,7 +411,7 @@ object KeYmaeraPrettyPrinter {
   def stringifyEvidence(e:Evidence) = e match {
     case e : ProofEvidence => ??? //TODO
     case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."
-    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"\n") + "\nEnd."
+    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"").mkString("\n\t") + "\nEnd."
   }
   
   def proofHeader(ns : List[NamedSymbol]) : String = {
