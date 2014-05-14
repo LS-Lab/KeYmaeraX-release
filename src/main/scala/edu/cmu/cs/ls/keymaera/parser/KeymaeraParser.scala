@@ -1084,7 +1084,7 @@ class KeYmaeraParser(enabledLogging:Boolean=true) extends RegexParsers with Pack
     }
     
     lazy val externalInfoParser = {
-      lazy val pattern = "External." ~> """.*""".r <~ "." <~ "End."
+      lazy val pattern = "External." ~> """.*""".r <~ "End."
       log(pattern)("External Proof") ^^ {
         case file => new ExternalEvidence(new File(file))
       }

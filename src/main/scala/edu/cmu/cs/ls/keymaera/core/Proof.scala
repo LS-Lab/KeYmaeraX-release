@@ -184,6 +184,7 @@ object SuccSwitch {
 object Axiom {
   val axioms: Map[String, Formula] = getAxioms
 
+  //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   private def getAxioms: Map[String, Formula] = {
     var m = new HashMap[String, Formula]
     val a = ProgramConstant("$a")
@@ -919,6 +920,9 @@ object Helper {
     vars
   }
 
+  /**
+   * Finds all names in a sequent, ignoring the formula at position p.
+   */
   def variablesWithout(s: Sequent, p: Position): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     for(i <- 0 until s.ante.length) {

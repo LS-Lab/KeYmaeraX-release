@@ -395,16 +395,23 @@ object KeYmaeraPrettyPrinter {
   //////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////
-  def saveProof(file : java.io.File, f : Formula) = {
-    val namesToDeclare = SimpleExprRecursion.getFreeVariables(f)
+  def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
+    val namesToDeclare = ExpressionRecursor.getFreeVariables(f)
     val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
     val fString = KeYmaeraPrettyPrinter.stringify(f)
     
-    val fileContents = header + fString
+    val fileContents = header + "lemma " + "\"" + file.getName() + "\"." + "\n" + 
+    				   fString + "\nEnd.\n" + stringifyEvidence(ev)
     
     val pw = new java.io.PrintWriter(file)
     pw.write(fileContents)
     pw.close()
+  }
+  
+  def stringifyEvidence(e:Evidence) = e match {
+    case e : ProofEvidence => ??? //TODO
+    case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."
+    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"\n") + "End."
   }
   
   def proofHeader(ns : List[NamedSymbol]) : String = {
