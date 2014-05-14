@@ -566,9 +566,12 @@ object TacticLibrary {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
                 val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                //@TODO Check position. Hiding i makes i disappear.
                 val hideAllAnte = for(i <- 0 until node.sequent.ante.length) yield hideT(new Position(true, i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for(i <- 0 until node.sequent.succ.length) yield hideT(new Position(false, i))
+                //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
+                //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
                 val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
               case None => None
