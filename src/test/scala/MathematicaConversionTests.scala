@@ -143,11 +143,13 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   }
 
   "Mathematica -> KeYmaera" should "convert inequalities" in {
-    def check(e: Formula) = roundTrip(e) should be (e)
-    check(Forall(Seq(x), GreaterThan(Real,x,y)))
-    check(Forall(Seq(x), GreaterEquals(Real,x,y)))
-    check(Forall(Seq(x), LessEquals(Real,x,y)))
-    check(Forall(Seq(x), LessThan(Real,x,y)))
+    object round {
+      def trip(e: Formula) = roundTrip(e) should be (e)
+    }
+    round trip Forall(Seq(x), GreaterThan(Real,x,y))
+    round trip Forall(Seq(x), GreaterEquals(Real,x,y))
+    round trip Forall(Seq(x), LessEquals(Real,x,y))
+    round trip Forall(Seq(x), LessThan(Real,x,y))
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {
