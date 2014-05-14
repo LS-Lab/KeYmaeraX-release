@@ -137,15 +137,17 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
     )
   }
 
-  def roundTrip(e : edu.cmu.cs.ls.keymaera.core.Expr) = {
-    val math = KeYmaeraToMathematica.fromKeYmaera(e)
-    ml.run(math)._2
+
+  object round {
+    def trip(e: edu.cmu.cs.ls.keymaera.core.Expr) = roundTrip(e) should be (e)
+
+    def roundTrip(e : edu.cmu.cs.ls.keymaera.core.Expr) = {
+      val math = KeYmaeraToMathematica.fromKeYmaera(e)
+      ml.run(math)._2
+    }
   }
 
   "Mathematica -> KeYmaera" should "convert inequalities" in {
-    object round {
-      def trip(e: Formula) = roundTrip(e) should be (e)
-    }
     round trip Forall(Seq(x), GreaterThan(Real,x,y))
     round trip Forall(Seq(x), GreaterEquals(Real,x,y))
     round trip Forall(Seq(x), LessEquals(Real,x,y))
@@ -153,6 +155,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {
-    roundTrip(num(5)) should be (num(5))
+    round trip num(5)
+    round trip x
   }
 }
