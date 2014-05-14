@@ -161,8 +161,8 @@ object KeYmaeraPrettyPrinter {
       
     case Pair(s,l,r) => PAIR_OPEN + recInfix(l,r,expressionToPrint,COMMA) + PAIR_CLOSE
     
-    case False => FALSE
-    case True => TRUE
+    case False() => FALSE
+    case True() => TRUE
     
     case PredicateConstant(name,_) => name
     case ProgramConstant(name, _) => name
