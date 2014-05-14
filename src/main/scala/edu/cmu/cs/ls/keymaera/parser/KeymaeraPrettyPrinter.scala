@@ -12,7 +12,7 @@ object KeYmaeraPrettyPrinter {
   
   def stringify(e:Expr) = prettyPrinter(e)
       
-  def header(ns : List[NamedSymbol]) : String = "asdf"
+  def header(ns : List[NamedSymbol]) : String = ??? 
     
   private def sortPrinter(s:Sort):String = s match {
     case Bool => "B"
