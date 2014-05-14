@@ -290,11 +290,11 @@ object KeYmaeraPrettyPrinter {
       ProgramConstant.getClass().getCanonicalName() ::
       Variable.getClass().getCanonicalName() ::
       Number.NumberObj.getClass().getCanonicalName() ::
-      Nil 
+      Nil
     val precedence = precedenceDS.map(_.replace("$",""))
     
-    val childPrecedence = precedence.indexOf(child.getClass().getCanonicalName())
-    val parentPrecedence = precedence.indexOf(parent.getClass().getCanonicalName())
+    val childPrecedence = precedence.indexOf(child.getClass().getCanonicalName().replace("$",""))
+    val parentPrecedence = precedence.indexOf(parent.getClass().getCanonicalName().replace("$",""))
     if(childPrecedence == -1) {
       val classes = precedence.reduce(_ + "\n" + _)
       throw new Exception("child not found in precedence list: " + child.getClass().getCanonicalName() + " in: " + "\n" + classes)
@@ -396,11 +396,11 @@ object KeYmaeraPrettyPrinter {
   // Proofs
   //////////////////////////////////////////////////////////////////////////////
   def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
-    val namesToDeclare = ExpressionRecursor.getFreeVariables(f)
+    val namesToDeclare = Helper.freeVariables(f).toList
     val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
     val fString = KeYmaeraPrettyPrinter.stringify(f)
     
-    val fileContents = header + "lemma " + "\"" + file.getName() + "\"." + "\n" + 
+    val fileContents = header + "Lemma " + "\"" + file.getName() + "\"." + "\n" +
     				   fString + "\nEnd.\n" + stringifyEvidence(ev)
     
     val pw = new java.io.PrintWriter(file)
@@ -411,12 +411,12 @@ object KeYmaeraPrettyPrinter {
   def stringifyEvidence(e:Evidence) = e match {
     case e : ProofEvidence => ??? //TODO
     case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."
-    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"\n") + "End."
+    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"\n") + "\nEnd."
   }
   
   def proofHeader(ns : List[NamedSymbol]) : String = {
-    val varDecls = ns.map(symbol => sortProofPrinter(symbol.domain) + symbol.name)
-    "Variables.\n" + varDecls.reduce(_ + "\n" + _) + "\nEnd.\n"
+      val varDecls = ns.map(symbol => sortProofPrinter(symbol.domain) + " " + symbol.name + ".")
+      "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
   }
   private def sortProofPrinter(s:Sort):String = s match {
     case Bool => "T"
@@ -424,6 +424,7 @@ object KeYmaeraPrettyPrinter {
     case GameSort => ???
     case ProgramSort => "P"
     case Real => "T"
+    case Unit => "T" //FIXME is this the right thing to return?
   }
 
 }

@@ -22,7 +22,7 @@ class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr)
  * @author Nathan Fulton
  */
 private object NameConversion {
-  private val PREFIX = "KeYmaera"
+  private val PREFIX = "KeYmaera`"
   private val SEP    = "$beginIndex$"
   private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
 

@@ -47,6 +47,8 @@ object TacticLibrary {
     }
   }
 
+  def universalClosure(f: Formula): Formula = Forall(Helper.freeVariables(f).toList, f)
+
 //  def deskolemize(f : Formula) = {
 //    val FV = SimpleExprRecursion.getFreeVariables(f)
 //    Forall(FV, f)
@@ -67,7 +69,7 @@ object TacticLibrary {
     val file = getUniqueLemmaFile()
     
     val evidence = new ToolEvidence(Map(
-        "input" -> f.prettyString(), "output" -> f.prettyString()))
+        "input" -> f.prettyString(), "output" -> result.prettyString()))
     KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
     
     //Return the file where the result is saved, together with the result.
@@ -84,9 +86,9 @@ object TacticLibrary {
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
           tool match {
             case x: Mathematica => {
-              val (file, id, f) = addRealArithLemma(x.cricitalQE, desequentialization(node.sequent))
+              val (file, id, f) = addRealArithLemma(x.cricitalQE, universalClosure(desequentialization(node.sequent)))
               f match {
-                case True => {
+                case Equiv(_, True) => {
                   val t = new ApplyRule(LookupLemma(file, id)) {
                     override def applicable(node: ProofNode): Boolean = true
                   }
@@ -651,26 +653,33 @@ object TacticLibrary {
    * Tactic that executes "correct" tactic based on top-level operator
    */
   def indecisive(beta: Boolean, simplifyProg: Boolean): PositionTactic = new PositionTactic("Indecisive") {
-    override def applies(s: Sequent, p: Position): Boolean = true
+    override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = constructTactic(null, node).isDefined
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+    def getTactic(s: Sequent, p: Position) = {
+      val f = getFormula(s, p)
+      val res = f match {
         case Not(_) => if(p.isAnte) Some(NotLeftT(p)) else Some(NotRightT(p))
         case And(_, _) => if(p.isAnte) Some(AndLeftT(p)) else if(beta) Some(AndRightT(p)) else None
         case Or(_, _) => if(p.isAnte) if(beta) Some(OrLeftT(p)) else None else Some(OrRightT(p))
         case Imply(_, _) => if(p.isAnte) if(beta) Some(ImplyLeftT(p)) else None else Some(ImplyRightT(p))
         //case Equiv(_, _) =>
         case BoxModality(prog, f) if(simplifyProg) => prog match {
-          case Seq(_, _) => Some(boxSeqT(p))
+          case Sequence(_, _) => Some(boxSeqT(p))
           case Assign(_, _) => Some(assignment(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
         }
         case _ => None
       }
-  }
+      println("applicable to " + f + " is " + res)
+      res
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTactic(node.sequent, p)
+    }
   }
 
 }
