@@ -22,7 +22,10 @@ class TacticTests extends FlatSpec with Matchers {
     (res match {
       case Equiv(_, True) => true
       case _ => false
-    }) should be (True) 
-    LookupLemma(file,id)
+    }) should be (true)
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+    val t = LookupLemma(file,id)
+    val nr = r.apply(t).head
+    nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
   }
 }

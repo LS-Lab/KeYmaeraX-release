@@ -14,8 +14,6 @@ import edu.cmu.cs.ls.keymaera.parser._
     override def toString: String = name
   }
 
-  trait OracleRule extends Rule
-
   sealed abstract class Status
     case object Success       extends Status
     case object Failed        extends Status // counterexample found
@@ -210,15 +208,6 @@ object Axiom {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
         case _ => List(s)
       }
-    }
-  }
-}
-
-object Oracle {
-  def mathematicaReduce: Rule = new Rule("Oracle Mathematica") with OracleRule {
-    def apply(s: Sequent): List[Sequent] = {
-      //TODO: implement
-      List(s)
     }
   }
 }
