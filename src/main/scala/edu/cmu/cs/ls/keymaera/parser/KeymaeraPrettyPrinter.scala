@@ -411,7 +411,7 @@ object KeYmaeraPrettyPrinter {
   def stringifyEvidence(e:Evidence) = e match {
     case e : ProofEvidence => ??? //TODO
     case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."
-    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"\n") + "\nEnd."
+    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"").mkString("\n\t") + "\nEnd."
   }
   
   def proofHeader(ns : List[NamedSymbol]) : String = {
