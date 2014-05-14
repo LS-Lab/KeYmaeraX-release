@@ -187,10 +187,10 @@ object Axiom {
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   private def getAxioms: Map[String, Formula] = {
     var m = new HashMap[String, Formula]
-    val a = ProgramConstant("$a")
-    val b = ProgramConstant("$b")
-    val p = PredicateConstant("$p")
-    val pair = ("Choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
+    val a = ProgramConstant("a")
+    val b = ProgramConstant("b")
+    val p = PredicateConstant("p")
+    val pair = ("[++] choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
     m = m + pair
     val aA = ProgramConstant("a")
     val aB = ProgramConstant("b")

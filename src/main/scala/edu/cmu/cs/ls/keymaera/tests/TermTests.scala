@@ -33,9 +33,9 @@ object TermTests {
     val a = Assign(x, Number(0))
     val b = Assign(x, Number(1))
     val p = GreaterThan(Real, x, Number(0))
-    val substPairs = Seq(new SubstitutionPair(PredicateConstant("$p"), p), new SubstitutionPair(ProgramConstant("$a"), a), new SubstitutionPair(ProgramConstant("$b"), b))
+    val substPairs = Seq(new SubstitutionPair(PredicateConstant("p"), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
     val subst = new Substitution(substPairs)
-    Axiom.axioms.get("Choice") match {
+    Axiom.axioms.get("[++] choice") match {
       case Some(f) => (subst, Map((getTautology2, f)))
       case _ => throw new IllegalArgumentException("blub")
     }
@@ -122,7 +122,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = ((findPosSucc(boxSeqT) | findPosSucc(boxTestT) | ImplyRightFindT | assignmentFindSucc | eqLeftFind )*)
+    val tactic = ((findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) | eqLeftFind )*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     val tree = print(r)
