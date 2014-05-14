@@ -7,6 +7,8 @@ object Config {
    */
   val maxCPUs = 4
 
+  val mathlicenses = 4
+
   /**
    * apply expensive check whenever this threshold is exceeded
    */

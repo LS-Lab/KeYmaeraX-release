@@ -187,10 +187,10 @@ object Axiom {
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   private def getAxioms: Map[String, Formula] = {
     var m = new HashMap[String, Formula]
-    val a = ProgramConstant("$a")
-    val b = ProgramConstant("$b")
-    val p = PredicateConstant("$p")
-    val pair = ("Choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
+    val a = ProgramConstant("a")
+    val b = ProgramConstant("b")
+    val p = PredicateConstant("p")
+    val pair = ("[++] choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
     m = m + pair
     val aA = ProgramConstant("a")
     val aB = ProgramConstant("b")
@@ -894,7 +894,11 @@ object Helper {
    Set() ++ a.flatten ++ b.flatten
   }
 
-  def variables[A: FTPG](a: A): Set[NamedSymbol] = {
+  def variables[A: FTPG](a: A): Set[NamedSymbol] = variables(a, false)
+
+  def freeVariables[A: FTPG](a: A): Set[NamedSymbol] = variables(a, true)
+
+  def variables[A: FTPG](a: A, onlyFree: Boolean): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     val fn = new ExpressionTraversalFunction {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
@@ -903,7 +907,7 @@ object Helper {
           case x: ProgramConstant => vars += x
           case Apply(f, _) => vars += f
           case _ =>
-        };
+        }
         Left(None)
       }
 
@@ -912,7 +916,19 @@ object Helper {
           case x: PredicateConstant => vars += x
           case ApplyPredicate(f, _) => vars += f
           case _ =>
-        };
+        }
+        Left(None)
+      }
+
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+        if(onlyFree) {
+          e match {
+            case Forall(v, f) => vars = vars.filter(!v.contains(_))
+            case Exists(v, f) => vars = vars.filter(!v.contains(_))
+            case x: Modality => vars = vars.filter(!x.writes.contains(_))
+            case _ =>
+          }
+        }
         Left(None)
       }
     }
@@ -937,6 +953,7 @@ object Helper {
     }
     vars
   }
+
 
 }
 

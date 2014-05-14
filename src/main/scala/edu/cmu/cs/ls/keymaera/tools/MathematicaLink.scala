@@ -85,7 +85,9 @@ class JLinkMathematicaLink extends  MathematicaLink {
    */
   def getAnswer() = {
     ml.waitForAnswer()
-    MathematicaToKeYmaera.fromMathematica(ml.getExpr())
+    val res = ml.getExpr
+    println("Converting " + res.toString)
+    MathematicaToKeYmaera.fromMathematica(res)
   }
 
   def ready = ???
@@ -94,7 +96,7 @@ class JLinkMathematicaLink extends  MathematicaLink {
 
 
   def qe(f : Formula) : Formula = {
-    val result = run("Reduce[" + toMathematica(f) + "]")
+    val result = run("Reduce[" + toMathematica(f) + ",{}, Reals" + "]")
     if(result.isInstanceOf[Formula]) {
       result.asInstanceOf[Formula]
     }
