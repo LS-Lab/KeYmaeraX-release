@@ -18,6 +18,14 @@ import edu.cmu.cs.ls.keymaera.core.PosInExpr
  */
 object TacticLibrary {
 
+  object TacticHelper {
+    def getFormula(s: Sequent, p: Position): Formula = {
+      require(p.inExpr == HereP)
+      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+    }
+  }
+  import TacticHelper._
+
   /**
    * Tactics for real arithmetic
    */
@@ -82,6 +90,7 @@ object TacticLibrary {
                   val t = new ApplyRule(LookupLemma(file, id)) {
                     override def applicable(node: ProofNode): Boolean = true
                   }
+                  //TODO after applying the lemma we have to close this branch
                   Some(t)
                 }
                 case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
@@ -562,11 +571,6 @@ object TacticLibrary {
 
   abstract class AxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
     val axiom = Axiom.axioms.get(axiomName)
-    def getFormula(s: Sequent, p: Position): Formula = {
-      require(p.inExpr == HereP)
-      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
-    }
-
     def applies(f: Formula): Boolean
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
@@ -643,7 +647,30 @@ object TacticLibrary {
   // [++] choice
   // I induction
 
-  // TODO write tactic that executes "correct" tactic based on top-level operator
+  /*
+   * Tactic that executes "correct" tactic based on top-level operator
+   */
+  def indecisive(beta: Boolean, simplifyProg: Boolean): PositionTactic = new PositionTactic("Indecisive") {
+    override def applies(s: Sequent, p: Position): Boolean = true
 
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = constructTactic(null, node).isDefined
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case Not(_) => if(p.isAnte) Some(NotLeftT(p)) else Some(NotRightT(p))
+        case And(_, _) => if(p.isAnte) Some(AndLeftT(p)) else if(beta) Some(AndRightT(p)) else None
+        case Or(_, _) => if(p.isAnte) if(beta) Some(OrLeftT(p)) else None else Some(OrRightT(p))
+        case Imply(_, _) => if(p.isAnte) if(beta) Some(ImplyLeftT(p)) else None else Some(ImplyRightT(p))
+        //case Equiv(_, _) =>
+        case BoxModality(prog, f) if(simplifyProg) => prog match {
+          case Seq(_, _) => Some(boxSeqT(p))
+          case Assign(_, _) => Some(assignment(p))
+          case Test(_, _) => Some(boxTestT(p))
+          case _ => None
+        }
+        case _ => None
+      }
+  }
+  }
 
 }
