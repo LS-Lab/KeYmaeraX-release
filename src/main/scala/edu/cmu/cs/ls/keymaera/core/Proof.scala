@@ -309,6 +309,8 @@ class SubstitutionPair (val n: Expr, val t: Expr) {
 
   @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
     + n.sort + " != " + t.sort)
+
+  override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
 }
 
 /**
@@ -390,7 +392,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
       case BoxModality(p, f) => BoxModality(this(p), this(f))
       case DiamondModality(p, f) => DiamondModality(this(p), this(f))
       case _ => ???
-    } else throw new IllegalArgumentException("There is a name clash in a substitution " + x + " " + x.writes + " and " + l + " applied on " + f)
+    } else throw new IllegalArgumentException("There is a name clash in a substitution with pairs " + l + " to " + f.prettyString() + " since it writes " + x.writes)
 
     //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f

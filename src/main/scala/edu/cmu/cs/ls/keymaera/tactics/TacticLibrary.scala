@@ -587,8 +587,10 @@ object TacticLibrary {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
                 val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
-                // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
-                val branch2Tactic = uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT)
+                val hideAllAnte = for(i <- 0 until node.sequent.ante.length) yield hideT(new Position(true, i))
+                // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
+                val hideAllSuccButLast = for(i <- 0 until node.sequent.succ.length) yield hideT(new Position(false, i))
+                val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
               case None => None
             }
@@ -648,7 +650,7 @@ object TacticLibrary {
   // [++] choice
   // I induction
 
-  /*
+  /**
    * Tactic that executes "correct" tactic based on top-level operator
    */
   def indecisive(beta: Boolean, simplifyProg: Boolean): PositionTactic = new PositionTactic("Indecisive") {
