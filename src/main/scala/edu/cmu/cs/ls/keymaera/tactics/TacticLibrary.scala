@@ -92,8 +92,7 @@ object TacticLibrary {
                   val t = new ApplyRule(LookupLemma(file, id)) {
                     override def applicable(node: ProofNode): Boolean = true
                   }
-                  //TODO after applying the lemma we have to close this branch
-                  Some(t)
+                  Some(t & ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false)))*))
                 }
                 case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
               }
