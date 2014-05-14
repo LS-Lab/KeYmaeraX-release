@@ -595,12 +595,17 @@ object TacticLibrary {
             // [ a; b ]p <-> [a][b]p.
             val g = BoxModality(a, BoxModality(b, p))
             val axiomInstance = Equiv(f, g)
-            val axiom = Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP)))
+            //val axiom = Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP)))
+            val axiom = Axiom.axioms.get("[;] compose") match {
+              case Some(a) => a
+              case None => { continuation(this, Failed, Seq(node)); return }
+            }
             val eqPos = new Position(true, node.sequent.ante.length, HereP)
             val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
             // TODO: make sure that this substitution works by renaming if necessary, or by hiding everything else in the sequent
             val branch2Tactic = uniformSubstT(new Substitution(l), Map(axiomInstance -> axiom)) & (axiomT("[;] compose") & AxiomCloseT)
             val t = cutT(axiomInstance) & (branch1Tactic, branch2Tactic)
+            // TODO wrap this in constructTactic method, so that the code above constrcuts the tactic and the continuation stuff is elsewhere
             t.continuation = this.continuation
             t.dispatch(this, node)
           }
@@ -611,6 +616,8 @@ object TacticLibrary {
   }
   // [++] choice
   // I induction
+
+  // TODO write tactic that executes "correct" tactic based on top-level operator
 
 
 }
