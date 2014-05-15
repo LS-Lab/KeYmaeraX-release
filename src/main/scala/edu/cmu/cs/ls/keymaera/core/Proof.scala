@@ -37,7 +37,7 @@ import edu.cmu.cs.ls.keymaera.parser._
     /* must not be invoked when there is no alternative */
     def getStep : ProofStep = alternatives match {
       case List(h, t) => h
-      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative."
+      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
       //@TODO change exception type to a prover exception. Besides, there's no argument so it can't be illegal.
     }
 
