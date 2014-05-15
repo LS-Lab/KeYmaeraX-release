@@ -122,7 +122,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) | eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val tactic = ((AxiomCloseT | findPosSucc(indecisive(false, true)) | findPosAnte(indecisive(false, true)) | findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     val tree = print(r)
