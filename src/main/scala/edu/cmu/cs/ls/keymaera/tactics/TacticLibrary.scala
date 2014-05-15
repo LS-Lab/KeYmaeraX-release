@@ -698,14 +698,15 @@ object TacticLibrary {
 
   def modusPonensT(assumption: Position, implication: Position): Tactic = new ConstructionTactic("Modus Ponens") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      println("============= Applying modus ponens to " + assumption + " " + implication)
       val p = new Position(true, assumption.getIndex - (if(assumption.getIndex > implication.getIndex) 1 else 0))
-      Some(ImplyLeftT(implication) & (hideT(assumption), AxiomCloseT(p, new Position(false, node.sequent.succ.length))))
+      Some(ImplyLeftT(implication) & (AxiomCloseT(p, new Position(false, node.sequent.succ.length)), hideT(assumption)))
     }
 
     override def applicable(node: ProofNode): Boolean = assumption.isAnte && implication.isAnte &&
       ((getFormula(node.sequent, assumption), getFormula(node.sequent, implication)) match {
       case (a, Imply(b, c)) if (a == b) => true
-      case _ => false
+      case (a, b) => println("Modus ponens not applicable to " + a + " " + b); false
     })
   }
 
@@ -753,7 +754,7 @@ object TacticLibrary {
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
-                val branch1Tactic = modusPonensT(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                val branch1Tactic = modusPonensT(pos, eqPos) & (hideT(eqPos) & hideT(pos))
                 val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(new Position(true, i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(new Position(false, i))
