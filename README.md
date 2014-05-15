@@ -17,10 +17,45 @@ http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 Instructions are available at that website as well. Briefly, type "sbt test" to run the regression test case suite. Type "sbt run" to run the KeYmaera prover. If you run into problems during the compilation process, use "sbt clean" for a fresh start to remove stale files.
 
 To make sure sbt does not throw java.lang.OutOfMemoryError: PermGen space
-  edit ~/.sbtconfig
-  export SBT_OPTS=-XX:MaxPermSize=256M 
+
+    edit ~/.sbtconfig
+    export SBT_OPTS=-XX:MaxPermSize=256M 
+
+The Wiki contains extended build instructions and solutions to toher
+common sbt problems:
+
+https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
+
+Source Layout
+=============
+
+build.sbt - SBT configuration file
+
+jsgui/ - The javascript front-end
+
+src/ - Source code directory
+
+src/main/scala - source code (edu.cmu.cs.ls.keymaera)
+
+Without the keymaera namespace, code is separated according to functionality:
+
+    .core    - Soundness-critical core
+    .parser  - Parsing and pretty printing
+    .tactics - Tactic framework, including tactic implementations and the scheduler
+    .tools   - Arithmetic back-ends
+
+src/test/scala - tests run by `sbt test`
+
+The wiki contains an introduction to the testing framework:
+https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
+
+target/ - Created by sbt on first compilation.
+
+target/scala-2.10/classes/ - Target directory for sbt compilation.
 
 Source code is in src/main/scala and tests are in src/test/scala.
+
+
 
 Specification
 =============
