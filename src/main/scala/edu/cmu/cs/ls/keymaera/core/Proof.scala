@@ -440,6 +440,9 @@ class SubstitutionPair (val n: Expr, val t: Expr) {
 class Substitution(l: Seq[SubstitutionPair]) {
     //@TODO assert unique left hand side in l
 
+
+  override def toString: String = "Subst(" + l.mkString(", ") + ")"
+
   /**
    *
    * @param source should be a tuple of substitutable things
@@ -630,7 +633,8 @@ object UniformSubstitution {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println(KeYmaeraPrettyPrinter.stringify(a)); println(KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + "\nshould be equal\n" + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
       if(conclusion.pref == origin.pref // universal prefix is identical
         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
@@ -886,7 +890,6 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
         }, b), c))
         case x: PredicateConstant => Right(renamePred(x))
         case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
-        case _ => return Left(None)
         case _ => Left(None)
       }
     }

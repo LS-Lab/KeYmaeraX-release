@@ -446,11 +446,10 @@ object TacticLibrary {
     import Helper.variables
     var applicable = false
     val (blacklist, f) = s.ante(eqPos.getIndex) match {
-      case Equals(_, a, b) => val search = if(left) a else b; println("Searching for " + search)
+      case Equals(_, a, b) => val search = if(left) a else b
         (variables(a) ++ variables(b),
           new ExpressionTraversalFunction {
             override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-              println("found " + e + " with " + e == search)
               if (e == search) applicable = true
               Left(Some(new StopTraversal {}))
             }
@@ -734,19 +733,18 @@ object TacticLibrary {
         case None => throw new IllegalStateException("Replacing one variable by another should not fail")
       }
 
-      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution, (Variable, Variable))] = f match {
+      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution, (Variable, Variable), (Term, Variable))] = f match {
         case Forall(x, qf) if (x.contains(quantified)) =>
           def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
           // construct substitution
           val aX = Variable("x", None, Real)
           val aT = Variable("t", None, Real)
           val aP = Function("p", None, Real, Bool)
-          val l = List(new SubstitutionPair(Apply(aP, aX), forall(replace(qf)(quantified, aX))),
-            new SubstitutionPair(aT, instance))
+          val l = List(new SubstitutionPair(ApplyPredicate(aP, aX), forall(replace(qf)(quantified, aX))))
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
-          Some(axiomInstance, new Substitution(l), (quantified, aX))
+          Some(axiomInstance, new Substitution(l), (quantified, aX), (instance, aT))
         case _ => println("Cannot handle " + f.prettyString()); None
       }
 
@@ -755,7 +753,7 @@ object TacticLibrary {
         axiom match {
           case Some(a) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
-              case Some((axiomInstance, subst, (quantified, aX))) =>
+              case Some((axiomInstance, subst, (quantified, aX), (instance, aT))) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
                 val branch1Tactic = modusPonensT(pos, eqPos) & (hideT(eqPos) & hideT(pos))
                 val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(new Position(true, i))
@@ -764,15 +762,14 @@ object TacticLibrary {
                 def alpha(p: Position, q: Variable) = (new ApplyRule(new AlphaConversion(p, q.name, q.index, "$" + aX.name, aX.index)) {
                   override def applicable(node: ProofNode): Boolean = true
                 } ~ hideT(new Position(p.isAnte, p.getIndex)))
-                def repl(f: Formula, v: Variable) = f match {
-                  case Imply (a, b) => Imply(replace (a) (v, Variable ("$" + aX.name, aX.index, aX.sort) ), b)
+                def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
+                  case Imply (a, b) => Imply(replace (a) (v, Variable ("$" + aX.name, aX.index, aX.sort) ), if(atTrans) replace(b)(aT, instance) else b)
                   case _ => throw new IllegalArgumentException("...")
                 }
-                val replMap = Map(repl(axiomInstance, quantified) -> repl(a, aX))
-                println("====== " + replMap)
+                val replMap = Map(repl(axiomInstance, quantified, false) -> repl(a, aX))
                 val branch2Tactic = (((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~
                   alpha(new Position(false, 0, new PosInExpr().first), quantified) ~
-                  (uniformSubstT(subst, replMap) &
+                  (uniformSubstT(subst, replMap) & uniformSubstT(new Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
                     (axiomT(axiomName) ~ alpha(new Position(true, 0, new PosInExpr().first), aX) & AxiomCloseT)))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
               case None => println("Giving up " + this.name); None
@@ -808,7 +805,6 @@ object TacticLibrary {
         }
         case _ => None
       }
-      println("applicable to " + f + " is " + res)
       res
     }
 
