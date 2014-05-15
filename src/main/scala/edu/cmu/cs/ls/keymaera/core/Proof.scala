@@ -37,7 +37,7 @@ import edu.cmu.cs.ls.keymaera.parser._
     /* must not be invoked when there is no alternative */
     def getStep : ProofStep = alternatives match {
       case List(h, t) => h
-      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative."
+      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
       //@TODO change exception type to a prover exception. Besides, there's no argument so it can't be illegal.
     }
 
@@ -673,9 +673,9 @@ class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val f = s.ante(p.getIndex)
     f match {
-      //@TODO Soundness bug. Should be |-a as well as b|-
-      case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ),
-         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      case Imply(a, b) => List(
+         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
+         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
       case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
     }
   }
