@@ -26,6 +26,8 @@ class CoreTests extends FlatSpec with Matchers {
   def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
   def rootAnte(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(f), IndexedSeq()))
 
+  //def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, a.to
+
   def testImplyRight = {
     val pn = rootSucc(Imply(p, q))
     val res = pn.apply(ImplyRight(sPos))
@@ -50,6 +52,22 @@ class CoreTests extends FlatSpec with Matchers {
     ante(1).length should be (1)
     succ(1).length should be (0)
     ante(1)(0) should be (q)
+  }
+
+  def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
+    val pn = new RootNode(in)
+    val res = pn.apply(rule)
+    res.length should be (out.length)
+    for((s,t) <- res zip out) {
+      s.ante.length should be (t.ante.length)
+      for((f,g) <- s.ante zip t.ante)
+        f should be (g)
+      
+      s.succ.length should be (t.succ.length)
+      for((f,g) <- s.succ zip t.succ)
+        f should be (g)
+      
+    }
   }
 
   "Core (Propositional Rules)" should "yield expected results" in {
