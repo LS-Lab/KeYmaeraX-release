@@ -1243,6 +1243,16 @@ final class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quanti
  */
 
 final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula]) {
+  def apply(p: Position): Formula = {
+    require(p.inExpr == HereP, "Can only retrieve top level formulas")
+    if(p.isAnte) {
+      require(ante.length < p.getIndex, "Position " + p + " is invalid in sequent " + this)
+      ante(p.getIndex)
+    } else {
+      require(succ.length < p.getIndex, "Position " + p + " is invalid in sequent " + this)
+      succ(p.getIndex)
+    }
+  }
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
 }
