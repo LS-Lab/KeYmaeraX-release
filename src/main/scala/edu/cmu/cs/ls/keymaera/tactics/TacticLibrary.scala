@@ -632,7 +632,9 @@ object TacticLibrary {
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
+                //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                 val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                // hide in reverse order since hiding changes positions
                 val hideAllAnte = for(i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(new Position(true, i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for(i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(new Position(false, i))
