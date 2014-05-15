@@ -242,9 +242,7 @@ object Tactics {
   def onSuccessExact(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     if (status == Success) {
       if(tNext.length == result.length) {
-        val len = math.max(tNext.length, result.length)
-        def cont[A] = Stream.continually(_: Seq[A]).flatten.take(len).toList
-        for ((t, n) <- cont(tNext) zip cont(result)) t.dispatch(tFrom, n)
+        for ((t, n) <- tNext zip result) t.dispatch(tFrom, n)
       }
     }
   }
