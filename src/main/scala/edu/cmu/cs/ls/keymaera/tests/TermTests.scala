@@ -45,8 +45,8 @@ object TermTests {
   def test = {
       val i2 = getTautology
       val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-      val pos = new Position(false, 0)
-      val pos2 = new Position(true, 0)
+      val pos = SuccPosition(0)
+      val pos2 = AntePosition(0)
       val c = r(ImplyRight(pos))
       for(n <- c) {
         val c2 = n(ImplyRight(pos))
@@ -97,7 +97,7 @@ object TermTests {
           Tactics.repeatT(TacticLibrary.ImplyRightFindT),
           TacticLibrary.ImplyLeftFindT),
         TacticLibrary.cutT(getTautology2))
-     , TacticLibrary.hideT(new Position(true, 1)))//, (hideT(new Position(true, 0))*) & uniformSubstT(subst, delta) & axiomT("Choice") & AxiomCloseT)
+     , TacticLibrary.hideT(AntePosition(1)))//, (hideT(new Position(true, 0))*) & uniformSubstT(subst, delta) & axiomT("Choice") & AxiomCloseT)
     //val tactic2: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     //tactic2(r)

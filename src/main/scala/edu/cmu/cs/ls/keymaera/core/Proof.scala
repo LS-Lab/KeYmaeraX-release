@@ -112,48 +112,22 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  */
 
 case class PosInExpr(val pos: List[Int] = Nil) {
-  def first:  PosInExpr = fromIntList(toIntList :+ 0)
-  def second: PosInExpr = fromIntList(toIntList :+ 1)
-  def third:  PosInExpr = fromIntList(toIntList :+ 2)
+  def first:  PosInExpr = new PosInExpr(pos :+ 0)
+  def second: PosInExpr = new PosInExpr(pos :+ 1)
+  def third:  PosInExpr = new PosInExpr(pos :+ 2)
 
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
-  //@TODO List[Int] converters really needed? PosInExpr is really just a type alias / wrapper for List[Int]
-  def toIntList: List[Int] = pos
-  def fromIntList(l: List[Int]): PosInExpr = new PosInExpr(l)
 }
 
 // observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
 object HereP extends PosInExpr
 
-
-/*object FirstP {
-  def unapply(p: PosInExpr): Boolean = p.pos.length > 0 && p.pos(0) == 0
-}
-*/
-/*case class SecondP(val sub: PosInExpr) extends PosInExpr {
-  def isPrefixOf(p: PosInExpr) = p match {
-    case SecondP(s) => s.isPrefixOf(sub)
-    case _ => false
-  }
-  def toIntList: List[Int] = 1 :: sub.toIntList
-}
-case class ThirdP(val sub: PosInExpr) extends PosInExpr {
-  def isPrefixOf(p: PosInExpr) = p match {
-    case ThirdP(s) => s.isPrefixOf(sub)
-    case _ => false
-  }
-  def toIntList: List[Int] = 2 :: sub.toIntList
-}
-*/
-
 /**
- * @param ante whether indicates a position in succedent or antecedent.
  * @param index the number of the formula in the antecedent or succedent, respectively.
  * @param inExpr the position in said formula.
- *@TODO use case class Ante|Succ instead of Boolean for ante.
  */
-class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP) {
-  def isAnte = ante
+abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
+  def isAnte: Boolean
   def getIndex: Int = index
 
   def isDefined(s: Sequent): Boolean =
@@ -162,7 +136,33 @@ class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP)
     else
       s.succ.length > getIndex
 
+  /**
+   * Top level position of this position
+   * @return A position with the same index but on the top level (i.e., inExpr == HereP)
+   */
+  def topLevel = clone(index)
+
+  protected def clone(i: Int, e: PosInExpr = HereP): Position
+
   override def toString: String = "(" + isAnte + ", " + getIndex + ", " + inExpr + ")"
+}
+
+class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
+  def isAnte = true
+  protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
+}
+
+object AntePosition {
+  def apply(index: Int, inExpr: PosInExpr = HereP): Position = new AntePosition(index, inExpr)
+}
+
+class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
+  def isAnte = false
+  protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
+}
+
+object SuccPosition {
+  def apply(index: Int, inExpr: PosInExpr = HereP): Position = new SuccPosition(index, inExpr)
 }
 
 abstract class Signature
