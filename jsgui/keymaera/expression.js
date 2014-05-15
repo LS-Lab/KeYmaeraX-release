@@ -52,9 +52,9 @@ var FormulaAPI = {
 
   getOptions : function(formula) {
   }
-}
+};
 
-var FormulaGUI {
+var FormulaGUI = {
   staticView : function(formula) {
     var div = document.createElement('span');
     div.setAttribute('id', "s" + formula.uid);
@@ -65,7 +65,7 @@ var FormulaGUI {
   interactiveView : function(formula) {
     //TODO-nrf!
   },
-
+  
   onClick : function(formula) {
     var options = getOptions(formula)
     if(options.length == 0) {
@@ -84,38 +84,36 @@ var FormulaGUI {
 // Sequents
 ////////////////////////////////////////////////////////////////////////////////
 
-function Sequent(uid, parentSequent, left, right) {
-  /**
-   * Prints the sequent to the element with id ``id"
-   * TODO-nrf this needs to be better.
-   */
-  this.staticView = function() {
+function Sequent(uid, parentSequent, left, right) {}
+
+var SequentGUI = {
+  //Prints the sequent to the element with id ``id"
+  //TODO-nrf this needs to be better.
+  staticView : function(sequent) {
     var div = document.createElement('span');
-    div.setAttribute('id', "s"+uid);
-    div.innerHTML = FormulaGUI.staticView(left) + 
-                    "&#x22A2" + // |- 
-                    FormulaGUI.staticView(right);
+    div.setAttribute('id', "s"+sequent.uid);
+    div.innerHTML = FormulaGUI.staticView(sequent.left) + 
+                    "&#x22A2"                           + 
+                    FormulaGUI.staticView(sequent.right);
     return div;
-  }
+  },
 
-  this.interactiveView = function() {
+  interactiveView : function(sequent) {
     //TODO-nrf support interactive view.
-  }
+  },
 
-  this.onClick = function() {
+  onClick : function(sequent) {
     //TODO-nrf  
-  }
+  },
 
-  /**
-   * adds the sequent to the object with id ``id".
-   * interactive : bool indicates whether the static or interactive view
-   * should be printed.
-   */
-  this.show = function(id, interactive) {
+  //Adds sequent to the object with id ``id". 
+  //The interactive flag determines if the view should be static or
+  //interactive.
+  show : function(sequent, id, interactive) {
     var target = document.getElementById(id);
-    var newChild = interactive ? this.interactiveView() : this.staticView();
+    var newChild = interactive ? 
+                   SequentGUI.interactiveView(sequent) : 
+                   SequentGUI.staticView(sequent);
     target.appendChild(newChild);
   }
 }
-
-
