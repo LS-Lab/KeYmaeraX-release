@@ -844,6 +844,7 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
   def apply(s: Sequent): List[Sequent] = {
+	  //@TODO the following lookup line should be a function in Sequent.
     val f = if(tPos.isAnte) s.ante(tPos.getIndex) else s.succ(tPos.getIndex)
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
