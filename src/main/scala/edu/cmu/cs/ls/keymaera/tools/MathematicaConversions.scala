@@ -531,16 +531,29 @@ object KeYmaeraToMathematica {
     }
     result
   }
-  
+
   def convertExists(vs:Seq[NamedSymbol],f:Formula) = {
-    val variables = new MExpr(MathematicaSymbols.LIST, vs.map(convertNS).toArray)
-    val formula = convertFormula(f)
-    new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, formula))
+    val (vars, formula) = collectVarsExists(vs, f)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(convertNS).toArray)
+    new MExpr(MathematicaSymbols.EXISTS, Array[MExpr](variables, convertFormula(formula)))
   }
+  private def collectVarsExists(vsSoFar:Seq[NamedSymbol],candidate:Formula) : (Seq[NamedSymbol], Formula) = {
+    candidate match {
+      case Exists(nextVs, nextf) =>  collectVarsExists(vsSoFar ++ nextVs, nextf)
+      case _ => (vsSoFar,candidate)
+    }
+  }
+
   def convertForall(vs:Seq[NamedSymbol],f:Formula) = {
-    val variables = new MExpr(MathematicaSymbols.LIST, vs.map(convertNS).toArray)
-    val formula = convertFormula(f)
-    new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, formula))
+    val (vars, formula) = collectVarsForall(vs, f)
+    val variables = new MExpr(MathematicaSymbols.LIST, vars.map(convertNS).toArray)
+    new MExpr(MathematicaSymbols.FORALL, Array[MExpr](variables, convertFormula(formula)))
+  }
+  private def collectVarsForall(vsSoFar:Seq[NamedSymbol],candidate:Formula) : (Seq[NamedSymbol], Formula) = {
+    candidate match {
+      case Forall(nextVs, nextf) =>  collectVarsForall(vsSoFar ++ nextVs, nextf)
+      case _ => (vsSoFar,candidate)
+    }
   }
   
   def convertEquals(left:Term,right:Term) = {
