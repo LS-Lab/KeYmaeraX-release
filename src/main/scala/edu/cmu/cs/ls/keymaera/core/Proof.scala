@@ -661,8 +661,20 @@ class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
       case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
       case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
     }
+    /*
+    *@TODO Change propositional rule implementations to drop and concat style
+    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
+    f match {
+      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
+      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+    }
+    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
+    val (Imply(a, b), ress) = dropSeq(s, p)
+    List(concatSeq(s, Sequent(Nil, a, b)))
+    */
   }
 }
+
 
 // ->L Implication left
 object ImplyLeft extends (Position => Rule) {
