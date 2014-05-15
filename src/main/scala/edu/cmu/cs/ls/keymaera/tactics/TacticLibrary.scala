@@ -724,6 +724,10 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       def replace(f: Formula)(o: Variable, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Forall(v, f) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), f))
+          case _ => Left(None)
+        }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
       }, f) match {
         case Some(g) => g
@@ -761,12 +765,14 @@ object TacticLibrary {
                   override def applicable(node: ProofNode): Boolean = true
                 } ~ hideT(new Position(p.isAnte, p.getIndex)))
                 def repl(f: Formula, v: Variable) = f match {
-                  case Imply (a, b) => replace (a) (v, Variable ("$" + aX.name, aX.index, aX.sort) )
+                  case Imply (a, b) => Imply(replace (a) (v, Variable ("$" + aX.name, aX.index, aX.sort) ), b)
                   case _ => throw new IllegalArgumentException("...")
                 }
+                val replMap = Map(repl(axiomInstance, quantified) -> repl(a, aX))
+                println("====== " + replMap)
                 val branch2Tactic = (((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~
                   alpha(new Position(false, 0, new PosInExpr().first), quantified) ~
-                  (uniformSubstT(subst, Map(repl(axiomInstance, quantified) -> repl(a, aX))) &
+                  (uniformSubstT(subst, replMap) &
                     (axiomT(axiomName) ~ alpha(new Position(true, 0, new PosInExpr().first), aX) & AxiomCloseT)))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
               case None => println("Giving up " + this.name); None
