@@ -257,6 +257,7 @@ object KeYmaeraPrettyPrinter {
       Exp.getClass().getCanonicalName() ::
       Neg.getClass().getCanonicalName() ::
       Apply.getClass().getCanonicalName() ::
+      Function.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() :: //real-valued.
       Number.getClass().getCanonicalName()   ::
       //Formulas
@@ -278,6 +279,7 @@ object KeYmaeraPrettyPrinter {
       LessThan.getClass().getCanonicalName()    :: 
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
+      ApplyPredicate.getClass().getCanonicalName() ::
       True.getClass().getCanonicalName() ::
       False.getClass().getCanonicalName() ::
       //Programs.

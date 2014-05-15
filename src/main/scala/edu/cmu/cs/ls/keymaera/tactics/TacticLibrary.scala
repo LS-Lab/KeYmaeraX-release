@@ -74,18 +74,21 @@ object TacticLibrary {
                       val resG = reInst(g)
                       if (v.isEmpty) resG
                       else {
-                        throw new UnsupportedOperationException("Not yet implemented")
-//                        val tac = (for (n <- v) yield instantiateT(n, n)(pos)).reduce(seqT)
-//                        resG match {
-//                          case Some(t) => Some(tac & t)
-//                          case None => Some(tac)
-//                        }
+                        val vars = v.map(n => n match {
+                          case x: Variable => x
+                          case _ => throw new IllegalArgumentException("Can only handle quantifiers over variables")
+                        })
+                        val tac = (for (n <- vars) yield instantiateT(n, n)(pos)).reduce(seqT)
+                        resG match {
+                          case Some(t) => Some(tac & t)
+                          case None => Some(tac)
+                        }
                       }
                     }
                     case _ => None
                   }
                   val tr = reInst(res) match {
-                    case Some(tac) => t & tac
+                    case Some(tac) => t & EquivLeftT(pos) & AndLeftT(pos) & (tac, NotLeftT(new Position(true, node.sequent.ante.length + 1)) & CloseTrueT(new Position(false, node.sequent.succ.length)))
                     case _ => t
                   }
                   Some(tr & ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*))
@@ -312,6 +315,26 @@ object TacticLibrary {
     }
   }
 
+  def CloseTrueT: PositionTactic = new PositionTactic("CloseTrue") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && (getFormula(s, p) match {
+      case True() => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ApplyRule(CloseTrue(p)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+  def CloseFalseT: PositionTactic = new PositionTactic("CloseFalse") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
+      case False() => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ApplyRule(CloseFalse(p)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
   def axiomT(id: String): Tactic = Axiom.axioms.get(id) match {
     case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
       override def applicable(node: ProofNode): Boolean = true
@@ -413,8 +436,8 @@ object TacticLibrary {
     import Helper.variables
     p.isAnte && p.inExpr == HereP && (s.ante(p.getIndex) match {
       case Equals(_, a, b) => if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else true
-      case ProgramEquals(a, b) => if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else true
-      case Equiv(a, b) => if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else true
+      case ProgramEquals(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
+      case Equiv(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
       case _ => false
     })
   }
@@ -609,7 +632,9 @@ object TacticLibrary {
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
+                //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                 val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                // hide in reverse order since hiding changes positions
                 val hideAllAnte = for(i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(new Position(true, i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for(i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(new Position(false, i))
@@ -674,13 +699,13 @@ object TacticLibrary {
   def modusPonensT(assumption: Position, implication: Position): Tactic = new ConstructionTactic("Modus Ponens") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val p = new Position(true, assumption.getIndex - (if(assumption.getIndex > implication.getIndex) 1 else 0))
-      Some(ImplyLeftT(implication) & (hideT(assumption), AxiomCloseT(p, new Position(false, node.sequent.succ.length))))
+      Some(ImplyLeftT(implication) & (AxiomCloseT(p, new Position(false, node.sequent.succ.length)), hideT(assumption)))
     }
 
     override def applicable(node: ProofNode): Boolean = assumption.isAnte && implication.isAnte &&
       ((getFormula(node.sequent, assumption), getFormula(node.sequent, implication)) match {
       case (a, Imply(b, c)) if (a == b) => true
-      case _ => false
+      case (a, b) => false
     })
   }
 
@@ -688,6 +713,7 @@ object TacticLibrary {
   def instantiateT(quantified: Variable, instance: Term): PositionTactic = new PositionTactic("Quantifier Instantiation") {
     val axiomName = "Quantifier Instantiation"
     val axiom = Axiom.axioms.get(axiomName)
+    require(axiom.isDefined)
 
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
       case Forall(_, _) => true
@@ -704,7 +730,7 @@ object TacticLibrary {
         case None => throw new IllegalStateException("Replacing one variable by another should not fail")
       }
 
-      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution, (Variable, Variable))] = f match {
         case Forall(x, qf) if (x.contains(quantified)) =>
           def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
           // construct substitution
@@ -716,8 +742,8 @@ object TacticLibrary {
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
-          Some(axiomInstance, new Substitution(l))
-        case _ => None
+          Some(axiomInstance, new Substitution(l), (quantified, aX))
+        case _ => println("Cannot handle " + f.prettyString()); None
       }
 
       // since we have an implication, we use modus ponens to get it's consequence
@@ -725,17 +751,27 @@ object TacticLibrary {
         axiom match {
           case Some(a) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
-              case Some((axiomInstance, subst)) =>
+              case Some((axiomInstance, subst, (quantified, aX))) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
-                val branch1Tactic = modusPonensT(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                val branch1Tactic = modusPonensT(pos, eqPos) & (hideT(eqPos) & hideT(pos))
                 val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(new Position(true, i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(new Position(false, i))
-                val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT))
+                def alpha(p: Position, q: Variable) = (new ApplyRule(new AlphaConversion(p, q.name, q.index, "$" + aX.name, aX.index)) {
+                  override def applicable(node: ProofNode): Boolean = true
+                } ~ hideT(new Position(p.isAnte, p.getIndex)))
+                def repl(f: Formula, v: Variable) = f match {
+                  case Imply (a, b) => replace (a) (v, Variable ("$" + aX.name, aX.index, aX.sort) )
+                  case _ => throw new IllegalArgumentException("...")
+                }
+                val branch2Tactic = (((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~
+                  alpha(new Position(false, 0, new PosInExpr().first), quantified) ~
+                  (uniformSubstT(subst, Map(repl(axiomInstance, quantified) -> repl(a, aX))) &
+                    (axiomT(axiomName) ~ alpha(new Position(true, 0, new PosInExpr().first), aX) & AxiomCloseT)))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
-              case None => None
+              case None => println("Giving up " + this.name); None
             }
-          case None => None
+          case None => println("Giving up because the axiom does not exist " + this.name); None
         }
 
     }
