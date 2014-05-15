@@ -37,7 +37,7 @@ src/ - Source code directory
 
 src/main/scala - source code (edu.cmu.cs.ls.keymaera)
 
-Without the keymaera namespace, code is separated according to functionality:
+Within the keymaera namespace, code is separated according to functionality:
 
     .core    - Soundness-critical core
     .parser  - Parsing and pretty printing
@@ -52,10 +52,6 @@ https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
 target/ - Created by sbt on first compilation.
 
 target/scala-2.10/classes/ - Target directory for sbt compilation.
-
-Source code is in src/main/scala and tests are in src/test/scala.
-
-
 
 Specification
 =============
