@@ -10,6 +10,11 @@ import edu.cmu.cs.ls.keymaera.parser._
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
+/**
+ * Representation of a proof rule, which is ultimately a named mapping from sequents to lists of sequents.
+ * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
+ * to prove the current sequent (desired conclusion).
+ */
   sealed abstract class Rule(val name: String) extends (Sequent => List[Sequent]) {
     override def toString: String = name
   }
@@ -32,6 +37,10 @@ import edu.cmu.cs.ls.keymaera.parser._
 
     @volatile private[this] var alternatives : List[ProofStep] = Nil
 
+    /**
+     * List of all current or-branching alternatives of proving this proof node.
+     * Result can change over time as new alternative or-branches are added.
+     */
     def children: List[ProofStep] = alternatives
 
     /* must not be invoked when there is no alternative */
@@ -56,25 +65,33 @@ import edu.cmu.cs.ls.keymaera.parser._
       }
     }
 
-    def apply(rule : Rule) : List[ProofNode] = {
+    final def apply(rule : Rule) : List[ProofNode] = {
+      // ProofNodes for the respective sequents resulting from applying rule to sequent.
       val result = rule(sequent).map(new ProofNode(_, this))
+      // Add as or-branching alternative
       prepend(rule, result)
       result
     }
 
+    //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
+    //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
     @volatile private[this] var closed : Boolean = false
     @volatile var status               : Status  = Unfinished
 
     def isLocalClosed: Boolean = closed
 
+    //@TODO Purpose and function unclear
     def closeNode(s : Status) =
       this.synchronized {
         if (!closed) {
           closed = true
           status = s
-        }
+          } else {
+            assert (status == s, "status unchanged when closing already closed ProofNode with status " + status + " to " + s + " for " + this)
+          }
       }
 
+      //@TODO Purpose and function unclear
     def checkParentClosed() : Boolean = {
       var node = this
       while (node != null && !node.isLocalClosed) node = node.parent
@@ -91,6 +108,9 @@ import edu.cmu.cs.ls.keymaera.parser._
     }
   }
 
+  /**
+   * The root node (conclusion) for a sequent derivation.
+   */
   class RootNode(sequent : Sequent) extends ProofNode(sequent, null) {
 
   }
