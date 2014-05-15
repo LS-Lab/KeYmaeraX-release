@@ -122,7 +122,7 @@ case class PosInExpr(val pos: List[Int] = Nil) {
   def fromIntList(l: List[Int]): PosInExpr = new PosInExpr(l)
 }
 
-//@TODO HereP and PosInExpr([]) ought to be the same but are treated differently? That could fail in position comparison code.
+// observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
 object HereP extends PosInExpr
 
 
