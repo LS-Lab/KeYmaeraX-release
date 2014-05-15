@@ -199,6 +199,12 @@ object Axiom {
     val aH = PredicateConstant("H")
     val pair3 = ("[?] test", Equiv(BoxModality(Test(aH), aP), Imply(aH, aP)))
     m = m + pair3
+
+    val x = Variable("x", None, Real)
+    val t = Variable("t", None, Real)
+    val p2 = Function("p", None, Real, Bool)
+    val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p2, x)), ApplyPredicate(p2, t)))
+    m = m + pair4
     m
   }
 
@@ -564,6 +570,34 @@ class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass
         throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
       }
     }
+  }
+}
+
+// close by true
+object CloseTrue {
+  def apply(p: Position): PositionRule = new CloseTrue(p)
+}
+
+class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) {
+  require(!p.isAnte && p.inExpr == HereP, "CloseTrue only works in the succedent on top-level")
+  override def apply(s: Sequent): List[Sequent] = {
+    require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
+    if(s.succ(p.getIndex) == True) List()
+    else throw new IllegalArgumentException("CloseTrue is not applicable to " + s + " at " + p)
+  }
+}
+
+// close by false
+object CloseFalse {
+  def apply(p: Position): PositionRule = new CloseFalse(p)
+}
+
+class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) {
+  require(p.isAnte && p.inExpr == HereP, "CloseFalse only works in the antecedent on top-level")
+  override def apply(s: Sequent): List[Sequent] = {
+    require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
+    if(s.ante(p.getIndex) == False) List()
+    else throw new IllegalArgumentException("CloseFalse is not applicable to " + s + " at " + p)
   }
 }
 
