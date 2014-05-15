@@ -37,7 +37,8 @@ import edu.cmu.cs.ls.keymaera.parser._
     /* must not be invoked when there is no alternative */
     def getStep : ProofStep = alternatives match {
       case List(h, t) => h
-      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
+      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative."
+      //@TODO change exception type to a prover exception. Besides, there's no argument so it can't be illegal.
     }
 
     private def prepend(r : Rule, s : List[ProofNode]) {
@@ -95,7 +96,7 @@ import edu.cmu.cs.ls.keymaera.parser._
   }
 
   /*********************************************************************************
-   * Proof Rules
+   * Kinds of Proof Rules
    *********************************************************************************
    */
 
@@ -105,16 +106,23 @@ abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) e
 
 abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name)
 
+/*********************************************************************************
+ * Positioning information within expressions, i.e. formulas / terms / programs
+ *********************************************************************************
+ */
+
 case class PosInExpr(val pos: List[Int] = Nil) {
   def first:  PosInExpr = fromIntList(toIntList :+ 0)
   def second: PosInExpr = fromIntList(toIntList :+ 1)
   def third:  PosInExpr = fromIntList(toIntList :+ 2)
 
   def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
+  //@TODO List[Int] converters really needed? PosInExpr is really just a type alias / wrapper for List[Int]
   def toIntList: List[Int] = pos
   def fromIntList(l: List[Int]): PosInExpr = new PosInExpr(l)
 }
 
+//@TODO HereP and PosInExpr([]) ought to be the same but are treated differently? That could fail in position comparison code.
 object HereP extends PosInExpr
 
 
@@ -138,6 +146,12 @@ case class ThirdP(val sub: PosInExpr) extends PosInExpr {
 }
 */
 
+/**
+ * @param ante whether indicates a position in succedent or antecedent.
+ * @param index the number of the formula in the antecedent or succedent, respectively.
+ * @param inExpr the position in said formula.
+ *@TODO use case class Ante|Succ instead of Boolean for ante.
+ */
 class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte = ante
   def getIndex: Int = index
@@ -153,13 +167,25 @@ class Position(val ante: Boolean, val index: Int, val inExpr: PosInExpr = HereP)
 
 abstract class Signature
 
+/*********************************************************************************
+ * Proof Rules
+ *********************************************************************************
+ */
+
 // proof rules:
 
+/*********************************************************************************
+ * Structural Proof Rules
+ *********************************************************************************
+ */
+
 // reorder antecedent
+//@TODO Is there a better and more standard name
 object AnteSwitch {
   def apply(p1: Position, p2: Position): Rule = new AnteSwitchRule(p1, p2)
 
   private class AnteSwitchRule(p1: Position, p2: Position) extends Rule("AnteSwitch") {
+    //@TODO Contract ensuring that set projection of sequent before and after is the same
     def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP )
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
     else
@@ -172,6 +198,7 @@ object SuccSwitch {
   def apply(p1: Position, p2: Position): Rule = new SuccSwitchRule(p1, p2)
 
   private class SuccSwitchRule(p1: Position, p2: Position) extends Rule("SuccSwitch") {
+    //@TODO Contract ensuring that set projection of sequent before and after is the same
     def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     else
@@ -179,10 +206,44 @@ object SuccSwitch {
   }
 }
 
+// remove duplicate antecedent (this should be a tactic)
+// weakening = hide
+object HideLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = {
+    require(p.isAnte && p.inExpr == HereP)
+    new Hide(p)
+  }
+}
+// remove duplicate succedent (this should be a tactic)
+// weakening = hide
+object HideRight extends (Position => Rule) {
+  def apply(p: Position): Rule = {
+    require(!p.isAnte && p.inExpr == HereP)
+    new Hide(p)
+  }
+}
+class Hide(p: Position) extends PositionRule("Hide", p) {
+  def apply(s: Sequent): List[Sequent] = {
+    require(p.inExpr == HereP)
+    if (p.isAnte)
+      List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
+    else
+      List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+  }
+}
+
+
+
+/*********************************************************************************
+ * Axioms
+ *********************************************************************************
+ */
+
 object Axiom {
   val axioms: Map[String, Formula] = getAxioms
 
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
+  //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
   private def getAxioms: Map[String, Formula] = {
     var m = new HashMap[String, Formula]
     val a = ProgramConstant("a")
@@ -213,65 +274,98 @@ object Axiom {
       axioms.get(id) match {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
         case _ => List(s)
+        //@TODO Applying an axiom that does not exist should give exception because it's very wrong.
       }
     }
   }
 }
 
+/*********************************************************************************
+ * Sequent Proof Rules for closing and cut
+ *********************************************************************************
+ */
+
+// AX Axiom close
+object AxiomClose extends ((Position, Position) => Rule) {
+  def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
+}
+
+
+class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass, p) {
+  require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
+  require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
+
+  def apply(s: Sequent): List[Sequent] = {
+    if(ass.isAnte) {
+      if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
+        // close
+        Nil
+      } else {
+        throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
+      }
+    } else {
+      if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
+        // close
+        Nil
+      } else {
+        throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
+      }
+    }
+  }
+}
+
+// close by true
+object CloseTrue {
+  def apply(p: Position): PositionRule = new CloseTrue(p)
+}
+
+class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) {
+  require(!p.isAnte && p.inExpr == HereP, "CloseTrue only works in the succedent on top-level")
+  override def apply(s: Sequent): List[Sequent] = {
+    require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
+    //@TODO AxiomClose closes by Nil. CloseTrue closes by List(). Use consistent convention. Maybe List()
+    if(s.succ(p.getIndex) == True) List()
+    else throw new IllegalArgumentException("CloseTrue is not applicable to " + s + " at " + p)
+  }
+}
+
+// close by false
+object CloseFalse {
+  def apply(p: Position): PositionRule = new CloseFalse(p)
+}
+
+class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) {
+  require(p.isAnte && p.inExpr == HereP, "CloseFalse only works in the antecedent on top-level")
+  override def apply(s: Sequent): List[Sequent] = {
+    require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
+    if(s.ante(p.getIndex) == False) List()
+    else throw new IllegalArgumentException("CloseFalse is not applicable to " + s + " at " + p)
+  }
+}
+
+
 // cut
 object Cut {
-  def apply(f: Formula) : Rule = new Cut(f)
-  private class Cut(f: Formula) extends Rule("cut") {
+  // Cut in the given formula c
+  def apply(c: Formula) : Rule = new Cut(c)
+  private class Cut(c: Formula) extends Rule("cut") {
     def apply(s: Sequent): List[Sequent] = {
-      val l = new Sequent(s.pref, s.ante :+ f, s.succ)
-      val r = new Sequent(s.pref, s.ante, s.succ :+ f)
-      List(l, r)
+      val use = new Sequent(s.pref, s.ante :+ c, s.succ)
+      val show = new Sequent(s.pref, s.ante, s.succ :+ c)
+      List(use, show)
     }
 
-    def parameter: Formula = f
+    def parameter: Formula = c
   }
 }
 
-object LookupLemma {
-  def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
-  private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
-    def apply(s : Sequent) = {
-      val parser = new KeYmaeraParser()
-      val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
-      val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
-      val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
-      List(newSequent)
-    }
-  }
-
-  def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
-    //Find the solution
-    t match {
-      case x: Mathematica =>
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
-
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File("QE" + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = getUniqueLemmaFile()
-
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-      case _ => None
-    }
-  }
-}
+/*********************************************************************************
+ * Congruence Rewriting Proof Rule
+ *********************************************************************************
+ */
 
 // equality/equivalence rewriting
+//@TODO Review
 class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equality Rewriting", ass, p) {
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
@@ -311,6 +405,11 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
     }
   }
 }
+
+/*********************************************************************************
+ * Uniform Substitution Proof Rule
+ *********************************************************************************
+ */
 
 /**
  * Representation of a substitution replacing n with t.
@@ -544,70 +643,18 @@ object UniformSubstitution {
 }
 
 
-// AX close
-object AxiomClose extends ((Position, Position) => Rule) {
-  def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
-}
+/*********************************************************************************
+ * Propositional Sequent Proof Rules
+ *********************************************************************************
+ */
 
-
-class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass, p) {
-  require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
-  require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
-
-  def apply(s: Sequent): List[Sequent] = {
-    if(ass.isAnte) {
-      if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
-        // close
-        Nil
-      } else {
-        throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
-      }
-    } else {
-      if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
-        // close
-        Nil
-      } else {
-        throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.succ(ass.getIndex) + " not the same as " + s.ante(p.getIndex))
-      }
-    }
-  }
-}
-
-// close by true
-object CloseTrue {
-  def apply(p: Position): PositionRule = new CloseTrue(p)
-}
-
-class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) {
-  require(!p.isAnte && p.inExpr == HereP, "CloseTrue only works in the succedent on top-level")
-  override def apply(s: Sequent): List[Sequent] = {
-    require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
-    if(s.succ(p.getIndex) == True) List()
-    else throw new IllegalArgumentException("CloseTrue is not applicable to " + s + " at " + p)
-  }
-}
-
-// close by false
-object CloseFalse {
-  def apply(p: Position): PositionRule = new CloseFalse(p)
-}
-
-class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) {
-  require(p.isAnte && p.inExpr == HereP, "CloseFalse only works in the antecedent on top-level")
-  override def apply(s: Sequent): List[Sequent] = {
-    require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
-    if(s.ante(p.getIndex) == False) List()
-    else throw new IllegalArgumentException("CloseFalse is not applicable to " + s + " at " + p)
-  }
-}
-
-// Impl right
+// ->R Implication right
 object ImplyRight extends (Position => Rule) {
   def apply(p: Position): Rule = new ImplyRight(p)
 }
 
 class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  assert(!p.isAnte && p.inExpr == HereP)  //@TODO assert--->require
   def apply(s: Sequent): List[Sequent] = {
     val f = s.succ(p.getIndex)
     f match {
@@ -617,7 +664,7 @@ class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
   }
 }
 
-// Impl left
+// ->L Implication left
 object ImplyLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new ImplLeft(p)
 }
@@ -626,17 +673,17 @@ class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val f = s.ante(p.getIndex)
     f match {
-      case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ), Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      //@TODO Soundness bug. Should be |-a as well as b|-
+      case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a), s.succ),
+         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
       case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
     }
   }
 }
 
-// Not right
+// !R Not right
 object NotRight extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    new NotRight(p)
-  }
+  def apply(p: Position): Rule = new NotRight(p)
 }
 
 class NotRight(p: Position) extends PositionRule("Not Right", p) {
@@ -650,7 +697,7 @@ class NotRight(p: Position) extends PositionRule("Not Right", p) {
   }
 }
 
-// Not left
+// !L Not left
 object NotLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new NotLeft(p)
 }
@@ -666,7 +713,7 @@ class NotLeft(p: Position) extends PositionRule("Not Left", p) {
   }
 }
 
-// And right
+// &R And right
 object AndRight extends (Position => Rule) {
   def apply(p: Position): Rule = new AndRight(p)
 }
@@ -681,7 +728,7 @@ class AndRight(p: Position) extends PositionRule("And Right", p) {
   }
 }
 
-// And left
+// &L And left
 object AndLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new AndLeft(p)
 }
@@ -691,13 +738,14 @@ class AndLeft(p: Position) extends PositionRule("And Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val f = s.ante(p.getIndex)
     f match {
+      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
       case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
       case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
     }
   }
 }
 
-// Or right
+// |R Or right
 object OrRight extends (Position => Rule) {
   def apply(p: Position): Rule = new OrRight(p)
 }
@@ -712,7 +760,7 @@ class OrRight(p: Position) extends PositionRule("Or Right", p) {
   }
 }
 
-// Or left
+// |L Or left
 object OrLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new OrLeft(p)
 }
@@ -728,7 +776,7 @@ class OrLeft(p: Position) extends PositionRule("Or Left", p) {
   }
 }
 
-// Equiv right
+// <->R Equiv right
 object EquivRight extends (Position => Rule) {
   def apply(p: Position): Rule = new EquivRight(p)
 }
@@ -737,13 +785,14 @@ class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val f = s.succ(p.getIndex)
     f match {
+      //@TODO In succedent maybe replace by (a->b)&(b->a) and wait for the other rules to make it obvious.
       case Equiv(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)), Sequent(s.pref, s.ante :+ b, s.succ.updated(p.getIndex, a)))
       case _ => throw new IllegalArgumentException("Equiv-Right can only be applied to equivalences. Tried to apply to: " + f)
     }
   }
 }
 
-// Equiv left
+// <->L Equiv left
 object EquivLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new EquivLeft(p)
 }
@@ -753,36 +802,10 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val f = s.ante(p.getIndex)
     f match {
+      //@TODO In succedent maybe replace by (a&b)|(!a&!b) and wait for the other rules to make it obvious.
       case Equiv(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,And(a,b)), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex,And(Not(a),Not(b))), s.succ))
       case _ => throw new IllegalArgumentException("Equiv-Left can only be applied to equivalences. Tried to apply to: " + f)
     }
-  }
-}
-
-// Lookup Lemma (different justifications: Axiom, Lemma with proof, Oracle Lemma)
-
-// remove duplicate antecedent (this should be a tactic)
-// remove duplicate succedent (this should be a tactic)
-// hide
-object HideLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    assert(p.isAnte && p.inExpr == HereP)
-    new Hide(p)
-  }
-}
-object HideRight extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    assert(!p.isAnte && p.inExpr == HereP)
-    new Hide(p)
-  }
-}
-class Hide(p: Position) extends PositionRule("Hide", p) {
-  def apply(s: Sequent): List[Sequent] = {
-    assert(p.inExpr == HereP)
-    if (p.isAnte)
-      List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
-    else
-      List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
   }
 }
 
@@ -801,6 +824,7 @@ class Hide(p: Position) extends PositionRule("Hide", p) {
  * @param idx
  * @param target
  * @param tIdx
+ * @TODO Review
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
   def apply(s: Sequent): List[Sequent] = {
@@ -877,6 +901,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ * @TODO Review
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   import Helper._
@@ -906,6 +931,7 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
  * Assignment as equation
  * Assumptions: We assume that the variable has been made unique through alpha conversion first. That way, we can just
  * replace the assignment by an equation without further checking
+ * @TODO Review. Or turn into axiom.
  */
 class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   import Helper._
@@ -934,6 +960,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   }
 }
 
+// @TODO Review. Or turn into axiom.
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val f = if(pos.isAnte) s.ante(pos.getIndex) else s.succ(pos.getIndex)
@@ -968,7 +995,61 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 
 // merge sequent (or is this derived?)
 
+/*********************************************************************************
+ * Lemma Mechanism Rules
+ *********************************************************************************
+ */
 
+// Lookup Lemma (different justifications: Axiom, Lemma with proof, Oracle Lemma)
+
+
+//@TODO Review
+object LookupLemma {
+  def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
+  private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
+    def apply(s : Sequent) = {
+      val parser = new KeYmaeraParser()
+      val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
+      val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
+      val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
+      List(newSequent)
+    }
+  }
+
+  def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
+    //Find the solution
+    t match {
+      case x: Mathematica =>
+        val (solution, input, output) = x.cricitalQE.qeInOut(f)
+        val result = Equiv(f,solution)
+
+        //Save the solution to a file.
+        //TODO-nrf create an interface for databases.
+        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+          val f = new java.io.File("QE" + idx.toString() + ".alp")
+          if(f.exists()) getUniqueLemmaFile(idx+1)
+          else f
+        }
+        val file = getUniqueLemmaFile()
+
+        val evidence = new ToolEvidence(Map(
+          "input" -> input, "output" -> output))
+        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+        //Return the file where the result is saved, together with the result.
+        Some((file, file.getName, result))
+      case _ => None
+    }
+  }
+}
+
+
+/*********************************************************************************
+ * Helper code
+ *********************************************************************************
+ */
+
+//@TODO Review
 object Helper {
  def variables(s: Sequent): Set[NamedSymbol] = {
    val a = for(f <- s.ante) yield variables(f)
