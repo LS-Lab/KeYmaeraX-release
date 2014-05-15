@@ -140,7 +140,7 @@ abstract class Binary(sort : Sort, val domain : TupleT, val left : Expr, val rig
   applicable
 
   @elidable(ASSERTION) def applicable =
-        require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr")
+        require(domain.left == left.sort && domain.right == right.sort, "Sort Mismatch in Binary Expr " + domain.left + "(" + domain + ") != " + left.sort + "(" + left + ")" )
 
 }
 

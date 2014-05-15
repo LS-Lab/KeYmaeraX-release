@@ -637,7 +637,7 @@ object UniformSubstitution {
         && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
         List(origin)
       else
-        throw new IllegalStateException("Substitution did not yield the expected result")
+        throw new IllegalStateException("Substitution did not yield the expected result " + subst + " applied to " + conclusion)
     }
   }
 }
@@ -849,16 +849,16 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
               "single assignment at this position " + e + " " + p)
           }
           Left(None)
-        } else (e match {
-          case x: PredicateConstant => renamePred(x)
-          case x: ProgramConstant => renameProg(x)
-          case Apply(a, b) => Apply(renameFunc(a), b)
-          case ApplyPredicate(a, b) => ApplyPredicate(renameFunc(a), b)
-          case _ => return Left(None)
-        }) match {
-          case x: Formula => Right(x)
-          case a => throw new IllegalArgumentException("Expected a formula. Got " + a)
-        }
+        } else Left(None)
+      override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+        case x: ProgramConstant => Right(renameProg(x))
+        case _ => Left(None)
+      }
+      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+        case Apply(a, b) => Right(Apply(renameFunc(a), b))
+        case x: Variable => Right(renameVar(x))
+        case _ => Left(None)
+      }
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
         case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
@@ -872,6 +872,9 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
           case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
           case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
         }, b), c))
+        case x: PredicateConstant => Right(renamePred(x))
+        case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
+        case _ => return Left(None)
         case _ => Left(None)
       }
     }
@@ -881,7 +884,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
     }
   }
 
-  def renameVar(e: Variable): Variable = if(e.name == name && e.index == idx) Variable(target, tIdx, e.domain) else e
+  def renameVar(e: Variable): Variable = if(e.name == name && e.index == idx) Variable(target, tIdx, e.sort) else e
 
   def renamePred(e: PredicateConstant): PredicateConstant = if(e.name == name && e.index == idx) PredicateConstant(target, tIdx) else e
 

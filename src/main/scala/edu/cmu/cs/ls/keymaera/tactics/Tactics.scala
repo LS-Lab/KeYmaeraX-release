@@ -232,9 +232,10 @@ object Tactics {
   */
 
   def onSuccess(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
-    if (status == Success) {
+    require(tNext.length > 0)
+    if (status == Success && result.length > 0) {
       val len = math.max(tNext.length, result.length)
-      def cont[A] = Stream.continually(_: Seq[A]).flatten.take(len).toList
+      def cont[A](s: Seq[A]) = Stream.continually(s).flatten.take(len).toList
       for ((t, n) <- cont(tNext) zip cont(result)) t.dispatch(tFrom, n)
     }
   }
