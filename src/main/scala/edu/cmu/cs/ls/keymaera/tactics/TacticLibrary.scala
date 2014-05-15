@@ -466,6 +466,7 @@ object TacticLibrary {
         (variables(a) ++ variables(b),
           new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+              println("------- Seaching " + search + " found " + e)
               if (e == search) applicable = true
               Left(Some(new StopTraversal {}))
             }
@@ -480,7 +481,9 @@ object TacticLibrary {
 
   def equalityRewriting(eqPos: Position, p: Position): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
     override def applicable(node: ProofNode): Boolean = {
-      isEquality(node.sequent, eqPos, true) && (equalityApplicable(true, eqPos, p, node.sequent) || equalityApplicable(false, eqPos, p, node.sequent))
+      val res = isEquality(node.sequent, eqPos, true) && (equalityApplicable(true, eqPos, p, node.sequent) || equalityApplicable(false, eqPos, p, node.sequent))
+      println("Eq Rewrite is applicable " + res + " " + equalityApplicable(true, eqPos, p, node.sequent) + " " + equalityApplicable(false, eqPos, p, node.sequent))
+      res
     }
   }
 
@@ -632,7 +635,7 @@ object TacticLibrary {
               case Some((axiomInstance, subst)) =>
                 val eqPos = new Position(true, node.sequent.ante.length, HereP)
                 //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
-                val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                val branch1Tactic = debugT(eqPos.toString + " and " + pos) & equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
                 // hide in reverse order since hiding changes positions
                 val hideAllAnte = for(i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(new Position(true, i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
@@ -648,6 +651,15 @@ object TacticLibrary {
       }
     }
 
+  }
+
+  def debugT(s: String): Tactic = new Tactic("Debug") {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      println("===== " + s + " ==== " + node.sequent + " =====")
+      continuation(this, Success, Seq(node))
+    }
   }
 
   // [?] test
@@ -738,9 +750,10 @@ object TacticLibrary {
           def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
           // construct substitution
           val aX = Variable("x", None, Real)
+          val aXDD = Variable("$$x", None, Real)
           val aT = Variable("t", None, Real)
           val aP = Function("p", None, Real, Bool)
-          val l = List(new SubstitutionPair(ApplyPredicate(aP, aX), forall(replace(qf)(quantified, aX))))
+          val l = List(new SubstitutionPair(ApplyPredicate(aP, aXDD), forall(replace(qf)(quantified, aXDD))))
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))

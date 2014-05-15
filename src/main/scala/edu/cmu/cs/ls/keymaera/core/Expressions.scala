@@ -1242,7 +1242,10 @@ final class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quanti
  * Sequent notation
  */
 
-final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula])
+final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula]) {
+  override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
+    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
+}
 
 object Sequent {
   def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
