@@ -21,8 +21,13 @@ class CoreTests extends FlatSpec with Matchers {
   def num(n : Integer) = Number(new BigDecimal(n.toString()))
   def snum(n : String) = Number(new BigDecimal(n))
 
-  "Core" should "have HereP == new PosInExpr(Nil)" in {
+  "Core (Positions)" should "have HereP == new PosInExpr(Nil)" in {
     HereP should be (new PosInExpr(Nil))
   }
 
+  "Core (Positions)" should "have PosInExpr equality based on lists" in {
+    new PosInExpr(List(1,0,4,4,1)) should be (new PosInExpr(List(1,0,4,4,1)))
+    new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1)))
+    new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1,4)))
+  }
 }
