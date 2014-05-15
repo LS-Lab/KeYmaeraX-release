@@ -5,9 +5,9 @@ object Config {
   /**
    * number of CPUs and hence threads to execute in parallel
    */
-  val maxCPUs = 4
+  var maxCPUs = 4
 
-  val mathlicenses = 4
+  var mathlicenses = 4
 
   /**
    * apply expensive check whenever this threshold is exceeded

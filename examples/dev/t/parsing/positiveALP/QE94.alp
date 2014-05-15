@@ -1,0 +1,10 @@
+Variables.
+
+End.
+Lemma "QE94.alp".
+\forall x,y.(x>0&y=x+1&x+1>x->x>=0)<->⊤
+End.
+Tool.
+	input	"Reduce[ForAll[{KeYmaera`x, KeYmaera`y}, Implies[And[And[Greater[KeYmaera`x, 0], Equal[KeYmaera`y, Plus[KeYmaera`x, 1]]], Greater[Plus[KeYmaera`x, 1], KeYmaera`x]], GreaterEqual[KeYmaera`x, 0]]],{}, Reals]"
+	output	"True"
+End.

@@ -6,6 +6,8 @@ import java.math.BigDecimal
 import java.io.File
 
 class TacticTests extends FlatSpec with Matchers {
+  Config.mathlicenses = 1
+  Config.maxCPUs = 1
   val math = new Mathematica
   val qet = new JLinkMathematicaLink()
   val x = Variable("x", None, Real)
