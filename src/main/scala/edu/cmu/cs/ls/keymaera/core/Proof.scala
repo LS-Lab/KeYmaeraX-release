@@ -673,8 +673,9 @@ class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val f = s.ante(p.getIndex)
     f match {
-      case Imply(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ),
-         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      case Imply(a, b) => List(
+         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
+         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
       case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
     }
   }
