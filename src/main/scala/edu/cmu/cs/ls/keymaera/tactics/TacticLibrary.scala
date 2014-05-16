@@ -110,7 +110,7 @@ object TacticLibrary {
                     case _ => None
                   }
                   val tr = reInst(res) match {
-                    case Some(tac) => t & EquivLeftT(pos) & AndLeftT(pos) & (tac, NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length)))
+                    case Some(tac) => t & EquivLeftT(pos) & AndLeftT(pos) & (hideT(pos + 1) & tac, NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length)))
                     case _ => t
                   }
                   Some(tr & ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*))
@@ -657,7 +657,7 @@ object TacticLibrary {
               case Some((axiomInstance, subst)) =>
                 val eqPos = AntePosition(node.sequent.ante.length)
                 //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
-                val branch1Tactic = debugT(eqPos.toString + " and " + pos) & equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
+                val branch1Tactic = equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
                 // hide in reverse order since hiding changes positions
                 val hideAllAnte = for(i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
@@ -796,7 +796,7 @@ object TacticLibrary {
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
               case Some((axiomInstance, subst, (quantified, aX), (instance, aT))) =>
                 val eqPos = AntePosition(node.sequent.ante.length)
-                val branch1Tactic = modusPonensT(pos, eqPos) & (hideT(eqPos) & hideT(pos))
+                val branch1Tactic = modusPonensT(pos, eqPos)
                 val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))

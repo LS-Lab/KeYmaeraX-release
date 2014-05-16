@@ -197,6 +197,8 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
    */
   def topLevel = clone(index)
 
+  def +(i: Int): Position
+
   protected def clone(i: Int, e: PosInExpr = HereP): Position
 
   override def toString: String = "(" + isAnte + ", " + getIndex + ", " + inExpr + ")"
@@ -205,6 +207,7 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
 class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
   def isAnte = true
   protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
+  def +(i: Int) = AntePosition(index + i, inExpr)
 }
 
 object AntePosition {
@@ -214,6 +217,7 @@ object AntePosition {
 class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
   def isAnte = false
   protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
+  def +(i: Int) = SuccPosition(index + i, inExpr)
 }
 
 object SuccPosition {
