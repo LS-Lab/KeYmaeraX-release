@@ -71,7 +71,7 @@ object ProgramSort extends Sort
 /* user defined sort */
 case class UserSort(name : String) extends Sort
 /* user defined enum sort. values is the list of named constants of this enum */
-case class EnumT(name : String, values : List[String]) extends Sort
+//case class EnumT(name : String, values : List[String]) extends Sort
 
 /* used to define pairs of sorts. That is the pair sort is of type L x R */
 sealed trait TupleT extends Sort {
@@ -99,19 +99,7 @@ object TupleT {
 
 
 /* subtype of a given type; for example TimeT = Subtype("the time that passes", Real) */
-case class Subtype(name : String, sort : Sort) extends Sort
-
-object PredefinedSorts {
-  val RealXReal       = TupleT(Real, Real)
-  val BoolXBool       = TupleT(Bool, Bool)
-  val GameXBool       = TupleT(GameSort, Bool)
-  val BoolXProgram    = TupleT(Bool, ProgramSort)
-  val GameXGame       = TupleT(GameSort, GameSort)
-  val ProgramXProgram = TupleT(ProgramSort, ProgramSort)
-  val BoolXProgramXProgram    = TupleT(Bool, ProgramXProgram)
-}
-
-import PredefinedSorts._
+//case class Subtype(name : String, sort : Sort) extends Sort
 
 /**
  * Expression infrastructure
@@ -396,7 +384,7 @@ sealed trait Formula extends Expr
 /* Bool -> Bool */
 abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
 /* Bool x Bool -> Bool */
-abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, BoolXBool, left, right) with Formula
+abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, TupleT(Bool, Bool), left, right) with Formula
 
 object Not {
   def apply(child: Formula): Formula = new Not(child)
@@ -823,7 +811,7 @@ object Modality {
     case _ => None
   }
 }
-final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) with Formula {
+final class Modality (left : Game, right : Formula) extends Binary(Bool, TupleT(GameSort, Bool), left, right) with Formula {
   def reads: Seq[NamedSymbol] = ???
   def writes: Seq[NamedSymbol] = left.writes
 
@@ -835,7 +823,7 @@ final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBo
 }
 
 abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
-abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
+abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, TupleT(GameSort, GameSort), left, right) with Game
 
 /* Games */
 object BoxModality {
@@ -943,7 +931,7 @@ sealed trait Program extends Expr {
 }
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
-abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
+abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, TupleT(ProgramSort, ProgramSort), left, right) with Program
 
 object Sequence {
   def apply(left: Program, right: Program) = new Sequence(left, right)
@@ -1040,7 +1028,7 @@ object IfThen {
     case _ => None
   }
 }
-final class IfThen(cond: Formula, thenP: Program) extends Binary(ProgramSort, BoolXProgram, cond, thenP) with Program {
+final class IfThen(cond: Formula, thenP: Program) extends Binary(ProgramSort, TupleT(Bool, ProgramSort), cond, thenP) with Program {
   def reads = ???
   def writes = thenP.writes
 
@@ -1062,7 +1050,7 @@ object IfThenElse {
   }
 }
 final class IfThenElse(cond: Formula, thenP: Program, elseP: Program)
-  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, thenP, elseP) with Program {
+  extends Ternary(ProgramSort, TupleT(Bool, TupleT(ProgramSort, ProgramSort)), cond, thenP, elseP) with Program {
   def reads = ???
   def writes = thenP.writes ++ elseP.writes
 

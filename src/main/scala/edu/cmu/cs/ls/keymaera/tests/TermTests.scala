@@ -124,7 +124,9 @@ object TermTests {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     val tactic = ((AxiomCloseT | findPosSucc(indecisive(false, true)) | findPosAnte(indecisive(false, true)) | findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-    Thread.sleep(3000)
+    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(10)
+    }
     val tree = print(r)
     println(tree)
     writeToFile(new File(output), tree)
@@ -140,7 +142,9 @@ object TermTests {
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
     val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-    Thread.sleep(3000)
+    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(10)
+    }
     val tree = print(r)
     println(tree)
     writeToFile(new File(output), tree)
