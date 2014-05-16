@@ -200,12 +200,17 @@ class RandomFormula(val rand : Random = new Random()) {
   def nextT(vars : IndexedSeq[Variable], n : Int) : Term = {
       require(n>=0);
       if (n == 0 || rand.nextInt(10)<1) return Number(BigDecimal(0))
-      val r = rand.nextInt(150+1)
+      val r = rand.nextInt(20+1)
 	  r match {
         case 0 => Number(BigDecimal(0))
-		case it if 1 until 100 contains it => if (rand.nextBoolean) Number(BigDecimal(r)) else Number(BigDecimal(-r))
-        case it if 101 until 120 contains it => Number(BigDecimal(0))
-        case it if 101 until 150 contains it => vars(rand.nextInt(vars.length))
+		case it if 1 until 10 contains it => if (rand.nextBoolean) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
+        case it if 11 until 20 contains it => vars(rand.nextInt(vars.length))
+        case it if 21 until 30 contains it => Add(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 31 until 40 contains it => Subtract(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 41 until 50 contains it => Multiply(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 51 until 55 contains it => Divide(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 56 until 60 contains it => Exp(Real, nextT(vars, n-1), Number(BigDecimal(rand.nextInt(6))))
+        case it if 61 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
 		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range")
         }
     }
