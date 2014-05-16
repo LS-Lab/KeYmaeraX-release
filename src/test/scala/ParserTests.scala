@@ -27,6 +27,9 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("! \\forall x . x > 0 | p < 5", "(!(\\forall x . x>0)) | (p<5)") ::
       ("! \\exists x . x > 0 | p < 5", "(!(\\exists x . x>0)) | (p<5)") ::
       ("! \\forall x . [p:=x;]p >= x | p < 5", "(!(\\forall x . ([p:=x;](p>=x)))) | (p<5)") ::
+      // quantifiers with multiple variables
+      ("\\forall x, y . (y > x -> y > x)", "\\forall x, y . (y > x -> y > x)") ::
+      ("\\exists y, x . (y > x -> y > x)", "\\exists y, x . (y > x -> y > x)") ::
       // modalities do not bind logical connectives.
       ("[p:=1;] p>0 & p < 1", "([p:=1;](p>0)) & (p<1)") ::
       ("[p:=1;] p>0 | p < 1", "([p:=1;](p>0)) | (p<1)") ::
