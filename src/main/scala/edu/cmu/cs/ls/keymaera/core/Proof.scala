@@ -322,7 +322,8 @@ object ContractionLeft {
  */
 
 object Axiom {
-  val axioms: Map[String, Formula] = loadAxioms
+  // immutable list of axioms
+  val axioms: scala.collection.Map[String, Formula] = loadAxioms
 
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
