@@ -249,10 +249,11 @@ object Tactics {
   }
 
   def unconditionally(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
-    require(result.length > 0, "Can only follow up if there is still work to do")
-    val len = math.max(tNext.length, result.length)
-    def cont[A](s: Seq[A]) = Stream.continually(s).flatten.take(len).toList
-    for ((t, n) <- cont(tNext) zip cont(result)) t.dispatch(tFrom, n)
+    if(result.length > 0) {
+      val len = math.max(tNext.length, result.length)
+      def cont[A](s: Seq[A]) = Stream.continually(s).flatten.take(len).toList
+      for ((t, n) <- cont(tNext) zip cont(result)) t.dispatch(tFrom, n)
+    }
   }
 
   def onChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
@@ -321,6 +322,7 @@ object Tactics {
             left.continuation = onChangeAndOnNoChange(node, continuation, right)
             left.dispatch(this, node)
           } else {
+            println("Dispatch right " + right.name)
             right.dispatch(this, node)
         }
       }

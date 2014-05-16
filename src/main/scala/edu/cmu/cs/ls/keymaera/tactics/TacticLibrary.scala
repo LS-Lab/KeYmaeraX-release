@@ -803,7 +803,7 @@ object TacticLibrary {
                 val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
                 def alpha(p: Position, q: Variable) = (new ApplyRule(new AlphaConversion(p, q.name, q.index, "$" + aX.name, aX.index)) {
                   override def applicable(node: ProofNode): Boolean = true
-                } ~ hideT(p.topLevel))
+                } & hideT(p.topLevel))
                 def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
                   case Imply (a, b) => Imply(decompose(replace (a)(v, Variable ("$" + aX.name, aX.index, aX.sort) )), if(atTrans) replace(b)(aT, instance) else b)
                   case _ => throw new IllegalArgumentException("...")
@@ -813,7 +813,7 @@ object TacticLibrary {
                   alpha(SuccPosition(0, HereP.first), quantified) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) & uniformSubstT(new Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
-                    (axiomT(axiomName) ~ alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT)))
+                    (axiomT(axiomName) & alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT)))
                 Some(cutT(axiomInstance) &&(branch1Tactic, branch2Tactic))
               case None => println("Giving up " + this.name); None
             }

@@ -130,6 +130,22 @@ object TermTests {
     writeToFile(new File(output), tree)
   }
 
+  def test7(output: String) {
+    import TacticLibrary._
+    // x>0,y=x+1,x>0&y=x+1->x+1>0 ==> x+1>0
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val xp1 = Add(Real, x, Number(1))
+    val zero = Number(0)
+    val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
+    val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    Thread.sleep(3000)
+    val tree = print(r)
+    println(tree)
+    writeToFile(new File(output), tree)
+  }
+
 
   def readFile(input: String): String = try {
     val fr = new BufferedReader(new FileReader(input))
