@@ -113,6 +113,21 @@ class ParserParenTests extends FlatSpec with Matchers {
     }
   }
   
+  /*
+   *@TODO setup pretty-printer so that it can be parsed again.
+  it should "prase pretty-prints of random formulas" in {
+	  val rand = RandomFormula
+	  
+      for(i <- range(1,5)) {
+        val left : Expr = rand.nextFormula(10)
+        val print : String = KeYmaeraPrettyPrinter.stringify(left)
+        val right : Expr = parser.runParser(print)
+        left should be (right)
+      }
+    }
+  }
+  */
+  
   //////////////////////////////////////////////////////////////////////////////
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////
@@ -147,6 +162,7 @@ class RandomFormula(val rand : Random = new Random()) {
     case Some((a,b)) => a :: unfoldRight(b)(f)
     case None => Nil
   }
+  
   private def nextNames(n : Int) : IndexedSeq[Variable] = unfoldRight(n) { n =>
     if (n==0)
       None
@@ -154,13 +170,43 @@ class RandomFormula(val rand : Random = new Random()) {
       Some((Variable("z" + n, None, Real), n-1))
       //Some(("x" + (rand.alphanumeric take 5).fold("")((s:String,t:String)=>s+t), n-1))
   }.to[IndexedSeq]
-  def nextFormula(size : Int) = {
-    val vars = nextNames(size / 3 + 1)
-    rand.nextInt(10) match {
-      case 0 => False
-      case 1 => True
-      case it if 2 until 10 contains it => vars(rand.nextInt(vars.length))
-      //case it if 11 until 20 contains it => 
-    }
+  
+  def nextFormula(size : Int) = nextF(nextNames(size / 3 + 1), size)
+
+  def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = {
+	  require(n>=0);
+	  if (n == 0 || rand.nextInt(10)<1) return True
+      rand.nextInt(110+1) match {
+        case 0 => False
+        case 1 => True
+        case it if 2 until 10 contains it => Equals(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 11 until 20 contains it => Not(nextF(vars, n-1))
+        case it if 21 until 30 contains it => And(nextF(vars, n-1), nextF(vars, n-1))
+        case it if 31 until 40 contains it => Or(nextF(vars, n-1), nextF(vars, n-1))
+        case it if 41 until 50 contains it => Imply(nextF(vars, n-1), nextF(vars, n-1))
+        case it if 51 until 55 contains it => Equiv(nextF(vars, n-1), nextF(vars, n-1))
+        case it if 56 until 60 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
+        case it if 61 until 65 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
+        case it if 66 until 70 contains it => NotEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 71 until 80 contains it => GreaterEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 81 until 90 contains it => LessEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 91 until 100 contains it => GreaterThan(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 101 until 110 contains it => LessThan(Real, nextT(vars, n-1), nextT(vars, n-1))
+		//@TODO Add modality cases
+		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range")
+      }
   }
-}
+
+  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = {
+      require(n>=0);
+      if (n == 0 || rand.nextInt(10)<1) return Number(BigDecimal(0))
+      val r = rand.nextInt(150+1)
+	  r match {
+        case 0 => Number(BigDecimal(0))
+		case it if 1 until 100 contains it => if (rand.nextBoolean) Number(BigDecimal(r)) else Number(BigDecimal(-r))
+        case it if 101 until 120 contains it => Number(BigDecimal(0))
+        case it if 101 until 150 contains it => vars(rand.nextInt(vars.length))
+		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range")
+        }
+    }
+    }
