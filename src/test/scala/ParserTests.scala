@@ -115,7 +115,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   
   /*
    *@TODO setup pretty-printer so that it can be parsed again.
-  it should "prase pretty-prints of random formulas" in {
+  it should "parse pretty-prints of random formulas" in {
 	  val rand = RandomFormula
 	  
       for(i <- range(1,5)) {
