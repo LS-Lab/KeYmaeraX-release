@@ -86,7 +86,7 @@ object TacticLibrary {
             case Some((file, id, f)) =>
               f match {
                 case Equiv(res, True) => {
-                  val t = new ApplyRule(LookupLemma(file, id)) {
+                  val lemma = new ApplyRule(LookupLemma(file, id)) {
                     override def applicable(node: ProofNode): Boolean = true
                   }
                   // reinstantiate quantifiers
@@ -109,11 +109,14 @@ object TacticLibrary {
                     }
                     case _ => None
                   }
+                  val contTactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+                  def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
+                  val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
                   val tr = reInst(res) match {
-                    case Some(tac) => t & EquivLeftT(pos) & AndLeftT(pos) & (hideT(pos + 1) & tac, NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length)))
-                    case _ => t
+                    case Some(inst) => lemma & seqComposeExactT(EquivLeftT(pos), branch1(inst), branch2)
+                    case _ => lemma & contTactic
                   }
-                  Some(tr & ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*))
+                  Some(tr )//& debugT("Test"))
                 }
                 case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
               }
@@ -488,7 +491,6 @@ object TacticLibrary {
         (variables(a) ++ variables(b),
           new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-              println("------- Seaching " + search + " found " + e)
               if (e == search) applicable = true
               Left(Some(new StopTraversal {}))
             }
@@ -504,7 +506,6 @@ object TacticLibrary {
   def equalityRewriting(eqPos: Position, p: Position): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
     override def applicable(node: ProofNode): Boolean = {
       val res = isEquality(node.sequent, eqPos, true) && (equalityApplicable(true, eqPos, p, node.sequent) || equalityApplicable(false, eqPos, p, node.sequent))
-      println("Eq Rewrite is applicable " + res + " " + equalityApplicable(true, eqPos, p, node.sequent) + " " + equalityApplicable(false, eqPos, p, node.sequent))
       res
     }
   }
@@ -813,7 +814,7 @@ object TacticLibrary {
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) & uniformSubstT(new Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
                     (axiomT(axiomName) ~ alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT)))
-                Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
+                Some(cutT(axiomInstance) &&(branch1Tactic, branch2Tactic))
               case None => println("Giving up " + this.name); None
             }
           case None => println("Giving up because the axiom does not exist " + this.name); None
