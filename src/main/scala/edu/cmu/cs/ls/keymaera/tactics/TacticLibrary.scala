@@ -51,6 +51,28 @@ object TacticLibrary {
 //    Forall(FV, f)
 //  }
 
+  def decomposeQuanT = new PositionTactic("Decompose Quantifiers") {
+    override def applies(s: Sequent, pos: Position): Boolean = {
+      var res = false
+      val fn = new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
+        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+          e match {
+            case Forall(vars, f) if vars.length > 1 => res = true
+            case Exists(vars, f) if vars.length > 1 => res = true
+            case _ => res = false
+          }
+          Left(Some(new StopTraversal {}))
+        }
+      }
+      ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos))
+      res
+    }
+
+    override def apply(p: Position): Tactic = new ApplyRule(DecomposeQuantifiers(p)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
 
   def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
     override def applicable(node: ProofNode): Boolean = ??? // isFirstOrder
@@ -761,10 +783,15 @@ object TacticLibrary {
         case _ => println("Cannot handle " + f.prettyString()); None
       }
 
+      def decompose(d: Formula): Formula = d match {
+        case Forall(v, f) if(v.length > 1) => Forall(v.take(1), Forall(v.drop(1), f))
+        case Exists(v, f) if(v.length > 1) => Exists(v.take(1), Exists(v.drop(1), f))
+        case _ => d
+      }
+
       // since we have an implication, we use modus ponens to get it's consequence
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         axiom match {
-            // TODO: Decompose quantifiers to allow for instantiation
           case Some(a) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
               case Some((axiomInstance, subst, (quantified, aX), (instance, aT))) =>
@@ -777,12 +804,13 @@ object TacticLibrary {
                   override def applicable(node: ProofNode): Boolean = true
                 } ~ hideT(p.topLevel))
                 def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
-                  case Imply (a, b) => Imply(replace (a) (v, Variable ("$" + aX.name, aX.index, aX.sort) ), if(atTrans) replace(b)(aT, instance) else b)
+                  case Imply (a, b) => Imply(decompose(replace (a)(v, Variable ("$" + aX.name, aX.index, aX.sort) )), if(atTrans) replace(b)(aT, instance) else b)
                   case _ => throw new IllegalArgumentException("...")
                 }
                 val replMap = Map(repl(axiomInstance, quantified, false) -> repl(a, aX))
                 val branch2Tactic = (((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~
                   alpha(SuccPosition(0, HereP.first), quantified) ~
+                  decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) & uniformSubstT(new Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
                     (axiomT(axiomName) ~ alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT)))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))

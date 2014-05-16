@@ -166,7 +166,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  *********************************************************************************
  */
 
-case class PosInExpr(val pos: List[Int] = Nil) {
+case class PosInExpr(pos: List[Int] = Nil) {
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
   def second: PosInExpr = new PosInExpr(pos :+ 1)
   def third:  PosInExpr = new PosInExpr(pos :+ 2)
@@ -765,10 +765,10 @@ class Substitution(l: Seq[SubstitutionPair]) {
      * For quantifiers just check that there is no name clash, throw an exception if there is
      */
     case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, this(form))
-    else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars + " and " + l + " applied on " + f)
+    else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString())
 
     case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, this(form))
-    else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars + " and " + l + " applied on " + f)
+    else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString())
 
     case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
       case BoxModality(p, f) => BoxModality(this(p), this(f))
@@ -1136,20 +1136,27 @@ object LookupLemma {
 }
 
 object DecomposeQuantifiers {
-  def apply(p: Position): PositionRule = new DecomposeQuantifiers(p)
+  def apply(p: Position): Rule = new DecomposeQuantifiers(p)
 }
 
-class DecomposeQuantifiers(p: Position) extends PositionRule("Decompose Quantifiers", p) {
-  require(p.inExpr == HereP, "Only implemented for top level formulas yet")
+class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
   override def apply(s: Sequent): List[Sequent] = {
-    val f = s(p) match {
-      case Forall(vars, f) => vars.foldRight(f)((n: NamedSymbol, g: Formula) => Forall(Seq(n), g))
-      case Exists(vars, f) => vars.foldRight(f)((n: NamedSymbol, g: Formula) => Exists(Seq(n), g))
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
+        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
+        case _ => throw new IllegalArgumentException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString())
+      }
     }
-    if(p.isAnte)
-      List(Sequent(s.pref, s.ante.updated(p.getIndex, f), s.succ))
+    val f = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
+      case Some(form) => form
+      case _ => throw new IllegalArgumentException("Can only decompose quantifiers with at least 2 variables. Not: " + s(pos).prettyString() + " at " + pos)
+    }
+    if(pos.isAnte)
+      List(Sequent(s.pref, s.ante.updated(pos.getIndex, f), s.succ))
     else
-      List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, f)))
+      List(Sequent(s.pref, s.ante, s.succ.updated(pos.getIndex, f)))
   }
 }
 

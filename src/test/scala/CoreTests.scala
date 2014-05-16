@@ -21,6 +21,7 @@ class CoreTests extends FlatSpec with Matchers {
     new PosInExpr(List(1,0,4,4,1)) should be (new PosInExpr(List(1,0,4,4,1)))
     new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1)))
     new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1,4)))
+    new PosInExpr(List(0)) should not be (new PosInExpr(List(0, 0, 0, 0, 0)))
   }
 
   def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
