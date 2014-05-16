@@ -764,6 +764,7 @@ object TacticLibrary {
       // since we have an implication, we use modus ponens to get it's consequence
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         axiom match {
+            // TODO: Decompose quantifiers to allow for instantiation
           case Some(a) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
               case Some((axiomInstance, subst, (quantified, aX), (instance, aT))) =>

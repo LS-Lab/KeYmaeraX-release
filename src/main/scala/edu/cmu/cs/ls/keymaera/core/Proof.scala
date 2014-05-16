@@ -1135,6 +1135,23 @@ object LookupLemma {
   }
 }
 
+object DecomposeQuantifiers {
+  def apply(p: Position): PositionRule = new DecomposeQuantifiers(p)
+}
+
+class DecomposeQuantifiers(p: Position) extends PositionRule("Decompose Quantifiers", p) {
+  require(p.inExpr == HereP, "Only implemented for top level formulas yet")
+  override def apply(s: Sequent): List[Sequent] = {
+    val f = s(p) match {
+      case Forall(vars, f) => vars.foldRight(f)((n: NamedSymbol, g: Formula) => Forall(Seq(n), g))
+      case Exists(vars, f) => vars.foldRight(f)((n: NamedSymbol, g: Formula) => Exists(Seq(n), g))
+    }
+    if(p.isAnte)
+      List(Sequent(s.pref, s.ante.updated(p.getIndex, f), s.succ))
+    else
+      List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, f)))
+  }
+}
 
 /*********************************************************************************
  * Helper code
