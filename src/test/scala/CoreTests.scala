@@ -26,34 +26,39 @@ class CoreTests extends FlatSpec with Matchers {
   def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
   def rootAnte(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(f), IndexedSeq()))
 
-  def testImplyRight = {
-    val pn = rootSucc(Imply(p, q))
-    val res = pn.apply(ImplyRight(sPos))
-    res.length should be (1)
-    val ante = res.head.sequent.ante 
-    val succ = res.head.sequent.succ 
-    ante.length should be (1)
-    succ.length should be (1)
-    ante(0) should be (p)
-    succ(0) should be (q)
+  def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, IndexedSeq() ++ a, IndexedSeq() ++ b)
+
+  def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
+    val pn = new RootNode(in)
+    val resList = pn.apply(rule)
+    resList.length should be (out.length)
+    val res = resList.map(_.sequent)
+    for((s,t) <- res zip out) {
+      s.ante.length should be (t.ante.length)
+      for((f,g) <- s.ante zip t.ante)
+        f should be (g)
+      
+      s.succ.length should be (t.succ.length)
+      for((f,g) <- s.succ zip t.succ)
+        f should be (g)
+      
+    }
   }
 
-  def testImplyLeft = {
-    val pn = rootAnte(Imply(p, q))
-    val res = pn.apply(ImplyLeft(aPos))
-    res.length should be (2)
-    val ante = res(_:Int).sequent.ante 
-    val succ = res(_:Int).sequent.succ 
-    ante(0).length should be (0)
-    succ(0).length should be (1)
-    succ(0)(0) should be (p)
-    ante(1).length should be (1)
-    succ(1).length should be (0)
-    ante(1)(0) should be (q)
-  }
+  implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
+
+  implicit def sequentToList(s: Sequent): List[Sequent] = List(s)
 
   "Core (Propositional Rules)" should "yield expected results" in {
-    testImplyRight
-    testImplyLeft
+    testRule(NotRight(sPos), seq(Nil, Not(p)), seq(p, Nil))
+    testRule(NotLeft(aPos), seq(Not(p), Nil), seq(Nil, p))
+    testRule(ImplyRight(sPos), seq(Nil, Imply(p, q)), seq(p, q))
+    testRule(ImplyLeft(aPos), seq(Imply(p, q), Nil), seq(Nil, p) ++ seq(q, Nil))
+    testRule(AndRight(sPos), seq(Nil, And(p, q)), seq(Nil, p) ++ seq(Nil, q))
+    testRule(AndLeft(aPos), seq(And(p, q), Nil), seq(p ++ q, Nil))
+    testRule(OrRight(sPos), seq(Nil, Or(p, q)), seq(Nil, p ++ q))
+    testRule(OrLeft(aPos), seq(Or(p, q), Nil), seq(p, Nil) ++ seq(q, Nil))
+    testRule(EquivRight(sPos), seq(Nil, Equiv(p, q)), seq(p, q) ++ seq(q, p))
+    testRule(EquivLeft(aPos), seq(Equiv(p, q), Nil), seq(And(p, q), Nil) ++ seq(And(Not(p), Not(q)), Nil))
   }
 }
