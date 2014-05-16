@@ -1,3 +1,8 @@
+/**
+ * Sequent prover, proof rules, and axioms of KeYmaera
+ * @author Jan-David Quesel
+ * @author aplatzer
+ */
 package edu.cmu.cs.ls.keymaera.core
 
 import scala.annotation.elidable
@@ -11,7 +16,32 @@ import edu.cmu.cs.ls.keymaera.parser._
 /*--------------------------------------------------------------------------------*/
 
 /**
- * Representation of a proof rule, which is ultimately a named mapping from sequents to lists of sequents.
+ * Sequent notation
+ */
+
+final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula]) {
+  def apply(p: Position): Formula = {
+    require(p.inExpr == HereP, "Can only retrieve top level formulas")
+    if(p.isAnte) {
+      require(ante.length < p.getIndex, "Position " + p + " is invalid in sequent " + this)
+      ante(p.getIndex)
+    } else {
+      require(succ.length < p.getIndex, "Position " + p + " is invalid in sequent " + this)
+      succ(p.getIndex)
+    }
+  }
+  override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
+    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
+}
+
+object Sequent {
+  def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+}
+
+
+/**
+ * Subclasses represent all proof rules.
+ * A proof rule is ultimately a named mapping from sequents to lists of sequents.
  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
  * to prove the current sequent (desired conclusion).
  */
@@ -192,50 +222,21 @@ abstract class Signature
  *********************************************************************************
  */
 
-// proof rules:
-
 /*********************************************************************************
- * Structural Proof Rules
+ * Structural Sequent Proof Rules
  *********************************************************************************
  */
 
-// reorder antecedent
-//@TODO Is there a better and more standard name
-object AnteSwitch {
-  def apply(p1: Position, p2: Position): Rule = new AnteSwitchRule(p1, p2)
-
-  private class AnteSwitchRule(p1: Position, p2: Position) extends Rule("AnteSwitch") {
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP )
-      List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
-    else
-      throw new IllegalArgumentException("This rule is only applicable to two positions in the antecedent")
-  }
-}
-
-// reorder succedent
-object SuccSwitch {
-  def apply(p1: Position, p2: Position): Rule = new SuccSwitchRule(p1, p2)
-
-  private class SuccSwitchRule(p1: Position, p2: Position) extends Rule("SuccSwitch") {
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
-      List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
-    else
-      throw new IllegalArgumentException("This rule is only applicable to two positions in the succedent")
-  }
-}
-
+// weakening left = hide left
 // remove duplicate antecedent (this should be a tactic)
-// weakening = hide
 object HideLeft extends (Position => Rule) {
   def apply(p: Position): Rule = {
     require(p.isAnte && p.inExpr == HereP)
     new Hide(p)
   }
 }
+// weakening right = hide right
 // remove duplicate succedent (this should be a tactic)
-// weakening = hide
 object HideRight extends (Position => Rule) {
   def apply(p: Position): Rule = {
     require(!p.isAnte && p.inExpr == HereP)
@@ -253,18 +254,74 @@ class Hide(p: Position) extends PositionRule("Hide", p) {
 }
 
 
+// Exchange left rule reorders antecedent
+object ExchangeLeft {
+  def apply(p1: Position, p2: Position): Rule = new ExchangeLeftRule(p1, p2)
+
+  //@TODO Why is this not a TwoPositionRule?
+  private class ExchangeLeftRule(p1: Position, p2: Position) extends Rule("ExchangeLeft") {
+    //@TODO Contract ensuring that set projection of sequent before and after is the same
+    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP )
+      List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
+    else
+      throw new IllegalArgumentException("ExchangeLeft rule is only applicable to two positions in the antecedent")
+  }
+}
+
+// Exchange right rule reorders succcedent
+object ExchangeRight {
+  def apply(p1: Position, p2: Position): Rule = new ExchangeRightRule(p1, p2)
+
+  //@TODO Why is this not a TwoPositionRule?
+  private class ExchangeRightRule(p1: Position, p2: Position) extends Rule("ExchangeRight") {
+    //@TODO Contract ensuring that set projection of sequent before and after is the same
+    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
+      List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
+    else
+      throw new IllegalArgumentException("Exchange right rule is only applicable to two positions in the succedent")
+  }
+}
+
+// Contraction right rule duplicates a formula in the succedent
+
+object ContractionRight {
+  def apply(p: Position): Rule = new ContractionRightRule(p)
+
+  private class ContractionRightRule(p: Position) extends PositionRule("ContractionRight", p) {
+    //@TODO Contract ensuring that set projection of sequent before and after is the same
+    def apply(s: Sequent): List[Sequent] = if(!p.isAnte && p.inExpr == HereP)
+      List(Sequent(s.pref, s.ante, s.succ :+ s.succ(p.getIndex)))
+    else
+      throw new IllegalArgumentException("Contraction right rule is only applicable to a position in the succedent")
+  }
+}
+
+// Contraction left rule duplicates a formula in the succedent
+
+object ContractionLeft {
+  def apply(p: Position): Rule = new ContractionLeftRule(p)
+
+  private class ContractionLeftRule(p: Position) extends PositionRule("ContractionLeft", p) {
+    //@TODO Contract ensuring that set projection of sequent before and after is the same
+    def apply(s: Sequent): List[Sequent] = if(p.isAnte && p.inExpr == HereP)
+      List(Sequent(s.pref, s.ante :+ s.ante(p.getIndex), s.succ))
+    else
+      throw new IllegalArgumentException("Contraction left rule is only applicable to a position in the succedent")
+  }
+}
+
 
 /*********************************************************************************
- * Axioms
+ * Axiom Lookup
  *********************************************************************************
  */
 
 object Axiom {
-  val axioms: Map[String, Formula] = getAxioms
+  val axioms: Map[String, Formula] = loadAxioms
 
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
-  private def getAxioms: Map[String, Formula] = {
+  private def loadAxioms: Map[String, Formula] = {
     var m = new HashMap[String, Formula]
     val a = ProgramConstant("a")
     val b = ProgramConstant("b")
@@ -289,7 +346,7 @@ object Axiom {
     m
   }
 
-  def apply(id: String): Rule = new Rule("Axiom " + id) {
+  final def apply(id: String): Rule = new Rule("Axiom " + id) {
     def apply(s: Sequent): List[Sequent] = {
       axioms.get(id) match {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
@@ -301,11 +358,11 @@ object Axiom {
 }
 
 /*********************************************************************************
- * Sequent Proof Rules for closing and cut
+ * Sequent Proof Rules for identity/closing and cut
  *********************************************************************************
  */
 
-// AX Axiom close
+// Ax Axiom close / Identity rule
 object AxiomClose extends ((Position, Position) => Rule) {
   def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
 }
@@ -317,6 +374,7 @@ class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass
 
   def apply(s: Sequent): List[Sequent] = {
     if(ass.isAnte) {
+      assert (!p.isAnte, "axiom close applies to different sides of sequent")
       if(s.ante(ass.getIndex) == s.succ(p.getIndex)) {
         // close
         Nil
@@ -324,6 +382,7 @@ class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass
         throw new IllegalArgumentException("The referenced formulas are not identical. Thus the current goal cannot be closed. " + s.ante(ass.getIndex) + " not the same as " + s.succ(p.getIndex))
       }
     } else {
+      assert (p.isAnte, "axiom close applies to different sides of sequent")
       if(s.succ(ass.getIndex) == s.ante(p.getIndex)) {
         // close
         Nil
@@ -375,9 +434,192 @@ object Cut {
       List(use, show)
     }
 
+    //@TODO purpose unclear
     def parameter: Formula = c
   }
 }
+
+/*********************************************************************************
+ * Propositional Sequent Proof Rules
+ *********************************************************************************
+ */
+
+// ->R Implication right
+object ImplyRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new ImplyRight(p)
+}
+
+class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)  //@TODO assert--->require
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+    }
+    /*
+    *@TODO Change propositional rule implementations to drop and concat style
+    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
+    f match {
+      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
+      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+    }
+    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
+    val (Imply(a, b), ress) = dropSeq(s, p)
+    List(concatSeq(s, Sequent(Nil, a, b)))
+    */
+  }
+}
+
+
+// ->L Implication left
+object ImplyLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new ImplLeft(p)
+}
+class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Imply(a, b) => List(
+         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
+         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
+      case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
+    }
+  }
+}
+
+// !R Not right
+object NotRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new NotRight(p)
+}
+
+class NotRight(p: Position) extends PositionRule("Not Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
+      case _ => throw new IllegalArgumentException("Not-Right can only be applied to negation. Tried to apply to: " + f)
+    }
+  }
+}
+
+// !L Not left
+object NotLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new NotLeft(p)
+}
+
+class NotLeft(p: Position) extends PositionRule("Not Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
+      case _ => throw new IllegalArgumentException("Not-Left can only be applied to negation. Tried to apply to: " + f)
+    }
+  }
+}
+
+// &R And right
+object AndRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndRight(p)
+}
+class AndRight(p: Position) extends PositionRule("And Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
+      case _ => throw new IllegalArgumentException("And-Right can only be applied to conjunctions. Tried to apply to: " + f)
+    }
+  }
+}
+
+// &L And left
+object AndLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndLeft(p)
+}
+
+class AndLeft(p: Position) extends PositionRule("And Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
+      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
+      case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
+    }
+  }
+}
+
+// |R Or right
+object OrRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new OrRight(p)
+}
+class OrRight(p: Position) extends PositionRule("Or Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
+      case _ => throw new IllegalArgumentException("Or-Right can only be applied to disjunctions. Tried to apply to: " + f)
+    }
+  }
+}
+
+// |L Or left
+object OrLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new OrLeft(p)
+}
+
+class OrLeft(p: Position) extends PositionRule("Or Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
+      case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
+    }
+  }
+}
+
+// <->R Equiv right
+object EquivRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new EquivRight(p)
+}
+class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      //@TODO In succedent maybe replace by (a->b)&(b->a) and wait for the other rules to make it obvious.
+      case Equiv(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)), Sequent(s.pref, s.ante :+ b, s.succ.updated(p.getIndex, a)))
+      case _ => throw new IllegalArgumentException("Equiv-Right can only be applied to equivalences. Tried to apply to: " + f)
+    }
+  }
+}
+
+// <->L Equiv left
+object EquivLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new EquivLeft(p)
+}
+
+class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      //@TODO In succedent maybe replace by (a&b)|(!a&!b) and wait for the other rules to make it obvious.
+      case Equiv(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,And(a,b)), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex,And(Not(a),Not(b))), s.succ))
+      case _ => throw new IllegalArgumentException("Equiv-Left can only be applied to equivalences. Tried to apply to: " + f)
+    }
+  }
+}
+
+/************************************************************************
+ * Other Proof Rules
+ */
 
 /*********************************************************************************
  * Congruence Rewriting Proof Rule
@@ -666,185 +908,6 @@ object UniformSubstitution {
   }
 }
 
-
-/*********************************************************************************
- * Propositional Sequent Proof Rules
- *********************************************************************************
- */
-
-// ->R Implication right
-object ImplyRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplyRight(p)
-}
-
-class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)  //@TODO assert--->require
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
-      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
-    }
-    /*
-    *@TODO Change propositional rule implementations to drop and concat style
-    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
-    f match {
-      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
-      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
-    }
-    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
-    val (Imply(a, b), ress) = dropSeq(s, p)
-    List(concatSeq(s, Sequent(Nil, a, b)))
-    */
-  }
-}
-
-
-// ->L Implication left
-object ImplyLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplLeft(p)
-}
-class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Imply(a, b) => List(
-         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
-         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-      case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
-    }
-  }
-}
-
-// !R Not right
-object NotRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new NotRight(p)
-}
-
-class NotRight(p: Position) extends PositionRule("Not Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
-      case _ => throw new IllegalArgumentException("Not-Right can only be applied to negation. Tried to apply to: " + f)
-    }
-  }
-}
-
-// !L Not left
-object NotLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new NotLeft(p)
-}
-
-class NotLeft(p: Position) extends PositionRule("Not Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
-      case _ => throw new IllegalArgumentException("Not-Left can only be applied to negation. Tried to apply to: " + f)
-    }
-  }
-}
-
-// &R And right
-object AndRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndRight(p)
-}
-class AndRight(p: Position) extends PositionRule("And Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
-      case _ => throw new IllegalArgumentException("And-Right can only be applied to conjunctions. Tried to apply to: " + f)
-    }
-  }
-}
-
-// &L And left
-object AndLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndLeft(p)
-}
-
-class AndLeft(p: Position) extends PositionRule("And Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
-      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
-      case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
-    }
-  }
-}
-
-// |R Or right
-object OrRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new OrRight(p)
-}
-class OrRight(p: Position) extends PositionRule("Or Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
-      case _ => throw new IllegalArgumentException("Or-Right can only be applied to disjunctions. Tried to apply to: " + f)
-    }
-  }
-}
-
-// |L Or left
-object OrLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new OrLeft(p)
-}
-
-class OrLeft(p: Position) extends PositionRule("Or Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-      case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
-    }
-  }
-}
-
-// <->R Equiv right
-object EquivRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new EquivRight(p)
-}
-class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      //@TODO In succedent maybe replace by (a->b)&(b->a) and wait for the other rules to make it obvious.
-      case Equiv(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)), Sequent(s.pref, s.ante :+ b, s.succ.updated(p.getIndex, a)))
-      case _ => throw new IllegalArgumentException("Equiv-Right can only be applied to equivalences. Tried to apply to: " + f)
-    }
-  }
-}
-
-// <->L Equiv left
-object EquivLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new EquivLeft(p)
-}
-
-class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      //@TODO In succedent maybe replace by (a&b)|(!a&!b) and wait for the other rules to make it obvious.
-      case Equiv(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,And(a,b)), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex,And(Not(a),Not(b))), s.succ))
-      case _ => throw new IllegalArgumentException("Equiv-Left can only be applied to equivalences. Tried to apply to: " + f)
-    }
-  }
-}
-
 // alpha conversion
 
 /**
@@ -970,7 +1033,7 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
  * Assignment as equation
  * Assumptions: We assume that the variable has been made unique through alpha conversion first. That way, we can just
  * replace the assignment by an equation without further checking
- * @TODO Review. Or turn into axiom.
+ * @TODO Review. Will turn into an axiom.
  */
 class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   import Helper._
@@ -999,7 +1062,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   }
 }
 
-// @TODO Review. Or turn into axiom.
+// @TODO Review. Will turn into axiom.
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val f = if(pos.isAnte) s.ante(pos.getIndex) else s.succ(pos.getIndex)
@@ -1019,8 +1082,6 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 }
 
 // maybe:
-
-// close by true (do we need this or is this derived?)
 
 // quantifier instantiation
 
