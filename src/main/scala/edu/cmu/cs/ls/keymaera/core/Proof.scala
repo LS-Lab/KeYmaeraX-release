@@ -215,7 +215,7 @@ object SuccPosition {
   def apply(index: Int, inExpr: PosInExpr = HereP): Position = new SuccPosition(index, inExpr)
 }
 
-abstract class Signature
+//abstract class Signature
 
 /*********************************************************************************
  * Proof Rules
@@ -444,51 +444,6 @@ object Cut {
  *********************************************************************************
  */
 
-// ->R Implication right
-object ImplyRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplyRight(p)
-}
-
-class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)  //@TODO assert--->require
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.succ(p.getIndex)
-    f match {
-      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
-      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
-    }
-    /*
-    *@TODO Change propositional rule implementations to drop and concat style
-    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
-    f match {
-      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
-      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
-    }
-    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
-    val (Imply(a, b), ress) = dropSeq(s, p)
-    List(concatSeq(s, Sequent(Nil, a, b)))
-    */
-  }
-}
-
-
-// ->L Implication left
-object ImplyLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplLeft(p)
-}
-class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      case Imply(a, b) => List(
-         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
-         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-      case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
-    }
-  }
-}
-
 // !R Not right
 object NotRight extends (Position => Rule) {
   def apply(p: Position): Rule = new NotRight(p)
@@ -536,23 +491,6 @@ class AndRight(p: Position) extends PositionRule("And Right", p) {
   }
 }
 
-// &L And left
-object AndLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndLeft(p)
-}
-
-class AndLeft(p: Position) extends PositionRule("And Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val f = s.ante(p.getIndex)
-    f match {
-      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
-      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
-      case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
-    }
-  }
-}
-
 // |R Or right
 object OrRight extends (Position => Rule) {
   def apply(p: Position): Rule = new OrRight(p)
@@ -580,6 +518,69 @@ class OrLeft(p: Position) extends PositionRule("Or Left", p) {
     f match {
       case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
       case _ => throw new IllegalArgumentException("Or-Left can only be applied to disjunctions. Tried to apply to: " + f)
+    }
+  }
+}
+
+// &L And left
+object AndLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndLeft(p)
+}
+
+class AndLeft(p: Position) extends PositionRule("And Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
+      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
+      case _ => throw new IllegalArgumentException("And-Left can only be applied to conjunctions. Tried to apply to: " + f)
+    }
+  }
+}
+
+// ->R Implication right
+object ImplyRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new ImplyRight(p)
+}
+
+class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
+  assert(!p.isAnte && p.inExpr == HereP)  //@TODO assert--->require
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.succ(p.getIndex)
+    f match {
+      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+    }
+    /*
+    *@TODO Change propositional rule implementations to drop and concat style
+    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
+    f match {
+      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
+      case _ => throw new IllegalArgumentException("Implies-Right can only be applied to implications. Tried to apply to: " + f)
+    }
+    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
+    val (Imply(a, b), ress) = dropSeq(s, p)
+    List(concatSeq(s, Sequent(Nil, a, b)))
+    *@TODO Or can we combine the drop and concat operation somehow including pattern matching to make this one atomic step obviously correct? Unlike the dropping, which alone is incorrect except when followed up by the appropriate concatSeq. Note however, that concatSeq before drop would mess up if working with sets rather than lists.
+    */
+  }
+}
+
+
+// ->L Implication left
+object ImplyLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = new ImplLeft(p)
+}
+class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
+  assert(p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val f = s.ante(p.getIndex)
+    f match {
+      case Imply(a, b) => List(
+         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
+         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
+      case _ => throw new IllegalArgumentException("Implies-Left can only be applied to implications. Tried to apply to: " + f)
     }
   }
 }
