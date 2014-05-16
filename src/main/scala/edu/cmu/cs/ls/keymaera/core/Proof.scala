@@ -1163,6 +1163,7 @@ object Helper {
  def variables(s: Sequent): Set[NamedSymbol] = {
    val a = for(f <- s.ante) yield variables(f)
    val b = for(f <- s.succ) yield variables(f)
+   //@TODO Turn into map(s.ante ++ s.succ)(variables).flatten
    Set() ++ a.flatten ++ b.flatten
   }
 
@@ -1170,6 +1171,7 @@ object Helper {
 
   def freeVariables[A: FTPG](a: A): Set[NamedSymbol] = variables(a, true)
 
+  //@TODO clarify use and name. Does not just return variables but also function and predicate symbols
   def variables[A: FTPG](a: A, onlyFree: Boolean): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     val fn = new ExpressionTraversalFunction {

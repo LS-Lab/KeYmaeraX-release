@@ -188,6 +188,7 @@ class RandomFormula(val rand : Random = new Random()) {
         case it if 31 until 40 contains it => Or(nextF(vars, n-1), nextF(vars, n-1))
         case it if 41 until 50 contains it => Imply(nextF(vars, n-1), nextF(vars, n-1))
         case it if 51 until 55 contains it => Equiv(nextF(vars, n-1), nextF(vars, n-1))
+		//@TODO Should randomly add quantifiers for longer seqs.
         case it if 56 until 60 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
         case it if 61 until 65 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
         case it if 66 until 70 contains it => NotEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
