@@ -71,7 +71,7 @@ object ProgramSort extends Sort
 /* user defined sort */
 case class UserSort(name : String) extends Sort
 /* user defined enum sort. values is the list of named constants of this enum */
-//case class EnumT(name : String, values : List[String]) extends Sort
+case class EnumT(name : String, values : List[String]) extends Sort
 
 /* used to define pairs of sorts. That is the pair sort is of type L x R */
 sealed trait TupleT extends Sort {
