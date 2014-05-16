@@ -15,9 +15,9 @@ KeYmaera instances as well as Javascript clients interact with this API.
     Return Format: application/json
     Return value: { success: true|false; }
 
-    nodeClosed/<?>
-    nodePruned/<?>
-    limitExceeded/<?>
+    nodeClosed/<list[sequent]>
+    nodePruned/<list[sequent]>
+    limitExceeded/<list[sequent]>
     startingStrategy/<?>/<strategy name>
 
 ##State Query Messages (sent by GUI)##
