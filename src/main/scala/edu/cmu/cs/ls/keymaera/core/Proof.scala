@@ -353,6 +353,8 @@ object Axiom {
     val p2 = Function("p", None, Real, Bool)
     val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p2, x)), ApplyPredicate(p2, t)))
     m = m + pair4
+    val pair5 = ("I induction", Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), BoxModality(Loop(a), p)))
+    m = m + pair5
     m
   }
 
@@ -549,7 +551,7 @@ object ImplyRight extends (Position => Rule) {
 }
 
 class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
-  require(!p.isAnte && p.inExpr == HereP, "Imply Right is only applicable to top-level formulas in the succedent")
+  require(!p.isAnte && p.inExpr == HereP, "Imply Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     s(p) match {
       case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
@@ -1060,9 +1062,9 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
-            case BoxModality(p, f) => Right(Forall(p.writes, f))
-            case DiamondModality(p, f) => Right(Forall(p.writes, f))
-            case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
+          case BoxModality(p, f) => println("Writes " + p.prettyString() + " are " + p.writes); Right(Forall(p.writes, f))
+          case DiamondModality(p, f) => Right(Forall(p.writes, f))
+          case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
       }
     }
     ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
