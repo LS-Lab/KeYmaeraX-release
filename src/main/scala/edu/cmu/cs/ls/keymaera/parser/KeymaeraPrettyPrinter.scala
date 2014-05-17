@@ -164,12 +164,24 @@ object KeYmaeraPrettyPrinter {
     case False() => FALSE
     case True() => TRUE
     
-    case PredicateConstant(name,_) => name
-    case ProgramConstant(name, _) => name
-    case Variable(name, _,_) => name
+    case PredicateConstant(name,i) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
+    case ProgramConstant(name, i) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
+    case Variable(name, i,_) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
     
-    case Function(name,index,domain,argSorts) => name
-    
+    case Function(name,index,domain,argSorts) => name + (index match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
+
     /** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */

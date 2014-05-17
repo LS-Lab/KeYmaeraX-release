@@ -8,7 +8,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   // type declaration header for tests
   def makeInput(program : String) : String = {
     "Functions. B a. B b. B c. End." +
-    "ProgramVariables. R p. R q. R r. R s. End." +
+    "ProgramVariables. R p. R q. R r. R s. R r_0. End." +
     "Problem." + program + "\nEnd."
   }
 
@@ -82,6 +82,10 @@ class ParserParenTests extends FlatSpec with Matchers {
       val right : Expr = parser.runParser(makeInput(pair._2))
       left should be (right)
     }
+  }
+
+  it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
+    parser.runParser(makeInput("r_0 > 0")) should be (GreaterThan(Real, Variable("r", Some(0), Real), Number(0)))
   }
 
   it should "fail to parse bad input" in {

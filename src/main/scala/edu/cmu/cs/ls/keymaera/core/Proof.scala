@@ -927,28 +927,10 @@ object UniformSubstitution {
  * @TODO Review
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
+  require(name != target || idx != tIdx)
   def apply(s: Sequent): List[Sequent] = {
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  =
-        if(tPos.inExpr == p) {
-          e match {
-            case Forall(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
-            case Exists(v, phi) => require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
-            case BoxModality(Assign(a, b), c) => require((a match {
-              case Variable(n, _, _) => n
-              case Apply(Function(n, _, _, _), _) => n
-              case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
-            }) == name, "Symbol to be renamed must be bound in " + e)
-            case DiamondModality(Assign(a, b), c) => require((a match {
-              case Variable(n, _, _) => n
-              case Apply(Function(n, _, _, _), _) => n
-              case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
-            }) == name, "Symbol to be renamed must be bound in " + e)
-            case _ => throw new IllegalArgumentException("We expect either a quantifier or a modality with a " +
-              "single assignment at this position " + e + " " + p)
-          }
-          Left(None)
-        } else Left(None)
+
+    def proceed(f: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
         case x: ProgramConstant => Right(renameProg(x))
         case _ => Left(None)
@@ -961,23 +943,37 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
         case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
-        case BoxModality(Assign(a, b), c) => Right(BoxModality(Assign(a match {
-          case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
-          case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
-          case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
-        }, b), c))
-        case DiamondModality(Assign(a, b), c) => Right(DiamondModality(Assign(a match {
-          case Variable(n, i, d) => if(n == name && i == idx) Variable(target, tIdx, d) else a
-          case Apply(Function(n, i, d, s), phi) => if(n == name && i == idx) Apply(Function(target, tIdx, d, s), phi) else a
-          case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
-        }, b), c))
         case x: PredicateConstant => Right(renamePred(x))
         case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
         case _ => Left(None)
       }
+    }, f).get
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+        case Forall(v, phi) =>
+         require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+          Right(Forall(for (i <- v) yield rename(i), proceed(phi)))
+        case Exists(v, phi) =>
+          require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+          Right(Forall(for (i <- v) yield rename(i), proceed(phi)))
+        case BoxModality(Assign(a, b), c) =>
+          Right(BoxModality(Assign(a match {
+            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+            case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+          }, b), proceed(c)))
+        case DiamondModality(Assign(a, b), c) =>
+          Right(DiamondModality(Assign(a match {
+            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+            case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+          }, b), proceed(c)))
+        case _ => throw new IllegalArgumentException("Unknown Assignment structure: " + e)
+      }
     }
     ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), s(tPos)) match {
-      case Some(x: Formula) => if(tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case Some(x: Formula) =>
+        if (tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
       case _ => throw new IllegalStateException("No alpha renaming possible in " + s(tPos))
     }
   }

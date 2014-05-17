@@ -143,13 +143,19 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
             case Some(_) => throw new Exception("Parser combinator library is buggy...")
             case None    => false
           }
-          val result = Function(name, None, identsToSorts(argsorts), identToSort(rsort))
+          val result = {
+            val (n, idx) = nameAndIndex(name)
+            Function(n, idx, identsToSorts(argsorts), identToSort(rsort))
+          }
           if(isExternal) {
             result.markExternal()
           }
           result
         }
-        case None =>  PredicateConstant(name)
+        case None => {
+          val (n, idx) = nameAndIndex(name)
+          PredicateConstant(n, idx)
+        }
       }
   }
   
@@ -237,7 +243,9 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     //parsed by identP is always bound.
     lazy val identP : PackratParser[Term] = {
       log(ident)("Arbitrary Identifier") ^^ {
-        case id => Variable.apply(id, None, Real)
+        case id =>
+          val (n, idx) = nameAndIndex(id)
+          Variable(n, idx, Real)
       }
     }
 
@@ -889,8 +897,9 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
    * gets a Function object from the ``functions" list with name ``name"
    */
   def functionFromName(name:String, functions:List[Function]) = {
+    val (n, idx) = nameAndIndex(name)
     functions.find(Function.unapply(_) match {
-      case Some(f) => f._1.equals(name)
+      case Some(f) => f._1.equals(n) && f._2.equals(idx)
       case None    => false
     }) match {
       case Some(function) => function
@@ -975,11 +984,14 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     /**
      * Maps a string representation of a type and a name to an Expr
      */
-    private def makeVariable(ty : String, name : String) : VType = ty match {
-      case "P" => VProgram(new ProgramConstant(name))
-      case "F" => VFormula(new PredicateConstant(name))
-      case "T" => VTerm(new Variable(name,None,Real))
-      case _   => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula)")
+    private def makeVariable(ty : String, name : String) : VType = {
+      val (n, idx) = nameAndIndex(name)
+      ty match {
+        case "P" => VProgram(ProgramConstant(n, idx))
+        case "F" => VFormula(PredicateConstant(n, idx))
+        case "T" => VTerm(Variable(n, idx, Real))
+        case _ => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula)")
+      }
     }
 
     /**
@@ -1148,6 +1160,21 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       }
     }
   }
+
+  def nameAndIndex(id: String): (String, Option[Int]) =
+    try {
+      val i = id.lastIndexOf("_")
+      if(i <= 0) {
+        (id, None)
+      } else {
+        val pref = id.substring(0, i)
+        val idxCandidate = id.substring(i + 1)
+        (pref, Some(Integer.parseInt(idxCandidate)))
+      }
+    } catch {
+      case e: NumberFormatException => (id, None)
+    }
+
 }
 
 // vim: set ts=4 sw=4 et:

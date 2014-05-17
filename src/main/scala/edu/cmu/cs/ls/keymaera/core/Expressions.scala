@@ -169,11 +169,14 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
 
   //def deepName = name + "_" + index + "_" + id;
 
-  override def equals(e : Any) = e match {
-    case x: NamedSymbol => this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
-    case _ => false
+  override def equals(e : Any): Boolean = {
+    e match {
+      case x: NamedSymbol =>
+       this.getClass == x.getClass && this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
+      case _ => false
+    }
   }
-  override def hashCode: Int = hash(5, name, index, domain)
+  override def hashCode: Int = hash(5, getClass, name, index, domain)
 
   //def deepEquals(x : NamedSymbol) =
   //  flatEquals(x) && this.id == x.id

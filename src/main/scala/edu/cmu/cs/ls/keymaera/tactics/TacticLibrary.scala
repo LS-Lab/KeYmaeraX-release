@@ -413,23 +413,22 @@ object TacticLibrary {
   val uniquify = new PositionTactic("Uniquify") {
     // for now only on top level
     def getAssignment(s: Sequent, p: Position): Option[(String, Option[Int], Term)] = (if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Assign(Variable(name, i, _), e)) => Some(name, i, e)
-        case DiamondModality(Assign(Variable(name, i, _), e)) => Some(name, i, e)
+        case BoxModality(Assign(Variable(name, i, _), e), _) => Some(name, i, e)
+        case DiamondModality(Assign(Variable(name, i, _), e), _) => Some(name, i, e)
         case a => None
       }
     override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getAssignment(s, p).isDefined
-
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         getAssignment(node.sequent, p) match {
-          case Some((n, idx, _)) => {
-            val vars = Helper.variables(node.sequent).filter((ns: NamedSymbol) => ns.name == n)
-            require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
+          case Some((n, idx, _)) =>
+            val vars = Helper.variablesWithout(node.sequent, p).filter(_.name == n)
+            //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
             // we do not have to rename if there are no name clashes
-            if(vars.size > 1) {
+            if(vars.size > 0) {
               val maxIdx: Option[Int] = (vars.map((ns: NamedSymbol) => ns.index)).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
                 case Some(a) => i match {
                   case Some(b) => if (a < b) Some(b) else Some(a)
@@ -441,13 +440,12 @@ object TacticLibrary {
                 case None => Some(0)
                 case Some(a) => Some(a+1)
               }
-              Some(new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
+              Some(seqT(new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
                 override def applicable(n: ProofNode): Boolean = n == node
-              })
+              }, hideT(p)))
             } else {
               None
             }
-          }
           case None => None
         }
       }
@@ -781,7 +779,16 @@ object TacticLibrary {
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
           Some(axiomInstance, new Substitution(l), (quantified, aX), (instance, aT))
-        case _ => println("Cannot handle " + f.prettyString()); None
+        case Forall(x, qf) if (!x.contains(quantified)) =>
+          println(x + " does not contain " + quantified)
+          x.map(_ match {
+            case x: NamedSymbol => println("Symbol " + x.name + " " + x.index)
+            case _ =>
+          })
+          None
+        case _ =>
+          println("Cannot instantiate quantifier for " + quantified.prettyString() + " in " + f.prettyString())
+          None
       }
 
       def decompose(d: Formula): Formula = d match {
