@@ -112,7 +112,7 @@ class TacticTests extends FlatSpec with Matchers {
       println("found two alternatives " + p.children)
       false
     } else if(p.children.length > 0)
-      p.children.head.subgoals.foldLeft(false)((a: Boolean, b: ProofNode) => a || checkSingleAlternative(b))
+      p.children.head.subgoals.isEmpty || p.children.head.subgoals.foldLeft(false)((a: Boolean, b: ProofNode) => a || checkSingleAlternative(b))
     else
       true
 
