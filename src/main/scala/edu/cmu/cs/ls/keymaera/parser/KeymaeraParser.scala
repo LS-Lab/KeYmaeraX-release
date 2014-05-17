@@ -429,7 +429,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
-        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+        else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
       }
       
       log(pattern)("Variable") ^^ {
@@ -475,7 +475,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
-        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+        else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
       }
       
       log(pattern)("Predicate") ^^ {
@@ -670,7 +670,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
-        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+        else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
       }
       
       log(pattern)("Program Variable") ^^ {
