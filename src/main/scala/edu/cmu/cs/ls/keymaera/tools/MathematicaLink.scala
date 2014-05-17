@@ -15,7 +15,7 @@ import java.io.FileReader
  * 
  * @author Nathan Fulton
  */
-trait MathematicaLink extends Tool with QETool {
+trait MathematicaLink extends QETool {
   def run(cmd : String) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
   def run(cmd : com.wolfram.jlink.Expr) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
   

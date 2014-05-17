@@ -1122,7 +1122,7 @@ object LookupLemma {
         //Save the solution to a file.
         //TODO-nrf create an interface for databases.
         def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File("QE" + idx.toString() + ".alp")
+          val f = new java.io.File("QE" + t.name + idx.toString() + ".alp")
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
         }
