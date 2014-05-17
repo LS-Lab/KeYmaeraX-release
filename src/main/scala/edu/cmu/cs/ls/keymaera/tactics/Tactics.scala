@@ -163,13 +163,15 @@ object Tactics {
   // fix me if you want to start with configurable default limit
   val defaultLimits : Limits = new Limits(None, None, None)
 
+  type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
+
   abstract class Tactic(val name : String) extends Stats {
 
     var scheduler : Scheduler = KeYmaeraScheduler
 
     var limit  : Limits = defaultLimits
 
-    var continuation : (Tactic, Status, Seq[ProofNode]) => Unit = stop
+    var continuation : Continuation = stop
 
     override def toString: String = name
 
@@ -264,16 +266,10 @@ object Tactics {
     if (Seq(n) == result) tNext.dispatch(tFrom, n)
   }
 
-  def onChangeAndOnNoChange(n : ProofNode, tChange : Tactic, noChange: (Tactic, Status, Seq[ProofNode]) => Unit)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+  def onChangeAndOnNoChange(n : ProofNode, change: Continuation, noChange: Continuation)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     if (Seq(n) == result) noChange(tFrom, status, result)
-    else result.foreach((pn: ProofNode) => tChange.dispatch(tFrom, pn))
+    else change(tFrom, status, result)
   }
-
-  def onChangeAndOnNoChange(n : ProofNode, tChange: (Tactic, Status, Seq[ProofNode]) => Unit, tNoChange : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
-    if (Seq(n) == result) tNoChange.dispatch(tFrom, n)
-    else result.foreach((pn: ProofNode) => tChange(tFrom, status, result))
-  }
-
 
   def seqT(left : Tactic, right : Tactic) =
     new Tactic("Seq(" + left.name + "," + right.name + ")") {
@@ -312,24 +308,21 @@ object Tactics {
       }
     }
 
-//  def eitherT(left : Tactic, right : Tactic): Tactic =
-//    new Tactic("Either(" + left.name + "," + right.name + ")") {
-//      def applicable(node : ProofNode): Boolean = left.applicable(node) || right.applicable(node)
-//
-//      def apply(tool : Tool, node : ProofNode) = {
-//        right.continuation = continuation
-//        if(left.applicable(node)) {
-//            left.continuation = onChangeAndOnNoChange(node, continuation, right)
-//            left.dispatch(this, node)
-//          } else {
-//            println("Dispatch right " + right.name)
-//            right.dispatch(this, node)
-//        }
-//      }
-//    }
+  def eitherT(left : Tactic, right : Tactic): Tactic =
+    new Tactic("Either(" + left.name + "," + right.name + ")") {
+      def applicable(node : ProofNode): Boolean = left.applicable(node) || right.applicable(node)
 
-  // FIXME: eitherT should execute the first tactic that has effect, therefore this might miss some cases
-  def eitherT(left: Tactic, right: Tactic): Tactic = ifElseT(left.applicable(_), left, right)
+      def apply(tool : Tool, node : ProofNode) = {
+        right.continuation = continuation
+        if(left.applicable(node)) {
+            left.continuation = onChangeAndOnNoChange(node, continuation, onNoChange(node, right))
+            left.dispatch(this, node)
+          } else {
+            println("Dispatch right " + right.name)
+            right.dispatch(this, node)
+        }
+      }
+    }
 
   def weakSeqT(left : Tactic, right : Tactic) =
     new Tactic("WeakSeq(" + left.name + "," + right.name + ")") {
@@ -380,7 +373,7 @@ object Tactics {
 
     def apply(tool: Tool, node: ProofNode) = {
       if(t.applicable(node)) {
-        t.continuation = onChangeAndOnNoChange(node, this, continuation)
+        t.continuation = onChangeAndOnNoChange(node, onChange(node, this), continuation)
         t.dispatch(this, node)
       } else {
         continuation(this, Success, Seq(node))
