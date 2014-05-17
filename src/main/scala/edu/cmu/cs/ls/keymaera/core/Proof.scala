@@ -1126,7 +1126,13 @@ object LookupLemma {
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
         }
-        val file = getUniqueLemmaFile()
+        // TODO: make sure that it is sufficient to synchronize on the current tool
+        val file = t.synchronized {
+          val newFile = getUniqueLemmaFile()
+          newFile.createNewFile
+          newFile
+        }
+
 
         val evidence = new ToolEvidence(Map(
           "input" -> input, "output" -> output))
