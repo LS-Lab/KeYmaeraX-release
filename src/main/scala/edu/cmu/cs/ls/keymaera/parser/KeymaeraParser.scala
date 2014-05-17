@@ -253,7 +253,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     lazy val variableP:PackratParser[Term] = {
       lazy val pattern = {
         val stringList =  variables.map(Variable.unapply(_) match {
-          case Some(t) => t._1
+          case Some((n, i, _)) => n + (i match {case Some(idx) => "_" + idx case None => ""})
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
@@ -262,13 +262,14 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       
       log(pattern)("Variable") ^^ {
         case name => {
+          val (n, i) = nameAndIndex(name)
           variables.find(Variable.unapply(_) match {
-            case Some(p) => p._1.equals(name)
+            case Some(p) => p._1.equals(n) && p._2.equals(i)
             case None => false
           }) match {
             case Some(p) => p
             case None => 
-              throw new Exception("Predicate was mentioned out of context: " + name)
+              throw new Exception("Variable was mentioned out of context: " + name)
           }
         }
       } 
@@ -401,7 +402,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ asTightAsParsers(precedence, boxP).reduce(_|_)
       log(pattern)("Forall") ^^ {
         case idents ~ formula => {
-          val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
+          val boundVariables = idents.map(str => {val (n, i) = nameAndIndex(str); Variable.apply(n, i, Real)}) //TODO?
           new Forall(boundVariables, formula)
         }
       }
@@ -413,7 +414,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       lazy val pattern = (EXISTS ~> rep1sep(ident,",") <~ ".") ~ fP
       log(pattern)("Exists") ^^ {
         case idents ~ formula => {
-          val boundVariables = idents.map(str => Variable.apply(str, None, Real)) //TODO?
+          val boundVariables = idents.map(str => {val (n, i) = nameAndIndex(str); Variable.apply(n, i, Real)}) //TODO?
           new Exists(boundVariables, formula)
         }
       }
@@ -469,7 +470,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     lazy val predicateP:SubformulaParser = {
       lazy val pattern = {
         val stringList =  predicates.map(PredicateConstant.unapply(_) match {
-          case Some(t) => t._1
+          case Some((n, i)) => n + (i match { case Some(idx) => "_" + idx case None => ""})
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
@@ -478,14 +479,10 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       
       log(pattern)("Predicate") ^^ {
         case name => {
-          predicates.find(PredicateConstant.unapply(_) match {
-            case Some(p) => p._1.equals(name)
-            case None => false
-          }) match {
-            case Some(p) => p
-            case None => 
-              throw new Exception("Predicate was mentioned out of context: " + name)
-          }
+          val (n, i) = nameAndIndex(name)
+          val p = PredicateConstant(n, i)
+          require(predicates.contains(p), "All predicates have to be declared " + p.prettyString() + " not found in " + predicates)
+          p
         }
       } 
     }
@@ -668,7 +665,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     lazy val pvarP:PackratParser[Program] = {
       lazy val pattern = {
         val stringList =  programVariables.map(ProgramConstant.unapply(_) match {
-          case Some(t) => t._1
+          case Some((n, i)) => n + (i match {case Some(idx) => "_" + idx case None => ""})
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
@@ -677,14 +674,10 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       
       log(pattern)("Program Variable") ^^ {
         case name => {
-          programVariables.find(ProgramConstant.unapply(_) match {
-            case Some(p) => p._1.equals(name)
-            case None => false
-          }) match {
-            case Some(p) => p
-            case None => 
-              throw new Exception("Predicate was mentioned out of context: " + name)
-          }
+          val (n, i) = nameAndIndex(name)
+          val p = ProgramConstant(n, i)
+          require(programVariables.contains(p), "All program constants have to be declared " + p.prettyString() + " not found in " + programVariables)
+          p
         }
       } 
     }
@@ -844,9 +837,9 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     sortList.reduceRight( (l,r) => TupleT.apply(l, r) )
   }
   
-  def projectName(v:Variable):String = Variable.unapply(v) match {
-    case Some(t) => t._1
-    case None    => ""
+  def projectName(v:Variable): Option[(String, Option[Int])] = Variable.unapply(v) match {
+    case Some((n, idx, _)) => Some((n, idx))
+    case None    => None
   }
   
   //////////////////////////////////////////////////////////////////////////////
