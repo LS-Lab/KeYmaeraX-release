@@ -42,9 +42,8 @@
 
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.Tool
+import edu.cmu.cs.ls.keymaera.core.{Failed, Tool, ProofNode}
 import Config._
-import edu.cmu.cs.ls.keymaera.core.ProofNode
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import scala.Array
@@ -70,7 +69,9 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[T
       node.checkParentClosed
     }
     if (!node.isLocalClosed) {
-      tactic(tool, node)
+      if(tactic.applicable(node))
+        tactic(tool, node)
+      else tactic.continuation(tactic, Failed, Seq(node))
     }
   }
 

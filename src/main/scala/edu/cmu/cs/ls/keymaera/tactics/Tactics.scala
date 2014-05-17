@@ -312,21 +312,23 @@ object Tactics {
       }
     }
 
-  def eitherT(left : Tactic, right : Tactic): Tactic =
-    new Tactic("Either(" + left.name + "," + right.name + ")") {
-      def applicable(node : ProofNode): Boolean = left.applicable(node) || right.applicable(node)
+//  def eitherT(left : Tactic, right : Tactic): Tactic =
+//    new Tactic("Either(" + left.name + "," + right.name + ")") {
+//      def applicable(node : ProofNode): Boolean = left.applicable(node) || right.applicable(node)
+//
+//      def apply(tool : Tool, node : ProofNode) = {
+//        right.continuation = continuation
+//        if(left.applicable(node)) {
+//            left.continuation = onChangeAndOnNoChange(node, continuation, right)
+//            left.dispatch(this, node)
+//          } else {
+//            println("Dispatch right " + right.name)
+//            right.dispatch(this, node)
+//        }
+//      }
+//    }
 
-      def apply(tool : Tool, node : ProofNode) = {
-        right.continuation = continuation
-        if(left.applicable(node)) {
-            left.continuation = onChangeAndOnNoChange(node, continuation, right)
-            left.dispatch(this, node)
-          } else {
-            println("Dispatch right " + right.name)
-            right.dispatch(this, node)
-        }
-      }
-    }
+  def eitherT(left: Tactic, right: Tactic): Tactic = ifElseT(left.applicable(_), left, right)
 
   def weakSeqT(left : Tactic, right : Tactic) =
     new Tactic("WeakSeq(" + left.name + "," + right.name + ")") {
@@ -372,13 +374,16 @@ object Tactics {
     }
   }
 
-  // def branchRepeatT(t: Tactic): Tactic = branchT(t, () => branchRepeatT(t))
   def repeatT(t: Tactic): Tactic = new Tactic("Repeat(" + t.name + ")") {
-    def applicable(node: ProofNode) = t.applicable(node)
+    def applicable(node: ProofNode) = true
 
     def apply(tool: Tool, node: ProofNode) = {
-      t.continuation = onChangeAndOnNoChange(node, this, continuation)
-      t.dispatch(this, node)
+      if(t.applicable(node)) {
+        t.continuation = onChangeAndOnNoChange(node, this, continuation)
+        t.dispatch(this, node)
+      } else {
+        continuation(this, Success, Seq(node))
+      }
     }
   }
 

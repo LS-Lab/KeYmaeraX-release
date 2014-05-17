@@ -75,7 +75,7 @@ object TacticLibrary {
   }
 
   def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
-    override def applicable(node: ProofNode): Boolean = ??? // isFirstOrder
+    override def applicable(node: ProofNode): Boolean = true // isFirstOrder
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       val t: Tactic = new ConstructionTactic("Mathematica QE") {

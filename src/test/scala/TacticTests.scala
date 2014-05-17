@@ -1,3 +1,4 @@
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
@@ -93,19 +94,39 @@ class TacticTests extends FlatSpec with Matchers {
     }
   }
 
-  "Tactics" should "produce a proof with no alternatives" in {
-    import TacticLibrary._
+  def tryTactic(tactic: Tactic): ProofNode = {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val xp1 = Add(Real, x, Number(1))
     val zero = Number(0)
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
-    val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
       Thread.sleep(10)
     }
-    def visit(p: ProofNode): Boolean = if(p.children.length > 1) false else if(p.children.length > 0) p.children.head.subgoals.foldLeft(false)(_ && visit(_)) else true
-    require(visit(r) == true, "The proof should not have alternatives")
+    r
+  }
+
+  def checkSingleAlternative(p: ProofNode): Boolean =
+    if(p.children.length > 1) {
+      println("found two alternatives " + p.children)
+      false
+    } else if(p.children.length > 0)
+      p.children.head.subgoals.foldLeft(false)((a: Boolean, b: ProofNode) => a || checkSingleAlternative(b))
+    else
+      true
+
+  "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
+    import TacticLibrary._
+    val tactic = ((AxiomCloseT ~ findPosSucc(indecisive(true, false)) ~ findPosAnte(indecisive(true, false, true)))*)
+    val r = tryTactic(tactic)
+    require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
+  }
+
+  "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
+    import TacticLibrary._
+    val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+    val r = tryTactic(tactic)
+    require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
 }
