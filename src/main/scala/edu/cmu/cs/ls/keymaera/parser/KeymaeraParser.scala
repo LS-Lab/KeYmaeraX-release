@@ -176,7 +176,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
 
   lazy val vardefP = ident ~ ident ^^ {
     //Note: it might be necessary to give these arguments indices.
-    case rsort ~ name => Variable(name, None, identToSort(rsort))
+    case rsort ~ name => val (n, i) = nameAndIndex(name); Variable(n, i, identToSort(rsort))
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -257,19 +257,20 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
-        else new scala.util.matching.Regex( stringList.reduce(_+"|"+_) )
+        else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
       }
       
       log(pattern)("Variable") ^^ {
         case name => {
           val (n, i) = nameAndIndex(name)
           variables.find(Variable.unapply(_) match {
-            case Some(p) => p._1.equals(n) && p._2.equals(i)
+            case Some((nn, ii, _)) => nn == n && ii == i
             case None => false
           }) match {
             case Some(p) => p
-            case None => 
-              throw new Exception("Variable was mentioned out of context: " + name)
+            case None =>
+              throw new Exception("Variable was mentioned out of context: " + nameAndIndex(name) + " context: " +
+                variables.map(Variable.unapply(_) match { case Some((n, i, _)) => "(" + n + ", " + i + ")" case None => ??? }))
           }
         }
       } 
