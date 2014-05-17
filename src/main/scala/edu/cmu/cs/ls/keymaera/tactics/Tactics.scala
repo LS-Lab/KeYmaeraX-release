@@ -328,6 +328,7 @@ object Tactics {
 //      }
 //    }
 
+  // FIXME: eitherT should execute the first tactic that has effect, therefore this might miss some cases
   def eitherT(left: Tactic, right: Tactic): Tactic = ifElseT(left.applicable(_), left, right)
 
   def weakSeqT(left : Tactic, right : Tactic) =
