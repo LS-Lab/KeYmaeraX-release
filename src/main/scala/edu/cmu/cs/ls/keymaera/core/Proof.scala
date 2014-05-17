@@ -1003,20 +1003,20 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
  * @TODO Review
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
+  require(p.inExpr == HereP, "We can only skolemize top level formulas");
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
-    require(p.inExpr == HereP, "We can only skolemize top level formulas");
     val vars = variablesWithout(s, p)
     val form = s(p)
     val (v,phi) = if(p.isAnte) {
       form match {
-        case Exists(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+        case Exists(v, phi) => if(!(vars.map(v.contains).contains(true))) (v, phi) else
           throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
         case _ => throw new IllegalArgumentException("Skolemization is only applicable to existential quantifiers in the antecedent")
       }
     } else {
       form match {
-        case Forall(v, phi) => if(vars.map(v.contains).foldLeft(false)(_||_)) (v, phi) else
+        case Forall(v, phi) => if(!(vars.map(v.contains).contains(true))) (v, phi) else
           throw new IllegalArgumentException("Variables to be skolemized should not appear anywhere in the sequent")
         case _ => throw new IllegalArgumentException("Skolemization is only applicable to universal quantifiers in the succedent")
       }
@@ -1062,7 +1062,7 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
-          case BoxModality(p, f) => println("Writes " + p.prettyString() + " are " + p.writes); Right(Forall(p.writes, f))
+          case BoxModality(p, f) => Right(Forall(p.writes, f))
           case DiamondModality(p, f) => Right(Forall(p.writes, f))
           case _ => throw new IllegalStateException("The abstraction rule is not applicable to " + e)
       }
