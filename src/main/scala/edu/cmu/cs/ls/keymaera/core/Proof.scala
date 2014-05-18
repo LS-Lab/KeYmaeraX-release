@@ -362,8 +362,7 @@ object Axiom {
     def apply(s: Sequent): List[Sequent] = {
       axioms.get(id) match {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
-        case _ => List(s)
-        //@TODO Applying an axiom that does not exist should give exception because it's very wrong.
+        case _ => throw new IllegalArgumentException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"))
       }
     }
   }
