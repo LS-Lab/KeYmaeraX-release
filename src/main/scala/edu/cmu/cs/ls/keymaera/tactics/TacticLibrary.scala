@@ -75,7 +75,36 @@ object TacticLibrary {
   }
 
   def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
-    override def applicable(node: ProofNode): Boolean = true // isFirstOrder
+    def qeApplicable(s: Sequent): Boolean =
+      (s.ante ++ s.succ).foldLeft(true)((acc: Boolean, f: Formula) => acc && qeApplicable(f))
+    def qeApplicable(f: Formula): Boolean = {
+      var qeAble = true
+      val fn = new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+          e match {
+            case Modality(_, _) => qeAble = false
+            case ApplyPredicate(_, _) => qeAble = false
+            case PredicateConstant(_, _) => qeAble = false
+            case _ =>
+          }
+          if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
+        }
+
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          e match {
+            case Pair(_, _, _) => qeAble = false
+            case Apply(fun, _) => qeAble = false // check if fun is an external function
+            case Derivative(_, _) => qeAble = false
+            case IfThenElseTerm(_, _, _) => qeAble = false
+            case _ =>
+          }
+          if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
+        }
+      }
+      ExpressionTraversal.traverse(fn, f)
+      qeAble
+    }
+    override def applicable(node: ProofNode): Boolean = qeApplicable(node.sequent)
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       val t: Tactic = new ConstructionTactic("Mathematica QE") {
