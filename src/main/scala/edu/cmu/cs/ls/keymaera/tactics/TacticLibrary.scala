@@ -338,7 +338,7 @@ object TacticLibrary {
     override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
       case Some(t) =>
         Some(new Tactics.ApplyRule(Cut(t)) {
-          override def applicable(node: ProofNode): Boolean = node == p
+          override def applicable(node: ProofNode): Boolean = true
         })
       case _ => None
     }
@@ -409,7 +409,7 @@ object TacticLibrary {
         case _ => f
       }
       Some(new Tactics.ApplyRule(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))) {
-        override def applicable(node: ProofNode): Boolean = node == p
+        override def applicable(node: ProofNode): Boolean = true
       })
     }
 
