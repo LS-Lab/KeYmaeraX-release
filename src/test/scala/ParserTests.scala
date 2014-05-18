@@ -124,7 +124,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   it should "parse pretty-prints of random formulas" in {
 	  val rand = RandomFormula
 	  
-      for(i <- range(1,5)) {
+      for(i <- 1 to 5) {
         val left : Expr = rand.nextFormula(10)
         val print : String = KeYmaeraPrettyPrinter.stringify(left)
         val right : Expr = parser.runParser(print)
