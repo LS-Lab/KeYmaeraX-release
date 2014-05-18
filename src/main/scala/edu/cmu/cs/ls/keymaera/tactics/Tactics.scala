@@ -136,7 +136,8 @@ object Tactics {
     def propagate(s : Stats) : Boolean = {
         var p = this
         var r = false
-        while (p != null) r = p.update(s) || r
+        // FIXME: what was the intention of this loop? It's an infinite loop like this (therefore commented out for now)
+        /*while (p != null)*/ r = p.update(s) || r
         s.clear()
         return r
     }
