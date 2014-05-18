@@ -518,17 +518,15 @@ object TacticLibrary {
           case _ => ???
         }))
         case BoxModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
+        case BoxModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
         case DiamondModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
+        case DiamondModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
         case a => None
       }
     override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getBoundVariables(s, p).isDefined
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = {
-        val r = applies(node.sequent, p)
-        println("Applicable to " + node + " at " + node.sequent(p) + " " + r);
-        r
-      }
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         getBoundVariables(node.sequent, p) match {
@@ -551,9 +549,7 @@ object TacticLibrary {
                   case Some(a) => Some(a + 1)
                 }
                 otherVars = otherVars ++ Seq((n, tIdx))
-                Some(seqT(new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
-                  override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
-                }, hideT(p)))
+                Some(alphaRenamingT(n, idx, n, tIdx)(p))
               } else {
                 None
               }
@@ -757,7 +753,14 @@ object TacticLibrary {
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
     //@TODO Add contract that applies(f) <=> \result.isDefined
-    def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)]
+    def constructInstanceAndSubst(f: Formula, a: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
+      constructInstanceAndSubst(f) match {
+        case Some((instance, subst)) => Some((a, instance, subst, None))
+        case None => None
+      }
+    }
+
+    def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = ???
 
     //@TODO Add contract that applies()=>\result fine
     override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
@@ -765,9 +768,9 @@ object TacticLibrary {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         axiom match {
-          case Some(a) =>
-            constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
-              case Some((axiomInstance, subst)) =>
+          case Some(ax) =>
+            constructInstanceAndSubst(getFormula(node.sequent, pos), ax) match {
+              case Some((a, axiomInstance, subst, ptac)) =>
                 val eqPos = AntePosition(node.sequent.ante.length)
                 //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                 val branch1Tactic = axiomInstance match {
@@ -782,7 +785,11 @@ object TacticLibrary {
                 val hideAllSuccButLast = for(i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
                 //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
                 //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
-                val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (axiomT(axiomName) & AxiomCloseT))
+                val cont = ptac match {
+                  case Some(t) => t(SuccPosition(0))
+                  case None => NilT
+                }
+                val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (cont & axiomT(axiomName) & AxiomCloseT))
                 Some(cutT(axiomInstance) &(branch1Tactic, branch2Tactic))
               case None => None
             }
@@ -824,10 +831,59 @@ object TacticLibrary {
 
   }
 
+  def boxNDetAssign: PositionTactic = new AxiomTactic("[:*] assignment", "[:*] assignment") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(NDetAssign(_), _) => true
+      case _ => false
+    }
+
+    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case Forall(v, f) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), f))
+        case Exists(v, f) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), f))
+        case _ => Left(None)
+      }
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
+    }, f) match {
+      case Some(g) => g
+      case None => throw new IllegalStateException("Replacing one variable by another should not fail")
+    }
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+      case BoxModality(NDetAssign(x), p) if(Variable.unapply(x).isDefined) =>
+        val v = x.asInstanceOf[Variable]
+        // construct substitution
+        val aX = Variable("x", None, Real)
+        val aP = Function("p", None, Real, Bool)
+        val l = List(new SubstitutionPair(ApplyPredicate(aP, x), p))
+        // construct axiom instance: [x:=*]p(x) <-> \forall x. p(x).
+        val g = Forall(Seq(v), p)
+        val axiomInstance = Equiv(f, g)
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(BoxModality(NDetAssign(_), _), Forall(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(alphaRenamingT(v.name, v.index, "x", None)(p.first) & alphaRenamingT(v.name, v.index, "x", None)(p.second))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+        // rename to match axiom if necessary
+        val (ax, cont) = if(v.name != "x" || v.index != None) (replace(axiom)(aX, v), Some(alpha)) else (axiom, None)
+        // TODO: we have to replace x in the axiom by v in order to have the uniform subst succeed
+        Some(ax, axiomInstance, new Substitution(l), cont)
+      case _ => None
+    }
+  }
+
   // [;] compose
   def boxSeqT: PositionTactic = new AxiomTactic("[;] compose", "[;] compose") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Sequence(_), _) => true
+      case BoxModality(Sequence(_, _), _) => true
       case _ => false
     }
 
@@ -882,6 +938,15 @@ object TacticLibrary {
     })
   }
 
+  def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
+    new PositionTactic("Alpha Renaming") {
+      override def applies(s: Sequent, p: Position): Boolean = true // TOOD: really check applicablity
+
+      override def apply(p: Position): Tactic = (new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
+        override def applicable(node: ProofNode): Boolean = true
+        } & hideT(p.topLevel))
+  }
+
   // Quantifier Instantiation
   def instantiateT(quantified: Variable, instance: Term): PositionTactic = new PositionTactic("Quantifier Instantiation") {
     val axiomName = "Quantifier Instantiation"
@@ -899,6 +964,7 @@ object TacticLibrary {
       def replace(f: Formula)(o: Variable, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
           case Forall(v, f) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), f))
+          case Exists(v, f) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), f))
           case _ => Left(None)
         }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
@@ -949,9 +1015,7 @@ object TacticLibrary {
                 val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
                 // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
-                def alpha(p: Position, q: Variable) = (new ApplyRule(new AlphaConversion(p, q.name, q.index, "$" + aX.name, aX.index)) {
-                  override def applicable(node: ProofNode): Boolean = true
-                } & hideT(p.topLevel))
+                def alpha(p: Position, q: Variable) = alphaRenamingT(q.name, q.index, "$" + aX.name, aX.index)(p)
                 def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
                   case Imply (a, b) => Imply(decompose(replace (a)(v, Variable ("$" + aX.name, aX.index, aX.sort) )), if(atTrans) replace(b)(aT, instance) else b)
                   case _ => throw new IllegalArgumentException("...")
@@ -994,7 +1058,27 @@ object TacticLibrary {
   }
 
   // [++] choice
+  def boxChoiceT: PositionTactic = new AxiomTactic("[++] choice", "[++] choice") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(Choice(_, _), _) => true
+      case _ => false
+    }
 
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case BoxModality(Choice(a, b), p) =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aB = ProgramConstant("b")
+        val aP = PredicateConstant("p")
+        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
+        // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
+        val g = And(BoxModality(a, p), BoxModality(b, p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, new Substitution(l))
+      case _ => None
+    }
+
+  }
   /**
    * Tactic that executes "correct" tactic based on top-level operator
    */
@@ -1011,7 +1095,9 @@ object TacticLibrary {
         case Equiv(_, _) => if(equiv) if(p.isAnte) Some(EquivLeftT(p)) else Some(EquivRightT(p)) else None
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
+          case Choice(_, _) => Some(boxChoiceT(p))
           case Assign(_, _) => Some(assignment(p))
+          case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
         }

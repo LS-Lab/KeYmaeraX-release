@@ -199,6 +199,10 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
 
   def +(i: Int): Position
 
+  def first: Position
+  def second: Position
+  def third: Position
+
   protected def clone(i: Int, e: PosInExpr = HereP): Position
 
   override def toString: String = "(" + isAnte + ", " + getIndex + ", " + inExpr + ")"
@@ -208,6 +212,9 @@ class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index
   def isAnte = true
   protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
   def +(i: Int) = AntePosition(index + i, inExpr)
+  def first: Position = AntePosition(index, inExpr.first)
+  def second: Position = AntePosition(index, inExpr.second)
+  def third: Position = AntePosition(index, inExpr.third)
 }
 
 object AntePosition {
@@ -218,6 +225,9 @@ class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index
   def isAnte = false
   protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
   def +(i: Int) = SuccPosition(index + i, inExpr)
+  def first: Position = SuccPosition(index, inExpr.first)
+  def second: Position = SuccPosition(index, inExpr.second)
+  def third: Position = SuccPosition(index, inExpr.third)
 }
 
 object SuccPosition {
@@ -364,6 +374,8 @@ object Axiom {
     //[a](p->q) -> (([a]p) -> ([a]q))
     val pair6 = ("K modal modus ponens", Imply(BoxModality(aA, Imply(aP, aQ)), Imply(BoxModality(aA, aP), BoxModality(aA, aQ))))
     m = m + pair6
+    val pair7 = ("[:*] assignment", Equiv(BoxModality(NDetAssign(x), ApplyPredicate(p2, x)), Forall(Seq(x), ApplyPredicate(p2, x))))
+    m = m + pair7
     m
   }
 
@@ -914,6 +926,8 @@ object UniformSubstitution {
  * (2) Exists(v, phi)
  * (3) Modality(BoxModality(Assign(x, e)), phi)
  * (4) Modality(DiamondModality(Assign(x, e)), phi)
+ * (5) Modality(BoxModality(NDetAssign(x)), phi)
+ * (6) Modality(DiamondModality(NDetAssign(x)), phi)
  *
  * It always replaces _every_ occurrence of the name in phi
  * @param tPos
@@ -959,12 +973,24 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
             case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
             case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
           }, b), proceed(c)))
+        case BoxModality(NDetAssign(a), c) =>
+          Right(BoxModality(NDetAssign(a match {
+            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+            case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
+          }), proceed(c)))
         case DiamondModality(Assign(a, b), c) =>
           Right(DiamondModality(Assign(a match {
             case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
             case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
             case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
           }, b), proceed(c)))
+        case DiamondModality(NDetAssign(a), c) =>
+          Right(DiamondModality(NDetAssign(a match {
+            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+            case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
+          }), proceed(c)))
         case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
       }
     }
