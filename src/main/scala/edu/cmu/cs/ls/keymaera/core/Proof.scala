@@ -760,25 +760,25 @@ class Substitution(l: Seq[SubstitutionPair]) {
   // uniform substitution on formulas
   def apply(f: Formula): Formula = f match {
       // homomorphic cases
-    case Not(c) => Not(this(c))
-    case And(l, r) => And(this(l), this(r))
-    case Or(l, r) => Or(this(l), this(r))
-    case Imply(l, r) => Imply(this(l), this(r))
-    case Equiv(l, r) => Equiv(this(l), this(r))
+    case Not(c) => Not(apply(c))
+    case And(l, r) => And(apply(l), apply(r))
+    case Or(l, r) => Or(apply(l), apply(r))
+    case Imply(l, r) => Imply(apply(l), apply(r))
+    case Equiv(l, r) => Equiv(apply(l), apply(r))
 
     // binding cases
     /*
      * For quantifiers just check that there is no name clash, throw an exception if there is
      */
-    case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, this(form))
+    case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, apply(form))
     else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString())
 
-    case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, this(form))
+    case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, apply(form))
     else throw new IllegalArgumentException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString())
 
     case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
-      case BoxModality(p, f) => BoxModality(this(p), this(f))
-      case DiamondModality(p, f) => DiamondModality(this(p), this(f))
+      case BoxModality(p, f) => BoxModality(apply(p), apply(f))
+      case DiamondModality(p, f) => DiamondModality(apply(p), apply(f))
       case _ => ???
     } else throw new IllegalArgumentException("There is a name clash in a substitution with pairs " + l + " to " + f.prettyString() + " since it writes " + x.writes)
 
@@ -792,39 +792,39 @@ class Substitution(l: Seq[SubstitutionPair]) {
         case ApplyPredicate(pf, parg) if(func == pf) => return constructSubst(parg, arg)(p.t.asInstanceOf[Formula])
         case _ =>
       }
-    }; return ApplyPredicate(func, this(arg))
+    }; return ApplyPredicate(func, apply(arg))
 
     // homomorphic cases
     case Equals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => Equals(d, this(a), this(b))
+      case (a: Term,b: Term) => Equals(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case " + f)
     }
     case NotEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => NotEquals(d, this(a), this(b))
+      case (a: Term,b: Term) => NotEquals(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case ProgramEquals(l, r) => (l,r) match {
-      case (a: Program,b: Program) => ProgramEquals(this(a), this(b))
+      case (a: Program,b: Program) => ProgramEquals(apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case ProgramNotEquals(l, r) => (l,r) match {
-      case (a: Program,b: Program) => ProgramNotEquals(this(a), this(b))
+      case (a: Program,b: Program) => ProgramNotEquals(apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterThan(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => GreaterThan(d, this(a), this(b))
+      case (a: Term,b: Term) => GreaterThan(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case GreaterEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => GreaterEquals(d, this(a), this(b))
+      case (a: Term,b: Term) => GreaterEquals(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case LessEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => LessEquals(d, this(a), this(b))
+      case (a: Term,b: Term) => LessEquals(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case LessThan(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => LessThan(d, this(a), this(b))
+      case (a: Term,b: Term) => LessThan(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case x: Atom => x
@@ -834,14 +834,15 @@ class Substitution(l: Seq[SubstitutionPair]) {
   // uniform substitution on terms
   def apply(t: Term): Term = t match {
       // homomorphic cases
-    case Neg(s, c) => Neg(s, this(c))
-    case Add(s, l, r) => Add(s, this(l), this(r))
-    case Subtract(s, l, r) => Subtract(s, this(l), this(r))
-    case Multiply(s, l, r) => Multiply(s, this(l), this(r))
-    case Divide(s, l, r) => Divide(s, this(l), this(r))
-    case Exp(s, l, r) => Exp(s, this(l), this(r))
-    case Pair(dom, l, r) => Pair(dom, this(l), this(r))
+    case Neg(s, c) => Neg(s, apply(c))
+    case Add(s, l, r) => Add(s, apply(l), apply(r))
+    case Subtract(s, l, r) => Subtract(s, apply(l), apply(r))
+    case Multiply(s, l, r) => Multiply(s, apply(l), apply(r))
+    case Divide(s, l, r) => Divide(s, apply(l), apply(r))
+    case Exp(s, l, r) => Exp(s, apply(l), apply(r))
+    case Pair(dom, l, r) => Pair(dom, apply(l), apply(r))
     // applying uniform substitutions
+    //@TODO Bug. Derivative ends up in an infinite loop unless it matches.
     case Derivative(_, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return this(t)
     case Variable(_, _, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
     // if we find a match, we bind the arguments of our match to what is in the current term
@@ -851,7 +852,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
         case Apply(pf, parg) if(func == pf) => return constructSubst(parg, arg)(p.t.asInstanceOf[Term])
         case _ =>
       }
-    }; return Apply(func, this(arg))
+    }; return Apply(func, apply(arg))
     case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
     case _ => throw new UnsupportedOperationException("Not implemented yet")
   }
@@ -860,17 +861,17 @@ class Substitution(l: Seq[SubstitutionPair]) {
   def apply(p: Program): Program = {
       require(p.writes.intersect(names(l)).isEmpty)
       p match {
-        case Loop(c) => Loop(this(c))
-        case Sequence(a, b) => Sequence(this(a), this(b))
-        case Choice(a, b) => Choice(this(a), this(b))
-        case Parallel(a, b) => Parallel(this(a), this(b))
-        case IfThen(a, b) => IfThen(this(a), this(b))
-        case IfThenElse(a, b, c) => IfThenElse(this(a), this(b), this(c))
-        case Assign(a, b) => Assign(a, this(b))  //@TODO assert that a is a variable (so far) and assert that a not in names(l)
+        case Loop(c) => Loop(apply(c))
+        case Sequence(a, b) => Sequence(apply(a), apply(b))
+        case Choice(a, b) => Choice(apply(a), apply(b))
+        case Parallel(a, b) => Parallel(apply(a), apply(b))
+        case IfThen(a, b) => IfThen(apply(a), apply(b))
+        case IfThenElse(a, b, c) => IfThenElse(apply(a), apply(b), apply(c))
+        case Assign(a, b) => Assign(a, apply(b))  //@TODO assert that a is a variable (so far) and assert that a not in names(l)
         case NDetAssign(a) => p
-        case Test(a) => Test(this(a))
-        case ContEvolve(a) => ContEvolve(this(a))
-        case NFContEvolve(v, x, t, f) => if(v.intersect(names(l)).isEmpty) NFContEvolve(v, x, this(t), this(f))
+        case Test(a) => Test(apply(a))
+        case ContEvolve(a) => ContEvolve(apply(a))
+        case NFContEvolve(v, x, t, f) => if(v.intersect(names(l)).isEmpty) NFContEvolve(v, x, apply(t), apply(f))
           else throw new IllegalArgumentException("There is a name clash in uniform substitution " + l + " applied on " + p + " because of quantified disturbance " + v)
         case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
         case _ => throw new UnsupportedOperationException("Not implemented yet")
@@ -1105,6 +1106,7 @@ object LookupLemma {
       val parser = new KeYmaeraParser()
       val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
       val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
+      //@TODO Are lemmas fine in every context? Including any s.pref?
       val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
       List(newSequent)
     }
@@ -1120,11 +1122,14 @@ object LookupLemma {
         //Save the solution to a file.
         //TODO-nrf create an interface for databases.
         def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File("QE" + t.name + idx.toString() + ".alp")
+          val lemmadbpath = new java.io.File("lemmadb")
+          lemmadbpath.mkdirs
+          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
         }
         val file = LookupLemma.synchronized {
+          // synchronize on file creation to make sure concurrent uses use new file names
           val newFile = getUniqueLemmaFile()
           newFile.createNewFile
           newFile
