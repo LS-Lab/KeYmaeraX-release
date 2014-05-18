@@ -997,6 +997,7 @@ object TacticLibrary {
 
   /**
    * Tactic that executes "correct" tactic based on top-level operator
+   * except when a decision needs to be made (i.e., loops, differential equations).
    */
   def indecisive(beta: Boolean, simplifyProg: Boolean, equiv: Boolean = false): PositionTactic = new PositionTactic("Indecisive") {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
