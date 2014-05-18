@@ -457,7 +457,7 @@ object KeYmaeraToMathematica {
       case Derivative(s, c) => convertDerivative(c)
       case False() => MathematicaSymbols.FALSE
       case True() => MathematicaSymbols.TRUE
-      case Neg(s, c) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertTerm(c)))
+      case Neg(s, c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
       case Number(s, n) => new MExpr(n.underlying())
       case t: Variable => convertNS(t)
     }

@@ -198,9 +198,9 @@ object TermTests {
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     val invString = "v^2<=2*b*(m-z)"
-    val invInput = "Functions. R b. End. ProgramVariables. R v. R. m. R z. End. Problem. " + invString + "End."
+    val invInput = "Functions. R b. End.\n ProgramVariables. R v. R m. R z. End.\n Problem.\n " + invString + "End.\n"
     val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
-    val tactic = master(new Generate(inv))
+    val tactic = master(new Generate(inv), true)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
