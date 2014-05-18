@@ -1155,6 +1155,13 @@ object TacticLibrary {
     }
   }
 
+  /**
+   * Tactic that applies propositional proof rules exhaustively.
+   *@TODO Implement for real. This strategy uses more than propositional steps.
+   */
+  def propositional = ((AxiomCloseT | findPosSucc(indecisive(false, false, true)) | findPosAnte(indecisive(false, false, true)))*)
+  
+
   def skolemizeT = new PositionTactic("Skolemize") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case Forall(_, _) => true

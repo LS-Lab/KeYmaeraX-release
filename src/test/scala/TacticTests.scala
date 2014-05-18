@@ -130,18 +130,56 @@ class TacticTests extends FlatSpec with Matchers {
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
   
+  sealed abstract class ProvabilityStatus
+  object Provable extends ProvabilityStatus
+  object NonProvable extends ProvabilityStatus
+  object UnknownProvability extends ProvabilityStatus
+
+  /**
+   * Run KeYmaera till completion using given tactic for proving given conjecture f.
+   *@TODO Implement this stub
+   */
+  def prove(f:Formula, tactic:Tactic) : ProvabilityStatus = {
+    println("TacticTests.prove: Not implemented yet")
+    UnknownProvability
+  }
+  
   "Tactics (propositional)" should "prove A->A for any A" in {
-    val tactic = indecisive(false, false, true)
-    val A = new RandomFormula().nextFormula(5)
-    val formula = Imply(A, A)
-    //@TODO tryProve(formula, tactic) should be (provable)
+    val tactic = propositional
+    for (i <- 1 to 5) {
+      val A = new RandomFormula().nextFormula(5)
+      val formula = Imply(A, A)
+      prove(formula, tactic) should be (Provable)
+    }
   }
 
   it should "prove A->(B->A) for any A,B" in {
-    val tactic = indecisive(false, false, true)
-    val A = new RandomFormula().nextFormula(5)
-    val B = new RandomFormula().nextFormula(5)
-    val formula = Imply(A, Imply(B, A))
-    //@TODO tryProve(formula, tactic) should be (provable)
+    val tactic = propositional
+    for (i <- 1 to 5) {
+      val A = new RandomFormula().nextFormula(5)
+      val B = new RandomFormula().nextFormula(5)
+      val formula = Imply(A, Imply(B, A))
+      prove(formula, tactic) should be (Provable)
+    }
+  }
+
+  it should "prove (A->(B->C)) <-> ((A&B)->C) for any A,B,C" in {
+    val tactic = propositional
+    for (i <- 1 to 5) {
+      val A = new RandomFormula().nextFormula(3)
+      val B = new RandomFormula().nextFormula(3)
+      val C = new RandomFormula().nextFormula(3)
+      val formula = Equiv(Imply(A, Imply(B, C)), Imply(And(A,B),C))
+      prove(formula, tactic) should be (Provable)
+    }
+  }
+
+  it should "prove (~A->A) -> A for any A" in {
+    val tactic = propositional
+    for (i <- 1 to 5) {
+      val A = new RandomFormula().nextFormula(5)
+      val formula = Imply(Imply(Not(A),A),A)
+      prove(formula, tactic) should be (Provable)
+    }
   }
 }
