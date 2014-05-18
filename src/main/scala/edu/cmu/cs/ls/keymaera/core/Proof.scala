@@ -413,8 +413,7 @@ class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) {
   require(!p.isAnte && p.inExpr == HereP, "CloseTrue only works in the succedent on top-level")
   override def apply(s: Sequent): List[Sequent] = {
     require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
-    //@TODO AxiomClose closes by Nil. CloseTrue closes by List(). Use consistent convention. Maybe List()
-    if(s.succ(p.getIndex) == True) List()
+    if(s.succ(p.getIndex) == True) Nil
     else throw new IllegalArgumentException("CloseTrue is not applicable to " + s + " at " + p)
   }
 }
@@ -428,7 +427,7 @@ class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) {
   require(p.isAnte && p.inExpr == HereP, "CloseFalse only works in the antecedent on top-level")
   override def apply(s: Sequent): List[Sequent] = {
     require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
-    if(s.ante(p.getIndex) == False) List()
+    if(s.ante(p.getIndex) == False) Nil
     else throw new IllegalArgumentException("CloseFalse is not applicable to " + s + " at " + p)
   }
 }
@@ -444,9 +443,6 @@ object Cut {
       val show = new Sequent(s.pref, s.ante, s.succ :+ c)
       List(use, show)
     }
-
-    //@TODO purpose unclear
-    def parameter: Formula = c
   }
 }
 
@@ -841,8 +837,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
     case Exp(s, l, r) => Exp(s, apply(l), apply(r))
     case Pair(dom, l, r) => Pair(dom, apply(l), apply(r))
     // applying uniform substitutions
-    //@TODO Bug. Derivative ends up in an infinite loop unless it matches.
-    case Derivative(_, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return this(t)
+    case Derivative(s, child) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return Derivative(s, this(child))
     case Variable(_, _, _) => for(p <- l) { if(t == p.n) return p.t.asInstanceOf[Term]}; return t
     // if we find a match, we bind the arguments of our match to what is in the current term
     // then we apply it to the codomain of the substitution
