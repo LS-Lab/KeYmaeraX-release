@@ -178,7 +178,7 @@ object TermTests {
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     val master = ((AxiomCloseT | findPosSucc(indecisive(false, true)) | findPosAnte(indecisive(false, true)) | findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
-    val tactic = ImplyRightFindT & findPosSucc(inductionT(True)) & master
+    val tactic = ImplyRightFindT & findPosSucc(inductionT(Some(PredicateConstant("inv")))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {

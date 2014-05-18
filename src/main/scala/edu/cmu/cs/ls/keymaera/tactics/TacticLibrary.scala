@@ -159,18 +159,57 @@ object TacticLibrary {
     }
   }
 
-  def inductionT(f: Formula): PositionTactic = new PositionTactic("induction") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case BoxModality(Loop(_), _) => true
-      case _ => false
-    })
+  def lastSucc(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " succ.length - 1") {
+    override def applicable(node: ProofNode): Boolean =
+      pt.applies(node.sequent, SuccPosition(node.sequent.succ.length - 1))
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+      Some(pt(SuccPosition(node.sequent.succ.length - 1)))
+  }
+
+  def lastAnte(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " ante.length - 1") {
+    override def applicable(node: ProofNode): Boolean =
+      pt.applies(node.sequent, AntePosition(node.sequent.ante.length - 1))
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+      Some(pt(SuccPosition(node.sequent.ante.length - 1)))
+  }
+
+  def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
+    def getBody(g: Formula): Option[Program] = g match {
+      case BoxModality(Loop(a), _) => Some(a)
+      case _ => None
+    }
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        // TODO: use formula f
-        Some(boxInductionT(p) & AndRightT(p) & (NilT, abstractionT(p) & hideT(p)))
+      def ind(cutSPos: Position) = boxInductionT(cutSPos) & AndRightT(cutSPos) & (NilT, abstractionT(cutSPos) & hideT(cutSPos))
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
+        case Some(f) =>
+        val cutAPos = AntePosition(node.sequent.ante.length, HereP)
+        val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+            case x@BoxModality(a, _) =>
+              val cPos = AntePosition(node.sequent.ante.length)
+              val b1 = ImplyLeftT(cPos) & AxiomCloseT
+              val b2 = hideT(p)
+              Some(cutT(Imply(BoxModality(a, f), x)) & (b1, b2))
+            case _ => None
+          }
+          override def applicable(node: ProofNode): Boolean = true
+        }
+        val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
+        val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) & hideT(cutSPos)
+        val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) /* invariant initially valid */, useCase)
+        val branch2Tactic = hideT(p) & ImplyRightT(cutSPos) & ind(cutSPos) & (AxiomCloseT, NilT)
+        getBody(node.sequent(p)) match {
+          case Some(a) =>
+            Some(cutT(Imply(f, BoxModality(Loop(a), f))) & (branch1Tactic, branch2Tactic))
+          case None => None
+        }
+        case None => Some(ind(p))
       }
     }
   }
@@ -929,6 +968,28 @@ object TacticLibrary {
           case None => println("Giving up because the axiom does not exist " + this.name); None
         }
 
+    }
+  }
+
+  // K modal  modus ponens
+  def kModalModusPonensT = new AxiomTactic("K modal modus ponens", "K modal modus ponens") {
+    override def applies(f: Formula): Boolean = f match {
+      case Imply(BoxModality(a, _), BoxModality(b, _)) if(a == b) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case Imply(BoxModality(a, p), BoxModality(b, q)) if(a == b) =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aP = PredicateConstant("p")
+        val aQ = PredicateConstant("q")
+        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
+        // construct axiom instance: [a](p->q) -> (([a]p) -> ([a]q))
+        val g = BoxModality(a, Imply(p, q))
+        val axiomInstance = Imply(g, f)
+        Some(axiomInstance, new Substitution(l))
+      case _ => None
     }
   }
 

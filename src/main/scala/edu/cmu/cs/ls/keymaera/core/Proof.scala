@@ -359,6 +359,11 @@ object Axiom {
     m = m + pair4
     val pair5 = ("I induction", Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), BoxModality(Loop(a), p)))
     m = m + pair5
+
+    val aQ = PredicateConstant("q")
+    //[a](p->q) -> (([a]p) -> ([a]q))
+    val pair6 = ("K modal modus ponens", Imply(BoxModality(aA, Imply(aP, aQ)), Imply(BoxModality(aA, aP), BoxModality(aA, aQ))))
+    m = m + pair6
     m
   }
 
