@@ -185,7 +185,7 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      def ind(cutSPos: Position) = boxInductionT(cutSPos) & AndRightT(cutSPos) & (NilT, abstractionT(cutSPos) & hideT(cutSPos))
+      def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) & (NilT, abstractionT(cutSPos) & hideT(cutSPos) & cont)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
         case Some(f) =>
         val cutAPos = AntePosition(node.sequent.ante.length, HereP)
@@ -203,13 +203,13 @@ object TacticLibrary {
         val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
         val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) & hideT(cutSPos)
         val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) /* invariant initially valid */, useCase)
-        val branch2Tactic = hideT(p) & ImplyRightT(cutSPos) & ind(cutSPos) & (AxiomCloseT, NilT)
+        val branch2Tactic = hideT(p) & ImplyRightT(cutSPos) & ind(cutSPos, hideT(cutAPos)) & (AxiomCloseT, NilT)
         getBody(node.sequent(p)) match {
           case Some(a) =>
             Some(cutT(Imply(f, BoxModality(Loop(a), f))) & (branch1Tactic, branch2Tactic))
           case None => None
         }
-        case None => Some(ind(p))
+        case None => Some(ind(p, NilT))
       }
     }
   }
