@@ -87,10 +87,12 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
       }
-      require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_)))" )
+      require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_))): " + parse + " != " + printofparseParse )
     }
     catch {
-      case e : Exception => require(false, "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + KeYmaeraPrettyPrinter.stringify(parse))
+      case e : Exception => require(false, "Parse of print did not succeed on: " + printOfParse + "\nExpected: " +
+        KeYmaeraPrettyPrinter.stringify(parse) +
+        "\n Exception was: " + e)
     }
 
   }

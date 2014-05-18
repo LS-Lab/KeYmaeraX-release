@@ -190,6 +190,30 @@ object TermTests {
     println(tree)
     writeToFile(new File(output), tree)
   }
+  def test10(output: String) {
+    import TacticLibrary._
+    val parse = new KeYmaeraParser()
+    val input = "examples/dev/t/tactics/ETCS-essentials.key"
+    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
+    println(KeYmaeraPrettyPrinter.stringify(i2))
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
+    val invString = "v^2<=2*b*(m-z)"
+    val invInput = "Functions. R b. End. ProgramVariables. R v. R. m. R z. End. Problem. " + invString + "End."
+    val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
+    val tactic = master(new Generate(inv))
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    Thread.sleep(3000)
+    /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(100)
+      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
+      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
+    }*/
+    val tree = print(r)
+    println(tree)
+    writeToFile(new File(output), tree)
+  }
+
+
   def readFile(input: String): String = try {
     val fr = new BufferedReader(new FileReader(input))
     var result = ""

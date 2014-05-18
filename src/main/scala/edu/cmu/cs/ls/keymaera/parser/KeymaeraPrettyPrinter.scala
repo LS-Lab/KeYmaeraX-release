@@ -286,9 +286,9 @@ object KeYmaeraPrettyPrinter {
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
+      LessEquals.getClass().getCanonicalName()    ::
       GreaterEquals.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
-      LessThan.getClass().getCanonicalName()    :: 
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
       ApplyPredicate.getClass().getCanonicalName() ::
