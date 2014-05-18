@@ -1246,7 +1246,7 @@ private object VSearch {
     case Multiply(_, a, b) => modified(a) ++ modified(b)
     case Divide(_, a, b) => modified(a) ++ modified(b)
     case Exp(_, a, b) => modified(a) ++ modified(b)
-    case _ => throw new IllegalArgumentException("Unexpected form" + e)
+    case _ => throw new UnknownOperatorException("Unexpected form", e)
   }
 
   def primed(f: Formula): Seq[NamedSymbol] = f match {
