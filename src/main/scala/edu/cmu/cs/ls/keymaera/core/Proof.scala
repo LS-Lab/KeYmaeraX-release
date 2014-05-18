@@ -637,7 +637,7 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
     require(ass.isAnte && ass.inExpr == HereP)
     val (blacklist, fn) = s.ante(ass.getIndex) match {
       case Equals(d, a, b) =>
-        (variables(a) ++ variables(b),
+        (names(a) ++ names(b),
         new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
             if(e == a) Right(b)
@@ -645,7 +645,7 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })
       case ProgramEquals(a, b) =>
-        (variables(a) ++ variables(b),
+        (names(a) ++ names(b),
         new ExpressionTraversalFunction {
           override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
             if(e == a) Right(b)
@@ -653,7 +653,7 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })
       case Equiv(a, b) =>
-        (variables(a) ++ variables(b),
+        (names(a) ++ names(b),
         new ExpressionTraversalFunction {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
             if (e == a) Right(b)
@@ -1007,7 +1007,7 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   require(p.inExpr == HereP, "We can only skolemize top level formulas");
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
-    val vars = variablesWithout(s, p)
+    val vars = namesIgnoringPosition(s, p)
     val form = s(p)
     val (v,phi) = if(p.isAnte) {
       form match {
@@ -1036,7 +1036,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
     // we need to make sure that the variable does not occur in any other formula in the sequent
-    val vars = variablesWithout(s, p)
+    val vars = namesIgnoringPosition(s, p)
     // TODO: we have to make sure that the variable does not occur in the formula itself
     // if we want to have positions different from HereP
     require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
@@ -1047,7 +1047,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
         "containing a single assignment")
     }
     // check that v is not contained in any other formula
-    val rhsVars = variables(rhs)
+    val rhsVars = names(rhs)
     val v = exp match {
       case x: Variable if(!vars.contains(x) && !rhsVars.contains(x)) => x
       case x: Variable if(vars.contains(x) || rhsVars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
@@ -1179,19 +1179,32 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
 
 //@TODO Review
 object Helper {
- def variables(s: Sequent): Set[NamedSymbol] = {
-   val a = for(f <- s.ante) yield variables(f)
-   val b = for(f <- s.succ) yield variables(f)
-   //@TODO Turn into map(s.ante ++ s.succ)(variables).flatten
-   Set() ++ a.flatten ++ b.flatten
-  }
+  /**
+   * Collect all NamedSymbols occurring in a formula/term/program/game
+   */
+  def names(s: Sequent): Set[NamedSymbol] =  Set() ++ (s.ante ++ s.succ).map((f: Formula) => names(f)).flatten
 
-  def variables[A: FTPG](a: A): Set[NamedSymbol] = variables(a, false)
+  def names[A: FTPG](a: A): Set[NamedSymbol] = names(a, false)
 
-  def freeVariables[A: FTPG](a: A): Set[NamedSymbol] = variables(a, true)
+  /**
+   * Collect all NamedSymbols occurring in a formula/term/program/game ignoring (potentially) bound ones
+   */
+  def freeNames[A: FTPG](a: A): Set[NamedSymbol] = names(a, true)
 
-  //@TODO clarify use and name. Does not just return variables but also function and predicate symbols
-  def variables[A: FTPG](a: A, onlyFree: Boolean): Set[NamedSymbol] = {
+  /**
+   * Collect all NamedSymbols occurring in a formula/term/program/game ignoring those that definitely bound
+   * That is, we add all those written by modalities just to be sure to capture all those that might be read
+   */
+  def certainlyFreeNames[A: FTPG](a: A): Set[NamedSymbol] = names(a, true, true)
+
+  /**
+   * Collect all NamedSymbols occurring in a formula/term/program/game
+   * @param a
+   * @param onlyFree
+   * @tparam A
+   * @return
+   */
+  def names[A: FTPG](a: A, onlyFree: Boolean, certainlyFree: Boolean = false): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     val fn = new ExpressionTraversalFunction {
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
@@ -1218,7 +1231,7 @@ object Helper {
           e match {
             case Forall(v, f) => vars = vars.filter(!v.contains(_))
             case Exists(v, f) => vars = vars.filter(!v.contains(_))
-            case x: Modality => vars = vars.filter(!x.writes.contains(_))
+            case x: Modality if(!certainlyFree) => vars = vars.filter(!x.writes.contains(_))
             case _ =>
           }
         }
@@ -1230,18 +1243,18 @@ object Helper {
   }
 
   /**
-   * Finds all names in a sequent, ignoring the formula at position p.
+   * Finds all names in a sequent, ignoring those in the formula at position p.
    */
-  def variablesWithout(s: Sequent, p: Position): Set[NamedSymbol] = {
+  def namesIgnoringPosition(s: Sequent, p: Position): Set[NamedSymbol] = {
     var vars: Set[NamedSymbol] = Set.empty
     for(i <- 0 until s.ante.length) {
       if(!p.isAnte || i != p.getIndex) {
-        vars ++= variables(s.ante(i))
+        vars ++= names(s.ante(i))
       }
     }
     for(i <- 0 until s.succ.length) {
       if(p.isAnte || i != p.getIndex) {
-        vars ++= variables(s.ante(i))
+        vars ++= names(s.ante(i))
       }
     }
     vars

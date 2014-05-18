@@ -410,7 +410,7 @@ object KeYmaeraPrettyPrinter {
   // Proofs
   //////////////////////////////////////////////////////////////////////////////
   def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
-    val namesToDeclare = Helper.freeVariables(f).toList
+    val namesToDeclare = Helper.freeNames(f).toList
     val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
     val fString = KeYmaeraPrettyPrinter.stringify(f)
     

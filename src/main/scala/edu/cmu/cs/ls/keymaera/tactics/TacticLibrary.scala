@@ -44,7 +44,7 @@ object TacticLibrary {
     }
   }
 
-  def universalClosure(f: Formula): Formula = Forall(Helper.freeVariables(f).toList, f)
+  def universalClosure(f: Formula): Formula = Forall(Helper.certainlyFreeNames(f).toList, f)
 
 //  def deskolemize(f : Formula) = {
 //    val FV = SimpleExprRecursion.getFreeVariables(f)
@@ -465,7 +465,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         getBoundVariables(node.sequent, p) match {
           case Some(s) =>
-            var otherVars = (Helper.variablesWithout(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s)
+            var otherVars = (Helper.namesIgnoringPosition(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s)
             val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
               val vars = otherVars.filter(_._1 == n)
               //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
@@ -502,9 +502,9 @@ object TacticLibrary {
   // exhaustive equality rewriting
   // check variable disjointness between left and right side
   def isEquality(s: Sequent, p: Position, checkDisjointness: Boolean = false): Boolean = {
-    import Helper.variables
+    import Helper.names
     p.isAnte && p.inExpr == HereP && (s.ante(p.getIndex) match {
-      case Equals(_, a, b) => if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else true
+      case Equals(_, a, b) => if (checkDisjointness) names(a).intersect(names(b)).isEmpty else true
       case ProgramEquals(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
       case Equiv(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
       case _ => false
@@ -512,11 +512,11 @@ object TacticLibrary {
   }
 
   def equalityApplicable(left: Boolean, eqPos: Position, p: Position, s: Sequent): Boolean = {
-    import Helper.variables
+    import Helper.names
     var applicable = false
     val (blacklist, f) = s.ante(eqPos.getIndex) match {
       case Equals(_, a, b) => val search = if(left) a else b
-        (variables(a) ++ variables(b),
+        (names(a) ++ names(b),
           new ExpressionTraversalFunction {
             override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
               if (e == search) applicable = true
@@ -524,7 +524,7 @@ object TacticLibrary {
             }
           })
       case ProgramEquals(a, b) => val search = if(left) a else b
-        (variables(a) ++ variables(b),
+        (names(a) ++ names(b),
           new ExpressionTraversalFunction {
             override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
               if (e == search) applicable = true
@@ -532,7 +532,7 @@ object TacticLibrary {
             }
           })
       case Equiv(a, b) => val search = if(left) a else b
-        (variables(a) ++ variables(b),
+        (names(a) ++ names(b),
           new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
               if (e == search) applicable = true
@@ -633,7 +633,7 @@ object TacticLibrary {
 
   def findPosInExpr(left: Boolean, s: Sequent, eqPos: Position): Option[Position] = {
     val eq = s.ante(eqPos.getIndex)
-    val blacklist = Helper.variables(eq)
+    val blacklist = Helper.names(eq)
     val search: Expr = eq match {
       case Equals(_, a, b) => if(left) a else b
       case ProgramEquals(a, b) => if(left) a else b
