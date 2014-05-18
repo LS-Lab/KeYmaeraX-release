@@ -6,6 +6,8 @@ import edu.cmu.cs.ls.keymaera.tools._
 import java.math.BigDecimal
 import java.io.File
 
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+
 class TacticTests extends FlatSpec with Matchers {
   Config.mathlicenses = 1
   Config.maxCPUs = 1
@@ -117,16 +119,29 @@ class TacticTests extends FlatSpec with Matchers {
       true
 
   "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
-    import TacticLibrary._
     val tactic = ((AxiomCloseT ~ findPosSucc(indecisive(true, false)) ~ findPosAnte(indecisive(true, false, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
 
   "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
-    import TacticLibrary._
     val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
+  }
+  
+  "Tactics (propositional)" should "prove A->A for any A" in {
+    val tactic = indecisive(false, false, true)
+    val A = new RandomFormula().nextFormula(5)
+    val formula = Imply(A, A)
+    //@TODO tryProve(formula, tactic) should be (provable)
+  }
+
+  it should "prove A->(B->A) for any A,B" in {
+    val tactic = indecisive(false, false, true)
+    val A = new RandomFormula().nextFormula(5)
+    val B = new RandomFormula().nextFormula(5)
+    val formula = Imply(A, Imply(B, A))
+    //@TODO tryProve(formula, tactic) should be (provable)
   }
 }
