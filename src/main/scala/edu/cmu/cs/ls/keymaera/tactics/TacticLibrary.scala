@@ -440,8 +440,12 @@ object TacticLibrary {
 
   val uniquify = new PositionTactic("Uniquify") {
     // for now only on top level
-    def getAssignment(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = (if (p.isAnte) s.ante else s.succ)(p.index) match {
+    def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
         case Forall(v, _) => Some(v.map(_ match {
+          case Variable(n, i, _) => (n, i)
+          case _ => ???
+        }))
+        case Exists(v, _) => Some(v.map(_ match {
           case Variable(n, i, _) => (n, i)
           case _ => ???
         }))
@@ -449,13 +453,17 @@ object TacticLibrary {
         case DiamondModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
         case a => None
       }
-    override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getAssignment(s, p).isDefined
+    override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getBoundVariables(s, p).isDefined
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def applicable(node: ProofNode): Boolean = {
+        val r = applies(node.sequent, p)
+        println("Applicable to " + node + " at " + node.sequent(p) + " " + r);
+        r
+      }
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        getAssignment(node.sequent, p) match {
+        getBoundVariables(node.sequent, p) match {
           case Some(s) =>
             var otherVars = (Helper.variablesWithout(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s)
             val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
@@ -476,15 +484,13 @@ object TacticLibrary {
                 }
                 otherVars = otherVars ++ Seq((n, tIdx))
                 Some(seqT(new ApplyRule(new AlphaConversion(p, n, idx, n, tIdx)) {
-                  override def applicable(n: ProofNode): Boolean = n == node
+                  override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
                 }, hideT(p)))
               } else {
                 None
               }
             }
-            println("Created " + res)
-            val tactic = res.flatten.reduce(seqT)
-            println("Created " + res.length + " " + tactic)
+            val tactic = res.flatten.reduceRight(seqT)
             Some(tactic)
           case None => None
         }

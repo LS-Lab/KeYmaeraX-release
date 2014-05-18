@@ -318,7 +318,6 @@ object Tactics {
             left.continuation = onChangeAndOnNoChange(node, continuation, onNoChange(node, right))
             left.dispatch(this, node)
           } else {
-            println("Dispatch right " + right.name)
             right.dispatch(this, node)
         }
       }
@@ -395,7 +394,6 @@ object Tactics {
   abstract class ApplyRule(val rule : Rule) extends Tactic("Apply rule " + rule) {
 
     def apply(tool : Tool, node : ProofNode) {
-      println("Trying to apply " + rule)
       if (applicable(node)) {
         incRule()
         val res = measure(node(rule))
