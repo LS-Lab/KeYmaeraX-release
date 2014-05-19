@@ -122,7 +122,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = ((AxiomCloseT | findPosSucc(indecisive(false, true)) | findPosAnte(indecisive(false, true)) | findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(false, true)) | locateAnte(indecisive(false, true)) | locateSucc(indecisive(true, true)) | locateAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -143,7 +143,7 @@ object TermTests {
     val xp1 = Add(Real, x, Number(1))
     val zero = Number(0)
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
-    val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
       Thread.sleep(10)
@@ -161,7 +161,7 @@ object TermTests {
     val xp1 = Add(Real, x, Number(1))
     val zero = Number(0)
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
-    val tactic = ((AxiomCloseT ~ findPosSucc(indecisive(true, false)) ~ findPosAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false)) ~ locateAnte(indecisive(true, false, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
       Thread.sleep(100)
@@ -177,8 +177,8 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val master = ((AxiomCloseT | findPosSucc(indecisive(false, true)) | findPosAnte(indecisive(false, true)) | findPosSucc(indecisive(true, true)) | findPosAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
-    val tactic = ImplyRightFindT & findPosSucc(inductionT(Some(PredicateConstant("inv")))) & master
+    val master = ((AxiomCloseT | locateSucc(indecisive(false, true)) | locateAnte(indecisive(false, true)) | locateSucc(indecisive(true, true)) | locateAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val tactic = ImplyRightFindT & locateSucc(inductionT(Some(PredicateConstant("inv")))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {

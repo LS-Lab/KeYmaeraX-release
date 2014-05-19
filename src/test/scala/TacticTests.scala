@@ -119,13 +119,13 @@ class TacticTests extends FlatSpec with Matchers {
       true
 
   "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT ~ findPosSucc(indecisive(true, false)) ~ findPosAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false)) ~ locateAnte(indecisive(true, false, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
 
   "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
@@ -148,10 +148,10 @@ class TacticTests extends FlatSpec with Matchers {
    * Tactic that applies propositional proof rules exhaustively but only closes by axiom lazyly, i.e. if no other rule applies.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def lazyPropositional = ((findPosSucc(indecisive(false, false, true)) | findPosAnte(indecisive(false, false, true)) | closeT)*)
+  def lazyPropositional = ((locate(indecisive(false, false, true)) | closeT)*)
 
   "Tactics (propositional)" should "prove A->A for any A" in {
-    val tactic = propositional
+    val tactic = lazyPropositional
     for (i <- 1 to 5) {
       val A = new RandomFormula().nextFormula(5)
       val formula = Imply(A, A)
@@ -160,7 +160,7 @@ class TacticTests extends FlatSpec with Matchers {
   }
 
   it should "prove A->(B->A) for any A,B" in {
-    val tactic = propositional
+    val tactic = lazyPropositional
     for (i <- 1 to 5) {
       val A = new RandomFormula().nextFormula(5)
       val B = new RandomFormula().nextFormula(5)
@@ -170,7 +170,7 @@ class TacticTests extends FlatSpec with Matchers {
   }
 
   it should "prove (A->(B->C)) <-> ((A&B)->C) for any A,B,C" in {
-    val tactic = propositional
+    val tactic = lazyPropositional
     for (i <- 1 to 5) {
       val A = new RandomFormula().nextFormula(3)
       val B = new RandomFormula().nextFormula(3)
@@ -181,11 +181,34 @@ class TacticTests extends FlatSpec with Matchers {
   }
 
   it should "prove (~A->A) -> A for any A" in {
-    val tactic = propositional
+    val tactic = lazyPropositional
     for (i <- 1 to 5) {
       val A = new RandomFormula().nextFormula(5)
       val formula = Imply(Imply(Not(A),A),A)
       prove(formula, tactic) should be (Provable)
     }
   }
+  
+  it should "prove (A->B) && (C->D) |= (A&C)->(B&D) for any A,B,C,D" in {
+    val tactic = lazyPropositional
+    for (i <- 1 to 5) {
+      val A = new RandomFormula().nextFormula(5)
+      val B = new RandomFormula().nextFormula(5)
+      val C = new RandomFormula().nextFormula(5)
+      val D = new RandomFormula().nextFormula(5)
+      val formula = Imply(And(Imply(A,B),Imply(C,D)) , Imply(And(A,C),And(B,D)))
+      prove(formula, tactic) should be (Provable)
+    }
+  }
+  
+  it should "prove ((A->B)->A)->A for any A,B" in {
+    val tactic = lazyPropositional
+    for (i <- 1 to 5) {
+      val A = new RandomFormula().nextFormula(5)
+      val B = new RandomFormula().nextFormula(5)
+      val formula = Imply(Imply(Imply(A,B),A),A)
+      prove(formula, tactic) should be (Provable)
+    }
+  }
+  
 }

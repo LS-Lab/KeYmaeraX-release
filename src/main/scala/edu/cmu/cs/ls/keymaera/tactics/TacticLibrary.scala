@@ -12,6 +12,8 @@ import edu.cmu.cs.ls.keymaera.core.PosInExpr
  * In this object we collect wrapper tactics around the basic rules and axioms.
  *
  * Created by Jan-David Quesel on 4/28/14.
+ * @author Jan-David Quesel
+ * @author aplatzer
  */
 object TacticLibrary {
 
@@ -33,11 +35,11 @@ object TacticLibrary {
   def master(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
     def repeat(t: Tactic):Tactic = if(exhaustive) repeatT(t) else t
     repeat(closeT
-      | findPosSucc(indecisive(false, true))
-      | findPosAnte(indecisive(false, true))
-      | findPosSucc(indecisive(true, true))
-      | findPosAnte(indecisive(true, true))
-      | findPosSucc(genInductionT(invGenerator))
+      | locateSucc(indecisive(false, true))
+      | locateAnte(indecisive(false, true))
+      | locateSucc(indecisive(true, true))
+      | locateAnte(indecisive(true, true))
+      | locateSucc(genInductionT(invGenerator))
       |  eqLeftFind
     ) ~ quantifierEliminationT("Mathematica")
   }
@@ -46,7 +48,7 @@ object TacticLibrary {
    * Tactic that applies propositional proof rules exhaustively.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def propositional = ((closeT | findPosSucc(indecisive(false, false, true)) | findPosAnte(indecisive(false, false, true)))*)
+  def propositional = ((closeT | locate(indecisive(false, false, true)))*)
   
 
   /*******************************************************************
@@ -178,7 +180,7 @@ object TacticLibrary {
                     }
                     case _ => None
                   }
-                  val contTactic = ((closeT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+                  val contTactic = ((closeT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
                   def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
                   val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
                   val tr = reInst(res) match {
@@ -287,7 +289,10 @@ object TacticLibrary {
     * *******************************************
     */
 
-  def findPosAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosAnte (" + posT.name + ")", posT) {
+  /**
+   * tactic locating an antecedent position where PositionTactic is applicable.
+   */
+  def locateAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
@@ -301,12 +306,38 @@ object TacticLibrary {
     }
   }
 
-  def findPosSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("FindPosSucc (" + posT.name + ")", posT) {
+  /**
+   * tactic locating a succedent position where PositionTactic is applicable.
+   */
+  def locateSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.succ.length) {
         val pos = SuccPosition(i)
+        if(posT.applies(s, pos)) {
+          return Some(pos)
+        }
+      }
+      return None
+    }
+  }
+
+  /**
+   * tactic locating an antecedent or succedent position where PositionTactic is applicable.
+   */
+  def locate(posT: PositionTactic): Tactic = new ApplyPositionTactic("locate (" + posT.name + ")", posT) {
+    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
+
+    override def findPosition(s: Sequent): Option[Position] = {
+      for (i <- 0 until s.succ.length) {
+        val pos = SuccPosition(i)
+        if(posT.applies(s, pos)) {
+          return Some(pos)
+        }
+      }
+      for (i <- 0 until s.ante.length) {
+        val pos = AntePosition(i)
         if(posT.applies(s, pos)) {
           return Some(pos)
         }
@@ -326,7 +357,7 @@ object TacticLibrary {
     }
   }
 
-  def AndLeftFindT: Tactic = findPosAnte(AndLeftT)
+  def AndLeftFindT: Tactic = locateAnte(AndLeftT)
 
   def AndRightT: PositionTactic = new PositionTactic("AndRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
@@ -339,7 +370,7 @@ object TacticLibrary {
     }
   }
 
-  def AndRightFindT: Tactic = findPosSucc(AndRightT)
+  def AndRightFindT: Tactic = locateSucc(AndRightT)
 
   def OrLeftT: PositionTactic = new PositionTactic("OrLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
@@ -352,7 +383,7 @@ object TacticLibrary {
     }
   }
 
-  def OrLeftFindT: Tactic = findPosAnte(OrLeftT)
+  def OrLeftFindT: Tactic = locateAnte(OrLeftT)
 
   def OrRightT: PositionTactic = new PositionTactic("OrRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
@@ -365,7 +396,7 @@ object TacticLibrary {
     }
   }
 
-  def OrRightFindT: Tactic = findPosSucc(OrRightT)
+  def OrRightFindT: Tactic = locateSucc(OrRightT)
 
   def ImplyLeftT: PositionTactic = new PositionTactic("ImplyLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
@@ -378,7 +409,7 @@ object TacticLibrary {
     }
   }
 
-  def ImplyLeftFindT: Tactic = findPosAnte(ImplyLeftT)
+  def ImplyLeftFindT: Tactic = locateAnte(ImplyLeftT)
 
   def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
@@ -391,7 +422,7 @@ object TacticLibrary {
     }
   }
 
-  def ImplyRightFindT: Tactic = findPosSucc(ImplyRightT)
+  def ImplyRightFindT: Tactic = locateSucc(ImplyRightT)
 
   def EquivLeftT: PositionTactic = new PositionTactic("EquivLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
@@ -404,7 +435,7 @@ object TacticLibrary {
     }
   }
 
-  def EquivLeftFindT: Tactic = findPosAnte(EquivLeftT)
+  def EquivLeftFindT: Tactic = locateAnte(EquivLeftT)
 
   def EquivRightT: PositionTactic = new PositionTactic("EquivRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && (s.succ(p.index) match {
@@ -417,7 +448,7 @@ object TacticLibrary {
     }
   }
 
-  def EquivRightFindT: Tactic = findPosSucc(EquivRightT)
+  def EquivRightFindT: Tactic = locateSucc(EquivRightT)
 
   def NotLeftT: PositionTactic = new PositionTactic("NotLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
@@ -430,7 +461,7 @@ object TacticLibrary {
     }
   }
 
-  def NotLeftFindT: Tactic = findPosAnte(NotLeftT)
+  def NotLeftFindT: Tactic = locateAnte(NotLeftT)
 
   def NotRightT: PositionTactic = new PositionTactic("NotRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
@@ -443,7 +474,7 @@ object TacticLibrary {
     }
   }
 
-  def NotRightFindT: Tactic = findPosSucc(NotRightT)
+  def NotRightFindT: Tactic = locateSucc(NotRightT)
 
   def hideT: PositionTactic = new PositionTactic("Hide") {
     def applies(s: Sequent, p: Position) = true
@@ -470,7 +501,7 @@ object TacticLibrary {
 
   def cutT(f: Formula): Tactic = cutT((x: ProofNode) => Some(f))
 
-  def closeT : Tactic = AxiomCloseT | findPosAnte(CloseTrueT) | findPosSucc(CloseFalseT)
+  def closeT : Tactic = AxiomCloseT | locateAnte(CloseTrueT) | locateSucc(CloseFalseT)
 
   def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(AxiomClose(a, b)) {
       override def applicable(node: ProofNode): Boolean = a.isAnte && !b.isAnte && getFormula(node.sequent, a) == getFormula(node.sequent, b)
@@ -542,12 +573,12 @@ object TacticLibrary {
   }
 
   // assignment tactic (alpha renaming and then assignment rule)
-  def assignmentFindAnte = findPosAnte(assignment)
-  def assignmentFindSucc = findPosSucc(assignment)
+  def assignmentFindAnte = locateAnte(assignment)
+  def assignmentFindSucc = locateSucc(assignment)
   def assignmentFind = assignmentFindSucc | assignmentFindAnte
   // it would be great if we could access the same position to apply the imply right rule
   // FIXME: this only works for toplevel positions since there the positions are stable
-  def assignmentFindImpl = findPosSucc(assignment & ImplyRightT) | findPosAnte(assignment & ImplyLeftT)
+  def assignmentFindImpl = locateSucc(assignment & ImplyRightT) | locateAnte(assignment & ImplyLeftT)
 
   val assignment = new PositionTactic("Assignment") {
     // for now only on top level
@@ -787,9 +818,9 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(true, p)* else eqRewritePos(true, p)
   }
 
-  val eqLeftFind = findPosAnte(eqLeft(false))
+  val eqLeftFind = locateAnte(eqLeft(false))
 
-  val eqLeftFindExhaustive = findPosAnte(eqLeft(true))
+  val eqLeftFindExhaustive = locateAnte(eqLeft(true))
 
   def eqRight(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Left to Right") {
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p, true) && findPosInExpr(false, s, p).isDefined
@@ -797,9 +828,9 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(false, p)* else eqRewritePos(false, p)
   }
 
-  val eqRightFind = findPosAnte(eqRight(false))
+  val eqRightFind = locateAnte(eqRight(false))
 
-  val eqRightFindExhaustive = findPosAnte(eqRight(true))
+  val eqRightFindExhaustive = locateAnte(eqRight(true))
 
   // axiom wrappers
   // TODO: Use findPosInExpr to find a position that matches the left side of the axiom and cut in the resulting instance
