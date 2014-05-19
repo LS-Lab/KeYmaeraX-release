@@ -43,7 +43,11 @@ import scala.language.implicitConversions
 
 
 */
-
+// TODO: In order to stop execution we should explicitly schedule a "checkStop" tactic to react on that signal
+// for example a valid point to stop is after some loop unrolling. If we just stop at an arbitrary point we run into
+// the issue, that that might not be a valid point to ever resume the tactic (e.g., we have stopped right before
+// a uniform substitution or something (this was different for KeYmaera 3 where the strategy was stateless).
+// TODO: clearly mark exit points of tactics to give a & (b, c) a well defined meaning over complex tactics instead of just rule applications
 object Tactics {
 
   val KeYmaeraScheduler = new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))

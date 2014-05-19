@@ -213,6 +213,25 @@ object TermTests {
     writeToFile(new File(output), tree)
   }
 
+  def test11(input: String, output: String) {
+    import TacticLibrary._
+    val parse = new KeYmaeraParser()
+    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
+    println(KeYmaeraPrettyPrinter.stringify(i2))
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
+    val inv = GreaterThan(Real, Variable("x", None, Real), Number(0))
+    val tactic = master(new Generate(inv), true)
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    Thread.sleep(3000)
+    /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(100)
+      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
+      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
+    }*/
+    val tree = print(r)
+    println(tree)
+    writeToFile(new File(output), tree)
+  }
 
   def readFile(input: String): String = try {
     val fr = new BufferedReader(new FileReader(input))
