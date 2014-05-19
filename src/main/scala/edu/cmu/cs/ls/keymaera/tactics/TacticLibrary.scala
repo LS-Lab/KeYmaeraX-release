@@ -41,7 +41,7 @@ object TacticLibrary {
       | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
-    ) ~ quantifierEliminationT("Mathematica")
+    ) ~ arithmeticT
   }
 
   /**
@@ -49,7 +49,41 @@ object TacticLibrary {
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
   def propositional = ((closeT | locate(indecisive(true, false, false, true)))*)
-  
+
+
+  /**
+   * Tactic for arithmetic
+   * @return
+   */
+  def arithmeticT = hideUnnecessaryLeftEqT ~ quantifierEliminationT("Mathematica")
+
+  def hideUnnecessaryLeftEqT: Tactic = new ConstructionTactic("Hide Equations") {
+    import Helper.names
+    def collectEquations(s: Sequent): Seq[(Int, Term, Term)] =
+      (for(i <- 0 until s.ante.length)
+        yield s.ante(i) match {
+          case Equals(_, a, b) if(names(a).intersect(names(b)).isEmpty) => Some((i, a, b))
+          case _ => None
+        }
+      ).flatten
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      val eqS: Seq[(Int, Term, Term)] = collectEquations(node.sequent)
+      val s = node.sequent
+      val anteNames = for (i <- 0 until s.ante.length)
+      yield (i, Helper.certainlyFreeNames(s.ante(i)))
+
+      val succNames = s.succ.map(Helper.certainlyFreeNames(_)).flatten
+
+      val res = (for ((i, l, r) <- eqS)
+        yield if (succNames.contains(l)
+            || anteNames.filter((j: (Int, Set[NamedSymbol])) => i != j._1).map(_._2).flatten.contains(l)) None
+          else Some(i)
+        ).flatten.sortWith((i: Int, j: Int) => i > j)
+      if(res.isEmpty) Some(NilT) else Some(res.map((i: Int) => hideT(AntePosition(i))).reduce(seqT(_, _)))
+    }
+
+    override def applicable(node: ProofNode): Boolean = true
+  }
 
   /*******************************************************************
    * Elementary tactics
