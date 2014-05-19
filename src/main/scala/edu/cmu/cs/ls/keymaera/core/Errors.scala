@@ -19,15 +19,14 @@ class ProverException private(ex: RuntimeException) extends RuntimeException(ex)
 /**
  * Critical exceptions from KeYmaera's Prover Core.
  */
-class CoreException(msg:String) extends ProverException(msg) {
-}
+class CoreException(msg:String) extends ProverException(msg) {}
 
-class SubstitutionClashException(msg:String, s:Substitution, e:Expr) extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString) {
-}
+class SubstitutionClashException(msg:String, s:Substitution, e:Expr) extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString) {}
+
+class SkolemClashException(msg:String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 
 class InapplicableRuleException(msg:String, r:Rule, s:Sequent) extends CoreException(msg + "\nRule " + r + " applied to " + s) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
 }
 
-class UnknownOperatorException(msg:String, e:Expr) extends ProverException(msg + "\n" + e.prettyString) {
-}
+class UnknownOperatorException(msg:String, e:Expr) extends ProverException(msg + "\n" + e.prettyString) {}

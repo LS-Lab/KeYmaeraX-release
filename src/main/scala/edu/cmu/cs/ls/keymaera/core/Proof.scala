@@ -1026,27 +1026,21 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
- * @TODO Review
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
-  require(p.inExpr == HereP, "We can only skolemize top level formulas");
+  require(p.inExpr == HereP, "Can only skolemize top level formulas");
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
+    // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
     val vars = namesIgnoringPosition(s, p)
-    val form = s(p)
-    val (v,phi) = if(p.isAnte) {
-      form match {
-        case Exists(v, phi) => if(!(vars.map(v.contains).contains(true))) (v, phi) else
-          throw new CoreException("Variables to be skolemized should not appear anywhere in the sequent")
-        case _ => throw new InapplicableRuleException("Skolemization is only applicable to existential quantifiers in the antecedent", this, s)
-      }
-    } else {
-      form match {
-        case Forall(v, phi) => if(!(vars.map(v.contains).contains(true))) (v, phi) else
-          throw new CoreException("Variables to be skolemized should not appear anywhere in the sequent")
-        case _ => throw new InapplicableRuleException("Skolemization is only applicable to universal quantifiers in the succedent", this, s)
-      }
+    val (v,phi) = s(p) match {
+      case Forall(v, phi) if (!p.isAnte) => (v,phi)
+      case Exists(v, phi) if (p.isAnte) => (v,phi)
+      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers", this, s)
     }
+    if (vars.map(v.contains).contains(true))
+      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
+        vars.intersect(v.toSet))
     List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
   }
 }
@@ -1268,18 +1262,19 @@ object Helper {
   }
 
   /**
-   * Finds all names in a sequent, ignoring those in the formula at position p.
+   * Finds all names in a sequent, ignoring those in the formula at top-level position p.
    */
   def namesIgnoringPosition(s: Sequent, p: Position): Set[NamedSymbol] = {
+    require(p.inExpr == HereP, "namesIgnoringPosition only implemented for top-level positions HereP");
     var vars: Set[NamedSymbol] = Set.empty
     for(i <- 0 until s.ante.length) {
-      if(!p.isAnte || i != p.getIndex) {
+      if(!(p.isAnte && i == p.getIndex)) {
         vars ++= names(s.ante(i))
       }
     }
     for(i <- 0 until s.succ.length) {
-      if(p.isAnte || i != p.getIndex) {
-        vars ++= names(s.ante(i))
+      if(!(!p.isAnte && i == p.getIndex)) {
+        vars ++= names(s.succ(i))
       }
     }
     vars
