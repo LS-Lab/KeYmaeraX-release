@@ -67,6 +67,42 @@ object Sequent {
    *============
    */
 
+  class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
+       //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
+    //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
+    @volatile private[this] var closed : Boolean = false
+    @volatile var status               : Status  = Unfinished
+
+    def isLocalClosed: Boolean = closed
+
+    //@TODO Purpose and function unclear
+    def closeNode(s : Status) =
+      this.synchronized {
+        if (!closed) {
+          closed = true
+          status = s
+          } else {
+            assert (status == s, "status unchanged when closing already closed ProofNode with status " + status + " to " + s + " for " + this)
+          }
+      }
+
+      //@TODO Purpose and function unclear
+    def checkParentClosed() : Boolean = {
+      var node = proofNode
+      while (node != null && !node.info.isLocalClosed) node = node.parent
+      if (node == null) {
+        return false
+      } else {
+        node = proofNode
+        while (node != null && !node.info.isLocalClosed) {
+          node.info.closeNode(ParentClosed)
+          node = node.parent
+        }
+        return true
+      }
+    }
+  }
+
   sealed case class ProofStep(rule : Rule, subgoals : List[ProofNode])
   sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
 
@@ -108,39 +144,8 @@ object Sequent {
       result
     }
 
-    //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
-    //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
-    @volatile private[this] var closed : Boolean = false
-    @volatile var status               : Status  = Unfinished
+    val info: ProofNodeInfo = new ProofNodeInfo(if(parent == null) "" else parent.info.branchLabel, this)
 
-    def isLocalClosed: Boolean = closed
-
-    //@TODO Purpose and function unclear
-    def closeNode(s : Status) =
-      this.synchronized {
-        if (!closed) {
-          closed = true
-          status = s
-          } else {
-            assert (status == s, "status unchanged when closing already closed ProofNode with status " + status + " to " + s + " for " + this)
-          }
-      }
-
-      //@TODO Purpose and function unclear
-    def checkParentClosed() : Boolean = {
-      var node = this
-      while (node != null && !node.isLocalClosed) node = node.parent
-      if (node == null) {
-        return false
-      } else {
-        node = this
-        while (node != null && !node.isLocalClosed) {
-          node.closeNode(ParentClosed)
-          node = node.parent
-        }
-        return true
-      }
-    }
   }
 
   /**

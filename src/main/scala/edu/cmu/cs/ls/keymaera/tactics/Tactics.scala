@@ -230,7 +230,7 @@ object Tactics {
 
   def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     tFrom.limit.propagate(tFrom)
-    result.foreach(n => n.checkParentClosed())
+    result.foreach(n => n.info.checkParentClosed())
   }
 
   /*
@@ -361,6 +361,15 @@ object Tactics {
   def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
       ifElseT(cond, thenT, NilT)
 
+  def switchT(generate: ProofNode => Tactic) = new Tactic("Switch") {
+    def applicable(node : ProofNode) = generate(node).applicable(node)
+    def apply(tool : Tool, node : ProofNode) = {
+      val t = generate(node)
+      t.continuation = continuation
+      t.dispatch(this, node)
+    }
+  }
+
   def branchT(tcts: Tactic*): Tactic = new Tactic("branch") {
     def applicable(node: ProofNode) = true
 
@@ -451,6 +460,18 @@ object Tactics {
     }
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic]
+  }
+
+  object LabelBranch {
+    def apply(s: String): Tactic = new LabelBranch(s)
+  }
+  class LabelBranch(s: String) extends Tactic("Label branch " + s) {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.info.branchLabel = s
+      continuation(this, Success, Seq(node))
+    }
   }
 
 }
