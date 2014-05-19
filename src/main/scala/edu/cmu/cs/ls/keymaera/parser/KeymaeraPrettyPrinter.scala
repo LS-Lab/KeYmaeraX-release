@@ -164,12 +164,24 @@ object KeYmaeraPrettyPrinter {
     case False() => FALSE
     case True() => TRUE
     
-    case PredicateConstant(name,_) => name
-    case ProgramConstant(name, _) => name
-    case Variable(name, _,_) => name
+    case PredicateConstant(name,i) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
+    case ProgramConstant(name, i) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
+    case Variable(name, i,_) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
     
-    case Function(name,index,domain,argSorts) => name
-    
+    case Function(name,index,domain,argSorts) => name + (index match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
+
     /** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
@@ -274,9 +286,9 @@ object KeYmaeraPrettyPrinter {
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
+      LessEquals.getClass().getCanonicalName()    ::
       GreaterEquals.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
-      LessThan.getClass().getCanonicalName()    :: 
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
       ApplyPredicate.getClass().getCanonicalName() ::
@@ -398,7 +410,7 @@ object KeYmaeraPrettyPrinter {
   // Proofs
   //////////////////////////////////////////////////////////////////////////////
   def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
-    val namesToDeclare = Helper.freeVariables(f).toList
+    val namesToDeclare = Helper.freeNames(f).toList
     val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
     val fString = KeYmaeraPrettyPrinter.stringify(f)
     
@@ -407,6 +419,7 @@ object KeYmaeraPrettyPrinter {
     
     val pw = new java.io.PrintWriter(file)
     pw.write(fileContents)
+    //@TODO Read and parse file again. Compare with f.
     pw.close()
   }
   

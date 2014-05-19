@@ -4,6 +4,7 @@ import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 import scala.math.BigDecimal
+import java.io.FileReader
 
 /**
  * An abstract interface to Mathematica link implementations.
@@ -14,7 +15,7 @@ import scala.math.BigDecimal
  * 
  * @author Nathan Fulton
  */
-trait MathematicaLink extends Tool with QETool {
+trait MathematicaLink extends QETool {
   def run(cmd : String) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
   def run(cmd : com.wolfram.jlink.Expr) : (String, edu.cmu.cs.ls.keymaera.core.Expr)
   
@@ -53,9 +54,18 @@ trait MathematicaLink extends Tool with QETool {
  */
 class JLinkMathematicaLink extends  MathematicaLink {
   val ml : KernelLink = {
+    val call: String = try {
+      import java.io.File
+      val prop = new java.util.Properties()
+      val f = new File(System.getProperties.get("user.home") + File.separator + ".keymaera" + File.separator + "proof-settings.props")
+      prop.load(new FileReader(f))
+      prop.get("[MathematicaOptions]mathKernel").asInstanceOf[String]
+    } catch {
+      case x: java.io.IOException => "MathKernel"
+    }
     MathLinkFactory.createKernelLink(Array[String](
       "-linkmode", "launch",
-      "-linkname", "MathKernel -mathlink"))
+      "-linkname", call + " -mathlink"))
   }
   ml.discardAnswer()
 

@@ -42,9 +42,8 @@
 
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.Tool
+import edu.cmu.cs.ls.keymaera.core.{Failed, Tool, ProofNode}
 import Config._
-import edu.cmu.cs.ls.keymaera.core.ProofNode
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import scala.Array
@@ -70,8 +69,9 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[T
       node.checkParentClosed
     }
     if (!node.isLocalClosed) {
-      println("Exectuing " + tactic)
-      tactic(tool, node)
+      if(tactic.applicable(node))
+        tactic(tool, node)
+      else tactic.continuation(tactic, Failed, Seq(node))
     }
   }
 
@@ -80,8 +80,6 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[T
 class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) extends java.lang.Runnable {
 
   override def run() {
-    println ("I think I am " + id + " therefor I am: " + this)
-
     @volatile var runnable : Boolean = true
     @volatile var stop     : Boolean = false
 
@@ -89,9 +87,7 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
       /* pick tactic; execute apply; wait for interrupts , ... */
       try {
         try {
-          println("checking for tactic " + id)
           val t = scheduler.prioList.dequeue()
-          println("Found " + t.tactic.name)
           t.execute(tool)
           if (Thread.interrupted) {
             throw new InterruptedException()
@@ -101,7 +97,6 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
             /* poll vs. wait */
             scheduler.synchronized {
               scheduler.blocked = scheduler.blocked + 1
-              println("Waiting " + id)
               scheduler.wait()
             }
           }
@@ -137,7 +132,6 @@ class Scheduler(tools : Seq[Tool]) {
   thread.foreach(_.start())
 
   def dispatch(t : TacticWrapper) : this.type = {
-    println("Dispatching " + t.tactic.name)
     prioList += t
     this.synchronized {
       if (blocked > 0) {

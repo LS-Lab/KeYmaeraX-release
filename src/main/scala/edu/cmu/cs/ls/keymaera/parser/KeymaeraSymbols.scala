@@ -118,8 +118,8 @@ object ParseSymbols extends KeYmaeraSymbols {
   val COMMA = ","
 
   //**Formulas
-  val TRUE      = "⊤"
-  val FALSE     = "⊥"
+  val TRUE      = "true"//"⊤"
+  val FALSE     = "false"//"⊥"
   val NEGATE    = "!" //¬
   val AND       = "&" //∧
   val OR        = "|" //∨

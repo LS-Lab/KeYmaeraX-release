@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaera.tools.{JLinkMathematicaLink, QETool}
 /**
  * Tool instance (e.g., a specific mathematica kernel)
  */
-abstract class Tool {
+abstract class Tool(val name: String) {
 
   /**
    * Check whether the managed tool is still alive and recover it if not.
@@ -30,8 +30,8 @@ abstract class Tool {
 
 }
 
-object KeYmaera extends Tool {}
+object KeYmaera extends Tool("KeYmaera") {}
 
-class Mathematica extends Tool {
+class Mathematica extends Tool("Mathematica") {
   private[core] val cricitalQE: QETool = new JLinkMathematicaLink
 }

@@ -136,7 +136,8 @@ object Tactics {
     def propagate(s : Stats) : Boolean = {
         var p = this
         var r = false
-        while (p != null) r = p.update(s) || r
+        // FIXME: what was the intention of this loop? It's an infinite loop like this (therefore commented out for now)
+        /*while (p != null)*/ r = p.update(s) || r
         s.clear()
         return r
     }
@@ -163,13 +164,15 @@ object Tactics {
   // fix me if you want to start with configurable default limit
   val defaultLimits : Limits = new Limits(None, None, None)
 
+  type Continuation = (Tactic, Status, Seq[ProofNode]) => Unit
+
   abstract class Tactic(val name : String) extends Stats {
 
     var scheduler : Scheduler = KeYmaeraScheduler
 
     var limit  : Limits = defaultLimits
 
-    var continuation : (Tactic, Status, Seq[ProofNode]) => Unit = stop
+    var continuation : Continuation = stop
 
     override def toString: String = name
 
@@ -205,7 +208,8 @@ object Tactics {
     // t1 ~ t2 = (t1 & t2) | t2
     def ~(o: Tactic): Tactic = weakSeqT(this, o)
     // execute this tactic and the given tactics on the resulting branches
-    def &(o: Tactic*): Tactic = seqComposeT(this, o: _*)
+    def &(a: Tactic, o: Tactic*): Tactic = seqComposeT(this, a, o: _*)
+    def &&(a: Tactic, o: Tactic*): Tactic = seqComposeExactT(this, a, o: _*)
     // create an or-branch for each given tactic
     def <(tcts: Tactic*) = branchT(this :: tcts.toList: _*)
   }
@@ -232,7 +236,6 @@ object Tactics {
   */
 
   def onSuccess(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
-    require(tNext.length > 0)
     if (status == Success && result.length > 0) {
       val len = math.max(tNext.length, result.length)
       def cont[A](s: Seq[A]) = Stream.continually(s).flatten.take(len).toList
@@ -248,8 +251,12 @@ object Tactics {
     }
   }
 
-  def unconditionally(tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
-    result.foreach((n : ProofNode) => tNext.dispatch(tFrom, n))
+  def unconditionally(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+    if(result.length > 0) {
+      val len = math.max(tNext.length, result.length)
+      def cont[A](s: Seq[A]) = Stream.continually(s).flatten.take(len).toList
+      for ((t, n) <- cont(tNext) zip cont(result)) t.dispatch(tFrom, n)
+    }
   }
 
   def onChange(n : ProofNode, tNext : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
@@ -260,16 +267,10 @@ object Tactics {
     if (Seq(n) == result) tNext.dispatch(tFrom, n)
   }
 
-  def onChangeAndOnNoChange(n : ProofNode, tChange : Tactic, noChange: (Tactic, Status, Seq[ProofNode]) => Unit)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
+  def onChangeAndOnNoChange(n : ProofNode, change: Continuation, noChange: Continuation)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     if (Seq(n) == result) noChange(tFrom, status, result)
-    else result.foreach((pn: ProofNode) => tChange.dispatch(tFrom, pn))
+    else change(tFrom, status, result)
   }
-
-  def onChangeAndOnNoChange(n : ProofNode, tChange: (Tactic, Status, Seq[ProofNode]) => Unit, tNoChange : Tactic)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
-    if (Seq(n) == result) tNoChange.dispatch(tFrom, n)
-    else result.foreach((pn: ProofNode) => tChange(tFrom, status, result))
-  }
-
 
   def seqT(left : Tactic, right : Tactic) =
     new Tactic("Seq(" + left.name + "," + right.name + ")") {
@@ -282,49 +283,43 @@ object Tactics {
       }
     }
 
-  def seqComposeT(left: Tactic, rights: Tactic*) =
-    new Tactic("SeqComposeT(" + left.name + ", " + rights.mkString(", ") + ")") {
+  def seqComposeT(left: Tactic, right: Tactic, rights: Tactic*) =
+    new Tactic("SeqComposeT(" + left.name + ", " + right + ", " + rights.map(_.name).mkString(", ") + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
-        if(rights.length > 0) {
-          for (t <- rights)
-            t.continuation = continuation
-          left.continuation = onSuccess(rights: _*)
-        } else {
-          left.continuation = continuation
-        }
+        val r = right +: rights
+        for (t <- r)
+          t.continuation = continuation
+        left.continuation = onSuccess(r: _*)
         left.dispatch(this, node)
       }
     }
 
-   def seqComposeExactT(left: Tactic, rights: Tactic*) =
-    new Tactic("SeqComposeT(" + left.name + ", " + rights.mkString(", ") + ")") {
+   def seqComposeExactT(left: Tactic, right: Tactic, rights: Tactic*) =
+    new Tactic("SeqComposeExactT(" + left.name + ", " + right.name + ", " + rights.map(_.name).mkString(", ") + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
-        if(rights.length > 0) {
-          for (t <- rights)
-            t.continuation = continuation
-          left.continuation = onSuccessExact(rights: _*)
-        } else {
-          left.continuation = continuation
-        }
+        val r = right +: rights
+        for (t <- r)
+          t.continuation = continuation
+        left.continuation = onSuccessExact(r: _*)
         left.dispatch(this, node)
       }
     }
 
-  def eitherT(left : Tactic, right : Tactic) =
+  def eitherT(left : Tactic, right : Tactic): Tactic =
     new Tactic("Either(" + left.name + "," + right.name + ")") {
-      def applicable(node : ProofNode) = left.applicable(node) || right.applicable(node)
+      def applicable(node : ProofNode): Boolean = left.applicable(node) || right.applicable(node)
 
       def apply(tool : Tool, node : ProofNode) = {
         right.continuation = continuation
         if(left.applicable(node)) {
-          left.continuation = onChangeAndOnNoChange(node, continuation, right)
-          left.dispatch(this, node)
-        } else {
-          right.dispatch(this, node)
+            left.continuation = onChangeAndOnNoChange(node, continuation, onNoChange(node, right))
+            left.dispatch(this, node)
+          } else {
+            right.dispatch(this, node)
         }
       }
     }
@@ -373,13 +368,16 @@ object Tactics {
     }
   }
 
-  // def branchRepeatT(t: Tactic): Tactic = branchT(t, () => branchRepeatT(t))
   def repeatT(t: Tactic): Tactic = new Tactic("Repeat(" + t.name + ")") {
-    def applicable(node: ProofNode) = t.applicable(node)
+    def applicable(node: ProofNode) = true
 
     def apply(tool: Tool, node: ProofNode) = {
-      t.continuation = onChangeAndOnNoChange(node, this, continuation)
-      t.dispatch(this, node)
+      if(t.applicable(node)) {
+        t.continuation = onChangeAndOnNoChange(node, onChange(node, this), continuation)
+        t.dispatch(this, node)
+      } else {
+        continuation(this, Success, Seq(node))
+      }
     }
   }
 
@@ -397,7 +395,6 @@ object Tactics {
   abstract class ApplyRule(val rule : Rule) extends Tactic("Apply rule " + rule) {
 
     def apply(tool : Tool, node : ProofNode) {
-      println("Trying to apply " + rule)
       if (applicable(node)) {
         incRule()
         val res = measure(node(rule))

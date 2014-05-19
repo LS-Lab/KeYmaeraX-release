@@ -18,8 +18,8 @@ object ExpressionTraversal {
 
   type FTPG[T] = union[Term]#and[Formula]#and[Program]#and[Game]#andProvideEvidence[T]
 
-  def fail(x: Expr) = throw new IllegalStateException("Unimplemented case in Expr traversal: " + x)
-  def failFTPG[T, A : FTPG](x: A) = throw new IllegalStateException("Unimplemented case in Expr traversal: " + x)
+  def fail(x: Expr) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expr])
+  def failFTPG[T, A : FTPG](x: A) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expr])
 
   trait StopTraversal
   val stop = new StopTraversal {}

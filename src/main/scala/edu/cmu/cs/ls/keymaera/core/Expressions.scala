@@ -99,19 +99,7 @@ object TupleT {
 
 
 /* subtype of a given type; for example TimeT = Subtype("the time that passes", Real) */
-case class Subtype(name : String, sort : Sort) extends Sort
-
-object PredefinedSorts {
-  val RealXReal       = TupleT(Real, Real)
-  val BoolXBool       = TupleT(Bool, Bool)
-  val GameXBool       = TupleT(GameSort, Bool)
-  val BoolXProgram    = TupleT(Bool, ProgramSort)
-  val GameXGame       = TupleT(GameSort, GameSort)
-  val ProgramXProgram = TupleT(ProgramSort, ProgramSort)
-  val BoolXProgramXProgram    = TupleT(Bool, ProgramXProgram)
-}
-
-import PredefinedSorts._
+//case class Subtype(name : String, sort : Sort) extends Sort
 
 /**
  * Expression infrastructure
@@ -181,11 +169,14 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
 
   //def deepName = name + "_" + index + "_" + id;
 
-  override def equals(e : Any) = e match {
-    case x: NamedSymbol => this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
-    case _ => false
+  override def equals(e : Any): Boolean = {
+    e match {
+      case x: NamedSymbol =>
+       this.getClass == x.getClass && this.name == x.name && this.sort == x.sort && this.index == x.index && this.domain == x. domain
+      case _ => false
+    }
   }
-  override def hashCode: Int = hash(5, name, index, domain)
+  override def hashCode: Int = hash(5, getClass, name, index, domain)
 
   //def deepEquals(x : NamedSymbol) =
   //  flatEquals(x) && this.id == x.id
@@ -396,7 +387,7 @@ sealed trait Formula extends Expr
 /* Bool -> Bool */
 abstract class UnaryFormula(child : Formula) extends Unary(Bool, Bool, child) with Formula
 /* Bool x Bool -> Bool */
-abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, BoolXBool, left, right) with Formula
+abstract class BinaryFormula(left : Formula, right : Formula) extends Binary(Bool, TupleT(Bool, Bool), left, right) with Formula
 
 object Not {
   def apply(child: Formula): Formula = new Not(child)
@@ -823,7 +814,7 @@ object Modality {
     case _ => None
   }
 }
-final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBool, left, right) with Formula {
+final class Modality (left : Game, right : Formula) extends Binary(Bool, TupleT(GameSort, Bool), left, right) with Formula {
   def reads: Seq[NamedSymbol] = ???
   def writes: Seq[NamedSymbol] = left.writes
 
@@ -835,7 +826,7 @@ final class Modality (left : Game, right : Formula) extends Binary(Bool, GameXBo
 }
 
 abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
-abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, GameXGame, left, right) with Game
+abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, TupleT(GameSort, GameSort), left, right) with Game
 
 /* Games */
 object BoxModality {
@@ -943,7 +934,7 @@ sealed trait Program extends Expr {
 }
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
-abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, ProgramXProgram, left, right) with Program
+abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, TupleT(ProgramSort, ProgramSort), left, right) with Program
 
 object Sequence {
   def apply(left: Program, right: Program) = new Sequence(left, right)
@@ -956,8 +947,8 @@ object Sequence {
   }
 }
 final class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right) {
-  def reads = left.reads ++ right.reads
-  def writes = left.writes ++ left.writes
+  def reads = (left.reads ++ right.reads).distinct
+  def writes = (left.writes ++ right.writes).distinct
 
   override def equals(e: Any): Boolean = e match {
     case x: Sequence => x.left == left && x.right == right
@@ -977,8 +968,8 @@ object Choice {
   }
 }
 final class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right) {
-  def reads = left.reads ++ right.reads
-  def writes = left.writes ++ left.writes
+  def reads = (left.reads ++ right.reads).distinct
+  def writes = (left.writes ++ right.writes).distinct
 
   override def equals(e: Any): Boolean = e match {
     case x: Choice => x.left == left && x.right == right
@@ -998,8 +989,8 @@ object Parallel {
   }
 }
 final class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right) {
-  def reads = left.reads ++ right.reads
-  def writes = left.writes ++ left.writes
+  def reads = (left.reads ++ right.reads).distinct
+  def writes = (left.writes ++ right.writes).distinct
 
   override def equals(e: Any): Boolean = e match {
     case x: Parallel => x.left == left && x.right == right
@@ -1040,7 +1031,7 @@ object IfThen {
     case _ => None
   }
 }
-final class IfThen(cond: Formula, thenP: Program) extends Binary(ProgramSort, BoolXProgram, cond, thenP) with Program {
+final class IfThen(cond: Formula, thenP: Program) extends Binary(ProgramSort, TupleT(Bool, ProgramSort), cond, thenP) with Program {
   def reads = ???
   def writes = thenP.writes
 
@@ -1062,9 +1053,9 @@ object IfThenElse {
   }
 }
 final class IfThenElse(cond: Formula, thenP: Program, elseP: Program)
-  extends Ternary(ProgramSort, BoolXProgramXProgram, cond, thenP, elseP) with Program {
+  extends Ternary(ProgramSort, TupleT(Bool, TupleT(ProgramSort, ProgramSort)), cond, thenP, elseP) with Program {
   def reads = ???
-  def writes = thenP.writes ++ elseP.writes
+  def writes = (thenP.writes ++ elseP.writes).distinct
 
   override def equals(e: Any): Boolean = e match {
     case x: IfThenElse => x.fst == fst && x.snd == snd && x.thd == thd
@@ -1164,7 +1155,7 @@ object ContEvolve {
 }
 final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
   def reads = ???
-  def writes = VSearch.primed(child)
+  def writes = (VSearch.primed(child)).distinct
 
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
@@ -1185,7 +1176,7 @@ object NFContEvolve {
 }
 final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
   def reads = ???
-  def writes = VSearch.primed(x)
+  def writes = (VSearch.primed(x)).distinct
 
   override def equals(e: Any): Boolean = e match {
     case o: NFContEvolve => o.vars == vars && o.x == x && o.theta == theta && o.f == f
@@ -1255,7 +1246,7 @@ private object VSearch {
     case Multiply(_, a, b) => modified(a) ++ modified(b)
     case Divide(_, a, b) => modified(a) ++ modified(b)
     case Exp(_, a, b) => modified(a) ++ modified(b)
-    case _ => throw new IllegalArgumentException("Unexpected form" + e)
+    case _ => throw new UnknownOperatorException("Unexpected form", e)
   }
 
   def primed(f: Formula): Seq[NamedSymbol] = f match {

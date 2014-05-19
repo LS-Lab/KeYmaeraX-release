@@ -2,7 +2,7 @@ Variables.
 
 End.
 Lemma "QE96.alp".
-\forall x,y.(x>0&y=x+1&y>x->x>=0&y>0)<->⊤
+\forall x,y.(x>0&y=x+1&y>x->x>=0&y>0)<->true
 End.
 Tool.
 	input	"Reduce[ForAll[{KeYmaera`x, KeYmaera`y}, Implies[And[And[Greater[KeYmaera`x, 0], Equal[KeYmaera`y, Plus[KeYmaera`x, 1]]], Greater[KeYmaera`y, KeYmaera`x]], And[GreaterEqual[KeYmaera`x, 0], Greater[KeYmaera`y, 0]]]],{}, Reals]"
