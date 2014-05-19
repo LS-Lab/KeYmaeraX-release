@@ -168,7 +168,7 @@ class TacticTests extends FlatSpec with Matchers {
    * Tactic that applies propositional proof rules exhaustively but only closes by axiom lazyly, i.e. if no other rule applies.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def lazyPropositional = ((locate(indecisive(true, false, true)) | closeT)*)
+  def lazyPropositional = ((locate(indecisive(true, false, false, true)) | closeT)*)
 
   "Tactics (propositional)" should "prove A->A for any A" in {
     val tactic = lazyPropositional

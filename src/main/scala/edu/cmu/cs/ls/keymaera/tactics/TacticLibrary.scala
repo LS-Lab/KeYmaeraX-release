@@ -37,8 +37,8 @@ object TacticLibrary {
   def master(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
     def repeat(t: Tactic):Tactic = if(exhaustive) repeatT(t) else t
     repeat(closeT
-      | locateSuccAnte(indecisive(false, true))
-      | locateSuccAnte(indecisive(true, true))
+      | locateSuccAnte(indecisive(false, true, true))
+      | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
     ) ~ quantifierEliminationT("Mathematica")
@@ -48,7 +48,7 @@ object TacticLibrary {
    * Tactic that applies propositional proof rules exhaustively.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def propositional = ((closeT | locate(indecisive(true, false, true)))*)
+  def propositional = ((closeT | locate(indecisive(true, false, false, true)))*)
   
 
   /*******************************************************************
@@ -184,7 +184,7 @@ object TacticLibrary {
                     }
                     case _ => None
                   }
-                  val contTactic = ((closeT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
+                  val contTactic = ((closeT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
                   def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
                   val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
                   val tr = reInst(res) match {
@@ -1190,7 +1190,7 @@ object TacticLibrary {
    * @param simplifyProg false to stop working on modalities. True to take simplifying steps on modalities (except when decisions would be needed).
    * @param equiv true to split equivalences.
    */
-  def indecisive(beta: Boolean, simplifyProg: Boolean, equiv: Boolean = false): PositionTactic = new PositionTactic("Indecisive") {
+  def indecisive(beta: Boolean, simplifyProg: Boolean, quantifiers: Boolean, equiv: Boolean = false): PositionTactic = new PositionTactic("Indecisive") {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
     def getTactic(s: Sequent, p: Position): Option[Tactic] = {
@@ -1210,8 +1210,8 @@ object TacticLibrary {
           case _ => None
         }
         //@TODO case DiamondModality(prog, f)
-        case Forall(_, _) if(!p.isAnte) => Some(skolemizeT(p))
-        case Exists(_, _) if(p.isAnte) => Some(skolemizeT(p)) //@TODO Make sure skolemizeT works
+        case Forall(_, _) if(quantifiers && !p.isAnte) => Some(skolemizeT(p))
+        case Exists(_, _) if(quantifiers && p.isAnte) => Some(skolemizeT(p)) //@TODO Make sure skolemizeT works
         case _ => None
       }
       res
