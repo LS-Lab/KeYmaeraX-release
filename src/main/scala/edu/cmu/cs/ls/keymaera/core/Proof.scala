@@ -718,6 +718,7 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  */
 class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
+  require(n != t, "Cannot substitute " + n + " by " + t)
 
   @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
     + n.sort + " != " + t.sort)
@@ -743,16 +744,18 @@ class Substitution(l: Seq[SubstitutionPair]) {
    */
   private def constructSubst(source: Expr, target: Expr): Substitution = new Substitution(collectSubstPairs(source, target))
 
-  private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] = source match {
-    case Pair(dom, a, b) => target match {
-      case Pair(dom2, c, d) => collectSubstPairs(a, c) ++ collectSubstPairs(b, d)
-      case _ => throw new IllegalArgumentException("Type error. A pair: " + source + " must not be replaced by a non pair: " + target)
-    }
-    case _: Variable => List(new SubstitutionPair(source, target))
-    case _: PredicateConstant => List(new SubstitutionPair(source, target))
-    case _: ProgramConstant => List(new SubstitutionPair(source, target))
-    case _ => throw new UnknownOperatorException("Unknown base case " + source + " of sort " + source.sort, source)
-  }
+  private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] =
+    if(source != target)
+      source match {
+      case Pair(dom, a, b) => target match {
+        case Pair(dom2, c, d) => collectSubstPairs(a, c) ++ collectSubstPairs(b, d)
+        case _ => throw new IllegalArgumentException("Type error. A pair: " + source + " must not be replaced by a non pair: " + target)
+      }
+      case _: Variable => List(new SubstitutionPair(source, target))
+      case _: PredicateConstant => List(new SubstitutionPair(source, target))
+      case _: ProgramConstant => List(new SubstitutionPair(source, target))
+      case _ => throw new UnknownOperatorException("Unknown base case " + source + " of sort " + source.sort, source)
+    } else Nil
 
   def names(pairs: Seq[SubstitutionPair]): Seq[NamedSymbol] = (for(p <- pairs) yield names(p)).flatten.distinct
   def names(pair: SubstitutionPair): Seq[NamedSymbol] = (names(pair.n) ++ names(pair.t)).filter(!boundNames(pair.n).contains(_))
