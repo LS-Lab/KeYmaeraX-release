@@ -124,13 +124,13 @@ class TacticTests extends FlatSpec with Matchers {
       true
 
   "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false)) ~ locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
 
   "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
