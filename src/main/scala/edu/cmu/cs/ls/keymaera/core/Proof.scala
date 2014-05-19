@@ -1279,7 +1279,7 @@ object Helper {
     }
     for(i <- 0 until s.succ.length) {
       if(p.isAnte || i != p.getIndex) {
-        vars ++= names(s.ante(i))
+        vars ++= names(s.succ(i))
       }
     }
     vars

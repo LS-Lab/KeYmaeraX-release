@@ -255,13 +255,6 @@ object TermTests {
 
   def printPos(p: PosInExpr): Any =
    p.pos.mkString(",")
-   /*p match {
-    case HereP => "h"
-    case FirstP(s) => "f" + printPos(s) + ""
-    case SecondP(s) => "s" + printPos(s) + ""
-    case ThirdP(s) => "t" + printPos(s) + ""
-    case _ => throw new UnsupportedOperationException("not implement for pos " + p)
-  }*/
 
   def printNamedSymbol(n: NamedSymbol): String = "\"" + n.name + (n.index match { case Some(j) => "_" + j case _ => "" }) + "\""
 
