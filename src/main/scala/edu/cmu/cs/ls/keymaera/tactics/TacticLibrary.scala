@@ -35,12 +35,10 @@ object TacticLibrary {
   def master(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
     def repeat(t: Tactic):Tactic = if(exhaustive) repeatT(t) else t
     repeat(closeT
-      | locateSucc(indecisive(false, true))
-      | locateAnte(indecisive(false, true))
-      | locateSucc(indecisive(true, true))
-      | locateAnte(indecisive(true, true))
+      | locateSuccAnte(indecisive(false, true))
+      | locateSuccAnte(indecisive(true, true))
       | locateSucc(genInductionT(invGenerator))
-      |  eqLeftFind
+      | eqLeftFind
     ) ~ quantifierEliminationT("Mathematica")
   }
 
@@ -48,14 +46,18 @@ object TacticLibrary {
    * Tactic that applies propositional proof rules exhaustively.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def propositional = ((closeT | locate(indecisive(false, false, true)))*)
+  def propositional = ((closeT | locate(indecisive(true, false, true)))*)
   
 
   /*******************************************************************
    * Elementary tactics
    *******************************************************************/
 
-
+  /**
+   * apply results in a formula to try.
+   * Results do not have to be deterministic, e.g., calls to apply might advance to the next candidate.
+   * Results can also be deterministic.
+   */
   trait Generator[A] extends ((Sequent, Position) => Option[A]) {
     def peek(s: Sequent, p: Position): Option[A]
   }
@@ -326,25 +328,17 @@ object TacticLibrary {
   /**
    * tactic locating an antecedent or succedent position where PositionTactic is applicable.
    */
-  def locate(posT: PositionTactic): Tactic = new ApplyPositionTactic("locate (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
+  def locate(posT: PositionTactic): Tactic = locateSuccAnte(posT)
 
-    override def findPosition(s: Sequent): Option[Position] = {
-      for (i <- 0 until s.succ.length) {
-        val pos = SuccPosition(i)
-        if(posT.applies(s, pos)) {
-          return Some(pos)
-        }
-      }
-      for (i <- 0 until s.ante.length) {
-        val pos = AntePosition(i)
-        if(posT.applies(s, pos)) {
-          return Some(pos)
-        }
-      }
-      return None
-    }
-  }
+  /**
+   * tactic locating an antecedent or succedent position where PositionTactic is applicable.
+   */
+  def locateAnteSucc(posT: PositionTactic): Tactic = locateAnte(posT) | locateSucc(posT)
+
+  /**
+   * tactic locating an succedent or antecedent position where PositionTactic is applicable.
+   */
+  def locateSuccAnte(posT: PositionTactic): Tactic = locateSucc(posT) | locateAnte(posT)
 
   def AndLeftT: PositionTactic = new PositionTactic("AndLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
