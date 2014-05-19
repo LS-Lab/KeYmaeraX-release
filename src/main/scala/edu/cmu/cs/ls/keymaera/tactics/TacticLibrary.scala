@@ -23,12 +23,16 @@ object TacticLibrary {
   }
   import TacticHelper._
 
+  /*******************************************************************
+   * Major tactics
+   *******************************************************************/
+ 
   /**
    * Master tactic
    */
   def master(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
     def repeat(t: Tactic):Tactic = if(exhaustive) repeatT(t) else t
-    repeat(AxiomCloseT
+    repeat(closeT
       | findPosSucc(indecisive(false, true))
       | findPosAnte(indecisive(false, true))
       | findPosSucc(indecisive(true, true))
@@ -37,6 +41,18 @@ object TacticLibrary {
       |  eqLeftFind
     ) ~ quantifierEliminationT("Mathematica")
   }
+
+  /**
+   * Tactic that applies propositional proof rules exhaustively.
+   *@TODO Implement for real. This strategy uses more than propositional steps.
+   */
+  def propositional = ((closeT | findPosSucc(indecisive(false, false, true)) | findPosAnte(indecisive(false, false, true)))*)
+  
+
+  /*******************************************************************
+   * Elementary tactics
+   *******************************************************************/
+
 
   trait Generator[A] extends ((Sequent, Position) => Option[A]) {
     def peek(s: Sequent, p: Position): Option[A]
@@ -162,7 +178,7 @@ object TacticLibrary {
                     }
                     case _ => None
                   }
-                  val contTactic = ((AxiomCloseT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
+                  val contTactic = ((closeT | findPosSucc(indecisive(true, false)) | findPosAnte(indecisive(true, false, true)))*)
                   def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
                   val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
                   val tr = reInst(res) match {
@@ -453,6 +469,8 @@ object TacticLibrary {
   }
 
   def cutT(f: Formula): Tactic = cutT((x: ProofNode) => Some(f))
+
+  def closeT : Tactic = AxiomCloseT | findPosAnte(CloseTrueT) | findPosSucc(CloseFalseT)
 
   def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(AxiomClose(a, b)) {
       override def applicable(node: ProofNode): Boolean = a.isAnte && !b.isAnte && getFormula(node.sequent, a) == getFormula(node.sequent, b)
@@ -1120,8 +1138,12 @@ object TacticLibrary {
 
   }
   /**
-   * Tactic that executes "correct" tactic based on top-level operator
-   * except when a decision needs to be made (i.e., loops, differential equations).
+   * Tactic that makes a proof step based on the top-level operator
+   * except when a decision needs to be made (e.g. for loops, differential equations).
+   * This tactics step is thus "indecisive", because it will not reach decisions only make progress.
+   * @param beta true to use beta rules (such as AndRight) which split branches.
+   * @param simplifyProg false to stop working on modalities. True to take simplifying steps on modalities (except when decisions would be needed).
+   * @param equiv true to split equivalences.
    */
   def indecisive(beta: Boolean, simplifyProg: Boolean, equiv: Boolean = false): PositionTactic = new PositionTactic("Indecisive") {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
@@ -1142,7 +1164,9 @@ object TacticLibrary {
           case Test(_) => Some(boxTestT(p))
           case _ => None
         }
+        //@TODO case DiamondModality(prog, f)
         case Forall(_, _) if(!p.isAnte) => Some(skolemizeT(p))
+        case Exists(_, _) if(p.isAnte) => Some(skolemizeT(p)) //@TODO Make sure skolemizeT works
         case _ => None
       }
       res
@@ -1154,13 +1178,6 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTactic(node.sequent, p)
     }
   }
-
-  /**
-   * Tactic that applies propositional proof rules exhaustively.
-   *@TODO Implement for real. This strategy uses more than propositional steps.
-   */
-  def propositional = ((AxiomCloseT | findPosSucc(indecisive(false, false, true)) | findPosAnte(indecisive(false, false, true)))*)
-  
 
   def skolemizeT = new PositionTactic("Skolemize") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
