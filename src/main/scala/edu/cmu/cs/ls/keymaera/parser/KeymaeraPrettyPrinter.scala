@@ -62,6 +62,7 @@ object KeYmaeraPrettyPrinter {
       val rightString = r match {
         case Or(_,_)	=> paren(prettyPrinter(r))
         case Imply(_,_)	=> paren(prettyPrinter(r))
+        case And(_,_) => paren(prettyPrinter(r))
         case _			=> prettyPrinter(r)
       }
       leftString + AND + rightString
@@ -76,6 +77,7 @@ object KeYmaeraPrettyPrinter {
       val rightString = r match {
         case And(_,_)	=> paren(prettyPrinter(r))
         case Imply(_,_)	=> paren(prettyPrinter(r))
+        case Or(_,_) => paren(prettyPrinter(r))
         case _			=> prettyPrinter(r)
       }
       leftString + OR + rightString
