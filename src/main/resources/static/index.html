@@ -1,0 +1,56 @@
+<html>
+<head>
+<script src="/static/js/jquery.js" type="text/javascript"></script>
+<script src="/static/js/api_client.js" type="text/javascript"></script>
+<script src="/static/js/expression.js" type="text/javascript"></script>
+<script src="/static/js/event_handler.js" type="text/javascript"></script>
+<script>
+  /**
+    * Intro page script
+    * Nathan Fulton
+    */
+
+  var client = new HydraClient();
+
+  //Handles an event from the file chooser.
+  function handleChooserEvent(evt) {
+    var files = evt.target.files;
+    var file = files[0];
+    loadFile(file);
+  }
+
+  //Loads a window.File object using the FileReader.
+  function loadFile(file) {
+    var fr = new FileReader();
+    fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); }
+
+    fr.onload = function(e) {
+      client.startNewProblem(e.target.result);
+    }
+
+    fr.readAsText(file);
+  }
+
+  window.onload = function() {
+    //Note: we only show this error when we really cannot service the user's request;
+    //it's based upon the availablility of required APIs, not nasty user agent
+    //checking.
+    if(!(window.File && window.FileReader && window.FileList && window.Blob)) {
+      alert("The KeYmaera4 web front-end requires the HTML 5 file API. " +
+            "It appears your browser does not support this API ." +
+            "Please update to the latest version of a standards-compliant browser.");
+    }
+
+    //Add an event listener for the file box.
+    document.getElementById('files').addEventListener('change', handleChooserEvent, false);
+
+    //Create main event loop. Ugh we should be doing something better.
+    setInterval(function() { client.getUpdates(); }, 500);
+  }
+</script>
+</head>
+<body>
+
+<input type="file" id="files" name="files[]"  mulitple />
+</body>
+</html>

@@ -4,11 +4,12 @@ import akka.actor.Actor
 import spray.routing._
 import spray.http._
 import MediaTypes._
+import scala.collection.mutable.HashMap
 
 class RestApiActor extends Actor with RestApi {
   def actorRefFactory = context
 
-  //Note: separating the actor and router allows resting of the router without
+  //Note: separating the actor and router allows testing of the router without
   //spinning up an actor.
   def receive = runRoute(myRoute)
 }
@@ -23,19 +24,39 @@ trait RestApi extends HttpService {
 
   val startSession = path("startSession") {
     get {
+      val newKey = ServerState.createSession()
       respondWithMediaType(`application/json`) {
-        complete("{sessionName: \"newkey\"}") //TODO-nrf 
+        complete("{\"sessionName\": \""+newKey+"\"}") //TODO-nrf 
       }
     }
   }
 
-  val requestUpdate = path("requestUpdate") {
+  val getUpdates = path("getUpdates") {
     get {
       respondWithMediaType(`application/json`) {
-        complete("[]")
+        parameter("sessionName") { 
+           sessionName => complete(ServerState.getUpdates(sessionName))
+        }
       }
     }
   }
+  
+  val startNewProblem = path("startNewProblem") {
+    post {
+      parameter("sessionName") { sessionName => {
+        decompressRequest() {
+          entity(as[String]) {
+            problem => {
+              val request = new Problem(sessionName, problem)
+              val result = KeYmaeraClient.serviceRequest(sessionName, request) 
+              complete("[]")
+            }
+          }
+        }
+      }}
+    }
+  }
+ 
 
 //  val nodeClosed = path("nodeClosed") undefCall
 //  val nodePruned = path("nodePruned") undefCall
@@ -48,14 +69,10 @@ trait RestApi extends HttpService {
     javascriptRoute ::
     cssRoute ::
     staticRoute ::
+    //Real stuff begins here.
+    getUpdates ::
     startSession ::
-    requestUpdate ::
-//    nodeClosed ::
-//    nodePruned ::
-//    limitExceeded ::
-//    startingStrategy ::
-//    applyTactic ::
-//    getNode ::
+    startNewProblem ::
     Nil
 
   val myRoute = routes.reduce(_ ~ _)

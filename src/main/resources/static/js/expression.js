@@ -40,10 +40,24 @@
  * is implemented on the Scala side.
  */
 
-function Atomic(uid) {}
-function Grouping(uid, inner) {} //note: it's possible that uid=inner.uid
-function Binding(uid, variable, body) {}
-function Connective(left, connective, right) {}
+function Atomic(uid, str) { this.uid = uid; this.str = str; }
+
+function Grouping(uid, inner) {
+  this.uid = uid;
+  this.inner = inner;
+} //note: it's possible that uid=inner.uid
+
+function Binding(uid, variable, body) {
+  this.uid = uid
+  this.variable = variable
+  this.body = body
+}
+
+function Connective(left, connective, right) {
+  this.left = left
+  this.connective = connective
+  this.right = right
+}
 
 //// API Calls for Formulas
 var FormulaAPI = {
@@ -84,7 +98,12 @@ var FormulaGUI = {
 // Sequents
 ////////////////////////////////////////////////////////////////////////////////
 
-function Sequent(uid, parentSequent, left, right) {}
+function Sequent(uid, pref, ante, succ) {
+  this.uid = uid
+  this.pref = pref
+  this.ante = ante
+  this.succ = succ
+}
 
 var SequentGUI = {
   //Prints the sequent to the element with id ``id"
@@ -116,4 +135,14 @@ var SequentGUI = {
                    SequentGUI.staticView(sequent);
     target.appendChild(newChild);
   }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Nodes
+////////////////////////////////////////////////////////////////////////////////
+
+function Node(uid, parentUid, sequent) {
+  this.uid = uid
+  this.parentUid = parentUid
+  this.sequent = sequent
 }

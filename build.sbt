@@ -22,6 +22,7 @@ libraryDependencies ++= {
   val akkaV = "2.1.4"
   val sprayV = "1.1.1"
   Seq(
+    "io.spray"            %%  "spray-json"    % "1.2.6",
     "io.spray"            %   "spray-can"     % sprayV,
     "io.spray"            %   "spray-routing" % sprayV,
     "io.spray"            %   "spray-testkit" % sprayV  % "test",
@@ -30,5 +31,7 @@ libraryDependencies ++= {
     "org.specs2"          %%  "specs2"        % "2.2.3" % "test"
   )
 }
+
+//libraryDependencies += "net.liftweb" % "lift-json" % "latest.release" 
 
 Revolver.settings
