@@ -88,10 +88,12 @@ function HydraClient(serverarg, portarg) {
       async: "true",
       url: "http://" + this.server + ":" + this.port + "/getUpdates" + "?sessionName=" + this.sessionName,
       success: function(updates) {
-        console.log("Recieved updates from the server: ");
-        console.log(updates);
-        for(i = 0; i < updates.length; i++) {
-          HydraEventHandler(updates[i], this);
+        if(updates instanceof Array && updates.length > 0) {
+          console.log("Recieved updates from the server: ");
+          console.log(updates);
+          for(i = 0; i < updates.length; i++) {
+            HydraEventHandler(updates[i], this);
+          }
         }
       },
       error: this.ajaxErrorHandler

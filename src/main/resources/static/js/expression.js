@@ -59,6 +59,15 @@ function Connective(left, connective, right) {
   this.right = right
 }
 
+function Ternary(first, second, third, pre, inf, post) {
+  this.first = first;
+  this.second = second;
+  this.third = third;
+  this.pre = pre;
+  this.inf = inf;
+  this.post = pos;
+}
+
 //// API Calls for Formulas
 var FormulaAPI = {
   toString : function(formula) {

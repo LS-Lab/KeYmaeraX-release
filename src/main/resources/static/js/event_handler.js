@@ -18,6 +18,5 @@ function HydraEventHandler(evt, client) {
   else {
     alert("Event type not found: " + evt.eventType);
   }
-
 }
 
