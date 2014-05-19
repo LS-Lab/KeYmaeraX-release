@@ -35,6 +35,21 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
       succ(p.getIndex)
     }
   }
+  
+  /**
+   * A copy of this sequent with the indicated position replaced by the formula f.
+   * @param p the position of the replacement
+   * @param f the replacing formula
+   * @returns a copy of this sequent with the formula at position p replaced by f.
+   */
+  def updated(p: Position, f: Formula) = {
+    //require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.isAnte)
+        Sequent(pref, ante.updated(p.getIndex, f), succ)
+    else
+        Sequent(pref, ante, succ.updated(p.getIndex, f))
+  }
+      
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
 }
