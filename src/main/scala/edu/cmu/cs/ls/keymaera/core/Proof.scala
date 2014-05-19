@@ -1099,7 +1099,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
           case BoxModality(p, f) => Right(Forall(p.writes, f))
           case DiamondModality(p, f) => Right(Forall(p.writes, f))
           case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
@@ -1107,25 +1107,42 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
     }
     ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
       case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case _ => throw new IllegalStateException("No abstraction possible of " + s(pos))
+      case _ => throw new InapplicableRuleException("No abstraction possible for " + s(pos), this, s)
     }
 
   }
 }
 
-// maybe:
+/*********************************************************************************
+ * Block Quantifier Decomposition
+ *********************************************************************************
+ */
 
-// quantifier instantiation
+object DecomposeQuantifiers {
+  def apply(p: Position): Rule = new DecomposeQuantifiers(p)
+}
 
-// remove known
+class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
+  override def apply(s: Sequent): List[Sequent] = {
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
+        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
+        case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
+      }
+    }
+    val f = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
+      case Some(form) => form
+      case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + s(pos).prettyString() + " at " + pos, this, s)
+    }
+    if(pos.isAnte)
+      List(Sequent(s.pref, s.ante.updated(pos.getIndex, f), s.succ))
+    else
+      List(Sequent(s.pref, s.ante, s.succ.updated(pos.getIndex, f)))
+  }
+}
 
-// unskolemize
-
-// forall-I
-
-// forall-E
-
-// merge sequent (or is this derived?)
 
 /*********************************************************************************
  * Lemma Mechanism Rules
@@ -1181,31 +1198,6 @@ object LookupLemma {
         Some((file, file.getName, result))
       case _ => None
     }
-  }
-}
-
-object DecomposeQuantifiers {
-  def apply(p: Position): Rule = new DecomposeQuantifiers(p)
-}
-
-class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
-  override def apply(s: Sequent): List[Sequent] = {
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
-        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
-        case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
-      }
-    }
-    val f = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
-      case Some(form) => form
-      case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + s(pos).prettyString() + " at " + pos, this, s)
-    }
-    if(pos.isAnte)
-      List(Sequent(s.pref, s.ante.updated(pos.getIndex, f), s.succ))
-    else
-      List(Sequent(s.pref, s.ante, s.succ.updated(pos.getIndex, f)))
   }
 }
 
