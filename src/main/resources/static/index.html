@@ -1,20 +1,30 @@
 <html>
 <head>
+<style>
+  #drop_zone {
+    border: 2px solid;
+    border-radius: 25px;
+    background-color:rgba(0,0,0,0.1);
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    vertical-align: center;
+    font-size: 20px;
+  }
+</style>
 <script src="/static/js/jquery.js" type="text/javascript"></script>
 <script src="/static/js/api_client.js" type="text/javascript"></script>
 <script src="/static/js/expression.js" type="text/javascript"></script>
 <script src="/static/js/event_handler.js" type="text/javascript"></script>
 <script>
-  /**
-    * Intro page script
-    * Nathan Fulton
-    */
-
   var client = new HydraClient();
 
   //Handles an event from the file chooser.
   function handleChooserEvent(evt) {
-    var files = evt.target.files;
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var files = evt.dataTransfer.files;
     var file = files[0];
     loadFile(file);
   }
@@ -31,10 +41,8 @@
     fr.readAsText(file);
   }
 
+  //Initialize the file selector and main event loop when the page is loaded.
   window.onload = function() {
-    //Note: we only show this error when we really cannot service the user's request;
-    //it's based upon the availablility of required APIs, not nasty user agent
-    //checking.
     if(!(window.File && window.FileReader && window.FileList && window.Blob)) {
       alert("The KeYmaera4 web front-end requires the HTML 5 file API. " +
             "It appears your browser does not support this API ." +
@@ -42,8 +50,24 @@
     }
 
     //Add an event listener for the file box.
-    document.getElementById('files').addEventListener('change', handleChooserEvent, false);
-
+    var drop_zone = document.getElementById('drop_zone');
+    drop_zone.addEventListener('dragover', function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        evt.dataTransfer.dropEffect = 'copy';
+      }, false);
+    drop_zone.addEventListener('drop', function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        var files = evt.dataTransfer.files;
+        var file = files[0];
+        loadFile(file);
+        }, false);
+    files.addEventListener('change', function(evt) {
+        var files = evt.target.files;
+        var file = files[0];
+        loadFile(file);
+        }, false);
     //Create main event loop. Ugh we should be doing something better.
     setInterval(function() { client.getUpdates(); }, 500);
   }
@@ -51,6 +75,13 @@
 </head>
 <body>
 
-<input type="file" id="files" name="files[]"  mulitple />
+<span id="prover">
+  <div class="drop_zone" id="drop_zone">Drag and Drop a Problem File to begin.
+    <br/>
+    <br/>
+    <input type="file" id="files" name="files[]" multiple />
+  </div>
+</span>
+
 </body>
 </html>
