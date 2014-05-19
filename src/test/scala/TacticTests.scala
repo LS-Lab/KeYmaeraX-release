@@ -13,6 +13,10 @@ class TacticTests extends FlatSpec with Matchers {
   Config.maxCPUs = 1
   val math = new Mathematica
   val qet = new JLinkMathematicaLink()
+  
+  val randomTrials = 10
+  val randomFormulaComplexity = 5
+  
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
 
@@ -24,7 +28,7 @@ class TacticTests extends FlatSpec with Matchers {
   val xgt0 = GreaterThan(Real, x, zero)
   val xplus1 = Add(Real, x, one)
   val xplus1gtx = GreaterThan(Real, xplus1, x)
-
+  
   def num(n : Integer) = Number(new BigDecimal(n.toString()))
   def snum(n : String) = Number(new BigDecimal(n))
 
@@ -152,8 +156,8 @@ class TacticTests extends FlatSpec with Matchers {
 
   "Tactics (propositional)" should "prove A->A for any A" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(A, A)
       prove(formula, tactic) should be (Provable)
     }
@@ -161,9 +165,9 @@ class TacticTests extends FlatSpec with Matchers {
 
   it should "prove A->(B->A) for any A,B" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
-      val B = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(A, Imply(B, A))
       prove(formula, tactic) should be (Provable)
     }
@@ -171,10 +175,10 @@ class TacticTests extends FlatSpec with Matchers {
 
   it should "prove (A->(B->C)) <-> ((A&B)->C) for any A,B,C" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(3)
-      val B = new RandomFormula().nextFormula(3)
-      val C = new RandomFormula().nextFormula(3)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val C = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Equiv(Imply(A, Imply(B, C)), Imply(And(A,B),C))
       prove(formula, tactic) should be (Provable)
     }
@@ -182,8 +186,8 @@ class TacticTests extends FlatSpec with Matchers {
 
   it should "prove (~A->A) -> A for any A" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(Imply(Not(A),A),A)
       prove(formula, tactic) should be (Provable)
     }
@@ -191,11 +195,11 @@ class TacticTests extends FlatSpec with Matchers {
   
   it should "prove (A->B) && (C->D) |= (A&C)->(B&D) for any A,B,C,D" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
-      val B = new RandomFormula().nextFormula(5)
-      val C = new RandomFormula().nextFormula(5)
-      val D = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val C = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val D = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(And(Imply(A,B),Imply(C,D)) , Imply(And(A,C),And(B,D)))
       prove(formula, tactic) should be (Provable)
     }
@@ -203,9 +207,9 @@ class TacticTests extends FlatSpec with Matchers {
   
   it should "prove ((A->B)->A)->A for any A,B" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
-      val B = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(Imply(Imply(A,B),A),A)
       prove(formula, tactic) should be (Provable)
     }
