@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaera.tests.TermTests
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
@@ -123,13 +124,13 @@ class TacticTests extends FlatSpec with Matchers {
       true
 
   "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false)) ~ locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
 
   "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
@@ -144,15 +145,30 @@ class TacticTests extends FlatSpec with Matchers {
    *@TODO Implement this stub
    */
   def prove(f:Formula, tactic:Tactic) : ProvabilityStatus = {
-    println("TacticTests.prove: Not implemented yet")
-    UnknownProvability
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
+      && Tactics.KeYmaeraScheduler.prioList.isEmpty
+      && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
+      && Tactics.MathematicaScheduler.prioList.isEmpty)) {
+      Thread.sleep(100)
+      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
+      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
+      println("Blocked on Mathematica: " + Tactics.MathematicaScheduler.blocked + " of " + Tactics.MathematicaScheduler.maxThreads)
+      println("Tasks open Mathematica: " + Tactics.MathematicaScheduler.prioList.length)
+    }
+    if(checkClosed(r)) Provable else {println(TermTests.print(r)); UnknownProvability}
   }
+
+  def checkClosed(n: ProofNode): Boolean =
+    n.children.map((f: ProofStep) =>  f.subgoals.foldLeft(true)(_ && checkClosed(_))).contains(true)
+
   
   /**
    * Tactic that applies propositional proof rules exhaustively but only closes by axiom lazyly, i.e. if no other rule applies.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def lazyPropositional = ((locate(indecisive(false, false, true)) | closeT)*)
+  def lazyPropositional = ((locate(indecisive(true, false, false, true)) | closeT)*)
 
   "Tactics (propositional)" should "prove A->A for any A" in {
     val tactic = lazyPropositional
@@ -214,5 +230,5 @@ class TacticTests extends FlatSpec with Matchers {
       prove(formula, tactic) should be (Provable)
     }
   }
-  
+
 }
