@@ -93,26 +93,96 @@ function Ternary(uid, fst,snd,thd,pre,inf,post) {
   this.post = post;
 }
 
+
+// Logic for converting plain old objects into instances
+// This makes pattern matching-style logic cleaner.
+// Think of this method as a method for determining the type of a formula
+// based upon the names of its fields.
+function formulaToInstance(f) {
+  var rec_on = formulaToInstance //shorthand.
+  if(f.str)              new Atomic(f.uid, f.str)
+  else if(f.pre_symbol)  new Prefix(f.uid, rec_on(f.child), f.pre_symbol)
+  else if(f.post_symbol) new Postfix(f.uid, rec_on(f.child), f.post_symbol)
+  else if(f.left_symbol) 
+    new Grouping(f.uid, rec_on(f.inner), f.left_symbol, f.right_symbol)
+  else if(f.program)     
+    new Modality(f.uid, rec_on(f.program), rec_on(f.formula), f.open, f.close)
+  else if(f.bind_symbol) {
+    var rec_variables = new Array();
+    for(var i=0; i<f.variables.length; i++) {
+      rec_variables.push(rec_on(f.variables[i]));
+    }
+    new Binding(f.uid, f.bind_symbol, rec_variables, rec_on(f.child))
+  }
+  else if(f.connective)  
+    new Connective(f.uid, rec_on(f.left), f.connective, rec_on(f.right))
+  else if(f.thd)         
+    new Ternary(f.uid,
+        rec_on(f.fst),rec_on(f.snd),rec_on(f.thd),
+        f.pre,f.inf,f.post)
+  else
+    null
+}
+
+// Pattern matching for formuals.
+function formulaMatch(formula, atomicF, prefixF, postfixF, groupingF, 
+    modalityF, bindingF, connectiveF, ternaryF) 
+{
+  if(formula) {
+    if(formula instanceof Atomic) atomicF(formula);
+    else if(formula instanceof Prefix) prefixF(formula);
+    else if(formula instanceof Postfix) postfixF(formula);
+    else if(formula instanceof Grouping) groupingF(formula);
+    else if(formula instanceof Modality) modalityF(formula);
+    else if(formula instanceof Binding) bindingF(formula);
+    else if(formula instanceof Connective) connectiveF(formula);
+    else if(formula instanceof Ternary) connectiveF(formula);
+    else formulaMatch(formulaToInstance(formula)); //returns null on fail.
+  }
+  else {
+    throw "Formula did not match any type."
+  }
+}
+
 //// API Calls for Formulas
 var FormulaAPI = {
   getOptions : function(formula) {
   }
-};
+}
+
 
 var FormulaGUI = {
   toString : function(client, formula) {
     return client.formulaToString(formula);
   },
 
-  staticView : function(formula) {
-    var div = document.createElement('span');
-    div.setAttribute('id', "s" + formula.uid);
-    div.innerHTML = FormulaAPI.toString(formula);
-    return div;
+  // Writes a simple string to the static span for this formula, or creates
+  // such a span if it does not yet exist. Returns the modified span.
+  staticView : function(client, formula) {
+    var span;
+    if(document.getElementById("s" + formula.uid)) {
+      span = document.getElementById("s" + formula.uid);
+    }
+    else {
+      span = document.createElement('span');
+      span.setAttribute('id', "s" + formula.uid);
+    }
+
+    span.innerHTML = client.formulaToString(formula);
+    return span;
   },
 
-  interactiveView : function(formula) {
-    //TODO-nrf!
+  interactiveView : function(client, div, formula) {
+    var span;
+    if(document.getElementById("i" + formula.uid)) {
+      span = document.getElementById("i" + formula.uid);
+    }
+    else {
+      span = document.createElement('span');
+      span.setAttribute('id', "i" + formula.uid);
+    }
+    span.innerHTML = client.formulaToInteractiveString(formula);
+    return span;
   },
   
   onClick : function(formula) {

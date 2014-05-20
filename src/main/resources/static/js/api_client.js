@@ -89,13 +89,34 @@ function HydraClient(serverarg, portarg) {
         async: false,
         url: 'http://' + this.server + ":" + this.port + "/formulaToString" + "?sessionName=" + this.sessionName + "&uid=" + f.uid,
         success: function(resp) {
-          result = resp[0].formula;
+          result = resp[0].string;
         }
       });
       return result;
     }
     else {
       console.error("formulaToString requires its argument to have a defined uid.");
+    }
+  }
+
+  this.formulaToInteractiveString = function(f) {
+    var result = "";
+    if(f.uid) {
+      var result = "";
+      $.ajax({
+        type: "GET",
+        dataType: "json",
+        async: false,
+        url: 'http://' + this.server + ":" + this.port + "/formulaToInstractiveString" + "?sessionNAme=" + this.sessionName + "&uid=" + f.uid,
+        success: function(resp) {
+          result = resp[0].html;
+        },
+        error: this.ajaxErrorHandler
+      });
+      return result;
+    }
+    else {
+      throw "formulaToInteractiveString requires f to have uid defined."
     }
   }
 

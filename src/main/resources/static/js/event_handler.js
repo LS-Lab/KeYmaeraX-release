@@ -25,15 +25,21 @@ function HydraEventHandler(evt, client) {
 
   else if(evt.eventType === "CreateRootNode") {
     console.log(evt.sequent);
-    window.s = evt.sequent;
     proverSpan.innerHTML = SequentGUI.toString(client, evt.sequent);
   }
 
+
+  //Add ignore cases for all syncronous calls.
   else if(evt.eventType === "FormulaToStringResponse") {
     //Ignore -- formula to string should be called synchronously.
   }
+  else if(evt.eventType === "FormulaToInteractiveStringResponse") { 
+    //ignore -- this is not an async call.
+  }
+
+  //Add error case
   else {
-    alert("Event type not found: " + evt.eventType);
+    throw "HydraEventHandler received an event with unhandled type: " + evt.eventType;
   }
 }
 

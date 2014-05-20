@@ -68,6 +68,15 @@ trait RestApi extends HttpService {
     }
   }
  
+  val formulaToInteractiveString = path("formulaToInteractiveString") {
+    get {
+      parameter("sessionName", "uid") { (sessionName,uid) => {
+        val request = new FormulaToInteractiveStringRequest(sessionName, uid)
+        val result = KeYmaeraClient.serviceRequest(sessionName, request)
+        complete("[" + result.map(_.json).mkString(",") + "]")
+      }}
+    }
+  }
 
 //  val nodeClosed = path("nodeClosed") undefCall
 //  val nodePruned = path("nodePruned") undefCall
@@ -85,6 +94,7 @@ trait RestApi extends HttpService {
     startSession ::
     startNewProblem ::
     formulaToString ::
+    formulaToInteractiveString ::
     Nil
 
   val myRoute = routes.reduce(_ ~ _)

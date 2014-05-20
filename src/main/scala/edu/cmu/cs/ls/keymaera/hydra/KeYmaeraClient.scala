@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraParser, KeYmaeraPrettyPrinter}
 import edu.cmu.cs.ls.keymaera.core._
 import spray.json._
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal._
 
 /**
  * Pretty-prints each subexpression, storing a unique identifier based upon the
@@ -14,6 +15,8 @@ import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
  * expression, sequent or node.
  */
 object KeYmaeraClientPrinter {    
+  def printPos(p: PosInExpr): Any = p.pos.mkString("")
+  
   def getSequent(sessionName : String, uid : String, sequent : Sequent) = { 
     KeYmaeraClient.sendSequent(sessionName, uid, sequent);
     
@@ -28,46 +31,46 @@ object KeYmaeraClientPrinter {
     for(index <- 0 to l.length-1) {
       val expr = l.lift(index).get
       val uid = uidPrefix + (uidOffset+index).toString()
-      result = result ++ List(getExpr(sessionName, uid, expr))
+      result = result ++ List(exprToJson(sessionName, uid, expr))
     }  
     JsArray(result)
   }
   
-  def getExpr(sessionName : String, uid : String, e : Expr) : JsValue = {
+  def exprToJson(sessionName : String, uid : String, e : Expr) : JsValue = {
     KeYmaeraClient.sendExpression(sessionName, uid, e);
     import edu.cmu.cs.ls.keymaera.parser.HTMLSymbols._;
     e match {
       case e : DiamondModality => JsObject(
             "uid" -> JsString(uid),
-            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "inner" -> exprToJson(sessionName, uid+"0", e.child),
             "left_symbol" -> JsString(DIA_OPEN),
             "right_symbol" -> JsString(DIA_CLOSE)
       )
       case e : BoxModality => JsObject(
             "uid" -> JsString(uid),
-            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "inner" -> exprToJson(sessionName, uid+"0", e.child),
             "left_symbol" -> JsString(BOX_OPEN),
             "right_symbol" -> JsString(BOX_CLOSE)      
       )
       case Modality(p:Program,f:Formula) => JsObject(
             "uid" -> JsString(uid),
-            "program" -> getExpr(sessionName, uid+"0", p),
-            "formula" -> getExpr(sessionName, uid+"1", f),
+            "program" -> exprToJson(sessionName, uid+"0", p),
+            "formula" -> exprToJson(sessionName, uid+"1", f),
             "open" -> JsString(BOX_OPEN),
             "close" -> JsString(BOX_CLOSE)          
       )
       case e : Binary => e match {
         case Modality(p:Program, f:Formula) => JsObject(
             "uid" -> JsString(uid),
-            "program" -> getExpr(sessionName, uid+"0", p),
-            "formula" -> getExpr(sessionName, uid+"1", f),
+            "program" -> exprToJson(sessionName, uid+"0", p),
+            "formula" -> exprToJson(sessionName, uid+"1", f),
             "open" -> JsString(BOX_OPEN),
             "close" -> JsString(BOX_CLOSE)          
         )
         case _ => JsObject(
             "uid" -> JsString(uid),
-            "left" -> getExpr(sessionName, uid+"0", e.left),
-            "right" -> getExpr(sessionName, uid+"1", e.right),
+            "left" -> exprToJson(sessionName, uid+"0", e.left),
+            "right" -> exprToJson(sessionName, uid+"1", e.right),
             "connective" -> JsString(e match {
               case e : Modality => "ERROR" //no idea why we absolutely need this...
               case e : Add => PLUS
@@ -99,9 +102,9 @@ object KeYmaeraClientPrinter {
       case e : Ternary => {
         JsObject(
             "uid" -> JsString(uid),
-            "fst" -> getExpr(sessionName, uid+"0", e.fst),
-            "snd" -> getExpr(sessionName, uid+"1", e.snd),
-            "thd" -> getExpr(sessionName, uid+"2", e.thd),
+            "fst" -> exprToJson(sessionName, uid+"0", e.fst),
+            "snd" -> exprToJson(sessionName, uid+"1", e.snd),
+            "thd" -> exprToJson(sessionName, uid+"2", e.thd),
             "pre" -> JsString("if"),
             "in" -> JsString("then"),
             "else" -> JsString("else"))
@@ -112,40 +115,40 @@ object KeYmaeraClientPrinter {
 
         case e : ContEvolve => JsObject(
             "uid" -> JsString(uid),
-            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "inner" -> exprToJson(sessionName, uid+"0", e.child),
             "left_symbol" -> JsString("{"),
             "right_symbol" -> JsString("}"))
         case e : Derivative => JsObject(
             "uid" -> JsString(uid),
-            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "child" -> exprToJson(sessionName, uid+"0", e.child),
             "post_symbol" -> JsString(PRIME))
         case e : Left => ???
         case e : Right => ???
         case e : NDetAssign => JsObject(
             "uid" -> JsString(uid),
-            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "child" -> exprToJson(sessionName, uid+"0", e.child),
             "post_symbol" -> JsString(ASSIGN + KSTAR)
         )
         case e : Neg => JsObject(
             "uid" -> JsString(uid),
-            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "child" -> exprToJson(sessionName, uid+"0", e.child),
             "pre_symbol" -> JsString(NEGATIVE)
         )
         case e : Test => JsObject(
             "uid" -> JsString(uid),
-            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "child" -> exprToJson(sessionName, uid+"0", e.child),
             "pre_symbol" -> JsString(TEST)
         )
         case e : UnaryFormula => e match {
           case e : Finally => ???
           case e : FormulaDerivative => JsObject(
             "uid" -> JsString(uid),
-            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "child" -> exprToJson(sessionName, uid+"0", e.child),
             "post_symbol" -> JsString(PRIME))
           case e : Globally => ???
           case e : Not => JsObject(
             "uid" -> JsString(uid),
-            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "child" -> exprToJson(sessionName, uid+"0", e.child),
             "pre_symbol" -> JsString(NEGATE)
         )
           case e : Quantifier => e match {
@@ -153,13 +156,13 @@ object KeYmaeraClientPrinter {
                 "uid" -> JsString(uid),
                 "bind_symbol" -> JsString(FORALL),
                 "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
-                "child" -> getExpr(sessionName, uid+"c", child)
+                "child" -> exprToJson(sessionName, uid+"c", child)
             )
             case Exists(variables, child) => JsObject(
                 "uid" -> JsString(uid),
                 "bind_symbol" -> JsString(FORALL),
                 "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
-                "child" -> getExpr(sessionName, uid+"c", child)
+                "child" -> exprToJson(sessionName, uid+"c", child)
             )
           }
         }
@@ -167,7 +170,7 @@ object KeYmaeraClientPrinter {
         case e : UnaryProgram => e match {
           case e : Loop => JsObject( 
               "uid" -> JsString(uid),
-              "child" -> getExpr(sessionName, uid+"c", e.child),
+              "child" -> exprToJson(sessionName, uid+"c", e.child),
               "post_symbol" -> JsString(KSTAR)
           )
         }
@@ -175,7 +178,7 @@ object KeYmaeraClientPrinter {
       
       case e : NamedSymbol => {JsObject(
           "uid" -> JsString(uid),
-          "str" -> JsString(e.prettyString())
+          "str" -> JsString(e.prettyString()+(e.index match { case Some(j) => "_" + j case _ => "" }))
       )}
       case e : Number.NumberObj => JsObject("uid" -> JsString(uid), "str" -> JsString(e.prettyString()))
       case True() => JsObject("uid" -> JsString(uid),"str" -> JsString(TRUE))
@@ -186,7 +189,7 @@ object KeYmaeraClientPrinter {
   
   def getExprList(sessionName:String,uid:String,variables:Seq[NamedSymbol]) = {
     (variables zip Seq.range(0, variables.size-1)).map( pair => {
-      getExpr(sessionName, uid + pair._2.toString(), pair._1)
+      exprToJson(sessionName, uid + pair._2.toString(), pair._1)
     }).toList
   }
 }
@@ -223,6 +226,8 @@ object KeYmaeraClient {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Request types
+////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Requests from clients
@@ -257,10 +262,32 @@ case class FormulaToStringRequest(sessionName : String, uid : String) extends Re
   }
   catch {
     case e : Exception => (new ErrorResponse(sessionName, e))::Nil
-  }
-   
+  }  
 }
 
+case class FormulaToInteractiveStringRequest(sessionName : String, uid : String) extends Request {
+  def getResultingUpdates() : List[Update] = 
+    try {
+      if(ServerState.expressions == null) {
+        new ErrorResponse(sessionName, new NullPointerException()) :: Nil
+      }
+      else if(!KeYmaeraClient.hasExpression(sessionName,uid)) {
+        new ErrorResponse(sessionName, new Exception("UID not found for uid: " + sessionName + "," + uid + " in " + ServerState.expressions.keySet().toArray().mkString(","))) :: Nil
+      }
+      else {
+        ???
+//        val expr= KeYmaeraClient.getExpression(sessionName,uid)
+//        val prettyString = new KeYmaeraClientInteractivePrinter(sessionName).makeInteractive(expr.asInstanceOf[Formula])
+//        (new FormulaToStringResponse(sessionName,prettyString))::Nil
+      }
+    }
+    catch {
+      case e : Exception => (new ErrorResponse(sessionName, e))::Nil
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Response types
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -293,6 +320,13 @@ case class ErrorResponse(sessionName : String, exn : Exception) extends Update {
 case class FormulaToStringResponse(sessionName : String, prettyString : String) extends Update {
   val json = JsObject(
       "eventType" -> JsString("FormulaToStringResponse"),
-      "formula" -> JsString(prettyString)    
+      "string" -> JsString(prettyString)    
+  )
+}
+
+case class FormulaToInteractiveStringResponse(sessionName : String, prettyString : String) extends Update {
+  val json = JsObject(
+      "eventType" -> JsString("formulaToInteractiveStringResponse"),
+      "html" -> JsString(prettyString)
   )
 }
