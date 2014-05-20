@@ -355,7 +355,7 @@ object ContractionLeft {
 
 
 /*********************************************************************************
- * Axiom Lookup
+ * Lookup Axioms
  *********************************************************************************
  */
 
@@ -372,11 +372,13 @@ object Axiom {
     val p = PredicateConstant("p")
     val pair = ("[++] choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
     m = m + pair
+    
     val aA = ProgramConstant("a")
     val aB = ProgramConstant("b")
     val aP = PredicateConstant("p")
     val pair2 = ("[;] compose", Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP))))
     m = m + pair2
+    
     // [?H]p <-> (H -> p)
     val aH = PredicateConstant("H")
     val pair3 = ("[?] test", Equiv(BoxModality(Test(aH), aP), Imply(aH, aP)))
@@ -384,9 +386,10 @@ object Axiom {
 
     val x = Variable("x", None, Real)
     val t = Variable("t", None, Real)
-    val p2 = Function("p", None, Real, Bool)
-    val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p2, x)), ApplyPredicate(p2, t)))
+    val p1 = Function("p", None, Real, Bool)
+    val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p1, x)), ApplyPredicate(p1, t)))
     m = m + pair4
+    
     val pair5 = ("I induction", Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), BoxModality(Loop(a), p)))
     m = m + pair5
 
@@ -394,8 +397,14 @@ object Axiom {
     //[a](p->q) -> (([a]p) -> ([a]q))
     val pair6 = ("K modal modus ponens", Imply(BoxModality(aA, Imply(aP, aQ)), Imply(BoxModality(aA, aP), BoxModality(aA, aQ))))
     m = m + pair6
-    val pair7 = ("[:*] assignment", Equiv(BoxModality(NDetAssign(x), ApplyPredicate(p2, x)), Forall(Seq(x), ApplyPredicate(p2, x))))
+    
+    val pair7 = ("[:*] assignment", Equiv(BoxModality(NDetAssign(x), ApplyPredicate(p1, x)), Forall(Seq(x), ApplyPredicate(p1, x))))
     m = m + pair7
+    
+    //[x:=t]p(x) <-> \forall x . (x=t -> p(x))
+    val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(x), Imply(Equals(Real, x,t), ApplyPredicate(p1, x)))))
+    m = m + pair8
+
     m
   }
 
@@ -801,16 +810,16 @@ class Substitution(l: Seq[SubstitutionPair]) {
      * For quantifiers just check that there is no name clash, throw an exception if there is
      */
     case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, apply(form))
-    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString(), this, f)
+    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied to " + f.prettyString(), this, f)
 
     case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, apply(form))
-    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString(), this, f)
+    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied to " + f.prettyString(), this, f)
 
     case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
       case BoxModality(p, f) => BoxModality(apply(p), apply(f))
       case DiamondModality(p, f) => DiamondModality(apply(p), apply(f))
       case _ => ???
-    } else throw new SubstitutionClashException("There is a name clash in a substitution with pairs " + l + " to " + f.prettyString() + " since it writes " + x.writes, this, f)
+    } else throw new SubstitutionClashException("There is a name clash in a substitution with pairs " + l + "\napplied to " + f.prettyString() + "\nwhich writes " + x.writes.map(_.prettyString()), this, f)
 
     //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
@@ -901,7 +910,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
         case Test(a) => Test(apply(a))
         case ContEvolve(a) => ContEvolve(apply(a))
         case NFContEvolve(v, x, t, f) => if(v.intersect(names(l)).isEmpty) NFContEvolve(v, x, apply(t), apply(f))
-          else throw new SubstitutionClashException("There is a name clash in uniform substitution " + l + " applied on " + p + " because of quantified disturbance " + v, this, p)
+          else throw new SubstitutionClashException("There is a name clash in uniform substitution " + l + " applied on " + p + " because of quantified disturbance " + v.mkString(","), this, p)
         case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
         case _ => throw new UnknownOperatorException("Not implemented yet", p)
      }

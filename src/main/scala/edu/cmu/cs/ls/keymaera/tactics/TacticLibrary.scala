@@ -32,6 +32,11 @@ object TacticLibrary {
    *******************************************************************/
  
   /**
+   * Default tactic without any invariant generation.
+   */
+  def default = master(new NoneGenerate(), true)
+  
+  /**
    * Master tactic
    */
   def master(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
@@ -101,6 +106,11 @@ object TacticLibrary {
   class Generate[A](f: A) extends Generator[A] {
     def apply(s: Sequent, p: Position) = Some(f)
     def peek(s: Sequent, p: Position) = Some(f)
+  }
+
+  class NoneGenerate[A] extends Generator[A] {
+    def apply(s: Sequent, p: Position) = None
+    def peek(s: Sequent, p: Position) = None
   }
 
   /**
@@ -594,6 +604,8 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
+  
+  // Axiom lookup
   def axiomT(id: String): Tactic = Axiom.axioms.get(id) match {
     case Some(_) => new Tactics.ApplyRule(Axiom(id)) {
       override def applicable(node: ProofNode): Boolean = true
@@ -642,6 +654,46 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
       override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
     })
+  }
+  
+  // axiomatic version of assignment axiom assignaxiom
+  val assignmentAxiom = new PositionTactic("AssignmentAxiom") {
+    // for now only on top level
+    override def applies(s: Sequent, p: Position): Boolean = {
+      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
+        case BoxModality(Assign(Variable(_, _, _), _), _) => true
+        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
+        case _ => false
+      })
+    }
+
+    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), assignT(p))
+    //@TODO required?  {
+    //   override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
+    // })
+  }
+  
+  // axiomatic assignequal
+  def assignT: PositionTactic = new AxiomTactic("[:=] assignment equal", "[:=] assignment equal") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(Assign(Variable(_, _,_), _), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case BoxModality(Assign(x:Variable, t), p) =>
+        // construct substitution
+        val aX = Variable("x", None, Real)
+        val aT = Variable("t", None, Real)
+        val aP = PredicateConstant("p")
+        val l = List(new SubstitutionPair(aX, x), new SubstitutionPair(aT, t), new SubstitutionPair(aP, p))
+        // construct axiom instance: [x:=t]p(x) <-> \forall x . (x=t -> p(x))
+        val g = Forall(Seq(x), Imply(Equals(Real, x,t), p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, new Substitution(l))
+      case _ => None
+    }
+
   }
 
   val uniquify = new PositionTactic("Uniquify") {
@@ -1216,6 +1268,7 @@ object TacticLibrary {
     }
 
   }
+  
   /**
    * Tactic that makes a proof step based on the top-level operator
    * except when a decision needs to be made (e.g. for loops, differential equations).
@@ -1239,6 +1292,7 @@ object TacticLibrary {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
           case Assign(_, _) => Some(assignment(p))
+          //case Assign(_, _) => Some(assignmentAxiom(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None

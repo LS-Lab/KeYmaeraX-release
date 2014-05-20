@@ -230,5 +230,49 @@ class TacticTests extends FlatSpec with Matchers {
       prove(formula, tactic) should be (Provable)
     }
   }
+  
+  "Tactics (default)" should "prove z>0 -> [z:=z+1]z>1" in {
+    val tactic = default
+    val x = Variable("z", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
+    prove(formula, tactic) should be (Provable)
+  }
 
+  it should "prove x>0 -> [x:=x+1]x>1" in {
+    val tactic = default
+    val x = Variable("x", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
+    prove(formula, tactic) should be (Provable)
+  }
+
+  it should "prove x>0 -> [y:=x; x:=y+1; ](x>y & y>0)" in {
+    val tactic = default
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1)))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula, tactic) should be (Provable)
+  }
+
+  it should "prove x>0 -> [x:=x+1;y:=x-1 ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+    val tactic = default
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,Subtract(Real,x,Number(1)))),
+        Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula, tactic) should be (Provable)
+  }
+
+  it should "not prove invalid x>0 -> [x:=x+1;y:=x ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+    val tactic = default
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,x)),
+        Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula, tactic) should not be (Provable)
+  }
 }
