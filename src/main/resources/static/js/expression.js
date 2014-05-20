@@ -100,44 +100,45 @@ function Ternary(uid, fst,snd,thd,pre,inf,post) {
 // based upon the names of its fields.
 function formulaToInstance(f) {
   var rec_on = formulaToInstance //shorthand.
-  if(f.str)              new Atomic(f.uid, f.str)
-  else if(f.pre_symbol)  new Prefix(f.uid, rec_on(f.child), f.pre_symbol)
-  else if(f.post_symbol) new Postfix(f.uid, rec_on(f.child), f.post_symbol)
+  if(f.str)              return new Atomic(f.uid, f.str)
+  else if(f.pre_symbol)  return new Prefix(f.uid, rec_on(f.child), f.pre_symbol)
+  else if(f.post_symbol) return new Postfix(f.uid, rec_on(f.child), f.post_symbol)
   else if(f.left_symbol) 
-    new Grouping(f.uid, rec_on(f.inner), f.left_symbol, f.right_symbol)
+    return new Grouping(f.uid, rec_on(f.inner), f.left_symbol, f.right_symbol)
   else if(f.program)     
-    new Modality(f.uid, rec_on(f.program), rec_on(f.formula), f.open, f.close)
+    return new Modality(f.uid, rec_on(f.program), rec_on(f.formula), f.open, f.close)
   else if(f.bind_symbol) {
     var rec_variables = new Array();
     for(var i=0; i<f.variables.length; i++) {
       rec_variables.push(rec_on(f.variables[i]));
     }
-    new Binding(f.uid, f.bind_symbol, rec_variables, rec_on(f.child))
+    return new Binding(f.uid, f.bind_symbol, rec_variables, rec_on(f.child))
   }
   else if(f.connective)  
-    new Connective(f.uid, rec_on(f.left), f.connective, rec_on(f.right))
+    return new Connective(f.uid, rec_on(f.left), f.connective, rec_on(f.right))
   else if(f.thd)         
-    new Ternary(f.uid,
+    return new Ternary(f.uid,
         rec_on(f.fst),rec_on(f.snd),rec_on(f.thd),
         f.pre,f.inf,f.post)
   else
-    null
+    return null
 }
 
 // Pattern matching for formuals.
 function formulaMatch(formula, atomicF, prefixF, postfixF, groupingF, 
     modalityF, bindingF, connectiveF, ternaryF) 
 {
+  formula = formulaToInstance(formula);
   if(formula) {
-    if(formula instanceof Atomic) atomicF(formula);
-    else if(formula instanceof Prefix) prefixF(formula);
-    else if(formula instanceof Postfix) postfixF(formula);
-    else if(formula instanceof Grouping) groupingF(formula);
-    else if(formula instanceof Modality) modalityF(formula);
-    else if(formula instanceof Binding) bindingF(formula);
-    else if(formula instanceof Connective) connectiveF(formula);
-    else if(formula instanceof Ternary) connectiveF(formula);
-    else formulaMatch(formulaToInstance(formula)); //returns null on fail.
+    if(formula instanceof Atomic)         return atomicF(formula);
+    else if(formula instanceof Prefix)    return prefixF(formula);
+    else if(formula instanceof Postfix)   return postfixF(formula);
+    else if(formula instanceof Grouping)  return groupingF(formula);
+    else if(formula instanceof Modality)  return modalityF(formula);
+    else if(formula instanceof Binding)   return bindingF(formula);
+    else if(formula instanceof Connective) return connectiveF(formula);
+    else if(formula instanceof Ternary)    return connectiveF(formula);
+    else throw "Not a Formula."
   }
   else {
     throw "Formula did not match any type."
@@ -172,7 +173,11 @@ var FormulaGUI = {
     return span;
   },
 
-  interactiveView : function(client, div, formula) {
+  interactiveView : function(client, formula) {
+    var rec = function(x) { 
+      return FormulaGUI.interactiveView(client,x).outerHTML; 
+    }
+
     var span;
     if(document.getElementById("i" + formula.uid)) {
       span = document.getElementById("i" + formula.uid);
@@ -181,7 +186,41 @@ var FormulaGUI = {
       span = document.createElement('span');
       span.setAttribute('id', "i" + formula.uid);
     }
-    span.innerHTML = client.formulaToInteractiveString(formula);
+
+    span.innerHTML = 
+      formulaMatch(formula, 
+        function(f) { return f.str; },
+        function(pre) { 
+          return pre.pre_symbol + rec(pre.child)
+        },
+        function(post) {
+          return rec(post.child) + post.post_symbol
+        },
+        function(group) {
+          return group.left_symbol + rec(group.inner) + group.right_symbol;
+        },
+        function(modality) {
+          return modality.open + rec(modality.program) + modality.close + rec(modality.formula);
+        },
+        function(binding) {
+          var result = binding.bind_symbol;
+          for(var i=0; i < binding.variables.length; i++) {
+            result += rec(binding.variables[i]);
+            if(i < binding.variables.length-1) result += ",";
+          }
+          result += rec(binding.child);
+          return result;
+        },
+        function(connective) {
+          return rec(connective.left) + connective.connective + rec(connective.right)
+        },
+        function(ternary) {
+          return pre + rec(ternary.fst) +
+                 inf + rec(ternary.snd) +
+                 post + rec(ternary.thd);
+        }
+    );
+
     return span;
   },
   

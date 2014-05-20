@@ -30,12 +30,9 @@ function HydraEventHandler(evt, client) {
 
 
   //Add ignore cases for all syncronous calls.
-  else if(evt.eventType === "FormulaToStringResponse") {
-    //Ignore -- formula to string should be called synchronously.
-  }
-  else if(evt.eventType === "FormulaToInteractiveStringResponse") { 
-    //ignore -- this is not an async call.
-  }
+  else if(evt.eventType === "FormulaToStringResponse") {}
+  else if(evt.eventType === "FormulaToInteractiveStringResponse") {}
+  else if(evt.eventType === "FormulaFromUid") {}
 
   //Add error case
   else {

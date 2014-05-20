@@ -50,15 +50,8 @@ object KeYmaeraClientPrinter {
             "left_symbol" -> JsString(BOX_OPEN),
             "right_symbol" -> JsString(BOX_CLOSE)      
       )
-      case Modality(p:Program,f:Formula) => JsObject(
-            "uid" -> JsString(uid),
-            "program" -> exprToJson(sessionName, uid+"0", p),
-            "formula" -> exprToJson(sessionName, uid+"1", f),
-            "open" -> JsString(BOX_OPEN),
-            "close" -> JsString(BOX_CLOSE)          
-      )
       case e : Binary => e match {
-        case Modality(p:Program, f:Formula) => JsObject(
+        case Modality(p:Game, f:Formula) => JsObject(
             "uid" -> JsString(uid),
             "program" -> exprToJson(sessionName, uid+"0", p),
             "formula" -> exprToJson(sessionName, uid+"1", f),
@@ -70,7 +63,7 @@ object KeYmaeraClientPrinter {
             "left" -> exprToJson(sessionName, uid+"0", e.left),
             "right" -> exprToJson(sessionName, uid+"1", e.right),
             "connective" -> JsString(e match {
-              case e : Modality => "ERROR" //no idea why we absolutely need this...
+              case e : Modality => ???
               case e : Add => PLUS
               case e : Assign => ASSIGN
               case e: And => AND
@@ -246,6 +239,20 @@ case class Problem(sessionName : String, contents : String) extends Request {
     }
   }
 }
+
+case class FormulaFromUidRequest(sessionName : String, uid : String)  extends Request {
+  def getResultingUpdates() : List[Update] = {
+    try {
+      val expr = KeYmaeraClient.getExpression(sessionName, uid)
+      val json = KeYmaeraClientPrinter.exprToJson(sessionName, uid, expr)
+      new FormulaFromUidResponse(sessionName, json) :: Nil
+    }
+    catch {
+      case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
+    }
+  }
+}
+
 case class FormulaToStringRequest(sessionName : String, uid : String) extends Request {
   def getResultingUpdates() : List[Update] = try {
     if(ServerState.expressions == null) {
@@ -284,6 +291,8 @@ case class FormulaToInteractiveStringRequest(sessionName : String, uid : String)
       case e : Exception => (new ErrorResponse(sessionName, e))::Nil
     }
 }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Response types
@@ -327,5 +336,12 @@ case class FormulaToInteractiveStringResponse(sessionName : String, prettyString
   val json = JsObject(
       "eventType" -> JsString("formulaToInteractiveStringResponse"),
       "html" -> JsString(prettyString)
+  )
+}
+
+case class FormulaFromUidResponse(sessionName : String, fjson : JsValue) extends Update {
+  val json = JsObject(
+      "eventType" -> JsString("FormulaFromUid"),
+      "formula" -> fjson
   )
 }

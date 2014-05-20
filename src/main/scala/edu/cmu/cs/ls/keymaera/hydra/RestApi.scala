@@ -77,6 +77,16 @@ trait RestApi extends HttpService {
       }}
     }
   }
+  
+  val formulaFromUid = path("formulaFromUid") {
+    get {
+      parameter("sessionName", "uid") { (sessionName,uid) => {
+        val request = new FormulaFromUidRequest(sessionName, uid)
+        val result = KeYmaeraClient.serviceRequest(sessionName, request)
+        complete("[" + result.map(_.json).mkString(",") + "]")
+      }}
+    }
+  }
 
 //  val nodeClosed = path("nodeClosed") undefCall
 //  val nodePruned = path("nodePruned") undefCall
@@ -95,6 +105,7 @@ trait RestApi extends HttpService {
     startNewProblem ::
     formulaToString ::
     formulaToInteractiveString ::
+    formulaFromUid::
     Nil
 
   val myRoute = routes.reduce(_ ~ _)

@@ -99,24 +99,24 @@ function HydraClient(serverarg, portarg) {
     }
   }
 
-  this.formulaToInteractiveString = function(f) {
+  this.formulaFromUid = function(uid) {
     var result = "";
-    if(f.uid) {
+    if(uid) {
       var result = "";
       $.ajax({
         type: "GET",
         dataType: "json",
         async: false,
-        url: 'http://' + this.server + ":" + this.port + "/formulaToInstractiveString" + "?sessionNAme=" + this.sessionName + "&uid=" + f.uid,
+        url: 'http://' + this.server + ":" + this.port + "/formulaFromUid" + "?sessionName=" + this.sessionName + "&uid=" + uid,
         success: function(resp) {
-          result = resp[0].html;
+          result = resp[0].formula;
         },
         error: this.ajaxErrorHandler
       });
       return result;
     }
     else {
-      throw "formulaToInteractiveString requires f to have uid defined."
+      throw "Expected a defined uid"
     }
   }
 
@@ -140,4 +140,6 @@ function HydraClient(serverarg, portarg) {
       error: this.ajaxErrorHandler
     })
   }
+
+
 }
