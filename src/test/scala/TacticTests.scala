@@ -231,23 +231,31 @@ class TacticTests extends FlatSpec with Matchers {
     }
   }
   
-  "Tactics (default)" should "prove z>0 -> [y:=y+1]z>1" in {
-    val y = Variable("y", None, Real)
+  "Tactics (default)" should "prove a>0 -> [x:=x+1]a>1" in {
+    val x = Variable("x", None, Real)
+    val a = Variable("a", None, Real)
+    val formula = Imply(GreaterThan(Real, a,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(1))))
+    prove(formula) should be (Provable)
+  }
+  /*
+  it should "prove z>0 -> [y:=y+1]z>1" in {
     val z = Variable("z", None, Real)
+    val y = Variable("y", None, Real)
     val formula = Imply(GreaterThan(Real, z,Number(0)),
       BoxModality(Assign(y, Add(Real, y,Number(1))), GreaterThan(Real, z,Number(1))))
     prove(formula) should be (Provable)
   }
 
-  it should "prove z>0 -> [z:=z+1]z>1" in {
-    val x = Variable("z", None, Real)
+  it should "prove x>0 -> [x:=x+1]x>1" in {
+    val x = Variable("x", None, Real)
     val formula = Imply(GreaterThan(Real, x,Number(0)),
       BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
     prove(formula) should be (Provable)
   }
-
-  it should "prove x>0 -> [x:=x+1]x>1" in {
-    val x = Variable("x", None, Real)
+  
+  it should "prove z>0 -> [z:=z+1]z>1" in {
+    val x = Variable("z", None, Real)
     val formula = Imply(GreaterThan(Real, x,Number(0)),
       BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
     prove(formula) should be (Provable)
@@ -278,4 +286,5 @@ class TacticTests extends FlatSpec with Matchers {
         Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
     prove(formula) should not be (Provable)
   }
+  */
 }

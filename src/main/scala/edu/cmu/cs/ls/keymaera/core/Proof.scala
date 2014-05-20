@@ -725,23 +725,37 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  * @param t the expression to be used in place of n
  *@TODO Assert that n is of the above form only
  */
-class SubstitutionPair (val n: Expr, val t: Expr) {
+sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
-  require(n != t, "Cannot substitute " + n + " by " + t)
+  //require(n != t, "Cannot substitute " + n + " by equal " + t)  //@TODO Why not?
 
   @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
     + n.sort + " != " + t.sort)
 
   override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
 }
+object SubstitutionPair {
+  def apply(n: Expr, t: Expr): SubstitutionPair = new SubstitutionPair(n, t)
+  def unapply(e: Any): Option[(Expr,Expr)] = e match {
+    case x: SubstitutionPair => Some((x.n,x.t))
+    case _ => None
+  }
+}
+
 
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  */
-class Substitution(l: Seq[SubstitutionPair]) {
-    //@TODO assert unique left hand side in l
+sealed class Substitution(l: Seq[SubstitutionPair]) {
+  applicable
 
+  // unique left hand sides in l
+  @elidable(ASSERTION) def applicable = {
+    //val lefts = l.map(SubstitutionPair(n,t)=>n).toList
+    val lefts = l.map(sp => sp match {case SubstitutionPair(n,t)=>n}).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+  }
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
 
