@@ -5,6 +5,7 @@ import spray.routing._
 import spray.http._
 import MediaTypes._
 import scala.collection.mutable.HashMap
+import spray.json.JsArray
 
 class RestApiActor extends Actor with RestApi {
   def actorRefFactory = context
@@ -56,6 +57,16 @@ trait RestApi extends HttpService {
       }}
     }
   }
+  
+  val formulaToString = path("formulaToString") {
+    get {
+      parameter("sessionName", "uid") { (sessionName,uid) => {
+        val request = new FormulaToStringRequest(sessionName, uid)
+        val result = KeYmaeraClient.serviceRequest(sessionName, request)
+        complete("[" + result.map(_.json).mkString(",") + "]")
+      }}
+    }
+  }
  
 
 //  val nodeClosed = path("nodeClosed") undefCall
@@ -73,6 +84,7 @@ trait RestApi extends HttpService {
     getUpdates ::
     startSession ::
     startNewProblem ::
+    formulaToString ::
     Nil
 
   val myRoute = routes.reduce(_ ~ _)

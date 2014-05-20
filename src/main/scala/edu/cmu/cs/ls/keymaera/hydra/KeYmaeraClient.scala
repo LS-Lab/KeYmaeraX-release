@@ -46,7 +46,7 @@ object KeYmaeraClientPrinter {
               case e : Assign => ASSIGN
               case e: And => AND
               case e: Equiv => EQUIV
-              case e : Imply => "->"
+              case e : Imply => ARROW
               case e : Or => OR
               case e : BinaryGame => ???
               case e : Choice => CHOICE
@@ -58,17 +58,18 @@ object KeYmaeraClientPrinter {
               case e: LessEquals => LEQ
               case e : LessThan => LT
               case e : NotEquals => NEQ
-              case e : ProgramEquals => ???
-              case e : ProgramNotEquals => ???
+              case e : ProgramEquals => EQ //or equiv?
+              case e : ProgramNotEquals => NEQ
               case e : Divide => DIVIDE
               case e : Exp => EXP
-              case e : Modality => ???
+              case e : Modality => ??? //not sure why this is binary.
               case e : Multiply => MULTIPLY
               case e : Pair => ","
               case e : Subtract => MINUS
             }),
             "right" -> getExpr(sessionName, uid+"1", e.right))
       }
+      
       case e : Ternary => {
         JsObject(
             "uid" -> JsString(uid),
@@ -79,18 +80,98 @@ object KeYmaeraClientPrinter {
             "in" -> JsString("then"),
             "else" -> JsString("else"))
       }
+      
+      case e : Unary => e match {
+        case e : Apply => ???
+        case e : ApplyPredicate => ???
+        case e : BoxModality => JsObject(
+            "uid" -> JsString(uid),
+            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "left_symbol" -> JsString(BOX_OPEN),
+            "right_symbol" -> JsString(BOX_CLOSE))
+        case e : ContEvolve => JsObject(
+            "uid" -> JsString(uid),
+            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "left_symbol" -> JsString("{"),
+            "right_symbol" -> JsString("}"))
+        case e : Derivative => JsObject(
+            "uid" -> JsString(uid),
+            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "post_symbol" -> JsString(PRIME))
+        case e : DiamondModality => JsObject(
+            "uid" -> JsString(uid),
+            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "left_symbol" -> JsString(DIA_OPEN),
+            "right_symbol" -> JsString(DIA_CLOSE))
+        case e : Left => ???
+        case e : Right => ???
+        case e : NDetAssign => JsObject(
+            "uid" -> JsString(uid),
+            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "post_symbol" -> JsString(ASSIGN + KSTAR)
+        )
+        case e : Neg => JsObject(
+            "uid" -> JsString(uid),
+            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "pre_symbol" -> JsString(NEGATIVE)
+        )
+        case e : Test => JsObject(
+            "uid" -> JsString(uid),
+            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "pre_symbol" -> JsString(TEST)
+        )
+        case e : UnaryFormula => e match {
+          case e : Finally => ???
+          case e : FormulaDerivative => JsObject(
+            "uid" -> JsString(uid),
+            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "post_symbol" -> JsString(PRIME))
+          case e : Globally => ???
+          case e : Not => JsObject(
+            "uid" -> JsString(uid),
+            "child" -> getExpr(sessionName, uid+"0", e.child),
+            "pre_symbol" -> JsString(NEGATE)
+        )
+          case e : Quantifier => e match {
+            case Forall(variables, child) => JsObject(
+                "uid" -> JsString(uid),
+                "bind_symbol" -> JsString(FORALL),
+                "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
+                "child" -> getExpr(sessionName, uid+"c", child)
+            )
+            case Exists(variables, child) => JsObject(
+                "uid" -> JsString(uid),
+                "bind_symbol" -> JsString(FORALL),
+                "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
+                "child" -> getExpr(sessionName, uid+"c", child)
+            )
+          }
+        }
+        case e : UnaryGame => ???
+        case e : UnaryProgram => e match {
+          case e : Loop => JsObject( 
+              "uid" -> JsString(uid),
+              "child" -> getExpr(sessionName, uid+"c", e.child),
+              "post_symbol" -> JsString(KSTAR)
+          )
+        }
+      }
+      
       case e : NamedSymbol => {JsObject(
           "uid" -> JsString(uid),
           "str" -> JsString(e.prettyString())
       )}
-      //TODO very odd, using edu.cmu.cs.ls.keymaera.core.Number here fails....
       case e : Number.NumberObj => JsObject("uid" -> JsString(uid), "str" -> JsString(e.prettyString()))
-      case e: NFContEvolve => JsString("unimplemented")
-      case e : ContEvolve => JsString("unimplemented")
-//      case e : True => JsObject("uid" -> JsString(uid),"str" -> JsString(TRUE))
-//      case e : False => JsObject("uid" -> JsString(uid),"str" -> JsString(FALSE))
+      case True() => JsObject("uid" -> JsString(uid),"str" -> JsString(TRUE))
+      case False() => JsObject("uid" -> JsString(uid),"str" -> JsString(FALSE))
       case _ => JsString("unimmplemented: unary and quantifiers." + e.prettyString() + e.getClass().getName())
     }
+  }
+  
+  def getExprList(sessionName:String,uid:String,variables:Seq[NamedSymbol]) = {
+    (variables zip Seq.range(0, variables.size-1)).map( pair => {
+      getExpr(sessionName, uid + pair._2.toString(), pair._1)
+    }).toList
   }
 }
 
@@ -107,8 +188,15 @@ object KeYmaeraClient {
     for(update <- updates) {
       ServerState.addUpdate(sessionName, update.json)
     }
+    updates
   }
   
+  def hasExpression(sessionName:String, uid:String) = {
+    ServerState.expressions.containsKey((sessionName, uid))
+  }
+  def getExpression(sessionName:String, uid:String) = {
+    ServerState.getExpression(sessionName, uid)
+  }
   def sendSequent(sessionName : String, uid : String, s:Sequent) = {
     ServerState.addSequent(sessionName,uid,s)
   }
@@ -134,9 +222,27 @@ case class Problem(sessionName : String, contents : String) extends Request {
       (new CreateRootNode(sessionName, rootSequent)) :: Nil
     }
     catch {
-      case e : Exception => (new ErrorResponse(sessionName, e.getMessage())) :: Nil
+      case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
     }
   }
+}
+case class FormulaToStringRequest(sessionName : String, uid : String) extends Request {
+  def getResultingUpdates() : List[Update] = try {
+    if(ServerState.expressions == null) {
+      new ErrorResponse(sessionName, new NullPointerException()) :: Nil
+    }
+    else if(!KeYmaeraClient.hasExpression(sessionName,uid)) {
+      new ErrorResponse(sessionName, new Exception("UID not found for uid: " + sessionName + "," + uid + " in " + ServerState.expressions.keySet().toArray().mkString(","))) :: Nil
+    }
+    else {
+      val prettyString= KeYmaeraClient.getExpression(sessionName,uid).prettyString()
+      (new FormulaToStringResponse(sessionName,prettyString))::Nil
+    }
+  }
+  catch {
+    case e : Exception => (new ErrorResponse(sessionName, e))::Nil
+  }
+   
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -159,7 +265,18 @@ case class CreateRootNode(sessionName : String, sequent : Sequent) extends Updat
       )
 }
 
-case class ErrorResponse(sessionName : String, message : String) extends Update {
-  val json = JsObject("eventType" -> JsString("ErrorResponse"),
-      "message" -> JsString(message))
+case class ErrorResponse(sessionName : String, exn : Exception) extends Update {
+  val json = JsObject(
+      "eventType" -> JsString("ErrorResponse"),
+      "exnType" -> JsString(exn.getClass().getName()),
+      "message"   -> JsString(exn.getMessage()),
+      "stacktrace" -> JsString(exn.getStackTraceString)
+      )
+}
+
+case class FormulaToStringResponse(sessionName : String, prettyString : String) extends Update {
+  val json = JsObject(
+      "eventType" -> JsString("FormulaToStringResponse"),
+      "formula" -> JsString(prettyString)    
+  )
 }

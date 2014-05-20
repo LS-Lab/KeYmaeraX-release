@@ -42,37 +42,51 @@
 
 function Atomic(uid, str) { this.uid = uid; this.str = str; }
 
-function Grouping(uid, inner) {
+function Prefix(uid, child, pre_symbol) {
   this.uid = uid;
-  this.inner = inner;
-} //note: it's possible that uid=inner.uid
-
-function Binding(uid, variable, body) {
-  this.uid = uid
-  this.variable = variable
-  this.body = body
+  this.child = child;
+  this.pre_symbol = pre_symbol;
 }
 
-function Connective(left, connective, right) {
+function Postfix(uid, child, post_symbol) {
+  this.uid = uid;
+  this.child = child;
+  this.post_symbol = post_symbol;
+}
+
+function Grouping(uid, inner, left_symbol, right_symbol) {
+  this.uid = uid;
+  this.inner = inner;
+  this.left_symbol = left_symbol;
+  this.right_symbol = right_symbol;
+} //note: it's possible that uid=inner.uid
+
+function Binding(uid, bind_symbol, variables, child) {
+  this.uid = uid
+  this.variables = variables
+  this.child = child
+  this.bind_symbol = bind_symbol
+}
+
+function Connective(uid, left, connective, right) {
+  this.uid = uid
   this.left = left
   this.connective = connective
   this.right = right
 }
 
-function Ternary(first, second, third, pre, inf, post) {
-  this.first = first;
-  this.second = second;
-  this.third = third;
-  this.pre = pre;
+function Ternary(uid, fst,snd,thd,pre,inf,post) {
+  this.uid = uid;
+  this.fst = fst;
+  this.snd = snd;
+  this.thd = thd;
+  this.pre = pre
   this.inf = inf;
-  this.post = pos;
+  this.post = post;
 }
 
 //// API Calls for Formulas
 var FormulaAPI = {
-  toString : function(formula) {
-  },
-
   getOptions : function(formula) {
   }
 };

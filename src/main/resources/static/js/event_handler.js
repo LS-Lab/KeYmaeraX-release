@@ -15,6 +15,9 @@ function HydraEventHandler(evt, client) {
     console.log(evt.sequent);
     //TODO-nrf  
   }
+  else if(evt.eventType === "FormulaToStringResponse)
+    //Ignore -- formula to string should be called synchronously.
+  }
   else {
     alert("Event type not found: " + evt.eventType);
   }

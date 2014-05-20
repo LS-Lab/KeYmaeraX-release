@@ -80,6 +80,20 @@ function HydraClient(serverarg, portarg) {
     });
   }
 
+  this.formulaToString = function(uid) {
+    var result = "";
+    $.ajax({
+      type: 'GET',
+      dataType: 'json',
+      async: false,
+      url: 'http://' + this.server + ":" + this.port + "/formulaToString" + "?sessionName=" + this.sessionName + "&uid=" + uid,
+      success: function(resp) {
+        result = resp;
+      }
+    });
+    return result;
+  }
+
   this.getUpdates = function() {
     $.ajax({
       type: "GET",
