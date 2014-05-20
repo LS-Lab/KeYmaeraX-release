@@ -797,6 +797,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
   }
 
   // uniform substitution on formulas
+  //@TODO Use the outermost call to apply(Formula) as a wrapper that adds the full formula o as exception.inContext(o) on exception.
   def apply(f: Formula): Formula = f match {
       // homomorphic cases
     case Not(c) => Not(apply(c))
@@ -819,7 +820,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
       case BoxModality(p, f) => BoxModality(apply(p), apply(f))
       case DiamondModality(p, f) => DiamondModality(apply(p), apply(f))
       case _ => ???
-    } else throw new SubstitutionClashException("There is a name clash in a substitution with pairs " + l + "\napplied to " + f.prettyString() + "\nwhich writes " + x.writes.map(_.prettyString()), this, f)
+    } else throw new SubstitutionClashException("There is a name clash in uniform substitution " + l + "\napplied to modality " + f.prettyString() + "\nwhich writes " + x.writes.map(_.prettyString()) + " leading to a clash in variables " + x.writes.intersect(names(l)).map(_.prettyString()), this, f)
 
     //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f

@@ -71,6 +71,7 @@ object TacticLibrary {
           case _ => None
         }
       ).flatten
+      
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val eqS: Seq[(Int, Term, Term)] = collectEquations(node.sequent)
       val s = node.sequent
@@ -962,8 +963,8 @@ object TacticLibrary {
             constructInstanceAndSubst(getFormula(node.sequent, pos), ax) match {
               case Some((a, axiomInstance, subst, ptac)) =>
                 val eqPos = AntePosition(node.sequent.ante.length)
-                //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                 val branch1Tactic = axiomInstance match {
+                  //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                   case Equiv(_, _) => equalityRewriting(eqPos, pos) & (hideT(eqPos) & hideT(pos))
                   case Imply(_, _) if(pos.isAnte  && pos.inExpr == HereP) => modusPonensT(pos, eqPos)
                   case Imply(_, _) if(!pos.isAnte && pos.inExpr == HereP) => ImplyLeftT(eqPos) & (hideT(pos), AxiomCloseT(eqPos.topLevel, pos))
@@ -976,6 +977,7 @@ object TacticLibrary {
                 //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
                 //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
                 val cont = ptac match {
+                  //@TODO Why is it first succedent position that it's to be applied on?
                   case Some(t) => t(SuccPosition(0))
                   case None => NilT
                 }
@@ -1276,6 +1278,7 @@ object TacticLibrary {
    * @param beta true to use beta rules (such as AndRight) which split branches.
    * @param simplifyProg false to stop working on modalities. True to take simplifying steps on modalities (except when decisions would be needed).
    * @param equiv true to split equivalences.
+   * @TODO Rename. Maybe stepAt?
    */
   def indecisive(beta: Boolean, simplifyProg: Boolean, quantifiers: Boolean, equiv: Boolean = false): PositionTactic = new PositionTactic("Indecisive") {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
@@ -1291,8 +1294,8 @@ object TacticLibrary {
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          case Assign(_, _) => Some(assignment(p))
-          //case Assign(_, _) => Some(assignmentAxiom(p))
+          //case Assign(_, _) => Some(assignment(p))
+          case Assign(_, _) => Some(assignmentAxiom(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
