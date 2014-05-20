@@ -37,18 +37,46 @@ object KeYmaeraClientPrinter {
     KeYmaeraClient.sendExpression(sessionName, uid, e);
     import edu.cmu.cs.ls.keymaera.parser.HTMLSymbols._;
     e match {
-      case e : Binary => {
-        JsObject(
+      case e : DiamondModality => JsObject(
+            "uid" -> JsString(uid),
+            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "left_symbol" -> JsString(DIA_OPEN),
+            "right_symbol" -> JsString(DIA_CLOSE)
+      )
+      case e : BoxModality => JsObject(
+            "uid" -> JsString(uid),
+            "inner" -> getExpr(sessionName, uid+"0", e.child),
+            "left_symbol" -> JsString(BOX_OPEN),
+            "right_symbol" -> JsString(BOX_CLOSE)      
+      )
+      case Modality(p:Program,f:Formula) => JsObject(
+            "uid" -> JsString(uid),
+            "program" -> getExpr(sessionName, uid+"0", p),
+            "formula" -> getExpr(sessionName, uid+"1", f),
+            "open" -> JsString(BOX_OPEN),
+            "close" -> JsString(BOX_CLOSE)          
+      )
+      case e : Binary => e match {
+        case Modality(p:Program, f:Formula) => JsObject(
+            "uid" -> JsString(uid),
+            "program" -> getExpr(sessionName, uid+"0", p),
+            "formula" -> getExpr(sessionName, uid+"1", f),
+            "open" -> JsString(BOX_OPEN),
+            "close" -> JsString(BOX_CLOSE)          
+        )
+        case _ => JsObject(
             "uid" -> JsString(uid),
             "left" -> getExpr(sessionName, uid+"0", e.left),
+            "right" -> getExpr(sessionName, uid+"1", e.right),
             "connective" -> JsString(e match {
+              case e : Modality => "ERROR" //no idea why we absolutely need this...
               case e : Add => PLUS
               case e : Assign => ASSIGN
               case e: And => AND
               case e: Equiv => EQUIV
               case e : Imply => ARROW
               case e : Or => OR
-              case e : BinaryGame => ???
+              case e : BinaryGame => throw new Exception("Games not implemented.")
               case e : Choice => CHOICE
               case e : Parallel => PARALLEL
               case e : Sequence => SCOLON
@@ -62,12 +90,10 @@ object KeYmaeraClientPrinter {
               case e : ProgramNotEquals => NEQ
               case e : Divide => DIVIDE
               case e : Exp => EXP
-              case e : Modality => ??? //not sure why this is binary.
               case e : Multiply => MULTIPLY
               case e : Pair => ","
               case e : Subtract => MINUS
-            }),
-            "right" -> getExpr(sessionName, uid+"1", e.right))
+            }))
       }
       
       case e : Ternary => {
@@ -80,15 +106,10 @@ object KeYmaeraClientPrinter {
             "in" -> JsString("then"),
             "else" -> JsString("else"))
       }
-      
       case e : Unary => e match {
         case e : Apply => ???
         case e : ApplyPredicate => ???
-        case e : BoxModality => JsObject(
-            "uid" -> JsString(uid),
-            "inner" -> getExpr(sessionName, uid+"0", e.child),
-            "left_symbol" -> JsString(BOX_OPEN),
-            "right_symbol" -> JsString(BOX_CLOSE))
+
         case e : ContEvolve => JsObject(
             "uid" -> JsString(uid),
             "inner" -> getExpr(sessionName, uid+"0", e.child),
@@ -98,11 +119,6 @@ object KeYmaeraClientPrinter {
             "uid" -> JsString(uid),
             "child" -> getExpr(sessionName, uid+"0", e.child),
             "post_symbol" -> JsString(PRIME))
-        case e : DiamondModality => JsObject(
-            "uid" -> JsString(uid),
-            "inner" -> getExpr(sessionName, uid+"0", e.child),
-            "left_symbol" -> JsString(DIA_OPEN),
-            "right_symbol" -> JsString(DIA_CLOSE))
         case e : Left => ???
         case e : Right => ???
         case e : NDetAssign => JsObject(

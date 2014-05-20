@@ -80,21 +80,27 @@ function HydraClient(serverarg, portarg) {
     });
   }
 
-  this.formulaToString = function(uid) {
-    var result = "";
-    $.ajax({
-      type: 'GET',
-      dataType: 'json',
-      async: false,
-      url: 'http://' + this.server + ":" + this.port + "/formulaToString" + "?sessionName=" + this.sessionName + "&uid=" + uid,
-      success: function(resp) {
-        result = resp;
-      }
-    });
-    return result;
+  this.formulaToString = function(f) {
+    if(f.uid) {
+      var result = "";
+      $.ajax({
+        type: 'GET',
+        dataType: 'json',
+        async: false,
+        url: 'http://' + this.server + ":" + this.port + "/formulaToString" + "?sessionName=" + this.sessionName + "&uid=" + f.uid,
+        success: function(resp) {
+          result = resp[0].formula;
+        }
+      });
+      return result;
+    }
+    else {
+      console.error("formulaToString requires its argument to have a defined uid.");
+    }
   }
 
   this.getUpdates = function() {
+    var client = this;
     $.ajax({
       type: "GET",
       datatype: "json",
@@ -106,7 +112,7 @@ function HydraClient(serverarg, portarg) {
           console.log("Recieved updates from the server: ");
           console.log(updates);
           for(i = 0; i < updates.length; i++) {
-            HydraEventHandler(updates[i], this);
+            HydraEventHandler(updates[i], client);
           }
         }
       },

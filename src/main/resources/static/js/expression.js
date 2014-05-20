@@ -61,6 +61,14 @@ function Grouping(uid, inner, left_symbol, right_symbol) {
   this.right_symbol = right_symbol;
 } //note: it's possible that uid=inner.uid
 
+function Modality(uid, program, formula, open, close) {
+  this.uid = uid;
+  this.formula = formula;
+  this.program = program;
+  this.open = open;
+  this.close = close;
+}
+
 function Binding(uid, bind_symbol, variables, child) {
   this.uid = uid
   this.variables = variables
@@ -92,6 +100,10 @@ var FormulaAPI = {
 };
 
 var FormulaGUI = {
+  toString : function(client, formula) {
+    return client.formulaToString(formula);
+  },
+
   staticView : function(formula) {
     var div = document.createElement('span');
     div.setAttribute('id', "s" + formula.uid);
@@ -129,6 +141,28 @@ function Sequent(uid, pref, ante, succ) {
 }
 
 var SequentGUI = {
+  sequentSymbol : "&#x22A2",
+
+  toString : function(client, sequent) {
+    var result = "";
+
+    if(sequent.ante) {
+      for(var i=0; i < sequent.ante.length; i++) {
+        var f = sequent.ante[i];
+        result += FormulaGUI.toString(client, f);
+      }
+    }
+    result += " " + this.sequentSymbol + " "; //spaces necessary to prevent []
+    if(sequent.succ) {
+      for(var i=0; i < sequent.succ.length; i++) {
+        var f = sequent.succ[i];
+        result += FormulaGUI.toString(client, sequent.succ[i]);
+      }
+    }
+
+    return result;
+  },
+
   //Prints the sequent to the element with id ``id"
   //TODO-nrf this needs to be better.
   staticView : function(sequent) {
