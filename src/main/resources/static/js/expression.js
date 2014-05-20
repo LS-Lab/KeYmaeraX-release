@@ -167,13 +167,14 @@ var FormulaGUI = {
     else {
       span = document.createElement('span');
       span.setAttribute('id', "s" + formula.uid);
+      span.setAttribute('class', 'sFormula');
     }
 
     span.innerHTML = client.formulaToString(formula);
     return span;
   },
 
-  interactiveView : function(client, formula) {
+  interactiveView : function(client, formula, target) {
     var rec = function(x) { 
       return FormulaGUI.interactiveView(client,x).outerHTML; 
     }
@@ -185,6 +186,7 @@ var FormulaGUI = {
     else {
       span = document.createElement('span');
       span.setAttribute('id', "i" + formula.uid);
+      span.setAttribute('class', 'iFormula');
     }
 
     span.innerHTML = 
@@ -220,6 +222,19 @@ var FormulaGUI = {
                  post + rec(ternary.thd);
         }
     );
+
+    var ifs = document.getElementsByClassName("iformula");
+ 
+    //Recursive calls don't have target defined.
+    if(target) {
+      target.innerHTML = span.outerHTML
+
+      for(var i=0;i<ifs.length;i++) {
+        ifs[i].addEventListener('mouseover', function(e) {
+          e.target.style["background-color"] = "#FFFF00";
+        }, false);
+      }
+    }
 
     return span;
   },
