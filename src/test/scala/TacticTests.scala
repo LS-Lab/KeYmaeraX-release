@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaera.tests.TermTests
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
@@ -13,6 +14,10 @@ class TacticTests extends FlatSpec with Matchers {
   Config.maxCPUs = 1
   val math = new Mathematica
   val qet = new JLinkMathematicaLink()
+  
+  val randomTrials = 10
+  val randomFormulaComplexity = 5
+  
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
 
@@ -24,7 +29,7 @@ class TacticTests extends FlatSpec with Matchers {
   val xgt0 = GreaterThan(Real, x, zero)
   val xplus1 = Add(Real, x, one)
   val xplus1gtx = GreaterThan(Real, xplus1, x)
-
+  
   def num(n : Integer) = Number(new BigDecimal(n.toString()))
   def snum(n : String) = Number(new BigDecimal(n))
 
@@ -119,13 +124,13 @@ class TacticTests extends FlatSpec with Matchers {
       true
 
   "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false)) ~ locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
 
   "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
-    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
     val r = tryTactic(tactic)
     require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
   }
@@ -139,21 +144,36 @@ class TacticTests extends FlatSpec with Matchers {
    * Run KeYmaera till completion using given tactic for proving given conjecture f.
    *@TODO Implement this stub
    */
-  def prove(f:Formula, tactic:Tactic) : ProvabilityStatus = {
-    println("TacticTests.prove: Not implemented yet")
-    UnknownProvability
+  def prove(f:Formula, tactic:Tactic = TacticLibrary.default) : ProvabilityStatus = {
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
+      && Tactics.KeYmaeraScheduler.prioList.isEmpty
+      && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
+      && Tactics.MathematicaScheduler.prioList.isEmpty)) {
+      Thread.sleep(100)
+//      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
+//      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
+//      println("Blocked on Mathematica: " + Tactics.MathematicaScheduler.blocked + " of " + Tactics.MathematicaScheduler.maxThreads)
+//      println("Tasks open Mathematica: " + Tactics.MathematicaScheduler.prioList.length)
+    }
+    if(checkClosed(r)) Provable else {println(TermTests.print(r)); UnknownProvability}
   }
+
+  def checkClosed(n: ProofNode): Boolean =
+    n.children.map((f: ProofStep) =>  f.subgoals.foldLeft(true)(_ && checkClosed(_))).contains(true)
+
   
   /**
    * Tactic that applies propositional proof rules exhaustively but only closes by axiom lazyly, i.e. if no other rule applies.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
-  def lazyPropositional = ((locate(indecisive(false, false, true)) | closeT)*)
+  def lazyPropositional = ((locate(indecisive(true, false, false, true)) | closeT)*)
 
   "Tactics (propositional)" should "prove A->A for any A" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(A, A)
       prove(formula, tactic) should be (Provable)
     }
@@ -161,9 +181,9 @@ class TacticTests extends FlatSpec with Matchers {
 
   it should "prove A->(B->A) for any A,B" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
-      val B = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(A, Imply(B, A))
       prove(formula, tactic) should be (Provable)
     }
@@ -171,10 +191,10 @@ class TacticTests extends FlatSpec with Matchers {
 
   it should "prove (A->(B->C)) <-> ((A&B)->C) for any A,B,C" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(3)
-      val B = new RandomFormula().nextFormula(3)
-      val C = new RandomFormula().nextFormula(3)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val C = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Equiv(Imply(A, Imply(B, C)), Imply(And(A,B),C))
       prove(formula, tactic) should be (Provable)
     }
@@ -182,8 +202,8 @@ class TacticTests extends FlatSpec with Matchers {
 
   it should "prove (~A->A) -> A for any A" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(Imply(Not(A),A),A)
       prove(formula, tactic) should be (Provable)
     }
@@ -191,11 +211,11 @@ class TacticTests extends FlatSpec with Matchers {
   
   it should "prove (A->B) && (C->D) |= (A&C)->(B&D) for any A,B,C,D" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
-      val B = new RandomFormula().nextFormula(5)
-      val C = new RandomFormula().nextFormula(5)
-      val D = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val C = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val D = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(And(Imply(A,B),Imply(C,D)) , Imply(And(A,C),And(B,D)))
       prove(formula, tactic) should be (Provable)
     }
@@ -203,12 +223,67 @@ class TacticTests extends FlatSpec with Matchers {
   
   it should "prove ((A->B)->A)->A for any A,B" in {
     val tactic = lazyPropositional
-    for (i <- 1 to 5) {
-      val A = new RandomFormula().nextFormula(5)
-      val B = new RandomFormula().nextFormula(5)
+    for (i <- 1 to randomTrials) {
+      val A = new RandomFormula().nextFormula(randomFormulaComplexity)
+      val B = new RandomFormula().nextFormula(randomFormulaComplexity)
       val formula = Imply(Imply(Imply(A,B),A),A)
       prove(formula, tactic) should be (Provable)
     }
   }
   
+  "Tactics (default)" should "prove a>0 -> [x:=x+1]a>1" in {
+    val x = Variable("x", None, Real)
+    val a = Variable("a", None, Real)
+    val formula = Imply(GreaterThan(Real, a,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(1))))
+    prove(formula) should be (Provable)
+  }
+
+  it should "prove z>0 -> [y:=y+1]z>1" in {
+    val z = Variable("z", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, z,Number(0)),
+      BoxModality(Assign(y, Add(Real, y,Number(1))), GreaterThan(Real, z,Number(1))))
+    prove(formula) should be (Provable)
+  }
+
+  it should "prove x>0 -> [x:=x+1]x>1" in {
+    val x = Variable("x", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove z>0 -> [z:=z+1]z>1" in {
+    val x = Variable("z", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
+    prove(formula) should be (Provable)
+  }
+
+  it should "prove x>0 -> [y:=x; x:=y+1; ](x>y & y>0)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1)))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula) should be (Provable)
+  }
+
+  it should "prove x>0 -> [x:=x+1;y:=x-1 ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,Subtract(Real,x,Number(1)))),
+        Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula) should be (Provable)
+  }
+
+  it should "not prove invalid x>0 -> [x:=x+1;y:=x ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,x)),
+        Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula) should not be (Provable)
+  }
 }

@@ -43,7 +43,11 @@ import scala.language.implicitConversions
 
 
 */
-
+// TODO: In order to stop execution we should explicitly schedule a "checkStop" tactic to react on that signal
+// for example a valid point to stop is after some loop unrolling. If we just stop at an arbitrary point we run into
+// the issue, that that might not be a valid point to ever resume the tactic (e.g., we have stopped right before
+// a uniform substitution or something (this was different for KeYmaera 3 where the strategy was stateless).
+// TODO: clearly mark exit points of tactics to give a & (b, c) a well defined meaning over complex tactics instead of just rule applications
 object Tactics {
 
   val KeYmaeraScheduler = new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
@@ -226,7 +230,7 @@ object Tactics {
 
   def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     tFrom.limit.propagate(tFrom)
-    result.foreach(n => n.checkParentClosed())
+    result.foreach(n => n.info.checkParentClosed())
   }
 
   /*
@@ -357,6 +361,15 @@ object Tactics {
   def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
       ifElseT(cond, thenT, NilT)
 
+  def switchT(generate: ProofNode => Tactic) = new Tactic("Switch") {
+    def applicable(node : ProofNode) = generate(node).applicable(node)
+    def apply(tool : Tool, node : ProofNode) = {
+      val t = generate(node)
+      t.continuation = continuation
+      t.dispatch(this, node)
+    }
+  }
+
   def branchT(tcts: Tactic*): Tactic = new Tactic("branch") {
     def applicable(node: ProofNode) = true
 
@@ -447,6 +460,18 @@ object Tactics {
     }
 
     def constructTactic(tool: Tool, node: ProofNode): Option[Tactic]
+  }
+
+  object LabelBranch {
+    def apply(s: String): Tactic = new LabelBranch(s)
+  }
+  class LabelBranch(s: String) extends Tactic("Label branch " + s) {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      node.info.branchLabel = s
+      continuation(this, Success, Seq(node))
+    }
   }
 
 }

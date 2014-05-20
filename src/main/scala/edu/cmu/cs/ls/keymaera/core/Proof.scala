@@ -35,6 +35,21 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
       succ(p.getIndex)
     }
   }
+  
+  /**
+   * A copy of this sequent with the indicated position replaced by the formula f.
+   * @param p the position of the replacement
+   * @param f the replacing formula
+   * @returns a copy of this sequent with the formula at position p replaced by f.
+   */
+  def updated(p: Position, f: Formula) = {
+    //require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.isAnte)
+        Sequent(pref, ante.updated(p.getIndex, f), succ)
+    else
+        Sequent(pref, ante, succ.updated(p.getIndex, f))
+  }
+      
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
 }
@@ -66,6 +81,42 @@ object Sequent {
    * Proof Tree
    *============
    */
+
+  class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
+       //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
+    //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
+    @volatile private[this] var closed : Boolean = false
+    @volatile var status               : Status  = Unfinished
+
+    def isLocalClosed: Boolean = closed
+
+    //@TODO Purpose and function unclear
+    def closeNode(s : Status) =
+      this.synchronized {
+        if (!closed) {
+          closed = true
+          status = s
+          } else {
+            assert (status == s, "status unchanged when closing already closed ProofNode with status " + status + " to " + s + " for " + this)
+          }
+      }
+
+      //@TODO Purpose and function unclear
+    def checkParentClosed() : Boolean = {
+      var node = proofNode
+      while (node != null && !node.info.isLocalClosed) node = node.parent
+      if (node == null) {
+        return false
+      } else {
+        node = proofNode
+        while (node != null && !node.info.isLocalClosed) {
+          node.info.closeNode(ParentClosed)
+          node = node.parent
+        }
+        return true
+      }
+    }
+  }
 
   sealed case class ProofStep(rule : Rule, subgoals : List[ProofNode])
   sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
@@ -108,39 +159,8 @@ object Sequent {
       result
     }
 
-    //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
-    //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
-    @volatile private[this] var closed : Boolean = false
-    @volatile var status               : Status  = Unfinished
+    val info: ProofNodeInfo = new ProofNodeInfo(if(parent == null) "" else parent.info.branchLabel, this)
 
-    def isLocalClosed: Boolean = closed
-
-    //@TODO Purpose and function unclear
-    def closeNode(s : Status) =
-      this.synchronized {
-        if (!closed) {
-          closed = true
-          status = s
-          } else {
-            assert (status == s, "status unchanged when closing already closed ProofNode with status " + status + " to " + s + " for " + this)
-          }
-      }
-
-      //@TODO Purpose and function unclear
-    def checkParentClosed() : Boolean = {
-      var node = this
-      while (node != null && !node.isLocalClosed) node = node.parent
-      if (node == null) {
-        return false
-      } else {
-        node = this
-        while (node != null && !node.isLocalClosed) {
-          node.closeNode(ParentClosed)
-          node = node.parent
-        }
-        return true
-      }
-    }
   }
 
   /**
@@ -335,7 +355,7 @@ object ContractionLeft {
 
 
 /*********************************************************************************
- * Axiom Lookup
+ * Lookup Axioms
  *********************************************************************************
  */
 
@@ -352,11 +372,13 @@ object Axiom {
     val p = PredicateConstant("p")
     val pair = ("[++] choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
     m = m + pair
+    
     val aA = ProgramConstant("a")
     val aB = ProgramConstant("b")
     val aP = PredicateConstant("p")
     val pair2 = ("[;] compose", Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP))))
     m = m + pair2
+    
     // [?H]p <-> (H -> p)
     val aH = PredicateConstant("H")
     val pair3 = ("[?] test", Equiv(BoxModality(Test(aH), aP), Imply(aH, aP)))
@@ -364,9 +386,10 @@ object Axiom {
 
     val x = Variable("x", None, Real)
     val t = Variable("t", None, Real)
-    val p2 = Function("p", None, Real, Bool)
-    val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p2, x)), ApplyPredicate(p2, t)))
+    val p1 = Function("p", None, Real, Bool)
+    val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p1, x)), ApplyPredicate(p1, t)))
     m = m + pair4
+    
     val pair5 = ("I induction", Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), BoxModality(Loop(a), p)))
     m = m + pair5
 
@@ -374,8 +397,14 @@ object Axiom {
     //[a](p->q) -> (([a]p) -> ([a]q))
     val pair6 = ("K modal modus ponens", Imply(BoxModality(aA, Imply(aP, aQ)), Imply(BoxModality(aA, aP), BoxModality(aA, aQ))))
     m = m + pair6
-    val pair7 = ("[:*] assignment", Equiv(BoxModality(NDetAssign(x), ApplyPredicate(p2, x)), Forall(Seq(x), ApplyPredicate(p2, x))))
+    
+    val pair7 = ("[:*] assignment", Equiv(BoxModality(NDetAssign(x), ApplyPredicate(p1, x)), Forall(Seq(x), ApplyPredicate(p1, x))))
     m = m + pair7
+    
+    //[x:=t]p(x) <-> \forall x . (x=t -> p(x))
+    val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(x), Imply(Equals(Real, x,t), ApplyPredicate(p1, x)))))
+    m = m + pair8
+
     m
   }
 
@@ -696,22 +725,37 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  * @param t the expression to be used in place of n
  *@TODO Assert that n is of the above form only
  */
-class SubstitutionPair (val n: Expr, val t: Expr) {
+sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
+  //require(n != t, "Cannot substitute " + n + " by equal " + t)  //@TODO Why not?
 
   @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
     + n.sort + " != " + t.sort)
 
   override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
 }
+object SubstitutionPair {
+  def apply(n: Expr, t: Expr): SubstitutionPair = new SubstitutionPair(n, t)
+  def unapply(e: Any): Option[(Expr,Expr)] = e match {
+    case x: SubstitutionPair => Some((x.n,x.t))
+    case _ => None
+  }
+}
+
 
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  */
-class Substitution(l: Seq[SubstitutionPair]) {
-    //@TODO assert unique left hand side in l
+sealed class Substitution(l: Seq[SubstitutionPair]) {
+  applicable
 
+  // unique left hand sides in l
+  @elidable(ASSERTION) def applicable = {
+    //val lefts = l.map(SubstitutionPair(n,t)=>n).toList
+    val lefts = l.map(sp => sp match {case SubstitutionPair(n,t)=>n}).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+  }
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
 
@@ -723,16 +767,18 @@ class Substitution(l: Seq[SubstitutionPair]) {
    */
   private def constructSubst(source: Expr, target: Expr): Substitution = new Substitution(collectSubstPairs(source, target))
 
-  private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] = source match {
-    case Pair(dom, a, b) => target match {
-      case Pair(dom2, c, d) => collectSubstPairs(a, c) ++ collectSubstPairs(b, d)
-      case _ => throw new IllegalArgumentException("Type error. A pair: " + source + " must not be replaced by a non pair: " + target)
-    }
-    case _: Variable => List(new SubstitutionPair(source, target))
-    case _: PredicateConstant => List(new SubstitutionPair(source, target))
-    case _: ProgramConstant => List(new SubstitutionPair(source, target))
-    case _ => throw new UnknownOperatorException("Unknown base case " + source + " of sort " + source.sort, source)
-  }
+  private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] =
+    if(source != target)
+      source match {
+      case Pair(dom, a, b) => target match {
+        case Pair(dom2, c, d) => collectSubstPairs(a, c) ++ collectSubstPairs(b, d)
+        case _ => throw new IllegalArgumentException("Type error. A pair: " + source + " must not be replaced by a non pair: " + target)
+      }
+      case _: Variable => List(new SubstitutionPair(source, target))
+      case _: PredicateConstant => List(new SubstitutionPair(source, target))
+      case _: ProgramConstant => List(new SubstitutionPair(source, target))
+      case _ => throw new UnknownOperatorException("Unknown base case " + source + " of sort " + source.sort, source)
+    } else Nil
 
   def names(pairs: Seq[SubstitutionPair]): Seq[NamedSymbol] = (for(p <- pairs) yield names(p)).flatten.distinct
   def names(pair: SubstitutionPair): Seq[NamedSymbol] = (names(pair.n) ++ names(pair.t)).filter(!boundNames(pair.n).contains(_))
@@ -765,6 +811,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
   }
 
   // uniform substitution on formulas
+  //@TODO Use the outermost call to apply(Formula) as a wrapper that adds the full formula o as exception.inContext(o) on exception.
   def apply(f: Formula): Formula = f match {
       // homomorphic cases
     case Not(c) => Not(apply(c))
@@ -778,16 +825,16 @@ class Substitution(l: Seq[SubstitutionPair]) {
      * For quantifiers just check that there is no name clash, throw an exception if there is
      */
     case Forall(vars, form) => if(vars.intersect(names(l)).isEmpty) Forall(vars, apply(form))
-    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString(), this, f)
+    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied to " + f.prettyString(), this, f)
 
     case Exists(vars, form) => if(vars.intersect(names(l)).isEmpty) Exists(vars, apply(form))
-    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied on " + f.prettyString(), this, f)
+    else throw new SubstitutionClashException("There is a name clash in uniform substitution " + vars.map(_.prettyString()) + " and " + l + " applied to " + f.prettyString(), this, f)
 
     case x: Modality => if(x.writes.intersect(names(l)).isEmpty) x match {
       case BoxModality(p, f) => BoxModality(apply(p), apply(f))
       case DiamondModality(p, f) => DiamondModality(apply(p), apply(f))
       case _ => ???
-    } else throw new SubstitutionClashException("There is a name clash in a substitution with pairs " + l + " to " + f.prettyString() + " since it writes " + x.writes, this, f)
+    } else throw new SubstitutionClashException("There is a name clash in uniform substitution " + l + "\napplied to modality " + f.prettyString() + "\nwhich writes " + x.writes.map(_.prettyString()) + " leading to a clash in variables " + x.writes.intersect(names(l)).map(_.prettyString()), this, f)
 
     //@TODO Concise way of asserting that there can be only one
     case _: PredicateConstant => for(p <- l) { if(f == p.n) return p.t.asInstanceOf[Formula]}; return f
@@ -878,7 +925,7 @@ class Substitution(l: Seq[SubstitutionPair]) {
         case Test(a) => Test(apply(a))
         case ContEvolve(a) => ContEvolve(apply(a))
         case NFContEvolve(v, x, t, f) => if(v.intersect(names(l)).isEmpty) NFContEvolve(v, x, apply(t), apply(f))
-          else throw new SubstitutionClashException("There is a name clash in uniform substitution " + l + " applied on " + p + " because of quantified disturbance " + v, this, p)
+          else throw new SubstitutionClashException("There is a name clash in uniform substitution " + l + " applied on " + p + " because of quantified disturbance " + v.mkString(","), this, p)
         case x: ProgramConstant => for(pair <- l) { if(p == pair.n) return pair.t.asInstanceOf[Program]}; return p
         case _ => throw new UnknownOperatorException("Not implemented yet", p)
      }
@@ -1021,27 +1068,21 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
- * @TODO Review
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
-  require(p.inExpr == HereP, "We can only skolemize top level formulas");
+  require(p.inExpr == HereP, "Can only skolemize top level formulas");
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
+    // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
     val vars = namesIgnoringPosition(s, p)
-    val form = s(p)
-    val (v,phi) = if(p.isAnte) {
-      form match {
-        case Exists(v, phi) => if(!(vars.map(v.contains).contains(true))) (v, phi) else
-          throw new CoreException("Variables to be skolemized should not appear anywhere in the sequent")
-        case _ => throw new InapplicableRuleException("Skolemization is only applicable to existential quantifiers in the antecedent", this, s)
-      }
-    } else {
-      form match {
-        case Forall(v, phi) => if(!(vars.map(v.contains).contains(true))) (v, phi) else
-          throw new CoreException("Variables to be skolemized should not appear anywhere in the sequent")
-        case _ => throw new InapplicableRuleException("Skolemization is only applicable to universal quantifiers in the succedent", this, s)
-      }
+    val (v,phi) = s(p) match {
+      case Forall(v, phi) if (!p.isAnte) => (v,phi)
+      case Exists(v, phi) if (p.isAnte) => (v,phi)
+      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers", this, s)
     }
+    if (vars.map(v.contains).contains(true))
+      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
+        vars.intersect(v.toSet))
     List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
   }
 }
@@ -1082,7 +1123,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
           case BoxModality(p, f) => Right(Forall(p.writes, f))
           case DiamondModality(p, f) => Right(Forall(p.writes, f))
           case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
@@ -1090,25 +1131,42 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
     }
     ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
       case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case _ => throw new IllegalStateException("No abstraction possible of " + s(pos))
+      case _ => throw new InapplicableRuleException("No abstraction possible for " + s(pos), this, s)
     }
 
   }
 }
 
-// maybe:
+/*********************************************************************************
+ * Block Quantifier Decomposition
+ *********************************************************************************
+ */
 
-// quantifier instantiation
+object DecomposeQuantifiers {
+  def apply(p: Position): Rule = new DecomposeQuantifiers(p)
+}
 
-// remove known
+class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
+  override def apply(s: Sequent): List[Sequent] = {
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
+      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
+        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
+        case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
+      }
+    }
+    val f = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
+      case Some(form) => form
+      case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + s(pos).prettyString() + " at " + pos, this, s)
+    }
+    if(pos.isAnte)
+      List(Sequent(s.pref, s.ante.updated(pos.getIndex, f), s.succ))
+    else
+      List(Sequent(s.pref, s.ante, s.succ.updated(pos.getIndex, f)))
+  }
+}
 
-// unskolemize
-
-// forall-I
-
-// forall-E
-
-// merge sequent (or is this derived?)
 
 /*********************************************************************************
  * Lemma Mechanism Rules
@@ -1164,31 +1222,6 @@ object LookupLemma {
         Some((file, file.getName, result))
       case _ => None
     }
-  }
-}
-
-object DecomposeQuantifiers {
-  def apply(p: Position): Rule = new DecomposeQuantifiers(p)
-}
-
-class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
-  override def apply(s: Sequent): List[Sequent] = {
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
-        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
-        case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
-      }
-    }
-    val f = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
-      case Some(form) => form
-      case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + s(pos).prettyString() + " at " + pos, this, s)
-    }
-    if(pos.isAnte)
-      List(Sequent(s.pref, s.ante.updated(pos.getIndex, f), s.succ))
-    else
-      List(Sequent(s.pref, s.ante, s.succ.updated(pos.getIndex, f)))
   }
 }
 
@@ -1263,18 +1296,19 @@ object Helper {
   }
 
   /**
-   * Finds all names in a sequent, ignoring those in the formula at position p.
+   * Finds all names in a sequent, ignoring those in the formula at top-level position p.
    */
   def namesIgnoringPosition(s: Sequent, p: Position): Set[NamedSymbol] = {
+    require(p.inExpr == HereP, "namesIgnoringPosition only implemented for top-level positions HereP");
     var vars: Set[NamedSymbol] = Set.empty
     for(i <- 0 until s.ante.length) {
-      if(!p.isAnte || i != p.getIndex) {
+      if(!(p.isAnte && i == p.getIndex)) {
         vars ++= names(s.ante(i))
       }
     }
     for(i <- 0 until s.succ.length) {
-      if(p.isAnte || i != p.getIndex) {
-        vars ++= names(s.ante(i))
+      if(!(!p.isAnte && i == p.getIndex)) {
+        vars ++= names(s.succ(i))
       }
     }
     vars

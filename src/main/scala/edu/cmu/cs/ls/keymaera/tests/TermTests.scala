@@ -122,7 +122,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = ((AxiomCloseT | locateSucc(indecisive(false, true)) | locateAnte(indecisive(false, true)) | locateSucc(indecisive(true, true)) | locateAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true)) | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -143,7 +143,7 @@ object TermTests {
     val xp1 = Add(Real, x, Number(1))
     val zero = Number(0)
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
-    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false)) | locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
       Thread.sleep(10)
@@ -161,7 +161,7 @@ object TermTests {
     val xp1 = Add(Real, x, Number(1))
     val zero = Number(0)
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
-    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false)) ~ locateAnte(indecisive(true, false, true)))*)
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
       Thread.sleep(100)
@@ -177,7 +177,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val master = ((AxiomCloseT | locateSucc(indecisive(false, true)) | locateAnte(indecisive(false, true)) | locateSucc(indecisive(true, true)) | locateAnte(indecisive(true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val master = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true)) | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
     val tactic = ImplyRightFindT & locateSucc(inductionT(Some(PredicateConstant("inv")))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
@@ -213,6 +213,48 @@ object TermTests {
     writeToFile(new File(output), tree)
   }
 
+  def test10a(output: String) {
+    import TacticLibrary._
+    val parse = new KeYmaeraParser()
+    val input = "examples/dev/t/tactics/ETCS-safety.key"
+    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
+    println(KeYmaeraPrettyPrinter.stringify(i2))
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
+    val invString = "v^2 - d^2 <= 2*b*(m-z) & d >= 0"
+    val invInput = "Functions. R b. End.\n ProgramVariables. R v. R m. R z. R d. End.\n Problem.\n " + invString + "End.\n"
+    val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
+    val tactic = master(new Generate(inv), true)
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    Thread.sleep(3000)
+    /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(100)
+      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
+      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
+    }*/
+    val tree = print(r)
+    println(tree)
+    writeToFile(new File(output), tree)
+  }
+
+  def test11(input: String, output: String) {
+    import TacticLibrary._
+    val parse = new KeYmaeraParser()
+    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
+    println(KeYmaeraPrettyPrinter.stringify(i2))
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
+    val inv = GreaterThan(Real, Variable("x", None, Real), Number(0))
+    val tactic = master(new Generate(inv), true)
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    Thread.sleep(3000)
+    /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(100)
+      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
+      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
+    }*/
+    val tree = print(r)
+    println(tree)
+    writeToFile(new File(output), tree)
+  }
 
   def readFile(input: String): String = try {
     val fr = new BufferedReader(new FileReader(input))
@@ -236,13 +278,6 @@ object TermTests {
 
   def printPos(p: PosInExpr): Any =
    p.pos.mkString(",")
-   /*p match {
-    case HereP => "h"
-    case FirstP(s) => "f" + printPos(s) + ""
-    case SecondP(s) => "s" + printPos(s) + ""
-    case ThirdP(s) => "t" + printPos(s) + ""
-    case _ => throw new UnsupportedOperationException("not implement for pos " + p)
-  }*/
 
   def printNamedSymbol(n: NamedSymbol): String = "\"" + n.name + (n.index match { case Some(j) => "_" + j case _ => "" }) + "\""
 
@@ -348,8 +383,8 @@ object TermTests {
   }
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
-  def print(s: Sequent): String = "\"" + print(s.ante) + " ==> " + print(s.succ) + "\""
-  def print(p: ProofNode): String = "{ \"sequent\":" + print(p.sequent) + ", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
+  def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
+  def print(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
   def print(ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print).mkString(",") + "]" + "}"
 
 }
