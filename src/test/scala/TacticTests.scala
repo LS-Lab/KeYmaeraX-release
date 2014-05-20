@@ -231,19 +231,27 @@ class TacticTests extends FlatSpec with Matchers {
     }
   }
   
-  "Tactics (default)" should "prove a>0 -> [x:=x+1]a>1" in {
+  "Tactics (default)" should "prove a>0 -> [x:=77]a>0" in {
     val x = Variable("x", None, Real)
     val a = Variable("a", None, Real)
     val formula = Imply(GreaterThan(Real, a,Number(0)),
-      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(1))))
+      BoxModality(Assign(x, Number(77)), GreaterThan(Real, a,Number(0))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove a>0 -> [x:=x+1]a>0" in {
+    val x = Variable("x", None, Real)
+    val a = Variable("a", None, Real)
+    val formula = Imply(GreaterThan(Real, a,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(0))))
     prove(formula) should be (Provable)
   }
 
-  it should "prove z>0 -> [y:=y+1]z>1" in {
+  it should "prove z>0 -> [y:=y+1]z>0" in {
     val z = Variable("z", None, Real)
     val y = Variable("y", None, Real)
     val formula = Imply(GreaterThan(Real, z,Number(0)),
-      BoxModality(Assign(y, Add(Real, y,Number(1))), GreaterThan(Real, z,Number(1))))
+      BoxModality(Assign(y, Add(Real, y,Number(1))), GreaterThan(Real, z,Number(0))))
     prove(formula) should be (Provable)
   }
 

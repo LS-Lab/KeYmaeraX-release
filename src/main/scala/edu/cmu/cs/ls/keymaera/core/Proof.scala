@@ -175,11 +175,17 @@ object Sequent {
    *********************************************************************************
    */
 
-abstract class PositionRule(name: String, val pos: Position) extends Rule(name)
+abstract class PositionRule(name: String, val pos: Position) extends Rule(name) {
+    override def toString: String = name + " at " + pos
+}
 
-abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos)
+abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos) {
+  override def toString: String = name + " at " + pos + " assumtion at " + aPos
+}
 
-abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name)
+abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name) {
+  override def toString: String = name + " at " + pos1 + " and " + pos2
+}
 
 /*********************************************************************************
  * Positioning information within expressions, i.e. formulas / terms / programs
@@ -717,9 +723,9 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  *
  * @param n the expression to be replaced. n can have one of the following forms:
  *          - Variable
- *          - Predicate
- *          - ApplyPredicate(Function, Expr)
- *          - Apply(Function, Expr)
+ *          - PredicateConstant
+ *          - ApplyPredicate(p:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . p(x)"
+ *          - Apply(f:Function, x:Variable)
  *          - ProgramConstant
  *          - Derivative(...)
  * @param t the expression to be used in place of n
@@ -727,10 +733,22 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  */
 sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
-  //require(n != t, "Cannot substitute " + n + " by equal " + t)  //@TODO Why not?
-
-  @elidable(ASSERTION) def applicable = require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
+  // identity substitution would be correct but is usually unintended
+  require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
+  
+  @elidable(ASSERTION) def applicable = {
+    require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
     + n.sort + " != " + t.sort)
+    require(n match {
+      case _:Variable => true
+      case _:PredicateConstant => true
+      case ApplyPredicate(_:Function, _:Variable) => true
+      case Apply(_:Function, _:Variable) => true
+      case _:ProgramConstant => true
+      case Derivative(_, _:Variable) => true
+      case _ => false
+      })
+  }
 
   override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
 }
@@ -752,8 +770,8 @@ sealed class Substitution(l: Seq[SubstitutionPair]) {
 
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
-    //val lefts = l.map(SubstitutionPair(n,t)=>n).toList
-    val lefts = l.map(sp => sp match {case SubstitutionPair(n,t)=>n}).toList
+    val lefts = l.map(sp=>sp.n).toList
+    //@TODO check that we never replace p(x) by something and also p(t) by something
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
   }
 
