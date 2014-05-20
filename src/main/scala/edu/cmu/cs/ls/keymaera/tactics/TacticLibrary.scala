@@ -658,24 +658,10 @@ object TacticLibrary {
   }
   
   // axiomatic version of assignment axiom assignaxiom
-  val assignmentAxiom = new PositionTactic("AssignmentAxiom") {
-    // for now only on top level
-    override def applies(s: Sequent, p: Position): Boolean = {
-      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Assign(Variable(_, _, _), _), _) => true
-        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
-        case _ => false
-      })
-    }
-
-    override def apply(p: Position): Tactic = assignT(p)//Tactics.weakSeqT(uniquify(p), assignT(p))
-    //@TODO required?  {
-    //   override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
-    // })
-  }
+  val assignT = boxAssignT /*@TODO | diamondAssignT*/
   
   // axiomatic assignequal
-  def assignT: PositionTactic = new AxiomTactic("[:=] assignment equal", "[:=] assignment equal") {
+  def boxAssignT: PositionTactic = new AxiomTactic("[:=] assignment equal", "[:=] assignment equal") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(Variable(_, _,_), _), _) => true
       case _ => false
@@ -719,7 +705,7 @@ object TacticLibrary {
           }
         }
         // rename to match axiom if necessary
-        val (ax, cont) = if(x.name != "x" || x.index != None) (replace(axiom)(aX, x), Some(alpha)) else (axiom, None)
+        val (ax, cont) = if (x.name == "x" && x.index == None) (axiom, None) else (replace(axiom)(aX, x), Some(alpha))
         Some(ax, axiomInstance, new Substitution(l), cont)
       case _ => None
     }
@@ -1324,7 +1310,7 @@ object TacticLibrary {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
           //case Assign(_, _) => Some(assignment(p))
-          case Assign(_, _) => Some(assignmentAxiom(p))
+          case Assign(_, _) => Some(assignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
