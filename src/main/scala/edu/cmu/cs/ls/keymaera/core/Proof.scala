@@ -175,11 +175,17 @@ object Sequent {
    *********************************************************************************
    */
 
-abstract class PositionRule(name: String, val pos: Position) extends Rule(name)
+abstract class PositionRule(name: String, val pos: Position) extends Rule(name) {
+    override def toString: String = name + " at " + pos
+}
 
-abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos)
+abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos) {
+  override def toString: String = name + " at " + pos + " assumtion at " + aPos
+}
 
-abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name)
+abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name) {
+  override def toString: String = name + " at " + pos1 + " and " + pos2
+}
 
 /*********************************************************************************
  * Positioning information within expressions, i.e. formulas / terms / programs
