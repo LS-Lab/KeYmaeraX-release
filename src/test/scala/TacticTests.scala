@@ -238,7 +238,7 @@ class TacticTests extends FlatSpec with Matchers {
       BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(1))))
     prove(formula) should be (Provable)
   }
-  /*
+
   it should "prove z>0 -> [y:=y+1]z>1" in {
     val z = Variable("z", None, Real)
     val y = Variable("y", None, Real)
@@ -286,5 +286,4 @@ class TacticTests extends FlatSpec with Matchers {
         Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
     prove(formula) should not be (Provable)
   }
-  */
 }
