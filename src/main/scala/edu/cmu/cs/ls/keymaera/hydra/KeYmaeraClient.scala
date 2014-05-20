@@ -4,8 +4,6 @@ import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraParser, KeYmaeraPrettyPrinter}
 import edu.cmu.cs.ls.keymaera.core._
 import spray.json._
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal._
-
 /**
  * Pretty-prints each subexpression, storing a unique identifier based upon the
  * positions in the sequent. The server is notified of all newly created identifiers.
@@ -89,6 +87,7 @@ object KeYmaeraClientPrinter {
               case e: LessEquals => LEQ
               case e : LessThan => LT
               case e : NotEquals => NEQ
+
               case e : ProgramEquals => EQ //or equiv?
               case e : ProgramNotEquals => NEQ
               case e : Divide => DIVIDE
