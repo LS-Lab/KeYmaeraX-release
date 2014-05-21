@@ -38,32 +38,49 @@ object KeYmaeraClientPrinter {
     KeYmaeraClient.sendExpression(sessionName, uid, e);
     import edu.cmu.cs.ls.keymaera.parser.HTMLSymbols._;
     e match {
-      case e : DiamondModality => JsObject(
-            "uid" -> JsString(uid),
-            "inner" -> exprToJson(sessionName, uid+"0", e.child),
-            "left_symbol" -> JsString(DIA_OPEN),
-            "right_symbol" -> JsString(DIA_CLOSE)
-      )
-      case e : BoxModality => JsObject(
-            "uid" -> JsString(uid),
-            "inner" -> exprToJson(sessionName, uid+"0", e.child),
-            "left_symbol" -> JsString(BOX_OPEN),
-            "right_symbol" -> JsString(BOX_CLOSE)      
-      )
-      case e : Binary => e match {
-        case Modality(p:Game, f:Formula) => JsObject(
-            "uid" -> JsString(uid),
-            "program" -> exprToJson(sessionName, uid+"0", p),
-            "formula" -> exprToJson(sessionName, uid+"1", f),
-            "open" -> JsString(BOX_OPEN),
-            "close" -> JsString(BOX_CLOSE)          
+      case DiamondModality(ep) => {
+        val (program:Program, formula:Formula) = ep
+        JsObject(
+          "uid" -> JsString(uid),
+          "program" -> exprToJson(sessionName, uid+"0", program),
+          "formula" -> exprToJson(sessionName, uid+"0", formula),
+          "open" -> JsString(BOX_OPEN),
+          "close" -> JsString(BOX_CLOSE)
         )
+      }
+      case BoxModality(ep) => {
+        val (program:Program, formula:Formula) = ep
+        JsObject(
+          "uid" -> JsString(uid),
+          "program" -> exprToJson(sessionName, uid+"0", program),
+          "formula" -> exprToJson(sessionName, uid+"0", formula),
+          "open" -> JsString(BOX_OPEN),
+          "close" -> JsString(BOX_CLOSE)
+        )
+      }
+
+      case e : Binary => e match {
+//        case Modality(p:Any, f:Any) => {
+//          val (lefts,rights,program,formula) = p match {
+//            case BoxModality(p,f) => (BOX_OPEN,BOX_CLOSE,exprToJson(sessionName, uid+"0", p),exprToJson(sessionName, uid+"0", f))
+//            case DiamondModality(p,f) => (DIA_OPEN,DIA_CLOSE,exprToJson(sessionName, uid+"1", p),exprToJson(sessionName, uid+"0", f))
+////            case _ => (BOX_OPEN, BOX_CLOSE,exprToJson(sessionName, uid+"0", p),exprToJson(sessionName, uid+"0", f) )
+//            case _ => throw new Exception("found a non-box, non-diamond modality: " + p.prettyString() + " of type: " + p.getClass().getName())
+//          }
+//          JsObject(
+//            "uid" -> JsString(uid),
+//            "program" -> exprToJson(sessionName, uid+"0", p),
+//            "formula" -> exprToJson(sessionName, uid+"1", f),
+//            "left_symbol" -> JsString(lefts),
+//            "right_symbol" -> JsString(rights)
+//          )
+//        }
         case _ => JsObject(
             "uid" -> JsString(uid),
             "left" -> exprToJson(sessionName, uid+"0", e.left),
             "right" -> exprToJson(sessionName, uid+"1", e.right),
             "connective" -> JsString(e match {
-              case e : Modality => ???
+              case e : Modality => throw new Exception("found modality!")
               case e : Add => PLUS
               case e : Assign => ASSIGN
               case e: And => AND
@@ -80,7 +97,6 @@ object KeYmaeraClientPrinter {
               case e: LessEquals => LEQ
               case e : LessThan => LT
               case e : NotEquals => NEQ
-
               case e : ProgramEquals => EQ //or equiv?
               case e : ProgramNotEquals => NEQ
               case e : Divide => DIVIDE
@@ -88,6 +104,7 @@ object KeYmaeraClientPrinter {
               case e : Multiply => MULTIPLY
               case e : Pair => ","
               case e : Subtract => MINUS
+              case _ => ???
             }))
       }
       
@@ -166,6 +183,7 @@ object KeYmaeraClientPrinter {
               "post_symbol" -> JsString(KSTAR)
           )
         }
+        case _ => ???
       }
       
       case e : NamedSymbol => {JsObject(

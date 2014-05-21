@@ -17,6 +17,19 @@ function HydraClient(serverarg, portarg) {
   //Default values for the parameters.
   if(typeof(serverarg) === 'undefined') serverarg = "localhost";
   if(typeof(portarg) === 'undefined') portarg = 8080;
+  
+  //End "Constructor" logic.
+
+  this.setServerStatus = function(up) {
+    document.getElementById("status").innerHTML = "hydra://" + hydraServerInfo.server + ":" + hydraServerInfo.port
+    if(up) {
+      //document.getElementById("status").style.backgroundColor = null;
+      document.getElementById("status").style.backgroundColor = "#005500";
+    }
+    else {
+      document.getElementById("status").style.backgroundColor = "#FF0000";
+    }
+  }
 
   //Create instead varaibles based upon the arguments provided. Blah.
   this.server = serverarg;
@@ -31,12 +44,14 @@ function HydraClient(serverarg, portarg) {
   //////////////////////////////////////////////////////////////////////////////
   // Begin API calls
   //////////////////////////////////////////////////////////////////////////////
+  var client_instance = this; //For the inside of AJAX callbacks.
 
   this.ajaxErrorHandler = function (request, textStatus, errorThrown) {
-    console.log(request.responseText);
-    console.log(textStatus);
-    console.log(errorThrown);
-    alert("error during AJAX call: " + textStatus + " (see console for more information)");
+    console.error(request.responseText);
+    console.error(textStatus);
+    console.error(errorThrown);
+    client_instance.setServerStatus(false);
+    //alert("error during AJAX call: " + textStatus + " (see console for more information)");
   }
  
   this.get = function(resourceName, callbackFunction) {
@@ -129,6 +144,7 @@ function HydraClient(serverarg, portarg) {
       async: "true",
       url: "http://" + this.server + ":" + this.port + "/getUpdates" + "?sessionName=" + this.sessionName,
       success: function(updates) {
+        client.setServerStatus(true);
         if(updates instanceof Array && updates.length > 0) {
           console.log("Recieved updates from the server: ");
           console.log(updates);

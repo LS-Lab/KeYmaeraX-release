@@ -215,6 +215,8 @@ object KeYmaeraPrettyPrinter {
     //And these we can pattern match on but are not implemented yet.
     case Modality(_,_) => ???
     case Exists(_,_) => ???
+    
+    case _ => throw new Exception("Ended up in the _ case of the pretty printer for: " + expressionToPrint.getClass())
   }
   
   private def recurse(e:Expr) = groupIfNotAtomic(e, prettyPrinter(e))

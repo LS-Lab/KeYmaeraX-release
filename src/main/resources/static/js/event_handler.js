@@ -3,7 +3,7 @@ function HydraEventHandler(evt, client) {
     alert(msg); //todo
   }
 
-  var proverSpan = document.getElementById("prover")
+  var proverSpan = document.getElementById("provercontents")
   if(!(evt.eventType)) {
     alert("Non-event found in event stream.");
     console.log("non-event found in event stream: ");
@@ -25,7 +25,9 @@ function HydraEventHandler(evt, client) {
 
   else if(evt.eventType === "CreateRootNode") {
     console.log(evt.sequent);
-    proverSpan.innerHTML = SequentGUI.toString(client, evt.sequent);
+    $("#provercontents").html(
+        SequentGUI.staticView(client, evt.sequent)
+    );
   }
 
 

@@ -1,3 +1,4 @@
+ //THIS COMMENT IS STALE
 /**
  * KeYmaera Javascript Frontend Library
  * Nathan Fulton
@@ -22,6 +23,7 @@
 // Expressions
 ////////////////////////////////////////////////////////////////////////////////
 
+// THIS COMMENT IS STALE
 /**
  * The Javascript data structure for expressions is considerably less
  * expressive than the Scala data structure. Formulas are distinguished
@@ -171,12 +173,51 @@ var FormulaGUI = {
     }
 
     span.innerHTML = client.formulaToString(formula);
+    
+    $(span).contextPopup({
+      title: 'Static Formula Popup Menu',
+      items: [
+        { 
+          label:'Interact', 
+          action:function() {
+            alert(formula.uid);
+            var new_span = FormulaGUI.interactiveView(client, formula);
+            document.getElementById('s'+formula.uid).outerHTML = new_span.outerHTML; //???
+            FormulaGUI.addInteractions();
+          }
+        },
+      ]
+    });
+
+    //span.addEventListener('click', function(e) {
+    //    
+    //});
+
     return span;
   },
 
-  interactiveView : function(client, formula, target) {
+  addInteractions : function() {
+    var ifs = document.getElementsByClassName("iFormula");
+ 
+    //Recursive calls have recursive defined defined.
+    for(var i=0;i<ifs.length;i++) {
+      alert("asdf")
+      ifs[i].addEventListener('mouseover', function(e) {
+        e.target.style["background-color"] = "#FFFF00";
+      }, false);
+      ifs[i].addEventListener('mouseout', function(e) {
+        e.target.style["background-color"] = null;
+      }, false);
+      ifs[i].addEventListener('click', function(e) {
+        alert(JSON.stringify(e.target.innerHTML));
+        //FormulaGUI.menu(client, formula, e.target);
+      },true);
+    }
+  },
+
+  interactiveView : function(client, formula, recursive) {
     var rec = function(x) { 
-      return FormulaGUI.interactiveView(client,x).outerHTML; 
+      return FormulaGUI.interactiveView(client,x,true).outerHTML; 
     }
 
     var span;
@@ -223,18 +264,10 @@ var FormulaGUI = {
         }
     );
 
-    var ifs = document.getElementsByClassName("iformula");
- 
-    //Recursive calls don't have target defined.
-    if(target) {
-      target.innerHTML = span.outerHTML
-
-      for(var i=0;i<ifs.length;i++) {
-        ifs[i].addEventListener('mouseover', function(e) {
-          e.target.style["background-color"] = "#FFFF00";
-        }, false);
-      }
-    }
+    //Recursive calls have recursive defined defined.
+    //There's nothing wrong with adding the interactions at each step,
+    //but taht would be rather inefficient.
+    if(!recursive) FormulaGUI.addInteractions();
 
     return span;
   },
@@ -289,12 +322,29 @@ var SequentGUI = {
 
   //Prints the sequent to the element with id ``id"
   //TODO-nrf this needs to be better.
-  staticView : function(sequent) {
+  staticView : function(client, sequent) {
     var div = document.createElement('span');
     div.setAttribute('id', "s"+sequent.uid);
-    div.innerHTML = FormulaGUI.staticView(sequent.left) + 
-                    "&#x22A2"                           + 
-                    FormulaGUI.staticView(sequent.right);
+    if(sequent.ante) {
+      for(var i = 0; i < sequent.ante.length; i++) {
+        var f = sequent.ante[i];
+        $(div).append(FormulaGUI.staticView(client,f));
+        if(i != sequent.ante.length - 1) {
+          $(div).append(",")
+        }
+      }
+    }
+    $(div).append('\u22A2' + " ");
+    if(sequent.succ) {
+      for(var i = 0; i < sequent.succ.length; i++) {
+        var f = sequent.succ[i];
+        $(div).append(FormulaGUI.staticView(client,f));
+        if(i != sequent.succ.length - 1) {
+          $(div).append(",")
+        }
+      }
+    }
+
     return div;
   },
 
