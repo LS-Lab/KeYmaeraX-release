@@ -180,7 +180,6 @@ var FormulaGUI = {
         { 
           label:'Interact', 
           action:function() {
-            alert(formula.uid);
             var new_span = FormulaGUI.interactiveView(client, formula);
             document.getElementById('s'+formula.uid).outerHTML = new_span.outerHTML; //???
             FormulaGUI.addInteractions();
@@ -201,7 +200,6 @@ var FormulaGUI = {
  
     //Recursive calls have recursive defined defined.
     for(var i=0;i<ifs.length;i++) {
-      alert("asdf")
       ifs[i].addEventListener('mouseover', function(e) {
         e.target.style["background-color"] = "#FFFF00";
       }, false);
@@ -209,7 +207,6 @@ var FormulaGUI = {
         e.target.style["background-color"] = null;
       }, false);
       ifs[i].addEventListener('click', function(e) {
-        alert(JSON.stringify(e.target.innerHTML));
         //FormulaGUI.menu(client, formula, e.target);
       },true);
     }
