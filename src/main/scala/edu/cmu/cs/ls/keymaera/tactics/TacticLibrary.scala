@@ -50,6 +50,11 @@ object TacticLibrary {
   }
 
   /**
+   * Make a step in a proof at the given position (except when decision needed)
+   */
+  def step : PositionTactic = indecisive(true, true, true, true)
+
+  /**
    * Tactic that applies propositional proof rules exhaustively.
    *@TODO Implement for real. This strategy uses more than propositional steps.
    */
@@ -1309,8 +1314,8 @@ object TacticLibrary {
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          //case Assign(_, _) => Some(assignment(p))
-          case Assign(_, _) => Some(assignT(p))
+          case Assign(_, _) => Some(assignment(p))
+          // case Assign(_, _) => Some(assignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
@@ -1329,7 +1334,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTactic(node.sequent, p)
     }
   }
-
+  
   def skolemizeT = new PositionTactic("Skolemize") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case Forall(_, _) => true
