@@ -294,4 +294,74 @@ class TacticTests extends FlatSpec with Matchers {
         Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
     prove(formula) should not be (Provable)
   }
+
+  //@TODO Implement
+  def unsoundUniformSubstitution(assume : Formula, conclude : Formula, s: Substitution) = Provable
+
+  //@TODO Move the subsequent tests to UniformSubstitutionTest.scala
+  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]p(x)<->p(2) with .>y for p(.)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val p1 = Function("p", None, Real, Bool)
+    val assume = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Number(2))), ApplyPredicate(p1, x)),
+      ApplyPredicate(p1, Number(2)))
+    val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Number(2))), GreaterThan(Real,x,y)),
+      GreaterThan(Real, Number(2), y))
+    val l = Variable("l", None, Real)
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,l), GreaterThan(Real,l,y))))) should not be (Provable)
+
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,x), GreaterThan(Real,x,y))))) should not be (Provable)
+    
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,y), GreaterThan(Real,y,y))))) should not be (Provable)
+  }
+
+  it should "not apply unsoundly to [y:=5;x:=x^2]p(x+y)<->p(x^2+5) with y>=. for p(.)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val p1 = Function("p", None, Real, Bool)
+    val assume = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), ApplyPredicate(p1, Add(Real,x,y))),
+      ApplyPredicate(p1, Add(Real,Exp(Real,x,Number(2)),Number(5))))
+    val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), GreaterEquals(Real,y, Add(Real,x,y))),
+        GreaterEquals(Real,y, Add(Real,Exp(Real,x,Number(2)),Number(5))))
+    val l = Variable("l", None, Real)
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,l), GreaterEquals(Real,y,l))))) should not be (Provable)
+
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,x), GreaterEquals(Real,y,x))))) should not be (Provable)
+    
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,y), GreaterEquals(Real,y,y))))) should not be (Provable)
+  }
+
+  it should "not apply unsoundly to [x:=x+1]p(x)<->p(x+1) with .>0&\\exists x. x<. for p(.)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val p1 = Function("p", None, Real, Bool)
+    val assume = Equiv(BoxModality(Assign(x, Add(Real,x,Number(1))), ApplyPredicate(p1, x)),
+      ApplyPredicate(p1, Add(Real,x, Number(1))))
+    val conclude = Equiv(BoxModality(Assign(x, Add(Real,x,Number(1))), And(GreaterThan(Real,x,Number(0)),Exists(Seq(x),LessThan(Real,x,x)))),
+      And(GreaterThan(Real,Add(Real,x,Number(1)),Number(0)),Exists(Seq(x),LessThan(Real,x,Add(Real,x,Number(1))))))
+    val l = Variable("l", None, Real)
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,l), And(GreaterThan(Real,l,Number(0)),Exists(Seq(x),LessThan(Real,x,l))))))) should not be (Provable)
+
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,x), And(GreaterThan(Real,x,Number(0)),Exists(Seq(x),LessThan(Real,x,x))))))) should not be (Provable)
+    
+    unsoundUniformSubstitution(assume, conclude,
+      new Substitution(List(
+      new SubstitutionPair(ApplyPredicate(p1,y), And(GreaterThan(Real,y,Number(0)),Exists(Seq(x),LessThan(Real,x,y))))))) should not be (Provable)
+  }
 }
