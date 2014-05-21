@@ -60,21 +60,6 @@ object KeYmaeraClientPrinter {
       }
 
       case e : Binary => e match {
-//        case Modality(p:Any, f:Any) => {
-//          val (lefts,rights,program,formula) = p match {
-//            case BoxModality(p,f) => (BOX_OPEN,BOX_CLOSE,exprToJson(sessionName, uid+"0", p),exprToJson(sessionName, uid+"0", f))
-//            case DiamondModality(p,f) => (DIA_OPEN,DIA_CLOSE,exprToJson(sessionName, uid+"1", p),exprToJson(sessionName, uid+"0", f))
-////            case _ => (BOX_OPEN, BOX_CLOSE,exprToJson(sessionName, uid+"0", p),exprToJson(sessionName, uid+"0", f) )
-//            case _ => throw new Exception("found a non-box, non-diamond modality: " + p.prettyString() + " of type: " + p.getClass().getName())
-//          }
-//          JsObject(
-//            "uid" -> JsString(uid),
-//            "program" -> exprToJson(sessionName, uid+"0", p),
-//            "formula" -> exprToJson(sessionName, uid+"1", f),
-//            "left_symbol" -> JsString(lefts),
-//            "right_symbol" -> JsString(rights)
-//          )
-//        }
         case _ => JsObject(
             "uid" -> JsString(uid),
             "left" -> exprToJson(sessionName, uid+"0", e.left),
@@ -165,6 +150,7 @@ object KeYmaeraClientPrinter {
                 "uid" -> JsString(uid),
                 "bind_symbol" -> JsString(FORALL),
                 "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
+                "variables2" -> JsString(getExprList(sessionName, uid+"v", variables).mkString(",")),
                 "child" -> exprToJson(sessionName, uid+"c", child)
             )
             case Exists(variables, child) => JsObject(
@@ -198,9 +184,19 @@ object KeYmaeraClientPrinter {
   }
   
   def getExprList(sessionName:String,uid:String,variables:Seq[NamedSymbol]) = {
+    var retVal : List[JsValue] = List()
+    var count = 0;
+    for(v <- variables) {
+      val newExpr = exprToJson(sessionName, uid + count.toString(), v)
+      retVal = retVal ++ List(newExpr)
+      count += 1;
+    }
+    retVal
+    /*
     (variables zip Seq.range(0, variables.size-1)).map( pair => {
-      exprToJson(sessionName, uid + pair._2.toString(), pair._1)
-    }).toList
+      JsString(pair._1 + pair._2.toString())
+//      exprToJson(sessionName, uid + pair._2.toString(), pair._1)
+    }).toList*/
   }
 }
 

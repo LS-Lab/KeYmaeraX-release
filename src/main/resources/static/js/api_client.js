@@ -15,8 +15,8 @@ var hydraServerInfo = {
 
 function HydraClient(serverarg, portarg) {
   //Default values for the parameters.
-  if(typeof(serverarg) === 'undefined') serverarg = "localhost";
-  if(typeof(portarg) === 'undefined') portarg = 8080;
+  if(typeof(serverarg) === 'undefined') serverarg = hydraServerInfo.server;
+  if(typeof(portarg) === 'undefined') portarg = hydraServerInfo.port;
   
   //End "Constructor" logic.
 

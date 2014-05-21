@@ -244,10 +244,12 @@ var FormulaGUI = {
         },
         function(binding) {
           var result = binding.bind_symbol;
+          alert(JSON.stringify(binding.variables));
           for(var i=0; i < binding.variables.length; i++) {
             result += rec(binding.variables[i]);
             if(i < binding.variables.length-1) result += ",";
           }
+          result += "."
           result += rec(binding.child);
           return result;
         },
