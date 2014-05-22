@@ -1,3 +1,7 @@
+var HydraEventListeners = {
+  treeViews : [],
+}
+
 function HydraEventHandler(evt, client) {
   function showError(msg) {
     alert(msg); //todo
@@ -24,10 +28,25 @@ function HydraEventHandler(evt, client) {
   }
 
   else if(evt.eventType === "CreateRootNode") {
-    console.log(evt.sequent);
+    console.log("Root node for this problem: ");
+    console.log(evt);
     $("#provercontents").html(
         SequentGUI.staticView(client, evt.sequent)
     );
+  }
+
+  else if(evt.eventType === "AddNode") {
+    console.log("AddNode event: ");
+    console.log(evt);
+    //Pass the event along to all of the tree listeners.
+    HydraEventListeners.treeViews.map(function(child) {
+      child.addNode(evt.parentId, evt.node);
+    });
+
+    //Show an error message if there are no trees listening.
+    if(HydraEventListeners.treeViews.length === 0) {
+      console.error("Recieved an add node event, but there are no tree views to process the event.");
+    }
   }
 
 

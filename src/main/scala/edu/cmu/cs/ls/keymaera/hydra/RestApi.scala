@@ -87,6 +87,18 @@ trait RestApi extends HttpService {
       }}
     }
   }
+  
+  val runTactic = path("runTactic") {
+    get {
+      parameter("sessionName", "tacticName", "uid") {
+        (sessionName, tacticName, uid) => {
+          val request = new RunTacticRequest(sessionName, tacticName, uid)
+          val result = KeYmaeraClient.serviceRequest(sessionName, request)
+          complete("[" + result.map(_.json).mkString(",") + "]")
+        }
+      }
+    }
+  }
 
 //  val nodeClosed = path("nodeClosed") undefCall
 //  val nodePruned = path("nodePruned") undefCall
@@ -106,6 +118,7 @@ trait RestApi extends HttpService {
     formulaToString ::
     formulaToInteractiveString ::
     formulaFromUid::
+    runTactic::
     Nil
 
   val myRoute = routes.reduce(_ ~ _)

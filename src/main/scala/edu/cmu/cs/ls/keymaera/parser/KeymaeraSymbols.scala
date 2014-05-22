@@ -190,8 +190,8 @@ object HTMLSymbols extends KeYmaeraSymbols {
   //**Terms
   val LEQ = "≤"
   val GEQ = "≥"
-  val LT = "<"
-  val GT = ">"
+  val LT = "&lt;"
+  val GT = "&gt;"
   val EQ = "="
   val MULTIPLY = "*"
   val PLUS = "+"
@@ -221,8 +221,8 @@ object HTMLSymbols extends KeYmaeraSymbols {
   //** Dynamic Modalities
   val BOX_OPEN  = "["
   val BOX_CLOSE  = "]"
-  val DIA_OPEN  = "〈"
-  val DIA_CLOSE  = "〉"
+  val DIA_OPEN  = "&lt;"
+  val DIA_CLOSE  = "&gt;"
   
   //** Programs
   val ASSIGN = ":="

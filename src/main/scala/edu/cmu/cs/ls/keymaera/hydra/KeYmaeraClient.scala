@@ -4,6 +4,8 @@ import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraParser, KeYmaeraPrettyPrinter}
 import edu.cmu.cs.ls.keymaera.core._
 import spray.json._
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
+import edu.cmu.cs.ls.keymaera.tactics.Tactics
+import edu.cmu.cs.ls.keymaera.tactics._
 /**
  * Pretty-prints each subexpression, storing a unique identifier based upon the
  * positions in the sequent. The server is notified of all newly created identifiers.
@@ -34,6 +36,8 @@ object KeYmaeraClientPrinter {
     JsArray(result)
   }
   
+ 
+  
   def exprToJson(sessionName : String, uid : String, e : Expr) : JsValue = {
     KeYmaeraClient.sendExpression(sessionName, uid, e);
     import edu.cmu.cs.ls.keymaera.parser.HTMLSymbols._;
@@ -44,13 +48,15 @@ object KeYmaeraClientPrinter {
           "uid" -> JsString(uid),
           "program" -> exprToJson(sessionName, uid+"0", program),
           "formula" -> exprToJson(sessionName, uid+"0", formula),
-          "open" -> JsString(BOX_OPEN),
-          "close" -> JsString(BOX_CLOSE)
+          "open" -> JsString(DIA_OPEN),
+          "close" -> JsString(DIA_CLOSE),
+          "wtf" -> JsString("diamond")
         )
       }
       case BoxModality(ep) => {
         val (program:Program, formula:Formula) = ep
         JsObject(
+            "WTF" -> JsString(program.prettyString()),
           "uid" -> JsString(uid),
           "program" -> exprToJson(sessionName, uid+"0", program),
           "formula" -> exprToJson(sessionName, uid+"0", formula),
@@ -149,14 +155,13 @@ object KeYmaeraClientPrinter {
             case Forall(variables, child) => JsObject(
                 "uid" -> JsString(uid),
                 "bind_symbol" -> JsString(FORALL),
-                "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
-                "variables2" -> JsString(getExprList(sessionName, uid+"v", variables).mkString(",")),
+                "variables" -> JsArray(getNSList(sessionName, uid+"v", variables)),
                 "child" -> exprToJson(sessionName, uid+"c", child)
             )
             case Exists(variables, child) => JsObject(
                 "uid" -> JsString(uid),
                 "bind_symbol" -> JsString(FORALL),
-                "variables" -> JsArray(getExprList(sessionName, uid+"v", variables)),
+                "variables" -> JsArray(getNSList(sessionName, uid+"v", variables)),
                 "child" -> exprToJson(sessionName, uid+"c", child)
             )
           }
@@ -183,7 +188,7 @@ object KeYmaeraClientPrinter {
     }
   }
   
-  def getExprList(sessionName:String,uid:String,variables:Seq[NamedSymbol]) = {
+  def getNSList(sessionName:String,uid:String,variables:Seq[NamedSymbol]) = {
     var retVal : List[JsValue] = List()
     var count = 0;
     for(v <- variables) {
@@ -306,6 +311,47 @@ case class FormulaToInteractiveStringRequest(sessionName : String, uid : String)
     }
 }
 
+case class RunTacticRequest(sessionName : String, tacticName : String, uid : String) extends Request {
+  def getResultingUpdates() : List[Update] = 
+    try {
+      if(tacticName.equals("default")) {
+        val sequent = ServerState.getSequent(sessionName, uid)
+        val tactic = TacticLibrary.default
+        val r = new RootNode(sequent)
+        Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+        while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
+          && Tactics.KeYmaeraScheduler.prioList.isEmpty
+          && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
+          && Tactics.MathematicaScheduler.prioList.isEmpty)) 
+        {
+          Thread.sleep(100)
+        }
+        
+        if(r.children.size == 0) {
+          new ErrorResponse(sessionName, new Exception("Tactic failed!"))::Nil
+        }
+        else {
+          val sequents = r.children.map(_.subgoals.map(goal => goal.sequent)).flatten
+        
+          val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => 
+            new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), KeYmaeraClientPrinter.getSequent(sessionName, uid + p._2.toString(), p._1)))
+          if(results.size == 0) {
+            new ErrorResponse(sessionName, new Exception("Tactic failed!"))::Nil
+          }
+          else {
+            results
+          }
+        }
+      }
+      else {
+        new ErrorResponse(sessionName, new Exception("tactic not supported.")) :: Nil
+      }
+  }
+  catch {
+    case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
+  }
+}
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -357,5 +403,13 @@ case class FormulaFromUidResponse(sessionName : String, fjson : JsValue) extends
   val json = JsObject(
       "eventType" -> JsString("FormulaFromUid"),
       "formula" -> fjson
+  )
+}
+
+case class AddNodeResponse(sessionName : String, parentId : JsString, node: JsValue) extends Update {
+  val json = JsObject(
+    "eventType" -> JsString("AddNode"),
+    "parentId"  -> parentId,
+    "node"       -> node
   )
 }

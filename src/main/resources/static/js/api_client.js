@@ -107,7 +107,7 @@ function HydraClient(serverarg, portarg) {
           result = resp[0].string;
         }
       });
-      return result;
+      return result.replace("<","&lt;").replace(">","&gt;");
     }
     else {
       console.error("formulaToString requires its argument to have a defined uid.");
@@ -135,6 +135,23 @@ function HydraClient(serverarg, portarg) {
     }
   }
 
+  this.runTactic = function(tacticName, sequent) {
+    if(sequent.uid) {
+      $.ajax({
+        type: "GET",
+        dataType: "json",
+        async: true,
+        url: "http://" + this.server + ":" + this.port + "/runTactic?sessionName="+ this.sessionName + "&tacticName=" + tacticName + "&uid=" + sequent.uid,
+        error: this.ajaxErrorHandler
+      });
+    }
+    else {
+      throw "Expected the sequent to have a uid.";
+    }
+  }
+
+
+  //Called from the main event loop.
   this.getUpdates = function() {
     var client = this;
     $.ajax({
@@ -146,8 +163,10 @@ function HydraClient(serverarg, portarg) {
       success: function(updates) {
         client.setServerStatus(true);
         if(updates instanceof Array && updates.length > 0) {
-          console.log("Recieved updates from the server: ");
-          console.log(updates);
+          if(window.DEBUG_MODE) {
+            console.log("Received updates from the server: ");
+            console.log(updates);
+          }
           for(i = 0; i < updates.length; i++) {
             HydraEventHandler(updates[i], client);
           }

@@ -172,8 +172,8 @@ var FormulaGUI = {
       span.setAttribute('class', 'sFormula');
     }
 
-    span.innerHTML = client.formulaToString(formula);
-    
+    span.innerHTML = client.formulaToString(formula)
+
     $(span).contextPopup({
       title: 'Static Formula Popup Menu',
       items: [
@@ -183,6 +183,14 @@ var FormulaGUI = {
             var new_span = FormulaGUI.interactiveView(client, formula);
             document.getElementById('s'+formula.uid).outerHTML = new_span.outerHTML; //???
             FormulaGUI.addInteractions();
+          }
+        },
+
+        { //comment this option out in production.
+          label: 'Copy to GSEQ',
+          action: function() {
+            window.GSEQ = new Sequent("0", new Array(),new Array(), [formula]);
+            window.alert('Copied. This is a developer-only option.');
           }
         },
       ]
@@ -343,6 +351,29 @@ var SequentGUI = {
         }
       }
     }
+
+    $(div).contextPopup({
+      title: 'Static Sequent Popup Menu',
+      items: [
+        { 
+          label:'Root Simple Tree View Here', 
+          action:function() {
+            var tree = new Tree(sequent, null);
+            var treeView = new SimpleTreeView(tree, client);
+            treeView.redrawIn('prover'); //TODO-nrf idk
+            HydraEventListeners.treeViews.push(treeView);
+          }
+        },
+        {
+          label: 'Run default tactic',
+          action:function() {
+            client.runTactic("default", sequent);
+            //TODO-nrf add some sort of visual indicator.
+          }
+        },
+      ]
+    });
+
 
     return div;
   },
