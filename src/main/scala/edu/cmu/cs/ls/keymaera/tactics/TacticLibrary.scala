@@ -619,7 +619,7 @@ object TacticLibrary {
     case _ => throw new IllegalArgumentException("Unknown axiom " + id)
   }
 
-
+  //@TODO Document
   def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new ConstructionTactic("Uniform Substitution") {
     def applicable(pn: ProofNode) = true
 

@@ -296,7 +296,20 @@ class TacticTests extends FlatSpec with Matchers {
   }
 
   //@TODO Implement
-  def unsoundUniformSubstitution(assume : Formula, conclude : Formula, s: Substitution) = Provable
+  def unsoundUniformSubstitution(assume : Formula, nonconclude : Formula, s: Substitution) : ProvabilityStatus = {
+    println("Premise\t" + assume.prettyString)
+    println("Nonclusion\t" + nonconclude.prettyString)
+    println("Usubst\t" + s)
+    val assumestat = prove(assume)
+    val nonconcstat = prove(nonconclude)
+    nonconcstat should not be (Provable)
+    //@TODO prove(nonconclude) should be (Counterexample) OR: prove(Not(nonconclude)) should be (Satisfiable)
+    a [SubstitutionClashException] should be thrownBy {
+      prove(nonconclude, TacticLibrary.uniformSubstT(s, Map(assume -> nonconclude)))
+    }
+    assumestat should be (Provable)
+    nonconcstat
+  }
 
   //@TODO Move the subsequent tests to UniformSubstitutionTest.scala
   "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]p(x)<->p(2) with .>y for p(.)" in {
