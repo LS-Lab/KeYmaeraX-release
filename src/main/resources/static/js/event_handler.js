@@ -3,9 +3,6 @@ var HydraEventListeners = {
 }
 
 function HydraEventHandler(evt, client) {
-  function showError(msg) {
-    alert(msg); //todo
-  }
 
   var proverSpan = document.getElementById("provercontents")
   if(!(evt.eventType)) {
@@ -17,10 +14,10 @@ function HydraEventHandler(evt, client) {
 
   else if(evt.eventType === "ErrorResponse") {
     if(evt.message === "parse failed.") {
-      showError("KeYmaera could not parse your file.")
+      console.error("KeYmaera could not parse your file.")
     }
     else {
-      showError("Unrecognized error: " + evt.message)
+      console.error("Unrecognized error: " + evt.message)
     }
 
     console.error("Hydra server returned an ErrorResponse: ");
