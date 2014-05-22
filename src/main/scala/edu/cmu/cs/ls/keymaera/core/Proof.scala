@@ -20,6 +20,13 @@ import edu.cmu.cs.ls.keymaera.parser._
  */
 
 final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula]) {
+  override def equals(e: Any): Boolean = e match {
+    case Sequent(p, a, s) => pref == p && ante == a && succ == s
+    case _ => false
+  }
+
+  override def hashCode: Int = HashFn.hash(251, pref, ante, succ)
+
   /**
    * Retrieves the formula in sequent at a given position. Note that this ignores p.inExpr
    * @param p the position of the formula
@@ -56,6 +63,12 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
 
 object Sequent {
   def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+
+  def unapply(e: Sequent): Option[(Seq[NamedSymbol], IndexedSeq[Formula], IndexedSeq[Formula])] = e match {
+    case s: Sequent => Some((s.pref,s.ante,s.succ))
+    case _ => None
+  }
+
 }
 
 
@@ -82,6 +95,9 @@ object Sequent {
    *============
    */
 
+  /**
+   * Additional proof node information payload for tactics.
+   */
   class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
        //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
     //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
@@ -91,6 +107,7 @@ object Sequent {
     def isLocalClosed: Boolean = closed
 
     //@TODO Purpose and function unclear
+    //@TODO rename to doneNode since it's not about closed in the sense of proved. Only closed in the sense of done with it even if disproved.
     def closeNode(s : Status) =
       this.synchronized {
         if (!closed) {
@@ -118,7 +135,20 @@ object Sequent {
     }
   }
 
-  sealed case class ProofStep(rule : Rule, subgoals : List[ProofNode])
+  /** 
+   * Represents a deduction step in a proof using the indicated rule which leads to the given conjunctive list of subgoals.
+   * @TODO Is there a way of proctecting constructor access so that only ProofNode.apply can construct ProofSteps?
+   */
+  sealed case class ProofStep(rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode]) {
+    justifiedByProofRule
+    @elidable(ASSERTION) def justifiedByProofRule = {
+      // println("Checking " + this)
+      // println("Reapply  " + rule(goal.sequent))
+      require(rule(goal.sequent) == subgoals.map(_.sequent), "ProofStep " + this + " is justified by said proof rule application")
+      // println("Checked  " + this)
+    }
+  }
+  
   sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
 
     @volatile private[this] var alternatives : List[ProofStep] = Nil
@@ -127,22 +157,22 @@ object Sequent {
      * List of all current or-branching alternatives of proving this proof node.
      * Result can change over time as new alternative or-branches are added.
      */
-    def children: List[ProofStep] = alternatives
-
-    /* must not be invoked when there is no alternative */
-    def getStep : ProofStep = alternatives match {
-      case List(h, t) => h
-      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
-      //@TODO change exception type to a prover exception. Besides, there's no argument so it can't be illegal.
+    def children: scala.collection.immutable.List[ProofStep] = {
+      assert(alternatives.foldLeft(true)((all,next) => all && next.goal == this), "all alternatives are children of this goal")
+      alternatives
     }
 
-    private def prepend(r : Rule, s : List[ProofNode]) {
-      this.synchronized {
-        alternatives = ProofStep(r, s) :: alternatives;
+    def hasAlternative : Boolean = alternatives != Nil
+    def nextAlternative : ProofStep = {
+      require(hasAlternative, "apply proof rule before calling nextAlternative")
+      alternatives match {
+        case List(h, t) => h
+        case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
+      //@TODO change exception type to a prover exception.
       }
     }
 
-    def prune(n : Int) {
+    def pruneAlternative(n : Int) {
       this.synchronized {
         if (n < alternatives.length)
           alternatives = alternatives.take(n-1) ++ alternatives.drop(n)
@@ -151,16 +181,24 @@ object Sequent {
       }
     }
 
+    /**
+     * Apply the given proof rule to this ProofNode.
+     * Return the resulting list of subgoals (after including them as an or-branch alternative for proving this ProofNode).
+     * Soundness-critical proof rule application mechanism.
+     */
     final def apply(rule : Rule) : List[ProofNode] = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
-      val result = rule(sequent).map(new ProofNode(_, this))
+      val subgoals = rule(sequent).map(new ProofNode(_, this))
       // Add as or-branching alternative
-      prepend(rule, result)
-      result
+      this.synchronized {
+        alternatives = ProofStep(rule, this, subgoals) :: alternatives;
+      }
+      subgoals
     }
 
     val info: ProofNodeInfo = new ProofNodeInfo(if(parent == null) "" else parent.info.branchLabel, this)
 
+    override def toString = "ProofNode(" + sequent + "\nfrom " + parent + ")"
   }
 
   /**
@@ -171,7 +209,7 @@ object Sequent {
   }
 
   /*********************************************************************************
-   * Kinds of Proof Rules
+   * Categorize Kinds of Proof Rules
    *********************************************************************************
    */
 

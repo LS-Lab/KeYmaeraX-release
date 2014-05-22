@@ -1,6 +1,7 @@
 /**
  * @author Marcus Völp
  * @author Jan-David Quesel
+ * @author aplatzer
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -34,7 +35,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 251
+   * Next free prime is 257
    * @param prime
    * @param a
    * @return
