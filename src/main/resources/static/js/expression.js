@@ -304,8 +304,10 @@ function Sequent(uid, pref, ante, succ) {
   this.succ = succ
 }
 
+
 var SequentGUI = {
   sequentSymbol : "&#x22A2",
+
 
   toString : function(client, sequent) {
     var result = "";
@@ -406,4 +408,31 @@ function Node(uid, parentUid, sequent) {
   this.uid = uid
   this.parentUid = parentUid
   this.sequent = sequent
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// These GUI events work for either sequents or formulas.
+///////////////////////////////////////////////////////////////////////////////
+
+var GenericGUI = {
+  greenFlash : function(uid, count) {
+    var docId;
+    if(document.getElementById('s'+uid)) {
+      docId = 's'+uid;
+    }
+    else if(document.getElementById('i'+uid)) {
+      docId = 'i'+uid;
+    }
+    else {
+      docId = 'prover' //???
+    }
+
+    var originalColor = document.getElementById(docId).style.backgroundColor;
+    document.getElementById(docId).style.backgroundColor = "#008800"
+    setTimeout(function() {
+      document.getElementById(docId).style.backgroundColor = originalColor;
+    }, 500)
+  },
 }

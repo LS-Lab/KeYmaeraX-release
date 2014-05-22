@@ -46,6 +46,12 @@ function HydraEventHandler(evt, client) {
     }
   }
 
+  else if(evt.eventType === "TacticFinished") {
+    console.log("TacticFinished event: ");
+    console.log(evt);
+    GenericGUI.greenFlash(evt.uid);
+  }
+
 
   //Add ignore cases for all syncronous calls.
   else if(evt.eventType === "FormulaToStringResponse") {}

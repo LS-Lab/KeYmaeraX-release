@@ -39,3 +39,9 @@ interact with this API.
 
     /applyTactic/<position>/<tactic name>
 
+##To add a new request/response
+
+ * Add a Request class
+ * Add a Update class
+ * Add a path in RestApi (be sure to append to the list of routes).
+ * Add a case in the HydraEventHandler javascript function.

@@ -40,7 +40,7 @@ object KeYmaeraPrettyPrinter {
     //quantifiers
     case Forall(variables, child) => {
       FORALL + " " +
-      variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
+     (if(!variables.isEmpty) {variables.map(prettyPrinter(_)).reduce(_ + "," + _)} else{""}) +
       "." + 
       parensIfNeeded(child, expressionToPrint)
     }

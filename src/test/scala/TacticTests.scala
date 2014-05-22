@@ -147,6 +147,7 @@ class TacticTests extends FlatSpec with Matchers {
   def prove(f:Formula, tactic:Tactic = TacticLibrary.default) : ProvabilityStatus = {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    //For all schedulers, no one is working anymore.
     while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
       && Tactics.KeYmaeraScheduler.prioList.isEmpty
       && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
