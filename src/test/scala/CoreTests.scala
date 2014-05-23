@@ -31,11 +31,11 @@ class CoreTests extends FlatSpec with Matchers {
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
-    println("Check " + rule) //@TODO turn into "should" output?
+    println("\tCheck " + rule) //@TODO turn into "should" output?
     val pn = new RootNode(in)
     val resList = pn.apply(rule)
-    println("Result\t" + resList.map(_.sequent))
-    println("Expected\t" + out)
+    println("\tResult\t" + resList.map(_.sequent))
+    println("\tExpected\t" + out)
     if (resList.map(_.sequent) != out) println("Unexpected")
     resList.length should be (out.length)
     val res = resList.map(_.sequent)
@@ -48,6 +48,12 @@ class CoreTests extends FlatSpec with Matchers {
       for((f,g) <- s.succ zip t.succ)
         f should be (g)
     }
+  }
+
+  def testRule(rule: Rule, in: Sequent) {
+    val pn = new RootNode(in)
+    val resList = pn.apply(rule)
+    resList.map(_.sequent)
   }
 
   implicit def form2SeqForm(f: Formula): Seq[Formula] = Seq(f)
@@ -66,5 +72,93 @@ class CoreTests extends FlatSpec with Matchers {
     //@TODO The following two tests fail since Equivs have been currently changed to a single formula
     testRule(EquivRight(sPos), seq(Nil, Equiv(p, q)), seq(p, q) ++ seq(q, p))
     testRule(EquivLeft(aPos), seq(Equiv(p, q), Nil), seq(And(p, q), Nil) ++ seq(And(Not(p), Not(q)), Nil))
+  }
+  
+  it should "complain about being applied to the wrong sequent side" in {
+    val sPos = SuccPosition(0)
+    val aPos = AntePosition(0)
+    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q)), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q)))
+    an [IllegalArgumentException] should be thrownBy testRule(NotRight(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(NotLeft(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndRight(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndLeft(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrRight(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrLeft(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyRight(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivRight(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(sPos), s)
+  }
+  
+  it should "complain about being applied to non-top-level positions" in {
+    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q)), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q)))
+    val aDeep = AntePosition(0, PosInExpr(List(0,1)))
+    aDeep.isDefined(s) should be (true)
+    an [IllegalArgumentException] should be thrownBy testRule(NotRight(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(NotLeft(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndRight(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndLeft(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrRight(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrLeft(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyRight(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivRight(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(aDeep), s)
+
+    val sDeep = SuccPosition(0, PosInExpr(List(0,1)))
+    sDeep.isDefined(s) should be (true)
+    an [IllegalArgumentException] should be thrownBy testRule(NotRight(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(NotLeft(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndRight(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndLeft(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrRight(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrLeft(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyRight(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivRight(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(sDeep), s)
+  }
+  
+  it should "complain about being applied to formulas of the wrong shape" in {
+    var sPos = SuccPosition(0)
+    var aPos = AntePosition(0)
+    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
+
+    an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
+    // an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
+    // an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+
+    sPos = SuccPosition(1)
+    aPos = AntePosition(1)
+    //an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
+    //an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+
+    sPos = SuccPosition(2)
+    aPos = AntePosition(2)
+    an [MatchError] should be thrownBy testRule(NotRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(NotLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(OrRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(OrLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(AndRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(AndLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(ImplyRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
+    an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
   }
 }

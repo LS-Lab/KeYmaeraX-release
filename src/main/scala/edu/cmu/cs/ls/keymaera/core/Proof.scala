@@ -290,6 +290,7 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte: Boolean
   def getIndex: Int = index
 
+  //@TODO unexpected name because check is independent of inExpr. Or check both.
   def isDefined(s: Sequent): Boolean =
     if(isAnte)
       s.ante.length > getIndex
