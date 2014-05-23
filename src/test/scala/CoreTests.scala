@@ -31,7 +31,6 @@ class CoreTests extends FlatSpec with Matchers {
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
-    println("Testing rule " + rule)
     val pn = new RootNode(in)
     val resList = pn.apply(rule)
     resList.length should be (out.length)
@@ -44,7 +43,6 @@ class CoreTests extends FlatSpec with Matchers {
       s.succ.length should be (t.succ.length)
       for((f,g) <- s.succ zip t.succ)
         f should be (g)
-      
     }
   }
 

@@ -675,12 +675,12 @@ object ImplyRight extends (Position => Rule) {
 class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
   require(!p.isAnte && p.inExpr == HereP, "Imply Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    /*val Imply(a,b) = s(p)
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))*/
-    s(p) match {
+    val Imply(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
+    /*s(p) match {
       case Imply(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
       case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + s(p), this, s)
-    }
+      }*/
     /*
     *@TODO Change propositional rule implementations to drop and concat style
     val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
