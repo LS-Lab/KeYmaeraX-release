@@ -27,7 +27,7 @@ import edu.cmu.cs.ls.keymaera.parser._
  * Sequent notation
  */
 
-final class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val ante: scala.collection.immutable.IndexedSeq[Formula], val succ: scala.collection.immutable.IndexedSeq[Formula]) {
+final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val ante: scala.collection.immutable.IndexedSeq[Formula], val succ: scala.collection.immutable.IndexedSeq[Formula]) {
   //@TODO Turn into a case class?
   //@TODO Turn IndexedSeq into scala.collection.immutable.Seq, because that is irrelevant except for performance?
   override def equals(e: Any): Boolean = e match {
@@ -101,6 +101,7 @@ final class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val a
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
 }
 
+/*
 object Sequent {
   def apply(pref: scala.collection.immutable.Seq[NamedSymbol], ante: scala.collection.immutable.IndexedSeq[Formula], succ: scala.collection.immutable.IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
 
@@ -109,7 +110,7 @@ object Sequent {
     case _ => None
   }
 
-}
+  }*/
 
 
 /**
@@ -602,20 +603,6 @@ class NotLeft(p: Position) extends PositionRule("Not Left", p) {
   }
 }
 
-// &R And right
-object AndRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndRight(p)
-}
-class AndRight(p: Position) extends PositionRule("And Right", p) {
-  require(!p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    val And(a,b) = s(p)
-    List(s.updated(p, a), s.updated(p, b))
-                        /*List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
-                             s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(b))))*/
-  }
-}
-
 // |R Or right
 object OrRight extends (Position => Rule) {
   def apply(p: Position): Rule = new OrRight(p)
@@ -638,6 +625,20 @@ class OrLeft(p: Position) extends PositionRule("Or Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Or(a,b) = s(p)
     List(s.updated(p, a), s.updated(p, b))
+  }
+}
+
+// &R And right
+object AndRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndRight(p)
+}
+class AndRight(p: Position) extends PositionRule("And Right", p) {
+  require(!p.isAnte && p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    val And(a,b) = s(p)
+    List(s.updated(p, a), s.updated(p, b))
+                        /*List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
+                             s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(b))))*/
   }
 }
 
@@ -711,6 +712,7 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
     //List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
     // List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
     //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
+    //@TODO This choice is compatible with tactics but is unreasonable. Prefer upper choices
     List(s.updated(p, Sequent(s.pref, IndexedSeq(And(a,b)),IndexedSeq())),
          s.updated(p, Sequent(s.pref, IndexedSeq(And(Not(a),Not(b))),IndexedSeq())))
   }
