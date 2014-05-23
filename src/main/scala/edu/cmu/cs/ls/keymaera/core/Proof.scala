@@ -693,7 +693,9 @@ class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
   require(!p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
     val Equiv(a,b) = s(p)
-    List(s.updated(p, And(Imply(a,b), Imply(b,a))))
+    //List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a),IndexedSeq(b))),
+         s.updated(p, Sequent(s.pref, IndexedSeq(b),IndexedSeq(a))))
   }
 }
 
@@ -706,7 +708,11 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
   require(p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
     val Equiv(a,b) = s(p)
-    List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))
+    //List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
+    // List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
+    //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(And(a,b)),IndexedSeq())),
+         s.updated(p, Sequent(s.pref, IndexedSeq(And(Not(a),Not(b))),IndexedSeq())))
   }
 }
 
