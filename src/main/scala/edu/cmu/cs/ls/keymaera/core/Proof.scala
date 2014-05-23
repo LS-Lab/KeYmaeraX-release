@@ -43,6 +43,19 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
     }
   }
   
+  // transformations giving copies of sequents
+  
+  /**
+   * A copy of this sequent concatenated with given sequent s.
+   * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
+   * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
+   * @returns a copy of this sequent concatenated with s.
+   */
+  def glue(s: Sequent) = {
+    require(s.pref == pref, "identical sequent prefix required when gluing " + this + " with " + s)
+    Sequent(pref, ante ++ s.ante, succ ++ s.succ)
+  }
+      
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
    * @param p the position of the replacement
@@ -56,7 +69,23 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
     else
         Sequent(pref, ante, succ.updated(p.getIndex, f))
   }
-      
+  
+  /**
+   * A copy of this sequent with the indicated position replaced by gluing the sequent s.
+   * @param p the position of the replacement
+   * @param s the sequent glued / concatenated to this sequent after dropping p.
+   * @returns a copy of this sequent with the formula at position p removed and the sequent s appended.
+   * @see #updated(Position,Formula)
+   * @see #glue(Sequent)
+   */
+  def updated(p: Position, s: Sequent) = {
+    //require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.isAnte)
+        Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
+    else
+        Sequent(pref, ante, s.succ.patch(p.getIndex, Nil, 1)).glue(s)
+  }
+
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
 }
