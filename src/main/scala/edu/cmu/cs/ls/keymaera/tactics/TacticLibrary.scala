@@ -49,6 +49,7 @@ object TacticLibrary {
     ) ~ arithmeticT
   }
 
+
   /**
    * Tactic that applies propositional proof rules exhaustively.
    *@TODO Implement for real. This strategy uses more than propositional steps.

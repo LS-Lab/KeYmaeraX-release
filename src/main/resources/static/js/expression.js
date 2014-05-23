@@ -171,8 +171,8 @@ var FormulaGUI = {
       span.setAttribute('id', "s" + formula.uid);
       span.setAttribute('class', 'sFormula');
     }
-
-    span.innerHTML = client.formulaToString(formula)
+    
+    $(span).html(client.formulaToString(formula));
 
     $(span).contextPopup({
       title: 'Static Formula Popup Menu',
@@ -367,6 +367,15 @@ var SequentGUI = {
           }
         },
         {
+          label:'Root KeY-style Tree View Here',
+          action:function() {
+            var tree = new Tree(sequent, null);
+            var treeView = new KeYTreeView(tree, client, document.getElementById('prover'));
+            treeView.redrawIn('prover');
+            HydraEventListeners.treeViews.push(treeView);
+          }
+        },
+        {
           label: 'Run default tactic',
           action:function() {
             client.runTactic("default", sequent);
@@ -417,7 +426,7 @@ function Node(uid, parentUid, sequent) {
 ///////////////////////////////////////////////////////////////////////////////
 
 var GenericGUI = {
-  greenFlash : function(uid, count) {
+  greenFlash : function(uid) {
     var docId;
     if(document.getElementById('s'+uid)) {
       docId = 's'+uid;
@@ -428,11 +437,10 @@ var GenericGUI = {
     else {
       docId = 'prover' //???
     }
-
     var originalColor = document.getElementById(docId).style.backgroundColor;
     document.getElementById(docId).style.backgroundColor = "#008800"
     setTimeout(function() {
-      document.getElementById(docId).style.backgroundColor = originalColor;
+      document.getElementById(docId).style.backgroundColor = null;
     }, 500)
   },
 }

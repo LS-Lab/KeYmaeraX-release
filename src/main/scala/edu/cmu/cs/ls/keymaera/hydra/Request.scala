@@ -85,34 +85,33 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
   def getResultingUpdates() : List[Update] = 
     try {
       if(tacticName.equals("default")) {
-//        val sequent = ServerState.getSequent(sessionName, uid)
-//        val tactic = TacticLibrary.default
-//        val r = new RootNode(sequent)
-//        Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-//        while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
-//          && Tactics.KeYmaeraScheduler.prioList.isEmpty
-//          && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
-//          && Tactics.MathematicaScheduler.prioList.isEmpty)) 
-//        {
-//          Thread.sleep(100)
-//        }
-//        
-//        val results = if(r.children.size == 0) {
-//          Nil
-//        }
-//        else {
-//          val sequents = r.children.map(_.subgoals.map(goal => goal.sequent)).flatten
-//        
-//          val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => 
-//            new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), KeYmaeraClientPrinter.getSequent(sessionName, uid + p._2.toString(), p._1)))
-//          if(results.size == 0) {
-//            new ErrorResponse(sessionName, new Exception("Tactic ran but there was not result."))::Nil
-//          }
-//          else {
-//            results
-//          }
-//        }
-        val results = Nil
+        val sequent = ServerState.getSequent(sessionName, uid)
+        val tactic = TacticLibrary.default
+        val r = new RootNode(sequent)
+        Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+        while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
+          && Tactics.KeYmaeraScheduler.prioList.isEmpty
+          && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
+          && Tactics.MathematicaScheduler.prioList.isEmpty)) 
+        {
+          Thread.sleep(100)
+        }
+        
+        val results = if(r.children.size == 0) {
+          Nil
+        }
+        else {
+          val sequents = r.children.map(_.subgoals.map(goal => goal.sequent)).flatten
+        
+          val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => 
+            new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), KeYmaeraClientPrinter.getSequent(sessionName, uid + p._2.toString(), p._1)))
+          if(results.size == 0) {
+            new ErrorResponse(sessionName, new Exception("Tactic ran but there was not result."))::Nil
+          }
+          else {
+            results
+          }
+        }
         //Add the "finished" result.
         results ++ List( new TacticFinished(sessionName, tacticName, uid) )
       }

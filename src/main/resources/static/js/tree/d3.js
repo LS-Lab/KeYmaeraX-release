@@ -1,7 +1,8 @@
-//TODO-nrf
-//use the tree view
-function TreeView(targetDiv) {
+function D3TreeView(tree, client, targetDiv) {
+  this.tree = tree;
+  this.client = client;
 
+  // VIEW INITIALIZATION
   this.margin = {top: 30, right: 20, bottom: 30, left: 20};
   this.width = 960 - this.margin.left - this.margin.right;
   this.barHeight = 20,
@@ -10,21 +11,31 @@ function TreeView(targetDiv) {
   this.duration = 400;
   this.root;
 
-  this.tree = d3.layout.tree().size([0, 100]);
+  this.d3tree = d3.layout.tree().size([0,100]);
 
-  thia.diagonal = d3.svg.diagonal()
+  this.diagonal = d3.svg.diagonal()
       .projection(function(d) { return [d.y, d.x]; });
 
-  thia.svg = d3.select(targetDiv).append("svg")
+  this.svg = d3.select(targetDiv).append("svg")
         .attr("width", this.width + this.margin.left + this.margin.right)
         .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr("transform", "translate(" + this.margin.left + "," + this.margin.top + ")");
 
+  this.redrawIn = function(id) {
+    if(id != targetDiv.getAttribute('id')) {
+      console.error("Redrawing in non-target div!")
+    }
+    return this.redraw();
+  }
 
-  function update(source) {
+  this.redraw = function() {
+    alert("not yet ported to TreeView interface.");
+    //this.update();
+  }
 
+  this.update = function() { //note: old "source" is not this.tree.
     // Compute the flattened node list. TODO use d3.layout.hierarchy.
-    var nodes = tree.nodes(root);
+    var nodes = this.d3tree.nodes(root);
 
     var height = Math.max(500, nodes.length * barHeight + margin.top + margin.bottom);
 
@@ -116,9 +127,9 @@ function TreeView(targetDiv) {
       d.y0 = d.y;
     });
   }
-
+  
   // Toggle children on click.
-  function click(d) {
+  this.click = function(d) {
     if (d.children) {
       d._children = d.children;
       d.children = null;
@@ -128,18 +139,19 @@ function TreeView(targetDiv) {
     }
     update(d);
   }
-
-  function color(d) {
+  this.color = function(d) {
     return d.hasOwnProperty("sequent")?"#aaaaaa": d._children ? "#323232" : d.children ? "#8C8C8C" : "#3D7178";
   }     	
 
-  function show() {
-
-          d3.json("resources/proof.json", function(error, proof) {
-        proof.x0 = 0;
-        proof.y0 = 0;
-        update(root = proof);
-      });
-  }
+  //this.onAdd = function(parentId, tree) {alert("add")}
+  //this.onDelete = function(nodeId) {}
 }
 
+
+/*
+ * `
+  function update(source) {
+
+
+}
+*/
