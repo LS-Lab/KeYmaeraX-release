@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.KeYmaera
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Scheduler
+import scala.collection.immutable
 
 object SchedulerTests {
 
@@ -19,7 +20,7 @@ object SchedulerTests {
   }
 
   def test() {
-    val r = new RootNode(new Sequent(IndexedSeq.empty, IndexedSeq.empty, IndexedSeq.empty))
+    val r = new RootNode(new Sequent(immutable.IndexedSeq.empty, immutable.IndexedSeq.empty, immutable.IndexedSeq.empty))
 
     val a = huhu("a")
     val b = huhu("b")

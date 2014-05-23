@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tools._
 import java.math.BigDecimal
 import java.io.File
+import scala.collection.immutable._
 
 class CoreTests extends FlatSpec with Matchers {
   

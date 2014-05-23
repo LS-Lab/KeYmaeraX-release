@@ -3,6 +3,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
 import java.io.File
 import java.math.BigDecimal
+import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers {
   var ml : MathematicaLink = null //var so that we can instantiate within a test case.

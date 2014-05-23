@@ -283,42 +283,42 @@ object MathematicaToKeYmaera {
   //	output: (a ~ b) && (b ~ c)
   def convertEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(subterms)
+    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
       staggeredPairs.map(pair => Equals(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertNotEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(subterms)
+    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
       staggeredPairs.map(pair => NotEquals(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertGreaterEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(subterms)
+    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
       staggeredPairs.map(pair => GreaterEquals(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertLessEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(subterms)
+    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
       staggeredPairs.map(pair => LessEquals(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertLessThan(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(subterms)
+    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
       staggeredPairs.map(pair => LessThan(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertGreaterThan(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
-    val staggeredPairs = makeOverlappingPairs(subterms)
+    val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
       staggeredPairs.map(pair => GreaterThan(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
@@ -367,10 +367,10 @@ object MathematicaToKeYmaera {
         
       //Create the final expression.
       if(isThing(e, MathematicaSymbols.FORALL)) {
-        Forall(quantifiedVars, bodyOfQuantifier)
+        Forall(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
       }
       else if(isThing(e, MathematicaSymbols.EXISTS)) {
-        Exists(quantifiedVars, bodyOfQuantifier)
+        Exists(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
       }
       else {
         throw mathExnMsg(e, "Tried to convert a quantifier-free expression using convertQuantifier. The check in fromMathematica must be wrong.")

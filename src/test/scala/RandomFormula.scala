@@ -1,6 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser._
 import scala.util.Random
+import scala.collection.immutable._
 
 /**
  * Random formula generator
