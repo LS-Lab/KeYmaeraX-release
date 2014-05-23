@@ -638,8 +638,6 @@ class AndRight(p: Position) extends PositionRule("And Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val And(a,b) = s(p)
     List(s.updated(p, a), s.updated(p, b))
-                        /*List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
-                             s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(b))))*/
   }
 }
 
@@ -666,10 +664,6 @@ class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Imply(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
-    /*s(p) match {
-      case Imply(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
-      case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + s(p), this, s)
-      }*/
   }
 }
 
