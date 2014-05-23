@@ -17,6 +17,14 @@ package edu.cmu.cs.ls.keymaera.core
  * 2) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
  */
 
+// require favoring immutable Seqs for soundness
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
 import scala.annotation.elidable
 import scala.annotation.elidable._
 

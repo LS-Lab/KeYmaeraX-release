@@ -1,5 +1,13 @@
 package edu.cmu.cs.ls.keymaera.tests
 
+// favoring immutable Seqs
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter

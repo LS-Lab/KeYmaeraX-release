@@ -5,6 +5,14 @@
  */
 package edu.cmu.cs.ls.keymaera.core
 
+// require favoring immutable Seqs for soundness
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
 import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
@@ -19,7 +27,7 @@ import edu.cmu.cs.ls.keymaera.parser._
  * Sequent notation
  */
 
-final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula]) {
+final class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val ante: scala.collection.immutable.IndexedSeq[Formula], val succ: scala.collection.immutable.IndexedSeq[Formula]) {
   override def equals(e: Any): Boolean = e match {
     case Sequent(p, a, s) => pref == p && ante == a && succ == s
     case _ => false
@@ -91,9 +99,9 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
 }
 
 object Sequent {
-  def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+  def apply(pref: scala.collection.immutable.Seq[NamedSymbol], ante: scala.collection.immutable.IndexedSeq[Formula], succ: scala.collection.immutable.IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
 
-  def unapply(e: Sequent): Option[(Seq[NamedSymbol], IndexedSeq[Formula], IndexedSeq[Formula])] = e match {
+  def unapply(e: Sequent): Option[(scala.collection.immutable.Seq[NamedSymbol], scala.collection.immutable.IndexedSeq[Formula], scala.collection.immutable.IndexedSeq[Formula])] = e match {
     case s: Sequent => Some((s.pref,s.ante,s.succ))
     case _ => None
   }
@@ -663,7 +671,7 @@ class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
   require(!p.isAnte && p.inExpr == HereP, "Imply Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     s(p) match {
-      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
+      case Imply(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
       case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + s(p), this, s)
     }
     /*
@@ -832,7 +840,7 @@ object SubstitutionPair {
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  */
-sealed class Substitution(l: Seq[SubstitutionPair]) {
+sealed class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
 
   // unique left hand sides in l
@@ -886,7 +894,7 @@ sealed class Substitution(l: Seq[SubstitutionPair]) {
    * @return
    * @TODO maybe rename to freeNames, but make naming compatible with boundNames
    */
-  def names(e: Expr): Seq[NamedSymbol] = e match {
+  def names(e: Expr): scala.collection.immutable.Seq[NamedSymbol] = e match {
     case x: NamedSymbol => Vector(x)
     case x: Unary => names(x.child)
     case x: Binary => names(x.left) ++ names(x.right)
