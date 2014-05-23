@@ -101,7 +101,7 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
           Nil
         }
         else {
-          val sequents = r.children.map(_.subgoals.map(goal => goal.sequent)).flatten
+          val sequents : List[Sequent] = List() //TODO - get the results of running a tactic.
         
           val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => 
             new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), KeYmaeraClientPrinter.getSequent(sessionName, uid + p._2.toString(), p._1)))
