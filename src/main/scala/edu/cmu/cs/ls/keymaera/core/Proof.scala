@@ -93,7 +93,8 @@ final class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val a
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
-        Sequent(pref, ante, s.succ.patch(p.getIndex, Nil, 1)).glue(s)
+        Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
+    //@TODO Add contract @ensures(\result "++ this(p) == this.glue(s) modulo order)
   }
 
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +

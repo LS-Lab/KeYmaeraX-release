@@ -31,6 +31,7 @@ class CoreTests extends FlatSpec with Matchers {
   def seq(a: Seq[Formula], b: Seq[Formula]): Sequent = Sequent(Nil, IndexedSeq() ++ a, IndexedSeq() ++ b)
 
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
+    println("Testing rule " + rule)
     val pn = new RootNode(in)
     val resList = pn.apply(rule)
     resList.length should be (out.length)
@@ -60,6 +61,7 @@ class CoreTests extends FlatSpec with Matchers {
     testRule(AndLeft(aPos), seq(And(p, q), Nil), seq(p ++ q, Nil))
     testRule(OrRight(sPos), seq(Nil, Or(p, q)), seq(Nil, p ++ q))
     testRule(OrLeft(aPos), seq(Or(p, q), Nil), seq(p, Nil) ++ seq(q, Nil))
+    //@TODO The following two tests fail since Equivs have been currently changed to a single formula
     testRule(EquivRight(sPos), seq(Nil, Equiv(p, q)), seq(p, q) ++ seq(q, p))
     testRule(EquivLeft(aPos), seq(Equiv(p, q), Nil), seq(And(p, q), Nil) ++ seq(And(Not(p), Not(q)), Nil))
   }
