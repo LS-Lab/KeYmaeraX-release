@@ -582,12 +582,10 @@ object NotRight extends (Position => Rule) {
 }
 
 class NotRight(p: Position) extends PositionRule("Not Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Not(a) => List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq())))
-      case _ => throw new InapplicableRuleException("Not-Right can only be applied to negation. Tried to apply to: " + s(p), this, s)
-    }
+    val Not(a) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq())))
   }
 }
 
@@ -597,12 +595,10 @@ object NotLeft extends (Position => Rule) {
 }
 
 class NotLeft(p: Position) extends PositionRule("Not Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Not(a) => List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))))
-      case _ => throw new InapplicableRuleException("Not-Left can only be applied to negation. Tried to apply to: " + s(p), this, s)
-    }
+    val Not(a) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))))
   }
 }
 
@@ -611,14 +607,12 @@ object AndRight extends (Position => Rule) {
   def apply(p: Position): Rule = new AndRight(p)
 }
 class AndRight(p: Position) extends PositionRule("And Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case And(a, b) => List(s.updated(p, a), s.updated(p, b))
+    val And(a,b) = s(p)
+    List(s.updated(p, a), s.updated(p, b))
                         /*List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
                              s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(b))))*/
-      case _ => throw new InapplicableRuleException("And-Right can only be applied to conjunctions. Tried to apply to: " + s(p), this, s)
-    }
   }
 }
 
@@ -627,12 +621,10 @@ object OrRight extends (Position => Rule) {
   def apply(p: Position): Rule = new OrRight(p)
 }
 class OrRight(p: Position) extends PositionRule("Or Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Or(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a,b))))
-      case _ => throw new InapplicableRuleException("Or-Right can only be applied to disjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val Or(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a,b))))
   }
 }
 
@@ -642,12 +634,10 @@ object OrLeft extends (Position => Rule) {
 }
 
 class OrLeft(p: Position) extends PositionRule("Or Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Or(a, b) => List(s.updated(p, a), s.updated(p, b))
-      case _ => throw new InapplicableRuleException("Or-Left can only be applied to disjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val Or(a,b) = s(p)
+    List(s.updated(p, a), s.updated(p, b))
   }
 }
 
@@ -657,13 +647,10 @@ object AndLeft extends (Position => Rule) {
 }
 
 class AndLeft(p: Position) extends PositionRule("And Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
-      case And(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b), IndexedSeq())))
-      case _ => throw new InapplicableRuleException("And-Left can only be applied to conjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val And(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b), IndexedSeq())))
   }
 }
 
@@ -681,18 +668,6 @@ class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
       case Imply(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
       case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + s(p), this, s)
       }*/
-    /*
-    *@TODO Change propositional rule implementations to drop and concat style
-    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
-    f match {
-      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
-      case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + f, this, s)
-    }
-    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
-    val (Imply(a, b), ress) = dropSeq(s, p)
-    List(concatSeq(s, Sequent(Nil, a, b)))
-    *@TODO Or can we combine the drop and concat operation somehow including pattern matching to make this one atomic step obviously correct? Unlike the dropping, which alone is incorrect except when followed up by the appropriate concatSeq. Note however, that concatSeq before drop would mess up if working with sets rather than lists.
-    */
   }
 }
 
@@ -702,13 +677,11 @@ object ImplyLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new ImplyLeft(p)
 }
 class ImplyLeft(p: Position) extends PositionRule("Imply Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Imply(a, b) => List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
-                               s.updated(p, Sequent(s.pref, IndexedSeq(b), IndexedSeq())))
-      case _ => throw new InapplicableRuleException("Implies-Left can only be applied to implications. Tried to apply to: " + s(p), this, s)
-    }
+    val Imply(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
+         s.updated(p, Sequent(s.pref, IndexedSeq(b), IndexedSeq())))
   }
 }
 
@@ -717,12 +690,10 @@ object EquivRight extends (Position => Rule) {
   def apply(p: Position): Rule = new EquivRight(p)
 }
 class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Equiv(a, b) => List(s.updated(p, And(Imply(a,b), Imply(b,a))))
-      case _ => throw new InapplicableRuleException("Equiv-Right can only be applied to equivalences. Tried to apply to: " + s(p), this, s)
-    }
+    val Equiv(a,b) = s(p)
+    List(s.updated(p, And(Imply(a,b), Imply(b,a))))
   }
 }
 
@@ -732,12 +703,10 @@ object EquivLeft extends (Position => Rule) {
 }
 
 class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Equiv(a, b) => List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))
-      case _ => throw new InapplicableRuleException("Equiv-Left can only be applied to equivalences. Tried to apply to: " + s(p), this, s)
-    }
+    val Equiv(a,b) = s(p)
+    List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))
   }
 }
 
