@@ -16,6 +16,7 @@ class CoreTests extends FlatSpec with Matchers {
 
   "Core (Positions)" should "have HereP == new PosInExpr(Nil)" in {
     HereP should be (new PosInExpr(Nil))
+    HereP should be (new PosInExpr(List()))
   }
 
   "Core (Positions)" should "have PosInExpr equality based on lists" in {
@@ -23,6 +24,7 @@ class CoreTests extends FlatSpec with Matchers {
     new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1)))
     new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1,4)))
     new PosInExpr(List(0)) should not be (new PosInExpr(List(0, 0, 0, 0, 0)))
+    new PosInExpr(List(0)) should not be (HereP)
   }
 
   def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
