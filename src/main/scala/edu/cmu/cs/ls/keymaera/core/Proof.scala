@@ -28,8 +28,7 @@ import edu.cmu.cs.ls.keymaera.parser._
  */
 
 final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val ante: scala.collection.immutable.IndexedSeq[Formula], val succ: scala.collection.immutable.IndexedSeq[Formula]) {
-  //@TODO Turn into a case class?
-  //@TODO Turn IndexedSeq into scala.collection.immutable.Seq, because that is irrelevant except for performance?
+  // Could use scala.collection.immutable.Seq instead of IndexedSeq, since equivalent except for performance. But many KeYmaera parts construct Sequents, so safer for performance.
   override def equals(e: Any): Boolean = e match {
     case Sequent(p, a, s) => pref == p && ante == a && succ == s
     case _ => false
@@ -61,7 +60,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
    * @returns a copy of this sequent concatenated with s.
    */
-  def glue(s: Sequent) = {
+  def glue(s: Sequent) : Sequent = {
     require(s.pref == pref, "identical sequent prefix required when gluing " + this + " with " + s)
     Sequent(pref, ante ++ s.ante, succ ++ s.succ)
   }
@@ -72,7 +71,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    * @param f the replacing formula
    * @returns a copy of this sequent with the formula at position p replaced by f.
    */
-  def updated(p: Position, f: Formula) = {
+  def updated(p: Position, f: Formula) : Sequent = {
     //require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
@@ -88,7 +87,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    * @see #updated(Position,Formula)
    * @see #glue(Sequent)
    */
-  def updated(p: Position, s: Sequent) = {
+  def updated(p: Position, s: Sequent) : Sequent = {
     //require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
@@ -96,6 +95,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
         Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
     //@TODO Add contract @ensures(\result "++ this(p) == this.glue(s) modulo order)
   }
+  
+  /**
+   * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
+   */
+  def subsequentOf(r: Sequent) : Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
 
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
@@ -375,7 +379,7 @@ class Hide(p: Position) extends PositionRule("Hide", p) {
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
       List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
-  } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+  } ensuring (_.forall(r => r.subsequentOf(s)))
 }
 
 // co-weakening left = co-hide left (all but indicated position)
@@ -399,7 +403,7 @@ class CoHide(p: Position) extends PositionRule("CoHide", p) {
       List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
     else
       List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.ante(p.getIndex))))
-  } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+  } ensuring (_.forall(r => r.subsequentOf(s)))
 }
 
 
@@ -413,7 +417,7 @@ object ExchangeLeft {
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
       //throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
-    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+    } ensuring (_.forall(r => r.subsequentOf(s)))
   }
 }
 
@@ -426,7 +430,7 @@ object ExchangeRight {
     require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
-    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+    } ensuring (_.forall(r => r.subsequentOf(s)))
   }
 }
 
@@ -439,7 +443,7 @@ object ContractionRight {
     require(!p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the succedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ :+ s.succ(p.getIndex)))
-    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+    } ensuring (_.forall(r => r.subsequentOf(s)))
   }
 }
 
@@ -452,7 +456,7 @@ object ContractionLeft {
     require(p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the antecedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante :+ s.ante(p.getIndex), s.succ))
-    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+    } ensuring (_.forall(r => r.subsequentOf(s)))
   }
 }
 
