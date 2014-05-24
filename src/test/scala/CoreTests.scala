@@ -163,4 +163,21 @@ class CoreTests extends FlatSpec with Matchers {
     an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
     an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
   }
+
+  it should "complain about being applied to non-existent positions" in {
+    var sPos = SuccPosition(4)
+    var aPos = AntePosition(4)
+    val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
+
+    an [IllegalArgumentException] should be thrownBy testRule(NotRight(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(NotLeft(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrRight(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(OrLeft(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndRight(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(AndLeft(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyRight(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivRight(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(aPos), s)
+  }
 }

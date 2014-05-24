@@ -199,7 +199,7 @@ object Sequent {
      * Result can change over time as new alternative or-branches are added.
      */
     def children: scala.collection.immutable.List[ProofStep] = {
-      assert(alternatives.foldLeft(true)((all,next) => all && next.goal == this), "all alternatives are children of this goal")
+      assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
       alternatives
     }
 
@@ -243,7 +243,7 @@ object Sequent {
   }
 
   /**
-   * The root node (conclusion) for a sequent derivation.
+   * The root node (conclusion) where a sequent derivation starts.
    */
   class RootNode(sequent : Sequent) extends ProofNode(sequent, null) {
 
@@ -369,13 +369,37 @@ object HideRight extends (Position => Rule) {
   }
 }
 class Hide(p: Position) extends PositionRule("Hide", p) {
+  require(p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    require(p.inExpr == HereP)
     if (p.isAnte)
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
       List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+  } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
+}
+
+// co-weakening left = co-hide left (all but indicated position)
+object CoHideLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = {
+    require(p.isAnte && p.inExpr == HereP)
+    new CoHide(p)
   }
+}
+// co-weakening right = co-hide right (all but indicated position)
+object CoHideRight extends (Position => Rule) {
+  def apply(p: Position): Rule = {
+    require(!p.isAnte && p.inExpr == HereP)
+    new CoHide(p)
+  }
+}
+class CoHide(p: Position) extends PositionRule("CoHide", p) {
+  require(p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    if (p.isAnte)
+      List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
+    else
+      List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.ante(p.getIndex))))
+  } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
 }
 
 
@@ -385,12 +409,11 @@ object ExchangeLeft {
 
   //@TODO Why is this not a TwoPositionRule?
   private class ExchangeLeftRule(p1: Position, p2: Position) extends Rule("ExchangeLeft") {
-    require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP)
+    require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the antecedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
+      //throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
+    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
   }
 }
 
@@ -400,12 +423,10 @@ object ExchangeRight {
 
   //@TODO Why is this not a TwoPositionRule?
   private class ExchangeRightRule(p1: Position, p2: Position) extends Rule("ExchangeRight") {
-    require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
+    require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to two positions in the succedent", this, s)
+    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
   }
 }
 
@@ -415,12 +436,10 @@ object ContractionRight {
   def apply(p: Position): Rule = new ContractionRightRule(p)
 
   private class ContractionRightRule(p: Position) extends PositionRule("ContractionRight", p) {
-    require(!p.isAnte && p.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(!p.isAnte && p.inExpr == HereP)
+    require(!p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the succedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ :+ s.succ(p.getIndex)))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to a position in the succedent", this, s)
+    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
   }
 }
 
@@ -430,12 +449,10 @@ object ContractionLeft {
   def apply(p: Position): Rule = new ContractionLeftRule(p)
 
   private class ContractionLeftRule(p: Position) extends PositionRule("ContractionLeft", p) {
-    require(p.isAnte && p.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(p.isAnte && p.inExpr == HereP)
+    require(p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the antecedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante :+ s.ante(p.getIndex), s.succ))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to a position in the succedent", this, s)
+    } ensuring (_.forall(r => r.pref == s.pref && r.ante.toSet.subsetOf(s.ante.toSet) && r.succ.toSet.subsetOf(s.succ.toSet)))
   }
 }
 
@@ -776,11 +793,10 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  *          - Variable
  *          - PredicateConstant
  *          - ApplyPredicate(p:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . p(x)"
- *          - Apply(f:Function, x:Variable)
+ *          - Apply(f:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . f(x)"
  *          - ProgramConstant
  *          - Derivative(...)
  * @param t the expression to be used in place of n
- *@TODO Assert that n is of the above form only
  */
 sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
@@ -788,17 +804,16 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
   
   @elidable(ASSERTION) def applicable = {
-    require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
-    + n.sort + " != " + t.sort)
+    require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
       case _:PredicateConstant => true
-      case ApplyPredicate(_:Function, _:Variable) => true
-      case Apply(_:Function, _:Variable) => true
       case _:ProgramConstant => true
       case Derivative(_, _:Variable) => true
+      case ApplyPredicate(_:Function, _:Variable) => true
+      case Apply(_:Function, _:Variable) => true
       case _ => false
-      })
+      }, "Substitutable expression required, found " + n)
   }
 
   override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
@@ -821,9 +836,17 @@ sealed class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
 
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
+    // check that we never replace n by something and then again replacing the same n by something
     val lefts = l.map(sp=>sp.n).toList
-    //@TODO check that we never replace p(x) by something and also p(t) by something
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+    // check that we never replace p(x) by something and also p(t) by something
+    val lambdaNames = l.map(sp=>sp.n match {
+      case ApplyPredicate(p:Function, _:Variable) => List(p)
+      case Apply(f:Function, _:Variable) => List(f)
+      case _ => Nil
+      }).fold(Nil)((a,b)=>a++b)
+      //@TODO check that we never replace p(x) by something and also p(t) by something
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
   }
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
