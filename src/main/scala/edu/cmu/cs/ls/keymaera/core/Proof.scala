@@ -42,7 +42,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    * @return the formula at the given position either from the antecedent or the succedent ignoring p.inExpr
    */
   def apply(p: Position): Formula = {
-    //require(p.inExpr == HereP, "Can only retrieve top level formulas")
+    //require(p.inExpr == HereP, "Can only retrieve top level formulas")  //@TODO Could relax
     if(p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
       ante(p.getIndex)
@@ -59,11 +59,16 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
    * @returns a copy of this sequent concatenated with s.
+   * Results in a least upper bound with respect to subsets of this and s.
    */
   def glue(s: Sequent) : Sequent = {
     require(s.pref == pref, "identical sequent prefix required when gluing " + this + " with " + s)
     Sequent(pref, ante ++ s.ante, succ ++ s.succ)
-  }
+    } ensuring(r => this.subsequentOf(r) && s.subsequentOf(r)
+        && r.ante.forall(f=>this.ante.contains(f) || s.ante.contains(f))
+        && r.succ.forall(f=>this.succ.contains(f) || s.succ.contains(f)),
+        "result is a supersequent of its pieces and all formulas in result come from either one"
+    )
       
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
@@ -93,13 +98,22 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
         Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
-    //@TODO Add contract @ensures(\result "++ this(p) == this.glue(s) modulo order)
-  }
+    } ensuring(r=> if (p.isAnte)
+         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).equivalent(this.glue(s))
+     else
+         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).equivalent(this.glue(s)),
+         "result after re-including updated formula is equivalent to " + this + " glue " + s
+     )
   
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
    */
   def subsequentOf(r: Sequent) : Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
+
+  /**
+   * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
+   */
+  def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
   override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
@@ -276,6 +290,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  */
 
 case class PosInExpr(pos: List[Int] = Nil) {
+  require(pos forall(_>=0), "all nonnegative positions")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
   def second: PosInExpr = new PosInExpr(pos :+ 1)
   def third:  PosInExpr = new PosInExpr(pos :+ 2)
@@ -291,6 +306,7 @@ object HereP extends PosInExpr
  * @param inExpr the position in said formula.
  */
 abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
+  require (index >= 0, "nonnegative index " + index)
   def isAnte: Boolean
   def getIndex: Int = index
 
@@ -305,7 +321,9 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
    * Top level position of this position
    * @return A position with the same index but on the top level (i.e., inExpr == HereP)
    */
-  def topLevel = clone(index)
+  def topLevel: Position = {
+    clone(index)
+  } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
 
   def +(i: Int): Position
 
@@ -315,7 +333,7 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
 
   protected def clone(i: Int, e: PosInExpr = HereP): Position
 
-  override def toString: String = "(" + isAnte + ", " + getIndex + ", " + inExpr + ")"
+  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ", " + inExpr + ")"
 }
 
 class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
@@ -379,7 +397,7 @@ class Hide(p: Position) extends PositionRule("Hide", p) {
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
       List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
-  } ensuring (_.forall(r => r.subsequentOf(s)))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 // co-weakening left = co-hide left (all but indicated position)
@@ -402,8 +420,8 @@ class CoHide(p: Position) extends PositionRule("CoHide", p) {
     if (p.isAnte)
       List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
     else
-      List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.ante(p.getIndex))))
-  } ensuring (_.forall(r => r.subsequentOf(s)))
+      List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(p.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 
@@ -417,7 +435,7 @@ object ExchangeLeft {
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
       //throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
-    } ensuring (_.forall(r => r.subsequentOf(s)))
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -430,7 +448,7 @@ object ExchangeRight {
     require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
-    } ensuring (_.forall(r => r.subsequentOf(s)))
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -443,7 +461,7 @@ object ContractionRight {
     require(!p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the succedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ :+ s.succ(p.getIndex)))
-    } ensuring (_.forall(r => r.subsequentOf(s)))
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -456,7 +474,7 @@ object ContractionLeft {
     require(p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the antecedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante :+ s.ante(p.getIndex), s.succ))
-    } ensuring (_.forall(r => r.subsequentOf(s)))
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -521,7 +539,7 @@ object Axiom {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
         case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
       }
-    }
+      } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
   }
 }
 
@@ -529,6 +547,8 @@ object Axiom {
  * Sequent Proof Rules for identity/closing and cut
  *********************************************************************************
  */
+
+//@TODO Mark these rules as ClosingRules and add contract "ensuring (!_.isEmpty)" globally to all rules that are not ClosingRules
 
 // Ax Axiom close / Identity rule
 object AxiomClose extends ((Position, Position) => Rule) {
@@ -548,7 +568,7 @@ class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass
     } else {
         throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(ass) + " not the same as " + s(p), this, s)
     }
-  }
+  } ensuring (_.isEmpty, "closed if applicable")
 }
 
 // close by true
@@ -562,7 +582,7 @@ class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) {
     require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
     if(!p.isAnte && s.succ(p.getIndex) == True) Nil
     else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + p, this, s)
-  }
+  } ensuring (_.isEmpty, "closed if applicable")
 }
 
 // close by false
@@ -576,7 +596,7 @@ class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) {
     require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
     if(p.isAnte && s.ante(p.getIndex) == False) Nil
     else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + p, this, s)
-  }
+  } ensuring (_.isEmpty, "closed if applicable")
 }
 
 
@@ -590,7 +610,7 @@ object Cut {
       val show = new Sequent(s.pref, s.ante, s.succ :+ c)
       //@TODO Switch branches around to (show, use)
       List(use, show)
-    }
+    } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts")
   }
 }
 

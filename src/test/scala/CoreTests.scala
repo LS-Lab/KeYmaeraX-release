@@ -63,6 +63,9 @@ class CoreTests extends FlatSpec with Matchers {
   implicit def sequentToList(s: Sequent): List[Sequent] = List(s)
 
   "Core (Propositional Rules)" should "yield expected results" in {
+    testRule(CloseTrue(sPos), seq(Nil, True), Nil)
+    testRule(CloseFalse(aPos), seq(False, Nil), Nil)
+
     testRule(NotRight(sPos), seq(Nil, Not(p)), seq(p, Nil))
     testRule(NotLeft(aPos), seq(Not(p), Nil), seq(Nil, p))
     testRule(ImplyRight(sPos), seq(Nil, Imply(p, q)), seq(p, q))
@@ -90,6 +93,8 @@ class CoreTests extends FlatSpec with Matchers {
     an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(sPos), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivRight(aPos), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseTrue(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseFalse(sPos), s)
   }
   
   it should "complain about being applied to non-top-level positions" in {
@@ -106,6 +111,8 @@ class CoreTests extends FlatSpec with Matchers {
     an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(aDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivRight(aDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseTrue(aDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseFalse(aDeep), s)
 
     val sDeep = SuccPosition(0, PosInExpr(List(0,1)))
     sDeep.isDefined(s) should be (true)
@@ -119,6 +126,8 @@ class CoreTests extends FlatSpec with Matchers {
     an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(sDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivRight(sDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseTrue(sDeep), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseFalse(sDeep), s)
   }
   
   it should "complain about being applied to formulas of the wrong shape" in {
@@ -136,6 +145,8 @@ class CoreTests extends FlatSpec with Matchers {
     an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
     an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+    an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
 
     sPos = SuccPosition(1)
     aPos = AntePosition(1)
@@ -149,6 +160,8 @@ class CoreTests extends FlatSpec with Matchers {
     //an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
     an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+    an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
 
     sPos = SuccPosition(2)
     aPos = AntePosition(2)
@@ -162,13 +175,15 @@ class CoreTests extends FlatSpec with Matchers {
     an [MatchError] should be thrownBy testRule(ImplyLeft(aPos), s)
     an [MatchError] should be thrownBy testRule(EquivRight(sPos), s)
     an [MatchError] should be thrownBy testRule(EquivLeft(aPos), s)
+    an [InapplicableRuleException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an [InapplicableRuleException] should be thrownBy testRule(CloseFalse(aPos), s)
   }
 
   it should "complain about being applied to non-existent positions" in {
-    var sPos = SuccPosition(4)
-    var aPos = AntePosition(4)
     val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q), q), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q), p))
 
+    var sPos = SuccPosition(4)
+    var aPos = AntePosition(4)
     an [IllegalArgumentException] should be thrownBy testRule(NotRight(sPos), s)
     an [IllegalArgumentException] should be thrownBy testRule(NotLeft(aPos), s)
     an [IllegalArgumentException] should be thrownBy testRule(OrRight(sPos), s)
@@ -179,5 +194,7 @@ class CoreTests extends FlatSpec with Matchers {
     an [IllegalArgumentException] should be thrownBy testRule(ImplyLeft(aPos), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivRight(sPos), s)
     an [IllegalArgumentException] should be thrownBy testRule(EquivLeft(aPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseTrue(sPos), s)
+    an [IllegalArgumentException] should be thrownBy testRule(CloseFalse(aPos), s)
   }
 }

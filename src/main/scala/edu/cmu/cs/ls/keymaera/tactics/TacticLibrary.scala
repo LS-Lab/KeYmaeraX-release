@@ -554,6 +554,15 @@ object TacticLibrary {
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) HideLeft(pos) else HideRight(pos)) {
       override def applicable(node: ProofNode): Boolean = true
+      //@TODO Shouldn't this be = pos.isDefined(node.sequent) here and everywhere?
+    }
+  }
+
+  def cohideT: PositionTactic = new PositionTactic("CoHide") {
+    def applies(s: Sequent, p: Position) = true
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) CoHideLeft(pos) else CoHideRight(pos)) {
+      override def applicable(node: ProofNode): Boolean = true
     }
   }
 
@@ -990,6 +999,7 @@ object TacticLibrary {
           case Some(ax) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos), ax) match {
               case Some((a, axiomInstance, subst, ptac)) =>
+              {
                 val eqPos = AntePosition(node.sequent.ante.length)
                 val branch1Tactic = axiomInstance match {
                   //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
@@ -998,10 +1008,11 @@ object TacticLibrary {
                   case Imply(_, _) if(!pos.isAnte && pos.inExpr == HereP) => ImplyLeftT(eqPos) & (hideT(pos), AxiomCloseT(eqPos.topLevel, pos))
                   case _ => ???
                 }
-                // hide in reverse order since hiding changes positions
-                val hideAllAnte = for(i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
-                // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
-                val hideAllSuccButLast = for(i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
+                // // hide in reverse order since hiding changes positions
+                // val hideAllAnte = for(i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
+                // // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
+                // val hideAllSuccButLast = for(i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
+                // val hideAllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
                 //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
                 //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
                 val cont = ptac match {
@@ -1009,8 +1020,9 @@ object TacticLibrary {
                   case Some(t) => t(SuccPosition(0))
                   case None => NilT
                 }
-                val branch2Tactic = ((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (cont & axiomT(axiomName) & AxiomCloseT))
+                val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length-1)) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & (cont & axiomT(axiomName) & AxiomCloseT))
                 Some(cutT(axiomInstance) & onBranch((cutUseLbl,branch1Tactic), (cutShowLbl, branch2Tactic)))
+               }
               case None => None
             }
           case None => None
@@ -1231,16 +1243,17 @@ object TacticLibrary {
               case Some((axiomInstance, subst, (quantified, aX), (instance, aT))) =>
                 val eqPos = AntePosition(node.sequent.ante.length)
                 val branch1Tactic = modusPonensT(pos, eqPos)
-                val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
-                // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
-                val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
+                // val hideAllAnte = for (i <- node.sequent.ante.length - 1 to 0 by -1) yield hideT(AntePosition(i))
+                // // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
+                // val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
+                // val hideSllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
                 def alpha(p: Position, q: Variable) = alphaRenamingT(q.name, q.index, "$" + aX.name, aX.index)(p)
                 def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
                   case Imply (a, b) => Imply(decompose(replace (a)(v, Variable ("$" + aX.name, aX.index, aX.sort) )), if(atTrans) replace(b)(aT, instance) else b)
                   case _ => throw new IllegalArgumentException("...")
                 }
                 val replMap = Map(repl(axiomInstance, quantified, false) -> repl(a, aX))
-                val branch2Tactic = (((hideAllAnte ++ hideAllSuccButLast).reduce(seqT)) ~
+                val branch2Tactic = (cohideT(SuccPosition(node.sequent.succ.length-1)) ~
                   alpha(SuccPosition(0, HereP.first), quantified) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) & uniformSubstT(new Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
