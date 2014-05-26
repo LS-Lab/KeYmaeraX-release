@@ -886,8 +886,6 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   // uniform substitution on terms
   def apply(t: Term): Term = usubst(Set.empty, t)
   
-  //def freeVariables(e: Expr) : Set[NamedSymbol] = Helper.names(e, true, false) /*Helper.freeNames(e)*/
-
   /**
    * The set of all free variables whose value t depends (syntactically).
    */
@@ -1070,7 +1068,7 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  */
-sealed class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
+sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
 
   // unique left hand sides in l
@@ -1284,6 +1282,7 @@ object UniformSubstitution {
      */
     def apply(conclusion: Sequent): List[Sequent] = {
       //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + "\nshould be equal\n" + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      val subst = new USubstitution(this.subst.l)
       val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
       if(conclusion.pref == origin.pref // universal prefix is identical
         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
