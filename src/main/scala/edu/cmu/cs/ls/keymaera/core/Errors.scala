@@ -26,7 +26,7 @@ class ProverException(msg: String) extends RuntimeException(msg) {
  */
 class CoreException(msg:String) extends ProverException(msg) {}
 
-class SubstitutionClashException(msg:String, s:Substitution, e:Expr) extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString) {}
+class SubstitutionClashException(msg:String, s:Any/*Substitution*/, e:Expr) extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString) {}
 
 class SkolemClashException(msg:String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 

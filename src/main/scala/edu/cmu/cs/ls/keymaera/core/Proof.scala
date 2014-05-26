@@ -854,6 +854,221 @@ object SubstitutionPair {
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
+ * Explicit construction computing bound variables on the fly.
+ * @author aplatzer
+ */
+sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
+  applicable
+
+  /**
+   * @param rarg the argument in the substitution.
+   * @param instArg the argument to instantiate rarg with in the occurrence.
+   */
+  private def instantiate(rarg: Term, instArg: Term) = new USubstitution(List(new SubstitutionPair(rarg, instArg)))
+
+  // unique left hand sides in l
+  @elidable(ASSERTION) def applicable = {
+    // check that we never replace n by something and then again replacing the same n by something
+    val lefts = l.map(sp=>sp.n).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+    // check that we never replace p(x) by something and also p(t) by something
+    val lambdaNames = l.map(sp=>sp.n match {
+      case ApplyPredicate(p:Function, _:Variable) => List(p)
+      case Apply(f:Function, _:Variable) => List(f)
+      case _ => Nil
+      }).fold(Nil)((a,b)=>a++b)
+      //@TODO check that we never replace p(x) by something and also p(t) by something
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
+  }
+
+  override def toString: String = "Subst(" + l.mkString(", ") + ")"
+
+  // uniform substitution on terms
+  def apply(t: Term): Term = usubst(Set.empty, t)
+  
+  //def freeVariables(e: Expr) : Set[NamedSymbol] = Helper.names(e, true, false) /*Helper.freeNames(e)*/
+
+  /**
+   * The set of all free variables whose value t depends (syntactically).
+   */
+  def freeVariables(t: Term) : Set[NamedSymbol] = t match {
+    // homomorphic cases
+    case Neg(s, l) => freeVariables(l)
+    case Add(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Subtract(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Multiply(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Divide(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Exp(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
+    // base cases
+    case x:Variable => Set(x)
+    case Derivative(s, e) => freeVariables(e)
+    case Apply(f, arg) => Set(f) ++ freeVariables(arg)
+    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); Set.empty
+  }
+  
+  private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
+
+  def freeVariables(f: Formula) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], f)
+
+  private def freeVariables(u: Set[NamedSymbol], f: Formula) : Set[NamedSymbol] = f match {
+    // homomorphic cases
+  case Not(g) => freeVariables(u, g)
+  case And(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case Or(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+
+  case Equals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case NotEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case GreaterEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case GreaterThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case LessEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case LessThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
+
+  // binding cases add bound variables to u
+  case Forall(vars, g) => freeVariables(u ++ vars, g)
+  case Exists(vars, g) => freeVariables(u ++ vars, g)
+
+  //@TODO Could miss free variables from p that are only bound on some branches of p. Introduce third result
+  case BoxModality(p, g) => val (v,fv) = freeVariables(u, p); fv++freeVariables(u++v, g)
+  case DiamondModality(p, g) => val (v,fv) = freeVariables(u, p); fv++freeVariables(u++v, g)
+
+  // base cases
+  case p: PredicateConstant => Set(p)
+  case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg)
+  case x: Atom => ???
+  }
+
+  /**
+   * Returns set of symbols bound by p (possibly written) and set of symbols free in p (possibly read).
+   */
+  private def freeVariables(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Set[NamedSymbol]) = p match {
+    case Choice(a, b) => val (v,fv)=freeVariables(u,a); val (w,fw)=freeVariables(u,b); (v++w, fv++fw)
+    case Sequence(a, b) => val (v,fv)=freeVariables(u,a); val (w,fw)=freeVariables(v,b); (w, fv++fw)  //@TODO Sequence could miss free variables from b that are only bound on some branches of a. Introduce third result
+    case Loop(a) => freeVariables(u, a)
+    case Test(f) => (Set.empty, freeVariables(u,f))
+    case Assign(x:Variable, e) => (Set(x), freeVariables(u, e))
+    case NDetAssign(x:Variable) => (Set(x), Set.empty)
+    case NFContEvolve(v, x:Variable, e, h) => (Set(x),
+      (if (u.contains(x)) Set.empty else Set(x)) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
+    
+    //@TODO check implementation
+    case a: ProgramConstant => (Set.empty, Set.empty)
+  }
+
+  /**
+   * Return t after checking for clashes with names in u.
+   */
+  private def clashChecked(u: Set[NamedSymbol], t: Term) : Term = {
+    if (freeVariables(t).intersect(u).isEmpty) t
+    else throw new SubstitutionClashException("Clash in uniform substitution " + freeVariables(t).intersect(u), this, t)
+  }
+  /**
+   * Return t after checking for clashes with names in u.
+   */
+  private def clashChecked(u: Set[NamedSymbol], f: Formula) : Formula = {
+    if (freeVariables(f).intersect(u).isEmpty) f
+    else throw new SubstitutionClashException("Clash in uniform substitution " + freeVariables(f).intersect(u), this, f)
+  }
+  
+
+  /**
+   * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
+   */
+  private def usubst(u: Set[NamedSymbol], t: Term) : Term = t match {
+      // homomorphic cases
+    case Neg(s, e) => Neg(s, usubst(u, e))
+    case Add(s, l, r) => Add(s, usubst(u, l), usubst(u, r))
+    case Subtract(s, l, r) => Subtract(s, usubst(u, l), usubst(u, r))
+    case Multiply(s, l, r) => Multiply(s, usubst(u, l), usubst(u, r))
+    case Divide(s, l, r) => Divide(s, usubst(u, l), usubst(u, r))
+    case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
+    case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
+    // uniform substitution base cases
+    case x:Variable => if (u.contains(x)) return x else for(p <- l) { if(x == p.n) return clashChecked(u, p.t.asInstanceOf[Term])}; return x
+    case Derivative(s, e) => for(p <- l) { if(t == p.n) return clashChecked(u, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
+    case Apply(f, arg) => for(rp <- l) {
+      rp.n match {
+        case Apply(rf, rarg) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, rp.t.asInstanceOf[Term]))
+        case _ => // skip to next
+      }
+    }; return Apply(f, usubst(u, arg))
+    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
+    case _ => throw new UnknownOperatorException("Not implemented yet", t)
+  }
+  
+  def apply(f: Formula): Formula = usubst(Set.empty, f)
+  
+  private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
+      // homomorphic cases
+    case Not(g) => Not(usubst(u, g))
+    case And(l, r) => And(usubst(u, l), usubst(u, r))
+    case Or(l, r) => Or(usubst(u, l), usubst(u, r))
+    case Imply(l, r) => Imply(usubst(u, l), usubst(u, r))
+    case Equiv(l, r) => Equiv(usubst(u, l), usubst(u, r))
+
+    case Equals(d, l, r) => Equals(d, usubst(u, l), usubst(u, r))
+    case NotEquals(d, l, r) => NotEquals(d, usubst(u, l), usubst(u, r))
+    case GreaterEquals(d, l, r) => GreaterEquals(d, usubst(u, l), usubst(u, r))
+    case GreaterThan(d, l, r) => GreaterThan(d, usubst(u, l), usubst(u, r))
+    case LessEquals(d, l, r) => LessEquals(d, usubst(u, l), usubst(u, r))
+    case LessThan(d, l, r) => LessThan(d, usubst(u, l), usubst(u, r))
+
+    // binding cases add bound variables to u
+    case Forall(vars, g) => Forall(vars, usubst(u ++ vars, g))
+    case Exists(vars, g) => Exists(vars, usubst(u ++ vars, g))
+
+    case BoxModality(p, g) => val (v,q) = usubst(u, p); BoxModality(q, usubst(v, g))
+    case DiamondModality(p, g) => val (v,q) = usubst(u, p); DiamondModality(q, usubst(v, g))
+
+    // uniform substitution base cases
+    case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, p.t.asInstanceOf[Formula])}; return f
+    case ApplyPredicate(p, arg) => for(rp <- l) {
+      rp.n match {
+        case ApplyPredicate(rf, rarg) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, rp.t.asInstanceOf[Formula]))
+        case _ => // skip to next
+      }
+    }; return ApplyPredicate(p, usubst(u, arg))
+    
+    // 
+    case x: Atom => x
+    case _ => throw new UnknownOperatorException("Not implemented yet", f)
+  }
+
+  // uniform substitution on programs
+  //@TODO def apply(p: Program): Program = {val (v,as)=usubst(Set[NamedSymbol].empty, p); as}/*usubst(Set.empty, p)._2*/
+  
+  /**
+   *
+   */
+  private def usubst(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Program) = { p match {
+    case Choice(a, b) => val (v,as)=usubst(u,a); val (w,bs)=usubst(u,b); (v++w, Choice(as, bs))
+    case Sequence(a, b) => val (v,as)=usubst(u,a); val (w,bs)=usubst(v,b); (w, Sequence(as, bs))
+    case Loop(a) => val (v,_)=usubst(u,a); val (w,as)=usubst(v,a); (w,Loop(as)) ensuring usubst(w,a)._1==w
+    case Test(f) => (u, Test(usubst(u,f)))
+    case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
+    case NDetAssign(x:Variable) => (u+x, p)
+    case NFContEvolve(v, x:Variable, e, h) => if (v.isEmpty) {
+      if (!u.contains(x)) for (pair <- l) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
+      (u+x, NFContEvolve(v, x, usubst(u++v+x, e), usubst(u++v+x,h)))
+    } else throw new UnknownOperatorException("Not implemented yet. Check whether passing v is correct.", p)
+    
+    //@TODO check implementation
+    case a: ProgramConstant => for(pair <- l) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
+    case _ => throw new UnknownOperatorException("Not implemented yet", p)
+  }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
+
+
+}
+
+
+/******************************************************************/
+
+
+/**
+ * A Uniform Substitution.
+ * Implementation of applying uniform substitutions to terms, formulas, programs.
  */
 sealed class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
