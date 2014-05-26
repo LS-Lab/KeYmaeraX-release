@@ -1173,8 +1173,9 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
   override def hashCode: Int = hash(223, child)
 }
 
-/** Normal form ODE data structures
- * \exists R a,b,c. (\D{x} = \theta & F)
+/**
+ * Normal form differential equation data structures for explicit ODE
+ * NFContEvolve(Seq(a,b,c), x, theta, F) is \exists R a,b,c. (\D{x} = \theta & F)
  */
 object NFContEvolve {
   def apply(vars: Seq[NamedSymbol], x: Term, theta: Term, f: Formula): NFContEvolve = new NFContEvolve(vars, x, theta, f)
@@ -1184,6 +1185,8 @@ object NFContEvolve {
   }
 }
 final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
+  require(!vars.contains(x), "Quantified disturbance should not have differential equations")
+  //@TODO Why not just "x:Variable"
   def reads = ???
   def writes = (VSearch.primed(x)).distinct
 
