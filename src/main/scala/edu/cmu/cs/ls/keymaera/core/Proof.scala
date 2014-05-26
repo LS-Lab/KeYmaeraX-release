@@ -887,7 +887,7 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   def apply(t: Term): Term = usubst(Set.empty, t)
   
   /**
-   * The set of all free variables whose value t depends (syntactically).
+   * The set of all (may) free variables whose value t depends on (syntactically).
    */
   def freeVariables(t: Term) : Set[NamedSymbol] = t match {
     // homomorphic cases
@@ -907,6 +907,9 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   
   private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
 
+  /**
+   * The set of all (may) free variables whose value f depends on (syntactically).
+   */
   def freeVariables(f: Formula) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], f)
 
   private def freeVariables(u: Set[NamedSymbol], f: Formula) : Set[NamedSymbol] = f match {
@@ -928,9 +931,8 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   case Forall(vars, g) => freeVariables(u ++ vars, g)
   case Exists(vars, g) => freeVariables(u ++ vars, g)
 
-  //@TODO Could miss free variables from p that are only bound on some branches of p. Introduce third result
-  case BoxModality(p, g) => val (v,fv) = freeVariables(u, p); fv++freeVariables(u++v, g)
-  case DiamondModality(p, g) => val (v,fv) = freeVariables(u, p); fv++freeVariables(u++v, g)
+  case BoxModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
+  case DiamondModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
 
   // base cases
   case p: PredicateConstant => Set(p)
@@ -939,21 +941,27 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   }
 
   /**
-   * Returns set of symbols bound by p (possibly written) and set of symbols free in p (possibly read).
+   * Returns set of symbols bound by p (must bound = definitely written), (may bound = possibly written), and set of symbols free in p (may free = possibly read).
+   * @TODO In principle we could also compute must free, but that doesn't seem useful.
    */
-  private def freeVariables(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Set[NamedSymbol]) = p match {
-    case Choice(a, b) => val (v,fv)=freeVariables(u,a); val (w,fw)=freeVariables(u,b); (v++w, fv++fw)
-    case Sequence(a, b) => val (v,fv)=freeVariables(u,a); val (w,fw)=freeVariables(v,b); (w, fv++fw)  //@TODO Sequence could miss free variables from b that are only bound on some branches of a. Introduce third result
-    case Loop(a) => freeVariables(u, a)
-    case Test(f) => (Set.empty, freeVariables(u,f))
-    case Assign(x:Variable, e) => (Set(x), freeVariables(u, e))
-    case NDetAssign(x:Variable) => (Set(x), Set.empty)
-    case NFContEvolve(v, x:Variable, e, h) => (Set(x),
-      (if (u.contains(x)) Set.empty else Set(x)) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
+  private def freeVariables(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol]) = {p match {
+    case Choice(a, b) => val (mv,v,fv)=freeVariables(u,a); val (mw,w,fw)=freeVariables(u,b); (mv.intersect(mw), v++w, fv++fw)
+    case Sequence(a, b) => {val (mv,v,fv)=freeVariables(u,a); val (mw,w1,fw)=freeVariables(mv,b); val (mw2,w,fw2)=freeVariables(v,b); 
+      assert(mw.subsetOf(mw2), "must bound monotonicity");
+      assert(fw2.subsetOf(fw), "free variable antitonicity");
+      assert(w1.subsetOf(w), "may bound monotonicity");
+      (mw, w, fv++fw)
+    }
+    case Loop(a) => val (mv,v,fv)=freeVariables(u, a); (u,v,fv)
+    case Test(f) => (u, u, freeVariables(u,f))
+    case Assign(x:Variable, e) => (u+x, u+x, freeVariables(u, e))
+    case NDetAssign(x:Variable) => (u+x, u+x, Set.empty)
+    case NFContEvolve(v, x:Variable, e, h) => (u+x,u+x,
+      Set(x) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
     
     //@TODO check implementation
-    case a: ProgramConstant => (Set.empty, Set.empty)
-  }
+    case a: ProgramConstant => (u, u, Set.empty)
+  }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
   /**
    * Return t after checking for clashes with names in u.
@@ -1035,7 +1043,7 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   }
 
   // uniform substitution on programs
-  //@TODO def apply(p: Program): Program = {val (v,as)=usubst(Set[NamedSymbol].empty, p); as}/*usubst(Set.empty, p)._2*/
+  def apply(p: Program): Program = usubst(Set.empty[NamedSymbol], p)._2
   
   /**
    *
@@ -1050,7 +1058,7 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
     case NFContEvolve(v, x:Variable, e, h) => if (v.isEmpty) {
       if (!u.contains(x)) for (pair <- l) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
       (u+x, NFContEvolve(v, x, usubst(u++v+x, e), usubst(u++v+x,h)))
-    } else throw new UnknownOperatorException("Not implemented yet. Check whether passing v is correct.", p)
+    } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
     
     //@TODO check implementation
     case a: ProgramConstant => for(pair <- l) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
