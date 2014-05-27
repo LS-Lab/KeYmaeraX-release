@@ -880,6 +880,9 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
       //@TODO check that we never replace p(x) by something and also p(t) by something
     require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
   }
+  
+  @elidable(FINE) def log(msg: =>String) = println(msg)
+  
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
 
@@ -1004,7 +1007,12 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
     case _ => throw new UnknownOperatorException("Not implemented yet", t)
   }
   
-  def apply(f: Formula): Formula = usubst(Set.empty, f)
+  def apply(f: Formula): Formula = {
+    log("\tSubstituting " + f.prettyString + " using " + this)
+    val res = usubst(Set.empty[NamedSymbol], f)
+    log("\tSubstituted " + res.prettyString)
+    res
+  }
   
   private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
@@ -1289,9 +1297,9 @@ object UniformSubstitution {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + "\nshould be equal\n" + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
       val subst = new USubstitution(this.subst.l)
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
+      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + "\nshould be equal\n" + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
       if(conclusion.pref == origin.pref // universal prefix is identical
         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
