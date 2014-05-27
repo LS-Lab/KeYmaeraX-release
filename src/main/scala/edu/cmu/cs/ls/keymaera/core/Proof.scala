@@ -539,7 +539,7 @@ object Axiom {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
         case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
       }
-      } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
+    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
   }
 }
 
@@ -625,7 +625,7 @@ object NotRight extends (Position => Rule) {
 }
 
 class NotRight(p: Position) extends PositionRule("Not Right", p) {
-  require(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "Not Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Not(a) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq())))
@@ -638,7 +638,7 @@ object NotLeft extends (Position => Rule) {
 }
 
 class NotLeft(p: Position) extends PositionRule("Not Left", p) {
-  require(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Not Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Not(a) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))))
@@ -650,7 +650,7 @@ object OrRight extends (Position => Rule) {
   def apply(p: Position): Rule = new OrRight(p)
 }
 class OrRight(p: Position) extends PositionRule("Or Right", p) {
-  require(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "Or Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Or(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a,b))))
@@ -663,7 +663,7 @@ object OrLeft extends (Position => Rule) {
 }
 
 class OrLeft(p: Position) extends PositionRule("Or Left", p) {
-  require(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Or Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Or(a,b) = s(p)
     List(s.updated(p, a), s.updated(p, b))
@@ -675,7 +675,7 @@ object AndRight extends (Position => Rule) {
   def apply(p: Position): Rule = new AndRight(p)
 }
 class AndRight(p: Position) extends PositionRule("And Right", p) {
-  require(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "And Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val And(a,b) = s(p)
     List(s.updated(p, a), s.updated(p, b))
@@ -688,7 +688,7 @@ object AndLeft extends (Position => Rule) {
 }
 
 class AndLeft(p: Position) extends PositionRule("And Left", p) {
-  require(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "And Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val And(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b), IndexedSeq())))
@@ -714,7 +714,7 @@ object ImplyLeft extends (Position => Rule) {
   def apply(p: Position): Rule = new ImplyLeft(p)
 }
 class ImplyLeft(p: Position) extends PositionRule("Imply Left", p) {
-  require(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Imply Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Imply(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
@@ -727,7 +727,7 @@ object EquivRight extends (Position => Rule) {
   def apply(p: Position): Rule = new EquivRight(p)
 }
 class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
-  require(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "Equivalence Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Equiv(a,b) = s(p)
     //List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
@@ -742,15 +742,15 @@ object EquivLeft extends (Position => Rule) {
 }
 
 class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
-  require(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Equivalence Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Equiv(a,b) = s(p)
     //List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
     // List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
     //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
     //@TODO This choice is compatible with tactics but is unreasonable. Prefer upper choices
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(And(a,b)),IndexedSeq())),
-         s.updated(p, Sequent(s.pref, IndexedSeq(And(Not(a),Not(b))),IndexedSeq())))
+    List(s.updated(p, And(a,b)),
+         s.updated(p, And(Not(a),Not(b))))
   }
 }
 
