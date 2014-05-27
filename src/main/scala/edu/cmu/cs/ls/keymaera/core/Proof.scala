@@ -855,16 +855,17 @@ object SubstitutionPair {
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  * Explicit construction computing bound variables on the fly.
+ * Used for UniformSubstitution rule.
  * @author aplatzer
  */
-sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
+sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
 
   /**
    * @param rarg the argument in the substitution.
    * @param instArg the argument to instantiate rarg with in the occurrence.
    */
-  private def instantiate(rarg: Term, instArg: Term) = new USubstitution(List(new SubstitutionPair(rarg, instArg)))
+  private def instantiate(rarg: Term, instArg: Term) = new Substitution(List(new SubstitutionPair(rarg, instArg)))
 
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
@@ -886,9 +887,8 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
 
-  // uniform substitution on terms
-  def apply(t: Term): Term = usubst(Set.empty, t)
-  
+  // helper
+
   /**
    * The set of all (may) free variables whose value t depends on (syntactically).
    */
@@ -966,19 +966,22 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
     case a: ProgramConstant => (u, u, Set.empty)
   }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
+  // uniform substitution on terms
+  def apply(t: Term): Term = usubst(Set.empty, t)
+  
   /**
-   * Return t after checking for clashes with names in u.
+   * Return replacement t after checking for clashes with names in u.
    */
-  private def clashChecked(u: Set[NamedSymbol], t: Term) : Term = {
+  private def clashChecked(u: Set[NamedSymbol], original: Term, t: Term) : Term = {
     if (freeVariables(t).intersect(u).isEmpty) t
-    else throw new SubstitutionClashException("Clash in uniform substitution " + freeVariables(t).intersect(u), this, t)
+    else throw new SubstitutionClashException("Clash in uniform substitution because of binding of free variables: " + freeVariables(t).intersect(u) + " of replacement " + t.prettyString, this, original)
   }
   /**
-   * Return t after checking for clashes with names in u.
+   * Return replacement f after checking for clashes with names in u.
    */
-  private def clashChecked(u: Set[NamedSymbol], f: Formula) : Formula = {
+  private def clashChecked(u: Set[NamedSymbol], original:Formula, f: Formula) : Formula = {
     if (freeVariables(f).intersect(u).isEmpty) f
-    else throw new SubstitutionClashException("Clash in uniform substitution " + freeVariables(f).intersect(u), this, f)
+    else throw new SubstitutionClashException("Clash in uniform substitution because of binding of free variables: " + freeVariables(f).intersect(u) + " of replacement " + f.prettyString, this, original)
   }
   
 
@@ -995,11 +998,11 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
     case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
     case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
     // uniform substitution base cases
-    case x:Variable => if (u.contains(x)) return x else for(p <- l) { if(x == p.n) return clashChecked(u, p.t.asInstanceOf[Term])}; return x
-    case Derivative(s, e) => for(p <- l) { if(t == p.n) return clashChecked(u, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
+    case x:Variable => if (u.contains(x)) return x else for(p <- l) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
+    case Derivative(s, e) => for(p <- l) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- l) {
       rp.n match {
-        case Apply(rf, rarg) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, rp.t.asInstanceOf[Term]))
+        case Apply(rf, rarg) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
         case _ => // skip to next
       }
     }; return Apply(f, usubst(u, arg))
@@ -1010,9 +1013,12 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
   def apply(f: Formula): Formula = {
     log("\tSubstituting " + f.prettyString + " using " + this)
     val res = usubst(Set.empty[NamedSymbol], f)
-    log("\tSubstituted " + res.prettyString)
+    log("\tSubstituted  " + res.prettyString)
     res
   }
+  
+  //def apply(s: Sequent): Sequent = Sequent(s.pref, s.ante.map(this), s.succ.map(this))
+  def apply(s: Sequent): Sequent = Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
   
   private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
@@ -1037,10 +1043,10 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
     case DiamondModality(p, g) => val (v,q) = usubst(u, p); DiamondModality(q, usubst(v, g))
 
     // uniform substitution base cases
-    case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, p.t.asInstanceOf[Formula])}; return f
+    case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- l) {
       rp.n match {
-        case ApplyPredicate(rf, rarg) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, rp.t.asInstanceOf[Formula]))
+        case ApplyPredicate(rf, rarg) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
     }; return ApplyPredicate(p, usubst(u, arg))
@@ -1083,8 +1089,9 @@ sealed class USubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) 
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
+ * Old implementation.
  */
-sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
+sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
 
   // unique left hand sides in l
@@ -1297,16 +1304,23 @@ object UniformSubstitution {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      val subst = new USubstitution(this.subst.l)
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + "\nshould be equal\n" + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      if (subst(origin) == conclusion) {
+        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+        List(origin)
+      } else {
+        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+        throw new CoreException("Uniform substitution " + subst + " did not conclude " + conclusion + " from " + origin)
+      }
+    }
+    
+    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
+      //val subst = new OSubstitution(this.subst.l)
+      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + (if (a==p._2) "\nis equal to\n" else "\nshould have been equal\n") + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
       //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-      if(conclusion.pref == origin.pref // universal prefix is identical
+      (conclusion.pref == origin.pref // universal prefix is identical
         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
         && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
-        List(origin)
-      else
-        throw new CoreException("Substitution did not yield the expected result " + subst + " applied to " + conclusion)
     }
   }
 }
