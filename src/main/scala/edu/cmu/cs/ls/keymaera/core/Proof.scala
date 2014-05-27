@@ -925,9 +925,9 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
 
   case Equals(d, l, r) => freeVariables(l) ++ freeVariables(r)
   case NotEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case GreaterEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case GreaterEqual(d, l, r) => freeVariables(l) ++ freeVariables(r)
   case GreaterThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case LessEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case LessEqual(d, l, r) => freeVariables(l) ++ freeVariables(r)
   case LessThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
 
   // binding cases add bound variables to u
@@ -1030,9 +1030,9 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
 
     case Equals(d, l, r) => Equals(d, usubst(u, l), usubst(u, r))
     case NotEquals(d, l, r) => NotEquals(d, usubst(u, l), usubst(u, r))
-    case GreaterEquals(d, l, r) => GreaterEquals(d, usubst(u, l), usubst(u, r))
+    case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(u, l), usubst(u, r))
     case GreaterThan(d, l, r) => GreaterThan(d, usubst(u, l), usubst(u, r))
-    case LessEquals(d, l, r) => LessEquals(d, usubst(u, l), usubst(u, r))
+    case LessEqual(d, l, r) => LessEqual(d, usubst(u, l), usubst(u, r))
     case LessThan(d, l, r) => LessThan(d, usubst(u, l), usubst(u, r))
 
     // binding cases add bound variables to u
@@ -1221,12 +1221,12 @@ sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPa
       case (a: Term,b: Term) => GreaterThan(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
-    case GreaterEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => GreaterEquals(d, apply(a), apply(b))
+    case GreaterEqual(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => GreaterEqual(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
-    case LessEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => LessEquals(d, apply(a), apply(b))
+    case LessEqual(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => LessEqual(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case LessThan(d, l, r) => (l,r) match {

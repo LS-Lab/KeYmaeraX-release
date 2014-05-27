@@ -577,7 +577,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       lazy val pattern = termParser ~ LEQ ~ termParser
       log(pattern)(LEQ) ^^ {
         case left ~ LEQ ~ right =>  
-          LessEquals(left.sort,left,right)
+          LessEqual(left.sort,left,right)
       }
     }
     
@@ -585,7 +585,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       lazy val pattern = termParser ~ GEQ ~ termParser
       log(pattern)(GEQ) ^^ {
         case left ~ GEQ ~ right =>  
-          GreaterEquals(left.sort,left,right)
+          GreaterEqual(left.sort,left,right)
       }
     }
     

@@ -150,8 +150,8 @@ object KeYmaeraPrettyPrinter {
     //BinaryRelation
     //TODO is this OK?
     case Equals(s,l,r) => prettyPrinter(l) + EQ + prettyPrinter(r) 
-    case GreaterEquals(s,l,r) => prettyPrinter(l) + GEQ + prettyPrinter(r)
-    case LessEquals(s,l,r) => prettyPrinter(l) + LEQ + prettyPrinter(r)
+    case GreaterEqual(s,l,r) => prettyPrinter(l) + GEQ + prettyPrinter(r)
+    case LessEqual(s,l,r) => prettyPrinter(l) + LEQ + prettyPrinter(r)
     case LessThan(s,l,r) => prettyPrinter(l) + LT + prettyPrinter(r)
     case GreaterThan(s,l,r) => prettyPrinter(l) + GT + prettyPrinter(r)
     case NotEquals(s,l,r) => prettyPrinter(l) + NEQ + prettyPrinter(r)
@@ -288,8 +288,8 @@ object KeYmaeraPrettyPrinter {
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
-      LessEquals.getClass().getCanonicalName()    ::
-      GreaterEquals.getClass().getCanonicalName()    ::
+      LessEqual.getClass().getCanonicalName()    ::
+      GreaterEqual.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
@@ -376,8 +376,8 @@ object KeYmaeraPrettyPrinter {
     
     //BinaryRelation
     case Equals(s,l,r) => false
-    case GreaterEquals(s,l,r) => false
-    case LessEquals(s,l,r) => false
+    case GreaterEqual(s,l,r) => false
+    case LessEqual(s,l,r) => false
     case LessThan(s,l,r) => false
     case GreaterThan(s,l,r) => false
     case NotEquals(s,l,r) => false

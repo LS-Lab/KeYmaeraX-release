@@ -564,37 +564,37 @@ final class GreaterThan  (domain : Sort = Real, left : Term, right : Term) exten
   override def hashCode: Int = hash(59, domain, left, right)
 }
 
-object GreaterEquals {
-  def apply(domain : Sort = Real, left : Term, right : Term): GreaterEquals = new GreaterEquals(domain, left, right)
+object GreaterEqual {
+  def apply(domain : Sort = Real, left : Term, right : Term): GreaterEqual = new GreaterEqual(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: GreaterEquals => (x.domain, x.left, x.right) match {
+    case x: GreaterEqual => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-final class GreaterEquals(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+final class GreaterEqual(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
-    case GreaterEquals(d, a, b) => d == domain && left == a && right == b
+    case GreaterEqual(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
   override def hashCode: Int = hash(61, domain, left, right)
 }
 
-object LessEquals {
-  def apply(domain : Sort = Real, left : Term, right : Term): LessEquals = new LessEquals(domain, left, right)
+object LessEqual {
+  def apply(domain : Sort = Real, left : Term, right : Term): LessEqual = new LessEqual(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: LessEquals => (x.domain, x.left, x.right) match {
+    case x: LessEqual => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-final class LessEquals   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+final class LessEqual   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
-    case LessEquals(d, a, b) => d == domain && left == a && right == b
+    case LessEqual(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
   override def hashCode: Int = hash(67, domain, left, right)

@@ -186,9 +186,9 @@ object MathematicaToKeYmaera {
     else if(isThing(e,MathematicaSymbols.EQUALS))          convertEquals(e)
     else if(isThing(e, MathematicaSymbols.UNEQUAL))        convertNotEquals(e)
     else if(isThing(e, MathematicaSymbols.GREATER))        convertGreaterThan(e)
-    else if(isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertGreaterEquals(e)
+    else if(isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertGreaterEqual(e)
     else if(isThing(e, MathematicaSymbols.LESS))           convertLessThan(e)
-    else if(isThing(e, MathematicaSymbols.LESS_EQUALS))    convertLessEquals(e)
+    else if(isThing(e, MathematicaSymbols.LESS_EQUALS))    convertLessEqual(e)
     
     //Variables. This case intentionally comes last, so that it doesn't gobble up
     //and keywords that were not declared correctly in MathematicaSymbols (should be none)
@@ -295,18 +295,18 @@ object MathematicaToKeYmaera {
       staggeredPairs.map(pair => NotEquals(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
-  def convertGreaterEquals(e : MExpr) : Formula = {
+  def convertGreaterEqual(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => GreaterEquals(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => GreaterEqual(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
-  def convertLessEquals(e : MExpr) : Formula = {
+  def convertLessEqual(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => LessEquals(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => LessEqual(Real,pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertLessThan(e : MExpr) : Formula = {
@@ -488,9 +488,9 @@ object KeYmaeraToMathematica {
       case f : ProgramNotEquals => ???
       case Equals(s,l,r) => convertEquals(l,r)
       case NotEquals(s,l,r) => convertNotEquals(l,r)
-      case LessEquals(s,l,r) => convertLessEquals(l,r)
+      case LessEqual(s,l,r) => convertLessEqual(l,r)
       case LessThan(s,l,r) => convertLessThan(l,r)
-      case GreaterEquals(s,l,r) => convertGreaterEquals(l,r)
+      case GreaterEqual(s,l,r) => convertGreaterEqual(l,r)
       case GreaterThan(s,l,r) => convertGreaterThan(l,r)      
     }
     case t : Modality => ???
@@ -556,11 +556,11 @@ object KeYmaeraToMathematica {
     val args = Array[MExpr](convertTerm(left), convertTerm(right))
     new MExpr(MathematicaSymbols.EQUALS, args)
   }
-  def convertGreaterEquals(left:Term,right:Term) = {
+  def convertGreaterEqual(left:Term,right:Term) = {
     val args = Array[MExpr](convertTerm(left), convertTerm(right))
     new MExpr(MathematicaSymbols.GREATER_EQUALS, args)
   }
-  def convertLessEquals(left:Term,right:Term) = {
+  def convertLessEqual(left:Term,right:Term) = {
     val args = Array[MExpr](convertTerm(left), convertTerm(right))
     new MExpr(MathematicaSymbols.LESS_EQUALS, args)
   }
