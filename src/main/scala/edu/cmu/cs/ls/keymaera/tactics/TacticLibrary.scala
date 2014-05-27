@@ -692,9 +692,9 @@ object TacticLibrary {
                 val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
                   //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                   //@TODO If Pos.isAnte the following position management seems wrong since unstable.
-                  case Equiv(_, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(a)&hideT)(pos))
+                  case Equiv(_, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos))
                   case Imply(_, _) if(pos.isAnte  && pos.inExpr == HereP) => modusPonensT(pos, axiomInstPos)
-                  case Imply(_, _) if(!pos.isAnte && pos.inExpr == HereP) => ImplyLeftT(axiomInstPos) & ((assertPT(a)&hideT)(pos), AxiomCloseT(axiomInstPos.topLevel, pos))
+                  case Imply(_, _) if(!pos.isAnte && pos.inExpr == HereP) => ImplyLeftT(axiomInstPos) & ((assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos), AxiomCloseT(axiomInstPos.topLevel, pos))
                   case _ => ???
                 })
                 // // hide in reverse order since hiding changes positions
