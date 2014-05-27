@@ -48,6 +48,7 @@ src/test/scala - tests run by `sbt test`
 
 The wiki contains an introduction to the testing framework:
 https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
+http://www.scalatest.org/user_guide
 
 target/ - Created by sbt on first compilation.
 

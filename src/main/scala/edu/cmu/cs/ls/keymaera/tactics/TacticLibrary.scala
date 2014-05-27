@@ -728,7 +728,7 @@ object TacticLibrary {
         }
         // rename to match axiom if necessary
         val (ax, cont) = if (x.name == "x" && x.index == None) (axiom, None) else (replace(axiom)(aX, x), Some(alpha))
-        Some(ax, axiomInstance, new Substitution(l), cont)
+        Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
 
@@ -1057,7 +1057,7 @@ object TacticLibrary {
         // construct axiom instance: [?H]p <-> (H -> p).
         val g = Imply(h, p)
         val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, new Substitution(l))
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
 
@@ -1106,7 +1106,7 @@ object TacticLibrary {
         }
         // rename to match axiom if necessary
         val (ax, cont) = if(v.name != "x" || v.index != None) (replace(axiom)(aX, v), Some(alpha)) else (axiom, None)
-        Some(ax, axiomInstance, new Substitution(l), cont)
+        Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
   }
@@ -1128,7 +1128,7 @@ object TacticLibrary {
         // construct axiom instance: [ a; b ]p <-> [a][b]p.
         val g = BoxModality(a, BoxModality(b, p))
         val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, new Substitution(l))
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
 
@@ -1150,7 +1150,7 @@ object TacticLibrary {
         // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
         val g = And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p))))
         val axiomInstance = Imply(g, f)
-        Some(axiomInstance, new Substitution(l))
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
 
@@ -1216,7 +1216,7 @@ object TacticLibrary {
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
-          Some(axiomInstance, new Substitution(l), (quantified, aX), (instance, aT))
+          Some(axiomInstance, Substitution(l), (quantified, aX), (instance, aT))
         case Forall(x, qf) if (!x.contains(quantified)) =>
           println(x + " does not contain " + quantified)
           x.map(_ match {
@@ -1256,7 +1256,7 @@ object TacticLibrary {
                 val branch2Tactic = (cohideT(SuccPosition(node.sequent.succ.length-1)) ~
                   alpha(SuccPosition(0, HereP.first), quantified) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
-                  (uniformSubstT(subst, replMap) & uniformSubstT(new Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
+                  (uniformSubstT(subst, replMap) & uniformSubstT(Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
                     (axiomT(axiomName) & alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT)))
                 Some(cutT(axiomInstance) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
@@ -1284,7 +1284,7 @@ object TacticLibrary {
         // construct axiom instance: [a](p->q) -> (([a]p) -> ([a]q))
         val g = BoxModality(a, Imply(p, q))
         val axiomInstance = Imply(g, f)
-        Some(axiomInstance, new Substitution(l))
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
   }
@@ -1306,7 +1306,7 @@ object TacticLibrary {
         // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
         val g = And(BoxModality(a, p), BoxModality(b, p))
         val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, new Substitution(l))
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
 
