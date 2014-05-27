@@ -115,8 +115,8 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    */
   def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
-  override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
-    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
+  override def toString: String = "Sequent[{(" + pref.mkString(", ") + "), " +
+    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
 }
 
 /*
@@ -608,7 +608,7 @@ object Cut {
     def apply(s: Sequent): List[Sequent] = {
       val use = new Sequent(s.pref, s.ante :+ c, s.succ)
       val show = new Sequent(s.pref, s.ante, s.succ :+ c)
-      //@TODO Switch branches around to (show, use)
+      //@TODO Switch branches around to (show, use) and reformulate using glue()
       List(use, show)
     } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts")
   }

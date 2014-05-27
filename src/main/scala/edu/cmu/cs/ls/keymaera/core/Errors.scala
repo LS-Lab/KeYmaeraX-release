@@ -35,3 +35,5 @@ class InapplicableRuleException(msg:String, r:Rule, s:Sequent) extends CoreExcep
 }
 
 class UnknownOperatorException(msg:String, e:Expr) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
+  
+class TacticException(msg:String, node: ProofNode) extends ProverException(msg + "\nat " + node.sequent) {}
