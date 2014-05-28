@@ -882,7 +882,7 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
   }
   
-  @elidable(FINE) def log(msg: =>String) = println(msg)
+  @elidable(FINE) private def log(msg: =>String) {}  //= println(msg)
   
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
@@ -1096,6 +1096,15 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
 sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
 
+  /**
+   *
+   * @param source should be a tuple of substitutable things
+   * @param target should be a tuple of the same dimension donating the right sides
+   * @return
+   */
+  private def constructSubst(source: Expr, target: Expr): OSubstitution = new OSubstitution(collectSubstPairs(source, target))
+
+
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
     // check that we never replace n by something and then again replacing the same n by something
@@ -1112,14 +1121,6 @@ sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPa
   }
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
-
-  /**
-   *
-   * @param source should be a tuple of substitutable things
-   * @param target should be a tuple of the same dimension donating the right sides
-   * @return
-   */
-  private def constructSubst(source: Expr, target: Expr): Substitution = new Substitution(collectSubstPairs(source, target))
 
   private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] =
     if(source != target)
@@ -1299,6 +1300,8 @@ sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPa
 object UniformSubstitution {
   def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
 
+  @elidable(FINE) private def log(msg: =>String) = println(msg)
+
   private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
     /**
      * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
@@ -1306,6 +1309,7 @@ object UniformSubstitution {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
+      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
       if (subst(origin) == conclusion) {
         assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         List(origin)
@@ -1313,12 +1317,12 @@ object UniformSubstitution {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         throw new CoreException("Uniform substitution " + subst + " did not conclude " + conclusion + " from " + origin)
       }
-    }
+    } 
     
     private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
       //val subst = new OSubstitution(this.subst.l)
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + (if (a==p._2) "\nis equal to\n" else "\nshould have been equal\n") + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
+      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
+      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
       (conclusion.pref == origin.pref // universal prefix is identical
         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
