@@ -1290,7 +1290,7 @@ object TacticLibrary {
                   case _ => throw new IllegalArgumentException("...")
                 }
                 val replMap = Map(repl(axiomInstance, quantified, false) -> repl(a, aX))
-                val branch2Tactic = (cohideT(SuccPosition(node.sequent.succ.length-1)) ~
+                val branch2Tactic = (cohideT(SuccPosition(node.sequent.succ.length)) ~
                   alpha(SuccPosition(0, HereP.first), quantified) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) & uniformSubstT(Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
