@@ -1202,7 +1202,9 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Ter
  *=============
  */
 
-abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
+abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child) {
+  require(!variables.isEmpty, "no empty quantifiers " + this)
+}
 
 object Forall {
   def apply(variables : Seq[NamedSymbol], child : Formula): Forall = new Forall(variables, child)
@@ -1214,8 +1216,8 @@ object Forall {
     case _ => None
   }
 }
-final class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
-
+final class Forall(variables : scala.collection.immutable.Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+  require(!variables.isEmpty, "no empty quantifiers " + this)
   override def equals(e: Any): Boolean = e match {
     case x: Forall => x.variables == variables && x.child == child
     case _ => false
@@ -1234,6 +1236,7 @@ object Exists {
   }
 }
 final class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+  require(!variables.isEmpty, "no empty quantifiers " + this)
   override def equals(e: Any): Boolean = e match {
     case x: Exists => x.variables == variables && x.child == child
     case _ => false

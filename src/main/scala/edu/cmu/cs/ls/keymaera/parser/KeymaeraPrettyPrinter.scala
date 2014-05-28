@@ -39,6 +39,7 @@ object KeYmaeraPrettyPrinter {
     
     //quantifiers
     case Forall(variables, child) => {
+      assert(!variables.isEmpty, "no empty universal quantifiers for " + child);
       FORALL + " " +
       variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
       "." + 
@@ -46,6 +47,7 @@ object KeYmaeraPrettyPrinter {
     }
     
     case Exists(variables, child) => {
+      assert(!variables.isEmpty, "no empty existential quantifiers for " + child);
       EXISTS + " " +
       variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
       "." + 
