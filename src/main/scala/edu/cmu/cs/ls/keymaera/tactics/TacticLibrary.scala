@@ -54,6 +54,7 @@ object TacticLibrary {
       | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
+      | locateSuccAnte(indecisive(true, true, true, true))
     ) ~ arithmeticT
   }
 
@@ -148,7 +149,10 @@ object TacticLibrary {
     }
   }
 
-  def universalClosure(f: Formula): Formula = Forall(Helper.certainlyFreeNames(f).toList, f)
+  def universalClosure(f: Formula): Formula = {
+    val vars = Helper.certainlyFreeNames(f)
+    if(vars.isEmpty) f else Forall(vars.toList, f)
+  }
 
 //  def deskolemize(f : Formula) = {
 //    val FV = SimpleExprRecursion.getFreeVariables(f)
