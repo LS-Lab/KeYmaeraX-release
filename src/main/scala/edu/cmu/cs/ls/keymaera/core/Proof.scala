@@ -941,6 +941,7 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   case p: PredicateConstant => Set(p)
   case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg)
   case x: Atom => ???
+  case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
   /**
@@ -964,6 +965,7 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     
     //@TODO check implementation
     case a: ProgramConstant => (u, u, Set.empty)
+    case _ => throw new UnknownOperatorException("Not implemented", p)
   }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
   // uniform substitution on terms
