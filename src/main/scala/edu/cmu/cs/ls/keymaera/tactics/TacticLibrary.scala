@@ -54,8 +54,8 @@ object TacticLibrary {
       | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
-      // | locateSucc(EquivRightT) //@TODO ultimately address equivalences too.
-      // | locateAnte(EquivLeftT)
+      | locateSucc(EquivRightT) //@TODO ultimately address equivalences too.
+      | locateAnte(EquivLeftT)
       //| locateSuccAnte(indecisive(true, true, true, true)) //@TODO ultimately address equivalences too.
     ) ~ arithmeticT
   }
