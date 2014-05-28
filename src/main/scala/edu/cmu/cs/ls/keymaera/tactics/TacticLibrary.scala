@@ -638,8 +638,17 @@ object TacticLibrary {
     case _ => throw new IllegalArgumentException("Unknown axiom " + id)
   }
 
-  //@TODO Document
-  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])) = new ConstructionTactic("Uniform Substitution") {
+  /**
+   * Tactic to perform uniform substitution. In most cases this is called on a sequent that only contains a single
+   * formula in order to show that a formula is an instance of an axiom (modulo an alpha renaming of that).
+   *
+   * @param subst the substitution to perform
+   * @param delta a map with replacement for formulas in the sequent. That is, for all (f, g) in delta we will replace
+   *              every occurrence of formula f in the sequent by g in order to construct the origin of the uniform
+   *              substitution
+   * @return an instance of a tactic that performs the given uniform substitution
+   */
+  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
     def applicable(pn: ProofNode) = true
 
     def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
@@ -668,7 +677,16 @@ object TacticLibrary {
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
     //@TODO Add contract that applies(f) <=> \result.isDefined
-    //@TODO Document
+    /**
+     * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
+     * that performs the renaming.
+     *
+     * @param f the formula that should be rewritten using the axiom
+     * @param a the axiom to be used
+     * @return (Axiom before executing the given position tactic; the instance of the axiom, the uniform substitution that
+     *         transforms the first into the second axiom (Hilbert style); a position tactic that transforms the first
+     *         argument into the actual axiom (usually alpha renaming).
+     */
     def constructInstanceAndSubst(f: Formula, a: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
       constructInstanceAndSubst(f) match {
         case Some((instance, subst)) => Some((a, instance, subst, None))
@@ -676,6 +694,15 @@ object TacticLibrary {
       }
     }
 
+    /**
+     * This is a simpler form of the constructInstanceAndSubst method. It just gets the formula to be rewritten
+     * and has to construct the axiom instance and the substitution to transform the axiom into its instance.
+     *
+     * This method will be called by the default implementation of constructInstanceAndSubst(f: Formula, a: Formula).
+     *
+     * @param f The formula to be rewritten
+     * @return (The axiom instance; Substitution to transform the axiom into its instance)
+     */
     def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = ???
 
     //@TODO Add contract that applies()=>\result fine
