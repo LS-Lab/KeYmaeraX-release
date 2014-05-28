@@ -8,7 +8,6 @@ package edu.cmu.cs.ls.keymaera.core
  * KeYmaera Prover Exceptions.
  */
 class ProverException(msg: String) extends RuntimeException(msg) {
-  //@TODO Add inContext():Throwable function that gives wraps the exception within some extra information that explains the context formula in which a problem occurred. So not just the local subformula but the whole context. Useful for try catch e => throw e.inContext("Context information")
   
   //@TODO Add functionality to prettyPrint all expressions passed in on demand.
 }
@@ -26,7 +25,12 @@ class ProverException(msg: String) extends RuntimeException(msg) {
  */
 class CoreException(msg:String) extends ProverException(msg) {}
 
-class SubstitutionClashException(msg:String, s:Any/*Substitution*/, e:Expr) extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString) {}
+class SubstitutionClashException(msg:String, s:Any/*Substitution*/, e:Expr, info:String = "") extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString + " " + info) {
+  /**
+   * Add the context information to this exception, returning the resulting exception to be thrown.
+   */
+  def inContext(context: String) = new SubstitutionClashException(msg, s, e, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
+}
 
 class SkolemClashException(msg:String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 

@@ -54,8 +54,8 @@ object TacticLibrary {
       | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
-      | locateSucc(EquivRightT) //@TODO ultimately address equivalences too.
-      | locateAnte(EquivLeftT)
+      // | locateSucc(EquivRightT) //@TODO ultimately address equivalences too.
+      // | locateAnte(EquivLeftT)
       //| locateSuccAnte(indecisive(true, true, true, true)) //@TODO ultimately address equivalences too.
     ) ~ arithmeticT
   }
@@ -1376,8 +1376,8 @@ object TacticLibrary {
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          case Assign(_, _) => Some(assignment(p))
-          // case Assign(_, _) => Some(assignT(p))
+          // case Assign(_, _) => Some(assignment(p))
+          case Assign(_, _) => Some(assignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
