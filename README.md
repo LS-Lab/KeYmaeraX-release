@@ -84,7 +84,7 @@ Or, on a more fine-grained level within a class use
 sbt> test-only -- -n "MyTest MoreTest"
 
 For inlining scala output alongside the test suite information, first do:
-logBuffered in Test := false
+sbt>  set logBuffered in Test := false
 
 Specification
 =============

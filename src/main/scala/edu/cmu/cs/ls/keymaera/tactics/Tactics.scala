@@ -262,6 +262,14 @@ object Tactics {
   def assertT(cond : Sequent=>Boolean, msg:String = ""): Tactic = ifT(node => !cond(node.sequent), errorT("Tactic Assertion failed: " + msg))
 
   /**
+   * Assertion Tactic, which checks that the given formula is present at the given position in the sequent that this tactic is applied to.
+   */
+  def assertT(formulaExpectedAtPosition: Formula, pos: Position, msg:String): Tactic = assertT(s=>s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString + "at position " + pos + " " + msg)
+  
+  def assertT(formulaExpectedAtPosition: Formula, pos: Position): Tactic = assertT(formulaExpectedAtPosition, pos, "")
+
+
+  /**
    * Assertion PositionTactic, which has no effect except to sanity-check the given condition like an assert would.
    */
   def assertPT(cond : (Sequent,Position)=>Boolean, msg:String = ""): PositionTactic = new PositionTactic("Assert") {
@@ -275,7 +283,7 @@ object Tactics {
    */
   def assertPT(formulaExpectedAtPosition: Formula, msg:String): PositionTactic = assertPT((s,pos)=>s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString + " " + msg)
 
-  def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT((s,pos)=>s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString)
+  def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT(formulaExpectedAtPosition, "")
 
   /**
    * Assertion PositionTactic, which checks that the sequent has the specified number of antecedent and succedent formulas, respectively.

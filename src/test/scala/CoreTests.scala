@@ -100,7 +100,7 @@ class CoreTests extends FlatSpec with Matchers {
   it should "complain about being applied to non-top-level positions" in {
     val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q)), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q)))
     val aDeep = AntePosition(0, PosInExpr(List(0,1)))
-    aDeep.isDefined(s) should be (true)
+    aDeep.isIndexDefined(s) should be (true)
     an [IllegalArgumentException] should be thrownBy testRule(NotRight(aDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(NotLeft(aDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(AndRight(aDeep), s)
@@ -115,7 +115,7 @@ class CoreTests extends FlatSpec with Matchers {
     an [IllegalArgumentException] should be thrownBy testRule(CloseFalse(aDeep), s)
 
     val sDeep = SuccPosition(0, PosInExpr(List(0,1)))
-    sDeep.isDefined(s) should be (true)
+    sDeep.isIndexDefined(s) should be (true)
     an [IllegalArgumentException] should be thrownBy testRule(NotRight(sDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(NotLeft(sDeep), s)
     an [IllegalArgumentException] should be thrownBy testRule(AndRight(sDeep), s)

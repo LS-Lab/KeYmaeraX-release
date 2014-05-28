@@ -554,19 +554,19 @@ object TacticLibrary {
   def NotRightFindT: Tactic = locateSucc(NotRightT)
 
   def hideT: PositionTactic = new PositionTactic("Hide") {
-    def applies(s: Sequent, p: Position) = true
+    def applies(s: Sequent, p: Position) = p.isIndexDefined(s) && p.isTopLevel
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) HideLeft(pos) else HideRight(pos)) {
-      override def applicable(node: ProofNode): Boolean = true
+      override def applicable(node: ProofNode): Boolean = pos.isIndexDefined(node.sequent) && pos.isTopLevel
       //@TODO Shouldn't this be = pos.isDefined(node.sequent) here and everywhere?
     }
   }
 
   def cohideT: PositionTactic = new PositionTactic("CoHide") {
-    def applies(s: Sequent, p: Position) = true
+    def applies(s: Sequent, p: Position) = p.isIndexDefined(s) && p.isTopLevel
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) CoHideLeft(pos) else CoHideRight(pos)) {
-      override def applicable(node: ProofNode): Boolean = true
+      override def applicable(node: ProofNode): Boolean = pos.isIndexDefined(node.sequent) && pos.isTopLevel
     }
   }
 
@@ -741,7 +741,8 @@ object TacticLibrary {
                   case None => NilT
                 }
                 val axiomPos = SuccPosition(node.sequent.succ.length)
-                val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) ~ (uniformSubstT(subst, Map(axiomInstance -> a)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+                println("Axiom instance " + axiomInstance)
+                val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> a)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
                 Some(cutT(axiomInstance) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
                }
               case None => None
@@ -1212,7 +1213,7 @@ object TacticLibrary {
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
     new PositionTactic("Alpha Renaming") {
-      override def applies(s: Sequent, p: Position): Boolean = true // TOOD: really check applicablity
+      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicablity
 
       override def apply(p: Position): Tactic = (new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
         override def applicable(node: ProofNode): Boolean = true

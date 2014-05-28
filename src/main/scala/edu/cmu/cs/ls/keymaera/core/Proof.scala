@@ -115,7 +115,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
    */
   def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
-  override def toString: String = "Sequent[{(" + pref.mkString(", ") + "), " +
+  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
 }
 
@@ -310,8 +310,10 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   def isAnte: Boolean
   def getIndex: Int = index
 
-  //@TODO unexpected name because check is independent of inExpr. Or check both.
-  def isDefined(s: Sequent): Boolean =
+  /**
+   * Check whether index of this position is defined in given sequent (ignoring inExpr).
+   */
+  def isIndexDefined(s: Sequent): Boolean =
     if(isAnte)
       s.ante.length > getIndex
     else
@@ -324,6 +326,11 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   def topLevel: Position = {
     clone(index)
   } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
+
+  /**
+   * Whether this position is a top-level position of a sequent.
+   */
+  def isTopLevel: Boolean = inExpr == HereP
 
   def +(i: Int): Position
 
@@ -825,9 +832,10 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
 sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
   // identity substitution would be correct but is usually unintended
-  require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
+  //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
   
   @elidable(ASSERTION) def applicable = {
+    if (!(n != t)) println("INFO: Unexpected identity substitution " + n + " by equal " + t + "\n(non-critical, indicates possible tactics inefficiency)")
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
@@ -882,7 +890,7 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
   }
   
-  @elidable(FINE) private def log(msg: =>String) {}  //= println(msg)
+  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
   
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
@@ -1048,7 +1056,8 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- l) {
       rp.n match {
-        case ApplyPredicate(rf, rarg) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
+        //@TODO clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case ApplyPredicate(rf, rarg:Variable) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
     }; return ApplyPredicate(p, usubst(u, arg))
@@ -1300,7 +1309,7 @@ sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPa
 object UniformSubstitution {
   def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
 
-  @elidable(FINE) private def log(msg: =>String) = println(msg)
+  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
 
   private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
     /**
