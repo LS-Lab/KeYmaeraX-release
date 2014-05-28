@@ -832,9 +832,10 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
 sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
   // identity substitution would be correct but is usually unintended
-  require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
+  //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
   
   @elidable(ASSERTION) def applicable = {
+    if (!(n != t)) println("INFO: Unexpected identity substitution " + n + " by equal " + t + "\n(non-critical, indicates possible tactics inefficiency)")
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
@@ -1055,7 +1056,8 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- l) {
       rp.n match {
-        case ApplyPredicate(rf, rarg) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
+        //@TODO clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case ApplyPredicate(rf, rarg:Variable) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
     }; return ApplyPredicate(p, usubst(u, arg))
