@@ -68,6 +68,24 @@ target/ - Created by sbt on first compilation.
 
 target/scala-2.10/classes/ - Target directory for sbt compilation.
 
+Test Cases
+==========
+
+The full test suite can be run by
+  sbt test
+Selectively running individual test cases within sbt:
+sbt> test-only TacticTests
+Or, on a more fine-grained level within a class use
+   object MyTest extends Tag("MyTest")
+   object MyTest extends Tag("MyTest")
+   it should "do something useful" taggedAs(MyTest) in {....}
+   it should "do anything useful" taggedAs(MyTest) in {....}
+   it should "do more good" taggedAs(MoreTest) in {....}
+sbt> test-only -- -n "MyTest MoreTest"
+
+For inlining scala output alongside the test suite information, first do:
+logBuffered in Test := false
+
 Specification
 =============
 

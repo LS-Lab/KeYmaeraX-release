@@ -10,6 +10,11 @@ import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 
+import org.scalatest.Tag
+
+object MyTest extends Tag("MyTest")
+
+
 class TacticTests extends FlatSpec with Matchers {
   Config.mathlicenses = 1
   Config.maxCPUs = 1
@@ -41,7 +46,7 @@ class TacticTests extends FlatSpec with Matchers {
 
   /**
    * Run KeYmaera till completion using given tactic for proving given conjecture f.
-   *@TODO Implement this stub
+   *@TODO Improve implementation, e.g., by giving an upper time bound
    */
   def prove(f:Formula, tactic:Tactic = TacticLibrary.default) : ProvabilityStatus = {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
@@ -218,7 +223,6 @@ class TacticTests extends FlatSpec with Matchers {
 
   "Tactics (default)" should "prove the following properties" in {}
 
-    //@TODO This test loops forever with new Uniform Substitutions
   it should "prove a>0 -> [?x>a]x>0" in {
       val x = Variable("x", None, Real)
       val a = Variable("a", None, Real)
@@ -227,7 +231,7 @@ class TacticTests extends FlatSpec with Matchers {
       prove(formula) should be (Provable)
   }
 
-  ignore should "prove a>0 -> [?x>a++?x>=1]x>0" in {
+  it should "prove a>0 -> [?x>a++?x>=1]x>0" in {
       val x = Variable("x", None, Real)
       val a = Variable("a", None, Real)
       val formula = Imply(GreaterThan(Real, a,Number(0)),
@@ -235,176 +239,175 @@ class TacticTests extends FlatSpec with Matchers {
       prove(formula) should be (Provable)
   }
 
-  // "Tactics (default)" should "prove a>0 -> [x:=77]a>0" in {
-  //   val x = Variable("x", None, Real)
-  //   val a = Variable("a", None, Real)
-  //   val formula = Imply(GreaterThan(Real, a,Number(0)),
-  //     BoxModality(Assign(x, Number(77)), GreaterThan(Real, a,Number(0))))
-  //   prove(formula) should be (Provable)
-  // }
-  // 
-  // it should "prove a>0 -> [x:=x+1]a>0" in {
-  //   val x = Variable("x", None, Real)
-  //   val a = Variable("a", None, Real)
-  //   val formula = Imply(GreaterThan(Real, a,Number(0)),
-  //     BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(0))))
-  //   prove(formula) should be (Provable)
-  // }
-  // 
-  // it should "prove z>0 -> [y:=y+1]z>0" in {
-  //   val z = Variable("z", None, Real)
-  //   val y = Variable("y", None, Real)
-  //   val formula = Imply(GreaterThan(Real, z,Number(0)),
-  //     BoxModality(Assign(y, Add(Real, y,Number(1))), GreaterThan(Real, z,Number(0))))
-  //   prove(formula) should be (Provable)
-  // }
-  // 
-  // it should "prove x>0 -> [x:=x+1]x>1" in {
-  //   val x = Variable("x", None, Real)
-  //   val formula = Imply(GreaterThan(Real, x,Number(0)),
-  //     BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
-  //   prove(formula) should be (Provable)
-  // }
-  // 
-  // it should "prove z>0 -> [z:=z+1]z>1" in {
-  //   val x = Variable("z", None, Real)
-  //   val formula = Imply(GreaterThan(Real, x,Number(0)),
-  //     BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
-  //   prove(formula) should be (Provable)
-  // }
+  "Tactics (default)" should "prove a>0 -> [x:=77]a>0" in {
+    val x = Variable("x", None, Real)
+    val a = Variable("a", None, Real)
+    val formula = Imply(GreaterThan(Real, a,Number(0)),
+      BoxModality(Assign(x, Number(77)), GreaterThan(Real, a,Number(0))))
+    prove(formula) should be (Provable)
+  }
   
-  //@TODO This test loops forever with new Uniform Substitutions
-  // it should "prove x>0 -> [y:=x; x:=y+1; ](x>y & y>0)" in {
-  //   val x = Variable("x", None, Real)
-  //   val y = Variable("y", None, Real)
-  //   val formula = Imply(GreaterThan(Real, x,Number(0)),
-  //     BoxModality(Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1)))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
-  //   prove(formula) should be (Provable)
-  // }
-  // 
-  // it should "prove x>0 -> [x:=x+1;y:=x-1 ++ y:=x; x:=y+1; ](x>y & y>0)" in {
-  //   val x = Variable("x", None, Real)
-  //   val y = Variable("y", None, Real)
-  //   val formula = Imply(GreaterThan(Real, x,Number(0)),
-  //     BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,Subtract(Real,x,Number(1)))),
-  //       Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
-  //   prove(formula) should be (Provable)
-  // }
-  // 
-  // it should "not prove invalid x>0 -> [x:=x+1;y:=x ++ y:=x; x:=y+1; ](x>y & y>0)" in {
-  //   val x = Variable("x", None, Real)
-  //   val y = Variable("y", None, Real)
-  //   val formula = Imply(GreaterThan(Real, x,Number(0)),
-  //     BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,x)),
-  //       Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
-  //   prove(formula) should not be (Provable)
-  // }
-  // 
-  // 
-  // 
-  // def tryTactic(tactic: Tactic): ProofNode = {
-  //   val x = Variable("x", None, Real)
-  //   val y = Variable("y", None, Real)
-  //   val xp1 = Add(Real, x, Number(1))
-  //   val zero = Number(0)
-  //   val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
-  //   Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-  //   while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
-  //     Thread.sleep(10)
-  //   }
-  //   r
-  // }
-  // 
-  // def checkSingleAlternative(p: ProofNode): Boolean =
-  //   if(p.children.length > 1) {
-  //     println("found two alternatives " + p.children)
-  //     false
-  //   } else if(p.children.length > 0)
-  //     p.children.head.subgoals.isEmpty || p.children.head.subgoals.foldLeft(false)((a: Boolean, b: ProofNode) => a || checkSingleAlternative(b))
-  //   else
-  //     true
-  // 
-  // "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
-  //   val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
-  //   val r = tryTactic(tactic)
-  //   require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
-  // }
-  // 
-  // "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
-  //   val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
-  //   val r = tryTactic(tactic)
-  //   require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
-  // }
-  // 
+  it should "prove a>0 -> [x:=x+1]a>0" in {
+    val x = Variable("x", None, Real)
+    val a = Variable("a", None, Real)
+    val formula = Imply(GreaterThan(Real, a,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, a,Number(0))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove z>0 -> [y:=y+1]z>0" in {
+    val z = Variable("z", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, z,Number(0)),
+      BoxModality(Assign(y, Add(Real, y,Number(1))), GreaterThan(Real, z,Number(0))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove x>0 -> [x:=x+1]x>1" taggedAs(MyTest) in {
+    val x = Variable("x", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove z>0 -> [z:=z+1]z>1" in {
+    val x = Variable("z", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove x>0 -> [y:=x; x:=y+1; ](x>y & y>0)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1)))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "prove x>0 -> [x:=x+1;y:=x-1 ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,Subtract(Real,x,Number(1)))),
+        Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula) should be (Provable)
+  }
+  
+  it should "not prove invalid x>0 -> [x:=x+1;y:=x ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val formula = Imply(GreaterThan(Real, x,Number(0)),
+      BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,x)),
+        Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
+    prove(formula) should not be (Provable)
+  }
+  
+  
+  
+  def tryTactic(tactic: Tactic): ProofNode = {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val xp1 = Add(Real, x, Number(1))
+    val zero = Number(0)
+    val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+      Thread.sleep(10)
+    }
+    r
+  }
+  
+  def checkSingleAlternative(p: ProofNode): Boolean =
+    if(p.children.length > 1) {
+      println("found two alternatives " + p.children)
+      false
+    } else if(p.children.length > 0)
+      p.children.head.subgoals.isEmpty || p.children.head.subgoals.foldLeft(false)((a: Boolean, b: ProofNode) => a || checkSingleAlternative(b))
+    else
+      true
+  
+  "Tactics (weakSeqT)*" should "produce a proof with no alternatives" in {
+    val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
+    val r = tryTactic(tactic)
+    require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
+  }
+  
+  "Tactics (eitherT)*" should "produce a proof with no alternatives" in {
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
+    val r = tryTactic(tactic)
+    require(checkSingleAlternative(r) == true, "The proof should not have alternatives")
+  }
+  
 
-  // 
-  // 
-  // "Tactics (Lemma)" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
-  //   val f = TacticLibrary.universalClosure(Imply(And(xgt0, GreaterThan(Real, y, x)), xgeq0))
-  //   qet.qe(f) should be (True)
-  //   LookupLemma.addRealArithLemma(math, f) match {
-  //     case Some((file, id, res)) => 
-  //       (res match {
-  //         case Equiv(_, True) => true
-  //         case _ => false
-  //       }) should be (true)
-  //       val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-  //       val t = LookupLemma(file,id)
-  //       val nr = r.apply(t).head
-  //       nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
-  //     case None => "Lemma creation" should be ("successful")
-  //   }
-  // }
-  // 
-  // it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)" in {
-  //   val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, y, x)), And(xgeq0, GreaterThan(Real, y, zero))))
-  //   qet.qe(f) should be (True)
-  //   LookupLemma.addRealArithLemma(math, f) match {
-  //     case Some((file, id, res)) => 
-  //       (res match {
-  //         case Equiv(_, True) => true
-  //         case _ => false
-  //       }) should be (true)
-  //       val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-  //       val t = LookupLemma(file,id)
-  //       val nr = r.apply(t).head
-  //       nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
-  //     case None => "Lemma creation" should be ("successful")
-  //   }
-  // }
-  // 
-  // it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (y > 0)" in {
-  //   val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, y, x)), GreaterThan(Real, y, zero)))
-  //   qet.qe(f) should be (True)
-  //   LookupLemma.addRealArithLemma(math, f) match {
-  //     case Some((file, id, res)) => 
-  //       (res match {
-  //         case Equiv(_, True) => true
-  //         case _ => false
-  //       }) should be (true)
-  //       val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-  //       val t = LookupLemma(file,id)
-  //       val nr = r.apply(t).head
-  //       nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
-  //     case None => "Lemma creation" should be ("successful")
-  //   }
-  // }
-  // 
-  // it should "learn a lemma from (x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)" in {
-  //   val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, xplus1, x)), GreaterThan(Real, xplus1, zero)))
-  //   qet.qe(f) should be (True)
-  //   LookupLemma.addRealArithLemma(math, f) match {
-  //     case Some((file, id, res)) => 
-  //       (res match {
-  //         case Equiv(_, True) => true
-  //         case _ => false
-  //       }) should be (true)
-  //       val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-  //       val t = LookupLemma(file,id)
-  //       val nr = r.apply(t).head
-  //       nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
-  //     case None => "Lemma creation" should be ("successful")
-  //   }
-  // }
-  // 
+  
+  
+  "Tactics (Lemma)" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
+    val f = TacticLibrary.universalClosure(Imply(And(xgt0, GreaterThan(Real, y, x)), xgeq0))
+    qet.qe(f) should be (True)
+    LookupLemma.addRealArithLemma(math, f) match {
+      case Some((file, id, res)) => 
+        (res match {
+          case Equiv(_, True) => true
+          case _ => false
+        }) should be (true)
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val t = LookupLemma(file,id)
+        val nr = r.apply(t).head
+        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+      case None => "Lemma creation" should be ("successful")
+    }
+  }
+  
+  it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)" in {
+    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, y, x)), And(xgeq0, GreaterThan(Real, y, zero))))
+    qet.qe(f) should be (True)
+    LookupLemma.addRealArithLemma(math, f) match {
+      case Some((file, id, res)) => 
+        (res match {
+          case Equiv(_, True) => true
+          case _ => false
+        }) should be (true)
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val t = LookupLemma(file,id)
+        val nr = r.apply(t).head
+        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+      case None => "Lemma creation" should be ("successful")
+    }
+  }
+  
+  it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (y > 0)" in {
+    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, y, x)), GreaterThan(Real, y, zero)))
+    qet.qe(f) should be (True)
+    LookupLemma.addRealArithLemma(math, f) match {
+      case Some((file, id, res)) => 
+        (res match {
+          case Equiv(_, True) => true
+          case _ => false
+        }) should be (true)
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val t = LookupLemma(file,id)
+        val nr = r.apply(t).head
+        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+      case None => "Lemma creation" should be ("successful")
+    }
+  }
+  
+  it should "learn a lemma from (x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)" in {
+    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, xplus1, x)), GreaterThan(Real, xplus1, zero)))
+    qet.qe(f) should be (True)
+    LookupLemma.addRealArithLemma(math, f) match {
+      case Some((file, id, res)) => 
+        (res match {
+          case Equiv(_, True) => true
+          case _ => false
+        }) should be (true)
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val t = LookupLemma(file,id)
+        val nr = r.apply(t).head
+        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+      case None => "Lemma creation" should be ("successful")
+    }
+  }
+  
 }
