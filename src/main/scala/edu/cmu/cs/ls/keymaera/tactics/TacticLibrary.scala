@@ -761,7 +761,7 @@ object TacticLibrary {
                 }
                 val axiomPos = SuccPosition(node.sequent.succ.length)
                 println("Axiom instance " + axiomInstance)
-                val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> a)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+                val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
                 Some(cutT(axiomInstance) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
                }
               case None => None
@@ -891,10 +891,26 @@ object TacticLibrary {
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, x), p))
-        // construct axiom instance: [x:=t]p(x) <-> \forall x . (x=t -> p(x))
-        val g = Forall(Seq(x), Imply(Equals(Real, x,t), p))
+        val vars = Helper.names(p).map(f => (f.name, f.index)).filter(_._1 == x.name)
+        val xx = if (vars.size > 0) {
+          val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+            case Some(a) => i match {
+              case Some(b) => if (a < b) Some(b) else Some(a)
+              case None => Some(a)
+            }
+            case None => i
+          })
+          val tIdx: Option[Int] = maxIdx match {
+            case None => Some(0)
+            case Some(a) => Some(a + 1)
+          }
+          Variable(x.name, tIdx, x.sort)
+        } else x
+
+        // construct axiom instance: [x:=t]p(x) <-> \forall x_tIdx . (x_tIdx=t -> p(x_tIdx))
+        val g = Forall(Seq(xx), Imply(Equals(Real, xx,t), replace(p)(x, xx)))
         val axiomInstance = Equiv(f, g)
-        val alpha = new PositionTactic("Alpha") {
+        def alpha(left: Boolean) = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
             case _ => false
@@ -902,15 +918,20 @@ object TacticLibrary {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(x.name, x.index, "x", None)(p.first) & alphaRenamingT(x.name, x.index, "x", None)(p.second))
+              if(left)
+                Some(alphaRenamingT(x.name, x.index, "x", None)(p.first) & alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
+            else
+                Some(alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
         //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
         // rename to match axiom if necessary
-        val (ax, cont) = if (x.name == "x" && x.index == None) (axiom, None) else 
-        (replace(axiom)(aX, x), Some(alpha))
+        val Equiv(lef, righ) = axiom
+        val (ax, cont) = if (x.name == "x" && x.index == None) (Equiv(lef, replace(righ)(aX, xx)), Some(alpha(false))) else {
+          (Equiv(replace(lef)(aX, x), replace(righ)(aX, xx)), Some(alpha(true)))
+        }
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
