@@ -847,6 +847,9 @@ object TacticLibrary {
       case _ => false
     }
 
+    /**
+     * Replace the old variable o by the new variable n.
+     */
     def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
         case Forall(v, f) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), f))
@@ -884,8 +887,10 @@ object TacticLibrary {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
+        //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
         // rename to match axiom if necessary
-        val (ax, cont) = if (x.name == "x" && x.index == None) (axiom, None) else (replace(axiom)(aX, x), Some(alpha))
+        val (ax, cont) = if (x.name == "x" && x.index == None) (axiom, None) else 
+        (replace(axiom)(aX, x), Some(alpha))
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }

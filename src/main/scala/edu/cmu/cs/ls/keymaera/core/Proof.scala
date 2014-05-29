@@ -978,7 +978,13 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
   // uniform substitution on terms
-  def apply(t: Term): Term = usubst(Set.empty, t)
+  def apply(t: Term): Term = {
+    try {
+      usubst(Set.empty, t)
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(t.prettyString)
+    }
+  }
   
   /**
    * Return replacement t after checking for clashes with names in u.
@@ -1378,7 +1384,7 @@ object UniformSubstitution {
  * @TODO Review
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
-  require(name != target || idx != tIdx)
+  require(name != target || idx != tIdx, "unexpected identity renaming " + name + " to " + target + " with same index " + idx)
   def apply(s: Sequent): List[Sequent] = {
 
     def proceed(f: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction {

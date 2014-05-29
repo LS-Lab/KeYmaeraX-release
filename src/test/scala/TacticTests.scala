@@ -13,6 +13,8 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import org.scalatest.Tag
 
 object MyTest extends Tag("MyTest")
+object USTest extends Tag("USTest")
+object BadassignT extends Tag("BadassignT")
 
 
 class TacticTests extends FlatSpec with Matchers {
@@ -172,7 +174,7 @@ class TacticTests extends FlatSpec with Matchers {
   }
   
   //@TODO Move the subsequent tests to UniformSubstitutionTest.scala
-  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]p(x)<->p(2) with .>y for p(.)" in {
+  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]p(x)<->p(2) with .>y for p(.)" taggedAs(USTest) in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
@@ -194,7 +196,7 @@ class TacticTests extends FlatSpec with Matchers {
       new SubstitutionPair(ApplyPredicate(p1,y), GreaterThan(Real,y,y))))) should not be (Provable)
   }
   
-  it should "not apply unsoundly to [y:=5;x:=x^2]p(x+y)<->p(x^2+5) with y>=. for p(.)" in {
+  it should "not apply unsoundly to [y:=5;x:=x^2]p(x+y)<->p(x^2+5) with y>=. for p(.)" taggedAs(USTest) in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
@@ -216,7 +218,7 @@ class TacticTests extends FlatSpec with Matchers {
       new SubstitutionPair(ApplyPredicate(p1,y), GreaterEqual(Real,y,y))))) should not be (Provable)
   }
   
-  it should "not apply unsoundly to [x:=x+1]p(x)<->p(x+1) with .>0&\\exists x. x<. for p(.)" in {
+  it should "not apply unsoundly to [x:=x+1]p(x)<->p(x+1) with .>0&\\exists x. x<. for p(.)" taggedAs(USTest) in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
@@ -238,7 +240,7 @@ class TacticTests extends FlatSpec with Matchers {
       new SubstitutionPair(ApplyPredicate(p1,y), And(GreaterThan(Real,y,Number(0)),Exists(Seq(x),LessThan(Real,x,y))))))) should not be (Provable)
   }
 
-  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]q(x)<->q(2) with .>y for q(.)" in {
+  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]q(x)<->q(2) with .>y for q(.)" taggedAs(USTest) in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
@@ -260,7 +262,7 @@ class TacticTests extends FlatSpec with Matchers {
       new SubstitutionPair(ApplyPredicate(p1,y), GreaterThan(Real,y,y))))) should not be (Provable)
   }
   
-  it should "not apply unsoundly to [y:=5;x:=x^2]q(x+y)<->q(x^2+5) with y>=. for q(.)" in {
+  it should "not apply unsoundly to [y:=5;x:=x^2]q(x+y)<->q(x^2+5) with y>=. for q(.)" taggedAs(USTest) in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
@@ -282,7 +284,7 @@ class TacticTests extends FlatSpec with Matchers {
       new SubstitutionPair(ApplyPredicate(p1,y), GreaterEqual(Real,y,y))))) should not be (Provable)
   }
   
-  it should "not apply unsoundly to [x:=x+1]q(x)<->q(x+1) with .>0&\\exists x. x<. for q(.)" in {
+  it should "not apply unsoundly to [x:=x+1]q(x)<->q(x+1) with .>0&\\exists x. x<. for q(.)" taggedAs(USTest) in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
@@ -322,7 +324,7 @@ class TacticTests extends FlatSpec with Matchers {
       prove(formula) should be (Provable)
   }
 
-  "Tactics (default)" should "prove a>0 -> [x:=77]a>0" in {
+  "Tactics (default)" should "prove a>0 -> [x:=77]a>0" taggedAs(MyTest) in {
     val x = Variable("x", None, Real)
     val a = Variable("a", None, Real)
     val formula = Imply(GreaterThan(Real, a,Number(0)),
@@ -330,7 +332,7 @@ class TacticTests extends FlatSpec with Matchers {
     prove(formula) should be (Provable)
   }
   
-  it should "prove a>0 -> [x:=x+1]a>0" in {
+  it should "prove a>0 -> [x:=x+1]a>0" taggedAs(BadassignT) in {
     val x = Variable("x", None, Real)
     val a = Variable("a", None, Real)
     val formula = Imply(GreaterThan(Real, a,Number(0)),
@@ -346,7 +348,7 @@ class TacticTests extends FlatSpec with Matchers {
     prove(formula) should be (Provable)
   }
   
-  it should "prove x>0 -> [x:=x+1]x>1" taggedAs(MyTest) in {
+  it should "prove x>0 -> [x:=x+1]x>1" in {
     val x = Variable("x", None, Real)
     val formula = Imply(GreaterThan(Real, x,Number(0)),
       BoxModality(Assign(x, Add(Real, x,Number(1))), GreaterThan(Real, x,Number(1))))
