@@ -41,7 +41,7 @@ object KeYmaeraPrettyPrinter {
     case Forall(variables, child) => {
       assert(!variables.isEmpty, "no empty universal quantifiers for " + child);
       FORALL + " " +
-      variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
+      variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
       parensIfNeeded(child, expressionToPrint)
     }
@@ -49,7 +49,7 @@ object KeYmaeraPrettyPrinter {
     case Exists(variables, child) => {
       assert(!variables.isEmpty, "no empty existential quantifiers for " + child);
       EXISTS + " " +
-      variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
+      variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
       parensIfNeeded(child, expressionToPrint)
     }
@@ -190,7 +190,7 @@ object KeYmaeraPrettyPrinter {
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
     case NFContEvolve(vars,x,theta,f) => EXISTS + 
-      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).reduce(_ + "," + _) +
+      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
       groupIfNotAtomic(theta, prettyPrinter(theta)) +
       groupIfNotAtomic(f, prettyPrinter(f))
     

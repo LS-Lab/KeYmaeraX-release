@@ -648,8 +648,8 @@ object TacticLibrary {
    *
    * @param subst the substitution to perform
    * @param delta a map with replacement for formulas in the sequent. That is, for all (f, g) in delta we will replace
-   *              every occurrence of formula f in the sequent by g in order to construct the origin of the uniform
-   *              substitution
+   *              every top-level occurrence of formula f in the conclusion by the respective g
+   *              in order to construct the origin of the uniform substitution.
    * @return an instance of a tactic that performs the given uniform substitution
    */
   def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
