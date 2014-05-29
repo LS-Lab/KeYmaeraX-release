@@ -214,14 +214,15 @@ object Tactics {
      */
     def |(o: Tactic): Tactic = eitherT(this, o)
     /**
-     * Execute the given tactics in that order if possible: t1 ~ t2 = (t1 & t2) | t2
-     */
-    def ~(o: Tactic): Tactic = weakSeqT(this, o)
-    /**
-     * execute this tactic and the given tactics in htis order on the resulting branches
+     * Sequential composition: execute this tactic and the given tactics in this order on the resulting branches.
     */
     def &(a: Tactic, o: Tactic*): Tactic = seqComposeT(this, a, o: _*)
     def &&(a: Tactic, o: Tactic*): Tactic = seqComposeExactT(this, a, o: _*)
+    /**
+     * Weak sequential composition if possible.
+     * Execute the given tactics in that order if possible: t1 ~ t2 = (t1 & t2) | t2
+     */
+    def ~(o: Tactic): Tactic = weakSeqT(this, o)
     /**
      * create an or-branch for each given tactic
      */
@@ -312,7 +313,7 @@ object Tactics {
 
   def onSuccessExact(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     if (status == Success) {
-      if(tNext.length == result.length) {
+      if (tNext.length == result.length) {
         for ((t, n) <- tNext zip result) t.dispatch(tFrom, n)
       }
     }

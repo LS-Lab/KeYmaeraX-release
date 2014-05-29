@@ -156,6 +156,7 @@ object Sequent {
 
   /**
    * Additional proof node information payload for tactics.
+   * @TODO Make branchLabels more general (and more typed) by allowing certain combinations of lables or modifiers to apply. Such as "cutShowLbl"&"invisible" for an invisible branch that proves a cut formula.
    */
   class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
        //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
@@ -537,6 +538,11 @@ object Axiom {
     val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(x), Imply(Equals(Real, x,t), ApplyPredicate(p1, x)))))
     m = m + pair8
 
+    // val y = Variable("y", None, Real)
+    // //[x:=t]p(x) <-> \forall y . (y=t -> p(y))
+    // val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(y), Imply(Equals(Real, y,t), ApplyPredicate(p1, y)))))
+    // m = m + pair8
+    
     m
   }
 
@@ -977,21 +983,27 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
   // uniform substitution on terms
-  def apply(t: Term): Term = usubst(Set.empty, t)
+  def apply(t: Term): Term = {
+    try {
+      usubst(Set.empty, t)
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(t.prettyString)
+    }
+  }
   
   /**
    * Return replacement t after checking for clashes with names in u.
    */
   private def clashChecked(u: Set[NamedSymbol], original: Term, t: Term) : Term = {
     if (freeVariables(t).intersect(u).isEmpty) t
-    else throw new SubstitutionClashException("Clash in uniform substitution because of binding of free variables: " + freeVariables(t).intersect(u) + " of replacement " + t.prettyString, this, original)
+    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(t).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + t.prettyString, this, original)
   }
   /**
    * Return replacement f after checking for clashes with names in u.
    */
   private def clashChecked(u: Set[NamedSymbol], original:Formula, f: Formula) : Formula = {
     if (freeVariables(f).intersect(u).isEmpty) f
-    else throw new SubstitutionClashException("Clash in uniform substitution because of binding of free variables: " + freeVariables(f).intersect(u) + " of replacement " + f.prettyString, this, original)
+    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(f).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + f.prettyString, this, original)
   }
   
 
@@ -1012,7 +1024,8 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Derivative(s, e) => for(p <- l) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- l) {
       rp.n match {
-        case Apply(rf, rarg) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
+        //@TODO clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case Apply(rf, rarg:Variable) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
         case _ => // skip to next
       }
     }; return Apply(f, usubst(u, arg))
@@ -1022,13 +1035,22 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   
   def apply(f: Formula): Formula = {
     log("\tSubstituting " + f.prettyString + " using " + this)
-    val res = usubst(Set.empty[NamedSymbol], f)
-    log("\tSubstituted  " + res.prettyString)
-    res
+    try {
+      val res = usubst(Set.empty[NamedSymbol], f)
+      log("\tSubstituted  " + res.prettyString)
+      res
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString)
+    }
   }
   
-  //def apply(s: Sequent): Sequent = Sequent(s.pref, s.ante.map(this), s.succ.map(this))
-  def apply(s: Sequent): Sequent = Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+  def apply(s: Sequent): Sequent = {
+    try {
+      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
+    }
+  }
   
   private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
@@ -1068,7 +1090,14 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   }
 
   // uniform substitution on programs
-  def apply(p: Program): Program = usubst(Set.empty[NamedSymbol], p)._2
+  def apply(p: Program): Program = {
+    try {
+      usubst(Set.empty[NamedSymbol], p)._2
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
+    }
+  }
+      
   
   /**
    *
@@ -1324,7 +1353,7 @@ object UniformSubstitution {
         List(origin)
       } else {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("Uniform substitution " + subst + " did not conclude " + conclusion + " from " + origin)
+        throw new CoreException("Uniform substitution " + subst + " did not conclude\n" + conclusion + "\nfrom      " + origin)
       }
     } 
     
@@ -1360,7 +1389,7 @@ object UniformSubstitution {
  * @TODO Review
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
-  require(name != target || idx != tIdx)
+  require(name != target || idx != tIdx, "unexpected identity renaming " + name + " to " + target + " with same index " + idx)
   def apply(s: Sequent): List[Sequent] = {
 
     def proceed(f: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
@@ -1526,8 +1555,8 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
-        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
+        case Forall(vars, f) if vars.length >= 2 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
+        case Exists(vars, f) if vars.length >= 2 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
         case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
       }
     }
