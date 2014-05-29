@@ -5,6 +5,8 @@ var HydraEventListeners = {
 function HydraEventHandler(evt, client) {
 
   var proverSpan = document.getElementById("provercontents")
+  var errorSpan = document.getElementById("errors")
+
   if(!(evt.eventType)) {
     alert("Non-event found in event stream.");
     console.log("non-event found in event stream: ");
@@ -13,12 +15,10 @@ function HydraEventHandler(evt, client) {
   }
 
   else if(evt.eventType === "ErrorResponse") {
-    if(evt.message === "parse failed.") {
-      console.error("KeYmaera could not parse your file.")
-    }
-    else {
-      console.error("Unrecognized error: " + evt.message)
-    }
+    var messageSpan = document.createElement("div")
+    messageSpan.setAttribute("class", "errorMessage")
+    messageSpan.innerHTML = evt.message
+    errorSpan.appendChild(messageSpan)
 
     console.error("Hydra server returned an ErrorResponse: ");
     console.log(evt);
@@ -37,7 +37,12 @@ function HydraEventHandler(evt, client) {
     console.log(evt);
     //Pass the event along to all of the tree listeners.
     HydraEventListeners.treeViews.map(function(child) {
-      child.addNode(evt.parentId, evt.node);
+      if(child == null) {
+        GenericGUI.showError("found a null tree view.")
+      }
+      var parentId = evt.parentId
+      var node = evt.node
+      child.addNode(parentId, node)
     });
 
     //Show an error message if there are no trees listening.

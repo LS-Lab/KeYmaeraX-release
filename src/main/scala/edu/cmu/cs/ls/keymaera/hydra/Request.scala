@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, RootNode}
 import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticWrapper}
 import spray.json.JsString
 import edu.cmu.cs.ls.keymaera.core.ProofNode
+import spray.json.JsObject
 
 ////////////////////////////////////////////////////////////////////////////////
 // Request types
@@ -83,6 +84,40 @@ case class FormulaToInteractiveStringRequest(sessionName : String, uid : String)
 }
 
 case class RunTacticRequest(sessionName : String, tacticName : String, uid : String) extends Request {
+  private def proofNodeMap[T](l : List[ProofNode], fn : ProofNode => T) : List[T] = {
+    //System.err.println(l.size.toString() + l.map(_.toString()).mkString(","))
+    val thisLevel      = l.map(fn)
+    val nextLevelSteps = l.map(node => node.children).flatten
+    val nextLevelNodes = nextLevelSteps.map(step => step.subgoals).flatten
+    l.map(node => require(!nextLevelNodes.contains(node)))
+    if(nextLevelNodes.isEmpty) thisLevel //base
+    else                       thisLevel ++ proofNodeMap(nextLevelNodes, fn)
+  }
+  
+  /**
+   * @return uid for the subject w.r.t. the root, given that the uid of the root is rootUid.
+   */
+  private def nodeToUid(root : ProofNode, rootUid : String, subject : ProofNode) = {
+    if(root.equals(subject)) {
+      rootUid
+    }
+    else {
+      rootUid + "0" //TODO correct this...
+    }
+  }
+  
+  /**
+   * @return uid for the subject's parent w.r.t. the root, given that the uid of the root is rootUid.
+   */
+  private def nodeToParentUid(root : ProofNode, rootUid : String, subject : ProofNode) = {
+    if(root.equals(subject)) {
+      rootUid
+    }
+    else {
+      rootUid //TODO correct this...
+    }
+  }
+  
   def getResultingUpdates() : List[Update] = 
     try {
       if(tacticName.equals("default")) {
@@ -98,32 +133,28 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
           Thread.sleep(100)
         }
         
-        val results = if(r.children.size == 0) {
-          Nil
-        }
-        else {
-          //The children are tuples of (Rule, ?).
-          val responses : List[ProofNode] = null
-          
-          val sequents = r.children
-          
-          val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => {
-            val proofStep = p._1
-            val id = p._2
-            val parentId = JsString(uid + id.toString()) //Numbering TODO-nrf
-            val node = KeYmaeraClientPrinter.getSequent(sessionName, uid + id.toString(), proofStep)
-            
-            new AddNodeResponse(sessionName, parentId, node)
-          })
-//            new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), ))
-          if(results.size == 0) {
-            new ErrorResponse(sessionName, new Exception("Tactic ran but there was not result."))::Nil
+        val results = {
+          if(r.children.size == 0) { 
+            Nil 
           }
           else {
-            results
+            val mapFunction : ProofNode => AddNodeResponse = (x:ProofNode) => {
+              val parentId = JsString(nodeToParentUid(r,uid,x))
+              val newId = nodeToUid(r, uid, x)
+              //TODO we should not be using newId as an id for nodes and sequents...
+              val sequentString = KeYmaeraClientPrinter.getSequent(sessionName, newId, x.sequent)
+              val nodeString = JsObject(
+                  "sequent" -> sequentString,
+                  "id" -> JsString(newId)
+              )
+              new AddNodeResponse(sessionName, parentId, nodeString)
+            }
+            val topLevel = r.children.map(step => step.subgoals).flatten
+            proofNodeMap(topLevel, mapFunction)
           }
         }
-        //Add the "finished" result.
+        
+        //Add the "tactic finished" result.
         results ++ List( new TacticFinished(sessionName, tacticName, uid) )
       }
       else {

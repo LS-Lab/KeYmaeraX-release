@@ -1,4 +1,9 @@
+//trees and nodes are the same thing.
 function Tree(sequent, children) {
+  if(sequent.uid == null) {
+    alert("Sequent did not have a uid")
+  }
+
   this.id      = sequent.uid; 
   this.sequent = sequent;
 
@@ -48,7 +53,7 @@ function TreeView(tree) {
       }
     }
     else {
-      throw "Parent tree not found in this view's model: " + parentId;
+      throw "parentId not found in this tree view's model: " + parentId;
     }
   }
 

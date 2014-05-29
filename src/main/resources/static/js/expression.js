@@ -426,6 +426,14 @@ function Node(uid, parentUid, sequent) {
 ///////////////////////////////////////////////////////////////////////////////
 
 var GenericGUI = {
+  showError : function(message) {
+    var errorSpan = document.getElementById("errors")
+    var newMessage = document.createElement("div")
+    newMessage.setAttribute("class", "errorMessage")
+    newMessage.innerHTML = message
+    errorSpan.appendChild(newMessage)
+  },
+
   greenFlash : function(uid) {
     var docId;
     if(document.getElementById('s'+uid)) {

@@ -192,21 +192,17 @@ object Tactics {
 
     val priority : Int = 10
 
-    
-    
-    
     /**
-     * @TODO this is the root tactic; it's passed transitively through dispatch.
+     * The root tactic is passed on via dispatches.
      */
     var root : Tactic = null
 
-    //@TODO add an observer pattern so that when the data structure becomes empty
-    //we can notify people.
     def unregister(t : Tactic) {
       if(root != null) {
         root.unregister(t)
       }
       else {
+        System.err.println("I am the root -- todo")
         //TODO here we modify some data structure.
       }
     }
@@ -217,6 +213,7 @@ object Tactics {
         root.registerRunningTactic(t)
       }
       else {
+        System.err.println("I am the root -- todo")
         //TODO here we modify some data structure.
       }
     }
@@ -230,7 +227,7 @@ object Tactics {
       limit = l
       scheduler.dispatch(new TacticWrapper(this, node))
       this.root = t.root
-      this.root.registerRunningTactic(this)
+      registerRunningTactic(this)
     }
 
     def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }

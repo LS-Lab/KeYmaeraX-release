@@ -47,6 +47,12 @@ function HydraClient(serverarg, portarg) {
   var client_instance = this; //For the inside of AJAX callbacks.
 
   this.ajaxErrorHandler = function (request, textStatus, errorThrown) {
+    var errorSpan = document.getElementById("errors")
+    var report = document.createElement("div")
+    report.setAttribute("class", "errorMessage")
+    report.innerHTML = "Ajax error (" + textStatus + ": " + request.responseText + ")"
+    errorSpan.appendChild(report)
+
     console.error(request.responseText);
     console.error(textStatus);
     console.error(errorThrown);

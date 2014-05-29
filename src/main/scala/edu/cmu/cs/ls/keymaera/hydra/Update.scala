@@ -4,7 +4,9 @@ import spray.json._
 import edu.cmu.cs.ls.keymaera.core.Sequent
 
 /**
- * Updates sent to clients
+ * Updates sent to clients.
+ * 
+ * Updates might be Responses, which are return values for specific calls.
  */
 sealed trait Update {  
   /**
@@ -57,6 +59,7 @@ case class RuleApplied(sessionName : String, parentId : JsString, ruleIdentifier
 
 /**
  * @deprecated use RuleApplied
+ * @param node Needs feilds sequent and id.
  */
 case class AddNodeResponse(sessionName : String, parentId : JsString, node: JsValue) extends Update {
   val json = JsObject(
