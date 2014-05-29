@@ -1353,7 +1353,7 @@ object UniformSubstitution {
         List(origin)
       } else {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("Uniform substitution " + subst + " did not conclude\n" + conclusion + "\nfrom      " + origin)
+        throw new CoreException("Uniform substitution " + subst + " did not conclude  \n" + conclusion + "\nfrom\n  " + origin)
       }
     } 
     
@@ -1389,7 +1389,10 @@ object UniformSubstitution {
  * @TODO Review
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
-  require(name != target || idx != tIdx, "unexpected identity renaming " + name + " to " + target + " with same index " + idx)
+  //require(name != target || idx != tIdx, "unexpected identity renaming " + name + " to " + target + " with same index " + idx)
+  {
+    if (!(name != target || idx != tIdx)) println("INFO: Unexpected identity renaming " + name + " to " + target + " with same index " + idx)
+  }
   def apply(s: Sequent): List[Sequent] = {
 
     def proceed(f: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
