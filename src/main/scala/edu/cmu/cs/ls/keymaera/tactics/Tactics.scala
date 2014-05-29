@@ -19,6 +19,45 @@ import scala.language.implicitConversions
  * @author jdq
  * @author aplatzer
  */
+
+/**
+ * Programming Guide
+ * ==================
+ * Tactics follow a continuation-style programming model. That is, each
+ * tactic is an executable entities with a continuation function, which
+ * gets executed after the tactics completes. For example, SeqT is a
+ * tactics which combines two embedded tactics: left and right. Right is
+ * executed after left completes successfully. Therefore, SeqT dispatches
+ * left and registers onSuccess as a continuation function. Once left
+ * completes, the tactics executor invokes onSuccess, which checks the
+ * result of left and dispatches right if left is
+ * successful. Continuation functions are executed immediately after the
+ * tactic. Therefore, long running operations should all be encapsulated
+ * into tactics and continutations should be limited to simple checks and
+ * the dispatching of further tactics. Once dispatched tactics are
+ * assumed to be self contained and may be executed in parallel.
+ *
+ * Overview
+ * ========
+ * The tactics framework consists of the following modules:
+ * - abstract class Tactic: defines tactic to execute (by invoking apply)
+ * - object Tactics:        tactic definitions and convenience wrappers
+ * - class TacticExecutor:  thread that executes tactics
+ * - class Scheduler:       collection of threads (e.g., per tool) plus queue of ready to
+ *                          execute tactics. Tactics are dispatched to a scheduler (e.g.,
+ *                          to the mathematica scheduler). Once dispatched, a free thread
+ *                          of this scheduler (e.g., the thread which corresponds to a free
+ *                          mathematica kernel) picks the highest prioritized dispatched
+ *                          tactics and executes it until a limit is exceeded or until it
+ *                          completes. After that, the continuation of the tactic is
+ *                          executed.
+ * - class TacticWrapper:   helper class to combine tactics with the proof nodes on which
+ *                          they should be executed. Automatically created during dispatch.
+ * - class Limits:          class to keep track and update limits (e.g., no of branches)
+ */
+
+
+
 /*
   def testTp: Tactic = ((testT2 | tryheuristicT("alpha") | tryheuristicT("simplify_prog") | tryheuristicT("diff_solve"))*) ~ tryruleT(ReduceRule.INSTANCE.name.toString)
 
@@ -60,6 +99,10 @@ object Tactics {
 
     def this() = this(0, 0, 0)
 
+    /**
+     * measure execution time of function fn
+     * invoked by ApplyRule Tactic
+     */
     def measure[B](fn : => B) : B = {
       val start = System.currentTimeMillis
       val res = fn
@@ -67,12 +110,24 @@ object Tactics {
       return res
     }
 
+    /**
+     * increase no of executed tactics
+     */
     def incTacs() { tacs = tacs + 1 }
 
+    /**
+     * increase no of applied rules
+     */
     def incRule() { rules = rules + 1 }
 
+    /**
+     * increase no of branches (e.g., and / or splits)
+     */
     def incBranch(n : Int) { branches = branches + n }
 
+    /**
+     * clear tactic stats
+     */
     def clear() {
       rules         = 0
       branches      = 0
@@ -141,11 +196,18 @@ object Tactics {
         var p = this
         var r = false
         // FIXME: what was the intention of this loop? It's an infinite loop like this (therefore commented out for now)
+        // FIXME: update stats all the way up the tactics tree; check whether this is a data-race with delete ops before adding p = p.parent and reenabling the loop.
         /*while (p != null)*/ r = p.update(s) || r
         s.clear()
         return r
     }
 
+    /**
+     * check limits for given tactic
+     * ===
+     * If a limit exceeds a threshold values, all statistics are propagated to upper nodes.
+     * This way, overruns are detectable across branches, although with limited granularity.
+     */
     def checkStats(s : Stats)(res : Status) : Status =
       if (s.executionTime > timeThres || s.branches > branchThres || s.rules > ruleThres) {
         // propagate updates through all limit objects
@@ -172,18 +234,18 @@ object Tactics {
 
   abstract class Tactic(val name : String) extends Stats {
 
-    var scheduler : Scheduler = KeYmaeraScheduler
+    var scheduler : Scheduler = KeYmaeraScheduler // scheduler of this tactics
 
-    var limit  : Limits = defaultLimits
+    var limit  : Limits = defaultLimits // limit
 
-    var continuation : Continuation = stop
+    var continuation : Continuation = stop // continuation function to execute after apply returns
 
     override def toString: String = name
 
-    def applicable(node : ProofNode) : Boolean
-    def apply  (tool : Tool, node : ProofNode)
+    def applicable(node : ProofNode) : Boolean // true if this tactics is applicable to the proof node
+    def apply  (tool : Tool, node : ProofNode) // apply tactics to given node using the given tool (e.g., a specific mathematica kernel)
 
-    def inheritStats(s : Stats) {
+    def inheritStats(s : Stats) { // adopt stats (e.g., from privious tactic)
       tacs          = s.tacs
       executionTime = s.executionTime
       branches      = s.branches
@@ -192,13 +254,13 @@ object Tactics {
 
     val priority : Int = 10
 
-    def dispatch(t : Tactic, l : Limits, node : ProofNode) {
+    def dispatch(t : Tactic, l : Limits, node : ProofNode) { // bind tactic to node and dispatch it to the scheduler of this tactic
       inheritStats(t)
       limit = l
       scheduler.dispatch(new TacticWrapper(this, node))
     }
 
-    def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }
+    def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) } // convenience wrapper for dispatch
 
     def checkStats(res : Status) : Status = limit.checkStats(this)(res)
 
@@ -340,6 +402,9 @@ object Tactics {
     else change(tFrom, status, result)
   }
 
+  /**
+   * dispatch left. If left returns successfully, dispatch right on the resulting proof node.
+   */
   def seqT(left : Tactic, right : Tactic) =
     new Tactic("Seq(" + left.name + "," + right.name + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
