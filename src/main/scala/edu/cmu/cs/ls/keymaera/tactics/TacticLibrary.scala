@@ -54,7 +54,7 @@ object TacticLibrary {
       | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
-      //| locateSuccAnte(indecisive(true, true, true, true)) //@TODO ultimately address equivalences too.
+      | locateSuccAnte(indecisive(true, true, true, true))
     ) ~ arithmeticT
   }
 
@@ -149,7 +149,10 @@ object TacticLibrary {
     }
   }
 
-  def universalClosure(f: Formula): Formula = Forall(Helper.certainlyFreeNames(f).toList, f)
+  def universalClosure(f: Formula): Formula = {
+    val vars = Helper.certainlyFreeNames(f)
+    if(vars.isEmpty) f else Forall(vars.toList, f)
+  }
 
 //  def deskolemize(f : Formula) = {
 //    val FV = SimpleExprRecursion.getFreeVariables(f)
@@ -677,20 +680,37 @@ object TacticLibrary {
     def applies(f: Formula): Boolean
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
-    //@TODO Add contract that applies(f) <=> \result.isDefined
     /**
      * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
      * that performs the renaming.
      *
+     * An axiom tactic performs the following steps (Hilbert style):
+     * 1. Guess axiom
+     * 2. Rename bound variables to match the instance we want
+     * 3. Perform Uniform substitution to instantiate the axiom
+     *
+     * Axioms usually have the form ax = OP(a, b). The constructed instance either has the form OP(f, g) or OP(g, f).
+     * Here, f is an input to this function and g is derived from the axiom to be used. The output of this function
+     * should be 4 things:
+     * 1. The form of the axiom before apply the tactic provided in 4
+     * 2. The instance of the axiom eventually to be used in the proof
+     * 3. The substitution to turn 2 into 1
+     * 4. A tactic to turn the result of 3 into the actual axiom
+     *
+     * In the long run all this should be computed by unification.
+     *
      * @param f the formula that should be rewritten using the axiom
-     * @param a the axiom to be used
-     * @return (Axiom before executing the given position tactic; the instance of the axiom, the uniform substitution that
-     *         transforms the first into the second axiom (Hilbert style); a position tactic that transforms the first
-     *         argument into the actual axiom (usually alpha renaming).
+     * @param ax the axiom to be used
+     * @return (Axiom before executing the given position tactic;
+     *         the instance of the axiom,
+     *         the uniform substitution that transforms the first into the second axiom (Hilbert style);
+     *         an optional position tactic that transforms the first
+     *         argument into the actual axiom (usually alpha renaming)).
+     * @see #constructInstanceAndSubst(Formula)
      */
-    def constructInstanceAndSubst(f: Formula, a: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
+    def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
       constructInstanceAndSubst(f) match {
-        case Some((instance, subst)) => Some((a, instance, subst, None))
+        case Some((instance, subst)) => Some((ax, instance, subst, None))
         case None => None
       }
     }
@@ -701,8 +721,10 @@ object TacticLibrary {
      *
      * This method will be called by the default implementation of constructInstanceAndSubst(f: Formula, a: Formula).
      *
-     * @param f The formula to be rewritten
-     * @return (The axiom instance; Substitution to transform the axiom into its instance)
+     * @param f The formula to be rewritten using an axiom
+     * @return (The axiom instance to be constructed and used for rewriting;
+     *          Substitution to transform the axiom into its instance)
+     * @see #constructInstanceAndSubst(Formula,Formula)
      */
     def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = ???
 
@@ -714,7 +736,7 @@ object TacticLibrary {
         axiom match {
           case Some(ax) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos), ax) match {
-              case Some((a, axiomInstance, subst, ptac)) =>
+              case Some((ax, axiomInstance, subst, ptac)) =>
               {
                 val axiomInstPos = AntePosition(node.sequent.ante.length)
                 val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
@@ -733,13 +755,13 @@ object TacticLibrary {
                 //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
                 //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
                 val cont = ptac match {
-                  //@TODO Why is it first succedent position that it's to be applied on? It's the only position here?
-                  case Some(t) => t(SuccPosition(0))
+                  // SuccPosition(0) is the only position remaining in axiom proof
+                  case Some(tactic) => assertT(0, 1) & tactic(SuccPosition(0))
                   case None => NilT
                 }
                 val axiomPos = SuccPosition(node.sequent.succ.length)
                 println("Axiom instance " + axiomInstance)
-                val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> a)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+                val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
                 Some(cutT(axiomInstance) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
                }
               case None => None
@@ -845,6 +867,9 @@ object TacticLibrary {
       case _ => false
     }
 
+    /**
+     * Replace the old variable o by the new variable n.
+     */
     def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
         case Forall(v, f) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), f))
@@ -866,10 +891,26 @@ object TacticLibrary {
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, x), p))
-        // construct axiom instance: [x:=t]p(x) <-> \forall x . (x=t -> p(x))
-        val g = Forall(Seq(x), Imply(Equals(Real, x,t), p))
+        val vars = Helper.names(p).map(f => (f.name, f.index)).filter(_._1 == x.name)
+        val xx = if (vars.size > 0) {
+          val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+            case Some(a) => i match {
+              case Some(b) => if (a < b) Some(b) else Some(a)
+              case None => Some(a)
+            }
+            case None => i
+          })
+          val tIdx: Option[Int] = maxIdx match {
+            case None => Some(0)
+            case Some(a) => Some(a + 1)
+          }
+          Variable(x.name, tIdx, x.sort)
+        } else x
+
+        // construct axiom instance: [x:=t]p(x) <-> \forall x_tIdx . (x_tIdx=t -> p(x_tIdx))
+        val g = Forall(Seq(xx), Imply(Equals(Real, xx,t), replace(p)(x, xx)))
         val axiomInstance = Equiv(f, g)
-        val alpha = new PositionTactic("Alpha") {
+        def alpha(left: Boolean) = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
             case _ => false
@@ -877,13 +918,20 @@ object TacticLibrary {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(x.name, x.index, "x", None)(p.first) & alphaRenamingT(x.name, x.index, "x", None)(p.second))
+              if(left)
+                Some(alphaRenamingT(x.name, x.index, "x", None)(p.first) & alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
+            else
+                Some(alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
+        //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
         // rename to match axiom if necessary
-        val (ax, cont) = if (x.name == "x" && x.index == None) (axiom, None) else (replace(axiom)(aX, x), Some(alpha))
+        val Equiv(lef, righ) = axiom
+        val (ax, cont) = if (x.name == "x" && x.index == None) (Equiv(lef, replace(righ)(aX, xx)), Some(alpha(false))) else {
+          (Equiv(replace(lef)(aX, x), replace(righ)(aX, xx)), Some(alpha(true)))
+        }
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
@@ -1374,8 +1422,8 @@ object TacticLibrary {
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          case Assign(_, _) => Some(assignment(p))
-          // case Assign(_, _) => Some(assignT(p))
+          // case Assign(_, _) => Some(assignment(p))
+          case Assign(_, _) => Some(assignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
