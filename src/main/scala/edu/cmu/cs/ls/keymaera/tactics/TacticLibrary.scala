@@ -891,21 +891,22 @@ object TacticLibrary {
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, x), p))
-        val vars = Helper.names(p).map(f => (f.name, f.index)).filter(_._1 == x.name)
-        val xx = if (vars.size > 0) {
-          val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
-            case Some(a) => i match {
-              case Some(b) => if (a < b) Some(b) else Some(a)
-              case None => Some(a)
-            }
-            case None => i
-          })
-          val tIdx: Option[Int] = maxIdx match {
-            case None => Some(0)
-            case Some(a) => Some(a + 1)
+        // construct a new name for the quantified variable
+        val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == x.name)
+        require(vars.size > 0)
+        val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+          case Some(a) => i match {
+            case Some(b) => if (a < b) Some(b) else Some(a)
+            case None => Some(a)
           }
-          Variable(x.name, tIdx, x.sort)
-        } else x
+          case None => i
+        })
+        val tIdx: Option[Int] = maxIdx match {
+          case None => Some(0)
+          case Some(a) => Some(a + 1)
+        }
+        val xx = Variable(x.name, tIdx, x.sort)
+
 
         // construct axiom instance: [x:=t]p(x) <-> \forall x_tIdx . (x_tIdx=t -> p(x_tIdx))
         val g = Forall(Seq(xx), Imply(Equals(Real, xx,t), replace(p)(x, xx)))
