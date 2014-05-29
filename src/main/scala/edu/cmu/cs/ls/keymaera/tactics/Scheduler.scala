@@ -69,9 +69,14 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[T
       node.info.checkParentClosed
     }
     if (!node.info.isLocalClosed) {
-      if(tactic.applicable(node))
+      if(tactic.applicable(node)) {
         tactic(tool, node)
-      else tactic.continuation(tactic, Failed, Seq(node))
+        tactic.unregister(tactic)
+      }
+      else {
+        tactic.unregister(tactic) //TODO probably need no argument here?
+        tactic.continuation(tactic, Failed, Seq(node))
+      }
     }
   }
 

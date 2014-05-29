@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, RootNode}
 import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticWrapper}
 import spray.json.JsString
+import edu.cmu.cs.ls.keymaera.core.ProofNode
 
 ////////////////////////////////////////////////////////////////////////////////
 // Request types
@@ -101,10 +102,20 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
           Nil
         }
         else {
-          val sequents : List[Sequent] = List() //TODO - get the results of running a tactic.
-        
-          val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => 
-            new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), KeYmaeraClientPrinter.getSequent(sessionName, uid + p._2.toString(), p._1)))
+          //The children are tuples of (Rule, ?).
+          val responses : List[ProofNode] = null
+          
+          val sequents = r.children
+          
+          val results = (sequents zip Seq.range(0, sequents.size-1)).map(p => {
+            val proofStep = p._1
+            val id = p._2
+            val parentId = JsString(uid + id.toString()) //Numbering TODO-nrf
+            val node = KeYmaeraClientPrinter.getSequent(sessionName, uid + id.toString(), proofStep)
+            
+            new AddNodeResponse(sessionName, parentId, node)
+          })
+//            new AddNodeResponse(sessionName, JsString(uid + p._2.toString()), ))
           if(results.size == 0) {
             new ErrorResponse(sessionName, new Exception("Tactic ran but there was not result."))::Nil
           }

@@ -51,6 +51,13 @@ case class FormulaFromUidResponse(sessionName : String, fjson : JsValue) extends
   )
 }
 
+case class RuleApplied(sessionName : String, parentId : JsString, ruleIdentifier : JsString, childNodes : JsValue) extends Update {
+  val json = ???
+}
+
+/**
+ * @deprecated use RuleApplied
+ */
 case class AddNodeResponse(sessionName : String, parentId : JsString, node: JsValue) extends Update {
   val json = JsObject(
     "eventType" -> JsString("AddNode"),

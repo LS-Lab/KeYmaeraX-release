@@ -192,10 +192,45 @@ object Tactics {
 
     val priority : Int = 10
 
+    
+    
+    
+    /**
+     * @TODO this is the root tactic; it's passed transitively through dispatch.
+     */
+    var root : Tactic = null
+
+    //@TODO add an observer pattern so that when the data structure becomes empty
+    //we can notify people.
+    def unregister(t : Tactic) {
+      if(root != null) {
+        root.unregister(t)
+      }
+      else {
+        //TODO here we modify some data structure.
+      }
+    }
+    
+    //@TODO -- registration.
+    def registerRunningTactic(t : Tactic) : Unit = {
+      if(root != null) {
+        root.registerRunningTactic(t)
+      }
+      else {
+        //TODO here we modify some data structure.
+      }
+    }
+    
+    /**
+     * Called whenever a new tactic is dispatched.
+     * @param t - parent tactic
+     */
     def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
       scheduler.dispatch(new TacticWrapper(this, node))
+      this.root = t.root
+      this.root.registerRunningTactic(this)
     }
 
     def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }
