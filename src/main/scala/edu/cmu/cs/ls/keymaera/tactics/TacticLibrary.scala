@@ -684,6 +684,21 @@ object TacticLibrary {
      * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
      * that performs the renaming.
      *
+     * An axiom tactic performs the following steps (Hilbert style):
+     * 1. Guess axiom
+     * 2. Rename bound variables to match the instance we want
+     * 3. Perform Uniform substitution to instantiate the axiom
+     *
+     * Axioms usually have the form ax = OP(a, b). The constructed instance either has the form OP(f, g) or OP(g, f).
+     * Here, f is an input to this function and g is derived from the axiom to be used. The output of this function
+     * should be 4 things:
+     * 1. The form of the axiom before apply the tactic provided in 4
+     * 2. The instance of the axiom eventually to be used in the proof
+     * 3. The substitution to turn 2 into 1
+     * 4. A tactic to turn the result of 3 into the actual axiom
+     *
+     * In the long run all this should be computed by unification.
+     *
      * @param f the formula that should be rewritten using the axiom
      * @param ax the axiom to be used
      * @return (Axiom before executing the given position tactic;
