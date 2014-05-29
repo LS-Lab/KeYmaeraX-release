@@ -679,20 +679,22 @@ object TacticLibrary {
     def applies(f: Formula): Boolean
     final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
-    //@TODO Add contract that applies(f) <=> \result.isDefined
     /**
      * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
      * that performs the renaming.
      *
      * @param f the formula that should be rewritten using the axiom
-     * @param a the axiom to be used
-     * @return (Axiom before executing the given position tactic; the instance of the axiom, the uniform substitution that
-     *         transforms the first into the second axiom (Hilbert style); a position tactic that transforms the first
-     *         argument into the actual axiom (usually alpha renaming).
+     * @param ax the axiom to be used
+     * @return (Axiom before executing the given position tactic;
+     *         the instance of the axiom,
+     *         the uniform substitution that transforms the first into the second axiom (Hilbert style);
+     *         an optional position tactic that transforms the first
+     *         argument into the actual axiom (usually alpha renaming)).
+     * @see #constructInstanceAndSubst(Formula)
      */
-    def constructInstanceAndSubst(f: Formula, a: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
+    def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
       constructInstanceAndSubst(f) match {
-        case Some((instance, subst)) => Some((a, instance, subst, None))
+        case Some((instance, subst)) => Some((ax, instance, subst, None))
         case None => None
       }
     }
@@ -703,8 +705,10 @@ object TacticLibrary {
      *
      * This method will be called by the default implementation of constructInstanceAndSubst(f: Formula, a: Formula).
      *
-     * @param f The formula to be rewritten
-     * @return (The axiom instance; Substitution to transform the axiom into its instance)
+     * @param f The formula to be rewritten using an axiom
+     * @return (The axiom instance to be constructed and used for rewriting;
+     *          Substitution to transform the axiom into its instance)
+     * @see #constructInstanceAndSubst(Formula,Formula)
      */
     def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = ???
 
@@ -716,7 +720,7 @@ object TacticLibrary {
         axiom match {
           case Some(ax) =>
             constructInstanceAndSubst(getFormula(node.sequent, pos), ax) match {
-              case Some((a, axiomInstance, subst, ptac)) =>
+              case Some((ax, axiomInstance, subst, ptac)) =>
               {
                 val axiomInstPos = AntePosition(node.sequent.ante.length)
                 val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
@@ -735,8 +739,8 @@ object TacticLibrary {
                 //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
                 //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
                 val cont = ptac match {
-                  //@TODO Why is it first succedent position that it's to be applied on? It's the only position here?
-                  case Some(t) => t(SuccPosition(0))
+                  // SuccPosition(0) is the only position remaining in axiom proof
+                  case Some(tactic) => assertT(0, 1) & tactic(SuccPosition(0))
                   case None => NilT
                 }
                 val axiomPos = SuccPosition(node.sequent.succ.length)

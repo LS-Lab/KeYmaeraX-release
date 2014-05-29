@@ -538,6 +538,11 @@ object Axiom {
     val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(x), Imply(Equals(Real, x,t), ApplyPredicate(p1, x)))))
     m = m + pair8
 
+    // val y = Variable("y", None, Real)
+    // //[x:=t]p(x) <-> \forall y . (y=t -> p(y))
+    // val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(y), Imply(Equals(Real, y,t), ApplyPredicate(p1, y)))))
+    // m = m + pair8
+    
     m
   }
 
@@ -991,14 +996,14 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
    */
   private def clashChecked(u: Set[NamedSymbol], original: Term, t: Term) : Term = {
     if (freeVariables(t).intersect(u).isEmpty) t
-    else throw new SubstitutionClashException("Clash in uniform substitution because of binding of free variables: " + freeVariables(t).intersect(u).map(_.prettyString) + " of replacement " + t.prettyString, this, original)
+    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(t).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + t.prettyString, this, original)
   }
   /**
    * Return replacement f after checking for clashes with names in u.
    */
   private def clashChecked(u: Set[NamedSymbol], original:Formula, f: Formula) : Formula = {
     if (freeVariables(f).intersect(u).isEmpty) f
-    else throw new SubstitutionClashException("Clash in uniform substitution because of binding of free variables: " + freeVariables(f).intersect(u).map(_.prettyString) + " of replacement " + f.prettyString, this, original)
+    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(f).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + f.prettyString, this, original)
   }
   
 
@@ -1348,7 +1353,7 @@ object UniformSubstitution {
         List(origin)
       } else {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("Uniform substitution " + subst + " did not conclude " + conclusion + " from " + origin)
+        throw new CoreException("Uniform substitution " + subst + " did not conclude\n" + conclusion + "\nfrom      " + origin)
       }
     } 
     
