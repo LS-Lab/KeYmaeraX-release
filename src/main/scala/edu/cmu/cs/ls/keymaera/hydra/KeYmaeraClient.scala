@@ -82,9 +82,9 @@ object KeYmaeraClientPrinter {
               case e : Parallel => PARALLEL
               case e : Sequence => SCOLON
               case e : Equals => "="
-              case e : GreaterEquals => GEQ
+              case e : GreaterEqual => GEQ
               case e : GreaterThan => GT
-              case e: LessEquals => LEQ
+              case e: LessEqual => LEQ
               case e : LessThan => LT
               case e : NotEquals => NEQ
               case e : ProgramEquals => EQ //or equiv?
@@ -110,10 +110,10 @@ object KeYmaeraClientPrinter {
       }
       case e : Unary => e match {
         case e : Apply => JsObject(
-            "function" -> exprToJson(sessionName, uid+"0", e.function),
+            "fn" -> exprToJson(sessionName, uid+"0", e.function),
             "child" -> exprToJson(sessionName, uid+"1", e.child))
         case e : ApplyPredicate => JsObject(
-            "function" -> exprToJson(sessionName, uid+"0", e.function),
+            "fn" -> exprToJson(sessionName, uid+"0", e.function),
             "child" -> exprToJson(sessionName, uid+"1", e.child))
 
         case e : ContEvolve => JsObject(

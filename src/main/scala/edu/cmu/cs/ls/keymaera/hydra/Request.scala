@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticWrapper}
 import spray.json.JsString
 import edu.cmu.cs.ls.keymaera.core.ProofNode
 import spray.json.JsObject
+import edu.cmu.cs.ls.keymaera.core.NamedSymbol
 
 ////////////////////////////////////////////////////////////////////////////////
 // Request types
@@ -22,7 +23,7 @@ case class Problem(sessionName : String, contents : String) extends Request {
   def getResultingUpdates() : List[Update] = {
     try {
       val expression  = new KeYmaeraParser().runParser(contents);
-      val rootSequent = new Sequent(List(), IndexedSeq(), IndexedSeq(expression.asInstanceOf[Formula]));
+      val rootSequent = new Sequent(List(), scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(expression.asInstanceOf[Formula]));
       (new CreateRootNode(sessionName, rootSequent)) :: Nil
     }
     catch {
