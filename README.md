@@ -34,6 +34,19 @@ open http://localhost:8080/static/index.html in web browser
 open .key file in KeYmaera 4 HyDRA
 right click to interact
 
+Proof Tree Viewer
+=================
+
+To view proof trees converted to JSON by TermTests.print you can use
+jsgui/proofviewer.html
+
+Simply deploy proofviewer.html to any webserver and put the JSON
+descirption into resources/proof.json in the same directory on the
+webserver. Please note that JSON sources cannot be read from file-urls
+and thus have to be accessed through a webserver. There are no
+specific requirements for the webserver since it is only servering
+html and the JavaScript part is interpreted in the browser on the
+client anyway.
 
 Source Layout
 =============
@@ -57,10 +70,29 @@ src/test/scala - tests run by `sbt test`
 
 The wiki contains an introduction to the testing framework:
 https://github.com/LS-Lab/KeYmaera4/wiki/How-to-Add-Tests
+http://www.scalatest.org/user_guide
 
 target/ - Created by sbt on first compilation.
 
 target/scala-2.10/classes/ - Target directory for sbt compilation.
+
+Test Cases
+==========
+
+The full test suite can be run by
+  sbt test
+Selectively running individual test cases within sbt:
+sbt> test-only TacticTests
+Or, on a more fine-grained level within a class use
+   object MyTest extends Tag("MyTest")
+   object MyTest extends Tag("MyTest")
+   it should "do something useful" taggedAs(MyTest) in {....}
+   it should "do anything useful" taggedAs(MyTest) in {....}
+   it should "do more good" taggedAs(MoreTest) in {....}
+sbt> test-only -- -n "MyTest MoreTest"
+
+For inlining scala output alongside the test suite information, first do:
+sbt>  set logBuffered in Test := false
 
 Specification
 =============

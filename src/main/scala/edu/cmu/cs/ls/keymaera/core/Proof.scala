@@ -5,6 +5,14 @@
  */
 package edu.cmu.cs.ls.keymaera.core
 
+// require favoring immutable Seqs for soundness
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
 import scala.annotation.elidable
 import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
@@ -19,14 +27,22 @@ import edu.cmu.cs.ls.keymaera.parser._
  * Sequent notation
  */
 
-final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], val succ: IndexedSeq[Formula]) {
+final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val ante: scala.collection.immutable.IndexedSeq[Formula], val succ: scala.collection.immutable.IndexedSeq[Formula]) {
+  // Could use scala.collection.immutable.Seq instead of IndexedSeq, since equivalent except for performance. But many KeYmaera parts construct Sequents, so safer for performance.
+  override def equals(e: Any): Boolean = e match {
+    case Sequent(p, a, s) => pref == p && ante == a && succ == s
+    case _ => false
+  }
+
+  override def hashCode: Int = HashFn.hash(251, pref, ante, succ)
+
   /**
    * Retrieves the formula in sequent at a given position. Note that this ignores p.inExpr
    * @param p the position of the formula
    * @return the formula at the given position either from the antecedent or the succedent ignoring p.inExpr
    */
   def apply(p: Position): Formula = {
-    //require(p.inExpr == HereP, "Can only retrieve top level formulas")
+    //require(p.inExpr == HereP, "Can only retrieve top level formulas")  //@TODO Could relax
     if(p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
       ante(p.getIndex)
@@ -36,27 +52,83 @@ final class Sequent(val pref: Seq[NamedSymbol], val ante: IndexedSeq[Formula], v
     }
   }
   
+  // transformations giving copies of sequents
+  
+  /**
+   * A copy of this sequent concatenated with given sequent s.
+   * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
+   * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
+   * @returns a copy of this sequent concatenated with s.
+   * Results in a least upper bound with respect to subsets of this and s.
+   */
+  def glue(s: Sequent) : Sequent = {
+    require(s.pref == pref, "identical sequent prefix required when gluing " + this + " with " + s)
+    Sequent(pref, ante ++ s.ante, succ ++ s.succ)
+    } ensuring(r => this.subsequentOf(r) && s.subsequentOf(r)
+        && r.ante.forall(f=>this.ante.contains(f) || s.ante.contains(f))
+        && r.succ.forall(f=>this.succ.contains(f) || s.succ.contains(f)),
+        "result is a supersequent of its pieces and all formulas in result come from either one"
+    )
+      
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
    * @param p the position of the replacement
    * @param f the replacing formula
    * @returns a copy of this sequent with the formula at position p replaced by f.
    */
-  def updated(p: Position, f: Formula) = {
+  def updated(p: Position, f: Formula) : Sequent = {
     //require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
     else
         Sequent(pref, ante, succ.updated(p.getIndex, f))
   }
-      
-  override def toString: String = "Sequent[(" + pref.mkString(", ") + "), " +
-    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "]"
+  
+  /**
+   * A copy of this sequent with the indicated position replaced by gluing the sequent s.
+   * @param p the position of the replacement
+   * @param s the sequent glued / concatenated to this sequent after dropping p.
+   * @returns a copy of this sequent with the formula at position p removed and the sequent s appended.
+   * @see #updated(Position,Formula)
+   * @see #glue(Sequent)
+   */
+  def updated(p: Position, s: Sequent) : Sequent = {
+    //require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.isAnte)
+        Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
+    else
+        Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
+    } ensuring(r=> if (p.isAnte)
+         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).equivalent(this.glue(s))
+     else
+         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).equivalent(this.glue(s)),
+         "result after re-including updated formula is equivalent to " + this + " glue " + s
+     )
+  
+  /**
+   * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
+   */
+  def subsequentOf(r: Sequent) : Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
+
+  /**
+   * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
+   */
+  def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
+
+  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
+    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
 }
 
+/*
 object Sequent {
-  def apply(pref: Seq[NamedSymbol], ante: IndexedSeq[Formula], succ: IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
-}
+  def apply(pref: scala.collection.immutable.Seq[NamedSymbol], ante: scala.collection.immutable.IndexedSeq[Formula], succ: scala.collection.immutable.IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
+
+  def unapply(e: Sequent): Option[(scala.collection.immutable.Seq[NamedSymbol], scala.collection.immutable.IndexedSeq[Formula], scala.collection.immutable.IndexedSeq[Formula])] = e match {
+    case s: Sequent => Some((s.pref,s.ante,s.succ))
+    case _ => None
+  }
+
+  }*/
 
 
 /**
@@ -82,6 +154,10 @@ object Sequent {
    *============
    */
 
+  /**
+   * Additional proof node information payload for tactics.
+   * @TODO Make branchLabels more general (and more typed) by allowing certain combinations of lables or modifiers to apply. Such as "cutShowLbl"&"invisible" for an invisible branch that proves a cut formula.
+   */
   class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
        //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
     //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
@@ -91,6 +167,7 @@ object Sequent {
     def isLocalClosed: Boolean = closed
 
     //@TODO Purpose and function unclear
+    //@TODO rename to doneNode since it's not about closed in the sense of proved. Only closed in the sense of done with it even if disproved.
     def closeNode(s : Status) =
       this.synchronized {
         if (!closed) {
@@ -118,7 +195,20 @@ object Sequent {
     }
   }
 
-  sealed case class ProofStep(rule : Rule, subgoals : List[ProofNode])
+  /** 
+   * Represents a deduction step in a proof using the indicated rule which leads to the given conjunctive list of subgoals.
+   * @TODO Is there a way of proctecting constructor access so that only ProofNode.apply can construct ProofSteps?
+   */
+  sealed case class ProofStep(rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode]) {
+    justifiedByProofRule
+    @elidable(ASSERTION) def justifiedByProofRule = {
+      // println("Checking " + this)
+      // println("Reapply  " + rule(goal.sequent))
+      require(rule(goal.sequent) == subgoals.map(_.sequent), "ProofStep " + this + " is justified by said proof rule application")
+      // println("Checked  " + this)
+    }
+  }
+  
   sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
 
     @volatile private[this] var alternatives : List[ProofStep] = Nil
@@ -127,22 +217,22 @@ object Sequent {
      * List of all current or-branching alternatives of proving this proof node.
      * Result can change over time as new alternative or-branches are added.
      */
-    def children: List[ProofStep] = alternatives
-
-    /* must not be invoked when there is no alternative */
-    def getStep : ProofStep = alternatives match {
-      case List(h, t) => h
-      case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
-      //@TODO change exception type to a prover exception. Besides, there's no argument so it can't be illegal.
+    def children: scala.collection.immutable.List[ProofStep] = {
+      assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
+      alternatives
     }
 
-    private def prepend(r : Rule, s : List[ProofNode]) {
-      this.synchronized {
-        alternatives = ProofStep(r, s) :: alternatives;
+    def hasAlternative : Boolean = alternatives != Nil
+    def nextAlternative : ProofStep = {
+      require(hasAlternative, "apply proof rule before calling nextAlternative")
+      alternatives match {
+        case List(h, t) => h
+        case Nil        => throw new IllegalArgumentException("getStep can only be invoked when there is at least one alternative.")
+      //@TODO change exception type to a prover exception.
       }
     }
 
-    def prune(n : Int) {
+    def pruneAlternative(n : Int) {
       this.synchronized {
         if (n < alternatives.length)
           alternatives = alternatives.take(n-1) ++ alternatives.drop(n)
@@ -151,27 +241,35 @@ object Sequent {
       }
     }
 
+    /**
+     * Apply the given proof rule to this ProofNode.
+     * Return the resulting list of subgoals (after including them as an or-branch alternative for proving this ProofNode).
+     * Soundness-critical proof rule application mechanism.
+     */
     final def apply(rule : Rule) : List[ProofNode] = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
-      val result = rule(sequent).map(new ProofNode(_, this))
+      val subgoals = rule(sequent).map(new ProofNode(_, this))
       // Add as or-branching alternative
-      prepend(rule, result)
-      result
+      this.synchronized {
+        alternatives = ProofStep(rule, this, subgoals) :: alternatives;
+      }
+      subgoals
     }
 
     val info: ProofNodeInfo = new ProofNodeInfo(if(parent == null) "" else parent.info.branchLabel, this)
 
+    override def toString = "ProofNode(" + sequent + "\nfrom " + parent + ")"
   }
 
   /**
-   * The root node (conclusion) for a sequent derivation.
+   * The root node (conclusion) where a sequent derivation starts.
    */
   class RootNode(sequent : Sequent) extends ProofNode(sequent, null) {
 
   }
 
   /*********************************************************************************
-   * Kinds of Proof Rules
+   * Categorize Kinds of Proof Rules
    *********************************************************************************
    */
 
@@ -193,6 +291,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  */
 
 case class PosInExpr(pos: List[Int] = Nil) {
+  require(pos forall(_>=0), "all nonnegative positions")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
   def second: PosInExpr = new PosInExpr(pos :+ 1)
   def third:  PosInExpr = new PosInExpr(pos :+ 2)
@@ -208,10 +307,14 @@ object HereP extends PosInExpr
  * @param inExpr the position in said formula.
  */
 abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
+  require (index >= 0, "nonnegative index " + index)
   def isAnte: Boolean
   def getIndex: Int = index
 
-  def isDefined(s: Sequent): Boolean =
+  /**
+   * Check whether index of this position is defined in given sequent (ignoring inExpr).
+   */
+  def isIndexDefined(s: Sequent): Boolean =
     if(isAnte)
       s.ante.length > getIndex
     else
@@ -221,7 +324,14 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
    * Top level position of this position
    * @return A position with the same index but on the top level (i.e., inExpr == HereP)
    */
-  def topLevel = clone(index)
+  def topLevel: Position = {
+    clone(index)
+  } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
+
+  /**
+   * Whether this position is a top-level position of a sequent.
+   */
+  def isTopLevel: Boolean = inExpr == HereP
 
   def +(i: Int): Position
 
@@ -231,7 +341,7 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
 
   protected def clone(i: Int, e: PosInExpr = HereP): Position
 
-  override def toString: String = "(" + isAnte + ", " + getIndex + ", " + inExpr + ")"
+  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ", " + inExpr + ")"
 }
 
 class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
@@ -289,13 +399,37 @@ object HideRight extends (Position => Rule) {
   }
 }
 class Hide(p: Position) extends PositionRule("Hide", p) {
+  require(p.inExpr == HereP)
   def apply(s: Sequent): List[Sequent] = {
-    require(p.inExpr == HereP)
     if (p.isAnte)
       List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
     else
       List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+// co-weakening left = co-hide left (all but indicated position)
+object CoHideLeft extends (Position => Rule) {
+  def apply(p: Position): Rule = {
+    require(p.isAnte && p.inExpr == HereP)
+    new CoHide(p)
   }
+}
+// co-weakening right = co-hide right (all but indicated position)
+object CoHideRight extends (Position => Rule) {
+  def apply(p: Position): Rule = {
+    require(!p.isAnte && p.inExpr == HereP)
+    new CoHide(p)
+  }
+}
+class CoHide(p: Position) extends PositionRule("CoHide", p) {
+  require(p.inExpr == HereP)
+  def apply(s: Sequent): List[Sequent] = {
+    if (p.isAnte)
+      List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
+    else
+      List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(p.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 
@@ -305,12 +439,11 @@ object ExchangeLeft {
 
   //@TODO Why is this not a TwoPositionRule?
   private class ExchangeLeftRule(p1: Position, p2: Position) extends Rule("ExchangeLeft") {
-    require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP)
+    require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the antecedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
+      //throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -320,12 +453,10 @@ object ExchangeRight {
 
   //@TODO Why is this not a TwoPositionRule?
   private class ExchangeRightRule(p1: Position, p2: Position) extends Rule("ExchangeRight") {
-    require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP )
+    require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to two positions in the succedent", this, s)
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -335,12 +466,10 @@ object ContractionRight {
   def apply(p: Position): Rule = new ContractionRightRule(p)
 
   private class ContractionRightRule(p: Position) extends PositionRule("ContractionRight", p) {
-    require(!p.isAnte && p.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(!p.isAnte && p.inExpr == HereP)
+    require(!p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the succedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ :+ s.succ(p.getIndex)))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to a position in the succedent", this, s)
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -350,12 +479,10 @@ object ContractionLeft {
   def apply(p: Position): Rule = new ContractionLeftRule(p)
 
   private class ContractionLeftRule(p: Position) extends PositionRule("ContractionLeft", p) {
-    require(p.isAnte && p.inExpr == HereP)
-    //@TODO Contract ensuring that set projection of sequent before and after is the same
-    def apply(s: Sequent): List[Sequent] = if(p.isAnte && p.inExpr == HereP)
+    require(p.isAnte && p.inExpr == HereP, "Rule is only applicable to a position in the antecedent " + this)
+    def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante :+ s.ante(p.getIndex), s.succ))
-    else
-      throw new InapplicableRuleException("Rule is only applicable to a position in the succedent", this, s)
+    } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
@@ -411,6 +538,11 @@ object Axiom {
     val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(x), Imply(Equals(Real, x,t), ApplyPredicate(p1, x)))))
     m = m + pair8
 
+    // val y = Variable("y", None, Real)
+    // //[x:=t]p(x) <-> \forall y . (y=t -> p(y))
+    // val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(y), Imply(Equals(Real, y,t), ApplyPredicate(p1, y)))))
+    // m = m + pair8
+    
     m
   }
 
@@ -420,7 +552,7 @@ object Axiom {
         case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
         case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
       }
-    }
+    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
   }
 }
 
@@ -428,6 +560,8 @@ object Axiom {
  * Sequent Proof Rules for identity/closing and cut
  *********************************************************************************
  */
+
+//@TODO Mark these rules as ClosingRules and add contract "ensuring (!_.isEmpty)" globally to all rules that are not ClosingRules
 
 // Ax Axiom close / Identity rule
 object AxiomClose extends ((Position, Position) => Rule) {
@@ -447,7 +581,7 @@ class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass
     } else {
         throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(ass) + " not the same as " + s(p), this, s)
     }
-  }
+  } ensuring (_.isEmpty, "closed if applicable")
 }
 
 // close by true
@@ -461,7 +595,7 @@ class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) {
     require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
     if(!p.isAnte && s.succ(p.getIndex) == True) Nil
     else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + p, this, s)
-  }
+  } ensuring (_.isEmpty, "closed if applicable")
 }
 
 // close by false
@@ -475,7 +609,7 @@ class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) {
     require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
     if(p.isAnte && s.ante(p.getIndex) == False) Nil
     else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + p, this, s)
-  }
+  } ensuring (_.isEmpty, "closed if applicable")
 }
 
 
@@ -487,9 +621,9 @@ object Cut {
     def apply(s: Sequent): List[Sequent] = {
       val use = new Sequent(s.pref, s.ante :+ c, s.succ)
       val show = new Sequent(s.pref, s.ante, s.succ :+ c)
-      //@TODO Switch branches around to (show, use)
+      //@TODO Switch branches around to (show, use) and reformulate using glue()
       List(use, show)
-    }
+    } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts")
   }
 }
 
@@ -504,12 +638,10 @@ object NotRight extends (Position => Rule) {
 }
 
 class NotRight(p: Position) extends PositionRule("Not Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "Not Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Not(a) => List(Sequent(s.pref, s.ante :+ a, s.succ.patch(p.getIndex, Nil, 1)))
-      case _ => throw new InapplicableRuleException("Not-Right can only be applied to negation. Tried to apply to: " + s(p), this, s)
-    }
+    val Not(a) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq())))
   }
 }
 
@@ -519,26 +651,10 @@ object NotLeft extends (Position => Rule) {
 }
 
 class NotLeft(p: Position) extends PositionRule("Not Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Not Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Not(a) => List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a))
-      case _ => throw new InapplicableRuleException("Not-Left can only be applied to negation. Tried to apply to: " + s(p), this, s)
-    }
-  }
-}
-
-// &R And right
-object AndRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndRight(p)
-}
-class AndRight(p: Position) extends PositionRule("And Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
-  def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case And(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex,a)), Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, b)))
-      case _ => throw new InapplicableRuleException("And-Right can only be applied to conjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val Not(a) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))))
   }
 }
 
@@ -547,12 +663,10 @@ object OrRight extends (Position => Rule) {
   def apply(p: Position): Rule = new OrRight(p)
 }
 class OrRight(p: Position) extends PositionRule("Or Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "Or Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Or(a, b) => List(Sequent(s.pref, s.ante, s.succ.updated(p.getIndex, a) :+ b))
-      case _ => throw new InapplicableRuleException("Or-Right can only be applied to disjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val Or(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a,b))))
   }
 }
 
@@ -562,12 +676,22 @@ object OrLeft extends (Position => Rule) {
 }
 
 class OrLeft(p: Position) extends PositionRule("Or Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Or Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Or(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,a), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-      case _ => throw new InapplicableRuleException("Or-Left can only be applied to disjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val Or(a,b) = s(p)
+    List(s.updated(p, a), s.updated(p, b))
+  }
+}
+
+// &R And right
+object AndRight extends (Position => Rule) {
+  def apply(p: Position): Rule = new AndRight(p)
+}
+class AndRight(p: Position) extends PositionRule("And Right", p) {
+  require(!p.isAnte && p.inExpr == HereP, "And Right is only applicable to top-level formulas in the succedent not to: " + p)
+  def apply(s: Sequent): List[Sequent] = {
+    val And(a,b) = s(p)
+    List(s.updated(p, a), s.updated(p, b))
   }
 }
 
@@ -577,13 +701,10 @@ object AndLeft extends (Position => Rule) {
 }
 
 class AndLeft(p: Position) extends PositionRule("And Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "And Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      //@TODO Here and in other places there is an ordering question. Should probably always drop the old position and just :+a :+ b appended at the end to retain ordering. Except possibly in rules which do not append. But consistency helps.
-      case And(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex, a) :+ b, s.succ))
-      case _ => throw new InapplicableRuleException("And-Left can only be applied to conjunctions. Tried to apply to: " + s(p), this, s)
-    }
+    val And(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b), IndexedSeq())))
   }
 }
 
@@ -595,39 +716,22 @@ object ImplyRight extends (Position => Rule) {
 class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
   require(!p.isAnte && p.inExpr == HereP, "Imply Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Imply(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)))
-      case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + s(p), this, s)
-    }
-    /*
-    *@TODO Change propositional rule implementations to drop and concat style
-    val (f, ress) = dropSeq(s, p)  // drop position p from sequent s, return remaining sequent ress and formula f
-    f match {
-      case Imply(a, b) => List(concatSeq(s, Sequent(Nil, a, b))) // glue sequent s and a|-b together checking compatible prefixes either as concatentation of sequents or via Sequent(ress.pref, a, b) and identity.
-      case _ => throw new InapplicableRuleException("Implies-Right can only be applied to implications. Tried to apply to: " + f, this, s)
-    }
-    *@TODO Or can we even do proper case matching as follows? Only if exceptions assured and reasonable (or catch and translate to reasonable)
-    val (Imply(a, b), ress) = dropSeq(s, p)
-    List(concatSeq(s, Sequent(Nil, a, b)))
-    *@TODO Or can we combine the drop and concat operation somehow including pattern matching to make this one atomic step obviously correct? Unlike the dropping, which alone is incorrect except when followed up by the appropriate concatSeq. Note however, that concatSeq before drop would mess up if working with sets rather than lists.
-    */
+    val Imply(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
   }
 }
 
 
 // ->L Implication left
 object ImplyLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplLeft(p)
+  def apply(p: Position): Rule = new ImplyLeft(p)
 }
-class ImplLeft(p: Position) extends PositionRule("Imply Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+class ImplyLeft(p: Position) extends PositionRule("Imply Left", p) {
+  require(p.isAnte && p.inExpr == HereP, "Imply Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      case Imply(a, b) => List(
-         Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ :+ a),
-         Sequent(s.pref, s.ante.updated(p.getIndex, b), s.succ))
-      case _ => throw new InapplicableRuleException("Implies-Left can only be applied to implications. Tried to apply to: " + s(p), this, s)
-    }
+    val Imply(a,b) = s(p)
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
+         s.updated(p, Sequent(s.pref, IndexedSeq(b), IndexedSeq())))
   }
 }
 
@@ -636,13 +740,12 @@ object EquivRight extends (Position => Rule) {
   def apply(p: Position): Rule = new EquivRight(p)
 }
 class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
-  assert(!p.isAnte && p.inExpr == HereP)
+  require(!p.isAnte && p.inExpr == HereP, "Equivalence Right is only applicable to top-level formulas in the succedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      //@TODO In succedent maybe replace by (a->b)&(b->a) and wait for the other rules to make it obvious.
-      case Equiv(a, b) => List(Sequent(s.pref, s.ante :+ a, s.succ.updated(p.getIndex, b)), Sequent(s.pref, s.ante :+ b, s.succ.updated(p.getIndex, a)))
-      case _ => throw new InapplicableRuleException("Equiv-Right can only be applied to equivalences. Tried to apply to: " + s(p), this, s)
-    }
+    val Equiv(a,b) = s(p)
+    //List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
+    List(s.updated(p, Sequent(s.pref, IndexedSeq(a),IndexedSeq(b))),
+         s.updated(p, Sequent(s.pref, IndexedSeq(b),IndexedSeq(a))))
   }
 }
 
@@ -652,13 +755,15 @@ object EquivLeft extends (Position => Rule) {
 }
 
 class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
-  assert(p.isAnte && p.inExpr == HereP)
+  require(p.isAnte && p.inExpr == HereP, "Equivalence Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
-    s(p) match {
-      //@TODO In succedent maybe replace by (a&b)|(!a&!b) and wait for the other rules to make it obvious.
-      case Equiv(a, b) => List(Sequent(s.pref, s.ante.updated(p.getIndex,And(a,b)), s.succ), Sequent(s.pref, s.ante.updated(p.getIndex,And(Not(a),Not(b))), s.succ))
-      case _ => throw new InapplicableRuleException("Equiv-Left can only be applied to equivalences. Tried to apply to: " + s(p), this, s)
-    }
+    val Equiv(a,b) = s(p)
+    //List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
+    // List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
+    //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
+    //@TODO This choice is compatible with tactics but is unreasonable. Prefer upper choices
+    List(s.updated(p, And(a,b)),
+         s.updated(p, And(Not(a),Not(b))))
   }
 }
 
@@ -725,29 +830,28 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  *          - Variable
  *          - PredicateConstant
  *          - ApplyPredicate(p:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . p(x)"
- *          - Apply(f:Function, x:Variable)
+ *          - Apply(f:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . f(x)"
  *          - ProgramConstant
  *          - Derivative(...)
  * @param t the expression to be used in place of n
- *@TODO Assert that n is of the above form only
  */
 sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
   // identity substitution would be correct but is usually unintended
-  require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
+  //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
   
   @elidable(ASSERTION) def applicable = {
-    require(n.sort == t.sort, "Sorts have to match in substitution pairs: "
-    + n.sort + " != " + t.sort)
+    if (!(n != t)) println("INFO: Unexpected identity substitution " + n + " by equal " + t + "\n(non-critical, indicates possible tactics inefficiency)")
+    require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
       case _:PredicateConstant => true
-      case ApplyPredicate(_:Function, _:Variable) => true
-      case Apply(_:Function, _:Variable) => true
       case _:ProgramConstant => true
       case Derivative(_, _:Variable) => true
+      case ApplyPredicate(_:Function, _:Variable) => true
+      case Apply(_:Function, _:Variable) => true
       case _ => false
-      })
+      }, "Substitutable expression required, found " + n)
   }
 
   override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
@@ -764,18 +868,271 @@ object SubstitutionPair {
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
+ * Explicit construction computing bound variables on the fly.
+ * Used for UniformSubstitution rule.
+ * @author aplatzer
  */
-sealed class Substitution(l: Seq[SubstitutionPair]) {
+sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
+
+  /**
+   * @param rarg the argument in the substitution.
+   * @param instArg the argument to instantiate rarg with in the occurrence.
+   */
+  private def instantiate(rarg: Term, instArg: Term) = new Substitution(List(new SubstitutionPair(rarg, instArg)))
 
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
+    // check that we never replace n by something and then again replacing the same n by something
     val lefts = l.map(sp=>sp.n).toList
-    //@TODO check that we never replace p(x) by something and also p(t) by something
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+    // check that we never replace p(x) by something and also p(t) by something
+    val lambdaNames = l.map(sp=>sp.n match {
+      case ApplyPredicate(p:Function, _:Variable) => List(p)
+      case Apply(f:Function, _:Variable) => List(f)
+      case _ => Nil
+      }).fold(Nil)((a,b)=>a++b)
+      //@TODO check that we never replace p(x) by something and also p(t) by something
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
   }
+  
+  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
+  
 
   override def toString: String = "Subst(" + l.mkString(", ") + ")"
+
+  // helper
+
+  /**
+   * The set of all (may) free variables whose value t depends on (syntactically).
+   */
+  def freeVariables(t: Term) : Set[NamedSymbol] = t match {
+    // homomorphic cases
+    case Neg(s, l) => freeVariables(l)
+    case Add(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Subtract(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Multiply(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Divide(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Exp(s, l, r) => freeVariables(l) ++ freeVariables(r)
+    case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
+    // base cases
+    case x:Variable => Set(x)
+    case Derivative(s, e) => freeVariables(e)
+    case Apply(f, arg) => Set(f) ++ freeVariables(arg)
+    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); Set.empty
+  }
+  
+  private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
+
+  /**
+   * The set of all (may) free variables whose value f depends on (syntactically).
+   */
+  def freeVariables(f: Formula) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], f)
+
+  private def freeVariables(u: Set[NamedSymbol], f: Formula) : Set[NamedSymbol] = f match {
+    // homomorphic cases
+  case Not(g) => freeVariables(u, g)
+  case And(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case Or(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+
+  case Equals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case NotEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case GreaterEqual(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case GreaterThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case LessEqual(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case LessThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
+
+  // binding cases add bound variables to u
+  case Forall(vars, g) => freeVariables(u ++ vars, g)
+  case Exists(vars, g) => freeVariables(u ++ vars, g)
+
+  case BoxModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
+  case DiamondModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
+
+  // base cases
+  case p: PredicateConstant => Set(p)
+  case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg)
+  case x: Atom => ???
+  case _ => throw new UnknownOperatorException("Not implemented", f)
+  }
+
+  /**
+   * Returns set of symbols bound by p (must bound = definitely written), (may bound = possibly written), and set of symbols free in p (may free = possibly read).
+   * @TODO In principle we could also compute must free, but that doesn't seem useful.
+   */
+  private def freeVariables(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol]) = {p match {
+    case Choice(a, b) => val (mv,v,fv)=freeVariables(u,a); val (mw,w,fw)=freeVariables(u,b); (mv.intersect(mw), v++w, fv++fw)
+    case Sequence(a, b) => {val (mv,v,fv)=freeVariables(u,a); val (mw,w1,fw)=freeVariables(mv,b); val (mw2,w,fw2)=freeVariables(v,b); 
+      assert(mw.subsetOf(mw2), "must bound monotonicity");
+      assert(fw2.subsetOf(fw), "free variable antitonicity");
+      assert(w1.subsetOf(w), "may bound monotonicity");
+      (mw, w, fv++fw)
+    }
+    case Loop(a) => val (mv,v,fv)=freeVariables(u, a); (u,v,fv)
+    case Test(f) => (u, u, freeVariables(u,f))
+    case Assign(x:Variable, e) => (u+x, u+x, freeVariables(u, e))
+    case NDetAssign(x:Variable) => (u+x, u+x, Set.empty)
+    case NFContEvolve(v, x:Variable, e, h) => (u+x,u+x,
+      Set(x) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
+    
+    //@TODO check implementation
+    case a: ProgramConstant => (u, u, Set.empty)
+    case _ => throw new UnknownOperatorException("Not implemented", p)
+  }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
+
+  // uniform substitution on terms
+  def apply(t: Term): Term = {
+    try {
+      usubst(Set.empty, t)
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(t.prettyString)
+    }
+  }
+  
+  /**
+   * Return replacement t after checking for clashes with names in u.
+   */
+  private def clashChecked(u: Set[NamedSymbol], original: Term, t: Term) : Term = {
+    if (freeVariables(t).intersect(u).isEmpty) t
+    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(t).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + t.prettyString, this, original)
+  }
+  /**
+   * Return replacement f after checking for clashes with names in u.
+   */
+  private def clashChecked(u: Set[NamedSymbol], original:Formula, f: Formula) : Formula = {
+    if (freeVariables(f).intersect(u).isEmpty) f
+    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(f).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + f.prettyString, this, original)
+  }
+  
+
+  /**
+   * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
+   */
+  private def usubst(u: Set[NamedSymbol], t: Term) : Term = t match {
+      // homomorphic cases
+    case Neg(s, e) => Neg(s, usubst(u, e))
+    case Add(s, l, r) => Add(s, usubst(u, l), usubst(u, r))
+    case Subtract(s, l, r) => Subtract(s, usubst(u, l), usubst(u, r))
+    case Multiply(s, l, r) => Multiply(s, usubst(u, l), usubst(u, r))
+    case Divide(s, l, r) => Divide(s, usubst(u, l), usubst(u, r))
+    case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
+    case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
+    // uniform substitution base cases
+    case x:Variable => if (u.contains(x)) return x else for(p <- l) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
+    case Derivative(s, e) => for(p <- l) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
+    case Apply(f, arg) => for(rp <- l) {
+      rp.n match {
+        //@TODO clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case Apply(rf, rarg:Variable) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
+        case _ => // skip to next
+      }
+    }; return Apply(f, usubst(u, arg))
+    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
+    case _ => throw new UnknownOperatorException("Not implemented yet", t)
+  }
+  
+  def apply(f: Formula): Formula = {
+    log("\tSubstituting " + f.prettyString + " using " + this)
+    try {
+      val res = usubst(Set.empty[NamedSymbol], f)
+      log("\tSubstituted  " + res.prettyString)
+      res
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString)
+    }
+  }
+  
+  def apply(s: Sequent): Sequent = {
+    try {
+      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
+    }
+  }
+  
+  private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
+      // homomorphic cases
+    case Not(g) => Not(usubst(u, g))
+    case And(l, r) => And(usubst(u, l), usubst(u, r))
+    case Or(l, r) => Or(usubst(u, l), usubst(u, r))
+    case Imply(l, r) => Imply(usubst(u, l), usubst(u, r))
+    case Equiv(l, r) => Equiv(usubst(u, l), usubst(u, r))
+
+    case Equals(d, l, r) => Equals(d, usubst(u, l), usubst(u, r))
+    case NotEquals(d, l, r) => NotEquals(d, usubst(u, l), usubst(u, r))
+    case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(u, l), usubst(u, r))
+    case GreaterThan(d, l, r) => GreaterThan(d, usubst(u, l), usubst(u, r))
+    case LessEqual(d, l, r) => LessEqual(d, usubst(u, l), usubst(u, r))
+    case LessThan(d, l, r) => LessThan(d, usubst(u, l), usubst(u, r))
+
+    // binding cases add bound variables to u
+    case Forall(vars, g) => Forall(vars, usubst(u ++ vars, g))
+    case Exists(vars, g) => Exists(vars, usubst(u ++ vars, g))
+
+    case BoxModality(p, g) => val (v,q) = usubst(u, p); BoxModality(q, usubst(v, g))
+    case DiamondModality(p, g) => val (v,q) = usubst(u, p); DiamondModality(q, usubst(v, g))
+
+    // uniform substitution base cases
+    case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
+    case ApplyPredicate(p, arg) => for(rp <- l) {
+      rp.n match {
+        //@TODO clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case ApplyPredicate(rf, rarg:Variable) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
+        case _ => // skip to next
+      }
+    }; return ApplyPredicate(p, usubst(u, arg))
+    
+    // 
+    case x: Atom => x
+    case _ => throw new UnknownOperatorException("Not implemented yet", f)
+  }
+
+  // uniform substitution on programs
+  def apply(p: Program): Program = {
+    try {
+      usubst(Set.empty[NamedSymbol], p)._2
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
+    }
+  }
+      
+  
+  /**
+   *
+   */
+  private def usubst(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Program) = { p match {
+    case Choice(a, b) => val (v,as)=usubst(u,a); val (w,bs)=usubst(u,b); (v++w, Choice(as, bs))
+    case Sequence(a, b) => val (v,as)=usubst(u,a); val (w,bs)=usubst(v,b); (w, Sequence(as, bs))
+    case Loop(a) => val (v,_)=usubst(u,a); val (w,as)=usubst(v,a); (w,Loop(as)) ensuring usubst(w,a)._1==w
+    case Test(f) => (u, Test(usubst(u,f)))
+    case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
+    case NDetAssign(x:Variable) => (u+x, p)
+    case NFContEvolve(v, x:Variable, e, h) => if (v.isEmpty) {
+      if (!u.contains(x)) for (pair <- l) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
+      (u+x, NFContEvolve(v, x, usubst(u++v+x, e), usubst(u++v+x,h)))
+    } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+    
+    //@TODO check implementation
+    case a: ProgramConstant => for(pair <- l) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
+    case _ => throw new UnknownOperatorException("Not implemented yet", p)
+  }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
+
+
+}
+
+
+/******************************************************************/
+
+
+/**
+ * A Uniform Substitution.
+ * Implementation of applying uniform substitutions to terms, formulas, programs.
+ * Old implementation.
+ */
+sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
+  applicable
 
   /**
    *
@@ -783,7 +1140,25 @@ sealed class Substitution(l: Seq[SubstitutionPair]) {
    * @param target should be a tuple of the same dimension donating the right sides
    * @return
    */
-  private def constructSubst(source: Expr, target: Expr): Substitution = new Substitution(collectSubstPairs(source, target))
+  private def constructSubst(source: Expr, target: Expr): OSubstitution = new OSubstitution(collectSubstPairs(source, target))
+
+
+  // unique left hand sides in l
+  @elidable(ASSERTION) def applicable = {
+    // check that we never replace n by something and then again replacing the same n by something
+    val lefts = l.map(sp=>sp.n).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+    // check that we never replace p(x) by something and also p(t) by something
+    val lambdaNames = l.map(sp=>sp.n match {
+      case ApplyPredicate(p:Function, _:Variable) => List(p)
+      case Apply(f:Function, _:Variable) => List(f)
+      case _ => Nil
+      }).fold(Nil)((a,b)=>a++b)
+      //@TODO check that we never replace p(x) by something and also p(t) by something
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
+  }
+
+  override def toString: String = "Subst(" + l.mkString(", ") + ")"
 
   private def collectSubstPairs(source: Expr, target: Expr): List[SubstitutionPair] =
     if(source != target)
@@ -819,7 +1194,7 @@ sealed class Substitution(l: Seq[SubstitutionPair]) {
    * @return
    * @TODO maybe rename to freeNames, but make naming compatible with boundNames
    */
-  def names(e: Expr): Seq[NamedSymbol] = e match {
+  def names(e: Expr): scala.collection.immutable.Seq[NamedSymbol] = e match {
     case x: NamedSymbol => Vector(x)
     case x: Unary => names(x.child)
     case x: Binary => names(x.left) ++ names(x.right)
@@ -887,12 +1262,12 @@ sealed class Substitution(l: Seq[SubstitutionPair]) {
       case (a: Term,b: Term) => GreaterThan(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
-    case GreaterEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => GreaterEquals(d, apply(a), apply(b))
+    case GreaterEqual(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => GreaterEqual(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
-    case LessEquals(d, l, r) => (l,r) match {
-      case (a: Term,b: Term) => LessEquals(d, apply(a), apply(b))
+    case LessEqual(d, l, r) => (l,r) match {
+      case (a: Term,b: Term) => LessEqual(d, apply(a), apply(b))
       case _ => throw new IllegalArgumentException("Don't know how to handle case" + f)
     }
     case LessThan(d, l, r) => (l,r) match {
@@ -963,6 +1338,8 @@ sealed class Substitution(l: Seq[SubstitutionPair]) {
 object UniformSubstitution {
   def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
 
+  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
+
   private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
     /**
      * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
@@ -970,15 +1347,24 @@ object UniformSubstitution {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- " + subst + "\n" + p._1 + "\nbecomes\n" + KeYmaeraPrettyPrinter.stringify(a) + "\nshould be equal\n" + KeYmaeraPrettyPrinter.stringify(p._2)); a == p._2})
+      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
+      if (subst(origin) == conclusion) {
+        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+        List(origin)
+      } else {
+        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+        throw new CoreException("Uniform substitution " + subst + " did not conclude  \n" + conclusion + "\nfrom\n  " + origin)
+      }
+    } 
+    
+    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
+      //val subst = new OSubstitution(this.subst.l)
+      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
       val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-      if(conclusion.pref == origin.pref // universal prefix is identical
+      (conclusion.pref == origin.pref // universal prefix is identical
         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
         && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
-        List(origin)
-      else
-        throw new CoreException("Substitution did not yield the expected result " + subst + " applied to " + conclusion)
     }
   }
 }
@@ -1003,7 +1389,10 @@ object UniformSubstitution {
  * @TODO Review
  */
 class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
-  require(name != target || idx != tIdx)
+  //require(name != target || idx != tIdx, "unexpected identity renaming " + name + " to " + target + " with same index " + idx)
+  {
+    if (!(name != target || idx != tIdx)) println("INFO: Unexpected identity renaming " + name + " to " + target + " with same index " + idx)
+  }
   def apply(s: Sequent): List[Sequent] = {
 
     def proceed(f: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
@@ -1169,8 +1558,8 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(vars, f) if vars.length > 1 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
-        case Exists(vars, f) if vars.length > 1 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
+        case Forall(vars, f) if vars.length >= 2 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
+        case Exists(vars, f) if vars.length >= 2 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
         case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
       }
     }

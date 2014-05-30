@@ -2,6 +2,7 @@ import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser._
 import java.io.File
+import scala.collection.immutable._
 
 class ParserParenTests extends FlatSpec with Matchers {
   // type declaration header for tests

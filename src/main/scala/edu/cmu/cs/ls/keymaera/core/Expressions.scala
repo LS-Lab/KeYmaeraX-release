@@ -1,6 +1,7 @@
 /**
  * @author Marcus Völp
  * @author Jan-David Quesel
+ * @author aplatzer
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -16,12 +17,23 @@ package edu.cmu.cs.ls.keymaera.core
  * 2) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
  */
 
+// require favoring immutable Seqs for soundness
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
 import scala.annotation.elidable
 import scala.annotation.elidable._
 
 import scala.math._
 
-import edu.cmu.cs.ls.keymaera.parser._ //the pretty printer.
+import edu.cmu.cs.ls.keymaera.parser._
+import scala.collection.immutable
+
+//the pretty printer.
 
 /**
  * External functions imported in core but not used in proof check mode
@@ -34,7 +46,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 251
+   * Next free prime is 257
    * @param prime
    * @param a
    * @return
@@ -555,37 +567,37 @@ final class GreaterThan  (domain : Sort = Real, left : Term, right : Term) exten
   override def hashCode: Int = hash(59, domain, left, right)
 }
 
-object GreaterEquals {
-  def apply(domain : Sort = Real, left : Term, right : Term): GreaterEquals = new GreaterEquals(domain, left, right)
+object GreaterEqual {
+  def apply(domain : Sort = Real, left : Term, right : Term): GreaterEqual = new GreaterEqual(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: GreaterEquals => (x.domain, x.left, x.right) match {
+    case x: GreaterEqual => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-final class GreaterEquals(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+final class GreaterEqual(domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
-    case GreaterEquals(d, a, b) => d == domain && left == a && right == b
+    case GreaterEqual(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
   override def hashCode: Int = hash(61, domain, left, right)
 }
 
-object LessEquals {
-  def apply(domain : Sort = Real, left : Term, right : Term): LessEquals = new LessEquals(domain, left, right)
+object LessEqual {
+  def apply(domain : Sort = Real, left : Term, right : Term): LessEqual = new LessEqual(domain, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: LessEquals => (x.domain, x.left, x.right) match {
+    case x: LessEqual => (x.domain, x.left, x.right) match {
       case (TupleT(s, t), a: Term, b: Term) if s == t => Some((s, a, b))
       case _ => None
     }
     case _ => None
   }
 }
-final class LessEquals   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
+final class LessEqual   (domain : Sort = Real, left : Term, right : Term) extends BinaryRelation(domain, left, right) {
   override def equals(e: Any): Boolean = e match {
-    case LessEquals(d, a, b) => d == domain && left == a && right == b
+    case LessEqual(d, a, b) => d == domain && left == a && right == b
     case _ => false
   }
   override def hashCode: Int = hash(67, domain, left, right)
@@ -1164,8 +1176,9 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
   override def hashCode: Int = hash(223, child)
 }
 
-/** Normal form ODE data structures
- * \exists R a,b,c. (\D{x} = \theta & F)
+/**
+ * Normal form differential equation data structures for explicit ODE
+ * NFContEvolve(Seq(a,b,c), x, theta, F) is \exists R a,b,c. (\D{x} = \theta & F)
  */
 object NFContEvolve {
   def apply(vars: Seq[NamedSymbol], x: Term, theta: Term, f: Formula): NFContEvolve = new NFContEvolve(vars, x, theta, f)
@@ -1175,6 +1188,8 @@ object NFContEvolve {
   }
 }
 final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Term, val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
+  require(!vars.contains(x), "Quantified disturbance should not have differential equations")
+  //@TODO Why not just "x:Variable"
   def reads = ???
   def writes = (VSearch.primed(x)).distinct
 
@@ -1190,7 +1205,9 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Ter
  *=============
  */
 
-abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child)
+abstract class Quantifier(val variables : Seq[NamedSymbol], child : Formula) extends UnaryFormula(child) {
+  require(!variables.isEmpty, "no empty quantifiers " + this)
+}
 
 object Forall {
   def apply(variables : Seq[NamedSymbol], child : Formula): Forall = new Forall(variables, child)
@@ -1202,8 +1219,9 @@ object Forall {
     case _ => None
   }
 }
-final class Forall(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
 
+final class Forall(variables : immutable.Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+  require(!variables.isEmpty, "Quantifiers should bind at least one variable")
   override def equals(e: Any): Boolean = e match {
     case x: Forall => x.variables == variables && x.child == child
     case _ => false
@@ -1221,7 +1239,9 @@ object Exists {
     case _ => None
   }
 }
-final class Exists(variables : Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+final class Exists(variables : immutable.Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
+  require(!variables.isEmpty, "Quantifiers should bind at least one variable")
+
   override def equals(e: Any): Boolean = e match {
     case x: Exists => x.variables == variables && x.child == child
     case _ => false

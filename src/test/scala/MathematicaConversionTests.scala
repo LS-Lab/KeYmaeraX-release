@@ -3,6 +3,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
 import java.io.File
 import java.math.BigDecimal
+import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers {
   var ml : MathematicaLink = null //var so that we can instantiate within a test case.
@@ -43,14 +44,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
     ml.run("x > y")._2 should be (GreaterThan(Real, x, y))
     ml.run("x > 0")._2 should be (GreaterThan(Real, x, zero))
     
-    ml.run("x >= y")._2 should be (GreaterEquals(Real, x, y))
-    ml.run("x >= 0")._2 should be (GreaterEquals(Real, x, zero))
+    ml.run("x >= y")._2 should be (GreaterEqual(Real, x, y))
+    ml.run("x >= 0")._2 should be (GreaterEqual(Real, x, zero))
 
     ml.run("x < y")._2 should be (LessThan(Real, x, y))
     ml.run("x < 0")._2 should be (LessThan(Real, x, zero))
 
-    ml.run("x <= y")._2 should be (LessEquals(Real, x, y))
-    ml.run("x <= 0")._2 should be (LessEquals(Real, x, zero))
+    ml.run("x <= y")._2 should be (LessEqual(Real, x, y))
+    ml.run("x <= 0")._2 should be (LessEqual(Real, x, zero))
   }
 
   it should "do math" in {
@@ -149,8 +150,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
 
   "Mathematica -> KeYmaera" should "convert inequalities" in {
     round trip Forall(Seq(x), GreaterThan(Real,x,y))
-    round trip Forall(Seq(x), GreaterEquals(Real,x,y))
-    round trip Forall(Seq(x), LessEquals(Real,x,y))
+    round trip Forall(Seq(x), GreaterEqual(Real,x,y))
+    round trip Forall(Seq(x), LessEqual(Real,x,y))
     round trip Forall(Seq(x), LessThan(Real,x,y))
   }
 

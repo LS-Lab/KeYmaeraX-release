@@ -18,7 +18,7 @@ import scala.collection.mutable.HashMap
 
 /**
  * @author jdq
- *
+ * @author aplatzer
  */
 /*
   def testTp: Tactic = ((testT2 | tryheuristicT("alpha") | tryheuristicT("simplify_prog") | tryheuristicT("diff_solve"))*) ~ tryruleT(ReduceRule.INSTANCE.name.toString)
@@ -252,16 +252,27 @@ object Tactics {
     /**
      * Convenience wrappers
      */
-    // repeat tactic until a fixed point is reached
+    /**
+     * repeat tactic until a fixed point is reached
+     */
     def * : Tactic = repeatT(this)
-    // apply the first tactic applicable
+    /**
+     * apply the first tactic applicable
+     */
     def |(o: Tactic): Tactic = eitherT(this, o)
-    // t1 ~ t2 = (t1 & t2) | t2
-    def ~(o: Tactic): Tactic = weakSeqT(this, o)
-    // execute this tactic and the given tactics on the resulting branches
+    /**
+     * Sequential composition: execute this tactic and the given tactics in this order on the resulting branches.
+    */
     def &(a: Tactic, o: Tactic*): Tactic = seqComposeT(this, a, o: _*)
     def &&(a: Tactic, o: Tactic*): Tactic = seqComposeExactT(this, a, o: _*)
-    // create an or-branch for each given tactic
+    /**
+     * Weak sequential composition if possible.
+     * Execute the given tactics in that order if possible: t1 ~ t2 = (t1 & t2) | t2
+     */
+    def ~(o: Tactic): Tactic = weakSeqT(this, o)
+    /**
+     * create an or-branch for each given tactic
+     */
     def <(tcts: Tactic*) = branchT(this :: tcts.toList: _*)
   }
 
@@ -274,6 +285,59 @@ object Tactics {
       continuation(this, Success, Seq(node))
     }
   }
+
+  /**
+   * Stop tactics execution.
+   * @TODO Implement and check.
+   */
+  def stopT = new Tactic("Stop") {
+    def applicable(node : ProofNode) = true
+    def apply(tool : Tool, node : ProofNode) = {}
+  }
+
+  /**
+   * Error tactics execution.
+   * @TODO Implement and check.
+   */
+  def errorT(msg: String) = new Tactic("Error") {
+    def applicable(node : ProofNode) = true
+    def apply(tool : Tool, node : ProofNode) = {println(msg + "\nat " + node.sequent); throw new TacticException(msg, node)}
+  }
+
+  /**
+   * Assertion Tactic, which has no effect except to sanity-check the given condition like an assert would.
+   */
+  def assertT(cond : Sequent=>Boolean, msg:String = ""): Tactic = ifT(node => !cond(node.sequent), errorT("Tactic Assertion failed: " + msg))
+
+  /**
+   * Assertion Tactic, which checks that the given formula is present at the given position in the sequent that this tactic is applied to.
+   */
+  def assertT(formulaExpectedAtPosition: Formula, pos: Position, msg:String): Tactic = assertT(s=>s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString + "at position " + pos + " " + msg)
+  
+  def assertT(formulaExpectedAtPosition: Formula, pos: Position): Tactic = assertT(formulaExpectedAtPosition, pos, "")
+
+
+  /**
+   * Assertion PositionTactic, which has no effect except to sanity-check the given condition like an assert would.
+   */
+  def assertPT(cond : (Sequent,Position)=>Boolean, msg:String = ""): PositionTactic = new PositionTactic("Assert") {
+    def applies(s: Sequent, p: Position) = true
+
+    def apply(pos: Position): Tactic = ifT(node => !cond(node.sequent, pos), errorT("Tactic Assertion failed: " + msg + " at " + pos))
+  }
+  
+  /**
+   * Assertion PositionTactic, which checks that the given formula is present at the position in the sequent where this tactic is applied to.
+   */
+  def assertPT(formulaExpectedAtPosition: Formula, msg:String): PositionTactic = assertPT((s,pos)=>s(pos)==formulaExpectedAtPosition, "Expected: " + formulaExpectedAtPosition.prettyString + " " + msg)
+
+  def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT(formulaExpectedAtPosition, "")
+
+  /**
+   * Assertion PositionTactic, which checks that the sequent has the specified number of antecedent and succedent formulas, respectively.
+   */
+  def assertT(antecedents: Int, succedents: Int): Tactic = assertT(s=>s.ante.length==antecedents && s.succ.length==succedents, "Expected: " + antecedents + " antecedent and " + succedents + " succedent formulas")
+
 
   def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     tFrom.limit.propagate(tFrom)
@@ -296,7 +360,7 @@ object Tactics {
 
   def onSuccessExact(tNext : Tactic*)(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     if (status == Success) {
-      if(tNext.length == result.length) {
+      if (tNext.length == result.length) {
         for ((t, n) <- tNext zip result) t.dispatch(tFrom, n)
       }
     }
@@ -520,11 +584,14 @@ object Tactics {
 
     def apply(p: Position): Tactic
 
+    /**
+     * Sequential composition of PositionTactics applied at the same position.
+     */
     def &(pt: PositionTactic) = new PositionTactic("Seq(" + this.name + ", " + pt.name) {
       override def applies(s: Sequent, p: Position): Boolean = this.applies(s, p)
 
-      // this crucially relies on stable positions
-      override def apply(p: Position): Tactic = this.apply(p) & pt.apply(p)
+      //@TODO Unfortunately, this crucially relies on stable positions
+      override def apply(p: Position): Tactic = PositionTactic.this.apply(p) & pt.apply(p)
     }
   }
 

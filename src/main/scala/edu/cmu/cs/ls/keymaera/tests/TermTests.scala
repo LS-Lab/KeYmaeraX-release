@@ -1,5 +1,13 @@
 package edu.cmu.cs.ls.keymaera.tests
 
+// favoring immutable Seqs
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
@@ -34,7 +42,7 @@ object TermTests {
     val b = Assign(x, Number(1))
     val p = GreaterThan(Real, x, Number(0))
     val substPairs = Seq(new SubstitutionPair(PredicateConstant("p"), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
-    val subst = new Substitution(substPairs)
+    val subst = Substitution(substPairs)
     Axiom.axioms.get("[++] choice") match {
       case Some(f) => (subst, Map((getTautology2, f)))
       case _ => throw new IllegalArgumentException("blub")
@@ -296,8 +304,8 @@ object TermTests {
           case ProgramEquals(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"programEquals\"" + ", \"children\": [ "
           case ProgramNotEquals(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"programNotEquals\"" + ", \"children\": [ "
           case LessThan(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"lt\"" + ", \"children\": [ "
-          case LessEquals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"leq\"" + ", \"children\": [ "
-          case GreaterEquals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"geq\"" + ", \"children\": [ "
+          case LessEqual(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"leq\"" + ", \"children\": [ "
+          case GreaterEqual(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"geq\"" + ", \"children\": [ "
           case GreaterThan(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"gt\"" + ", \"children\": [ "
           case Not(a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"not\"" + ", \"children\": [ "
           case And(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"and\"" + ", \"children\": [ "
@@ -347,8 +355,8 @@ object TermTests {
           case ProgramEquals(a, b) => "]}"
           case ProgramNotEquals(a, b) => "]}"
           case LessThan(d, a, b) => "]}"
-          case LessEquals(d, a, b) => "]}"
-          case GreaterEquals(d, a, b) => "]}"
+          case LessEqual(d, a, b) => "]}"
+          case GreaterEqual(d, a, b) => "]}"
           case GreaterThan(d, a, b) => "]}"
           case Not(a) => "]}"
           case And(a, b) => "]}"

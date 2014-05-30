@@ -1,6 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser._
 import scala.util.Random
+import scala.collection.immutable._
 
 /**
  * Random formula generator
@@ -39,8 +40,8 @@ class RandomFormula(val rand : Random = new Random()) {
         case it if 55 until 60 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
         case it if 60 until 65 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
         case it if 65 until 70 contains it => NotEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 70 until 80 contains it => GreaterEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 80 until 90 contains it => LessEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 70 until 80 contains it => GreaterEqual(Real, nextT(vars, n-1), nextT(vars, n-1))
+        case it if 80 until 90 contains it => LessEqual(Real, nextT(vars, n-1), nextT(vars, n-1))
         case it if 90 until 100 contains it => GreaterThan(Real, nextT(vars, n-1), nextT(vars, n-1))
         case it if 100 until 110 contains it => LessThan(Real, nextT(vars, n-1), nextT(vars, n-1))
 		//@TODO Add modality cases

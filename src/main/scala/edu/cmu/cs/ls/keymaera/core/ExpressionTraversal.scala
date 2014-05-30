@@ -220,8 +220,8 @@ object ExpressionTraversal {
         case ProgramEquals(a, b) => matchTwo(p, ProgramEquals.apply, f, a, b)
         case ProgramNotEquals(a, b) => matchTwo(p, ProgramNotEquals.apply, f, a, b)
         case LessThan(d, a, b) => matchTwo(p, LessThan.apply(d, _: Term, _: Term), f, a, b)
-        case LessEquals(d, a, b) => matchTwo(p, LessEquals.apply(d, _: Term, _: Term), f, a, b)
-        case GreaterEquals(d, a, b) => matchTwo(p, GreaterEquals.apply(d, _: Term, _: Term), f, a, b)
+        case LessEqual(d, a, b) => matchTwo(p, LessEqual.apply(d, _: Term, _: Term), f, a, b)
+        case GreaterEqual(d, a, b) => matchTwo(p, GreaterEqual.apply(d, _: Term, _: Term), f, a, b)
         case GreaterThan(d, a, b) => matchTwo(p, GreaterThan.apply(d, _: Term, _: Term), f, a, b)
         case Not(a) => matchOne(p, Not.apply, f, a)
         case And(a, b) => matchTwo(p, And.apply, f, a, b)
@@ -251,6 +251,7 @@ object ExpressionTraversal {
         case x: DiamondModality => matchOne(p, DiamondModality(_: Program), f, x.child.asInstanceOf[Program])
 
         // Programs
+        case ProgramConstant(_, _) => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
         case Test(a) => matchOne(p, Test.apply, f, a)

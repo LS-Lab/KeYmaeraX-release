@@ -39,15 +39,17 @@ object KeYmaeraPrettyPrinter {
     
     //quantifiers
     case Forall(variables, child) => {
+      assert(!variables.isEmpty, "no empty universal quantifiers for " + child);
       FORALL + " " +
-     (if(!variables.isEmpty) {variables.map(prettyPrinter(_)).reduce(_ + "," + _)} else{""}) +
+      variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
       parensIfNeeded(child, expressionToPrint)
     }
     
     case Exists(variables, child) => {
+      assert(!variables.isEmpty, "no empty existential quantifiers for " + child);
       EXISTS + " " +
-      variables.map(prettyPrinter(_)).reduce(_ + "," + _) +
+      variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
       parensIfNeeded(child, expressionToPrint)
     }
@@ -150,8 +152,8 @@ object KeYmaeraPrettyPrinter {
     //BinaryRelation
     //TODO is this OK?
     case Equals(s,l,r) => prettyPrinter(l) + EQ + prettyPrinter(r) 
-    case GreaterEquals(s,l,r) => prettyPrinter(l) + GEQ + prettyPrinter(r)
-    case LessEquals(s,l,r) => prettyPrinter(l) + LEQ + prettyPrinter(r)
+    case GreaterEqual(s,l,r) => prettyPrinter(l) + GEQ + prettyPrinter(r)
+    case LessEqual(s,l,r) => prettyPrinter(l) + LEQ + prettyPrinter(r)
     case LessThan(s,l,r) => prettyPrinter(l) + LT + prettyPrinter(r)
     case GreaterThan(s,l,r) => prettyPrinter(l) + GT + prettyPrinter(r)
     case NotEquals(s,l,r) => prettyPrinter(l) + NEQ + prettyPrinter(r)
@@ -188,7 +190,7 @@ object KeYmaeraPrettyPrinter {
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
     case NFContEvolve(vars,x,theta,f) => EXISTS + 
-      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).reduce(_ + "," + _) +
+      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
       groupIfNotAtomic(theta, prettyPrinter(theta)) +
       groupIfNotAtomic(f, prettyPrinter(f))
     
@@ -290,8 +292,8 @@ object KeYmaeraPrettyPrinter {
       Equals.getClass().getCanonicalName() ::
       NotEquals.getClass().getCanonicalName() ::
       LessThan.getClass().getCanonicalName()    ::
-      LessEquals.getClass().getCanonicalName()    ::
-      GreaterEquals.getClass().getCanonicalName()    ::
+      LessEqual.getClass().getCanonicalName()    ::
+      GreaterEqual.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
       Derivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
@@ -378,8 +380,8 @@ object KeYmaeraPrettyPrinter {
     
     //BinaryRelation
     case Equals(s,l,r) => false
-    case GreaterEquals(s,l,r) => false
-    case LessEquals(s,l,r) => false
+    case GreaterEqual(s,l,r) => false
+    case LessEqual(s,l,r) => false
     case LessThan(s,l,r) => false
     case GreaterThan(s,l,r) => false
     case NotEquals(s,l,r) => false
