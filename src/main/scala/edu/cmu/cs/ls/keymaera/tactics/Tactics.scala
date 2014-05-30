@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaera.core.Tool
 import Config._
 import scala.Unit
 import scala.language.implicitConversions
+import scala.collection.mutable.HashMap
 
 /**
  * @author jdq
@@ -195,26 +196,40 @@ object Tactics {
     /**
      * The root tactic is passed on via dispatches.
      */
-    var root : Tactic = null
+    var root : Option[Tactic] = None
+    
+    sealed trait TacticStatus
+    case class Running() extends TacticStatus
+    
+    /**
+     * This is defined for the root only; in other words, the following should be 
+     * an object invariant (that not being root implies runningTactics is empty):
+     * (this != root && runningTactics.isEmpty) || (this==root)
+     * 
+     */
+    private var runningTactics : HashMap[Tactic, TacticStatus] = new HashMap[Tactic,TacticStatus]()
 
+    //It should be the case that runningTactics.isEmpty IFF the scheduler is idle.
+     
+    /**
+     * @return true if this tactic is complete.
+     */
+    val isComplete = root match {
+      case None => this.runningTactics.contains(this)
+      case Some(x) => !x.runningTactics.contains(this)
+    }
+    
     def unregister(t : Tactic) {
-      if(root != null) {
-        root.unregister(t)
-      }
-      else {
-        System.err.println("I am the root -- todo")
-        //TODO here we modify some data structure.
+      root match {
+        case None => runningTactics.remove(t)
+        case Some(x) => x.unregister(t)
       }
     }
     
-    //@TODO -- registration.
     def registerRunningTactic(t : Tactic) : Unit = {
-      if(root != null) {
-        root.registerRunningTactic(t)
-      }
-      else {
-        System.err.println("I am the root -- todo")
-        //TODO here we modify some data structure.
+      root match {
+        case None => runningTactics.put(t, new Running())
+        case Some(x) => x.registerRunningTactic(t)
       }
     }
     

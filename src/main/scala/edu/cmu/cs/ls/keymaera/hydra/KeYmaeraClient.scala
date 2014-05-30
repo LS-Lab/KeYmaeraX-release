@@ -109,8 +109,12 @@ object KeYmaeraClientPrinter {
             "else" -> JsString("else"))
       }
       case e : Unary => e match {
-        case e : Apply => ???
-        case e : ApplyPredicate => ???
+        case e : Apply => JsObject(
+            "function" -> exprToJson(sessionName, uid+"0", e.function),
+            "child" -> exprToJson(sessionName, uid+"1", e.child))
+        case e : ApplyPredicate => JsObject(
+            "function" -> exprToJson(sessionName, uid+"0", e.function),
+            "child" -> exprToJson(sessionName, uid+"1", e.child))
 
         case e : ContEvolve => JsObject(
             "uid" -> JsString(uid),

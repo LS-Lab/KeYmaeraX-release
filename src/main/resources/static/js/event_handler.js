@@ -27,9 +27,10 @@ function HydraEventHandler(evt, client) {
   else if(evt.eventType === "CreateRootNode") {
     console.log("Root node for this problem: ");
     console.log(evt);
-    $("#provercontents").html(
-        SequentGUI.staticView(client, evt.sequent)
-    );
+    UI.insertKeyTreeView('prover', evt.sequent, client);
+    //$("#provercontents").html(
+        //SequentGUI.staticView(client, evt.sequent)
+    //);
   }
 
   else if(evt.eventType === "AddNode") {

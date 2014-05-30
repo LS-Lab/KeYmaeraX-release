@@ -95,6 +95,10 @@ function Ternary(uid, fst,snd,thd,pre,inf,post) {
   this.post = post;
 }
 
+function Application(uid, fn, child) {
+  this.fn = fn;
+  this.child = child;
+}
 
 // Logic for converting plain old objects into instances
 // This makes pattern matching-style logic cleaner.
@@ -122,13 +126,15 @@ function formulaToInstance(f) {
     return new Ternary(f.uid,
         rec_on(f.fst),rec_on(f.snd),rec_on(f.thd),
         f.pre,f.inf,f.post)
+  else if(f.fn)
+    return new Application(uid,fn,child)
   else
     return null
 }
 
 // Pattern matching for formuals.
 function formulaMatch(formula, atomicF, prefixF, postfixF, groupingF, 
-    modalityF, bindingF, connectiveF, ternaryF) 
+    modalityF, bindingF, connectiveF, ternaryF, applicationF) 
 {
   formula = formulaToInstance(formula);
   if(formula) {
@@ -140,6 +146,7 @@ function formulaMatch(formula, atomicF, prefixF, postfixF, groupingF,
     else if(formula instanceof Binding)   return bindingF(formula);
     else if(formula instanceof Connective) return connectiveF(formula);
     else if(formula instanceof Ternary)    return connectiveF(formula);
+    else if(formula instanceof Application) return applicationF(formula);
     else throw "Not a Formula."
   }
   else {
@@ -268,6 +275,9 @@ var FormulaGUI = {
           return pre + rec(ternary.fst) +
                  inf + rec(ternary.snd) +
                  post + rec(ternary.thd);
+        },
+        function(application) {
+          return rec(application.fn) + "(" + rec(application.child) + ")";
         }
     );
 
@@ -357,24 +367,24 @@ var SequentGUI = {
     $(div).contextPopup({
       title: 'Static Sequent Popup Menu',
       items: [
-        { 
-          label:'Root Simple Tree View Here', 
-          action:function() {
-            var tree = new Tree(sequent, null);
-            var treeView = new SimpleTreeView(tree, client);
-            treeView.redrawIn('prover'); //TODO-nrf idk
-            HydraEventListeners.treeViews.push(treeView);
-          }
-        },
-        {
-          label:'Root KeY-style Tree View Here',
-          action:function() {
-            var tree = new Tree(sequent, null);
-            var treeView = new KeYTreeView(tree, client, document.getElementById('prover'));
-            treeView.redrawIn('prover');
-            HydraEventListeners.treeViews.push(treeView);
-          }
-        },
+//        { 
+//          label:'Root Simple Tree View Here', 
+//          action:function() {
+//            var tree = new Tree(sequent, null);
+//            var treeView = new SimpleTreeView(tree, client);
+//            treeView.redrawIn('prover'); //TODO-nrf idk
+//            HydraEventListeners.treeViews.push(treeView);
+//          }
+//        },
+//        {
+//          label:'Root KeY-style Tree View Here',
+//          action:function() {
+//            var tree = new Tree(sequent, null);
+//            var treeView = new KeYTreeView(tree, client, document.getElementById('prover'));
+//            treeView.redrawIn('prover');
+//            HydraEventListeners.treeViews.push(treeView);
+//          }
+//        },
         {
           label: 'Run default tactic',
           action:function() {
