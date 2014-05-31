@@ -389,7 +389,12 @@ var SequentGUI = {
           label: 'Run default tactic',
           action:function() {
             client.runTactic("default", sequent);
-            //TODO-nrf add some sort of visual indicator.
+          }
+        },
+        {
+          label: 'Run closeT tactic',
+          action:function() {
+            client.runTactic('close', sequent);
           }
         },
       ]

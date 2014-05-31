@@ -8,6 +8,7 @@ import spray.json.JsString
 import edu.cmu.cs.ls.keymaera.core.ProofNode
 import spray.json.JsObject
 import edu.cmu.cs.ls.keymaera.core.NamedSymbol
+import edu.cmu.cs.ls.keymaera.hydra.ErrorResponse
 
 ////////////////////////////////////////////////////////////////////////////////
 // Request types
@@ -121,48 +122,49 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
   
   def getResultingUpdates() : List[Update] = 
     try {
-      if(tacticName.equals("default")) {
-        val sequent = ServerState.getSequent(sessionName, uid)
-        val tactic = TacticLibrary.default
-        val r = new RootNode(sequent)
-        Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-        while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
-          && Tactics.KeYmaeraScheduler.prioList.isEmpty
-          && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
-          && Tactics.MathematicaScheduler.prioList.isEmpty)) 
-        {
-          Thread.sleep(100)
-        }
-        
-        val results = {
-          if(r.children.size == 0) { 
-            Nil 
-          }
-          else {
-            val mapFunction : ProofNode => AddNodeResponse = (x:ProofNode) => {
-              val parentId = JsString(nodeToParentUid(r,uid,x))
-              val newId = nodeToUid(r, uid, x)
-              //TODO we should not be using newId as an id for nodes and sequents...
-              val sequentString = KeYmaeraClientPrinter.getSequent(sessionName, newId, x.sequent)
-              val nodeString = JsObject(
-                  "sequent" -> sequentString,
-                  "id" -> JsString(newId)
-              )
-              new AddNodeResponse(sessionName, parentId, nodeString)
-            }
-            val topLevel = r.children.map(step => step.subgoals).flatten
-            proofNodeMap(topLevel, mapFunction)
-          }
-        }
-        
-        //Add the "tactic finished" result.
-        results ++ List( new TacticFinished(sessionName, tacticName, uid) )
+      val tactic = tacticName match {
+        case "default" => TacticLibrary.default
+        case "close"   => TacticLibrary.closeT
+        case _ => throw new Exception("tactic not supported: " + tacticName)
       }
-      else {
-        new ErrorResponse(sessionName, new Exception("tactic not supported by the runtactic request.")) :: Nil
+      
+      val sequent = ServerState.getSequent(sessionName, uid)
+    
+      val r = new RootNode(sequent)
+      Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
+      while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
+      && Tactics.KeYmaeraScheduler.prioList.isEmpty
+      && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
+      && Tactics.MathematicaScheduler.prioList.isEmpty)) 
+      {
+        Thread.sleep(100)
       }
-  }
-  catch {
-    case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
-  }
+    
+      val results = {
+        if(r.children.size == 0) { 
+          Nil 
+        }
+        else {
+          val mapFunction : ProofNode => AddNodeResponse = (x:ProofNode) => {
+            val parentId = JsString(nodeToParentUid(r,uid,x))
+            val newId = nodeToUid(r, uid, x)
+            //TODO we should not be using newId as an id for nodes and sequents...
+            val sequentString = KeYmaeraClientPrinter.getSequent(sessionName, newId, x.sequent)
+            val nodeString = JsObject(
+              "sequent" -> sequentString,
+              "id" -> JsString(newId)
+            )
+            new AddNodeResponse(sessionName, parentId, nodeString)
+          }
+          val topLevel = r.children.map(step => step.subgoals).flatten
+          proofNodeMap(topLevel, mapFunction)
+        }
+      }
+    
+      //Add the "tactic finished" result.
+      results ++ List( new TacticFinished(sessionName, tacticName, uid) )
+    }
+    catch {
+      case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
+    }
 }
