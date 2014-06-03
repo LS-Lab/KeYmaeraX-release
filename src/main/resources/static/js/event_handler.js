@@ -65,13 +65,18 @@ function HydraEventHandler(evt, client) {
     else if(evt.eventType === "FormulaToInteractiveStringResponse") {}
     else if(evt.eventType === "FormulaFromUid") {}
 
+    else if(evt.eventType === "Info") {
+      console.log("Information: " + evt.info); 
+    }
     //Add error case
     else {
+      console.error("Unhandled event:")
+      console.error(evt)
       throw "HydraEventHandler received an event with unhandled type: " + evt.eventType;
     }
   }
   catch(e) {
-    UI.showError("Exception thrown during event handling", e);
+    UI.showError("Exception thrown during event handling for a known event: ", e);
   }
 }
 

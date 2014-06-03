@@ -2,13 +2,11 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, RootNode}
+import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, RootNode, ProofNode, ProofStep}
 import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticWrapper}
 import spray.json.JsString
-import edu.cmu.cs.ls.keymaera.core.ProofNode
 import spray.json.JsObject
 import edu.cmu.cs.ls.keymaera.core.NamedSymbol
-import edu.cmu.cs.ls.keymaera.hydra.ErrorResponse
 
 ////////////////////////////////////////////////////////////////////////////////
 // Request types
@@ -85,26 +83,73 @@ case class FormulaToInteractiveStringRequest(sessionName : String, uid : String)
     }
 }
 
-case class RunTacticRequest(sessionName : String, tacticName : String, uid : String) extends Request {
+
+case class RunTacticRequest(sessionName : String, tacticName : String, uid : String, input : Option[List[String]]) extends Request {
   private def proofNodeMap[T](l : List[ProofNode], fn : ProofNode => T) : List[T] = {
     //System.err.println(l.size.toString() + l.map(_.toString()).mkString(","))
     val thisLevel      = l.map(fn)
     val nextLevelSteps = l.map(node => node.children).flatten
     val nextLevelNodes = nextLevelSteps.map(step => step.subgoals).flatten
-    l.map(node => require(!nextLevelNodes.contains(node)))
+    l.map(node => require(!nextLevelNodes.contains(node))) //guard against inf recursion
     if(nextLevelNodes.isEmpty) thisLevel //base
     else                       thisLevel ++ proofNodeMap(nextLevelNodes, fn)
   }
   
   /**
-   * @return uid for the subject w.r.t. the root, given that the uid of the root is rootUid.
+   * Runs ProofNodeMap on all nodes in a step.
    */
-  private def nodeToUid(root : ProofNode, rootUid : String, subject : ProofNode) = {
-    if(root.equals(subject)) {
-      rootUid
+  private def proofStepMap[T](step : ProofStep, fn : ProofNode => T) : List[T] = {
+    val firstLevel = step.subgoals
+    proofNodeMap(firstLevel, fn)
+  }
+  
+  //////////////////////////////////////////////////////////////////////////////
+  // This is a bit of a mess. Clearly, we need a less ad hoc solution to the 
+  // numbering and passing around of proof steps, nodes, and sequents. 
+  // Hopefully we should unify all of these.
+  
+  /**
+   * @return uid for the subject w.r.t. the root, given that the uid of the root is rootUid.
+   * 
+   * An uid for a proof node/step (different from uids for sequents and expressions... oy vey) 
+   * is one of:
+   * 	uid + "g" + integer + uid?
+   *  	uid + "sg" + integer + gs + uid?
+   * 
+   */
+  private def nodeToUid(root : ProofNode, rootUid : String, subject : ProofNode) : String = {
+    nodeToUidHelper(root, rootUid, subject) match {
+      case Some(s) => s
+      case None => throw new Exception("could not get uid: " + root.toString() + "<br/>" + rootUid + "<br/>" + subject.toString())
     }
+  }
+    
+  private def nodeToUidHelper(root : ProofNode, rootUid : String, subject : ProofNode) : Option[String] = {
+    if(root.equals(subject)) Some(rootUid)
     else {
-      rootUid + "0" //TODO correct this...
+      val children = root.children zip Range(0,root.children.size-1)
+      val results = children.map(p => {
+        uidFromStep(p._1, rootUid + p._2, subject)
+      })
+      if(results.size > 0) results.head
+      else None
+    }
+  }
+  
+  def uidFromStep(step : ProofStep, stepUid : String, subject : ProofNode) : Option[String] = {
+    val cs = step.goal.children zip Range(0, step.goal.children.size - 1)
+    val goalResults = cs.map(c => {
+      uidFromStep(c._1, stepUid + c._2, subject) match {
+        case Some(id) => Some("g" + id)
+        case None => None
+      }
+    }).filter(x => x.isDefined)
+    if(!goalResults.isEmpty) goalResults.head
+    else {
+      val sgs = step.subgoals zip Range(0, step.subgoals.length - 1)
+      val results = sgs.map(p => nodeToUidHelper(p._1, stepUid + "sg" + p._2 + "gs", subject)).filter(p => p.isDefined)
+      if(results.length != 0) results.head 
+      else None
     }
   }
   
@@ -119,9 +164,16 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
       rootUid //TODO correct this...
     }
   }
+  // End numbering block
+  //////////////////////////////////////////////////////////////////////////////
   
+  
+  /**
+   * @return list of updates that results from the requested tactic.
+   */
   def getResultingUpdates() : List[Update] = 
-    try {
+    try { //Much can go wrong, so the entire request is wrapped in an error handler.
+      //tacticName -> tactic
       val tactic = tacticName match {
         case "default" => TacticLibrary.default
         case "close"   => TacticLibrary.closeT
@@ -140,7 +192,7 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
         Thread.sleep(100)
       }
     
-      val results = {
+      val newProofNodes = {
         if(r.children.size == 0) { 
           Nil 
         }
@@ -156,13 +208,14 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
             )
             new AddNodeResponse(sessionName, parentId, nodeString)
           }
+          //Note: topLevel is necessary because we don't want the actual root added to the list
+          //of added nodes.
           val topLevel = r.children.map(step => step.subgoals).flatten
-          proofNodeMap(topLevel, mapFunction)
+          proofNodeMap(List(r), mapFunction)
         }
       }
-    
-      //Add the "tactic finished" result.
-      results ++ List( new TacticFinished(sessionName, tacticName, uid) )
+      
+      newProofNodes :+ new TacticFinished(sessionName, tacticName, uid)
     }
     catch {
       case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil

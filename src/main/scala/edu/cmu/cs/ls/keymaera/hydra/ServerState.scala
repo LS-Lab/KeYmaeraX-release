@@ -14,6 +14,7 @@ object ServerState {
   
   type SessionNameCrossUid = (String,String)
   
+  //Note: this implementation of the keys is exposed.
   var sequents = new java.util.HashMap[SessionNameCrossUid, Sequent]()
   var expressions = new java.util.HashMap[SessionNameCrossUid, Expr]()
   

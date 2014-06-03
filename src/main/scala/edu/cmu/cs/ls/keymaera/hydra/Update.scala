@@ -76,3 +76,18 @@ case class TacticFinished(sessionName : String, tacticName : String, uid : Strin
       "uid" -> JsString(uid)
   )
 }
+
+case class Info(sessionName : String, info : String) extends Update {
+  val json = JsObject(
+    "eventType" -> JsString("Info"),
+    "info" -> JsString(info)
+  )
+}
+
+case class AddProofStep(sessionName : String, step : JsObject, stepId : String) extends Update {
+  val json = JsObject(
+     "sessionName" -> JsString(sessionName),
+     "step" -> step,
+     "stepId" -> JsString(stepId)
+  )
+}

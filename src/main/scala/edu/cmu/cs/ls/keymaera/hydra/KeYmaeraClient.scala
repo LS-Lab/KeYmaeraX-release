@@ -36,8 +36,6 @@ object KeYmaeraClientPrinter {
     JsArray(result)
   }
   
- 
-  
   def exprToJson(sessionName : String, uid : String, e : Expr) : JsValue = {
     KeYmaeraClient.sendExpression(sessionName, uid, e);
     import edu.cmu.cs.ls.keymaera.parser.HTMLSymbols._;
@@ -216,12 +214,55 @@ object KeYmaeraClient {
 //  val server = "localhost"
 //  val port = 8080 
   
+
+  /**
+   * @return the sequent containing the expression or sequent with id ``uid"
+   */
+  def getContainingSequent(sessionName : String, uid : String) = {
+    if(this.hasSequent(sessionName, uid)) this.getSequent(sessionName, uid)
+    else if(this.hasExpression(sessionName, uid)) {
+      val expr = this.getExpression(sessionName, uid)
+      val sequentUid = {
+        if(uid.contains("a")) {
+	      val parts = uid.split("a")
+          if(parts.size > 2) throw new Exception("bad uid")
+	      parts.head
+	    }
+	    else if(uid.contains("p")) {
+	      val parts = uid.split("p")
+	      if(parts.size > 2) throw new Exception("bad uid")
+	      parts.head        
+	    }
+	    else if(uid.contains("s")) {
+	      val parts = uid.split("s")
+	      if(parts.size > 2) throw new Exception("bad uid")
+	      parts.head
+	    }
+	    else {
+	      throw new Exception("bad uid")
+	    }
+      }
+      this.getSequent(sessionName, sequentUid)      
+    }
+    else {
+      throw new Exception("Formula not found.")
+    }
+  }
+  
   def serviceRequest(sessionName : String, request : Request) = {
     val updates = request.getResultingUpdates()
     for(update <- updates) {
       ServerState.addUpdate(sessionName, update.json)
     }
     updates
+  }
+  
+  def hasSequent(sessionName : String, uid : String) = {
+    ServerState.sequents.containsKey((sessionName, uid))
+  }
+  
+  def getSequent(sessionName : String, uid : String) = {
+    ServerState.getSequent(sessionName, uid)
   }
   
   def hasExpression(sessionName:String, uid:String) = {

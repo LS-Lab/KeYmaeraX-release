@@ -92,13 +92,17 @@ trait RestApi extends HttpService {
     get {
       parameter("sessionName", "tacticName", "uid") {
         (sessionName, tacticName, uid) => {
-          val request = new RunTacticRequest(sessionName, tacticName, uid)
+          val request = RunTacticRequest(sessionName, tacticName, uid, None)
           val result = KeYmaeraClient.serviceRequest(sessionName, request)
           complete("[" + result.map(_.json).mkString(",") + "]")
         }
       }
     }
   }
+
+  
+  //TODO-nrf next tactic should be a runTactic that takes some user input. Pass this
+  //input in as a list of strings where the runTactic request passes None.
 
 //  val nodeClosed = path("nodeClosed") undefCall
 //  val nodePruned = path("nodePruned") undefCall
