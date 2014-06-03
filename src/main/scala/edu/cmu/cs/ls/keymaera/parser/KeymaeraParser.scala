@@ -395,6 +395,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       gtP    ::
       ltP    ::  
       formulaDerivativeP ::
+      applyPredicateP ::
       predicateP ::
       trueP ::
       falseP ::
@@ -468,7 +469,19 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
         case DIA_OPEN ~ p ~ DIA_CLOSE ~ f => DiamondModality(p,f)
       }
     }
-    
+
+    //Predicate application
+
+    lazy val applyPredicateP:SubformulaParser = {
+      lazy val pattern = ident ~ ("(" ~> rep1sep(termParser, ",") <~ ")")
+
+      log(pattern)("Predicate Application") ^^ {
+        case name ~ args =>
+          ApplyPredicate(functionFromName(name, functions),
+            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
+      }
+    }
+
     //Predicates
     lazy val predicateP:SubformulaParser = {
       lazy val pattern = {
@@ -918,6 +931,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       case class VProgram(val variable:ProgramConstant) extends VType
       case class VFormula(val variable:PredicateConstant) extends VType
       case class VTerm(val variable:Variable) extends VType
+      case class VFunction(val fn:Function) extends VType
     /**
      * Type of the Axiom and Lemma parsers
      */
@@ -931,8 +945,8 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       //variable definitions. Then, we parse the axioms and lemmas.
       
       val inReader = new PackratReader(new CharSequenceReader(in))
-      val (programs, formulas, terms, nextIn) = parse(firstPassParser, inReader) match {
-        case Success(result, next) => (result._1, result._2, result._3, next)
+      val (programs, formulas, terms, funs, nextIn) = parse(firstPassParser, inReader) match {
+        case Success(result, next) => (result._1, result._2, result._3, result._4, next)
         case Failure(msg, next)    => 
           throw new Exception("Failed to parse variables section:"  + msg)
         case Error(msg,next)       =>
@@ -943,7 +957,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
         "(line: " + next.pos.line + ", column:" + next.pos.column + ")"
       }
       
-      val alParser = makeAxiomLemmaParser(programs, formulas, terms) //axiomlemmaParser
+      val alParser = makeAxiomLemmaParser(programs, formulas, terms, funs) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
         case Failure(msg, next)    => 
@@ -958,7 +972,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
      * This is the parser for the first pass
      */
     lazy val firstPassParser 
-    : PackratParser[(List[ProgramConstant], List[PredicateConstant], List[Variable])] = 
+    : PackratParser[(List[ProgramConstant], List[PredicateConstant], List[Variable], List[Function])] =
     {
       lazy val pattern = variablesP
       log(pattern)("Parsing variable declarations in proof file.") ^^ {
@@ -972,7 +986,10 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
           val terms = vars collect {
             case VTerm(t) => t
           }
-          (programs, formulas, terms)
+          val funs = vars collect {
+            case VFunction(f) => f
+          }
+          (programs, formulas, terms, funs)
         }
       }
     }
@@ -986,7 +1003,17 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
         case "P" => VProgram(ProgramConstant(n, idx))
         case "F" => VFormula(PredicateConstant(n, idx))
         case "T" => VTerm(Variable(n, idx, Real))
-        case _ => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula)")
+        case _ => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula) or T (term)")
+      }
+    }
+
+    private def makeFunction(ty : String, name : String, argT: String) : VType = {
+      require(argT == "T", "can only handle unary functions")
+      val (n, idx) = nameAndIndex(name)
+      ty match {
+        case "F" => VFunction(Function(n, idx, Real, Bool))
+        case "T" => VFunction(Function(n, idx, Real, Real))
+        case _ => throw new Exception("Type " + ty + " is unknown! Expected F (formula) or T (term)")
       }
     }
 
@@ -994,10 +1021,13 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
      * Parses the Variables section of the file
      */
     lazy val variablesP = {
-      lazy val variablesP = ident ~ ident ^^ {
-        case ty ~ name => makeVariable(ty, name)
+      lazy val variablesP = ident ~ ident ~ ("(" ~> rep1sep(ident, ",") <~ ")").? ^^ {
+        case ty ~ name ~ tail => tail match {
+          case Some(List(argT)) => makeFunction(ty.toString, name.toString, argT)
+          case None => makeVariable(ty.toString, name.toString)
+        }
       }
-      lazy val pattern = 
+      lazy val pattern =
         VARIABLES_SECT ~> START_SECT ~> ((repsep(variablesP, """\.""".r) <~ ".".?) <~ END_SECT)
       log(pattern)("Variable declarations") ^^ {
         case  variables => variables
@@ -1010,14 +1040,15 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     def makeAxiomLemmaParser(
           programs : List[ProgramConstant], 
           formulas : List[PredicateConstant],
-          terms : List[Variable]) : ALPType  = 
+          terms : List[Variable],
+          funs: List[Function]) : ALPType  =
     {
       //Names of lemmas and axioms may contain pretty much everything except "
       val alName = notDblQuote
       
       //Create the Formula and Evidence parsers.
       val formulaParser = new FormulaParser(terms,
-          List[Function](),
+          funs,
           formulas,
           programs)
       lazy val formulaP = formulaParser.parser
