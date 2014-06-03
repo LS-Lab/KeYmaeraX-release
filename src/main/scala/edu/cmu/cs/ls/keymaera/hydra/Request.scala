@@ -104,9 +104,9 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
   }
   
   //////////////////////////////////////////////////////////////////////////////
-  // This is a bit of a mess. Clearly, we need a less ad hoc solution to the 
-  // numbering and passing around of proof steps, nodes, and sequents. 
-  // Hopefully we should unify all of these.
+  // If we do not need to cache/recover these proof steps/nodes, then this should
+  // all be replaced with logic that loops through the proof steps and assigns
+  // parentIds based on structure alone.
   
   /**
    * @return uid for the subject w.r.t. the root, given that the uid of the root is rootUid.
@@ -117,11 +117,14 @@ case class RunTacticRequest(sessionName : String, tacticName : String, uid : Str
    *  	uid + "sg" + integer + gs + uid?
    * 
    */
+  var total = 0
   private def nodeToUid(root : ProofNode, rootUid : String, subject : ProofNode) : String = {
-    nodeToUidHelper(root, rootUid, subject) match {
-      case Some(s) => s
-      case None => throw new Exception("could not get uid: " + root.toString() + "<br/>" + rootUid + "<br/>" + subject.toString())
-    }
+    total += 1
+    rootUid + total.toString()
+//    nodeToUidHelper(root, rootUid, subject) match {
+//      case Some(s) => s
+//      case None => throw new Exception("could not get uid: " + root.toString() + "<br/>" + rootUid + "<br/>" + subject.toString())
+//    }
   }
     
   private def nodeToUidHelper(root : ProofNode, rootUid : String, subject : ProofNode) : Option[String] = {
