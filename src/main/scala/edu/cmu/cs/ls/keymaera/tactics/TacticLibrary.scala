@@ -1441,8 +1441,8 @@ object TacticLibrary {
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          // case Assign(_, _) => Some(assignment(p))
-          case Assign(_, _) => Some(assignT(p))
+          case Assign(_, _) => Some(assignment(p))
+          // case Assign(_, _) => Some(assignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None
