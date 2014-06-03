@@ -19,7 +19,8 @@ import scala.collection.immutable.HashMap
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.parser._
-    
+import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
+
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
@@ -1543,6 +1544,23 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 
   }
 }
+
+/*********************************************************************************
+ * Rules for derivatives that are not expressible as axioms
+ *********************************************************************************
+ */
+class DeriveConstant(t: Term) extends Rule("Derive Constant") {
+  val Number(Real, n) = t
+  override def apply(s: Sequent): List[Sequent] =
+    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, Derivative(Real, n), Number(0))), IndexedSeq())))
+}
+
+class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
+  val Exp(Real, base, Number(Real, n)) = t
+  override def apply(s: Sequent): List[Sequent] =
+    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, Derivative(Real, t), Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))))), IndexedSeq())))
+}
+
 
 /*********************************************************************************
  * Block Quantifier Decomposition
