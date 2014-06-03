@@ -494,7 +494,7 @@ object ContractionLeft {
 
 object Axiom {
   // immutable list of axioms
-  val axioms: scala.collection.Map[String, Formula] = loadAxioms
+  val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
@@ -544,6 +544,15 @@ object Axiom {
     // m = m + pair8
     
     m
+  }
+
+  private def loadAxiomFile: Map[String, Formula] = {
+    val parser = new KeYmaeraParser(false)
+    val alp = parser.ProofFileParser
+    val src = io.Source.fromFile("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp").mkString
+    val res = alp.runParser(src)
+    (for(k <- res)
+      yield (k.name -> k.formula)).toMap
   }
 
   final def apply(id: String): Rule = new Rule("Axiom " + id) {
