@@ -14,31 +14,25 @@ at the link following:
 
 http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-Instructions are available at that website as well. Briefly, type "sbt test" to run the regression test case suite. Type "sbt run" to run the KeYmaera prover. If you run into problems during the compilation process, use "sbt clean" for a fresh start to remove stale files.
+Instructions are available at that website as well. Briefly, type
+
+    sbt test
+
+to run the regression test case suite. To run the KeYmaera parser use:
+
+    sbt run
+
+If you run into problems during the compilation process, use "sbt clean" for a fresh start to remove stale files.
 
 To make sure sbt does not throw java.lang.OutOfMemoryError: PermGen space
 
     edit ~/.sbtconfig
-    export SBT_OPTS=-XX:MaxPermSize=256M 
+    SBT_OPTS="-XX:MaxPermSize=256M"
 
 The Wiki contains extended build instructions and solutions to toher
 common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
-
-Proof Tree Viewer
-=================
-
-To view proof trees converted to JSON by TermTests.print you can use
-jsgui/proofviewer.html
-
-Simply deploy proofviewer.html to any webserver and put the JSON
-descirption into resources/proof.json in the same directory on the
-webserver. Please note that JSON sources cannot be read from file-urls
-and thus have to be accessed through a webserver. There are no
-specific requirements for the webserver since it is only servering
-html and the JavaScript part is interpreted in the browser on the
-client anyway.
 
 Source Layout
 =============
@@ -72,19 +66,40 @@ Test Cases
 ==========
 
 The full test suite can be run by
-  sbt test
+
+    sbt test
+
 Selectively running individual test cases within sbt:
 sbt> test-only TacticTests
 Or, on a more fine-grained level within a class use
-   object MyTest extends Tag("MyTest")
-   object MyTest extends Tag("MyTest")
-   it should "do something useful" taggedAs(MyTest) in {....}
-   it should "do anything useful" taggedAs(MyTest) in {....}
-   it should "do more good" taggedAs(MoreTest) in {....}
-sbt> test-only -- -n "MyTest MoreTest"
+vobject MyTest extends Tag("MyTest")
 
-For inlining scala output alongside the test suite information, first do:
-sbt>  set logBuffered in Test := false
+    object MyTest extends Tag("MyTest")
+    it should "do something useful" taggedAs(MyTest) in {....}
+    it should "do anything useful" taggedAs(MyTest) in {....}
+    it should "do more good" taggedAs(MoreTest) in {....}
+
+Then in sbt interactive moe run   
+
+    sbt>  test-only -- -n "MyTest MoreTest"
+
+To inline scala console output alongside the test suite information, first do:
+
+    sbt>  set logBuffered in Test := false
+
+Proof Tree Viewer
+=================
+
+To view proof trees converted to JSON by TermTests.print you can use
+jsgui/proofviewer.html
+
+Simply deploy proofviewer.html to any webserver and put the JSON
+descirption into resources/proof.json in the same directory on the
+webserver. Please note that JSON sources cannot be read from file-urls
+and thus have to be accessed through a webserver. There are no
+specific requirements for the webserver since it is only servering
+html and the JavaScript part is interpreted in the browser on the
+client anyway.
 
 Specification
 =============
