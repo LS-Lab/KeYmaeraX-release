@@ -1,4 +1,4 @@
- //THIS COMMENT IS STALE
+//THIS COMMENT IS STALE
 /**
  * KeYmaera Javascript Frontend Library
  * Nathan Fulton
@@ -259,7 +259,6 @@ var FormulaGUI = {
         },
         function(binding) {
           var result = binding.bind_symbol;
-          alert(JSON.stringify(binding.variables));
           for(var i=0; i < binding.variables.length; i++) {
             result += rec(binding.variables[i]);
             if(i < binding.variables.length-1) result += ",";
@@ -280,6 +279,39 @@ var FormulaGUI = {
           return rec(application.fn) + "(" + rec(application.child) + ")";
         }
     );
+
+    /// Setup the context popup
+    var items = []
+//    var items = TacticLibrary.getPositionTactics().map(function(t) {
+//      return {
+//        label: "Run " + t.name,
+//        action: function() {
+//          if(!t.isPositionTactic) {
+//            alert("Error: Cannot run a non-position tactic on " + 
+//              " a formula. This shouldn't even be an option -- " +
+//              "there must be a bug in the tactic");
+//          }
+//          else {
+//            var inputs = null
+//            if(TacticLibrary.isInputTactic(t)) {
+//              inputs = TacticLibrary.getInputs();
+//              client.runPositionTactic(t.name, sequent, inputs);
+//            }
+//            else {
+//              client.runPositionTactic(t.name, sequent)
+//            }
+//
+//            var new_span = FormulaGUI.interactiveView(client, formula);
+//            document.getElementById('i'+formula.uid).outerHTML = new_span.outerHTML; //???
+//            FormulaGUI.addInteractions();
+//          }
+//        }
+//      }
+//    });
+    $(span).contextPopup({
+      title: 'Interactive Formula Popup Menu',
+      items: items
+    });
 
     //Recursive calls have recursive defined defined.
     //There's nothing wrong with adding the interactions at each step,
@@ -364,42 +396,28 @@ var SequentGUI = {
       }
     }
 
+    var sequentTactics = TacticLibrary.getSequentTactics(); //non-pos tactics
+    if(sequentTactics == null || sequentTactics === null)
+      throw "getSequentTactics returned a null result";
+    var items = sequentTactics.map(function(x) {
+      return {
+        label: "Run " + x.name,
+        action: function() {
+          var inputs = null;
+          if(x instanceof InputTactic) {
+            inputs = TacticLibrary.getInputs(x);
+            client.runTactic(x.name, sequent, inputs);
+          }
+          else {
+            client.runTactic(x.name, sequent, sequent.uid);
+          }
+        }
+      }
+    })
     $(div).contextPopup({
       title: 'Static Sequent Popup Menu',
-      items: [
-//        { 
-//          label:'Root Simple Tree View Here', 
-//          action:function() {
-//            var tree = new Tree(sequent, null);
-//            var treeView = new SimpleTreeView(tree, client);
-//            treeView.redrawIn('prover'); //TODO-nrf idk
-//            HydraEventListeners.treeViews.push(treeView);
-//          }
-//        },
-//        {
-//          label:'Root KeY-style Tree View Here',
-//          action:function() {
-//            var tree = new Tree(sequent, null);
-//            var treeView = new KeYTreeView(tree, client, document.getElementById('prover'));
-//            treeView.redrawIn('prover');
-//            HydraEventListeners.treeViews.push(treeView);
-//          }
-//        },
-        {
-          label: 'Run default tactic',
-          action:function() {
-            client.runTactic("default", sequent);
-          }
-        },
-        {
-          label: 'Run closeT tactic',
-          action:function() {
-            client.runTactic('close', sequent);
-          }
-        },
-      ]
-    });
-
+      items: items
+    })
 
     return div;
   },
@@ -428,13 +446,17 @@ var SequentGUI = {
 // Nodes
 ////////////////////////////////////////////////////////////////////////////////
 
-function Node(uid, parentUid, sequent) {
+function Node(uid, sequent, children) {
   this.uid = uid
-  this.parentUid = parentUid
   this.sequent = sequent
+  this.children = children
 }
 
-
+function Step(uid, rule, children) {
+  this.uid = uid;
+  this.rule = rule;
+  this.children = children;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // These GUI events work for either sequents or formulas.

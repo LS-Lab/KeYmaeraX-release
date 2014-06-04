@@ -17,5 +17,11 @@ var UI = {
     var treeView = new KeYTreeView(tree, client, element);
     treeView.redrawIn(element);
     HydraEventListeners.treeViews.push(treeView);
+  },
+  
+  getInput : function(message, value) {
+    if(value === null) value = ""
+    return window.prompt(message, value);
   }
+
 }

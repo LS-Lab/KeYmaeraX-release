@@ -19,7 +19,18 @@ function HydraClient(serverarg, portarg) {
   if(typeof(portarg) === 'undefined') portarg = hydraServerInfo.port;
   
   //End "Constructor" logic.
-
+  
+  //Assertions
+  this.requireAll = function(array) {
+    if(!(array instanceof Array))
+      throw "Argument to requireAll should be an array."
+    for(var i = 0 ; i < array.length; i++) {
+      if(array[i] == null || array[i] === null) {
+        throw "All arguments are required but argument " + i + " was null.";
+      }
+    }
+  }
+  
   this.setServerStatus = function(up) {
     document.getElementById("status").innerHTML = "hydra://" + hydraServerInfo.server + ":" + hydraServerInfo.port
     if(up) {
@@ -141,13 +152,14 @@ function HydraClient(serverarg, portarg) {
     }
   }
 
-  this.runTactic = function(tacticName, sequent) {
+  this.runTactic = function(tacticName, sequent, parentId) {
+    this.requireAll([tacticName, sequent, parentId]);
     if(sequent.uid) {
       $.ajax({
         type: "GET",
         dataType: "json",
         async: true,
-        url: "http://" + this.server + ":" + this.port + "/runTactic?sessionName="+ this.sessionName + "&tacticName=" + tacticName + "&uid=" + sequent.uid,
+        url: "http://" + this.server + ":" + this.port + "/runTactic?sessionName="+ this.sessionName + "&tacticName=" + tacticName + "&uid=" + sequent.uid + "&parentId=" + parentId,
         error: this.ajaxErrorHandler
       });
     }

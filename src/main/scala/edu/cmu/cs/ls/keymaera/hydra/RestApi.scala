@@ -90,9 +90,9 @@ trait RestApi extends HttpService {
   
   val runTactic = path("runTactic") {
     get {
-      parameter("sessionName", "tacticName", "uid") {
-        (sessionName, tacticName, uid) => {
-          val request = RunTacticRequest(sessionName, tacticName, uid, None)
+      parameter("sessionName", "tacticName", "uid", "parentId") {
+        (sessionName, tacticName, uid, parentId) => {
+          val request = RunTacticRequest(sessionName, tacticName, uid, None, parentId)
           val result = KeYmaeraClient.serviceRequest(sessionName, request)
           complete("[" + result.map(_.json).mkString(",") + "]")
         }
