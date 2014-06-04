@@ -96,6 +96,7 @@ function Ternary(uid, fst,snd,thd,pre,inf,post) {
 }
 
 function Application(uid, fn, child) {
+  //@TODO this.uid = uid; // isn't this missing?
   this.fn = fn;
   this.child = child;
 }
@@ -127,6 +128,7 @@ function formulaToInstance(f) {
         rec_on(f.fst),rec_on(f.snd),rec_on(f.thd),
         f.pre,f.inf,f.post)
   else if(f.fn)
+    //@TODO new Application(f.uid,f.fn,child) ???
     return new Application(uid,fn,child)
   else
     return null
