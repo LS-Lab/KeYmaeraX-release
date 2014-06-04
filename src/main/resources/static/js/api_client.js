@@ -13,11 +13,13 @@ var hydraServerInfo = {
   port: 8080
 }
 
-function HydraClient(serverarg, portarg) {
+function HydraClient(serverarg, portarg, count) {
   //Default values for the parameters.
   if(typeof(serverarg) === 'undefined') serverarg = hydraServerInfo.server;
   if(typeof(portarg) === 'undefined') portarg = hydraServerInfo.port;
-  
+ 
+  this.count = 0;
+
   //End "Constructor" logic.
   
   //Assertions
@@ -177,13 +179,16 @@ function HydraClient(serverarg, portarg) {
       datatype: "json",
       contentType: "application/javascript",
       async: "true",
-      url: "http://" + this.server + ":" + this.port + "/getUpdates" + "?sessionName=" + this.sessionName,
-      success: function(updates) {
+      url: "http://" + this.server + ":" + this.port + "/getUpdates" + "?sessionName=" + this.sessionName + "&count=" + this.count,
+      success: function(updateInfo) {
         client.setServerStatus(true);
+        var updates = updateInfo.events
+        var newCount = updateInfo.newCount; 
+        client.count = newCount
         if(updates instanceof Array && updates.length > 0) {
           if(window.DEBUG_MODE) {
             console.log("Received updates from the server: ");
-            console.log(updates);
+            console.log(updateInfo);
           }
           for(i = 0; i < updates.length; i++) {
             HydraEventHandler(updates[i], client);

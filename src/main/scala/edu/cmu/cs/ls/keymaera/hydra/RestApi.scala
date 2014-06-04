@@ -32,11 +32,14 @@ trait RestApi extends HttpService {
     }
   }
 
+  /**
+   * TODO ew. See comment on ServerState.getUpdates...
+   */
   val getUpdates = path("getUpdates") {
     get {
       respondWithMediaType(`application/json`) {
-        parameter("sessionName") { 
-           sessionName => complete(ServerState.getUpdates(sessionName))
+        parameter("sessionName", "count") { 
+           (sessionName, count) => complete(ServerState.getUpdates(sessionName, count))
         }
       }
     }

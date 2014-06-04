@@ -2,6 +2,8 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import edu.cmu.cs.ls.keymaera.core.Sequent
 import edu.cmu.cs.ls.keymaera.core.Expr
+import spray.json.JsObject
+import spray.json.JsValue
 
 /**
  * Pretty certain that we need to do something better for global session
@@ -32,10 +34,19 @@ object ServerState {
     key
   }
   
-  def getUpdates(sessionName : String) : String = {
-    val result = spray.json.JsArray(updates.get(sessionName))
-    updates.put(sessionName, Nil)
-    result.prettyPrint
+  /**
+   * TODO ew. This needs to be moved into the KeYmaeraClient and Request/Update files.
+   */
+  def getUpdates(sessionName : String, countStr : String) : String = {
+    val count = Integer.parseInt(countStr)
+    val sessionUpdates = updates.get(sessionName)
+    val newUpdates = sessionUpdates.slice(count, sessionUpdates.size)
+    val result = spray.json.JsArray(newUpdates)
+    JsObject(
+        "bullshit" -> spray.json.JsString(count.toString() + " " + sessionUpdates.size.toString()),
+        "events" -> result,
+        "newCount"  -> spray.json.JsNumber(sessionUpdates.size)
+    ).prettyPrint
   }
   
   def addUpdate(sessionName : String, update : spray.json.JsValue) = {
