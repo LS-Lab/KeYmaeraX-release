@@ -13,13 +13,26 @@ var hydraServerInfo = {
   port: 8080
 }
 
-function HydraClient(serverarg, portarg) {
+function HydraClient(serverarg, portarg, count) {
   //Default values for the parameters.
   if(typeof(serverarg) === 'undefined') serverarg = hydraServerInfo.server;
   if(typeof(portarg) === 'undefined') portarg = hydraServerInfo.port;
-  
-  //End "Constructor" logic.
+ 
+  this.count = 0;
 
+  //End "Constructor" logic.
+  
+  //Assertions
+  this.requireAll = function(array) {
+    if(!(array instanceof Array))
+      throw "Argument to requireAll should be an array."
+    for(var i = 0 ; i < array.length; i++) {
+      if(array[i] == null || array[i] === null) {
+        throw "All arguments are required but argument " + i + " was null.";
+      }
+    }
+  }
+  
   this.setServerStatus = function(up) {
     document.getElementById("status").innerHTML = "hydra://" + hydraServerInfo.server + ":" + hydraServerInfo.port
     if(up) {
@@ -141,13 +154,14 @@ function HydraClient(serverarg, portarg) {
     }
   }
 
-  this.runTactic = function(tacticName, sequent) {
+  this.runTactic = function(tacticName, sequent, parentId) {
+    this.requireAll([tacticName, sequent, parentId]);
     if(sequent.uid) {
       $.ajax({
         type: "GET",
         dataType: "json",
         async: true,
-        url: "http://" + this.server + ":" + this.port + "/runTactic?sessionName="+ this.sessionName + "&tacticName=" + tacticName + "&uid=" + sequent.uid,
+        url: "http://" + this.server + ":" + this.port + "/runTactic?sessionName="+ this.sessionName + "&tacticName=" + tacticName + "&uid=" + sequent.uid + "&parentId=" + parentId,
         error: this.ajaxErrorHandler
       });
     }
@@ -165,13 +179,16 @@ function HydraClient(serverarg, portarg) {
       datatype: "json",
       contentType: "application/javascript",
       async: "true",
-      url: "http://" + this.server + ":" + this.port + "/getUpdates" + "?sessionName=" + this.sessionName,
-      success: function(updates) {
+      url: "http://" + this.server + ":" + this.port + "/getUpdates" + "?sessionName=" + this.sessionName + "&count=" + this.count,
+      success: function(updateInfo) {
         client.setServerStatus(true);
+        var updates = updateInfo.events
+        var newCount = updateInfo.newCount; 
+        client.count = newCount
         if(updates instanceof Array && updates.length > 0) {
           if(window.DEBUG_MODE) {
             console.log("Received updates from the server: ");
-            console.log(updates);
+            console.log(updateInfo);
           }
           for(i = 0; i < updates.length; i++) {
             HydraEventHandler(updates[i], client);

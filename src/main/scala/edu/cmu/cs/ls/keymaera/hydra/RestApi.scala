@@ -32,11 +32,14 @@ trait RestApi extends HttpService {
     }
   }
 
+  /**
+   * TODO ew. See comment on ServerState.getUpdates...
+   */
   val getUpdates = path("getUpdates") {
     get {
       respondWithMediaType(`application/json`) {
-        parameter("sessionName") { 
-           sessionName => complete(ServerState.getUpdates(sessionName))
+        parameter("sessionName", "count") { 
+           (sessionName, count) => complete(ServerState.getUpdates(sessionName, count))
         }
       }
     }
@@ -90,9 +93,9 @@ trait RestApi extends HttpService {
   
   val runTactic = path("runTactic") {
     get {
-      parameter("sessionName", "tacticName", "uid") {
-        (sessionName, tacticName, uid) => {
-          val request = RunTacticRequest(sessionName, tacticName, uid, None)
+      parameter("sessionName", "tacticName", "uid", "parentId") {
+        (sessionName, tacticName, uid, parentId) => {
+          val request = RunTacticRequest(sessionName, tacticName, uid, None, parentId)
           val result = KeYmaeraClient.serviceRequest(sessionName, request)
           complete("[" + result.map(_.json).mkString(",") + "]")
         }
