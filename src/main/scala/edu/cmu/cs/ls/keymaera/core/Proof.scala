@@ -1561,7 +1561,7 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 class DeriveConstant(t: Term) extends Rule("Derive Constant") {
   val Number(Real, n) = t
   override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, Derivative(Real, n), Number(0))), IndexedSeq())))
+    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, Derivative(Real, Number(Real, n)), Number(Real, 0))), IndexedSeq())))
 }
 
 class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {

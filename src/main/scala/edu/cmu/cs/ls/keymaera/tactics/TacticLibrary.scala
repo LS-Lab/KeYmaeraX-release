@@ -701,6 +701,7 @@ object TacticLibrary {
      *
      * @param f the formula that should be rewritten using the axiom
      * @param ax the axiom to be used
+     * @param pos the position to which this rule is applied to
      * @return (Axiom before executing the given position tactic;
      *         the instance of the axiom,
      *         the uniform substitution that transforms the first into the second axiom (Hilbert style);
@@ -708,6 +709,9 @@ object TacticLibrary {
      *         argument into the actual axiom (usually alpha renaming)).
      * @see #constructInstanceAndSubst(Formula)
      */
+    def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      constructInstanceAndSubst(f, ax)
+
     def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
       constructInstanceAndSubst(f) match {
         case Some((instance, subst)) => Some((ax, instance, subst, None))
@@ -735,7 +739,7 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         axiom match {
           case Some(ax) =>
-            constructInstanceAndSubst(getFormula(node.sequent, pos), ax) match {
+            constructInstanceAndSubst(getFormula(node.sequent, pos), ax, pos) match {
               case Some((ax, axiomInstance, subst, ptac)) =>
               {
                 val axiomInstPos = AntePosition(node.sequent.ante.length)
@@ -743,6 +747,7 @@ object TacticLibrary {
                   //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                   //@TODO If Pos.isAnte the following position management seems wrong since unstable.
                   case Equiv(_, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos))
+                  case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos))
                   case Imply(_, _) if(pos.isAnte  && pos.inExpr == HereP) => modusPonensT(pos, axiomInstPos)
                   case Imply(_, _) if(!pos.isAnte && pos.inExpr == HereP) => ImplyLeftT(axiomInstPos) & ((assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos), AxiomCloseT(axiomInstPos.topLevel, pos))
                   case _ => ???
@@ -1534,7 +1539,7 @@ object TacticLibrary {
 
   def deriveEqualsT: PositionTactic = new AxiomTactic("=' derive =", "=' derive =") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Equals(_, _)) => true
+      case FormulaDerivative(Equals(Real, _, _)) => true
       case _ => false
     }
 
@@ -1557,16 +1562,41 @@ object TacticLibrary {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case f@Derivative(Add(Real, s, t)) =>
-        // construct substitution
-        val aS = Variable("s", None, Real)
-        val aT = Variable("t", None, Real)
-        val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
-        val g = Add(Real, Derivative(Real, s), Derivative(Real, t))
-        val axiomInstance = Equals(Real, f, g)
-        Some(axiomInstance, Substitution(l))
-      case _ => None
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subTerm(in, pos.inExpr) match {
+        case Some(f@Derivative(Add(Real, s, t))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+          val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+          val g = Add(Real, Derivative(Real, s), Derivative(Real, t))
+          val axiomInstance = Equals(Real, f, g)
+          Some(axiomInstance, ax, Substitution(l), None)
+        case _ => None
+    }
+  }
+
+
+  object Retrieve {
+    val stop = Left(Some(new StopTraversal {}))
+    def formula(s: Sequent, p: Position): Option[Formula] = subFormula(s(p), p.inExpr)
+
+    def subFormula(in: Formula, inExpr: PosInExpr) = {
+      var f: Option[Formula] = None
+      ExpressionTraversal.traverse(TraverseToPosition(inExpr, new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = { f = Some(e); stop }
+      }), in)
+      f
+    }
+
+    def term(s: Sequent, p: Position): Option[Term] = subTerm(s(p), p.inExpr)
+
+    def subTerm(f: Formula, inExpr: PosInExpr): Option[Term] = {
+      var t: Option[Term] = None
+      ExpressionTraversal.traverse(TraverseToPosition(inExpr, new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = { t = Some(e); stop }
+      }), f)
+      t
     }
   }
 }
