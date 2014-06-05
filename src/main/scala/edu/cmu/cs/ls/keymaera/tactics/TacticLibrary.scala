@@ -1462,4 +1462,111 @@ object TacticLibrary {
     }
   }
 
+
+  def deriveT = new PositionTactic("Derive") {
+    override def applies(s: Sequent, p: Position): Boolean = {
+      var a = false
+      ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+          e match {
+            case FormulaDerivative(_) => a = true
+            case _ =>
+          }
+          Left(Some(new StopTraversal {}))
+        }
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          e match {
+            case Derivative(_) => a = true
+            case _ =>
+          }
+          Left(Some(new StopTraversal {}))
+        }
+      }), s(p))
+      a
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = ???
+
+      override def applicable(node: ProofNode): Boolean = ???
+    }
+  }
+
+  // TODO: the below tactics need to be applied inside a formula, not on top level
+
+  def deriveAndT: PositionTactic = new AxiomTactic("&' derive and", "&' derive and") {
+    override def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(And(_, _)) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case FormulaDerivative(And(p, q)) =>
+        // construct substitution
+        val aP = PredicateConstant("p")
+        val aQ = PredicateConstant("q")
+        val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
+        val g = And(FormulaDerivative(p), FormulaDerivative(q))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+  }
+
+  def deriveOrT: PositionTactic = new AxiomTactic("|' derive or", "|' derive or") {
+    override def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(Or(_, _)) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case FormulaDerivative(Or(p, q)) =>
+        // construct substitution
+        val aP = PredicateConstant("p")
+        val aQ = PredicateConstant("q")
+        val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
+        val g = And(FormulaDerivative(p), FormulaDerivative(q))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+  }
+
+  def deriveEqualsT: PositionTactic = new AxiomTactic("=' derive =", "=' derive =") {
+    override def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(Equals(_, _)) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case FormulaDerivative(Equals(Real, s, t)) =>
+        // construct substitution
+        val aS = Variable("s", None, Real)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+  }
+
+   def deriveSumT: PositionTactic = new AxiomTactic("+' derive sum", "+' derive sum") {
+    override def applies(f: Formula): Boolean = f match {
+      case Derivative(Add(Real, _, _)) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case f@Derivative(Add(Real, s, t)) =>
+        // construct substitution
+        val aS = Variable("s", None, Real)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val g = Add(Real, Derivative(Real, s), Derivative(Real, t))
+        val axiomInstance = Equals(Real, f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+  }
 }
