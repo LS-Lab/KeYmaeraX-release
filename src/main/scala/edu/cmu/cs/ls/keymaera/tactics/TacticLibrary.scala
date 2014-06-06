@@ -1509,6 +1509,7 @@ object TacticLibrary {
           case Some(Derivative(Real, Add(Real, _, _))) => println("Found sum"); Some(deriveSumT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
           case Some(Derivative(Real, Subtract(Real, _, _))) => Some(deriveMinusT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
           case Some(Derivative(Real, Multiply(Real, _, _))) => Some(deriveProductT(p) ~ deriveTermT(p.first.first) ~ deriveTermT(p.second.second))
+          case Some(Derivative(Real, Divide(Real, _, _))) => Some(deriveQuotientT(p) ~ deriveTermT(p.first.first) ~ deriveTermT(p.second.second))
           case Some(Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real, _)))) => Some(deriveMonomialT(p))
           case Some(Derivative(Real, Number(Real, _))) => Some(deriveConstantT(p))
           case _ => println("Don't know what to do"); None
@@ -1771,6 +1772,26 @@ object TacticLibrary {
     }
   }
 
+  def deriveQuotientT: PositionTactic = new AxiomTactic("/' derive quotient", "/' derive quotient") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Divide(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subTerm(in, pos.inExpr) match {
+        case Some(f@Derivative(Real, Divide(Real, s, t))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+          val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+          val g = Divide(Real, Subtract(Real, Multiply(Real, Derivative(Real, s), t), Multiply(Real, s, Derivative(Real, t))), Exp(Real, t, Number(2)))
+          val axiomInstance = Equals(Real, f, g)
+          Some(ax, axiomInstance, Substitution(l), None)
+        case _ => None
+    }
+  }
   def deriveMonomialT: PositionTactic = new PositionTactic("Derive Monomial") {
     override def applies(s: Sequent,p:Position): Boolean = Retrieve.subTerm(s(p), p.inExpr) match {
       case Some(Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real,_)))) => true
