@@ -27,6 +27,11 @@ class CoreTests extends FlatSpec with Matchers {
     new PosInExpr(List(0)) should not be (HereP)
   }
 
+  "Core (Expressions)" should "yield equality" in {
+    FormulaDerivative(Equals(Real, Variable("x", None, Real), Number(0))) should be (FormulaDerivative(Equals(Real, Variable("x", None, Real), Number(0))))
+    Exp(Real, Variable("x", None, Real), Number(2)) should be (Exp(Real, Variable("x", None, Real), Number(Real, 2)))
+  }
+
   def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))
   def rootAnte(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(f), IndexedSeq()))
 

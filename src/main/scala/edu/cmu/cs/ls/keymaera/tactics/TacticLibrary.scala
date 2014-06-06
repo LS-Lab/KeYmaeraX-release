@@ -678,7 +678,7 @@ object TacticLibrary {
   abstract class AxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
     val axiom = Axiom.axioms.get(axiomName)
     def applies(f: Formula): Boolean
-    final override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
+    override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
 
     /**
      * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
@@ -739,15 +739,15 @@ object TacticLibrary {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         axiom match {
           case Some(ax) =>
-            constructInstanceAndSubst(getFormula(node.sequent, pos), ax, pos) match {
+            constructInstanceAndSubst(getFormula(node.sequent, pos.topLevel), ax, pos) match {
               case Some((ax, axiomInstance, subst, ptac)) =>
               {
                 val axiomInstPos = AntePosition(node.sequent.ante.length)
                 val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
                   //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                   //@TODO If Pos.isAnte the following position management seems wrong since unstable.
-                  case Equiv(_, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos))
-                  case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos))
+                  case Equiv(_, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
+                  case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos, false) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
                   case Imply(_, _) if(pos.isAnte  && pos.inExpr == HereP) => modusPonensT(pos, axiomInstPos)
                   case Imply(_, _) if(!pos.isAnte && pos.inExpr == HereP) => ImplyLeftT(axiomInstPos) & ((assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos), AxiomCloseT(axiomInstPos.topLevel, pos))
                   case _ => ???
@@ -993,9 +993,9 @@ object TacticLibrary {
     applicable
   }
 
-  def equalityRewriting(eqPos: Position, p: Position): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
+  def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
     override def applicable(node: ProofNode): Boolean = {
-      val res = isEquality(node.sequent, eqPos, true) && (equalityApplicable(true, eqPos, p, node.sequent) || equalityApplicable(false, eqPos, p, node.sequent))
+      val res = isEquality(node.sequent, eqPos, checkDisjoint) && (equalityApplicable(true, eqPos, p, node.sequent) || equalityApplicable(false, eqPos, p, node.sequent))
       res
     }
   }
@@ -1468,126 +1468,367 @@ object TacticLibrary {
   }
 
 
-  def deriveT = new PositionTactic("Derive") {
-    override def applies(s: Sequent, p: Position): Boolean = {
-      var a = false
-      ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-          e match {
-            case FormulaDerivative(_) => a = true
-            case _ =>
-          }
-          Left(Some(new StopTraversal {}))
-        }
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-          e match {
-            case Derivative(_) => a = true
-            case _ =>
-          }
-          Left(Some(new StopTraversal {}))
-        }
-      }), s(p))
-      a
+  def deriveFormulaT: PositionTactic = new PositionTactic("Derive Formula") {
+    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
+      case Some(FormulaDerivative(_)) => true
+      case Some(a) => println("Not applicable to " + a.prettyString); false
+      case None => println("Not applicable to None"); false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = ???
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        println("Constructing at " + p);
+        Retrieve.formula(node.sequent, p) match {
+          case Some(FormulaDerivative(And(_, _))) => Some(deriveAndT(p) ~ deriveFormulaT(p.first) ~ deriveFormulaT(p.second))
+          case Some(FormulaDerivative(Or(_, _))) => Some(deriveOrT(p) ~ deriveFormulaT(p.first) ~ deriveFormulaT(p.second))
+          case Some(FormulaDerivative(Equals(Real, _, _))) => println("found equals"); Some(deriveEqualsT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(FormulaDerivative(NotEquals(Real, _, _))) => Some(deriveNotEqualsT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(FormulaDerivative(GreaterThan(Real, _, _))) => Some(deriveGreaterThanT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(FormulaDerivative(GreaterEqual(Real, _, _))) => Some(deriveGreaterEqualsT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(FormulaDerivative(LessThan(Real, _, _))) => Some(deriveLessThanT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(FormulaDerivative(LessEqual(Real, _, _))) => Some(deriveLessEqualsT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case _ => None
+        }
+      }
 
-      override def applicable(node: ProofNode): Boolean = ???
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
 
-  // TODO: the below tactics need to be applied inside a formula, not on top level
+  def deriveTermT: PositionTactic = new PositionTactic("Derive Term") {
+    override def applies(s: Sequent, p: Position): Boolean = Retrieve.term(s, p) match {
+      case Some(Derivative(_, _)) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        println("Checking " + Retrieve.term(node.sequent, p))
+        Retrieve.term(node.sequent, p) match {
+          case Some(Derivative(Real, Neg(Real, _))) => Some(deriveNegT(p) ~ deriveTermT(p.first))
+          case Some(Derivative(Real, Add(Real, _, _))) => println("Found sum"); Some(deriveSumT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(Derivative(Real, Subtract(Real, _, _))) => Some(deriveMinusT(p) ~ deriveTermT(p.first) ~ deriveTermT(p.second))
+          case Some(Derivative(Real, Multiply(Real, _, _))) => Some(deriveProductT(p) ~ deriveTermT(p.first.first) ~ deriveTermT(p.second.second))
+          case Some(Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real, _)))) => Some(deriveMonomialT(p))
+          case Some(Derivative(Real, Number(Real, _))) => Some(deriveConstantT(p))
+          case _ => println("Don't know what to do"); None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
 
   def deriveAndT: PositionTactic = new AxiomTactic("&' derive and", "&' derive and") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(And(_, _)) => true
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(And(_, _))) => true
       case _ => false
-    }
+    })
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case FormulaDerivative(And(p, q)) =>
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(And(p, q))) =>
         // construct substitution
         val aP = PredicateConstant("p")
         val aQ = PredicateConstant("q")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
         val g = And(FormulaDerivative(p), FormulaDerivative(q))
         val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, Substitution(l))
+        Some(ax, axiomInstance, Substitution(l), None)
       case _ => None
-    }
-  }
+    }  }
 
   def deriveOrT: PositionTactic = new AxiomTactic("|' derive or", "|' derive or") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Or(_, _)) => true
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(Or(_, _))) => true
       case _ => false
-    }
+    })
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case FormulaDerivative(Or(p, q)) =>
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(Or(p, q))) =>
         // construct substitution
         val aP = PredicateConstant("p")
         val aQ = PredicateConstant("q")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
         val g = And(FormulaDerivative(p), FormulaDerivative(q))
         val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, Substitution(l))
+        Some(ax, axiomInstance, Substitution(l), None)
       case _ => None
     }
   }
 
   def deriveEqualsT: PositionTactic = new AxiomTactic("=' derive =", "=' derive =") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Equals(Real, _, _)) => true
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(Equals(Real, _, _))) => true
       case _ => false
-    }
+    })
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case FormulaDerivative(Equals(Real, s, t)) =>
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(Equals(Real, s, t))) =>
         // construct substitution
         val aS = Variable("s", None, Real)
         val aT = Variable("t", None, Real)
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, Substitution(l))
+        Some(ax, axiomInstance, Substitution(l), None)
       case _ => None
     }
   }
 
-   def deriveSumT: PositionTactic = new AxiomTactic("+' derive sum", "+' derive sum") {
-    override def applies(f: Formula): Boolean = f match {
-      case Derivative(Add(Real, _, _)) => true
+  def deriveNotEqualsT: PositionTactic = new AxiomTactic("!=' derive !=", "!=' derive !=") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(NotEquals(Real, _, _))) => true
       case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(NotEquals(Real, s, t))) =>
+        // construct substitution
+        val aS = Variable("s", None, Real)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
+        val axiomInstance = Equiv(f, g)
+        Some(ax, axiomInstance, Substitution(l), None)
+      case _ => None
     }
+  }
+
+  def deriveGreaterEqualsT: PositionTactic = new AxiomTactic(">=' derive >=", ">=' derive >=") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(GreaterEqual(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(GreaterEqual(Real, s, t))) =>
+        // construct substitution
+        val aS = Variable("s", None, Real)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val g = GreaterEqual(Real, Derivative(Real, s), Derivative(Real, t))
+        val axiomInstance = Equiv(f, g)
+        Some(ax, axiomInstance, Substitution(l), None)
+      case _ => None
+    }
+  }
+
+  def deriveGreaterThanT: PositionTactic = new AxiomTactic(">' derive >", ">' derive >") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(GreaterThan(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(GreaterThan(Real, s, t))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+          val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+          val g = GreaterEqual(Real, Derivative(Real, s), Derivative(Real, t))
+          val axiomInstance = Equiv(f, g)
+          Some(ax, axiomInstance, Substitution(l), None)
+        case _ => None
+      }
+  }
+
+   def deriveLessEqualsT: PositionTactic = new AxiomTactic("<=' derive <=", "<=' derive <=") {
+     def applies(f: Formula) = ???
+     override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(LessEqual(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(LessEqual(Real, s, t))) =>
+        // construct substitution
+        val aS = Variable("s", None, Real)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val g = LessEqual(Real, Derivative(Real, s), Derivative(Real, t))
+        val axiomInstance = Equiv(f, g)
+        Some(ax, axiomInstance, Substitution(l), None)
+      case _ => None
+    }
+  }
+
+  def deriveLessThanT: PositionTactic = new AxiomTactic("<' derive <", "<' derive <") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subFormula(s(p), p.inExpr) match {
+      case Some(FormulaDerivative(LessThan(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subFormula(in, pos.inExpr) match {
+        case Some(f@FormulaDerivative(LessThan(Real, s, t))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+          val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+          val g = LessEqual(Real, Derivative(Real, s), Derivative(Real, t))
+          val axiomInstance = Equiv(f, g)
+          Some(ax, axiomInstance, Substitution(l), None)
+        case _ => None
+      }
+  }
+
+  def deriveNegT: PositionTactic = new AxiomTactic("-' derive neg", "-' derive neg") {
+     def applies(f: Formula) = ???
+     override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+       case Some(Derivative(Neg(Real, _))) => true
+       case _ => false
+     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
-        case Some(f@Derivative(Add(Real, s, t))) =>
+        case Some(f@Derivative(Neg(Real, s))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val l = List(new SubstitutionPair(aS, s))
+          val g = Neg(Real, Derivative(Real, s))
+          val axiomInstance = Equals(Real, f, g)
+          Some(ax, axiomInstance, Substitution(l), None)
+        case _ => None
+    }
+  }
+
+   def deriveSumT: PositionTactic = new AxiomTactic("+' derive sum", "+' derive sum") {
+     def applies(f: Formula) = ???
+     override def applies(s: Sequent,p:Position): Boolean = {
+       axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+         case Some(Derivative(Real, Add(Real, _, _))) => true
+         case _ => false
+       })
+     }
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subTerm(in, pos.inExpr) match {
+        case Some(f@Derivative(Real, Add(Real, s, t))) =>
           // construct substitution
           val aS = Variable("s", None, Real)
           val aT = Variable("t", None, Real)
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Add(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equals(Real, f, g)
-          Some(axiomInstance, ax, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None)
+        case _ => println("Not applicable deriveSumT to " + in.prettyString() + " at " + pos); None
+    }
+  }
+
+  def deriveMinusT: PositionTactic = new AxiomTactic("-' derive minus", "-' derive minus") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Subtract(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subTerm(in, pos.inExpr) match {
+        case Some(f@Derivative(Real, Subtract(Real, s, t))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+          val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+          val g = Subtract(Real, Derivative(Real, s), Derivative(Real, t))
+          val axiomInstance = Equals(Real, f, g)
+          Some(ax, axiomInstance, Substitution(l), None)
+        case _ => None
+      }
+  }
+
+   def deriveProductT: PositionTactic = new AxiomTactic("*' derive product", "*' derive product") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Multiply(Real, _, _))) => true
+      case _ => false
+    })
+
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+      Retrieve.subTerm(in, pos.inExpr) match {
+        case Some(f@Derivative(Real, Multiply(Real, s, t))) =>
+          // construct substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+          val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+          val g = Add(Real, Multiply(Real, Derivative(Real, s), t), Multiply(Real, s, Derivative(Real, t)))
+          val axiomInstance = Equals(Real, f, g)
+          Some(ax, axiomInstance, Substitution(l), None)
         case _ => None
     }
   }
 
+  def deriveMonomialT: PositionTactic = new PositionTactic("Derive Monomial") {
+    override def applies(s: Sequent,p:Position): Boolean = Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real,_)))) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Retrieve.subTerm(node.sequent(p), p.inExpr) match {
+          case Some(f@Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real,_)))) =>
+            val app = new ApplyRule(DeriveMonomial(f)) {
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+            val eqPos = AntePosition(node.sequent.ante.length)
+            Some(app & equalityRewriting(eqPos, p, false) & hideT(p.topLevel) & hideT(eqPos))
+          case None => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def deriveConstantT: PositionTactic = new PositionTactic("Derive Constant") {
+    override def applies(s: Sequent, p: Position): Boolean = Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Number(_, _))) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Retrieve.subTerm(node.sequent(p), p.inExpr) match {
+          case Some(f@Derivative(Real, num@Number(Real, n))) =>
+            val app = new ApplyRule(DeriveConstant(f)) {
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+            val eqPos = AntePosition(node.sequent.ante.length)
+            Some(app & equalityRewriting(eqPos, p) & hideT(p.topLevel) & hideT(eqPos))
+          case None => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
 
   object Retrieve {
     val stop = Left(Some(new StopTraversal {}))
     def formula(s: Sequent, p: Position): Option[Formula] = subFormula(s(p), p.inExpr)
 
-    def subFormula(in: Formula, inExpr: PosInExpr) = {
-      var f: Option[Formula] = None
-      ExpressionTraversal.traverse(TraverseToPosition(inExpr, new ExpressionTraversalFunction {
-        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = { f = Some(e); stop }
-      }), in)
-      f
-    }
+    def subFormula(in: Formula, inExpr: PosInExpr): Option[Formula] =
+      if(inExpr == HereP) Some(in) else {
+        var f: Option[Formula] = None
+        ExpressionTraversal.traverse(TraverseToPosition(inExpr, new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = { f = Some(e); stop }
+        }), in)
+        f
+      }
 
     def term(s: Sequent, p: Position): Option[Term] = subTerm(s(p), p.inExpr)
 

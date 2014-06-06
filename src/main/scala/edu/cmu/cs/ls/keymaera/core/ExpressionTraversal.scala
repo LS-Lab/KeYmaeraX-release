@@ -231,6 +231,7 @@ object ExpressionTraversal {
         case Modality(a, b) => matchTwo(p, Modality.apply, f, a, b)
         case Forall(v, a) => matchOne(p, Forall(v, _: Formula), f, a)
         case Exists(v, a) => matchOne(p, Exists(v, _: Formula), f, a)
+        case FormulaDerivative(a) => matchOne(p, FormulaDerivative.apply, f, a)
 
         // Terms
         case Number(_, _) => matchZero(p, f, e)

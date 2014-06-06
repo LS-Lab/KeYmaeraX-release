@@ -272,6 +272,7 @@ object KeYmaeraPrettyPrinter {
       Divide.getClass().getCanonicalName() ::
       Exp.getClass().getCanonicalName() ::
       Neg.getClass().getCanonicalName() ::
+      Derivative.getClass().getCanonicalName() ::
       Apply.getClass().getCanonicalName() ::
       Function.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() :: //real-valued.
@@ -293,7 +294,7 @@ object KeYmaeraPrettyPrinter {
       LessEqual.getClass().getCanonicalName()    ::
       GreaterEqual.getClass().getCanonicalName()    ::
       GreaterThan.getClass().getCanonicalName()    ::
-      Derivative.getClass().getCanonicalName() ::
+      FormulaDerivative.getClass().getCanonicalName() ::
       PredicateConstant.getClass().getCanonicalName() ::
       ApplyPredicate.getClass().getCanonicalName() ::
       True.getClass().getCanonicalName() ::

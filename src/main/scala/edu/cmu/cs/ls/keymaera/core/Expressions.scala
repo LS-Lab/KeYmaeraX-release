@@ -645,7 +645,7 @@ object FormulaDerivative {
 }
 final class FormulaDerivative(child : Formula)    extends UnaryFormula(child) {
   override def equals(e: Any): Boolean = e match {
-    case x: FormulaDerivative => child == x.child
+    case FormulaDerivative(a) => child == a
     case _ => false
   }
   override def hashCode: Int = hash(79, child)

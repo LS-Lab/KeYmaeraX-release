@@ -387,7 +387,7 @@ object SuccPosition {
 // remove duplicate antecedent (this should be a tactic)
 object HideLeft extends (Position => Rule) {
   def apply(p: Position): Rule = {
-    require(p.isAnte && p.inExpr == HereP)
+    require(p.isAnte && p.inExpr == HereP, "Hide left should be done in the antecendent and on top level. Not on " + p)
     new Hide(p)
   }
 }
@@ -395,7 +395,7 @@ object HideLeft extends (Position => Rule) {
 // remove duplicate succedent (this should be a tactic)
 object HideRight extends (Position => Rule) {
   def apply(p: Position): Rule = {
-    require(!p.isAnte && p.inExpr == HereP)
+    require(!p.isAnte && p.inExpr == HereP, "Hide right should be done in succedent and on top level. Not on " + p)
     new Hide(p)
   }
 }
@@ -1095,6 +1095,7 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     }; return ApplyPredicate(p, usubst(u, arg))
     
     // 
+    case FormulaDerivative(g) => FormulaDerivative(usubst(u, g))
     case x: Atom => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
@@ -1363,7 +1364,7 @@ object UniformSubstitution {
         List(origin)
       } else {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("Uniform substitution " + subst + " did not conclude  \n" + conclusion + "\nfrom\n  " + origin)
+        throw new CoreException("Uniform substitution " + subst + " did not conclude  \n" + conclusion + "\nfrom\n  " + origin + "\nbut instead\n  " + subst(origin))
       }
     } 
     
@@ -1558,16 +1559,23 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
  * Rules for derivatives that are not expressible as axioms
  *********************************************************************************
  */
+object DeriveConstant {
+  def apply(t: Term): Rule = new DeriveConstant(t)
+}
 class DeriveConstant(t: Term) extends Rule("Derive Constant") {
-  val Number(Real, n) = t
+  val Derivative(Real, Number(Real, n)) = t
   override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, Derivative(Real, Number(Real, n)), Number(Real, 0))), IndexedSeq())))
+    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, t, Number(Real, 0))), IndexedSeq())))
+}
+
+object DeriveMonomial {
+  def apply(t: Term): Rule = new DeriveMonomial(t)
 }
 
 class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
-  val Exp(Real, base, Number(Real, n)) = t
+  val Derivative(Real, Exp(Real, base, Number(Real, n))) = t
   override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, Derivative(Real, t), Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))))), IndexedSeq())))
+    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, t, Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))))), IndexedSeq())))
 }
 
 
