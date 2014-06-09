@@ -1468,6 +1468,18 @@ object TacticLibrary {
     }
   }
 
+  def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with " + h.prettyString()) {
+    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
+      case BoxModality(ContEvolve(_), _) => true
+      case BoxModality(_: NFContEvolve, _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ApplyRule(new DiffCut(p, h)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
   def differentialInduction: PositionTactic = new PositionTactic("Perform differential induction") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
       case BoxModality(ContEvolve(_), _) => true
