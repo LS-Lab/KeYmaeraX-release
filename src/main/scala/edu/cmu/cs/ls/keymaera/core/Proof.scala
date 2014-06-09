@@ -1578,6 +1578,43 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
     List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, t, Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))))), IndexedSeq())))
 }
 
+// the following rules will turn into axioms
+
+class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
+  require(!p.isAnte)
+  override def apply(s: Sequent): List[Sequent] = {
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case BoxModality(ev@ContEvolve(evolve), f) => Right(And(BoxModality(ev, h),
+          BoxModality(ContEvolve(And(evolve, h)), f)))
+        case BoxModality(ev@NFContEvolve(vs, x, t, dom), f) => Right(And(BoxModality(ev, h),
+          BoxModality(NFContEvolve(vs, x, t, And(dom, h)), f)))
+        case _ => ???
+      }
+    }
+    ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, fn), s(p)) match {
+      case Some(f) => List(s.updated(p, f))
+      case a => throw new IllegalStateException("Unexpected traversal result " + a)
+    }
+  }
+}
+
+class DiffInd(p: Position) extends PositionRule("Differential Induction", p) {
+  override def apply(s: Sequent): List[Sequent] = {
+       val fn = new ExpressionTraversalFunction {
+      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+        case BoxModality(ev@ContEvolve(And(Equals(s, xp@Derivative(_, _), t), h)), f) =>
+          //TODO: require that t and h do not contain derivatives
+          Right(BoxModality(ev, Imply(h, BoxModality(Assign(xp, t), FormulaDerivative(f)))))
+        case _ => ???
+      }
+    }
+    ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, fn), s(p)) match {
+      case Some(f) => List(s.updated(p, f))
+      case a => throw new IllegalStateException("Unexpected traversal result " + a)
+    }
+  }
+}
 
 /*********************************************************************************
  * Block Quantifier Decomposition

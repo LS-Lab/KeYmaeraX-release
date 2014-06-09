@@ -54,6 +54,7 @@ object TacticLibrary {
       | locateSuccAnte(indecisive(true, true, true))
       | locateSucc(genInductionT(invGenerator))
       | eqLeftFind
+      | locateSucc(differentialInduction)
       | locateSuccAnte(indecisive(true, true, true, true))
     ) ~ arithmeticT
   }
@@ -1467,6 +1468,34 @@ object TacticLibrary {
     }
   }
 
+  def differentialInduction: PositionTactic = new PositionTactic("Perform differential induction") {
+    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
+      case BoxModality(ContEvolve(_), _) => true
+      case BoxModality(_: NFContEvolve, _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(diffIndT(p) & deriveFormulaT(p.second.second.second) & abstractionT(p))
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def diffIndT: PositionTactic = new PositionTactic("Differential Induction") {
+
+    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
+      case BoxModality(ContEvolve(_), _) => true
+      case BoxModality(_: NFContEvolve, _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ApplyRule(new DiffInd(p)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
 
   def deriveFormulaT: PositionTactic = new PositionTactic("Derive Formula") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
