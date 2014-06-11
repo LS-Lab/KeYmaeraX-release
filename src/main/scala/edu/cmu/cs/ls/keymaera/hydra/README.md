@@ -67,6 +67,9 @@ DESIGN DISCUSSION
 REST URI DESIGN
 ===============
 
+In addition to these fields, we should also require a session token, either
+as a cookie or as an addition parameter at the end of each URL.
+
 /proofs/
 	|- <ns>							- KeYmaera proofs sorted into namespaces
 	|- user/<userid>/<id>/
@@ -86,6 +89,7 @@ REST URI DESIGN
 					|- tactics
 					|- apply
 					|- step
+    |- updates/<lastId> - Returns an array of new updates.
 /lemmas/
 	|- <ns>/						- KeYmaera lemmas sorted into namespaces
 	|- user/<userid>/				- User lemmas, can create namespaces below
@@ -146,6 +150,56 @@ HATEOAS inspired
     { "rel" : "proof.all", "href" : "http://keymaera.org/proofs" }
     { "rel" : "proof.search", "href" : "http://keymaera.org/proofs{/who,id}
  ]
+}
+
+JSON Format for Formulas
+------------------------
+
+{
+  "id": 1,
+  "type": "LessThan",
+  "left": {
+    "id": 2,
+    "type": "Plus",
+    "left": {
+      "id": 3,
+      "type": "Number",
+      "str": "5"
+    },
+    "right": {
+      "id": 4,
+      "type": "Number",
+      "str": "3"
+    }
+  },
+  "right": {
+    "id": 5,
+    "type": "Number",
+    "str": "8"
+  }
+}
+
+Other JSON Responses (for updates)
+---------------------------------
+
+These are definitely necessary, since they might result from a tactic or other
+user action:
+
+{
+  "id": 20,
+  "type": "CreateProblem | CreateNode",
+  "node": <node>,
+  "parentId": 12
+}
+
+I'm not sure if these are necessary; although they can result from a user
+action, there's probably typicallly a 1:1 between a request for the action and 
+the action itself.
+
+{
+  "id": 20,
+  "type": "DeleteNode",
+  "nodeId": 5
 }
 
 Links with parameter templates
