@@ -67,9 +67,6 @@ DESIGN DISCUSSION
 REST URI DESIGN
 ===============
 
-In addition to these fields, we should also require a session token, either
-as a cookie or as an addition parameter at the end of each URL.
-
 /proofs/
 	|- <ns>							- KeYmaera proofs sorted into namespaces
 	|- user/<userid>/<id>/
@@ -188,8 +185,7 @@ user action:
 {
   "id": 20,
   "type": "CreateProblem | CreateNode",
-  "node": <node>,
-  "parentId": 12
+  "node": <node>
 }
 
 I'm not sure if these are necessary; although they can result from a user
