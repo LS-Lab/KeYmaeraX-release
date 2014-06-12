@@ -1260,6 +1260,7 @@ private object VSearch {
     case Pair(dom, a, b) => modified(a) ++ modified(b)
     case Apply(f, args) => Seq(f)
     case x:Variable => Seq(x)
+    case Derivative(_, x: Variable) => Seq(x)
     case Neg(_, a) => modified(a)
     case Add(_, a, b) => modified(a) ++ modified(b)
     case Subtract(_, a, b) => modified(a) ++ modified(b)
@@ -1276,10 +1277,18 @@ private object VSearch {
     case Imply(a, b) => primed(a) ++ primed(b)
     case Equiv(a, b) => primed(a) ++ primed(b)
     case ApplyPredicate(_, arg) => primed(arg)
-    case _ => ???
+    case Equals(_, a, b) => primed(a) ++ primed(b)
+    case NotEquals(_, a, b) => primed(a) ++ primed(b)
+    case GreaterThan(_, a, b) => primed(a) ++ primed(b)
+    case GreaterEqual(_, a, b) => primed(a) ++ primed(b)
+    case LessEqual(_, a, b) => primed(a) ++ primed(b)
+    case LessThan(_, a, b) => primed(a) ++ primed(b)
+    case a => throw new UnsupportedOperationException("Not implemented for " + a)
   }
 
   def primed(t: Term): Seq[NamedSymbol] = t match {
+    case Number(_, _) => Nil
+    case Variable(_, _, _) => Nil
     case Pair(_, a, b) => primed(a) ++ primed(b)
     case Derivative(_, x) => modified(x)
     case Neg(_, a) => primed(a)
@@ -1289,7 +1298,7 @@ private object VSearch {
     case Divide(_, a, b) => primed(a) ++ primed(b)
     case Exp(_, a, b) => primed(a) ++ primed(b)
     case Apply(f, args) => primed(args)
-    case _ => ???
+    case a => throw new UnsupportedOperationException("Not implemented for " + a)
   }
 }
 

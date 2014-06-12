@@ -1482,14 +1482,14 @@ object TacticLibrary {
 
   def differentialInduction: PositionTactic = new PositionTactic("Perform differential induction") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case BoxModality(ContEvolve(_), _) => true
-      case BoxModality(_: NFContEvolve, _) => true
+      case Some(BoxModality(ContEvolve(_), _)) => true
+      case Some(BoxModality(_: NFContEvolve, _)) => true
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(diffIndT(p) & deriveFormulaT(p.second.second.second) & abstractionT(p))
+        Some(diffIndT(p) & abstractionT(p) & skolemizeT(p) & ImplyRightT(p) & deriveFormulaT(p))
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -1499,8 +1499,8 @@ object TacticLibrary {
   def diffIndT: PositionTactic = new PositionTactic("Differential Induction") {
 
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case BoxModality(ContEvolve(_), _) => true
-      case BoxModality(_: NFContEvolve, _) => true
+      case Some(BoxModality(ContEvolve(_), _)) => true
+      case Some(BoxModality(_: NFContEvolve, _)) => true
       case _ => false
     }
 

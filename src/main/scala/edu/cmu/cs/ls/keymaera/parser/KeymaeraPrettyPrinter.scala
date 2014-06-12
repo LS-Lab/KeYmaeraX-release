@@ -306,6 +306,7 @@ object KeYmaeraPrettyPrinter {
       Assign.getClass().getCanonicalName() ::
       NDetAssign.getClass().getCanonicalName() ::
       Test.getClass().getCanonicalName() ::
+      ContEvolve.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() ::
       Variable.getClass().getCanonicalName() ::
       Number.NumberObj.getClass().getCanonicalName() ::
