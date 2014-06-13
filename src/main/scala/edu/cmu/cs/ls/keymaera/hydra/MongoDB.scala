@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaera.hydra
 import com.mongodb.casbah.Imports._
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 
 /**
  * Created by jdq on 6/12/14.
@@ -9,6 +10,14 @@ object MongoDB {
   val proofs = mongoClient("keymaera")("proofs")
   val tactics = mongoClient("keymaera")("tactics")
   val models = mongoClient("keymaera")("models")
+
+  initTactics
+
+  //FIXME in the long run we need to save everything in the database to restart KeYmaera
+  def initTactics =
+    for((i, s) <- KeYmaeraInterface.getTactics)
+      tactics.insert(MongoDBObject("tacticId" -> i, "name" -> s))
+
 
   /**
    * Add a new model to the database. This will return a unique identifier for this model.
@@ -21,16 +30,16 @@ object MongoDB {
    */
   def addModel(content: String, callback: String => Unit): String = {
     val query = MongoDBObject("parserResult" -> "unknown")
-    val id: String = models.insert(query) match {
-      case id: ObjectId => id.toHexString
+    val id: String = models.insert(query).getUpsertedId match {
+      case id: ObjectId =>
+        try {
+          val (tId, model) = KeYmaeraInterface.addTask(content)
+          models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success", "taskId" -> tId, "model" -> model))
+        } catch {
+          case e: Exception => models.update(MongoDBObject("_id" -> id), $set("parserResult" -> e.getMessage))
+        }
+        id.toHexString
       case _ => throw new IllegalStateException("Writing to database did not return a valid ObjectID")
-    }
-    try {
-      val pn = KeYmaeraInterface.parseProblem(content)
-      models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success"))
-      // TODO how do we now store the pointer to the ProofNode in the DB?
-    } catch {
-      case e: Exception => models.update(MongoDBObject("_id" -> id), $set("parserResult" -> e.getMessage))
     }
     id
   }
