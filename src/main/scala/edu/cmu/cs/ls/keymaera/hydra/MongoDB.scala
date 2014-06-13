@@ -34,7 +34,7 @@ object MongoDB {
       case id: ObjectId =>
         try {
           val (tId, model) = KeYmaeraInterface.addTask(content)
-          models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success", "taskId" -> tId, "model" -> model))
+          models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success", "taskId" -> tId, "nodeId" -> tId, "model" -> model))
         } catch {
           case e: Exception => models.update(MongoDBObject("_id" -> id), $set("parserResult" -> e.getMessage))
         }
@@ -42,6 +42,21 @@ object MongoDB {
       case _ => throw new IllegalStateException("Writing to database did not return a valid ObjectID")
     }
     id
+  }
+
+  def runTactic(tacticId: String, pnId: String): Boolean = {
+    val tactic = tactics.find("_id" -> tacticId)
+    val pn = models.find("_id" -> pnId)
+    require(tactic.length == 1 && pn.length == 1)
+    tactic.one()
+    val t = tactic.one
+    val node = pn.one
+    (node.get("taskId"), node.get("nodeId"), t.get("tacticId")) match {
+      case (tId: Integer, nId: Integer, tacId: Integer) =>
+        KeYmaeraInterface.runTactic(tId, Some(nId), tacId)
+        true
+      case _ => false
+    }
   }
 
 
