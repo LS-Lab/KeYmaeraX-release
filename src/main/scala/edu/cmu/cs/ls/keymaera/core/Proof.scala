@@ -214,11 +214,18 @@ object Sequent {
     @volatile private[this] var alternatives : List[ProofStep] = Nil
 
     /**
+     * Soundness-critical invariant that all alternative proof steps have us as their goal.
+     * Dropping alternatives is sound, but adding alternatives requires passing this invariant.
+     */
+    private def checkInvariant = 
+      assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
+      
+    /**
      * List of all current or-branching alternatives of proving this proof node.
      * Result can change over time as new alternative or-branches are added.
      */
     def children: scala.collection.immutable.List[ProofStep] = {
-      assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
+      checkInvariant
       alternatives
     }
 
@@ -253,6 +260,7 @@ object Sequent {
       this.synchronized {
         alternatives = ProofStep(rule, this, subgoals) :: alternatives;
       }
+      checkInvariant
       subgoals
     }
 
