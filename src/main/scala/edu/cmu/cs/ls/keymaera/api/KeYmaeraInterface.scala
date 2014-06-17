@@ -6,6 +6,13 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics, TacticLibrary}
 
 /**
+ * Open issues:
+ * - How do we identify where changes came from?
+ *   Consider the following case: A user starts a tactic on a node and then does some steps himself. If we now poll the node
+ *   to find out about its children we might get a bunch of alternatives. Which one is it the user wants to see and how do we identify it?
+ * - How can we attach meta information for the GUI?
+ * - What information do we want to attach?
+ *
  * Created by jdq on 6/12/14.
  */
 object KeYmaeraInterface {
@@ -126,7 +133,6 @@ object KeYmaeraInterface {
   private def getSubtree(n: ProofNode, id: String, depth: Int): String = json(n, id, depth)
 
   // TODO: maybe allow listeners to node change events
-
 
   def json(p: ProofNode): String = JSONConverter(p)
   def json(p: ProofNode, id: String, l: Int): String = JSONConverter(p, id, l)
