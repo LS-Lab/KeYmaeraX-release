@@ -258,7 +258,7 @@ object Sequent {
       val subgoals = rule(sequent).map(new ProofNode(_, this))
       // Add as or-branching alternative
       this.synchronized {
-        alternatives = ProofStep(rule, this, subgoals) :: alternatives;
+        alternatives = alternatives :+ ProofStep(rule, this, subgoals)
       }
       checkInvariant
       subgoals
