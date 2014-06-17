@@ -4,8 +4,6 @@ import edu.cmu.cs.ls.keymaera.core.{RootNode, Formula, Sequent, ProofNode}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics, TacticLibrary}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.Generator
-import java.util
 
 /**
  * Created by jdq on 6/12/14.
@@ -114,8 +112,19 @@ object KeYmaeraInterface {
    * @param depth
    * @return
    */
-  def getSubtree(taskId: Int, nodeId: Option[Int], depth: Int): String = ???
+  def getSubtree(taskId: Int, nodeId: Option[Int], depth: Int): Option[String] = {
+    (nodeId match {
+      case Some(id) => TaskManagement.getNode(taskId, id)
+      case None => TaskManagement.getRoot(taskId)
+    }) match {
+      case Some(n) => Some(getSubtree(n, depth))
+      case None => None
+    }
+  }
+
+  private def getSubtree(n: ProofNode, depth: Int): String = json(n, depth)
 
 
   def json(p: ProofNode): String = JSONConverter(p)
+  def json(p: ProofNode, l: Int): String = JSONConverter(p, l)
 }

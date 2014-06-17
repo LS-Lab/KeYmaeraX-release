@@ -122,9 +122,13 @@ object JSONConverter {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
-  def print(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
-  def print(ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print).mkString(",") + "]" + "}"
+  def print(limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " +
+    (limit match {
+      case Some(l) if l > 0 => p.children.map((ps: ProofStep) => print(limit.map(i => i - 1), ps)).mkString(",")
+      case _ => ""}) + "]}"
+  def print(limit: Option[Int], ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print(limit)).mkString(",") + "]" + "}"
 
-  def apply(p: ProofNode): String = print(p)
+  def apply(p: ProofNode): String = print(None)(p)
+  def apply(p: ProofNode, limit: Int): String = print(Some(limit))(p)
 
 }
