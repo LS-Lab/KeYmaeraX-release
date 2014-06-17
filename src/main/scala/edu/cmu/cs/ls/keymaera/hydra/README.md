@@ -1,8 +1,8 @@
-HYRDA WEB SERVER
+HyRDA WEB SERVER
 ================
 
 HyDRA (Hybrid Distributed Reasoning Architecture) is the "middle man" between
-the Javascript user interface and KeYmaera instances. Hydra exposes a REST API
+the Javascript user interface and KeYmaera instances. HyDRA exposes a REST API
 using the Spray framework.  KeYmaera instances as well as Javascript clients
 interact with this API.
 

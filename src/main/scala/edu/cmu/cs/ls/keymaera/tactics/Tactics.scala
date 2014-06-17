@@ -207,7 +207,7 @@ object Tactics {
      * (this != root && runningTactics.isEmpty) || (this==root)
      * 
      */
-    private var runningTactics : HashMap[Tactic, TacticStatus] = new HashMap[Tactic,TacticStatus]()
+    private val runningTactics : HashMap[Tactic, TacticStatus] = new HashMap[Tactic,TacticStatus]()
 
     //It should be the case that runningTactics.isEmpty IFF the scheduler is idle.
      
