@@ -197,6 +197,11 @@ object Tactics {
      * The root tactic is passed on via dispatches.
      */
     var root : Option[Tactic] = None
+
+    /**
+     * We will always use the root's updateInfo method
+     */
+    var updateInfo: (ProofNodeInfo => Unit) = (_: ProofNodeInfo) => ()
     
     sealed trait TacticStatus
     case class Running() extends TacticStatus
@@ -341,7 +346,7 @@ object Tactics {
 
   def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     tFrom.limit.propagate(tFrom)
-    result.foreach(n => n.info.checkParentClosed())
+    result.foreach(n => n.tacticInfo.checkParentClosed())
   }
 
   /*
@@ -568,6 +573,11 @@ object Tactics {
       if (applicable(node)) {
         incRule()
         val res = measure(node(rule))
+        // call updateInfo in order to propagate information along this proof node
+        this.root match {
+          case Some(r) => for(n <- res) r.updateInfo(n.tacticInfo)
+          case None => for(n <- res) this.updateInfo(n.tacticInfo)
+        }
         continuation(this, checkStats(Success), res)
       } else {
         continuation(this, Failed,  Seq(node))
@@ -640,7 +650,7 @@ object Tactics {
     override def applicable(node: ProofNode): Boolean = true
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
-      node.info.branchLabel = s
+      node.tacticInfo.infos += ("branchLabel" -> s)
       continuation(this, Success, Seq(node))
     }
   }

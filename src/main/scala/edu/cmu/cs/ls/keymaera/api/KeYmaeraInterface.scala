@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaera.api
 
 import edu.cmu.cs.ls.keymaera.core.{RootNode, Formula, Sequent, ProofNode}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics, TacticLibrary}
 
 /**
@@ -37,6 +37,9 @@ object KeYmaeraInterface {
   object TacticManagement {
     private var count = 0
     @volatile var tactics: Map[Int, () => Tactic] = Map()
+    @volatile var positionTactics: Map[Int, () => PositionTactic] = Map()
+    @volatile var inputTactics: Map[Int, (Formula) => Tactic] = Map()
+    @volatile var inputPositionTactics: Map[Int, (Formula) => PositionTactic] = Map()
 
     addTactic(TacticLibrary.default)
 
@@ -47,9 +50,32 @@ object KeYmaeraInterface {
       res
     }
 
+    def addInputTactic(t: (Formula => Tactic)): Int = this.synchronized {
+      val res = count
+      inputTactics += (res -> t)
+      count = count + 1
+      res
+    }
+
+    def addPositionTactic(t: PositionTactic): Int = this.synchronized {
+      val res = count
+      positionTactics += (res -> (() => t))
+      count = count + 1
+      res
+    }
+
+    def addInputPositionTactic(t: (Formula => PositionTactic)): Int = this.synchronized {
+      val res = count
+      inputPositionTactics += (res -> t)
+      count = count + 1
+      res
+    }
+
     def getTactic(id: Int): Option[Tactic] = tactics.get(id).map(_())
 
     def getTactics: List[(Int, String)] = tactics.foldLeft(Nil: List[(Int, String)])((a, p) => a :+ (p._1, p._2().name))
+
+    // TODO implement getter for the other tactics
   }
 
   object RunningTactics {

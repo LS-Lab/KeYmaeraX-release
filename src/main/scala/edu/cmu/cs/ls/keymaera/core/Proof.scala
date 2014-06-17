@@ -158,7 +158,7 @@ object Sequent {
    * Additional proof node information payload for tactics.
    * @TODO Make branchLabels more general (and more typed) by allowing certain combinations of lables or modifiers to apply. Such as "cutShowLbl"&"invisible" for an invisible branch that proves a cut formula.
    */
-  class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
+  class ProofNodeInfo(var infos: Map[String, String], val proofNode: ProofNode) {
        //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
     //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
     @volatile private[this] var closed : Boolean = false
@@ -181,13 +181,13 @@ object Sequent {
       //@TODO Purpose and function unclear
     def checkParentClosed() : Boolean = {
       var node = proofNode
-      while (node != null && !node.info.isLocalClosed) node = node.parent
+      while (node != null && !node.tacticInfo.isLocalClosed) node = node.parent
       if (node == null) {
         return false
       } else {
         node = proofNode
-        while (node != null && !node.info.isLocalClosed) {
-          node.info.closeNode(ParentClosed)
+        while (node != null && !node.tacticInfo.isLocalClosed) {
+          node.tacticInfo.closeNode(ParentClosed)
           node = node.parent
         }
         return true
@@ -264,7 +264,8 @@ object Sequent {
       subgoals
     }
 
-    val info: ProofNodeInfo = new ProofNodeInfo(if(parent == null) "" else parent.info.branchLabel, this)
+    // TODO: there should be a TestCase that checks that this field is never read in the prover core
+    val tacticInfo: ProofNodeInfo = new ProofNodeInfo(if(parent == null) Map() else parent.tacticInfo.infos, this)
 
     override def toString = "ProofNode(" + sequent + "\nfrom " + parent + ")"
   }

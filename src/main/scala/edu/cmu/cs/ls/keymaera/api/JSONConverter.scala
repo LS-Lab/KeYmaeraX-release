@@ -122,7 +122,7 @@ object JSONConverter {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
-  def print(id: String, limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " +
+  def print(id: String, limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + (p.tacticInfo.infos.get("branchLabel") match { case Some(l) => l + ": " case None => "" }) + print(p.sequent) + "\", \"children\": [ " +
     (limit match {
       case Some(l) if l > 0 => p.children.map((ps: ProofStep) => print(id, limit.map(i => i - 1), ps)).mkString(",")
       case _ => ""}) + "]}"
