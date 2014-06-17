@@ -12,7 +12,7 @@ object KeYmaeraInterface {
 
   object TaskManagement {
     private var count = 0
-    @volatile var tasks: Map[Int, (ProofNode, Map[Int, ProofNode])] = Map()
+    @volatile var tasks: Map[Int, (ProofNode, Map[String, ProofNode])] = Map()
 
     def addTask(r: ProofNode): Int = this.synchronized {
       assert(r.children.isEmpty)
@@ -24,7 +24,7 @@ object KeYmaeraInterface {
 
     def getRoot(id: Int): Option[ProofNode] = tasks.get(id).map(_._1)
 
-    def getNode(tId: Int, nId: Int): Option[ProofNode] = tasks.get(tId).map(_._2.get(nId)).flatten
+    def getNode(tId: Int, nId: String): Option[ProofNode] = tasks.get(tId).map(_._2.get(nId)).flatten
   }
 
   object TacticManagement {
@@ -35,7 +35,7 @@ object KeYmaeraInterface {
 
     def addTactic(t: Tactic): Int = this.synchronized {
       val res = count
-      tactics += (res -> t)
+      tactics += (res -> (() => t))
       count = count + 1
       res
     }
@@ -75,14 +75,14 @@ object KeYmaeraInterface {
     }
   }
 
-  def getNode(taskId: Int, nodeId: Option[Int]): Option[String] =  (nodeId match {
+  def getNode(taskId: Int, nodeId: Option[String]): Option[String] =  (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
     }) map json
 
   def getTactics: List[(Int, String)] = TacticManagement.getTactics
 
-  def runTactic(taskId: Int, nodeId: Option[Int], tacticId: Int): Option[Int] = {
+  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int): Option[Int] = {
     (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
@@ -112,20 +112,22 @@ object KeYmaeraInterface {
    * @param depth
    * @return
    */
-  def getSubtree(taskId: Int, nodeId: Option[Int], depth: Int): Option[String] = {
+  def getSubtree(taskId: Int, nodeId: Option[String], depth: Int): Option[String] = {
     // TODO: this method needs to add all the nodes to the task management
     (nodeId match {
-      case Some(id) => TaskManagement.getNode(taskId, id)
-      case None => TaskManagement.getRoot(taskId)
+      case Some(id) => (id, TaskManagement.getNode(taskId, id))
+      case None => ("", TaskManagement.getRoot(taskId))
     }) match {
-      case Some(n) => Some(getSubtree(n, depth))
-      case None => None
+      case (id, Some(n)) => Some(getSubtree(n, id, depth))
+      case (_, None) => None
     }
   }
 
-  private def getSubtree(n: ProofNode, depth: Int): String = json(n, depth)
+  private def getSubtree(n: ProofNode, id: String, depth: Int): String = json(n, id, depth)
+
+  // TODO: maybe allow listeners to node change events
 
 
   def json(p: ProofNode): String = JSONConverter(p)
-  def json(p: ProofNode, l: Int): String = JSONConverter(p, l)
+  def json(p: ProofNode, id: String, l: Int): String = JSONConverter(p, id, l)
 }

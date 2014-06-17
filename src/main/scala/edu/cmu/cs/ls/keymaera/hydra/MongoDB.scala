@@ -45,14 +45,14 @@ object MongoDB {
   }
 
   def runTactic(tacticId: String, pnId: String): Boolean = {
-    val tactic = tactics.find("_id" -> tacticId)
-    val pn = models.find("_id" -> pnId)
+    val tactic = tactics.find(MongoDBObject("_id" -> tacticId))
+    val pn = models.find(MongoDBObject("_id" -> pnId))
     require(tactic.length == 1 && pn.length == 1)
     tactic.one()
     val t = tactic.one
     val node = pn.one
     (node.get("taskId"), node.get("nodeId"), t.get("tacticId")) match {
-      case (tId: Integer, nId: Integer, tacId: Integer) =>
+      case (tId: Integer, nId: String, tacId: Integer) =>
         KeYmaeraInterface.runTactic(tId, Some(nId), tacId)
         true
       case _ => false

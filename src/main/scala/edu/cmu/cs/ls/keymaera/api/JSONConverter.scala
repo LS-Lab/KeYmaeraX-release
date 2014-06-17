@@ -122,13 +122,16 @@ object JSONConverter {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
-  def print(limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " +
+  def print(id: String, limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " +
     (limit match {
-      case Some(l) if l > 0 => p.children.map((ps: ProofStep) => print(limit.map(i => i - 1), ps)).mkString(",")
+      case Some(l) if l > 0 => p.children.map((ps: ProofStep) => print(id, limit.map(i => i - 1), ps)).mkString(",")
       case _ => ""}) + "]}"
-  def print(limit: Option[Int], ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print(limit)).mkString(",") + "]" + "}"
+  def print(id: String, limit: Option[Int], ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + subgoals(id, limit)(ps).mkString(",") + "]" + "}"
 
-  def apply(p: ProofNode): String = print(None)(p)
-  def apply(p: ProofNode, limit: Int): String = print(Some(limit))(p)
+  private def updateIndex(id: String, limit: Option[Int])(in: (ProofNode, Int)): String = print(id + "/" + in._2, limit)(in._1)
+  private def subgoals(id: String, limit: Option[Int])(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, limit))
+
+  def apply(p: ProofNode): String = print("", None)(p)
+  def apply(p: ProofNode, id: String, limit: Int): String = print(id, Some(limit))(p)
 
 }
