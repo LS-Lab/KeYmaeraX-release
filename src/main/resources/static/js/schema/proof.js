@@ -10,11 +10,11 @@
     },
     "nodes": {
       "type": "array",
-      "items": { "$ref": "sequent" }
+      "items": { "$ref": "/js/schema/sequent.js" }
     },
     "links": {
       "type": "array",
-      "items": {"$ref": "link"}
+      "items": {"$ref": "/js/schema/link.js" }
     }
   },
   "required": ["id", "type", "nodes"]

@@ -10,15 +10,15 @@
     },
     "antecedent": {
       "type": "array",
-      "items": {"$ref": "http://nfulton.org/hydra_spec/formula.js"}
+      "items": {"$ref": "/js/schema/formula.js"}
     },
     "succedent": {
       "type": "array",
-      "items": {"$ref": "http://nfulton.org/hydra_spec/formula.js"}
+      "items": {"$ref": "/js/schema/formula.js"}
     },
     "links": {
       "type": "array",
-      "items": {"$ref": "http://nfulton.org/hydra_spec/link.js"}
+      "items": {"$ref": "/js/schema/link.js"}
     }
   },
   "required": ["id", "type", "antecedent", "succedent", "links"]
