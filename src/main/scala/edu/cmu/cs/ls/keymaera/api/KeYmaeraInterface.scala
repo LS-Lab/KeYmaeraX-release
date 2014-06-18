@@ -130,18 +130,19 @@ object KeYmaeraInterface {
           t.registerCompletionEventListener(_ => callBack.foreach(_(taskId, nodeId, tacticId)))
           // attach a info transformation function which later on allows us to track then changes performed by this tactic
           // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
-          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tacticId.toString)
-          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tacticId.toString)
+          val res = RunningTactics.add(t)
+          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> res.toString)
+          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> res.toString)
           Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
-          Some(RunningTactics.add(t))
+          Some(res)
         case None => None
       }
       case None => None
     }
   }
 
-  def isRunning(tacticId: Int): Boolean = {
-    RunningTactics.get(tacticId) match {
+  def isRunning(tacticInstanceId: Int): Boolean = {
+    RunningTactics.get(tacticInstanceId) match {
       case Some(t) => !t.isComplete
       case None => false
     }
