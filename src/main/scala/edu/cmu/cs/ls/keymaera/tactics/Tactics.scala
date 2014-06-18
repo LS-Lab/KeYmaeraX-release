@@ -226,18 +226,30 @@ object Tactics {
     
     def unregister(t : Tactic) {
       root match {
-        case None => runningTactics.remove(t)
+        case None =>
+          runningTactics.remove(t)
+          // if there are no more running tactics notify our listeners
+          if(runningTactics.isEmpty) listeners.foreach(_(this))
         case Some(x) => x.unregister(t)
       }
     }
-    
+
     def registerRunningTactic(t : Tactic) : Unit = {
       root match {
         case None => runningTactics.put(t, new Running())
         case Some(x) => x.registerRunningTactic(t)
       }
     }
-    
+
+    var listeners: List[Tactic => Unit] = Nil
+
+    def registerCompletionEventListener(e: (Tactic => Unit)) {
+      require(root == None, "Only the root should have listeners")
+      this.synchronized {
+        listeners = listeners :+ e
+      }
+    }
+
     /**
      * Called whenever a new tactic is dispatched.
      * @param t - parent tactic

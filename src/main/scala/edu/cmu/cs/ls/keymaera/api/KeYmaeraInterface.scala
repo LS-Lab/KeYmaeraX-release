@@ -1,9 +1,12 @@
 package edu.cmu.cs.ls.keymaera.api
 
-import edu.cmu.cs.ls.keymaera.core.{RootNode, Formula, Sequent, ProofNode}
+import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.core.Sequent
+import scala.Some
+import scala.Unit
 
 /**
  * Open issues:
@@ -115,13 +118,19 @@ object KeYmaeraInterface {
 
   def getTactics: List[(Int, String)] = TacticManagement.getTactics
 
-  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int): Option[Int] = {
+  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int, callBack: Option[(Int, Option[String], Int) => Unit] = None): Option[Int] = {
     (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
     }) match {
       case Some(n) => TacticManagement.getTactic(tacticId) match {
         case Some(t) =>
+          // register listener to react on tactic completion
+          // this way the business logic can react to the completion if required
+          t.registerCompletionEventListener(_ => callBack.foreach(_(taskId, nodeId, tacticId)))
+          // attach a info transformation function which later on allows us to track then changes performed by this tactic
+          // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
+          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tacticId.toString)
           Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
           Some(RunningTactics.add(t))
         case None => None
