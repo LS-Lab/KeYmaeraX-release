@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 import com.mongodb.casbah.Imports._
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, ProofNodeInfo}
+import org.bson.BSONObject
 
 /**
  * Created by jdq on 6/12/14.
@@ -54,14 +55,17 @@ object MongoDB {
     val node = pn.one
     (node.get("taskId"), node.get("nodeId"), t.get("tacticId")) match {
       case (tId: Integer, nId: String, tacId: Integer) =>
-        KeYmaeraInterface.runTactic(tId, Some(nId), tacId)
+        KeYmaeraInterface.runTactic(tId, Some(nId), tacId, Some(tacticCompleted(node)))
         true
       case _ => false
     }
   }
 
-  private def tacticCompleted(taskId: Int, nId: Option[String], tacticId: Int) {
-    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => p.infos.get("tactic") == Some(tacticId.toString))
+  private def tacticCompleted(pn: BSONObject)(taskId: Int, nId: Option[String], tacticId: Int) {
+    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => p.infos.get("tactic") == Some(tacticId.toString)) match {
+      case Some(s) => // TODO: search pn in the proofs data structure (insert if it does not yet exist) then add the subtree to it
+      case None =>
+    }
   }
 
 
