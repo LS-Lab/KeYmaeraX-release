@@ -606,4 +606,47 @@ object Tactics {
     }
   }
 
+  object ProofNodeView {
+    def apply(n: ProofNode): ProofNodeView = new ProofNodeView(n)
+  }
+  sealed class ProofNodeView(private val n: ProofNode) {
+    def tacticInfo = n.tacticInfo
+    def sequent = n.sequent
+    def parent = ProofNodeView(n.parent)
+    def children = n.children.map(ProofStepView.apply)
+
+    override def toString: String = n.toString
+  }
+
+  object ProofStepView {
+    def apply(n: ProofStep): ProofStepView = new ProofStepView(n)
+  }
+  sealed class ProofStepView(private val s: ProofStep) {
+    // TODO check when this is allowed to be readable
+    def tacticInfo = s.tacticInfo
+    def rule = s.rule
+    def goal = ProofNodeView(s.goal)
+    def subgoals = s.subgoals.map(ProofNodeView.apply)
+
+    override def toString: String = s.toString
+  }
+
+  /**
+   * All user written tactics should be derived from UserTactic
+   * @param name
+   */
+  abstract class UserTactic(name: String) extends ConstructionTactic("User " + name) {
+    final def constructTactic(tool: Tool, node: ProofNode) = userTactic(tool, ProofNodeView(node))
+
+    /**
+     * This method should construct the user tactic. It only gets a view on the proof tree in order to make sure
+     * that rules are only applied using the ApplyRule tactic (for bookkeeping purposes).
+     *
+     * @param tool
+     * @param node
+     * @return
+     */
+    def userTactic(tool: Tool, node: ProofNodeView): Option[Tactic]
+  }
+
 }
