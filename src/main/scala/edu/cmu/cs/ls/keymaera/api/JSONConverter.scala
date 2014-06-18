@@ -122,16 +122,28 @@ object JSONConverter {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
-  def print(id: String, limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + (p.tacticInfo.infos.get("branchLabel") match { case Some(l) => l + ": " case None => "" }) + print(p.sequent) + "\", \"children\": [ " +
+  def print(id: String, limit: Option[Int])(p: ProofNode): String = "{ " + sequent(p) + "," + infos(p) + ", " +
+    "\"children\": [ " +
     (limit match {
       case Some(l) if l > 0 => p.children.map((ps: ProofStep) => print(id, limit.map(i => i - 1), ps)).mkString(",")
       case _ => ""}) + "]}"
   def print(id: String, limit: Option[Int], ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + subgoals(id, limit)(ps).mkString(",") + "]" + "}"
 
+  def print(id: String, filter: (ProofStepInfo => Boolean))(p: ProofNode): String = "{ " + sequent(p) + "," + infos(p) + ", " +
+    "\"children\": [ " +
+      p.children.filter(ps => filter(ps.tacticInfo)).map(ps => print(id, filter, ps)).mkString(",")  + "]}"
+
+  def print(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + subgoals(id, filter)(ps).mkString(",") + "]" + "}"
+
+  private def infos(p: ProofNode) = p.tacticInfo.infos.map(s => "\"info-" + s._1 + "\":" + "\"" + s._2 + "\"").mkString(", ")
+  private def sequent(p: ProofNode) = "\"sequent\":\"" + print(p.sequent) + "\""
   private def updateIndex(id: String, limit: Option[Int])(in: (ProofNode, Int)): String = print(id + "/" + in._2, limit)(in._1)
+  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean))(in: (ProofNode, Int)): String = print(id + "/" + in._2, filter)(in._1)
   private def subgoals(id: String, limit: Option[Int])(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, limit))
+  private def subgoals(id: String, filter: (ProofStepInfo => Boolean))(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, filter))
 
   def apply(p: ProofNode): String = print("", None)(p)
   def apply(p: ProofNode, id: String, limit: Int): String = print(id, Some(limit))(p)
+  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean)): String = print(id, None)(p)
 
 }

@@ -55,9 +55,9 @@ object TermTests {
       val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
       val pos = SuccPosition(0)
       val pos2 = AntePosition(0)
-      val c = r(ImplyRight(pos))
+      val c = r(ImplyRight(pos)).subgoals
       for(n <- c) {
-        val c2 = n(ImplyRight(pos))
+        val c2 = n(ImplyRight(pos)).subgoals
         for(n2 <- c2) {
           val end = n2(AxiomClose(pos2, pos))
           println(end)

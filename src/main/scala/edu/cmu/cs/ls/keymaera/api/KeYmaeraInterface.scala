@@ -131,6 +131,7 @@ object KeYmaeraInterface {
           // attach a info transformation function which later on allows us to track then changes performed by this tactic
           // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
           t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tacticId.toString)
+          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tacticId.toString)
           Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
           Some(RunningTactics.add(t))
         case None => None
@@ -165,10 +166,25 @@ object KeYmaeraInterface {
     }
   }
 
+  def getSubtree(taskId: Int, nodeId: Option[String], filter: (ProofStepInfo => Boolean)): Option[String] = {
+    (nodeId match {
+      case Some(id) => (id, TaskManagement.getNode(taskId, id))
+      case None => ("", TaskManagement.getRoot(taskId))
+    }) match {
+      case (id, Some(n)) => Some(getSubtree(n, id, filter))
+      case (_, None) => None
+    }
+
+  }
+
   private def getSubtree(n: ProofNode, id: String, depth: Int): String = json(n, id, depth)
+
+  private def getSubtree(n: ProofNode, id: String, filter: (ProofStepInfo => Boolean)): String = json(n, id, filter)
 
   // TODO: maybe allow listeners to node change events
 
   def json(p: ProofNode): String = JSONConverter(p)
   def json(p: ProofNode, id: String, l: Int): String = JSONConverter(p, id, l)
+
+  def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean)): String = JSONConverter(p, id, filter)
 }

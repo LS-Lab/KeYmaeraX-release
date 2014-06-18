@@ -173,6 +173,7 @@ object Tactics {
 
   abstract class Tactic(val name : String) extends Stats {
 
+
     var scheduler : Scheduler = KeYmaeraScheduler
 
     var limit  : Limits = defaultLimits
@@ -202,7 +203,8 @@ object Tactics {
      * We will always use the root's updateInfo method
      */
     var updateInfo: (ProofNodeInfo => Unit) = (_: ProofNodeInfo) => ()
-    
+    var updateStepInfo: (ProofStepInfo => Unit) = (_: ProofStepInfo) => ()
+
     sealed trait TacticStatus
     case class Running() extends TacticStatus
     
@@ -587,10 +589,14 @@ object Tactics {
         val res = measure(node(rule))
         // call updateInfo in order to propagate information along this proof node
         this.root match {
-          case Some(r) => for(n <- res) r.updateInfo(n.tacticInfo)
-          case None => for(n <- res) this.updateInfo(n.tacticInfo)
+          case Some(r) =>
+            r.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) r.updateInfo(n.tacticInfo)
+          case None =>
+            this.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) this.updateInfo(n.tacticInfo)
         }
-        continuation(this, checkStats(Success), res)
+        continuation(this, checkStats(Success), res.subgoals)
       } else {
         continuation(this, Failed,  Seq(node))
       }

@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.hydra
 import com.mongodb.casbah.Imports._
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
+import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, ProofNodeInfo}
 
 /**
  * Created by jdq on 6/12/14.
@@ -57,6 +58,10 @@ object MongoDB {
         true
       case _ => false
     }
+  }
+
+  private def tacticCompleted(taskId: Int, nId: Option[String], tacticId: Int) {
+    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => p.infos.get("tactic") == Some(tacticId.toString))
   }
 
 
