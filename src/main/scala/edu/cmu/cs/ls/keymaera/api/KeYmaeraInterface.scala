@@ -126,19 +126,19 @@ object KeYmaeraInterface {
 
   def getTactics: List[(Int, String)] = TacticManagement.getTactics
 
-  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int, callBack: Option[(Int, Option[String], Int) => Unit] = None): Option[Int] = {
+  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int, callBack: Option[Int => ((Int, Option[String], Int) => Unit)] = None): Option[Int] = {
     (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
     }) match {
       case Some(n) => TacticManagement.getTactic(tacticId) match {
         case Some(t) =>
-          // register listener to react on tactic completion
-          // this way the business logic can react to the completion if required
-          t.registerCompletionEventListener(_ => callBack.foreach(_(taskId, nodeId, tacticId)))
           // attach a info transformation function which later on allows us to track then changes performed by this tactic
           // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
           val res = RunningTactics.add(t)
+          // register listener to react on tactic completion
+          // this way the business logic can react to the completion if required
+          t.registerCompletionEventListener(_ => callBack.foreach(_(res)(taskId, nodeId, tacticId)))
           t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> res.toString)
           t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> res.toString)
           Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
@@ -180,7 +180,7 @@ object KeYmaeraInterface {
       case None => ("", TaskManagement.getRoot(taskId))
     }) match {
       case (id, Some(n)) => Some(getSubtree(n, id, filter, taskId))
-      case (_, None) => None
+      case (_, None) => println("Not found " + taskId + " " + nodeId); None
     }
 
   }

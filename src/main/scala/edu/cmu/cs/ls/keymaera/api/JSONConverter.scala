@@ -154,6 +154,6 @@ object JSONConverter {
 
   //def apply(p: ProofNode): String = print("", None, (_, _) => ())(p)
   def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit): String = print(id, Some(limit), store)(p)
-  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit)): String = print(id, None, store)(p)
+  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit)): String = print(id, filter, store)(p)
 
 }
