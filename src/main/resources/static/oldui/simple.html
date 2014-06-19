@@ -1,0 +1,99 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+
+	<meta http-equiv="content-type" content="text/html; charset=iso-8859-1"/>
+	<title>jQuery treeview</title>
+
+  <link rel="stylesheet" href="/static/css/treeview/jquery.treeview.css" />
+  <link rel="stylesheet" href="/static/css/treeview/screen.css" />
+
+  <script src="/static/js/jquery.js"></script>
+  <script src="/static/js/jquery.treeview.js" type="text/javascript"></script>
+
+
+	<script type="text/javascript">
+	$(document).ready(function(){
+		$("#ktvmain").treeview({
+			toggle: function() {
+				console.log("%s was toggled.", $(this).find(">span").text());
+			}
+		});
+
+	});
+
+  function addNode(parentId, node) {
+    var newNode = document.createElement("li");
+    newNode.setAttribute('id', "ktv-li-" + node.uid);
+    
+    //Add text to the node.
+    var newSpan = document.createElement("span");
+    newSpan.setAttribute('id', 'ktv-span-' + node.uid);
+    newSpan.setAttribute("class", "folder");
+    $(newNode).html(node.text); //TODO-nrf 
+    newNode.appendChild(newSpan);
+
+    //Add children to the node.
+    var newUl = document.createElement('ul');
+    newUl.setAttribute('id', 'ktv-ul-' + node.uid);
+    newNode.appendChild(newUl);
+
+    //Add node to the parent's children.
+    var parentHtmlId;
+    if(parentId === "ktvmain") parentHtmlId = "ktvmain";
+    else parentHtmlId = 'ktv-ul-' + parentId;
+    var appended = $(newNode).appendTo("#"+parentHtmlId);
+    $("#ktvmain").treeview({ add: newNode });
+    //document.getElementById(parentHtmlId).appendChild(newNode);
+  }
+
+  function test() {
+    addNode('ktvmain', { uid: '1', text: 'parent' });
+    addNode('1', { uid: '2', text: 'child' });
+    $("#ktvmain").treeview({});
+  }
+
+  function test2() {
+  }
+  </script>
+	</head>
+	<body>
+
+	<div id="main">
+	<ul id="ktvmain" class="filetree treeview-famfamfam">
+    <li>Folder 1 <span class="folder">Folder 1</span>
+			<ul>
+				<li><span class="folder">Item 1.1</span>
+					<ul>
+						<li><span class="file">Item 1.1.1</span></li>
+					</ul>
+				</li>
+				<li><span class="folder">Folder 2</span>
+					<ul>
+						<li><span class="folder">Subfolder 2.1</span>
+							<ul id="folder21">
+								<li><span class="file">File 2.1.1</span></li>
+								<li><span class="file">File 2.1.2</span></li>
+							</ul>
+						</li>
+						<li><span class="folder">Subfolder 2.2</span>
+							<ul>
+								<li><span class="file">File 2.2.1</span></li>
+								<li><span class="file">File 2.2.2</span></li>
+							</ul>
+						</li>
+					</ul>
+				</li>
+				<li class="closed"><span class="folder">Folder 3 (closed at start)</span>
+					<ul>
+						<li><span class="file">File 3.1</span></li>
+					</ul>
+				</li>
+				<li><span class="file">File 4</span></li>
+			</ul>
+		</li>
+	</ul>
+
+</div>
+
+</body></html>
