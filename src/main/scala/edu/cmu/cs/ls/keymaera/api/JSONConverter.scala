@@ -120,8 +120,9 @@ object JSONConverter {
     jsonResult
   }
 
-  def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
-  def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
+  //def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
+  def print(l: Seq[Formula]): String = (for(f <- l.zipWithIndex) yield "{ \"id\":\"" + f._2 + "\", \"formula\":" + printForm(f._1) + "}").mkString(",")
+  def print(s: Sequent): String = "{ \"ante\": [" + print(s.ante) + "], \"succ\": [" + print(s.succ) + "]}"
   def print(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): String = {
     store(p, id)
     "{ " + sequent(p) + "," + infos(p) +
@@ -145,7 +146,7 @@ object JSONConverter {
     "\"children\": [" + subgoals(id, filter, store)(ps).mkString(",") + "]" + "}"
 
   private def infos(p: ProofNode) = p.tacticInfo.infos.map(s => "\"info-" + s._1 + "\":" + "\"" + s._2 + "\"").mkString(", ") + (if(p.tacticInfo.infos.size > 0) ", " else "")
-  private def sequent(p: ProofNode) = "\"sequent\":\"" + print(p.sequent) + "\""
+  private def sequent(p: ProofNode) = "\"sequent\":" + print(p.sequent)
   private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "/" + in._2, limit, store)(in._1)
   private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "/" + in._2, filter, store)(in._1)
   private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store))
