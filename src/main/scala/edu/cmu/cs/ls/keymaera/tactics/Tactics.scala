@@ -225,15 +225,18 @@ object Tactics {
       case None => this.runningTactics.contains(this)
       case Some(x) => !x.runningTactics.contains(this)
     }
-    
-    def unregister(t : Tactic) {
-      root match {
-        case None =>
-          runningTactics.remove(t)
-          // if there are no more running tactics notify our listeners
-          if(runningTactics.isEmpty) listeners.foreach(_(this))
-        case Some(x) => x.unregister(t)
-      }
+
+    def unregister: Unit = root match {
+      case None => unregister(this)
+      case Some(x) => x.unregister(this)
+    }
+
+    protected def unregister(t : Tactic): Unit = root match {
+      case None =>
+        runningTactics.remove(t)
+        // if there are no more running tactics notify our listeners
+        if(runningTactics.isEmpty) listeners.foreach(_(this))
+      case Some(x) => x.unregister(t)
     }
 
     def registerRunningTactic(t : Tactic) : Unit = {
@@ -259,9 +262,9 @@ object Tactics {
     def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
-      scheduler.dispatch(new TacticWrapper(this, node))
       this.root = t.root
       registerRunningTactic(this)
+      scheduler.dispatch(new TacticWrapper(this, node))
     }
 
     def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }

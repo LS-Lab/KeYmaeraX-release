@@ -124,7 +124,7 @@ object JSONConverter {
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
   def print(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): String = {
     store(p, id)
-    "{ " + sequent(p) + "," + infos(p) + ", " +
+    "{ " + sequent(p) + "," + infos(p) +
       "\"children\": [ " +
       (limit match {
         case Some(l) if l > 0 => p.children.zipWithIndex.map(ps => print(id, limit.map(i => i - 1), ps._1, ps._2, store)).mkString(",")
@@ -135,7 +135,7 @@ object JSONConverter {
     "\"id\":\"" + i + "\", " +
     "\"children\": [" + subgoals(id, limit, store)(ps).mkString(",") + "]" + "}"
 
-  def print(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(p: ProofNode): String = "{ " + sequent(p) + "," + infos(p) + ", " +
+  def print(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(p: ProofNode): String = "{ " + sequent(p) + "," + infos(p) +
     "\"children\": [ " +
       p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => print(id, filter, ps._1, ps._2, store)).mkString(",")  + "]}"
 
@@ -144,7 +144,7 @@ object JSONConverter {
     "\"id\":\"" + i + "\", " +
     "\"children\": [" + subgoals(id, filter, store)(ps).mkString(",") + "]" + "}"
 
-  private def infos(p: ProofNode) = p.tacticInfo.infos.map(s => "\"info-" + s._1 + "\":" + "\"" + s._2 + "\"").mkString(", ")
+  private def infos(p: ProofNode) = p.tacticInfo.infos.map(s => "\"info-" + s._1 + "\":" + "\"" + s._2 + "\"").mkString(", ") + (if(p.tacticInfo.infos.size > 0) ", " else "")
   private def sequent(p: ProofNode) = "\"sequent\":\"" + print(p.sequent) + "\""
   private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "/" + in._2, limit, store)(in._1)
   private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "/" + in._2, filter, store)(in._1)
