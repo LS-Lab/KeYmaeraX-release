@@ -3,6 +3,7 @@ import com.mongodb.casbah.Imports._
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, ProofNodeInfo}
 import org.bson.BSONObject
+import com.mongodb.util.JSON
 
 /**
  * Created by jdq on 6/12/14.
@@ -11,6 +12,7 @@ object MongoDB {
   val mongoClient = MongoClient("localhost", 27017)
   val proofs = mongoClient("keymaera")("proofs")
   val tactics = mongoClient("keymaera")("tactics")
+  val positionTactics = mongoClient("keymaera")("positionTactics")
   val models = mongoClient("keymaera")("models")
 
   initTactics
@@ -63,9 +65,21 @@ object MongoDB {
 
   private def tacticCompleted(pn: BSONObject)(taskId: Int, nId: Option[String], tacticId: Int) {
     KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => p.infos.get("tactic") == Some(tacticId.toString)) match {
-      case Some(s) => // TODO: search pn in the proofs data structure (insert if it does not yet exist) then add the subtree to it
+      case Some(s) =>
+        // TODO search pn in the proofs data structure (insert if it does not yet exist) then add the subtree to it
+        KeYmaeraInterface.getSubtree(taskId, nId, p => p.infos.get("tacticId").get == tacticId.toString) match {
+          case Some(sub) =>
+            // replace the node by the subtree
+            proofs.update(MongoDBObject("_id" -> pn.get("_id")), JSON.parse(sub).asInstanceOf[DBObject])
+          case None =>
+        }
       case None =>
     }
+  }
+
+  def getSubtree(pnId: String): String = {
+    val pn = proofs.find(MongoDBObject("_id" -> pnId))
+    pn.one.toString
   }
 
 

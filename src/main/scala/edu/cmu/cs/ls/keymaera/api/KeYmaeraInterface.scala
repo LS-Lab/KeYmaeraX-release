@@ -165,7 +165,6 @@ object KeYmaeraInterface {
    * @return
    */
   def getSubtree(taskId: Int, nodeId: Option[String], depth: Int): Option[String] = {
-    // TODO: this method needs to add all the nodes to the task management
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
       case None => ("", TaskManagement.getRoot(taskId))
