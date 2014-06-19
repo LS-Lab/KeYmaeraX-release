@@ -35,7 +35,7 @@ class CoreTests extends FlatSpec with Matchers {
   def testRule(rule: Rule, in: Sequent, out: List[Sequent]) {
     println("\tCheck " + rule) //@TODO turn into "should" output?
     val pn = new RootNode(in)
-    val resList = pn.apply(rule)
+    val resList = pn.apply(rule).subgoals
     println("\tResult\t" + resList.map(_.sequent))
     println("\tExpected\t" + out)
     if (resList.map(_.sequent) != out) println("Unexpected")
@@ -54,7 +54,7 @@ class CoreTests extends FlatSpec with Matchers {
 
   def testRule(rule: Rule, in: Sequent) {
     val pn = new RootNode(in)
-    val resList = pn.apply(rule)
+    val resList = pn.apply(rule).subgoals
     resList.map(_.sequent)
   }
 

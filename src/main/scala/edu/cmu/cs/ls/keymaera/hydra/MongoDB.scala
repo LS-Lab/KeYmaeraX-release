@@ -1,6 +1,10 @@
 package edu.cmu.cs.ls.keymaera.hydra
 import com.mongodb.casbah.Imports._
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
+import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, ProofNodeInfo}
+import org.bson.BSONObject
+import com.mongodb.util.JSON
+import org.bson.types.ObjectId
 
 /**
  * Created by jdq on 6/12/14.
@@ -9,6 +13,7 @@ object MongoDB {
   val mongoClient = MongoClient("localhost", 27017)
   val proofs = mongoClient("keymaera")("proofs")
   val tactics = mongoClient("keymaera")("tactics")
+  val positionTactics = mongoClient("keymaera")("positionTactics")
   val models = mongoClient("keymaera")("models")
 
   initTactics
@@ -17,6 +22,8 @@ object MongoDB {
   def initTactics =
     for((i, s) <- KeYmaeraInterface.getTactics)
       tactics.insert(MongoDBObject("tacticId" -> i, "name" -> s))
+
+  def getTactic(i: Int): String = tactics.find(MongoDBObject("tacticId" -> i)).one.get("_id").toString
 
 
   /**
@@ -30,33 +37,56 @@ object MongoDB {
    */
   def addModel(content: String, callback: String => Unit): String = {
     val query = MongoDBObject("parserResult" -> "unknown")
-    val id: String = models.insert(query).getUpsertedId match {
+    models += query
+    val ins = models.find(query).one
+    println("Result is " + ins)
+    ins.get("_id") match {
       case id: ObjectId =>
         try {
           val (tId, model) = KeYmaeraInterface.addTask(content)
-          models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success", "taskId" -> tId, "nodeId" -> tId, "model" -> model))
+          println("Parsed " + model)
+          val jsonModel = JSON.parse(model)
+          models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success", "taskId" -> tId, "nodeId" -> tId, "model" -> jsonModel))
         } catch {
-          case e: Exception => models.update(MongoDBObject("_id" -> id), $set("parserResult" -> e.getMessage))
+          case e: Exception => models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "failed", "reason" -> (e.getClass + ": " + e.getMessage + "\n" + e.getStackTraceString)))
         }
-        id.toHexString
-      case _ => throw new IllegalStateException("Writing to database did not return a valid ObjectID")
+      case a => throw new IllegalStateException("Writing to database did not return a valid ObjectID. Got: " + a)
     }
-    id
+    val res = ins.get("_id").toString
+    callback(res)
+    res
   }
 
   def runTactic(tacticId: String, pnId: String): Boolean = {
-    val tactic = tactics.find("_id" -> tacticId)
-    val pn = models.find("_id" -> pnId)
-    require(tactic.length == 1 && pn.length == 1)
+    val tactic = tactics.find(MongoDBObject("_id" -> new ObjectId(tacticId)))
+    val pn = models.find(MongoDBObject("_id" -> new ObjectId(pnId)))
+    require(tactic.length == 1 && pn.length == 1, "tactic.length = " + tactic.length + " should be 1 and pn.length should be 1 but is " + pn.length)
     tactic.one()
     val t = tactic.one
     val node = pn.one
     (node.get("taskId"), node.get("nodeId"), t.get("tacticId")) match {
-      case (tId: Integer, nId: Integer, tacId: Integer) =>
-        KeYmaeraInterface.runTactic(tId, Some(nId), tacId)
+      case (tId: Integer, nId, tacId: Integer) =>
+        KeYmaeraInterface.runTactic(tId, Some(nId.toString), tacId, Some(tacticCompleted(node)))
         true
       case _ => false
     }
+  }
+
+  private def tacticCompleted(pn: BSONObject)(taskId: Int, nId: Option[String], tacticId: Int) {
+    println("Tactic completed " + tacticId)
+    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { println(p.infos); p.infos.get("tacticId") == Some(tacticId.toString) }) match {
+      case Some(s) =>
+        // TODO search pn in the proofs data structure (insert if it does not yet exist) then add the subtree to it
+        // replace the node by the subtree
+        println("Got update " + s)
+        proofs.insert(MongoDBObject("_id" -> pn.get("_id")), JSON.parse(s).asInstanceOf[DBObject])
+      case None => println("did not find subtree")
+    }
+  }
+
+  def getSubtree(pnId: String): String = {
+    val pn = proofs.find(MongoDBObject("_id" -> pnId))
+    pn.one.toString
   }
 
 

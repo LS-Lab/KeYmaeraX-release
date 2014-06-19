@@ -269,7 +269,7 @@ object TacticLibrary {
     }
   }
 
-  def onBranch(s: String, t: Tactic): Tactic = ifT(_.info.branchLabel == s, t)
+  def onBranch(s: String, t: Tactic): Tactic = ifT(_.tacticInfo.infos.get("branchLabel") == Some(s), t)
 
   /**
    * used on line 236 to say "do equiv-r. On the left branch of that, do my
@@ -290,10 +290,10 @@ object TacticLibrary {
    */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic =
     if(spec.isEmpty)
-     ifT(_.info.branchLabel == s1._1, s1._2)
+     ifT(_.tacticInfo.infos.get("branchLabel") == Some(s1._1), s1._2)
     else
       switchT((pn: ProofNode) => {
-        val candidates = (s1 +: spec).filter((s: (String, Tactic)) => pn.info.branchLabel == s._1)
+        val candidates = (s1 +: spec).filter((s: (String, Tactic)) => pn.tacticInfo.infos.get("branchLabel") == Some(s1._1))
         if(candidates.isEmpty) NilT
         else {
           require(candidates.length == 1)

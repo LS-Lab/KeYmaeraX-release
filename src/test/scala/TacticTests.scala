@@ -512,7 +512,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }
@@ -529,7 +529,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }
@@ -546,7 +546,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }
@@ -563,7 +563,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }

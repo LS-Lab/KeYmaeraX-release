@@ -122,13 +122,37 @@ object JSONConverter {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
-  def print(limit: Option[Int])(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " +
-    (limit match {
-      case Some(l) if l > 0 => p.children.map((ps: ProofStep) => print(limit.map(i => i - 1), ps)).mkString(",")
-      case _ => ""}) + "]}"
-  def print(limit: Option[Int], ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print(limit)).mkString(",") + "]" + "}"
+  def print(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): String = {
+    store(p, id)
+    "{ " + sequent(p) + "," + infos(p) +
+      "\"children\": [ " +
+      (limit match {
+        case Some(l) if l > 0 => p.children.zipWithIndex.map(ps => print(id, limit.map(i => i - 1), ps._1, ps._2, store)).mkString(",")
+        case _ => ""}) + "]}"
+  }
+  def print(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit)): String =
+    "{\"rule\":\"" + ps.rule.toString + "\", " +
+    "\"id\":\"" + i + "\", " +
+    "\"children\": [" + subgoals(id, limit, store)(ps).mkString(",") + "]" + "}"
 
-  def apply(p: ProofNode): String = print(None)(p)
-  def apply(p: ProofNode, limit: Int): String = print(Some(limit))(p)
+  def print(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(p: ProofNode): String = "{ " + sequent(p) + "," + infos(p) +
+    "\"children\": [ " +
+      p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => print(id, filter, ps._1, ps._2, store)).mkString(",")  + "]}"
+
+  def print(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit): String =
+    "{\"rule\":\"" + ps.rule.toString + "\", " +
+    "\"id\":\"" + i + "\", " +
+    "\"children\": [" + subgoals(id, filter, store)(ps).mkString(",") + "]" + "}"
+
+  private def infos(p: ProofNode) = p.tacticInfo.infos.map(s => "\"info-" + s._1 + "\":" + "\"" + s._2 + "\"").mkString(", ") + (if(p.tacticInfo.infos.size > 0) ", " else "")
+  private def sequent(p: ProofNode) = "\"sequent\":\"" + print(p.sequent) + "\""
+  private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "/" + in._2, limit, store)(in._1)
+  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "/" + in._2, filter, store)(in._1)
+  private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store))
+  private def subgoals(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, filter, store))
+
+  //def apply(p: ProofNode): String = print("", None, (_, _) => ())(p)
+  def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit): String = print(id, Some(limit), store)(p)
+  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit)): String = print(id, None, store)(p)
 
 }

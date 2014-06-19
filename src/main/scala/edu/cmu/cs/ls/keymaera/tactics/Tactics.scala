@@ -173,6 +173,7 @@ object Tactics {
 
   abstract class Tactic(val name : String) extends Stats {
 
+
     var scheduler : Scheduler = KeYmaeraScheduler
 
     var limit  : Limits = defaultLimits
@@ -197,7 +198,13 @@ object Tactics {
      * The root tactic is passed on via dispatches.
      */
     var root : Option[Tactic] = None
-    
+
+    /**
+     * We will always use the root's updateInfo method
+     */
+    var updateInfo: (ProofNodeInfo => Unit) = (_: ProofNodeInfo) => ()
+    var updateStepInfo: (ProofStepInfo => Unit) = (_: ProofStepInfo) => ()
+
     sealed trait TacticStatus
     case class Running() extends TacticStatus
     
@@ -218,21 +225,36 @@ object Tactics {
       case None => this.runningTactics.contains(this)
       case Some(x) => !x.runningTactics.contains(this)
     }
-    
-    def unregister(t : Tactic) {
-      root match {
-        case None => runningTactics.remove(t)
-        case Some(x) => x.unregister(t)
-      }
+
+    def unregister: Unit = root match {
+      case None => unregister(this)
+      case Some(x) => x.unregister(this)
     }
-    
+
+    protected def unregister(t : Tactic): Unit = root match {
+      case None =>
+        runningTactics.remove(t)
+        // if there are no more running tactics notify our listeners
+        if(runningTactics.isEmpty) listeners.foreach(_(this))
+      case Some(x) => x.unregister(t)
+    }
+
     def registerRunningTactic(t : Tactic) : Unit = {
       root match {
         case None => runningTactics.put(t, new Running())
         case Some(x) => x.registerRunningTactic(t)
       }
     }
-    
+
+    var listeners: List[Tactic => Unit] = Nil
+
+    def registerCompletionEventListener(e: (Tactic => Unit)) {
+      require(root == None, "Only the root should have listeners")
+      this.synchronized {
+        listeners = listeners :+ e
+      }
+    }
+
     /**
      * Called whenever a new tactic is dispatched.
      * @param t - parent tactic
@@ -240,9 +262,9 @@ object Tactics {
     def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
-      scheduler.dispatch(new TacticWrapper(this, node))
       this.root = t.root
       registerRunningTactic(this)
+      scheduler.dispatch(new TacticWrapper(this, node))
     }
 
     def dispatch(t : Tactic, node : ProofNode) { dispatch(t, t.limit, node) }
@@ -341,7 +363,7 @@ object Tactics {
 
   def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     tFrom.limit.propagate(tFrom)
-    result.foreach(n => n.info.checkParentClosed())
+    result.foreach(n => n.tacticInfo.checkParentClosed())
   }
 
   /*
@@ -568,7 +590,16 @@ object Tactics {
       if (applicable(node)) {
         incRule()
         val res = measure(node(rule))
-        continuation(this, checkStats(Success), res)
+        // call updateInfo in order to propagate information along this proof node
+        this.root match {
+          case Some(r) =>
+            r.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) r.updateInfo(n.tacticInfo)
+          case None =>
+            this.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) this.updateInfo(n.tacticInfo)
+        }
+        continuation(this, checkStats(Success), res.subgoals)
       } else {
         continuation(this, Failed,  Seq(node))
       }
@@ -640,9 +671,52 @@ object Tactics {
     override def applicable(node: ProofNode): Boolean = true
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
-      node.info.branchLabel = s
+      node.tacticInfo.infos += ("branchLabel" -> s)
       continuation(this, Success, Seq(node))
     }
+  }
+
+  object ProofNodeView {
+    def apply(n: ProofNode): ProofNodeView = new ProofNodeView(n)
+  }
+  sealed class ProofNodeView(private val n: ProofNode) {
+    def tacticInfo = n.tacticInfo
+    def sequent = n.sequent
+    def parent = ProofNodeView(n.parent)
+    def children = n.children.map(ProofStepView.apply)
+
+    override def toString: String = n.toString
+  }
+
+  object ProofStepView {
+    def apply(n: ProofStep): ProofStepView = new ProofStepView(n)
+  }
+  sealed class ProofStepView(private val s: ProofStep) {
+    // TODO check when this is allowed to be readable
+    def tacticInfo = s.tacticInfo
+    def rule = s.rule
+    def goal = ProofNodeView(s.goal)
+    def subgoals = s.subgoals.map(ProofNodeView.apply)
+
+    override def toString: String = s.toString
+  }
+
+  /**
+   * All user written tactics should be derived from UserTactic
+   * @param name
+   */
+  abstract class UserTactic(name: String) extends ConstructionTactic("User " + name) {
+    final def constructTactic(tool: Tool, node: ProofNode) = userTactic(tool, ProofNodeView(node))
+
+    /**
+     * This method should construct the user tactic. It only gets a view on the proof tree in order to make sure
+     * that rules are only applied using the ApplyRule tactic (for bookkeeping purposes).
+     *
+     * @param tool
+     * @param node
+     * @return
+     */
+    def userTactic(tool: Tool, node: ProofNodeView): Option[Tactic]
   }
 
 }
