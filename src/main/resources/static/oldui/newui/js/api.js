@@ -30,7 +30,7 @@ var ApiClient = {
 
 
   /**
-   * Update Requests should always reutrn an empty array; return values are
+   * Update Requests should always return an empty array; return values are
    * sent to the client via the event loop (see the event handler in
    * EventHandler.js).
    *
@@ -59,17 +59,69 @@ var ApiClient = {
   //////////////////////////////////////////////////////////////////////////////
   /// /users
   createNewUser: function(userid) {
-    sendUpdateRequest("/users?userid="+userid, "POST");
+    sendUpdateRequest("/users/"+userid, "POST");
   },
 
-  /// /proofs
+  listUsers : function() {
+    sendUpdateRequest("/users/", "GET");
+  },
+
+  /// /proofs/<userid>
   listUserProofs: function(userid) {
-    this.sendUpdateRequest("/proofs/user/"+userid, "GET");
+    this.sendUpdateRequest("/proofs/"+userid, "GET");
   },
 
-  createNewProof: function(userid) {
-    this.sendUpdateRequest("/proofs/user/no
+  createNewProof: function(userid, source) {
+    $.ajax({
+      url: this.url("/proofs/" + userid),
+      type: "POST",
+      data: source,
+      async: true,
+      success: function(resp) {},
+      error: this.ajaxErrorHandler
+    });
+    this.sendUpdateRequest("/proofs/" + userid, "POST");
   },
+
+
+  /// /proofs/<userid>/<proofid>
+  loadProof: function(userid, proofid) {
+    this.sendUpdateRequest("/proofs/"+userid+"/"+proofid, "GET");
+  },
+
+  /**
+   * The current count for the eventQueue.
+   * This is mutable and is updated by getUpdates.
+   */
+  count: 0, 
+
+  /// /proofs/<userid>/<proofid>/updates
+  getUpdates: function(userid, proofid, currentId) {
+    var client = this;
+    $.ajax({
+      url: this.url("/proofs/"+userid+"/"+proofid+"/updates?currentId="+currentId),
+      type: "GET",
+      dataType: 'json',
+      contentType: 'application/json',
+      async: true,
+      success: function(resp) {
+        client.setServerStatus(true);
+        var updates = resp.events;
+        var newCount = resp.newCount;
+        client.count = newCount;
+        if(updates instanceof Array && updates.length > 0) {
+          if(window.DEBUG_MODE) {
+            console.log("Received updates from the server: ");
+            console.log(updates);
+          }
+          for(i=0; i<updates.length; i++) {
+            HydraEventHandler(updates[i], client); //defined in EventHandler.js
+          }
+        } 
+      },
+      error: this.ajaxErrorHandler
+    });
+  }
 
 }
 

@@ -1,7 +1,25 @@
 Hydra API Specification
 =======================
 
-## /proofs/user/<userid>
+## /users
+
+#### GET
+
+Returns a list of all KeYmaera users with a registered account on this server.
+
+ * **Parameters**: none.
+ * **Data**: none.
+ * **Return value**: `[ {"userid": <userid> }, ... ]`
+ 
+
+#### POST /users/< newuserid >
+
+ * **Parameters**: none.
+ * **Data**: none.
+ * **Return value**: `[]` or Error of on error. See JSON Formats for a definition of Error.
+ 
+
+## /proofs/< userid >
 
 #### GET
 
@@ -22,15 +40,17 @@ Creates a new proof.
 #### DELETE
 
 Deletes a user and all associated data.
+
  * **Parameters**: none
  * **Data**: `{"confirm": true}`. This helps prevent accidental deletion, since deletes cascade.
  * **Return value**: `[]` on success or an Error on failure. See JSON response formats (below).
 
-## /proofs/user/<userid>/<proofid>
+## /proofs/< userid >/< proofid >
 
 #### GET
 
 Retrieves a proof.
+
  * **Parameters**: none.
  * **Data**: none.
  * **Return value**: A proof tree. See JSON response formats (below).
@@ -43,7 +63,7 @@ Deletes a proof from the database.
  * **Data**: none.
  * **Return value**: `[]` on success, or an Error on failure. See JSON response formats (below).
 
-## /proofs/user/<userid>/<proofid>/updates
+## /proofs/< userid >/< proofid >/updates
 
 #### GET
 
@@ -52,7 +72,7 @@ Retrieves updates from the update queue.
  * **Parameters**:
     * **currentid**: the queue index of the last retrieved update.
  * **Data**: An array of updates. See the JSON response formats (below) for a definition of updates.
- * **Return value**:
+ * **Return value**: `{ events: [ Events ], newCount: 12345`. See JSON Formats for a defintion of Event.
  * ** example**: `GET /proofs/user/5/updates?currentid=127`
 
 #### DELETE
@@ -171,7 +191,7 @@ HATEOAS inspired
         "errorThrown": "e.g. serialization of the exception's stack trace."
     }
 
-## JSON Format for Updates
+## JSON Format for Events
 
 This interface defines a bare minimum; different types will have specific requirements (e.g. proof <: update). Updates are processed by the EventHandler in resources/js/EventHandler.js
 
