@@ -15,6 +15,7 @@ import Config._
 import scala.Unit
 import scala.language.implicitConversions
 import scala.collection.mutable.HashMap
+import scala.collection.mutable
 
 /**
  * @author jdq
@@ -214,7 +215,7 @@ object Tactics {
      * (this != root && runningTactics.isEmpty) || (this==root)
      * 
      */
-    private val runningTactics : HashMap[Tactic, TacticStatus] = new HashMap[Tactic,TacticStatus]()
+    private val runningTactics : HashMap[Tactic, TacticStatus] = new HashMap[Tactic,TacticStatus]() with mutable.SynchronizedMap[Tactic, TacticStatus]
 
     //It should be the case that runningTactics.isEmpty IFF the scheduler is idle.
      
@@ -234,6 +235,7 @@ object Tactics {
     protected def unregister(t : Tactic): Unit = root match {
       case None =>
         runningTactics.remove(t)
+        println("removing " + t.name + " from running tactics. Remaining: " + runningTactics.size)
         // if there are no more running tactics notify our listeners
         if(runningTactics.isEmpty) listeners.foreach(_(this))
       case Some(x) => x.unregister(t)
@@ -241,7 +243,9 @@ object Tactics {
 
     def registerRunningTactic(t : Tactic) : Unit = {
       root match {
-        case None => runningTactics.put(t, new Running())
+        case None =>
+          runningTactics.put(t, new Running())
+          println("register " + t.name + " as running. Remaining: " + runningTactics.size)
         case Some(x) => x.registerRunningTactic(t)
       }
     }
@@ -262,7 +266,7 @@ object Tactics {
     def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
-      this.root = t.root
+      this.root = if(t.root == None) Some(t) else t.root
       registerRunningTactic(this)
       scheduler.dispatch(new TacticWrapper(this, node))
     }

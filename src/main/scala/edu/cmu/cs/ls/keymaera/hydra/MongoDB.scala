@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, ProofNodeInfo}
 import org.bson.BSONObject
 import com.mongodb.util.JSON
 import org.bson.types.ObjectId
+import edu.cmu.cs.ls.keymaera.tactics.Tactics
 
 /**
  * Created by jdq on 6/12/14.
@@ -72,9 +73,9 @@ object MongoDB {
     }
   }
 
-  private def tacticCompleted(pn: BSONObject)(taskId: Int, nId: Option[String], tacticId: Int) {
+  private def tacticCompleted(pn: BSONObject)(i: Int)(taskId: Int, nId: Option[String], tacticId: Int) {
     println("Tactic completed " + tacticId)
-    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { println(p.infos); p.infos.get("tacticId") == Some(tacticId.toString) }) match {
+    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { println(p.infos); p.infos.get("tactic") == Some(i.toString) }) match {
       case Some(s) =>
         // TODO search pn in the proofs data structure (insert if it does not yet exist) then add the subtree to it
         // replace the node by the subtree
