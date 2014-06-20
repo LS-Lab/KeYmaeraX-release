@@ -223,11 +223,11 @@ object TermTests {
   }
 
   def test10database {
-    import TacticLibrary._
-    val parse = new KeYmaeraParser()
     val input = "jsgui/keymaera/resources/input.key"
     val in = readFile(input)
-    ProverBusinessLogic.addModel(in, s => { println("running tactic on " + s); ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), s) })
+    val node = ProverBusinessLogic.addModel(in)
+    println("running tactic on " + node)
+    ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node)
   }
 
   def test10a(output: String) {

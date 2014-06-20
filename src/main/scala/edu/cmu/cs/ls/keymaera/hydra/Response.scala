@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaera.core.Sequent
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
- * formatted JSON from their paramters.
+ * formatted JSON from their parameters.
  */
 sealed trait Response {
   val json : JsValue
@@ -32,9 +32,9 @@ class UnimplementedResponse(callUrl : String) extends Response {
   )
 }
 
-class CreateProblemResponse(sequent:Sequent, proofid:String) extends Response {
+class CreateProblemResponse(tree:String, proofid:String) extends Response {
   val json = JsObject(
       "proofid" -> JsString(proofid),
-      "proofTree" -> JsString("TODO create a proof tree!") /**@TODO*/
+      "proofTree" -> JsonParser(tree)
   )
 }

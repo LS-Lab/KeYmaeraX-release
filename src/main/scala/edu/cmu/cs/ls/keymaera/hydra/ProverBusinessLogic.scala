@@ -38,30 +38,17 @@ object ProverBusinessLogic {
    * Each model will have a parser status in the database
    *
    * @param content the content to be added to the database which will be parsed by KeYmaera
-   * @param callback the callback function will be called once the parsing by KeYmaera has finished and thus the
-   *                 parsing status is consistent within the database
    * @return a unique identifier for the model
    */
-  def addModel(content: String, callback: String => Unit): String = {
-    val query = MongoDBObject("parserResult" -> "unknown")
-    models += query
-    val ins = models.find(query).one
-    println("Result is " + ins)
-    ins.get("_id") match {
-      case id: ObjectId =>
-        try {
-          val (tId, model) = KeYmaeraInterface.addTask(content)
-          println("Parsed " + model)
-          val jsonModel = JSON.parse(model)
-          models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "success", "taskId" -> tId, "nodeId" -> tId, "model" -> jsonModel))
-        } catch {
-          case e: Exception => models.update(MongoDBObject("_id" -> id), $set("parserResult" -> "failed", "reason" -> (e.getClass + ": " + e.getMessage + "\n" + e.getStackTraceString)))
-        }
-      case a => throw new IllegalStateException("Writing to database did not return a valid ObjectID. Got: " + a)
-    }
-    val res = ins.get("_id").toString
-    callback(res)
-    res
+  def addModel(content: String): String = {
+      val (tId, model) = KeYmaeraInterface.addTask(content)
+      println("Parsed " + model)
+      val jsonModel = JSON.parse(model)
+      val query = MongoDBObject("taskId" -> tId, "nodeId" -> tId, "model" -> jsonModel)
+      models += query
+      val ins = models.find(query).one
+      println("Result is " + ins)
+      ins.get("_id").toString
   }
 
   /**
