@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics
 /**
  * Created by jdq on 6/12/14.
  */
-object MongoDB {
+object ProverBusinessLogic {
   val mongoClient = MongoClient("localhost", 27017)
   val proofs = mongoClient("keymaera")("proofs")
   val tactics = mongoClient("keymaera")("tactics")

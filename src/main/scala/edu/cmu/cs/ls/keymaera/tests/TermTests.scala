@@ -17,7 +17,7 @@ import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core.ProofStep
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, TacticLibrary, Tactics}
-import edu.cmu.cs.ls.keymaera.hydra.MongoDB
+import edu.cmu.cs.ls.keymaera.hydra.ProverBusinessLogic
 
 object TermTests {
 
@@ -227,7 +227,7 @@ object TermTests {
     val parse = new KeYmaeraParser()
     val input = "jsgui/keymaera/resources/input.key"
     val in = readFile(input)
-    MongoDB.addModel(in, s => { println("running tactic on " + s); MongoDB.runTactic(MongoDB.getTactic(0), s) })
+    ProverBusinessLogic.addModel(in, s => { println("running tactic on " + s); ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), s) })
   }
 
   def test10a(output: String) {
