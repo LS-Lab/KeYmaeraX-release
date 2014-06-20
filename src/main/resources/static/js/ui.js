@@ -11,18 +11,24 @@
  * Nathan Fulton 2014
  */
 var UI = {
-  errorElement: document.getElementById("error"),
-  statusElement: document.getElementById("status"),
-  mainElement: document.getElementById("main"),
+  getErrorElement: function() {
+    return document.getElementById("errors")
+  },
+  getStatusElement: function() {
+    return document.getElementById("status")
+  },
+  getMainElement: function() {
+    return document.getElementById("main")
+  },
 
 
   /** @param isOnline - true if the server is up; false otherwise. */
   updateStatusDisplay: function(isOnline) {
-    errorElement.innerHTML = 
+    this.getStatusElement().innerHTML = 
       "hydra://" + ServerInfo.hostname + ":" + ServerInfo.port
     var color;
     if(isOnline) { color = "006600"; } else { color = "00FF00"; }
-    errorElement.style.backgroundColor = color;
+    this.getStatusElement().style.backgroundColor = color;
   },
 
   /**
@@ -31,10 +37,11 @@ var UI = {
    * console.
    */
   showError: function(msg, exn) {
-    var report = document.creatElement("div");
+    this.updateStatusDisplay(false)
+    var report = document.createElement("div");
     report.innerHTML = msg;
-    errorElement.appendChild(report);
-    console.error(msg);
+    this.getErrorElement().appendChild(report);
+    console.error("User Inferface reported error: " + msg);
     console.error(exn);
   },
 }

@@ -1,196 +1,47 @@
+/**
+ * HyDRA API Requests
+ * @author Nathan Fulton
+ */
 package edu.cmu.cs.ls.keymaera.hydra
 
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, RootNode, ProofNode, ProofStep}
-import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticWrapper}
-import spray.json.JsString
-import spray.json.JsObject
-import edu.cmu.cs.ls.keymaera.core.NamedSymbol
-
-////////////////////////////////////////////////////////////////////////////////
-// Request types
-////////////////////////////////////////////////////////////////////////////////
+import edu.cmu.cs.ls.keymaera.api.JSONConverter
+import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula}
 
 /**
- * Requests from clients
+ * A Request should handle all expensive computation as well as all
+ * possible side-effects of a request (e.g. updating the database), but shold
+ * not modify the internal state of the HyDRA server (e.g. do not update the 
+ * event queue).
+ * 
+ * Requests objects should do work after getResultingUpdates is called, 
+ * not during object construction.
+ * 
+ * Request.getResultingUpdates might be run from a new thread. 
  */
 sealed trait Request {
-  def getResultingUpdates() : List[Update]
+  def getResultingResponses() : List[Response] //see Response.scala.
 }
-case class Problem(sessionName : String, contents : String) extends Request {
-  def getResultingUpdates() : List[Update] = {
+
+class CreateProblemRequest(userid : String, keyFileContents : String) extends Request {
+  def getResultingResponses() = {
     try {
-      val expression  = new KeYmaeraParser().runParser(contents);
-      val rootSequent = new Sequent(List(), scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(expression.asInstanceOf[Formula]));
-      (new CreateRootNode(sessionName, rootSequent)) :: Nil
+      //Parse the incoming file.
+      val parseResult = new KeYmaeraParser().runParser(keyFileContents);
+      //Create a sequent from the parse result.
+      val asFormula = parseResult.asInstanceOf[Formula]
+      val sequent = new Sequent(scala.collection.immutable.IndexedSeq(), 
+          scala.collection.immutable.IndexedSeq(), 
+          scala.collection.immutable.IndexedSeq(asFormula))
+      //TODO add this proof.
+      //Create a new queue. TODO this isn't actually working. ServerState needs rewriting I think.
+      val newKey = ServerState.createNewKey(userid)
+      
+      //Return the resulting response.
+      new CreateProblemResponse(sequent, newKey._1 + newKey._2) :: Nil
     }
     catch {
-      case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
+      case e:Exception => new ErrorResponse(e) :: Nil
     }
   }
 }
-
-case class FormulaFromUidRequest(sessionName : String, uid : String)  extends Request {
-  def getResultingUpdates() : List[Update] = {
-    try {
-      val expr = KeYmaeraClient.getExpression(sessionName, uid)
-      val json = KeYmaeraClientPrinter.exprToJson(sessionName, uid, expr)
-      new FormulaFromUidResponse(sessionName, json) :: Nil
-    }
-    catch {
-      case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
-    }
-  }
-}
-
-case class FormulaToStringRequest(sessionName : String, uid : String) extends Request {
-  def getResultingUpdates() : List[Update] = try {
-    if(ServerState.expressions == null) {
-      new ErrorResponse(sessionName, new NullPointerException()) :: Nil
-    }
-    else if(!KeYmaeraClient.hasExpression(sessionName,uid)) {
-      new ErrorResponse(sessionName, new Exception("UID not found for uid: " + sessionName + "," + uid + " in " + ServerState.expressions.keySet().toArray().mkString(","))) :: Nil
-    }
-    else {
-      val prettyString= KeYmaeraClient.getExpression(sessionName,uid).prettyString()
-      (new FormulaToStringResponse(sessionName,prettyString))::Nil
-    }
-  }
-  catch {
-    case e : Exception => (new ErrorResponse(sessionName, e))::Nil
-  }  
-}
-
-case class FormulaToInteractiveStringRequest(sessionName : String, uid : String) extends Request {
-  def getResultingUpdates() : List[Update] = 
-    try {
-      if(ServerState.expressions == null) {
-        new ErrorResponse(sessionName, new NullPointerException()) :: Nil
-      }
-      else if(!KeYmaeraClient.hasExpression(sessionName,uid)) {
-        new ErrorResponse(sessionName, new Exception("UID not found for uid: " + sessionName + "," + uid + " in " + ServerState.expressions.keySet().toArray().mkString(","))) :: Nil
-      }
-      else {
-        ???
-//        val expr= KeYmaeraClient.getExpression(sessionName,uid)
-//        val prettyString = new KeYmaeraClientInteractivePrinter(sessionName).makeInteractive(expr.asInstanceOf[Formula])
-//        (new FormulaToStringResponse(sessionName,prettyString))::Nil
-      }
-    }
-    catch {
-      case e : Exception => (new ErrorResponse(sessionName, e))::Nil
-    }
-}
-
-
-case class RunTacticRequest(sessionName : String, tacticName : String, 
-    uid : String, input : Option[List[String]], 
-    parentNodeId : String) extends Request 
-{
-  ///Begin constructor logic.
-  val sequent = ServerState.getSequent(sessionName, uid)
-  
-  val tactic = tacticName match {
-    case "default" => TacticLibrary.default
-    case "closeT"  => TacticLibrary.closeT
-    case _ => {
-      throw new Exception("Tactic not defined for the RunTactic Result: " + tacticName)
-    }
-  }
-  ///End constructor logic.
-  
-  def getResultingUpdates() = {
-    try {
-      val root = runTactic()
-      if(root.children.size == 0) {
-        Nil
-      }
-      else {
-        makeUpdates(root)
-      }
-    }
-    catch {
-      case e : Exception => {
-        val errorResp = new ErrorResponse("Error while running tactic",e)
-        errorResp :: Nil
-      }
-    }
-  }
-  
-  def makeUpdates(root : RootNode) = {
-    null
-  }
-  
-  
-  
-  def runTactic() = {
-    val r = new RootNode(sequent)
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
-    && Tactics.KeYmaeraScheduler.prioList.isEmpty
-    && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
-    && Tactics.MathematicaScheduler.prioList.isEmpty)) 
-    {
-      Thread.sleep(100)
-    }
-    r
-  }
-}
-
-
-//case class RunTacticRequest(sessionName : String, tacticName : String, uid : String, input : Option[List[String]], parentNodeId : String) extends Request {
-//  private def proofNodeMap[T](l : List[ProofNode], fn : ProofNode => T) : List[T] = {
-//    //System.err.println(l.size.toString() + l.map(_.toString()).mkString(","))
-//    val thisLevel      = l.map(fn)
-//    val nextLevelSteps = l.map(node => node.children).flatten
-//    val nextLevelNodes = nextLevelSteps.map(step => step.subgoals).flatten
-//    l.map(node => require(!nextLevelNodes.contains(node))) //guard against inf recursion
-//    if(nextLevelNodes.isEmpty) thisLevel //base
-//    else                       thisLevel ++ proofNodeMap(nextLevelNodes, fn)
-//  }
-//  
-//  /**
-//   * Runs ProofNodeMap on all nodes in a step.
-//   */
-//  private def proofStepMap[T](step : ProofStep, fn : ProofNode => T) : List[T] = {
-//    val firstLevel = step.subgoals
-//    proofNodeMap(firstLevel, fn)
-//  }
-//  
-//  /**
-//   * @return list of updates that results from the requested tactic.
-//   */
-//  def getResultingUpdates() : List[Update] = {
-//    try { //Much can go wrong, so the entire request is wrapped in an error handler.
-//      //tacticName -> tactic
-//      val tactic = tacticName match {
-//        case "default" => TacticLibrary.default
-//        case "close"   => TacticLibrary.closeT
-//        case _ => throw new Exception("tactic not supported: " + tacticName)
-//      }
-//      
-//      val sequent = ServerState.getSequent(sessionName, uid)
-//    
-//      val r = new RootNode(sequent)
-//      Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-//      while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
-//      && Tactics.KeYmaeraScheduler.prioList.isEmpty
-//      && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
-//      && Tactics.MathematicaScheduler.prioList.isEmpty)) 
-//      {
-//        Thread.sleep(100)
-//      }
-//    
-//      if(r.children.size == 0) { 
-//        Nil 
-//      }
-//      else {
-//        Nil
-//      }
-//    }
-//    catch {
-//      case e : Exception => (new ErrorResponse(sessionName, e)) :: Nil
-//    }
-//  }
-//}

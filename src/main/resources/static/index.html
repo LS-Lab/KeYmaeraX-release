@@ -85,8 +85,8 @@
     fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); }
 
     fr.onload = function(e) {
-      var problemId = ApiClient.createNewProof(userid, e.target.result);
-      setInterval(function() { client.getUpdates(userid, problemid); }, 500);
+      var problemid = ApiClient.createNewProof(userid, e.target.result);
+      setInterval(function() { ApiClient.getUpdates(userid, problemid); }, 500);
 
     }
 

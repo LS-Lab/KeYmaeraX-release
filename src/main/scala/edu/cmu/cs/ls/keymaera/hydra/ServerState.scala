@@ -5,53 +5,49 @@ import edu.cmu.cs.ls.keymaera.core.Expr
 import spray.json.JsObject
 import spray.json.JsValue
 
-/**
- * Pretty certain that we need to do something better for global session
- * state. In partuclar, the whole "queue updates and send down when ready"
- * thing is pretty essentially not RESTy. At the very list use locks.
- */
 object ServerState {
-  var updates = new java.util.HashMap[String, List[spray.json.JsValue]]()
-  updates.put("default", Nil)
+  //updates : userid * proofid -> Response list
+  var updates = new java.util.HashMap[(String, String), List[Response]]()
   
-  type SessionNameCrossUid = (String,String)
+  type KeyType = (String,String)
   
   //Note: this implementation of the keys is exposed.
-  var sequents = new java.util.HashMap[SessionNameCrossUid, Sequent]()
-  var expressions = new java.util.HashMap[SessionNameCrossUid, Expr]()
+  var sequents = new java.util.HashMap[KeyType, Sequent]()
+  var expressions = new java.util.HashMap[KeyType, Expr]()
   
-  def createNewKey(i : Int = 0) : String = {
-    if(updates.containsKey("key" + i.toString())) {
-      createNewKey(i+1)
+  def createNewKey(userid : String, i : Int = 0) : KeyType = {
+    val key = (userid, "key" + i.toString())
+    if(updates.containsKey(key)) {
+      createNewKey(userid, i+1)
     }
     else {
-      "key" + i.toString()
+      key 
     }
-  }
-  def createSession() : String = {
-    val key = createNewKey()
-    updates.put(key, Nil)
-    key
   }
   
   /**
-   * TODO ew. This needs to be moved into the KeYmaeraClient and Request/Update files.
+   * @return the newly created proofid.
    */
-  def getUpdates(sessionName : String, countStr : String) : String = {
+  def createSession(userid : String) : KeyType = {
+    val key = createNewKey(userid)
+    updates.put(key,Nil)
+    key
+  }
+  
+  def getUpdates(userid : String, proofid : String, countStr : String) : String = {
     val count = Integer.parseInt(countStr)
-    val sessionUpdates = updates.get(sessionName)
+    val sessionUpdates = updates.get((userid,proofid))
     val newUpdates = sessionUpdates.slice(count, sessionUpdates.size)
-    val result = spray.json.JsArray(newUpdates)
+    val result = spray.json.JsArray(newUpdates.map(_.json))
     JsObject(
-        "bullshit" -> spray.json.JsString(count.toString() + " " + sessionUpdates.size.toString()),
         "events" -> result,
         "newCount"  -> spray.json.JsNumber(sessionUpdates.size)
     ).prettyPrint
   }
   
-  def addUpdate(sessionName : String, update : spray.json.JsValue) = {
-    val list = updates.remove(sessionName)
-    updates.put(sessionName, list ++ List(update))
+  def addUpdate(userid : String, proofid:String, update : Response) = {
+    val key = (userid, proofid)
+    updates.put(key, updates.get(key) ++ List(update))
   }
   
   def addSequent(sessionName : String, uid : String, sequent : Sequent) = {
