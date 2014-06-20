@@ -10,13 +10,14 @@ Returns a list of all KeYmaera users with a registered account on this server.
  * **Parameters**: none.
  * **Data**: none.
  * **Return value**: `[ {"userid": <userid> }, ... ]`
- 
+ * **Queue addition values**: none.
 
 #### POST /users/< newuserid >
 
  * **Parameters**: none.
  * **Data**: none.
  * **Return value**: `[]` or Error of on error. See JSON Formats for a definition of Error.
+ * **Queue addition values**: none.
  
 
 ## /proofs/< userid >
@@ -28,7 +29,8 @@ Returns a list of all the user's proofs.
  * **Parameters**: none.
  * **Data**: none.
  * **Return value**: `[ {"proofid": <proofid> } ]`. We might want to include more information (e.g. short names or something).
- 
+ * **Queue addition values**: none.
+ * 
 #### POST
 
 Creates a new proof.
@@ -36,7 +38,8 @@ Creates a new proof.
  * **Parameters**: none
  * **Data**: contents of a .key file
  * **Return value**: `{ proofid: <proofid> }`
-
+ * **Queue addition values**: none.
+ * 
 #### DELETE
 
 Deletes a user and all associated data.
@@ -44,16 +47,18 @@ Deletes a user and all associated data.
  * **Parameters**: none
  * **Data**: `{"confirm": true}`. This helps prevent accidental deletion, since deletes cascade.
  * **Return value**: `[]` on success or an Error on failure. See JSON response formats (below).
+ * **Queue addition values**: none.
 
 ## /proofs/< userid >/< proofid >
 
 #### GET
 
-Retrieves a proof.
+Retrieves a proof. I am unsure about return vs. queue for this call.
 
  * **Parameters**: none.
  * **Data**: none.
  * **Return value**: A proof tree. See JSON response formats (below).
+ * **Queue addition values**: none.
 
 #### DELETE
 
@@ -62,6 +67,7 @@ Deletes a proof from the database.
  * **Parameters**: none.
  * **Data**: none.
  * **Return value**: `[]` on success, or an Error on failure. See JSON response formats (below).
+ * **Queue addition values**: none.
 
 ## /proofs/< userid >/< proofid >/updates
 
@@ -73,6 +79,7 @@ Retrieves updates from the update queue.
     * **currentid**: the queue index of the last retrieved update.
  * **Data**: An array of updates. See the JSON response formats (below) for a definition of updates.
  * **Return value**: `{ events: [ Events ], newCount: 12345`. See JSON Formats for a defintion of Event.
+ * **Queue addition values**: none.
  * ** example**: `GET /proofs/user/5/updates?currentid=127`
 
 #### DELETE
@@ -83,6 +90,7 @@ Prunes the update queue for this proof. Essentially manual garbage collection. T
     * **currentid**: The event with this id in the queue -- and all preceeding events -- are deleted.
  * **Data**: none.
  * **Return value**: `[]` on success, or an Error on error (see JSON formats for a defintion of Error).
+ * **Queue addition values**: none.
  * ** example**: `DELETE /proofs/user/5/updates?currentid=127`
 
 
