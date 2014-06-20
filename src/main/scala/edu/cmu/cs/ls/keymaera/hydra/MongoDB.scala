@@ -19,6 +19,12 @@ object MongoDB {
 
   initTactics
 
+  // FIXME: in the long run this should only make sure that the database state is consistent
+  proofs.dropCollection
+  tactics.dropCollection
+  positionTactics.dropCollection
+  models.dropCollection
+
   //FIXME in the long run we need to save everything in the database to restart KeYmaera
   def initTactics =
     for((i, s) <- KeYmaeraInterface.getTactics)
@@ -58,6 +64,14 @@ object MongoDB {
     res
   }
 
+  /**
+   * This API call is used to dispatch a tactic. It will return true if the tactic has been dispatched successfully
+   * and false otherwise. Once the tactic has been completed all its results will become visible in the database.
+   *
+   * @param tacticId
+   * @param pnId
+   * @return
+   */
   def runTactic(tacticId: String, pnId: String): Boolean = {
     val tactic = tactics.find(MongoDBObject("_id" -> new ObjectId(tacticId)))
     val pn = models.find(MongoDBObject("_id" -> new ObjectId(pnId)))
