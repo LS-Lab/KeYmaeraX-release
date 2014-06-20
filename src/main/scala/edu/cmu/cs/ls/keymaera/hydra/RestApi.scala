@@ -51,7 +51,7 @@ trait RestApi extends HttpService {
   }}
 
   
-  val routes = createProof :: Nil
+  val routes = createProof :: staticRoute :: Nil
   val myRoute = routes.reduce(_ ~ _)
 }
 
