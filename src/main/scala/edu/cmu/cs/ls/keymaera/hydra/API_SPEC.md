@@ -37,9 +37,9 @@ Creates a new proof.
 
  * **Parameters**: none
  * **Data**: contents of a .key file
- * **Return value**: `{ proofid: <proofid> }`
+ * **Return value**: `{ proofid: <proofid>, proof: <proof> }`. See JSON Format for proof trees below.
  * **Queue addition values**: none.
- * 
+
 #### DELETE
 
 Deletes a user and all associated data.
