@@ -94,6 +94,7 @@ object MongoDB {
         // TODO search pn in the proofs data structure (insert if it does not yet exist) then add the subtree to it
         // replace the node by the subtree
         println("Got update " + s)
+        //FIXME This will replace all prior proof nodes. This causes trouble if there are alternative tactics running on the same node.
         proofs.insert(MongoDBObject("_id" -> pn.get("_id")), JSON.parse(s).asInstanceOf[DBObject])
       case None => println("did not find subtree")
     }
