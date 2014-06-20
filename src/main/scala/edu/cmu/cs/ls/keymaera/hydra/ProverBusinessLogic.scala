@@ -17,13 +17,14 @@ object ProverBusinessLogic {
   val positionTactics = mongoClient("keymaera")("positionTactics")
   val models = mongoClient("keymaera")("models")
 
-  initTactics
 
   // FIXME: in the long run this should only make sure that the database state is consistent
   proofs.dropCollection
   tactics.dropCollection
   positionTactics.dropCollection
   models.dropCollection
+
+  initTactics
 
   //FIXME in the long run we need to save everything in the database to restart KeYmaera
   def initTactics =
@@ -82,14 +83,18 @@ object ProverBusinessLogic {
         // replace the node by the subtree
         println("Got update " + s)
         //FIXME This will replace all prior proof nodes. This causes trouble if there are alternative tactics running on the same node.
-        proofs.insert(MongoDBObject("_id" -> pn.get("_id")), JSON.parse(s).asInstanceOf[DBObject])
+        val query = JSON.parse(s).asInstanceOf[DBObject]
+        val org = MongoDBObject("_id" -> pn.get("_id"))
+        proofs.update(org, query, true)
       case None => println("did not find subtree")
     }
   }
 
   def getSubtree(pnId: String): String = {
-    val pn = proofs.find(MongoDBObject("_id" -> pnId))
-    pn.one.toString
+    val pn = proofs.find(MongoDBObject("_id" -> new ObjectId(pnId)))
+    if(pn != null && pn.one != null) {
+      pn.one.toString
+    } else "{}"
   }
 
 

@@ -227,7 +227,14 @@ object TermTests {
     val in = readFile(input)
     val node = ProverBusinessLogic.addModel(in)
     println("running tactic on " + node)
+    val tree = ProverBusinessLogic.getSubtree(node)
+    var nTree = tree
     ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node)
+    while(tree == nTree) {
+      nTree = ProverBusinessLogic.getSubtree(node)
+      Thread.sleep(100)
+    }
+    println("Result is: " + nTree)
   }
 
   def test10a(output: String) {
