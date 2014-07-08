@@ -294,11 +294,15 @@ object TacticLibrary {
      ifT(_.tacticInfo.infos.get("branchLabel") == Some(s1._1), s1._2)
     else
       switchT((pn: ProofNode) => {
-        val candidates = (s1 +: spec).filter((s: (String, Tactic)) => pn.tacticInfo.infos.get("branchLabel") == Some(s1._1))
-        if(candidates.isEmpty) NilT
-        else {
-          require(candidates.length == 1)
-          candidates.head._2
+        pn.tacticInfo.infos.get("branchLabel") match {
+          case None => NilT
+          case Some(l) =>
+            val candidates = (s1 +: spec).filter((s: (String, Tactic)) => l == s._1)
+            if(candidates.isEmpty) NilT
+            else {
+              require(candidates.length == 1, "There should be a unique branch with label " + s1._1 + " however there are " + candidates.length + " containing " + candidates.map(_._1))
+              candidates.head._2
+            }
         }
       })
 
