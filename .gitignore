@@ -25,3 +25,11 @@ project/plugins/project/
 4KeYmaera.iml
 out/production/
 lemmadb/
+
+#eclipse IDE specific
+.cache
+.classpath
+.project
+.settings/
+.worksheet/
+

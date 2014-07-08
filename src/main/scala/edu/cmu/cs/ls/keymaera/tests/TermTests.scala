@@ -17,6 +17,7 @@ import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core.ProofStep
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, TacticLibrary, Tactics}
+import edu.cmu.cs.ls.keymaera.hydra.ProverBusinessLogic
 
 object TermTests {
 
@@ -55,9 +56,9 @@ object TermTests {
       val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
       val pos = SuccPosition(0)
       val pos2 = AntePosition(0)
-      val c = r(ImplyRight(pos))
+      val c = r(ImplyRight(pos)).subgoals
       for(n <- c) {
-        val c2 = n(ImplyRight(pos))
+        val c2 = n(ImplyRight(pos)).subgoals
         for(n2 <- c2) {
           val end = n2(AxiomClose(pos2, pos))
           println(end)
@@ -219,6 +220,21 @@ object TermTests {
     val tree = print(r)
     println(tree)
     writeToFile(new File(output), tree)
+  }
+
+  def test10database {
+    val input = "jsgui/keymaera/resources/input.key"
+    val in = readFile(input)
+    val node = ProverBusinessLogic.addModel(in)
+    println("running tactic on " + node)
+    val tree = ProverBusinessLogic.getSubtree(node)
+    var nTree = tree
+    ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node)
+    while(tree == nTree) {
+      nTree = ProverBusinessLogic.getSubtree(node)
+      Thread.sleep(100)
+    }
+    println("Result is: " + nTree)
   }
 
   def test10a(output: String) {
@@ -431,7 +447,7 @@ object TermTests {
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)
-  def print(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + p.info.branchLabel + ": " + print(p.sequent) + "\", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
+  def print(p: ProofNode): String = "{ \"sequent\":\"" + (if(p.children.isEmpty) "??? " else "") + (p.tacticInfo.infos.get("branchLabel") match { case Some(l) => l + ": " case None => "" }) + print(p.sequent) + "\", \"children\": [ " + p.children.map(print).mkString(",") + "]}"
   def print(ps: ProofStep): String = "{\"rule\":\"" + ps.rule.toString + "\", \"children\": [" + ps.subgoals.map(print).mkString(",") + "]" + "}"
 
 }

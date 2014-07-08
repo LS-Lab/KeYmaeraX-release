@@ -59,6 +59,7 @@ object TacticLibrary {
     ) ~ arithmeticT
   }
 
+
   /**
    * Make a step in a proof at the given position (except when decision needed)
    */
@@ -249,6 +250,7 @@ object TacticLibrary {
                   }
                   val contTactic = ((closeT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
                   def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
+                  //Really simple because this is just checking that the thing we believe to be true is actually true.
                   val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
                   val tr = reInst(res) match {
                     case Some(inst) => lemma & EquivLeftT(pos) & onBranch((equivLeftLbl, branch1(inst)), (equivRightLbl, branch2))
@@ -268,14 +270,31 @@ object TacticLibrary {
     }
   }
 
-  def onBranch(s: String, t: Tactic): Tactic = ifT(_.info.branchLabel == s, t)
+  def onBranch(s: String, t: Tactic): Tactic = ifT(_.tacticInfo.infos.get("branchLabel") == Some(s), t)
 
+  /**
+   * used on line 236 to say "do equiv-r. On the left branch of that, do my
+   * branch1 tactic and on the right brance I want to follow branch2 as a tactic.
+   * 
+   * onBranch is used when you have a very specific tactic you only want to run
+   * on a branch where you know it will work. e.g. "I know that tacticX will work
+   * on the left side because it's exactly what we need, but tacticX is not useful
+   * anywhere else."
+   * 
+   * This could be useful for macro recording so that we can provide a concise
+   * proof script of what we did. That way this can be used on another proof where
+   * the exact proof steps might not be necessary but the tactic might be very
+   * useful.
+   * 
+   * Idea: tie together the interface that we had in KeYmaera with tactic writing
+   * (I have an idea what my proof will look like
+   */
   def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic =
     if(spec.isEmpty)
-     ifT(_.info.branchLabel == s1._1, s1._2)
+     ifT(_.tacticInfo.infos.get("branchLabel") == Some(s1._1), s1._2)
     else
       switchT((pn: ProofNode) => {
-        val candidates = (s1 +: spec).filter((s: (String, Tactic)) => pn.info.branchLabel == s._1)
+        val candidates = (s1 +: spec).filter((s: (String, Tactic)) => pn.tacticInfo.infos.get("branchLabel") == Some(s1._1))
         if(candidates.isEmpty) NilT
         else {
           require(candidates.length == 1)
@@ -1429,8 +1448,8 @@ object TacticLibrary {
         case BoxModality(prog, f) if(simplifyProg) => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          // case Assign(_, _) => Some(assignment(p))
-          case Assign(_, _) => Some(assignT(p))
+          case Assign(_, _) => Some(assignment(p))
+          // case Assign(_, _) => Some(assignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None

@@ -14,6 +14,9 @@ import edu.cmu.cs.ls.keymaera.core.Tool
 import Config._
 import scala.Unit
 import scala.language.implicitConversions
+import scala.collection.mutable.HashMap
+import scala.collection.mutable
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * @author jdq
@@ -254,9 +257,80 @@ object Tactics {
 
     val priority : Int = 10
 
-    def dispatch(t : Tactic, l : Limits, node : ProofNode) { // bind tactic to node and dispatch it to the scheduler of this tactic
+    /**
+     * The root tactic is passed on via dispatches.
+     */
+    var root : Option[Tactic] = None
+
+    /**
+     * We will always use the root's updateInfo method
+     */
+    var updateInfo: (ProofNodeInfo => Unit) = (_: ProofNodeInfo) => ()
+    var updateStepInfo: (ProofStepInfo => Unit) = (_: ProofStepInfo) => ()
+
+    sealed trait TacticStatus
+    case class Running() extends TacticStatus
+    
+    /**
+     * This is defined for the root only; in other words, the following should be 
+     * an object invariant (that not being root implies runningTactics is empty):
+     * (this != root && runningTactics.isEmpty) || (this==root)
+     * 
+     */
+    private val runningTactics : ConcurrentLinkedQueue[Tactic] = new ConcurrentLinkedQueue()
+
+    //It should be the case that runningTactics.isEmpty IFF the scheduler is idle.
+     
+    /**
+     * @return true if this tactic is complete.
+     */
+    val isComplete = root match {
+      case None => this.runningTactics.contains(this)
+      case Some(x) => !x.runningTactics.contains(this)
+    }
+
+    def unregister: Unit = root match {
+      case None => unregister(this)
+      case Some(x) => x.unregister(this)
+    }
+
+    protected def unregister(t : Tactic): Unit = root match {
+      case None =>
+        runningTactics.remove(t)
+        println("removing " + t.name + " from running tactics. Remaining: " + runningTactics.size)
+        // if there are no more running tactics notify our listeners
+        if(runningTactics.isEmpty) listeners.foreach(_(this))
+      case Some(x) => x.unregister(t)
+    }
+
+    def registerRunningTactic(t : Tactic) : Unit = {
+      root match {
+        case None =>
+          runningTactics.add(t)
+          println("register " + t.name + " as running. Remaining: " + runningTactics.size)
+        case Some(x) => assert(x != this); x.registerRunningTactic(t)
+      }
+    }
+
+    var listeners: List[Tactic => Unit] = Nil
+
+    def registerCompletionEventListener(e: (Tactic => Unit)) {
+      require(root == None, "Only the root should have listeners")
+      this.synchronized {
+        listeners = listeners :+ e
+      }
+    }
+
+    /**
+     * Called whenever a new tactic is dispatched.
+     * @param t - parent tactic
+     */
+    def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
+      this.root = if(t != this && t.root == None) Some(t) else t.root
+      require(t.root != Some(this), "Cannot have loops in tactic tree")
+      registerRunningTactic(this)
       scheduler.dispatch(new TacticWrapper(this, node))
     }
 
@@ -356,7 +430,7 @@ object Tactics {
 
   def stop(tFrom : Tactic, status : Status, result : Seq[ProofNode]) {
     tFrom.limit.propagate(tFrom)
-    result.foreach(n => n.info.checkParentClosed())
+    result.foreach(n => n.tacticInfo.checkParentClosed())
   }
 
   /*
@@ -416,6 +490,23 @@ object Tactics {
       }
     }
 
+  
+  /**
+   * I have a bunch of tactics collected in the list ``r", rights = at least one tactic
+   * For all the r tactics that are to be executed later on, continue with the 
+   * current continuation of this tactic.
+   * 
+   * This is like scalar multiplcation???
+   * 
+   * The concept doesn't generalize to tactics well because in onSuccess, we 
+   * somehow don't end up doing the right thing because we could end up with
+   * multiple branches that are actually the same or something?
+   * 
+   * So the zip allows us to use repitition to never forget a single rule
+   * or a single tactic.
+   * 
+   * The branch labels in this file are defined in tacticslibrary.
+   */
   def seqComposeT(left: Tactic, right: Tactic, rights: Tactic*) =
     new Tactic("SeqComposeT(" + left.name + ", " + right + ", " + rights.map(_.name).mkString(", ") + ")") {
       def applicable(node : ProofNode) = left.applicable(node)
@@ -442,6 +533,16 @@ object Tactics {
       }
     }
 
+   /**
+    * Try left. 
+    * 
+    * If left is applicable and actually changes the node, quit and
+    * execute the followup.
+    * 
+    * If left is not applicable (does not change the node), then try right.
+    * 
+    * Kind of like non-deterministic choice, although "the successful branch wins".
+    */
   def eitherT(left : Tactic, right : Tactic): Tactic =
     new Tactic("Either(" + left.name + "," + right.name + ")") {
       def applicable(node : ProofNode): Boolean = left.applicable(node) || right.applicable(node)
@@ -457,6 +558,9 @@ object Tactics {
       }
     }
 
+  /**
+   * Continues regardless of the success of left.
+   */
   def weakSeqT(left : Tactic, right : Tactic) =
     new Tactic("WeakSeq(" + left.name + "," + right.name + ")") {
       def applicable(node : ProofNode) = left.applicable(node) || right.applicable(node)
@@ -472,6 +576,9 @@ object Tactics {
       }
     }
 
+  /**
+   * Allows decision making based upon the proof node (using code).
+   */
   def ifElseT(cond : ProofNode => Boolean, thenT : Tactic, elseT : Tactic) =
     new Tactic("Conditional " + thenT + " else " + elseT) {
       def applicable(node : ProofNode) = if(cond(node)) thenT.applicable(node) else elseT.applicable(node)
@@ -490,6 +597,10 @@ object Tactics {
   def ifT(cond : ProofNode => Boolean, thenT : Tactic) =
       ifElseT(cond, thenT, NilT)
 
+  /**
+   * Generalizes if-else. the generator can return the "do nothing" tactic.
+   * Useful with the branch labels.
+   */
   def switchT(generate: ProofNode => Tactic) = new Tactic("Switch") {
     def applicable(node : ProofNode) = generate(node).applicable(node)
     def apply(tool : Tool, node : ProofNode) = {
@@ -499,6 +610,10 @@ object Tactics {
     }
   }
 
+  /**
+   * Dispatches a whole bunch of tactics on the same node.
+   * This tactic might generate a lot of alternatives.
+   */
   def branchT(tcts: Tactic*): Tactic = new Tactic("branch") {
     def applicable(node: ProofNode) = true
 
@@ -510,12 +625,17 @@ object Tactics {
     }
   }
 
+  /**
+   * The smallest fixed point of t. 
+   * Unloop the rule once. If the node changed, then do the loop again.
+   * If the node is not changes, then continues with the follow-up
+   */
   def repeatT(t: Tactic): Tactic = new Tactic("Repeat(" + t.name + ")") {
     def applicable(node: ProofNode) = true
 
     def apply(tool: Tool, node: ProofNode) = {
       if(t.applicable(node)) {
-        t.continuation = onChangeAndOnNoChange(node, onChange(node, this), continuation)
+        t.continuation = onChangeAndOnNoChange(node, onChange(node, repeatT(t)), continuation)
         t.dispatch(this, node)
       } else {
         continuation(this, Success, Seq(node))
@@ -540,7 +660,16 @@ object Tactics {
       if (applicable(node)) {
         incRule()
         val res = measure(node(rule))
-        continuation(this, checkStats(Success), res)
+        // call updateInfo in order to propagate information along this proof node
+        this.root match {
+          case Some(r) =>
+            r.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) r.updateInfo(n.tacticInfo)
+          case None =>
+            this.updateStepInfo(res.tacticInfo)
+            for(n <- res.subgoals) this.updateInfo(n.tacticInfo)
+        }
+        continuation(this, checkStats(Success), res.subgoals)
       } else {
         continuation(this, Failed,  Seq(node))
       }
@@ -548,6 +677,9 @@ object Tactics {
 
   }
 
+  /**
+   * Takes a position tactic and ???
+   */
   abstract class PositionTactic(val name: String) {
     def applies(s: Sequent, p: Position): Boolean
 
@@ -580,6 +712,14 @@ object Tactics {
     def findPosition(s: Sequent): Option[Position]
   }
 
+  /**
+   * Allows construction of tactics based upon the proof node. Every axiom uses
+   * the construction tactic.
+   * 
+   * If you choose a position based upon some information in the current sequent
+   * (e.g. instantiating a quantifier), then you might construct a tactic based 
+   * upon the proof nodes.
+   */
   abstract class ConstructionTactic(name: String) extends Tactic("Construct " + name) {
     final def apply(tool: Tool, node: ProofNode) {
       constructTactic(tool, node) match {
@@ -601,9 +741,52 @@ object Tactics {
     override def applicable(node: ProofNode): Boolean = true
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
-      node.info.branchLabel = s
+      node.tacticInfo.infos += ("branchLabel" -> s)
       continuation(this, Success, Seq(node))
     }
+  }
+
+  object ProofNodeView {
+    def apply(n: ProofNode): ProofNodeView = new ProofNodeView(n)
+  }
+  sealed class ProofNodeView(private val n: ProofNode) {
+    def tacticInfo = n.tacticInfo
+    def sequent = n.sequent
+    def parent = ProofNodeView(n.parent)
+    def children = n.children.map(ProofStepView.apply)
+
+    override def toString: String = n.toString
+  }
+
+  object ProofStepView {
+    def apply(n: ProofStep): ProofStepView = new ProofStepView(n)
+  }
+  sealed class ProofStepView(private val s: ProofStep) {
+    // TODO check when this is allowed to be readable
+    def tacticInfo = s.tacticInfo
+    def rule = s.rule
+    def goal = ProofNodeView(s.goal)
+    def subgoals = s.subgoals.map(ProofNodeView.apply)
+
+    override def toString: String = s.toString
+  }
+
+  /**
+   * All user written tactics should be derived from UserTactic
+   * @param name
+   */
+  abstract class UserTactic(name: String) extends ConstructionTactic("User " + name) {
+    final def constructTactic(tool: Tool, node: ProofNode) = userTactic(tool, ProofNodeView(node))
+
+    /**
+     * This method should construct the user tactic. It only gets a view on the proof tree in order to make sure
+     * that rules are only applied using the ApplyRule tactic (for bookkeeping purposes).
+     *
+     * @param tool
+     * @param node
+     * @return
+     */
+    def userTactic(tool: Tool, node: ProofNodeView): Option[Tactic]
   }
 
 }

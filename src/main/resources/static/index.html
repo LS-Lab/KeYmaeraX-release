@@ -1,0 +1,163 @@
+<html>
+<head>
+<!--
+<link rel="stylesheet" href="/static/css/jquery.contextmenu.css">
+<link rel="stylesheet" href="/static/css/treeview/jquery.treeview.css" />     
+<link rel="stylesheet" href="/static/css/treeview/screen.css" />
+-->
+<style>
+  #prover {
+    border: 2px solid;
+    border-radius: 25px;
+    background-color:#FFFFFF;
+    height: 90%;
+    width: 100%;
+    text-align: center;
+    vertical-align: center;
+    font-size: 20px;
+  }
+  #footer {
+    text-align: center;
+    height: 5%;
+    width: 100%;
+  }
+  #welcome {
+    
+    text-align: center;
+//    font-size: 32px;
+    font-size: 20px;
+    width: 100%;
+    height: 5%;
+  }
+
+  #errorMessage {
+    text-align: left;
+    font-size: 12px;
+    width: 100%;
+    color: #FF0000;
+  }
+</style>
+<!-- extrnal libraries -->
+<script src="/static/js/external/jquery.js" type="text/javascript"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<!--
+<script src="/static/js/jquery.treeview.js" type="text/javascript"></script>
+<script src="/static/js/jquery.contextmenu.js"></script>
+-->
+
+<!-- the "core" UI classes -->
+<script src="/static/js/ui.js" type="text/javascript"></script>
+<!--
+<script src="/static/js/tactics.js" type="text/javascript"></script>
+-->
+<script src="/static/js/api.js" type="text/javascript"></script>
+<!--
+<script src="/static/js/expression.js" type="text/javascript"></script>
+-->
+<script src="/static/js/event_handler.js" type="text/javascript"></script>
+
+<!-- Tree views -->
+<!--
+<script src="/static/js/tree/tree.js" type="text/javascript"></script>
+<script src="/static/js/tree/simple_view.js" type="text/javascript"></script>
+<script src="/static/js/tree/key_tree_view.js" type="text/javascript"></script>
+-->
+
+<script>
+
+</script>
+<script>
+  var userid = window.prompt("Enter user id", "0");
+
+  //Handles an event from the file chooser.
+  function handleChooserEvent(evt) {
+    evt.stopPropagation();
+    evt.preventDefault();
+
+    var files = evt.dataTransfer.files;
+    var file = files[0];
+    loadFile(file);
+  }
+
+  //Loads a window.File object using the FileReader.
+  function loadFile(file) {
+    var fr = new FileReader();
+    fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); }
+
+    fr.onload = function(e) {
+      var problemid = ApiClient.createNewProof(userid, e.target.result);
+      setInterval(function() { ApiClient.getUpdates(userid, problemid); }, 500);
+
+    }
+
+    fr.readAsText(file);
+  }
+
+  //Initialize the file selector and main event loop when the page is loaded.
+  window.onload = function() {
+    if(!(window.File && window.FileReader && window.FileList && window.Blob)) {
+      alert("The KeYmaera4 web front-end requires the HTML 5 file API. " +
+            "It appears your browser does not support this API ." +
+            "Please update to the latest version of a standards-compliant browser.");
+    }
+
+    //Add an event listener for the file box.
+    var drop_zone = document.getElementById('drop_zone');
+    drop_zone.addEventListener('dragover', function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        evt.dataTransfer.dropEffect = 'copy';
+      }, false);
+    drop_zone.addEventListener('drop', function(evt) {
+        evt.stopPropagation();
+        evt.preventDefault();
+        var files = evt.dataTransfer.files;
+        var file = files[0];
+        loadFile(file);
+        }, false);
+    files.addEventListener('change', function(evt) {
+        var files = evt.target.files;
+        var file = files[0];
+        loadFile(file);
+        }, false);
+    //Create main event loop. Ugh we should be doing something better.
+  }
+</script>
+</head>
+<body>
+<div class="welcome" id="welcome">
+  KeYmaera4
+</div>
+<div class="instructions" id="instructions">
+After loading a problem, run a tactic by right-clicking on a sequent
+<!--, or
+by entering interactive mode and right-clicking when a subformula is
+high-lighted.-->
+</div>
+
+<!-- now poorly named... -->
+<span class="footer">
+  <center>
+    <span id="status" style="background-color: #555500; color: #FFFFFF">Disconnected</span>
+  </center>
+  <span id="errors">
+    <div>Error Messages (see console for detailed output): </div>
+  </span>
+</span>
+
+
+<div class="prover" id="prover">
+  <span id="provercontents">
+    <div class="drop_zone" id="drop_zone">
+      Drag and Drop a .key into the grey area to begin.
+      <br/>
+      <br/>
+      <input type="file" id="files" name="files[]" multiple />
+    </div>
+  </span>
+</div>
+
+</span>
+</body>
+</html>
+

@@ -159,7 +159,7 @@ object Sequent {
    * Additional proof node information payload for tactics.
    * @TODO Make branchLabels more general (and more typed) by allowing certain combinations of lables or modifiers to apply. Such as "cutShowLbl"&"invisible" for an invisible branch that proves a cut formula.
    */
-  class ProofNodeInfo(var branchLabel: String, val proofNode: ProofNode) {
+  class ProofNodeInfo(var infos: Map[String, String], val proofNode: ProofNode) {
        //@TODO Role of closed and status is unclear. Who ever closes that? What does it have to do with the proof? It's just status information, not closed in the sense of proved. Maybe rename to done? Also possibly move into mixin trait as separate non-core feature?
     //@TODO Is this an invariant closed <=> status==Success || status==Failed || status==ParentClosed?
     @volatile private[this] var closed : Boolean = false
@@ -182,13 +182,13 @@ object Sequent {
       //@TODO Purpose and function unclear
     def checkParentClosed() : Boolean = {
       var node = proofNode
-      while (node != null && !node.info.isLocalClosed) node = node.parent
+      while (node != null && !node.tacticInfo.isLocalClosed) node = node.parent
       if (node == null) {
         return false
       } else {
         node = proofNode
-        while (node != null && !node.info.isLocalClosed) {
-          node.info.closeNode(ParentClosed)
+        while (node != null && !node.tacticInfo.isLocalClosed) {
+          node.tacticInfo.closeNode(ParentClosed)
           node = node.parent
         }
         return true
@@ -200,7 +200,7 @@ object Sequent {
    * Represents a deduction step in a proof using the indicated rule which leads to the given conjunctive list of subgoals.
    * @TODO Is there a way of proctecting constructor access so that only ProofNode.apply can construct ProofSteps?
    */
-  sealed case class ProofStep(rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode]) {
+  sealed case class ProofStep(rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode], tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
     justifiedByProofRule
     @elidable(ASSERTION) def justifiedByProofRule = {
       // println("Checking " + this)
@@ -208,18 +208,28 @@ object Sequent {
       require(rule(goal.sequent) == subgoals.map(_.sequent), "ProofStep " + this + " is justified by said proof rule application")
       // println("Checked  " + this)
     }
+
   }
+
+  class ProofStepInfo(var infos: Map[String, String])
   
   sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
 
     @volatile private[this] var alternatives : List[ProofStep] = Nil
 
     /**
+     * Soundness-critical invariant that all alternative proof steps have us as their goal.
+     * Dropping alternatives is sound, but adding alternatives requires passing this invariant.
+     */
+    private def checkInvariant = 
+      assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
+      
+    /**
      * List of all current or-branching alternatives of proving this proof node.
      * Result can change over time as new alternative or-branches are added.
      */
     def children: scala.collection.immutable.List[ProofStep] = {
-      assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
+      checkInvariant
       alternatives
     }
 
@@ -247,17 +257,20 @@ object Sequent {
      * Return the resulting list of subgoals (after including them as an or-branch alternative for proving this ProofNode).
      * Soundness-critical proof rule application mechanism.
      */
-    final def apply(rule : Rule) : List[ProofNode] = {
+    final def apply(rule : Rule) : ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
       val subgoals = rule(sequent).map(new ProofNode(_, this))
+      val proofStep = ProofStep(rule, this, subgoals)
       // Add as or-branching alternative
       this.synchronized {
-        alternatives = ProofStep(rule, this, subgoals) :: alternatives;
+        alternatives = alternatives :+ proofStep
       }
-      subgoals
+      checkInvariant
+      proofStep
     }
 
-    val info: ProofNodeInfo = new ProofNodeInfo(if(parent == null) "" else parent.info.branchLabel, this)
+    // TODO: there should be a TestCase that checks that this field is never read in the prover core
+    val tacticInfo: ProofNodeInfo = new ProofNodeInfo(if(parent == null) Map() else parent.tacticInfo.infos, this)
 
     override def toString = "ProofNode(" + sequent + "\nfrom " + parent + ")"
   }

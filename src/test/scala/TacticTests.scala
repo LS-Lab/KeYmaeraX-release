@@ -53,16 +53,12 @@ class TacticTests extends FlatSpec with Matchers {
   def prove(f:Formula, tactic:Tactic = TacticLibrary.default, printOnFail: Boolean = true) : ProvabilityStatus = {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
-      && Tactics.KeYmaeraScheduler.prioList.isEmpty
-      && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
-      && Tactics.MathematicaScheduler.prioList.isEmpty)) {
-      Thread.sleep(100)
-//      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
-//      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
-//      println("Blocked on Mathematica: " + Tactics.MathematicaScheduler.blocked + " of " + Tactics.MathematicaScheduler.maxThreads)
-//      println("Tasks open Mathematica: " + Tactics.MathematicaScheduler.prioList.length)
+    //For all schedulers, no one is working anymore.
+    tactic.synchronized {
+      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll))
+      tactic.wait
     }
+
     if(checkClosed(r))
       Provable
     else {
@@ -511,7 +507,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }
@@ -528,7 +524,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }
@@ -545,7 +541,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }
@@ -562,7 +558,7 @@ class TacticTests extends FlatSpec with Matchers {
         }) should be (true)
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
         val t = LookupLemma(file,id)
-        val nr = r.apply(t).head
+        val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
     }

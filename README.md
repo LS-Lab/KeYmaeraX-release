@@ -34,6 +34,28 @@ common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 
+Front End
+=========
+
+sbt "~ re-start"
+open http://localhost:8080/static/index.html in web browser
+open .key file in KeYmaera 4 HyDRA
+right click to interact
+
+Proof Tree Viewer
+=================
+
+To view proof trees converted to JSON by TermTests.print you can use
+jsgui/proofviewer.html
+
+Simply deploy proofviewer.html to any webserver and put the JSON
+descirption into resources/proof.json in the same directory on the
+webserver. Please note that JSON sources cannot be read from file-urls
+and thus have to be accessed through a webserver. There are no
+specific requirements for the webserver since it is only servering
+html and the JavaScript part is interpreted in the browser on the
+client anyway.
+
 Source Layout
 =============
 

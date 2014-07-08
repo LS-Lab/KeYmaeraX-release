@@ -170,3 +170,91 @@ object ParseSymbols extends KeYmaeraSymbols {
   //Parens are always defined in the normal way..
   def paren(s:String) = "(" + s + ")" 
 }
+
+
+/**
+ * Standard symbol table for the Parser
+ */
+object HTMLSymbols extends KeYmaeraSymbols {
+  
+  /** Section headers */
+  val FUNCTIONS_SECT = "Functions" //RigidVariables
+  val PROBLEM_SECT = "Problem" //Assignables
+  val VARIABLES_SECT = "Variables"
+  val EXTERNAL_FUNCTION = "external"
+  val PVARS_SECT = "ProgramVariables" //ProgramVariables
+  val START_SECT = "."
+  val END_SECT   = "End."
+
+  /** Constants */
+  //**Terms
+  val LEQ = "≤"
+  val GEQ = "≥"
+  val LT = "&lt;"
+  val GT = "&gt;"
+  val EQ = "="
+  val MULTIPLY = "*"
+  val PLUS = "+"
+  val MINUS = "-"
+  val DIVIDE = "/"
+  val NEGATIVE = "-"
+  val EXP = "^"
+  val NEQ = "!="
+    
+  val OPEN_CBRACKET = "{"
+  val CLOSE_CBRACKET = "}"
+  val COMMA = ","
+
+  //**Formulas
+  val TRUE      = "⊤"
+  val FALSE     = "⊥"
+  val NEGATE    = "¬"
+  val AND       = "∧"
+  val OR        = "∨"
+  val ARROW     = "⊃"
+  val LARROW    = "<-"
+
+  //** Temporal Modealities
+  val BOX    = "◻"
+  val DIA    = "⋄"
+  
+  //** Dynamic Modalities
+  val BOX_OPEN  = "["
+  val BOX_CLOSE  = "]"
+  val DIA_OPEN  = "&lt;"
+  val DIA_CLOSE  = "&gt;"
+  
+  //** Programs
+  val ASSIGN = ":="
+  val KSTAR    = "*"
+  val CHOICE  = "∪"
+  val SCOLON  = ";"
+  val TEST = "?"
+  val PRIME = "'" //derivative of
+    
+  val PARALLEL    = "∥"
+  val SEND = "!"
+  val RECEIVE = "?"
+  
+  //Output-only program constructs
+  val PCOMP_JOINED = "∦" //for pretty printing.
+  val CURSOR = "."
+    
+  //** Provability relations
+  val TUNSTILE  = "⊢"
+  val DTURNSTILE= "⊨"
+  val EQUIV        = "≡"
+  val PROGRAM_META = "P"
+  val FORMULA_META = "F"
+
+    
+  val PAIR_OPEN = "("
+  val PAIR_CLOSE = ")"
+    
+  val EXISTS = "∃"
+  val FORALL = "∀"  
+  
+  //Abbreviations
+  //Parens are always defined in the normal way..
+  def paren(s:String) = "(" + s + ")" 
+}
