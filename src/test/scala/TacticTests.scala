@@ -54,16 +54,11 @@ class TacticTests extends FlatSpec with Matchers {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     //For all schedulers, no one is working anymore.
-    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads
-      && Tactics.KeYmaeraScheduler.prioList.isEmpty
-      && Tactics.MathematicaScheduler.blocked == Tactics.MathematicaScheduler.maxThreads
-      && Tactics.MathematicaScheduler.prioList.isEmpty)) {
-      Thread.sleep(100)
-//      println("Blocked " + Tactics.KeYmaeraScheduler.blocked + " of " + Tactics.KeYmaeraScheduler.maxThreads)
-//      println("Tasks open: " + Tactics.KeYmaeraScheduler.prioList.length)
-//      println("Blocked on Mathematica: " + Tactics.MathematicaScheduler.blocked + " of " + Tactics.MathematicaScheduler.maxThreads)
-//      println("Tasks open Mathematica: " + Tactics.MathematicaScheduler.prioList.length)
+    tactic.synchronized {
+      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll))
+      tactic.wait
     }
+
     if(checkClosed(r))
       Provable
     else {
