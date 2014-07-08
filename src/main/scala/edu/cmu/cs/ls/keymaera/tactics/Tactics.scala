@@ -297,7 +297,7 @@ object Tactics {
     protected def unregister(t : Tactic): Unit = root match {
       case None =>
         runningTactics.remove(t)
-        println("removing " + t.name + " from running tactics. Remaining: " + runningTactics.size)
+//        println("removing " + t.name + " from running tactics. Remaining: " + runningTactics.size)
         // if there are no more running tactics notify our listeners
         if(runningTactics.isEmpty) listeners.foreach(_(this))
       case Some(x) => x.unregister(t)
@@ -307,7 +307,7 @@ object Tactics {
       root match {
         case None =>
           runningTactics.add(t)
-          println("register " + t.name + " as running. Remaining: " + runningTactics.size)
+//          println("register " + t.name + " as running. Remaining: " + runningTactics.size)
         case Some(x) => assert(x != this); x.registerRunningTactic(t)
       }
     }

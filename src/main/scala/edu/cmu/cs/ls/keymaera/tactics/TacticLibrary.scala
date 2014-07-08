@@ -300,7 +300,7 @@ object TacticLibrary {
             val candidates = (s1 +: spec).filter((s: (String, Tactic)) => l == s._1)
             if(candidates.isEmpty) NilT
             else {
-              require(candidates.length == 1, "There should be a unique branch with label " + s1._1 + " however there are " + candidates.length + " containing " + candidates.map(_._1))
+              require(candidates.length == 1, "There should be a unique branch with label " + l + " however there are " + candidates.length + " containing " + candidates.map(_._1))
               candidates.head._2
             }
         }
