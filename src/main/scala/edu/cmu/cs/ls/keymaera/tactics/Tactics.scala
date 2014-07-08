@@ -16,6 +16,7 @@ import scala.Unit
 import scala.language.implicitConversions
 import scala.collection.mutable.HashMap
 import scala.collection.mutable
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * @author jdq
@@ -215,7 +216,7 @@ object Tactics {
      * (this != root && runningTactics.isEmpty) || (this==root)
      * 
      */
-    private val runningTactics : HashMap[Tactic, TacticStatus] = new HashMap[Tactic,TacticStatus]() with mutable.SynchronizedMap[Tactic, TacticStatus]
+    private val runningTactics : ConcurrentLinkedQueue[Tactic] = new ConcurrentLinkedQueue()
 
     //It should be the case that runningTactics.isEmpty IFF the scheduler is idle.
      
@@ -244,9 +245,9 @@ object Tactics {
     def registerRunningTactic(t : Tactic) : Unit = {
       root match {
         case None =>
-          runningTactics.put(t, new Running())
+          runningTactics.add(t)
           println("register " + t.name + " as running. Remaining: " + runningTactics.size)
-        case Some(x) => x.registerRunningTactic(t)
+        case Some(x) => assert(x != this); x.registerRunningTactic(t)
       }
     }
 
@@ -266,7 +267,8 @@ object Tactics {
     def dispatch(t : Tactic, l : Limits, node : ProofNode) {
       inheritStats(t)
       limit = l
-      this.root = if(t.root == None) Some(t) else t.root
+      this.root = if(t != this && t.root == None) Some(t) else t.root
+      require(t.root != Some(this), "Cannot have loops in tactic tree")
       registerRunningTactic(this)
       scheduler.dispatch(new TacticWrapper(this, node))
     }
