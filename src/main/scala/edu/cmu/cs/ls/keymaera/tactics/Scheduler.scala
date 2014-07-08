@@ -76,6 +76,8 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[T
           tactic.continuation(tactic, Failed, Seq(node))
       } catch {
         case e: Exception =>
+          // TODO report exception somewhere useful
+          e.printStackTrace()
           tactic.continuation(tactic, Failed, Seq(node))
       }
     }
