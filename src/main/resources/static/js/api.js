@@ -66,7 +66,7 @@ var ApiClient = {
       contentType: "application/json",
       async: false,
       url: this.url("user/"+userid + "/create"),
-      success: function(resp) {alert(resp)},
+      success: function(resp) {},
       error: this.ajaxErrorHandler
     });
   },
@@ -119,7 +119,7 @@ var ApiClient = {
 
   /// /proofs/<userid>/<proofid>/updates
   getUpdates: function(userid) {
-    var client = this;
+    var client = ApiClient;
     if(client.currentId == undefined) {
         client.currentId = 0;
     }
