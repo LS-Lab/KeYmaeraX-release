@@ -36,11 +36,13 @@
     width: 100%;
     color: #FF0000;
   }
+  .hl {background: transparent; }
+  .hlhover { background:#00aaaa; }
 </style>
 <!-- extrnal libraries -->
 <script src="/static/js/external/jquery.js" type="text/javascript"></script>
-<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <!--
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <script src="/static/js/jquery.treeview.js" type="text/javascript"></script>
 <script src="/static/js/jquery.contextmenu.js"></script>
 -->
@@ -93,8 +95,6 @@
     fr.onload = function(e) {
       ApiClient.createNewProof(userid, e.target.result,
       function(resp) {
-		  resp.proofTree.model.x0 = 0;
-		  resp.proofTree.model.y0 = 0;
 		  ClientState.proofid = resp.proofid;
 		  update(root = resp.proofTree.model);
 		});
@@ -171,25 +171,12 @@ high-lighted.-->
                 <div id="proof">
                 </div>
                 <script>
-      	var margin = {top: 30, right: 20, bottom: 30, left: 20},
-    width = 960 - margin.left - margin.right,
-    barHeight = 20,
-    barWidth = width * .8;
 
-var i = 0,
-    duration = 400,
-    root;
-
-var tree = d3.layout.tree()
-    .size([0, 100]);
-
-var diagonal = d3.svg.diagonal()
-    .projection(function(d) { return [d.y, d.x]; });
-
-var svg = d3.select("#proof").append("svg")
+var svg = $("#proof").append("<ul></ul>").find("ul")/*.append("svg")
 			.attr("width", width + margin.left + margin.right)
 			.append("g")
-			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")*/;
+
 function span(id, cont) {
     return "<span xmlns=\"http://www.w3.org/1999/xhtml\" onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + id + "'>" + cont + "</span>"
 }
@@ -281,119 +268,39 @@ function handle(json) {
 }
 
 function update(source) {
+	svg.html(translateNode(root));
+}
 
-  // Compute the flattened node list. TODO use d3.layout.hierarchy.
-  var nodes = tree.nodes(root);
+function translateFormula(f) {
+	 return "<span id=\"" + f.id + "\">" + handle(f.formula) + "</span>";
+}
 
-  var height = Math.max(500, nodes.length * barHeight + margin.top + margin.bottom);
+function translateSequent(s) {
+	var res = "";
+	s.ante.forEach(function(f) {
+		res = res + translateFormula(f) + "<br>";
+	});
+	res = res + "<span onClick=\"ApiClient.runTactic(ClientState.uid, 0, ClientState.proofid, function (resp) { alert(JSON.stringify(resp)); });\"> ==&gt; </span>";
+	s.succ.forEach(function(f) {
+		res = res + translateFormula(f) + "<br>";
+	});
+	return res;
+}
 
-  d3.select("svg")
-      .attr("height", height);
+function translateNode(node) {
+	var str = "<li id=\"" + node.id + "\">" + translateSequent(node.sequent) + "<ul>";
+	node.children.forEach(function(c) {
+		str = str + translateRule(c);
+	});
+	return str + "</ul></li>";
+}
 
-  d3.select(self.frameElement)
-      .style("height", height + "px");
-
-  // Compute the "layout".
-  nodes.forEach(function(n, i) {
-    n.x = i * barHeight;
-  });
-
-  // Update the nodes…
-  var node = svg.selectAll("g.node")
-      .data(nodes, function(d) { return d.id || (d.id = ++i); });
-
-  var nodeEnter = node.enter().append("g")
-      .attr("class", "node")
-      .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
-      .style("opacity", 1e-6);
-
-  // Enter any new nodes at the parent's previous position.
-  nodeEnter.append("rect")
-      .attr("y", -barHeight / 2)
-      .attr("height", barHeight)
-      .attr("width", barWidth)
-      .style("fill", color)
-      .on("click", click);
-
-  nodeEnter.append("foreignobject")
-      .attr("dy", 3.5)
-      .attr("dx", 5.5)
-      .attr("requiredExtensions", "http://www.w3.org/1999/xhtml")
-      .append("xhtml:body")
-      .attr("xmlns", "http://www.w3.org/1999/xhtml")
-      .html(function(d) {
-          var res = "";
-          if(d.hasOwnProperty("sequent")) {
-            var str = "";
-            d.sequent.ante.forEach(function(arg) {
-                str = str + "," + handle(arg);
-            });
-            str = str + " ==> ";
-            d.sequent.succ.forEach(function(arg) {
-                str = str + "," + handle(arg);
-            });
-            res = res + str;
-            //return JSON.stringify(d.sequent);
-          } else if(d.hasOwnProperty("rule"))
-            res = res + JSON.stringify(d.rule);
-          else res = res + d.id ;
-          return res;
-      });
-
-  // Transition nodes to their new position.
-  nodeEnter.transition()
-      .duration(duration)
-      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; })
-      .style("opacity", 1);
-
-  node.transition()
-      .duration(duration)
-      .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; })
-      .style("opacity", 1)
-    .select("rect")
-      .style("fill", color);
-
-  // Transition exiting nodes to the parent's new position.
-  node.exit().transition()
-      .duration(duration)
-      .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
-      .style("opacity", 1e-6)
-      .remove();
-
-  // Update the links…
-  var link = svg.selectAll("path.link")
-      .data(tree.links(nodes), function(d) { return d.target.id; });
-
-  // Enter any new links at the parent's previous position.
-  link.enter().insert("path", "g")
-      .attr("class", "link")
-      .attr("d", function(d) {
-        var o = {x: source.x0, y: source.y0};
-        return diagonal({source: o, target: o});
-      })
-    .transition()
-      .duration(duration)
-      .attr("d", diagonal);
-
-  // Transition links to their new position.
-  link.transition()
-      .duration(duration)
-      .attr("d", diagonal);
-
-  // Transition exiting nodes to the parent's new position.
-  link.exit().transition()
-      .duration(duration)
-      .attr("d", function(d) {
-        var o = {x: source.x, y: source.y};
-        return diagonal({source: o, target: o});
-      })
-      .remove();
-
-  // Stash the old positions for transition.
-  nodes.forEach(function(d) {
-    d.x0 = d.x;
-    d.y0 = d.y;
-  });
+function translateRule(rule) {
+	var res = "<li id=\"" + rule.id + "\">" + rule.rule;
+	rule.children.forEach(function(c) {
+		res = res + translateNode(c);
+	});
+	return res + "</li>";
 }
 
 // Toggle children on click.
@@ -408,10 +315,6 @@ function click(d) {
     d._children = null;
   }
   update(d);*/
-}
-
-function color(d) {
-	return d.hasOwnProperty("sequent")?"#aaaaaa": d._children ? "#323232" : d.children ? "#8C8C8C" : "#3D7178";
 }
       	</script>
             </div>
