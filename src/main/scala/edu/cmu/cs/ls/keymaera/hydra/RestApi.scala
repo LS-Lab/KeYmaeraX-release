@@ -21,7 +21,15 @@ class RestApiActor extends Actor with RestApi {
  */
 trait RestApi extends HttpService {
   val staticRoute = pathPrefix("static") { get { getFromResourceDirectory("static") } }
-  
+  val newUser = pathPrefix("user" / IntNumber / "create") { userid => {
+    get {
+      val newKey = ServerState.createSession(userid.toString)
+      respondWithMediaType(`application/json`) {
+        complete("{\"sessionName\": \"" + newKey + "\"}") //TODO-nrf
+      }
+    }
+  }
+  }
   /**
    * POST /proofs/< useridid > with data containing the .key file to load
    * GET /proofs/< userid >/< proofid > should load the proof id.
@@ -31,6 +39,7 @@ trait RestApi extends HttpService {
       post {
 //        decompressRequest()
         entity(as[String]) { keyFileContents => {
+          ServerState.createSession(userid.toString)
           val request = new CreateProblemRequest(userid.toString(), keyFileContents)
           val responses = request.getResultingResponses()
           if(responses.length != 1) {
@@ -50,8 +59,45 @@ trait RestApi extends HttpService {
     }
   }}
 
-  
-  val routes = createProof :: staticRoute :: Nil
+  val runTactic = pathPrefix("user" / IntNumber / "proofs" / Segment / "tactic" / IntNumber) { (userid, proofid, tacticid) => {
+    pathEnd {
+      post {
+//        decompressRequest()
+        entity(as[String]) { keyFileContents => {
+          val request = new RunTacticRequest(userid.toString(), tacticid, proofid)
+          val responses = request.getResultingResponses()
+          if(responses.length != 1) {
+            complete(new ErrorResponse(
+              new Exception("CreateProblemRequest generated too many responses"
+             )).json.prettyPrint)
+          }
+          else {
+            complete(responses.last.json.prettyPrint)
+          }
+        }}
+      } ~
+      get {
+        val response = new UnimplementedResponse("GET proofs/<useridid>")
+        complete(response.json.prettyPrint)
+      }
+    }
+  }}
+   val getUpdates = path("user" / IntNumber / "getUpdates" / IntNumber) { (userid, count) =>
+     pathEnd {
+      post {
+        val res = new UpdateResponse(ServerState.getUpdates(userid.toString, count)).json.prettyPrint
+        complete(res)
+      }
+    }
+  }
+
+  val routes =
+    createProof ::
+    runTactic ::
+    getUpdates ::
+    staticRoute ::
+    newUser ::
+    Nil
   val myRoute = routes.reduce(_ ~ _)
 }
 

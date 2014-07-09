@@ -60,22 +60,27 @@ object ProverBusinessLogic {
    * @param pnId
    * @return
    */
-  def runTactic(tacticId: String, pnId: String): Boolean = {
+  def runTactic(tacticId: String, pnId: String, callback: String => Unit = _ => ()): Boolean = {
+    println("Run tactic called")
     val tactic = tactics.find(MongoDBObject("_id" -> new ObjectId(tacticId)))
-    val pn = models.find(MongoDBObject("_id" -> new ObjectId(pnId)))
-    require(tactic.length == 1 && pn.length == 1, "tactic.length = " + tactic.length + " should be 1 and pn.length should be 1 but is " + pn.length)
-    tactic.one()
+    println("Tactic is " + tactic)
+    val qry = models.find(MongoDBObject("_id" -> new ObjectId(pnId)))
+    val node = if(qry == null || qry.one == null)
+      proofs.find(MongoDBObject("_id" -> new ObjectId(pnId))).one
+      else qry.one
+    println("Node is " + node)
+    require(tactic.length == 1, "tactic.length = " + tactic.length + " should be 1")
     val t = tactic.one
-    val node = pn.one
     (node.get("taskId"), node.get("nodeId"), t.get("tacticId")) match {
       case (tId: Integer, nId, tacId: Integer) =>
-        KeYmaeraInterface.runTactic(tId, Some(nId.toString), tacId, Some(tacticCompleted(node)))
+        println("Actually running tactic")
+        KeYmaeraInterface.runTactic(tId, Some(nId.toString), tacId, Some(tacticCompleted(callback, node)))
         true
       case _ => false
     }
   }
 
-  private def tacticCompleted(pn: BSONObject)(i: Int)(taskId: Int, nId: Option[String], tacticId: Int) {
+  private def tacticCompleted(f: String => Unit, pn: BSONObject)(i: Int)(taskId: Int, nId: Option[String], tacticId: Int) {
     println("Tactic completed " + tacticId)
     KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { println(p.infos); p.infos.get("tactic") == Some(i.toString) }) match {
       case Some(s) =>
@@ -86,15 +91,21 @@ object ProverBusinessLogic {
         val query = JSON.parse(s).asInstanceOf[DBObject]
         val org = MongoDBObject("_id" -> pn.get("_id"))
         proofs.update(org, query, true)
+        f(s)
       case None => println("did not find subtree")
     }
   }
 
   def getSubtree(pnId: String): String = {
     val pn = proofs.find(MongoDBObject("_id" -> new ObjectId(pnId)))
-    if(pn != null && pn.one != null) {
+    if(pn != null && pn.one != null)
       pn.one.toString
-    } else "{}"
+    else {
+      val pn = models.find(MongoDBObject("_id" -> new ObjectId(pnId)))
+      if(pn != null && pn.one != null)
+        pn.one.toString
+      else "{}"
+    }
   }
 
 

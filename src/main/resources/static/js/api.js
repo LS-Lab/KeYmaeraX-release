@@ -4,6 +4,7 @@
  * or resources/specs/api.js for a spec of the API.
  *
  * Nathan Fulton 2014
+ * Jan-David Quesel 2014
  */
 var ServerInfo = {
   hostname: "localhost",
@@ -59,7 +60,15 @@ var ApiClient = {
   //////////////////////////////////////////////////////////////////////////////
   /// /users
   createNewUser: function(userid) {
-    sendUpdateRequest("/users/"+userid, "POST");
+    $.ajax({
+      type: "GET",
+      dataType: "json",
+      contentType: "application/json",
+      async: false,
+      url: this.url("user/"+userid + "/create"),
+      success: function(resp) {alert(resp)},
+      error: this.ajaxErrorHandler
+    });
   },
 
   listUsers : function() {
@@ -71,18 +80,31 @@ var ApiClient = {
     this.sendUpdateRequest("/proofs/"+userid, "GET");
   },
 
-  createNewProof: function(userid, source) {
+  createNewProof: function(userid, source, callback) {
     $.ajax({
-      url: this.url("/proofs/" + userid),
+      url: this.url("proofs/" + userid),
       type: "POST",
       data: source,
       async: true,
-      success: function(resp) {},
+      dataType: 'json',
+      contentType: 'application/json',
+      success: callback,
       error: this.ajaxErrorHandler
     });
-    this.sendUpdateRequest("/proofs/" + userid, "POST");
+    //this.sendUpdateRequest("/proofs/" + userid, "POST");
   },
 
+  runTactic: function(userid, tacticId, proofid, callback) {
+    $.ajax({
+      url: this.url("user/" + userid + "/proofs/" + proofid + "/tactic/" + tacticId),
+      type: "POST",
+      async: true,
+      dataType: 'json',
+      contentType: 'application/json',
+      success: callback,
+      error: this.ajaxErrorHandler
+    });
+  },
 
   /// /proofs/<userid>/<proofid>
   loadProof: function(userid, proofid) {
@@ -93,22 +115,25 @@ var ApiClient = {
    * The current count for the eventQueue.
    * This is mutable and is updated by getUpdates.
    */
-  currentid: 0, 
+  currentId: 0,
 
   /// /proofs/<userid>/<proofid>/updates
-  getUpdates: function(userid, proofid) {
+  getUpdates: function(userid) {
     var client = this;
+    if(client.currentId == undefined) {
+        client.currentId = 0;
+    }
     $.ajax({
-      url: this.url("/proofs/"+userid+"/"+proofid+"/updates?currentId="+this.currentId),
-      type: "GET",
+      url: this.url("user/"+userid+"/getUpdates/" + client.currentId),
+      type: "POST",
       dataType: 'json',
       contentType: 'application/json',
       async: true,
-      success: function(resp) {
-        client.setServerStatus(true);
+      success: function(evt) {
+        var resp = evt.events;
         var updates = resp.events;
         var newCount = resp.newCount;
-        client.currentid = newCount;
+        client.currentId = newCount;
         if(updates instanceof Array && updates.length > 0) {
           if(window.DEBUG_MODE) {
             console.log("Received updates from the server: ");
@@ -117,7 +142,7 @@ var ApiClient = {
           for(i=0; i<updates.length; i++) {
             HydraEventHandler(updates[i], client); //defined in EventHandler.js
           }
-        } 
+        }
       },
       error: this.ajaxErrorHandler
     });

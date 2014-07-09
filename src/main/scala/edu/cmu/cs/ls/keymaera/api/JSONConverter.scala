@@ -77,6 +77,11 @@ object JSONConverter {
         Left(None)
       }
 
+      override def inP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+        jsonResult += ", "
+        Left(None)
+      }
+
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
         jsonResult += (e match {
           case ApplyPredicate(a, b) => "]}"

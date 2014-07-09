@@ -38,3 +38,17 @@ class CreateProblemResponse(tree:String, proofid:String) extends Response {
       "proofTree" -> JsonParser(tree)
   )
 }
+
+class UpdateResponse(update: String) extends Response {
+  val json = JsObject(
+    "type" -> JsString("update"),
+    "events" -> JsonParser(update)
+  )
+}
+
+class ProofTreeResponse(tree: String) extends Response {
+  val json = JsObject(
+    "type" -> JsString("proof"),
+    "tree" -> JsonParser(tree)
+  )
+}

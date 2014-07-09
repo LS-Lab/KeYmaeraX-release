@@ -68,6 +68,7 @@
 </script>
 <script>
   var userid = window.prompt("Enter user id", "0");
+  ApiClient.createNewUser(userid)
 
   //Handles an event from the file chooser.
   function handleChooserEvent(evt) {
@@ -85,9 +86,8 @@
     fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); }
 
     fr.onload = function(e) {
-      var problemid = ApiClient.createNewProof(userid, e.target.result);
-      setInterval(function() { ApiClient.getUpdates(userid, problemid); }, 500);
-
+      ApiClient.createNewProof(userid, e.target.result, function(resp) { alert(JSON.stringify(resp)); ApiClient.runTactic(userid, 0, resp.proofid, function (resp) { alert(JSON.stringify(resp)); }); });
+      //setInterval(function() { ApiClient.getUpdates(userid, problemid); }, 500);
     }
 
     fr.readAsText(file);
@@ -121,6 +121,7 @@
         loadFile(file);
         }, false);
     //Create main event loop. Ugh we should be doing something better.
+    setInterval(function() { ApiClient.getUpdates(userid); }, 500);
   }
 </script>
 </head>
