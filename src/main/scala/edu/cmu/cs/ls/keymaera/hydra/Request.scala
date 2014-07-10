@@ -34,12 +34,12 @@ class CreateProblemRequest(userid : String, keyFileContents : String) extends Re
   }
 }
 
-class RunTacticRequest(userid: String, tacticId: Int, proofId: String) extends Request {
+class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: String) extends Request {
   def getResultingResponses() = {
     try {
       // TODO: use the userid
       println("Running tactic " + tacticId + " on proof " + proofId)
-      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, s => ServerState.addUpdate(userid, s))
+      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, s => ServerState.addUpdate(userid, s))
       new UnimplementedResponse("running tactic " + res) :: Nil
     }
     catch {

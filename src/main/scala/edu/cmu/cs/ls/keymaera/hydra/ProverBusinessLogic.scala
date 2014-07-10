@@ -60,7 +60,7 @@ object ProverBusinessLogic {
    * @param pnId
    * @return
    */
-  def runTactic(tacticId: String, pnId: String, callback: String => Unit = _ => ()): Boolean = {
+  def runTactic(tacticId: String, pnId: String, nId: String, callback: String => Unit = _ => ()): Boolean = {
     println("Run tactic called")
     val tactic = tactics.find(MongoDBObject("_id" -> new ObjectId(tacticId)))
     println("Tactic is " + tactic)

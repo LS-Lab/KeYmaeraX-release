@@ -42,7 +42,8 @@ object JSONConverter {
           case Or(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"or\"" + ", \"children\": [ "
           case Imply(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"imply\"" + ", \"children\": [ "
           case Equiv(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equiv\"" + ", \"children\": [ "
-          case Modality(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"modality\"" + ", \"children\": [ "
+          case BoxModality(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"boxmodality\"" + ", \"children\": [ "
+          case DiamondModality(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"diamondmodality\"" + ", \"children\": [ "
           case Forall(v, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"forall\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
           case Exists(v, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"exists\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
           case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
@@ -67,6 +68,14 @@ object JSONConverter {
         Left(None)
       }
 
+      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+        jsonResult += (e match {
+          case x@ProgramConstant(_, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"" + printNamedSymbol(x.asInstanceOf[ProgramConstant]) + "\"}"
+          case Test(f) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Test\"" + ", \"children\": [ "
+          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
+        })
+        Left(None)
+      }
       override def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
         jsonResult += ", "
         Left(None)
@@ -120,6 +129,14 @@ object JSONConverter {
         })
         Left(None)
       }
+
+      override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
+        jsonResult += (e match {
+          case Test(_) => "]}"
+          case _ =>""
+        })
+        Left(None)
+      }
     }
     ExpressionTraversal.traverse(fn, formula)
     jsonResult
@@ -130,7 +147,7 @@ object JSONConverter {
   def print(s: Sequent): String = "{ \"ante\": [" + print(s.ante) + "], \"succ\": [" + print(s.succ) + "]}"
   def print(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): String = {
     store(p, id)
-    "{ " + sequent(p) + "," + infos(p) +
+    "{ \"id\":\"" + id + "\"," + sequent(p) + "," + infos(p) +
       "\"children\": [ " +
       (limit match {
         case Some(l) if l > 0 => p.children.zipWithIndex.map(ps => print(id, limit.map(i => i - 1), ps._1, ps._2, store)).mkString(",")

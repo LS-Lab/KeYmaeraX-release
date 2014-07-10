@@ -94,9 +94,9 @@ var ApiClient = {
     //this.sendUpdateRequest("/proofs/" + userid, "POST");
   },
 
-  runTactic: function(userid, tacticId, proofid, callback) {
+  runTactic: function(userid, tacticId, proofid, nodeid, callback) {
     $.ajax({
-      url: this.url("user/" + userid + "/proofs/" + proofid + "/tactic/" + tacticId),
+      url: this.url("user/" + userid + "/proofs/" + proofid + "/node/" +nodeid + "/tactic/" + tacticId),
       type: "POST",
       async: true,
       dataType: 'json',
