@@ -62,7 +62,7 @@ object JSONConverter {
           case Subtract(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"subtract\"" + ", \"children\": [ "
           case Multiply(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
           case Divide(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
-          case Exp(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
+          case Exp(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"exp\"" + ", \"children\": [ "
           case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
@@ -70,8 +70,13 @@ object JSONConverter {
 
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         jsonResult += (e match {
-          case x@ProgramConstant(_, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"" + printNamedSymbol(x.asInstanceOf[ProgramConstant]) + "\"}"
-          case Test(f) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Test\"" + ", \"children\": [ "
+          case x@ProgramConstant(_, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":" + printNamedSymbol(x.asInstanceOf[ProgramConstant]) + "}"
+          case Assign(_, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Assign\"" + ", \"children\": [ "
+          case NDetAssign(_) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"NDetAssign\"" + ", \"children\": [ "
+          case Sequence(_, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Sequence\"" + ", \"children\": [ "
+          case Choice(_, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Choice\"" + ", \"children\": [ "
+          case Test(_) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Test\"" + ", \"children\": [ "
+          case Loop(_) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Loop\"" + ", \"children\": [ "
           case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
@@ -132,7 +137,12 @@ object JSONConverter {
 
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         jsonResult += (e match {
+          case Assign(_) => "]}"
+          case NDetAssign(_) => "]}"
           case Test(_) => "]}"
+          case Loop(_) => "]}"
+          case Sequence(_, _) => "]}"
+          case Choice(_, _) => "]}"
           case _ =>""
         })
         Left(None)

@@ -29,7 +29,7 @@ class CreateProblemRequest(userid : String, keyFileContents : String) extends Re
       new CreateProblemResponse(node, res) :: Nil
     }
     catch {
-      case e:Exception => new ErrorResponse(e) :: Nil
+      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
     }
   }
 }
