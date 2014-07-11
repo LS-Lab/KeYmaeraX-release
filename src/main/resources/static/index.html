@@ -390,7 +390,12 @@ function translateNode(node) {
 }
 
 function translateRule(rule) {
-	var res = "<li id=\"" + rule.id + "\">" + rule.rule;
+	var res = "<li id=\"" + rule.id + "\">"
+	if(rule.children.length == 0) {
+	    res = res + "<span style=\"color:green\">" + rule.rule + "</span>";
+	} else {
+	    res = res + rule.rule;
+    }
 	rule.children.forEach(function(c) {
 		res = res + translateNode(c);
 	});
