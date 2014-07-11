@@ -187,7 +187,7 @@ function handle(json) {
       var c = json.children;
       if($.isArray(c)) {
           var left = handle(c[0]);
-          items.push(span(json.id, "!" + left));
+          items.push(span(json.id, "&not;" + left));
       }
   } else if(json.name == "and") {
       var c = json.children;
@@ -231,14 +231,14 @@ function handle(json) {
           var right = handle(c[1]);
           items.push(span(json.id, left + " &leq; " + right));
       }
-  } else if(json.name == "equal") {
+  } else if(json.name == "equals") {
       var c = json.children;
       if($.isArray(c)) {
           var left = handle(c[0]);
           var right = handle(c[1]);
           items.push(span(json.id, left + " = " + right));
       }
-  } else if(json.name == "notEqual") {
+  } else if(json.name == "notEquals") {
       var c = json.children;
       if($.isArray(c)) {
           var left = handle(c[0]);
@@ -259,6 +259,47 @@ function handle(json) {
           var right = handle(c[1]);
           items.push(span(json.id, left + " &gt; " + right));
       }
+  } else if(json.name == "neg") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "-" + left));
+      }
+  } else if(json.name == "add") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " + " + right));
+      }
+  } else if(json.name == "subtract") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " - " + right));
+      }
+  } else if(json.name == "multiply") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &middot; " + right));
+      }
+  } else if(json.name == "divide") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " / " + right));
+      }
+   } else if(json.name == "exp") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " <sup>" + right + "</sup>"));
+      }
   } else if(json.name == "boxmodality") {
       var c = json.children;
       if($.isArray(c)) {
@@ -266,11 +307,44 @@ function handle(json) {
           var right = handle(c[1]);
           items.push(span(json.id, "[" + left + "] " + right));
       }
+  } else if(json.name == "Assign") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " := " + right));
+      }
+  } else if(json.name == "NDetAssign") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, left + ":= *"));
+      }
   } else if(json.name == "Test") {
       var c = json.children;
       if($.isArray(c)) {
           var left = handle(c[0]);
           items.push(span(json.id, "?" + left));
+      }
+  } else if(json.name == "Loop") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "{" + left + "}<sup>*</sup>" ));
+      }
+  } else if(json.name == "Sequence") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + "; " + right));
+      }
+  } else if(json.name == "Choice") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8746; " + right));
       }
   } else {
       var chil = "";
