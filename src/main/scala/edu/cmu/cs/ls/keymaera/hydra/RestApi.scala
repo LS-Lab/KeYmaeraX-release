@@ -59,12 +59,12 @@ trait RestApi extends HttpService {
     }
   }}
 
-  val runTactic = pathPrefix("user" / IntNumber / "proofs" / Segment / "tactic" / IntNumber) { (userid, proofid, tacticid) => {
+  /*val runTactic = pathPrefix("user" / IntNumber / "proofs" / Segment / "tactic" / IntNumber) { (userid, proofid, tacticid) => {
     pathEnd {
       post {
 //        decompressRequest()
         entity(as[String]) { keyFileContents => {
-          val request = new RunTacticRequest(userid.toString(), tacticid, proofid)
+          val request = new RunTacticRequest(userid.toString(), tacticid, proofid, "0")
           val responses = request.getResultingResponses()
           if(responses.length != 1) {
             complete(new ErrorResponse(
@@ -81,14 +81,14 @@ trait RestApi extends HttpService {
         complete(response.json.prettyPrint)
       }
     }
-  }}
+  }}*/
 
   val runTacticNode = pathPrefix("user" / IntNumber / "proofs" / Segment / "node" / Segment / "tactic" / IntNumber) { (userid, proofid, nodeid, tacticid) => {
     pathEnd {
       post {
 //        decompressRequest()
         entity(as[String]) { keyFileContents => {
-          val request = new RunTacticRequest(userid.toString(), tacticid, nodeid)
+          val request = new RunTacticRequest(userid.toString(), tacticid, proofid, nodeid)
           val responses = request.getResultingResponses()
           if(responses.length != 1) {
             complete(new ErrorResponse(
@@ -119,7 +119,7 @@ trait RestApi extends HttpService {
 
   val routes =
     createProof ::
-    runTactic ::
+    runTacticNode ::
     getUpdates ::
     staticRoute ::
     newUser ::
