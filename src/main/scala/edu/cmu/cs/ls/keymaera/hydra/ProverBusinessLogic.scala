@@ -89,9 +89,24 @@ object ProverBusinessLogic {
         // replace the node by the subtree
         println("Got update " + s)
         //FIXME This will replace all prior proof nodes. This causes trouble if there are alternative tactics running on the same node.
-        val query = JSON.parse(s).asInstanceOf[DBObject]
-        val org = MongoDBObject("_id" -> pn.get("_id"))
-        proofs.update(org, query, true)
+        if(proofs.find(MongoDBObject("_id" -> pn.get("_id"))).one == null) {
+          val query = JSON.parse(s).asInstanceOf[DBObject]
+          val org = MongoDBObject("_id" -> pn.get("_id"))
+          proofs.update(org, query, true)
+        } else {
+          JSON.parse(s).asInstanceOf[DBObject].getAs[MongoDBList]("children") match {
+            case Some(l) => for (c <- l) {
+              println("Adding child " + c)
+              val query = $push("children" -> c)
+              val org = MongoDBObject("_id" -> pn.get("_id"))
+              println("Before " + proofs.find(MongoDBObject("_id" -> pn.get("_id"))).one)
+              proofs.update(org, query, true)
+              println("Now found " + proofs.find(MongoDBObject("_id" -> pn.get("_id"))).one)
+            }
+            case None => println("No children")
+          }
+        }
+
         f(s)
       case None => println("did not find subtree")
     }
