@@ -34,12 +34,13 @@ class CreateProblemRequest(userid : String, keyFileContents : String) extends Re
   }
 }
 
-class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: String) extends Request {
+class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: String, formulaId: Option[String] = None) extends Request {
   def getResultingResponses() = {
     try {
       // TODO: use the userid
-      println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId)
-      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, s => ServerState.addUpdate(userid, s))
+      println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId + " on formula" + formulaId)
+      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => ServerState.addUpdate(userid, s))
+      println("Dispatched!")
       new UnimplementedResponse("running tactic " + res) :: Nil
     }
     catch {

@@ -106,6 +106,18 @@ var ApiClient = {
     });
   },
 
+  runTactic: function(userid, tacticId, proofid, nodeid, formulaId, callback) {
+    $.ajax({
+      url: this.url("user/" + userid + "/proofs/" + proofid + "/node/" +nodeid + "/formula/" + formulaId + "/tactic/" + tacticId),
+      type: "POST",
+      async: true,
+      dataType: 'json',
+      contentType: 'application/json',
+      success: callback,
+      error: this.ajaxErrorHandler
+    });
+  },
+
   /// /proofs/<userid>/<proofid>
   loadProof: function(userid, proofid) {
     this.sendUpdateRequest("/proofs/"+userid+"/"+proofid, "GET");

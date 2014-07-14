@@ -53,6 +53,7 @@ object KeYmaeraInterface {
     @volatile var inputPositionTactics: Map[Int, (Formula) => PositionTactic] = Map()
 
     addTactic(TacticLibrary.default)
+    addPositionTactic(TacticLibrary.step)
 
     def addTactic(t: Tactic): Int = this.synchronized {
       val res = count
@@ -84,7 +85,11 @@ object KeYmaeraInterface {
 
     def getTactic(id: Int): Option[Tactic] = tactics.get(id).map(_())
 
+    def getPositionTactic(id: Int): Option[PositionTactic] = positionTactics.get(id).map(_())
+
     def getTactics: List[(Int, String)] = tactics.foldLeft(Nil: List[(Int, String)])((a, p) => a :+ (p._1, p._2().name))
+
+    def getPositionTactics: List[(Int, String)] = positionTactics.foldLeft(Nil: List[(Int, String)])((a, p) => a :+ (p._1, p._2().name))
 
     // TODO implement getter for the other tactics
   }
@@ -126,12 +131,25 @@ object KeYmaeraInterface {
 
   def getTactics: List[(Int, String)] = TacticManagement.getTactics
 
-  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int, callBack: Option[Int => ((Int, Option[String], Int) => Unit)] = None): Option[Int] = {
+  def getPositionTactics: List[(Int, String)] = TacticManagement.getPositionTactics
+
+  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int, formulaId: Option[String], callBack: Option[Int => ((Int, Option[String], Int) => Unit)] = None): Option[Int] = {
     (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
     }) match {
-      case Some(n) => println("Found node " + n); TacticManagement.getTactic(tacticId) match {
+      case Some(n) =>
+        (formulaId match {
+          case Some(fid) =>
+            val tail = Integer.parseInt(fid.split(":")(1))
+            val pos = if(fid.startsWith("ante:")) new AntePosition(tail) else new SuccPosition(tail)
+            TacticManagement.getPositionTactic(tacticId) match {
+            case Some(t) => Some(t(pos))
+            case None => None
+          }
+          case None =>
+            TacticManagement.getTactic(tacticId)
+        }) match {
         case Some(t) =>
           // attach a info transformation function which later on allows us to track then changes performed by this tactic
           // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label

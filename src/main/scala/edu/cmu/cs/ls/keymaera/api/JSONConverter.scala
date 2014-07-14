@@ -153,7 +153,7 @@ object JSONConverter {
   }
 
   //def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
-  def print(l: Seq[Formula], ante: String, nodeId: String): String = (for(f <- l.zipWithIndex) yield "{ \"id\":\"" + ante + ":" + f._2 + "\", \"formula\":" + printForm(f._1, ante + ":" + f._2, nodeId) + "}").mkString(",")
+  def print(l: Seq[Formula], ante: String, nodeId: String): String = (for(f <- l.zipWithIndex) yield "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\":\"" + ante + ":" + f._2 + "\", \"formula\":" + printForm(f._1, ante + ":" + f._2, nodeId) + "}").mkString(",")
   def print(s: Sequent, nodeId: String): String = "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"ante\": [" + print(s.ante, "ante", nodeId) + "], \"succ\": [" + print(s.succ, "succ", nodeId) + "]}"
   def print(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): String = {
     store(p, id)

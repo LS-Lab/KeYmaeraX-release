@@ -30,9 +30,10 @@ object ProverBusinessLogic {
   def initTactics =
     for((i, s) <- KeYmaeraInterface.getTactics)
       tactics.insert(MongoDBObject("tacticId" -> i, "name" -> s))
+    for((i, s) <- KeYmaeraInterface.getPositionTactics)
+      tactics.insert(MongoDBObject("tacticId" -> i, "name" -> s))
 
   def getTactic(i: Int): String = tactics.find(MongoDBObject("tacticId" -> i)).one.get("_id").toString
-
 
   /**
    * Add a new model to the database. This will return a unique identifier for this model.
@@ -60,7 +61,7 @@ object ProverBusinessLogic {
    * @param pnId
    * @return
    */
-  def runTactic(tacticId: String, pnId: String, nId: String, callback: String => Unit = _ => ()): Boolean = {
+  def runTactic(tacticId: String, pnId: String, nId: String, formulaId: Option[String], callback: String => Unit = _ => ()): Boolean = {
     println("Run tactic called")
     val tactic = tactics.find(MongoDBObject("_id" -> new ObjectId(tacticId)))
     println("Tactic is " + tactic)
@@ -74,7 +75,7 @@ object ProverBusinessLogic {
     (node.get("taskId"), t.get("tacticId")) match {
       case (tId: Integer, tacId: Integer) =>
         println("Actually running tactic on node " + nId)
-        KeYmaeraInterface.runTactic(tId, Some(nId), tacId, Some(tacticCompleted(callback, node)))
+        KeYmaeraInterface.runTactic(tId, Some(nId), tacId, formulaId, Some(tacticCompleted(callback, node)))
         true
       case _ => false
     }

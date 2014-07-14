@@ -229,7 +229,7 @@ object TermTests {
     println("running tactic on " + node)
     val tree = ProverBusinessLogic.getSubtree(node)
     var nTree = tree
-    ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node, "0")
+    ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node, "0", None)
     while(tree == nTree) {
       nTree = ProverBusinessLogic.getSubtree(node)
       Thread.sleep(100)

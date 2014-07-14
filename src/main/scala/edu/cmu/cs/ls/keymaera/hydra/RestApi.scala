@@ -107,7 +107,29 @@ trait RestApi extends HttpService {
     }
   }}
 
-
+  val runTacticFormula = pathPrefix("user" / IntNumber / "proofs" / Segment / "node" / Segment / "formula" / Segment / "tactic" / IntNumber) { (userid, proofid, nodeid, formulaid, tacticid) => {
+    pathEnd {
+      post {
+//        decompressRequest()
+        entity(as[String]) { keyFileContents => {
+          val request = new RunTacticRequest(userid.toString(), tacticid, proofid, nodeid, Some(formulaid))
+          val responses = request.getResultingResponses()
+          if(responses.length != 1) {
+            complete(new ErrorResponse(
+              new Exception("CreateProblemRequest generated too many responses"
+             )).json.prettyPrint)
+          }
+          else {
+            complete(responses.last.json.prettyPrint)
+          }
+        }}
+      } ~
+      get {
+        val response = new UnimplementedResponse("GET proofs/<useridid>")
+        complete(response.json.prettyPrint)
+      }
+    }
+  }}
    val getUpdates = path("user" / IntNumber / "getUpdates" / IntNumber) { (userid, count) =>
      pathEnd {
       post {
@@ -120,6 +142,7 @@ trait RestApi extends HttpService {
   val routes =
     createProof ::
     runTacticNode ::
+    runTacticFormula ::
     getUpdates ::
     staticRoute ::
     newUser ::
