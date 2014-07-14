@@ -38,7 +38,7 @@ class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: S
   def getResultingResponses() = {
     try {
       // TODO: use the userid
-      println("Running tactic " + tacticId + " on proof " + proofId)
+      println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId)
       val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, s => ServerState.addUpdate(userid, s))
       new UnimplementedResponse("running tactic " + res) :: Nil
     }

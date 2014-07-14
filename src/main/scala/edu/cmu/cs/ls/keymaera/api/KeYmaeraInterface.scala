@@ -131,7 +131,7 @@ object KeYmaeraInterface {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
     }) match {
-      case Some(n) => TacticManagement.getTactic(tacticId) match {
+      case Some(n) => println("Found node " + n); TacticManagement.getTactic(tacticId) match {
         case Some(t) =>
           // attach a info transformation function which later on allows us to track then changes performed by this tactic
           // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
@@ -141,11 +141,12 @@ object KeYmaeraInterface {
           t.registerCompletionEventListener(_ => callBack.foreach(_(res)(taskId, nodeId, tacticId)))
           t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> res.toString)
           t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> res.toString)
+          println("Dispatching tactic")
           Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
           Some(res)
         case None => None
       }
-      case None => None
+      case None => println("Tasks are + " + TaskManagement.tasks); None
     }
   }
 

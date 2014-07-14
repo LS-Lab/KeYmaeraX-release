@@ -369,12 +369,12 @@ function translateFormula(f) {
 	 return "<span id=\"" + f.id + "\">" + handle(f.formula) + "</span>";
 }
 
-function translateSequent(id, s) {
+function translateSequent(s) {
 	var res = "";
 	s.ante.forEach(function(f) {
 		res = res + translateFormula(f) + "<br>";
 	});
-	res = res + "<span onClick=\"ApiClient.runTactic(ClientState.uid, 0, ClientState.proofid, " + id + ", function (resp) { alert(JSON.stringify(resp)); });\"> ==&gt; </span>";
+	res = res + "<span onClick=\"ApiClient.runTactic(ClientState.uid, 0, ClientState.proofid, '" + s.nodeId + "', function (resp) { alert(JSON.stringify(resp)); });\"> ==&gt; </span>";
 	s.succ.forEach(function(f) {
 		res = res + translateFormula(f) + "<br>";
 	});
@@ -382,7 +382,7 @@ function translateSequent(id, s) {
 }
 
 function translateNode(node) {
-	var str = "<li id=\"" + node.id + "\">" + translateSequent(node.id, node.sequent) + "<ul>";
+	var str = "<li id=\"" + node.id + "\">" + translateSequent(node.sequent) + "<ul>";
 	node.children.forEach(function(c) {
 		str = str + translateRule(c);
 	});
@@ -405,7 +405,7 @@ function translateRule(rule) {
 // Toggle children on click.
 function click(d) {
   alert(JSON.stringify(d));
-  ApiClient.runTactic(ClientState.uid, 0, ClientState.proofid, d.id, function (resp) { alert(JSON.stringify(resp)); });
+  ApiClient.runTactic(ClientState.uid, 0, ClientState.proofid, d.nodeId, function (resp) { alert(JSON.stringify(resp)); });
   /*if (d.children) {
     d._children = d.children;
     d.children = null;

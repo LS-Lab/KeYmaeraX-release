@@ -71,10 +71,10 @@ object ProverBusinessLogic {
     println("Node is " + node)
     require(tactic.length == 1, "tactic.length = " + tactic.length + " should be 1")
     val t = tactic.one
-    (node.get("taskId"), node.get("nodeId"), t.get("tacticId")) match {
-      case (tId: Integer, nId, tacId: Integer) =>
-        println("Actually running tactic")
-        KeYmaeraInterface.runTactic(tId, Some(nId.toString), tacId, Some(tacticCompleted(callback, node)))
+    (node.get("taskId"), t.get("tacticId")) match {
+      case (tId: Integer, tacId: Integer) =>
+        println("Actually running tactic on node " + nId)
+        KeYmaeraInterface.runTactic(tId, Some(nId), tacId, Some(tacticCompleted(callback, node)))
         true
       case _ => false
     }
