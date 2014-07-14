@@ -97,11 +97,10 @@ object ProverBusinessLogic {
           JSON.parse(s).asInstanceOf[DBObject].getAs[MongoDBList]("children") match {
             case Some(l) => for (c <- l) {
               println("Adding child " + c)
+              // FIXME: this adds the child on top level it should be below nId instead
               val query = $push("children" -> c)
               val org = MongoDBObject("_id" -> pn.get("_id"))
-              println("Before " + proofs.find(MongoDBObject("_id" -> pn.get("_id"))).one)
               proofs.update(org, query, true)
-              println("Now found " + proofs.find(MongoDBObject("_id" -> pn.get("_id"))).one)
             }
             case None => println("No children")
           }

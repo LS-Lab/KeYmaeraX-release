@@ -1,5 +1,5 @@
 function HydraEventHandler(evt) {
-  alert("Event " + JSON.stringify(evt));
+  //alert("Event " + JSON.stringify(evt));
   if(evt.type === "proof") {
     evt.tree.x0 = 0;
     evt.tree.y0 = 0;
@@ -8,6 +8,7 @@ function HydraEventHandler(evt) {
     update(root = evt.tree);
   }
   else {
+    //alert("Event " + JSON.stringify(evt));
     UI.showError("Received event with no defined handler: " + evt.type, evt);
   }
 

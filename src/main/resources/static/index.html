@@ -366,7 +366,7 @@ function update(source) {
 }
 
 function translateFormula(f) {
-	 return "<span id=\"" + f.id + "\"onClick=\"ApiClient.runTactic(ClientState.uid, 1, ClientState.proofid, '" + f.nodeId + "', '" + f.id + "', function (resp) { });\">" + f.id + ": " + handle(f.formula) + "</span>";
+	 return "<span id=\"" + f.id + "\"onClick=\"ApiClient.runTactic(ClientState.uid, 1, ClientState.proofid, '" + f.nodeId + "', '" + f.id + "', function (resp) { });\">" + handle(f.formula) + "</span>";
 }
 
 function translateSequent(s) {
