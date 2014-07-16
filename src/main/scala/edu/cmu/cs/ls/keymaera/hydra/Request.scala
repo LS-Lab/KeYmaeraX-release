@@ -24,7 +24,7 @@ class CreateProblemRequest(userid : String, keyFileContents : String) extends Re
     try {
       // TODO: use the userid
       val res = ProverBusinessLogic.addModel(keyFileContents)
-      val node = ProverBusinessLogic.getSubtree(res)
+      val node = ProverBusinessLogic.getModel(res)
       //Return the resulting response.
       new CreateProblemResponse(node, res) :: Nil
     }
@@ -40,7 +40,7 @@ class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: S
       // TODO: use the userid
       println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId + " on formula" + formulaId)
       //val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => ServerState.addUpdate(userid, s))
-      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => { val sub = ProverBusinessLogic.getSubtree(proofId); println("======= Retrieved a tree"); ServerState.addUpdate(userid, sub)} )
+      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => { val sub = ProverBusinessLogic.getSubtree(proofId); println("======= Retrieved a tree " + sub); ServerState.addUpdate(userid, sub)} )
       new UnimplementedResponse("running tactic " + res) :: Nil
     }
     catch {

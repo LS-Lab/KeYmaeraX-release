@@ -365,24 +365,24 @@ function update(source) {
 	svg.html(translateNode(root));
 }
 
-function translateFormula(f) {
-	 return "<span id=\"" + f.id + "\"onClick=\"ApiClient.runTactic(ClientState.uid, 1, ClientState.proofid, '" + f.nodeId + "', '" + f.id + "', function (resp) { });\">" + handle(f.formula) + "</span>";
+function translateFormula(nId, f) {
+	 return "<span id=\"" + f.id + "\"onClick=\"ApiClient.runTactic(ClientState.uid, 1, ClientState.proofid, '" + nId + "', '" + f.id + "', function (resp) { });\">" + handle(f.formula) + "</span>";
 }
 
-function translateSequent(s) {
+function translateSequent(nId, s) {
 	var res = "";
 	s.ante.forEach(function(f) {
-		res = res + translateFormula(f) + "<br>";
+		res = res + translateFormula(nId, f) + "<br>";
 	});
-	res = res + "<span onClick=\"ApiClient.runTactic(ClientState.uid, 0, ClientState.proofid, '" + s.nodeId + "', function (resp) { alert(JSON.stringify(resp)); });\"> ==&gt; </span>";
+	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, ClientState.proofid, '" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> ==&gt; </span>";
 	s.succ.forEach(function(f) {
-		res = res + translateFormula(f) + "<br>";
+		res = res + translateFormula(nId, f) + "<br>";
 	});
 	return res;
 }
 
 function translateNode(node) {
-	var str = "<li id=\"" + node.id + "\">" + translateSequent(node.sequent) + "<ul>";
+	var str = "<li id=\"" + node.id + "\", _id=\"" + node._id + "\">" + translateSequent(node._id, node.sequent) + "<ul>";
 	node.children.forEach(function(c) {
 		str = str + translateRule(c);
 	});
