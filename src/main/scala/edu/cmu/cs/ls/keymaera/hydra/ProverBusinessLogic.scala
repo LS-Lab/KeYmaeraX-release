@@ -81,6 +81,25 @@ object ProverBusinessLogic {
     }
   }
 
+ private def store(q: DBObject): MongoDBObject = {
+    val res = new MongoDBObject
+    res.put("_id", new ObjectId)
+    for(key <- q.keys) {
+      if(key == "children") {
+        res.put(key, store(q.getAs[MongoDBList]("children").get))
+      } else {
+        res.put(key, q(key))
+      }
+    }
+    println("Inner obj: " + res)
+    proofs.insert(res)
+    res
+  }
+
+  private def store(cs: MongoDBList): Seq[String] = {
+    for(c <- cs) yield store(c.asInstanceOf[DBObject])("_id").toString
+  }
+
   private def tacticCompleted(f: String => Unit, pn: BSONObject)(i: Int)(taskId: Int, nId: Option[String], tacticId: Int) {
     println("Tactic completed " + tacticId)
     KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { println(p.infos); p.infos.get("tactic") == Some(i.toString) }) match {
@@ -91,13 +110,10 @@ object ProverBusinessLogic {
         //FIXME This will replace all prior proof nodes. This causes trouble if there are alternative tactics running on the same node.
         if(proofs.find(MongoDBObject("_id" -> pn.get("_id"))).one == null) {
           val query = JSON.parse(s).asInstanceOf[DBObject]
-          val org = MongoDBObject("_id" -> pn.get("_id"))
-          proofs.update(org, query, true)
+          store(query)
         } else {
           JSON.parse(s).asInstanceOf[DBObject].getAs[MongoDBList]("children") match {
-            case Some(l) => for (c <- l) {
-              println("Adding child " + c)
-              // FIXME: this adds the child on top level it should be below nId instead
+            case Some(l) => for (c <- store(l)) {
               val query = $push("children" -> c)
               val org = MongoDBObject("_id" -> pn.get("_id"))
               proofs.update(org, query, true)
@@ -105,20 +121,30 @@ object ProverBusinessLogic {
             case None => println("No children")
           }
         }
-
         f(s)
       case None => println("did not find subtree")
     }
   }
 
+  private def printJSON(o: DBObject): String = {
+    "{ " +
+      (o.keys.foldLeft("")( (acc,key) => {
+        if (key == "children")
+          acc + "\"children\": [ " + (for(c <- o.getAs[MongoDBList](key).get) yield printJSON(proofs.find(MongoDBObject("_id" -> new ObjectId(c.toString))).one)).mkString(", ") + " ]" + ", "
+        else
+          acc + "\"" + key + "\":\"" + o(key) + "\"" + ", "
+      })
+      ) + "}"
+  }
+
   def getSubtree(pnId: String): String = {
     val pn = proofs.find(MongoDBObject("_id" -> new ObjectId(pnId)))
     if(pn != null && pn.one != null)
-      pn.one.toString
+      printJSON(pn.one)
     else {
       val pn = models.find(MongoDBObject("_id" -> new ObjectId(pnId)))
       if(pn != null && pn.one != null)
-        pn.one.toString
+        printJSON(pn.one)
       else "{}"
     }
   }
