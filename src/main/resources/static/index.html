@@ -7,8 +7,6 @@
 -->
 <style>
   #prover {
-    border: 2px solid;
-    border-radius: 25px;
     background-color:#FFFFFF;
     height: 90%;
     width: 100%;
@@ -35,6 +33,19 @@
     font-size: 12px;
     width: 100%;
     color: #FF0000;
+  }
+
+  #sequent {
+    border: 2px solid;
+    border-radius: 25px;
+    margin-top: 20px;
+    min-height:200px;
+  }
+  #proof {
+    border: 2px solid;
+    border-radius: 25px;
+    margin-top: 20px;
+    min-height:200px;
   }
   .hl {background: transparent; }
   .hlhover { background:#00aaaa; }
@@ -171,9 +182,9 @@ high-lighted.-->
         <div class="row">
             <div class="large-9 columns">
                 <div style="width: 100%; overflow: hidden;">
-                    <div id="proof" style="width: 300px; float: left;">
+                    <div id="proof" class="proof" style="width: 300px; float: left;">
                     </div>
-                    <div id="sequent" style="margin-left: 320px;">
+                    <div id="sequent" class="sequent" style="margin-left: 320px;">
                     </div>
                 </div>
                 <script>
@@ -390,7 +401,7 @@ function translateSequent(nId, s) {
 	s.ante.forEach(function(f) {
 		res = res + translateFormula(nId, f) + "<br>";
 	});
-	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, ClientState.proofid, '" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> ==&gt; </span>";
+	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, ClientState.proofid, '" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> &#8866; </span><br>";
 	s.succ.forEach(function(f) {
 		res = res + translateFormula(nId, f) + "<br>";
 	});
@@ -412,7 +423,7 @@ function showSequent(id, sequent) {
 }
 
 function translateNode(node) {
-	var str = "<li id=\"" + node.id + "\" _id=\"" + node._id + "\"> <span id=\"span" + node._id + "\" onclick=\"showSequent('" + node._id + "', '" + JSON.stringify(node.sequent).replace(/\"/g, "\\'") + "');\">sequent</span>";
+	var str = "<li id=\"" + node.id + "\" _id=\"" + node._id + "\"> <span id=\"span" + node._id + "\" onclick=\"showSequent('" + node._id + "', '" + JSON.stringify(node.sequent).replace(/\"/g, "\\'") + "');\"> &#8866; </span>";
 	if(node.children.length > 0) {
 	    str = str + "<ul>";
         node.children.forEach(function(c) {
