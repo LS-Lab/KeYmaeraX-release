@@ -45,7 +45,8 @@
     border: 2px solid;
     border-radius: 25px;
     margin-top: 20px;
-    min-height:200px;
+    height: 80%;
+    overflow:scroll;
   }
   .hl {background: transparent; }
   .hlhover { background:#00aaaa; }
@@ -154,30 +155,13 @@
 <div class="welcome" id="welcome">
   KeYmaera4
 </div>
-<div class="instructions" id="instructions">
-After loading a problem, run a tactic by right-clicking on a sequent
-<!--, or
-by entering interactive mode and right-clicking when a subformula is
-high-lighted.-->
-</div>
-
-<!-- now poorly named... -->
-<span class="footer">
-  <center>
-    <span id="status" style="background-color: #555500; color: #FFFFFF">Disconnected</span>
-  </center>
-  <span id="errors">
-    <div>Error Messages (see console for detailed output): </div>
-  </span>
-</span>
-
 
 <div class="prover" id="prover">
   <span id="provercontents">
     <div class="drop_zone" id="drop_zone">
-      Drag and Drop a .key into the grey area to begin.
+     <!-- Drag and Drop a .key into the grey area to begin.
       <br/>
-      <br/>
+      <br/>-->
       <input type="file" id="files" name="files[]" multiple />
         <div class="row">
             <div class="large-9 columns">
@@ -467,6 +451,16 @@ function click(d) {
   </span>
 </div>
 
+</span>
+
+<!-- now poorly named... -->
+<span class="footer">
+  <center>
+    <span id="status" style="background-color: #555500; color: #FFFFFF">Disconnected</span>
+  </center>
+  <span id="errors">
+    <div>Error Messages (see console for detailed output): </div>
+  </span>
 </span>
 </body>
 </html>
