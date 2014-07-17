@@ -41,6 +41,8 @@
 </style>
 <!-- extrnal libraries -->
 <script src="/static/js/external/jquery.js" type="text/javascript"></script>
+<script src="/static/js/external/mktree.js" type="text/javascript"></script>
+<link rel="stylesheet" href="/static/mktree.css" type="text/css">
 <!--
 <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <script src="/static/js/jquery.treeview.js" type="text/javascript"></script>
@@ -168,14 +170,19 @@ high-lighted.-->
       <input type="file" id="files" name="files[]" multiple />
         <div class="row">
             <div class="large-9 columns">
-                <div id="proof">
+                <div style="width: 100%; overflow: hidden;">
+                    <div id="proof" style="width: 300px; float: left;">
+                    </div>
+                    <div id="sequent" style="margin-left: 320px;">
+                    </div>
                 </div>
                 <script>
 
-var svg = $("#proof").append("<ul></ul>").find("ul")/*.append("svg")
+var svg = $("#proof").append("<ul class=\"mktree\" style=\"text-align: left\" id=\"prooful\"></ul>").find("ul")/*.append("svg")
 			.attr("width", width + margin.left + margin.right)
 			.append("g")
 			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")*/;
+var seq = $("#sequent").append("<div></div>").find("div");
 
 function span(id, cont) {
     return "<span xmlns=\"http://www.w3.org/1999/xhtml\" onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + id + "'>" + cont + "</span>"
@@ -361,8 +368,17 @@ function handle(json) {
   return items.join("");
 }
 
+var selected = "";
+
 function update(source) {
 	svg.html(translateNode(root));
+	convertTrees();
+	expandTree('prooful');
+	if(selected.length == 0) {
+	    selected = root._id;
+	}
+	$("#span" + selected).click();
+    //colorSelected(selected);
 }
 
 function translateFormula(nId, f) {
@@ -381,12 +397,30 @@ function translateSequent(nId, s) {
 	return res;
 }
 
+
+function colorSelected(id) {
+    if(selected.length > 0) {
+        $("#span" + selected).css("background-color", "white");
+    }
+    $("#span" + id).css("background-color", "red");
+    selected = id;
+}
+
+function showSequent(id, sequent) {
+    seq.html(translateSequent(id, JSON.parse(sequent.replace(/'/g, "\""))));
+    colorSelected(id);
+}
+
 function translateNode(node) {
-	var str = "<li id=\"" + node.id + "\", _id=\"" + node._id + "\">" + translateSequent(node._id, node.sequent) + "<ul>";
-	node.children.forEach(function(c) {
-		str = str + translateRule(c);
-	});
-	return str + "</ul></li>";
+	var str = "<li id=\"" + node.id + "\" _id=\"" + node._id + "\"> <span id=\"span" + node._id + "\" onclick=\"showSequent('" + node._id + "', '" + JSON.stringify(node.sequent).replace(/\"/g, "\\'") + "');\">sequent</span>";
+	if(node.children.length > 0) {
+	    str = str + "<ul>";
+        node.children.forEach(function(c) {
+            str = str + translateRule(c);
+        });
+	    str = str + "</ul>";
+    }
+	return str + "</li>";
 }
 
 function translateRule(rule) {
