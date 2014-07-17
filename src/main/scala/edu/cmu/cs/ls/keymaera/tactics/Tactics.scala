@@ -268,9 +268,6 @@ object Tactics {
     var updateInfo: (ProofNodeInfo => Unit) = (_: ProofNodeInfo) => ()
     var updateStepInfo: (ProofStepInfo => Unit) = (_: ProofStepInfo) => ()
 
-    sealed trait TacticStatus
-    case class Running() extends TacticStatus
-    
     /**
      * This is defined for the root only; in other words, the following should be 
      * an object invariant (that not being root implies runningTactics is empty):

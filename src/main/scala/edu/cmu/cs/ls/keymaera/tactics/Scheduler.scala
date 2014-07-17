@@ -131,8 +131,8 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
 class Scheduler(tools : Seq[Tool]) {
 
   val maxThreads = tools.length
-  var thread   : Array[java.lang.Thread] = new Array(maxThreads)
-  var prioList : SynchronizedPriorityQueue[TacticWrapper] = new SynchronizedPriorityQueue()
+  val thread   : Array[java.lang.Thread] = new Array(maxThreads)
+  val prioList : SynchronizedPriorityQueue[TacticWrapper] = new SynchronizedPriorityQueue()
   @volatile var blocked  : Int = 0/* threads blocked on the scheduler */
 
   for (x <- 0 to maxThreads - 1)
