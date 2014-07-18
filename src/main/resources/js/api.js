@@ -8,7 +8,7 @@
  */
 var ServerInfo = {
   hostname: "localhost",
-  port:     8080,
+  port:     8090,
 }
 
 var ApiClient = {
@@ -92,6 +92,18 @@ var ApiClient = {
       error: this.ajaxErrorHandler
     });
     //this.sendUpdateRequest("/proofs/" + userid, "POST");
+  },
+
+  getProof: function(userid, proofid, callback) {
+    $.ajax({
+        url: this.url("proofs/" + userid + "/" + proofid),
+        type: "GET",
+        async: true,
+        dataType: 'json',
+        contentType: 'application/json',
+        success: callback,
+        error: this.ajaxErrorHandler
+      });
   },
 
   runGlobalTactic: function(userid, tacticId, proofid, nodeid, callback) {
