@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="../../favicon.ico">
+
+    <title>KeYmaera 4</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <link href="css/jasny-bootstrap.min.css" rel="stylesheet" media="screen">
+
+    <!-- Custom styles for this template -->
+    <link href="css/app.css" rel="stylesheet">
+    <link href="css/sticky-footer-navbar.css" rel="stylesheet">
+    <link href="css/jstree/style.min.css" rel="stylesheet">
+</head>
+
+<body>
+
+<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="index_bootstrap.html">KeYmaera 4</a>
+        </div>
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            <ul class="nav navbar-nav nav-pills">
+                <li><a href="dashboard.html">Dashboard</a></li>
+                <li><a href="models.html">Models</a></li>
+                <li><a href="#">Lemmas</a></li>
+                <!-- TODO nav pill shows how many updates where made to proofs since last logged in -->
+                <li class="active"><a href="proofs.html"><span class="badge pull-right">6</span> Proofs</a></li>
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="#">Profile</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#">Examples</a></li>
+                        <li><a href="#">Tutorials</a></li>
+                        <li><a href="#">Videos</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#">Hybrid Program Syntax</a></li>
+                        <li class="divider"></li>
+                        <li><a href="#">Hybrid Program Semantics</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div><!--/.navbar-collapse -->
+    </div>
+</div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-2" id="jstree"></div>
+        <div class="col-md-8">
+
+        </div>
+    </div>
+
+</div> <!-- /container -->
+
+<div class="footer">
+    <div class="container">
+        <p class="text-muted">&copy; Logical Systems Lab 2014</p>
+    </div>
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap/bootstrap.min.js"></script>
+<script src="js/bootstrap/jasny-bootstrap.min.js"></script>
+<script src="js/api.js"></script>
+<script src="js/jstree/jstree.min.js"></script>
+
+<!-- Proof tree
+================================================== -->
+<script>
+
+</script>
+
+<script>
+    $(function () {
+        $('#jstree').jstree({'plugins':["wholerow"], 'core' : {
+            'data' : [
+                {
+                    "text" : "Foo",
+                    "icon" : "glyphicon glyphicon-ok",
+                    "children" : [
+                        { "text" : "initially selected", "state" : { "selected" : true }, "icon" : "glyphicon glyphicon-leaf" },
+                        { "text" : "bar", "icon" : "glyphicon glyphicon-leaf" },
+                        { "text" : "initially open", "state" : { "opened" : true }, "icon" : "glyphicon glyphicon-ok", "children" : [ { "text" : "Another node", "icon" : "glyphicon glyphicon-leaf" } ] },
+                        { "text" : "custom icon class", "icon" : "glyphicon glyphicon-leaf" }
+                    ]
+                },
+                { "text" : "And wholerow selection", "icon" : "glyphicon glyphicon-leaf" }
+            ]
+        }});
+    });
+</script>
+</body>
+</html>

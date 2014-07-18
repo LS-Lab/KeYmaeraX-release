@@ -1,0 +1,33 @@
+<div class="row">
+    <div class="col-md-2" id="jstree"></div>
+    <div class="col-md-8">
+        <span>{{proofId}}</span>
+    </div>
+</div>
+
+<!-- Proof tree
+================================================== -->
+<script src="js/jstree/jstree.min.js"></script>
+<script>
+
+</script>
+
+<script>
+    $(function () {
+        $('#jstree').jstree({'plugins':["wholerow"], 'core' : {
+            'data' : [
+                {
+                    "text" : "Foo",
+                    "icon" : "glyphicon glyphicon-ok",
+                    "children" : [
+                        { "text" : "initially selected", "state" : { "selected" : true }, "icon" : "glyphicon glyphicon-leaf" },
+                        { "text" : "bar", "icon" : "glyphicon glyphicon-leaf" },
+                        { "text" : "initially open", "state" : { "opened" : true }, "icon" : "glyphicon glyphicon-ok", "children" : [ { "text" : "Another node", "icon" : "glyphicon glyphicon-leaf" } ] },
+                        { "text" : "custom icon class", "icon" : "glyphicon glyphicon-leaf" }
+                    ]
+                },
+                { "text" : "And wholerow selection", "icon" : "glyphicon glyphicon-leaf" }
+            ]
+        }});
+    });
+</script>
