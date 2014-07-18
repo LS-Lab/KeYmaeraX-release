@@ -32,7 +32,6 @@ trait RestApi extends HttpService {
   }
   /**
    * POST /proofs/< useridid > with data containing the .key file to load
-   * GET /proofs/< userid >/< proofid > should load the proof id.
    */
   val createProof = pathPrefix("proofs" / IntNumber) { userid => {
     pathEnd {
@@ -150,6 +149,7 @@ trait RestApi extends HttpService {
     runTacticNode ::
     runTacticFormula ::
     getUpdates ::
+    getProof ::
     staticRoute ::
     newUser ::
     Nil

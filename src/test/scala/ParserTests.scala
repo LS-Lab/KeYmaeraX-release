@@ -101,7 +101,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
   
   it should "parse all examples/t/positive files" in {
-    val positiveTestsDir = new File("./examples/dev/t/parsing/positive")
+    val positiveTestsDir = new File("examples/dev/t/parsing/positive")
     positiveTestsDir.isDirectory() should be (true)
     for(testFile <- positiveTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
@@ -110,7 +110,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
   
   it should "not parse any examples/t/negative files" in {
-    val negativeTestsDir = new File("./examples/dev/t/parsing/negative")
+    val negativeTestsDir = new File("examples/dev/t/parsing/negative")
     negativeTestsDir.isDirectory() should be (true)
     for(testFile <- negativeTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
@@ -140,7 +140,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   //////////////////////////////////////////////////////////////////////////////
   
   "The ALP Parser" should "parse all examples/t/positiveALP files" in {
-    val positiveTestsDir = new File("./examples/dev/t/parsing/positiveALP")
+    val positiveTestsDir = new File("examples/dev/t/parsing/positiveALP")
     positiveTestsDir.isDirectory() should be (true)
     for(testFile <- positiveTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
@@ -149,7 +149,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
   
   it should "not parse any examples/t/negativeALP files" in {
-    val negativeTestsDir = new File("./examples/dev/t/parsing/negativeALP")
+    val negativeTestsDir = new File("examples/dev/t/parsing/negativeALP")
     negativeTestsDir.isDirectory() should be (true)
     for(testFile <- negativeTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString

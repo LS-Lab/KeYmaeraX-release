@@ -1,6 +1,7 @@
 var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngRoute',
-  'keymaeraProofControllers'
+  'keymaeraProofControllers',
+  'treeControl'
 ]);
 
 keymaeraProofApp.config(['$routeProvider',

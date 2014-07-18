@@ -1,33 +1,243 @@
-<div class="row">
-    <div class="col-md-2" id="jstree"></div>
-    <div class="col-md-8">
-        <span>{{proofId}}</span>
+<div class="row" ng-controller="ProofTreeCtrl">
+    <div class="col-md-4">
+         <div treecontrol class="tree-light"
+              tree-model="proofTree"
+              options="proofTreeOpts"
+              on-selection="showSelected(node)"
+              on-node-toggle="showToggle(node, expanded)"
+              selected-node="selectedNode">
+             ID: {{node._id}}
+         </div>
+    </div>
+    <div class="col-md-6" id="sequent">
+
     </div>
 </div>
 
-<!-- Proof tree
+<!-- Proof tree controller
 ================================================== -->
-<script src="js/jstree/jstree.min.js"></script>
-<script>
-
+<script save-content="proof-tree-ctrl-js">
+    function ProofTreeCtrl($scope) {
+        $scope.showSelected = function(node) {
+            var seq = $("#sequent");
+            seq.html(translateSequent(node.model._id, node.model.sequent));
+        };
+        $scope.showToggle = function(node, expanded) {
+            alert('node toggled, is now expanded: ' + expanded);
+        };
+        $scope.proofTreeOpts = {
+            nodeChildren: "children",
+            dirSelectable: false,
+            injectClasses: {
+                ul: "a1",
+                li: "a2",
+                iExpanded: "a3",
+                iCollapsed: "a4",
+                iLeaf: "a5",
+                label: "a6"
+            }
+        };
+    }
 </script>
 
-<script>
-    $(function () {
-        $('#jstree').jstree({'plugins':["wholerow"], 'core' : {
-            'data' : [
-                {
-                    "text" : "Foo",
-                    "icon" : "glyphicon glyphicon-ok",
-                    "children" : [
-                        { "text" : "initially selected", "state" : { "selected" : true }, "icon" : "glyphicon glyphicon-leaf" },
-                        { "text" : "bar", "icon" : "glyphicon glyphicon-leaf" },
-                        { "text" : "initially open", "state" : { "opened" : true }, "icon" : "glyphicon glyphicon-ok", "children" : [ { "text" : "Another node", "icon" : "glyphicon glyphicon-leaf" } ] },
-                        { "text" : "custom icon class", "icon" : "glyphicon glyphicon-leaf" }
-                    ]
-                },
-                { "text" : "And wholerow selection", "icon" : "glyphicon glyphicon-leaf" }
-            ]
-        }});
-    });
+<script save-content="sequent-vis-js">
+function span(id, cont) {
+    return "<span xmlns=\"http://www.w3.org/1999/xhtml\" onmouseover=\"$(event.target).addClass('hlhover');\" onmouseout=\"$(event.target).removeClass('hlhover');\" class='hl' id='" + id + "'>" + cont + "</span>"
+}
+
+function handle(json) {
+  var items = [];
+  if(json.name == "not") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "&not;" + left));
+      }
+  } else if(json.name == "and") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8743; " + right));
+      }
+  } else if(json.name == "or") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8744; " + right));
+      }
+  } else if(json.name == "imply") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " → " + right));
+      }
+  } else if(json.name == "equiv") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8596 " + right));
+      }
+  } else if(json.name == "lt") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &lt; " + right));
+      }
+  } else if(json.name == "leq") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &leq; " + right));
+      }
+  } else if(json.name == "equals") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " = " + right));
+      }
+  } else if(json.name == "notEquals") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &neq; " + right));
+      }
+  } else if(json.name == "geq") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &geq; " + right));
+      }
+  } else if(json.name == "gt") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &gt; " + right));
+      }
+  } else if(json.name == "neg") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "-" + left));
+      }
+  } else if(json.name == "add") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " + " + right));
+      }
+  } else if(json.name == "subtract") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " - " + right));
+      }
+  } else if(json.name == "multiply") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &middot; " + right));
+      }
+  } else if(json.name == "divide") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " / " + right));
+      }
+   } else if(json.name == "exp") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " <sup>" + right + "</sup>"));
+      }
+  } else if(json.name == "boxmodality") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, "[" + left + "] " + right));
+      }
+  } else if(json.name == "Assign") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " := " + right));
+      }
+  } else if(json.name == "NDetAssign") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, left + ":= *"));
+      }
+  } else if(json.name == "Test") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "?" + left));
+      }
+  } else if(json.name == "Loop") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          items.push(span(json.id, "{" + left + "}<sup>*</sup>" ));
+      }
+  } else if(json.name == "Sequence") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + "; " + right));
+      }
+  } else if(json.name == "Choice") {
+      var c = json.children;
+      if($.isArray(c)) {
+          var left = handle(c[0]);
+          var right = handle(c[1]);
+          items.push(span(json.id, left + " &#8746; " + right));
+      }
+  } else {
+      var chil = "";
+      if(json.hasOwnProperty("children")) {
+        var strs = [];
+        var c = json.children;
+        for(var i = 0; i < c.length; i++) {
+            strs.push(handle(c[i]));
+        }
+        chil = "(" + strs.join(", ") + ")";
+      }
+      items.push(span(json.id, json.name + chil));
+  }
+  return items.join("");
+}
+
+function translateFormula(nId, f) {
+	 return "<span id=\"" + f.id + "\"onClick=\"ApiClient.runTactic(ClientState.uid, 1, ClientState.proofid, '" + nId + "', '" + f.id + "', function (resp) { });\">" + handle(f.formula) + "</span>";
+}
+
+function translateSequent(nId, s) {
+	var res = "";
+	s.ante.forEach(function(f) {
+		res = res + translateFormula(nId, f) + "<br>";
+	});
+	res = res + "<span onClick=\"ApiClient.runGlobalTactic(ClientState.uid, 0, ClientState.proofid, '" + nId + "', function (resp) { alert(JSON.stringify(resp)); });\"> &#8866; </span><br>";
+	s.succ.forEach(function(f) {
+		res = res + translateFormula(nId, f) + "<br>";
+	});
+	return res;
+}
 </script>

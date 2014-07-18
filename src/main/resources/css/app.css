@@ -26,3 +26,6 @@ table .btn{
   border-style: none;
   margin-right: -3px;
 }
+
+.hl {background: transparent; }
+.hlhover { background:#00aaaa; }

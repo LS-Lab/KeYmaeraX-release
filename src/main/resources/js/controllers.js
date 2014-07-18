@@ -27,6 +27,9 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl', ['$scope', '$http',
     jQuery.get('examples/ETCS-safety.key', function(fileContent) {
         $http.post("proofs/0", fileContent).success(function(data) {
             $scope.proofId = data.proofid;
+            $http.get('user/0/proofs/' + data.proofid).success(function(data) {
+                $scope.proofTree = [ data.proofTree ];
+            });
         });
     });
     $scope.$emit('routeLoaded', {theview: 'proofs'});
@@ -40,9 +43,10 @@ keymaeraProofControllers.controller('ProofListCtrl', ['$scope', '$http',
     $scope.$emit('routeLoaded', {theview: 'proofs'});
   }]);
 
-keymaeraProofControllers.controller('ProofDetailCtrl', ['$scope', '$http',
-  function($scope, $http) {
-    $http.get('user/0/proofs/' + $scope.proofId).success(function(data) {
+keymaeraProofControllers.controller('ProofDetailCtrl', ['$scope', '$http', '$routeParams',
+  function($scope, $http, $routeParams) {
+    $http.get('user/0/proofs/' + $routeParams.proofId).success(function(data) {
+        $scope.proofId = data.proofid;
         $scope.proofTree = data.proofTree;
     });
     $scope.$emit('routeLoaded', {theview: 'proofs'});
