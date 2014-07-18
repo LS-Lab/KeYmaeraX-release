@@ -20,7 +20,7 @@ class RestApiActor extends Actor with RestApi {
  * RestApi is the API router. See REAMDE.md for a description of the API.
  */
 trait RestApi extends HttpService {
-  val staticRoute = pathPrefix("static") { get { getFromResourceDirectory("static") } }
+  val staticRoute = pathPrefix("") { get { getFromResourceDirectory("") } }
   val newUser = pathPrefix("user" / IntNumber / "create") { userid => {
     get {
       val newKey = ServerState.createSession(userid.toString)
@@ -51,13 +51,19 @@ trait RestApi extends HttpService {
             complete(responses.last.json.prettyPrint)
           }
         }}
-      } ~ 
-      get {
-        val response = new UnimplementedResponse("GET proofs/<useridid>")
-        complete(response.json.prettyPrint)
       }
     }
   }}
+
+  val getProof = pathPrefix("user" / IntNumber / "proofs" / Segment) { (userid, proofid) =>
+    pathEnd {
+      get {
+        val request = new GetProblemRequest(userid.toString, proofid.toString)
+        val responses = request.getResultingResponses()
+        complete(responses.last.json.prettyPrint)
+      }
+    }
+  }
 
   /*val runTactic = pathPrefix("user" / IntNumber / "proofs" / Segment / "tactic" / IntNumber) { (userid, proofid, tacticid) => {
     pathEnd {

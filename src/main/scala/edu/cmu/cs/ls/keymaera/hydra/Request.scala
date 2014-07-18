@@ -24,11 +24,21 @@ class CreateProblemRequest(userid : String, keyFileContents : String) extends Re
     try {
       // TODO: use the userid
       val res = ProverBusinessLogic.addModel(keyFileContents)
-      val node = ProverBusinessLogic.getModel(res)
       //Return the resulting response.
-      new CreateProblemResponse(node, res) :: Nil
+      new CreateProblemResponse(res) :: Nil
     }
     catch {
+      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
+    }
+  }
+}
+
+class GetProblemRequest(userid : String, proofid : String) extends Request {
+  def getResultingResponses() = {
+    try {
+      val node = ProverBusinessLogic.getModel(proofid)
+      new GetProblemResponse(proofid, node) :: Nil
+    } catch {
       case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
     }
   }

@@ -32,10 +32,16 @@ class UnimplementedResponse(callUrl : String) extends Response {
   )
 }
 
-class CreateProblemResponse(tree:String, proofid:String) extends Response {
+class CreateProblemResponse(proofid:String) extends Response {
   val json = JsObject(
-      "proofid" -> JsString(proofid),
-      "proofTree" -> JsonParser(tree)
+      "proofid" -> JsString(proofid)
+  )
+}
+
+class GetProblemResponse(proofid:String, tree:String) extends Response {
+  val json = JsObject(
+    "proofid" -> JsString(proofid),
+    "proofTree" -> JsonParser(tree)
   )
 }
 
