@@ -24,7 +24,8 @@ keymaeraProofApp.config(['$routeProvider',
         controller: 'ModelProofsCtrl'
       }).
       when('/models/:modelId/proofs/create', {
-        templateUrl: 'partials/proof-detail.html',
+        //templateUrl: 'partials/proof-detail.html',
+        templateUrl: 'partials/proof-breadcrumbs.html',
         controller: 'ModelProofCreateCtrl'
       }).
       when('/proofs', {
@@ -32,7 +33,8 @@ keymaeraProofApp.config(['$routeProvider',
         controller: 'ProofListCtrl'
       }).
       when('/proofs/:proofId', {
-        templateUrl: 'partials/proof-detail.html',
+        //templateUrl: 'partials/proof-detail.html',
+        templateUrl: 'partials/proof-breadcrumbs.html',
         controller: 'ProofDetailCtrl'
       }).
       otherwise({

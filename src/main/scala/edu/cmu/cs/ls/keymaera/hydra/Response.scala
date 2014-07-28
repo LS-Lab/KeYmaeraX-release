@@ -45,6 +45,15 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
+class TacticDispatchedResponse(proofId: String, nodeId: String, tacticId: String, tacticInstId: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "nodeId" -> JsString(nodeId),
+    "tacticId" -> JsString(tacticId),
+    "tacticInstId" -> JsString(tacticInstId)
+  )
+}
+
 class UpdateResponse(update: String) extends Response {
   val json = JsObject(
     "type" -> JsString("update"),

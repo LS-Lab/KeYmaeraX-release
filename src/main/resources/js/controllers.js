@@ -28,7 +28,8 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl', ['$scope', '$http',
         $http.post("proofs/0", fileContent).success(function(data) {
             $scope.proofId = data.proofid;
             $http.get('user/0/proofs/' + data.proofid).success(function(data) {
-                $scope.proofTree = [ data.proofTree ];
+                $scope.proofTree = [ data.proofTree.model ];
+                globalProofTree = [ data.proofTree.model ];
             });
         });
     });

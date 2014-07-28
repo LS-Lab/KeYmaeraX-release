@@ -51,7 +51,11 @@ class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: S
       println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId + " on formula" + formulaId)
       //val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => ServerState.addUpdate(userid, s))
       val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => { val sub = ProverBusinessLogic.getSubtree(proofId); println("======= Retrieved a tree " + sub); ServerState.addUpdate(userid, sub)} )
-      new UnimplementedResponse("running tactic " + res) :: Nil
+      res match {
+        case Some(s) => new TacticDispatchedResponse(proofId, nodeId, tacticId.toString, s.toString) :: Nil
+        // TODO think about exception
+        case None => throw new IllegalStateException("Tactic not applicable")
+      }
     }
     catch {
       case e:Exception => new ErrorResponse(e) :: Nil

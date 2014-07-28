@@ -62,26 +62,28 @@ object ProverBusinessLogic {
    *
    * @param tacticId
    * @param pnId
-   * @return
+   * @return the tactic instance ID
    */
-  def runTactic(tacticId: String, pnId: String, nId: String, formulaId: Option[String], callback: String => Unit = _ => ()): Boolean = {
+  def runTactic(tacticId: String, pnId: String, nId: String, formulaId: Option[String], callback: String => Unit = _ => ()): Option[Int] = {
     println("Run tactic called")
     val tactic = tactics.find(MongoDBObject("_id" -> new ObjectId(tacticId)))
     println("Tactic is " + tactic)
     val proof = models.find(MongoDBObject("_id" -> new ObjectId(pnId))).one
     val node = proofs.find(MongoDBObject("_id" -> new ObjectId(nId))).one
+    // TODO create a new tactics instance in the DB, hand ID to KeYmaera
     println("Node is " + node)
     require(tactic.length == 1, "tactic.length = " + tactic.length + " should be 1")
     val t = tactic.one
     (proof.get("taskId"), node.get("sequent").asInstanceOf[DBObject].get("nodeId"), t.get("tacticId")) match {
       case (tId: Integer, nodeId: String, tacId: Integer) =>
         println("Actually running tactic on node " + nodeId)
-        if(proof("_id") == node("_id"))
+        val tacticInstId = if(proof("_id") == node("_id"))
           KeYmaeraInterface.runTactic(tId, None, tacId, formulaId, Some(tacticCompleted(callback, node)))
         else
           KeYmaeraInterface.runTactic(tId, Some(nodeId), tacId, formulaId, Some(tacticCompleted(callback, node)))
-        true
-      case _ => false
+        // TODO store tactics instance in DB
+        tacticInstId
+      case _ => None
     }
   }
 
@@ -105,7 +107,7 @@ object ProverBusinessLogic {
   }
 
   private def tacticCompleted(f: String => Unit, pn: BSONObject)(i: Int)(taskId: Int, nId: Option[String], tacticId: Int) {
-    println("Tactic completed " + tacticId)
+    println("Tactic completed " + tacticId + "(instance ID" + i + ")")
     KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { println(p.infos); p.infos.get("tactic") == Some(i.toString) }) match {
       case Some(s) =>
         println("Got update " + s)

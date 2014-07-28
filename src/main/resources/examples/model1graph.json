@@ -1,0 +1,22 @@
+{
+  "nodes":[
+    {"name":"start","group":1,"fixed":true,"x":10,"y":25,"class":"node"},
+    {"name":"a := *","group":2,"class":"node"},
+    {"name":"?a > 0","group":2,"class":"node"},
+    {"name":"t := 0","group":4,"class":"currentnode"},
+    {"name":"{x'=v, v'=a}","group":3,"class":"othernode"},
+    {"name":"b := 3","group":3,"class":"othernode"},
+    {"name":"?a + b < x","group":3,"class":"othernode"},
+    {"name":"end","group":1,"fixed":true,"x":290,"y":25,"class":"node"}
+  ],
+  "links":[
+    {"source":0,"target":1,"value":1,"class":"link"},
+    {"source":1,"target":2,"value":9,"class":"link"},
+    {"source":2,"target":3,"value":9,"class":"link"},
+    {"source":3,"target":4,"value":9,"class":"link"},
+    {"source":1,"target":5,"value":1,"class":"inactivelink"},
+    {"source":5,"target":6,"value":1,"class":"inactivelink"},
+    {"source":6,"target":4,"value":1,"class":"inactivelink"},
+    {"source":4,"target":7,"value":1,"class":"link"}
+  ]
+}
