@@ -1,22 +1,29 @@
 {
   "nodes":[
-    {"name":"start","group":1,"fixed":true,"x":10,"y":25,"class":"node"},
+    {"name":"start","group":1,"fixed":true,"x":10,"y":30,"class":"node"},
     {"name":"a := *","group":2,"class":"node"},
     {"name":"?a > 0","group":2,"class":"node"},
     {"name":"t := 0","group":4,"class":"currentnode"},
-    {"name":"{x'=v, v'=a}","group":3,"class":"othernode"},
+    {"name":"{x'=v, v'=a}","group":3,"class":"futurenode"},
     {"name":"b := 3","group":3,"class":"othernode"},
     {"name":"?a + b < x","group":3,"class":"othernode"},
-    {"name":"end","group":1,"fixed":true,"x":220,"y":25,"class":"node"}
+    {"name":"b := 5","group":3,"class":"othernode"},
+    {"name":"?x > 2","group":3,"class":"othernode"},
+    {"name":"b := 7","group":3,"class":"othernode"},
+    {"name":"end","group":1,"fixed":true,"x":220,"y":30,"class":"node"}
   ],
   "links":[
     {"source":0,"target":1,"value":1,"class":"link"},
     {"source":1,"target":2,"value":9,"class":"link"},
     {"source":2,"target":3,"value":9,"class":"link"},
-    {"source":3,"target":4,"value":1,"class":"inactivelink"},
+    {"source":3,"target":4,"value":1,"class":"link"},
     {"source":1,"target":5,"value":1,"class":"inactivelink"},
     {"source":5,"target":6,"value":1,"class":"inactivelink"},
     {"source":6,"target":4,"value":1,"class":"inactivelink"},
-    {"source":4,"target":7,"value":1,"class":"link"}
+    {"source":1,"target":7,"value":1,"class":"inactivelink"},
+    {"source":7,"target":4,"value":1,"class":"inactivelink"},
+    {"source":1,"target":8,"value":1,"class":"inactivelink"},
+    {"source":8,"target":4,"value":1,"class":"inactivelink"},
+    {"source":4,"target":10,"value":1,"class":"link"}
   ]
 }

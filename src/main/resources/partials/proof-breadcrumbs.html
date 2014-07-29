@@ -29,8 +29,10 @@
                         <!-- TODO hybrid program syntax highlighting and auto-formatting -->
                         <pre>
                            a := *;
-                           (?a > 0; <font style="background-color: lightgray">t := 0</font>)
-                           ++ (b := 3; ?a + b < x);
+                           (?a > 0; <span style="background-color: lightgray">t := 0</span>)
+                           ++ (b := 3; ?a + b < x)
+                           ++ (b := 5)
+                           ++ (?x > 2; b := 7);
                            {x' = v, v' = a}
                         </pre>
                     </div>
@@ -39,8 +41,14 @@
         </div>
         <div class="row" ng-controller="ProofProgressCtrl">
             <div class="col-md-10">
-            <p>Proof Progress</p>
-            <div id="proofprogress"></div>
+                <p>Single Alternative Proof Progress</p>
+                <div id="proofprogress"></div>
+            </div>
+        </div>
+        <div class="row" ng-controller="AlternativesProofProgressCtrl">
+            <div class="col-md-10">
+                <p>All Alternatives Proof Progress</p>
+                <div id="altproofprogress"></div>
             </div>
         </div>
     </div>
@@ -328,9 +336,16 @@ function getTacticName(tacticId) {
     stroke-width: 1.5px;
     }
 
-    .othernode {
+    .futurenode {
     stroke: #000;
     fill: #fff;
+    stroke-width: 1.5px;
+    }
+
+    .othernode {
+    stroke: #999;
+    fill: #fff;
+    stroke-opacity: .6;
     stroke-width: 1.5px;
     }
 
@@ -352,7 +367,7 @@ function StateChartCtrl($scope) {
     var color = d3.scale.category20();
 
     var width = 230,
-        height = 50;
+        height = 60;
 
     var force = d3.layout.force()
         .charge(-50)
@@ -400,6 +415,8 @@ function StateChartCtrl($scope) {
 }
 </script>
 
+<!-- Proof progress control
+================================================== -->
 <style>
 .axis path,
 .axis line {
@@ -407,15 +424,14 @@ function StateChartCtrl($scope) {
     stroke: #000;
     shape-rendering: crispEdges;
     }
+rect.closedstep {
+    fill: #aad; //Teal;
+    }
 </style>
 
-<!-- Proof progress control
-================================================== -->
 <script>
 function ProofProgressCtrl($scope) {
-    var n = 4, // number of layers = max. number of children
-        m = 4, // number of samples per layer
-        stack = d3.layout.stack();
+    var stack = d3.layout.stack();
 
     var margin = {top: 40, right: 10, bottom: 20, left: 10},
         width = 230 - margin.left - margin.right,
@@ -423,10 +439,6 @@ function ProofProgressCtrl($scope) {
 
     var x = d3.scale.ordinal()
         .rangeRoundBands([0, width], .08);
-
-    var color = d3.scale.linear()
-        .domain([-3, n - 1])
-        .range(["#aad", "#556"]);
 
     var xAxis = d3.svg.axis()
         .scale(x)
@@ -449,28 +461,42 @@ function ProofProgressCtrl($scope) {
     // open steps
     d3.json("examples/proofprogress.json", function(error, layersdata) {
         var layers = stack(layersdata.slice(1));
-        var yStackMax = 3;  // we can have max. 3 children
-        var yStackMin = -3;
+        var yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
+        var yStackMin = d3.min(layersdata.slice(0,1), function(layer) { return d3.min(layer, function(d) { return d.y; }); });
 
-        x.domain(layersdata.slice(0,1)[0].map(function(d) { return d.x; }));
+        var yMax = d3.max([yStackMax, -yStackMin]);
+
+        var color = d3.scale.linear()
+            .domain([0, yMax - 1])
+            .range(["#aad", "#556"]);
+
+        var xTickLabels = d3.scale.ordinal()
+            .domain(layersdata.slice(0,1)[0].map(function(d) { return d.group; }))
+            .range(layersdata.slice(0,1)[0].map(function(d) { return d.rule; }));
+
+        x.domain(layersdata.slice(0,1)[0].map(function(d) { return d.group; }));
+        xAxis.tickFormat(function(d) { return xTickLabels(d); })
 
         var y = d3.scale.linear()
-            .domain([0, yStackMax])
+            .domain([0, yMax])
             .range([height, 0]);
 
         var layer = svg.selectAll(".layer")
             .data(layers)
-            .enter().append("g")
+          .enter().append("g")
             .attr("class", "layer")
             .style("fill", function(d, i) { return color(i); });
 
         var rect = layer.selectAll("rect")
             .data(function(d) { return d; })
-            .enter().append("rect")
-            .attr("x", function(d) { return x(d.x); })
+          .enter().append("rect")
+            .attr("x", function(d) { return x(d.group); })
             .attr("y", height )
             .attr("width", x.rangeBand())
-            .attr("height", 0 );
+            .attr("height", 0 )
+            .on("click", function(d) { togglePopover.call(this, d);  });
+            //.on("mouseover", function (d) { showPopover.call(this, d); })
+            //.on("mouseout",  function (d) { removePopovers(); })
 
         rect.transition()
             .delay(function(d, i) { return i * 10; })
@@ -485,28 +511,156 @@ function ProofProgressCtrl($scope) {
 
     d3.json("examples/proofprogress.json", function(error, layersdata) {
         var layers = layersdata.slice(0,1);
-        var yStackMin = -3; // we can have max. 3 children
+        var yStackMax = d3.max(stack(layersdata.slice(1)), function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
+        var yStackMin = d3.min(layers, function(layer) { return d3.min(layer, function(d) { return d.y; }); });
 
-        x.domain(layers[0].map(function(d) { return d.x; }));
+        var yMin = d3.min([-yStackMax, yStackMin]);
+
+        x.domain(layers[0].map(function(d) { return d.group; }));
 
         var y = d3.scale.linear()
-            .domain([yStackMin, 0])
+            .domain([yMin, 0])
             .range([height, 0]);
 
         var layer = svgclosed.selectAll(".layer")
             .data(layers)
             .enter().append("g")
-            .attr("class", "layer")
-            .style("fill", function(d, i) { return color(i); });
+            .attr("class", "layer");
+            //.style("fill", function(d, i) { return color(i); });
 
-        var rect = layer.selectAll("rect")
+        var rect = layer.selectAll("g")
             .data(function(d) { return d; })
-            .enter().append("rect")
-            .attr("x", function(d) { return x(d.x); })
+          .enter().append("g");
+            //.attr("transform", function(d, i) { return "translate(" + i * x.rangeBand() + ", 0)"; });
+
+        rect.append("rect")
+            .attr("class", "closedstep")
+            .attr("x", function(d) { return x(d.group); })
             .attr("y", 0)
             .attr("width", x.rangeBand())
             .attr("height", function(d) { return Math.abs(y(d.y) - y(0)); });
+/*
+        rect.append("foreignObject")
+            .attr("x", function(d) { return x(d.group); })
+            .attr("y", height)
+            .attr("width", width)
+            //.attr("height", height)
+            .append("xhtml:body")
+            .html('<div class="glyphicon glyphicon-ok"></div>');*/
     });
+}
+
+function removePopovers () {
+  $('.popover').each(function() {
+    $(this).remove();
+  });
+}
+
+function showPopover (d) {
+  $(this).popover({
+    title: "Prover Interaction",
+    placement: 'auto top',
+    container: 'body',
+    trigger: 'manual',
+    html : true,
+    content: function() {
+      return "Sequent: " + d.id +
+             "<br/>Rule: " + d.rule; }
+  });
+  $(this).popover('show')
+}
+
+function togglePopover (d) {
+  $(this).popover({
+    title: "Background Progress",
+    placement: 'auto top',
+    container: 'body',
+    trigger: 'manual',
+    html : true,
+    content: function() {
+      return $('#popover_content_wrapper').html(); }
+  });
+  $(this).popover('toggle');
+}
+</script>
+
+<!-- Progress meter
+================================================== -->
+<style>
+
+.progress-meter .background {
+    fill: #ccc;
+    }
+
+.progress-meter .foreground {
+    fill: #000;
+    }
+
+.progress-meter text {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    font-weight: bold;
+    }
+</style>
+
+<!-- TODO must later be generatet from JavaScript -->
+<div class="hidden" id="popover_content_wrapper" ng-controller="BackgroundProgressController">
+    <div class="row">
+        <div class="col-md-3" id="progressMeter"></div>
+        <div class="col-md-2">37:14</div>
+        <div class="col-md-2">[QE]</div>
+        <div class="col-md-1 glyphicon glyphicon-pause"></div>
+        <div class="col-md-1 glyphicon glyphicon-stop"></div>
+        <div class="col-md-1 glyphicon glyphicon-refresh"></div>
+    </div>
+</div>
+
+<script>
+function BackgroundProgressController($scope) {
+    var width = 40,
+        height = 40,
+        twoPi = 2 * Math.PI,
+        progress = 1,
+        total = 3,
+        formatPercent = d3.format(".0%");
+
+    //$("#progressMeter").html("<p>Foo</p>");
+
+    var arc = d3.svg.arc()
+        .startAngle(0)
+        .innerRadius(15)
+        .outerRadius(20);
+
+    var svg = d3.select("#progressMeter").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+      .append("g")
+        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+
+    var meter = svg.append("g")
+        .attr("class", "progress-meter");
+
+    meter.append("path")
+        .attr("class", "background")
+        .attr("d", arc.endAngle(twoPi));
+
+    var foreground = meter.append("path")
+        .attr("class", "foreground");
+
+    var text = meter.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dy", ".35em");
+
+    foreground.attr("d", arc.endAngle(twoPi * progress / total));
+    //text.text(formatPercent(progress/total));
+    text.text(progress + "/" + total)
+}
+</script>
+
+<!-- Proof progress control
+================================================== -->
+<script>
+function AlternativesProofProgressCtrl($scope) {
 
 }
 </script>
