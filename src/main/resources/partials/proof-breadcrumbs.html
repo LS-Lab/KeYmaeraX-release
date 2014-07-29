@@ -1,8 +1,8 @@
 <div class="row" ng-controller="ProofTreeCtrl">
     <div class="col-md-4">
         <div class="row">
-            <p>Tree</p>
             <div class="col-md-10">
+                 <p>Tree</p>
                  <div treecontrol class="tree-light"
                       tree-model="proofTree"
                       options="proofTreeOpts"
@@ -13,19 +13,56 @@
                  </div>
             </div>
         </div>
-        <div class="row" ng-controller="StateChartCtrl">
-            <p>Statechart</p>
-            <div class="col-md-10" id="statechart"></div>
+        <div class="row">
+            <div class="col-md-10" ng-controller="TabCtrl">
+                <p>Program Position</p>
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist" id="programPosTab">
+                    <li class="active"><a data-target="#statechart" role="tab" data-toggle="tab">Statechart</a></li>
+                    <li><a data-target="#hybridprogram" role="tab" data-toggle="tab">Hybrid Program</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="statechart" ng-controller="StateChartCtrl"></div>
+                    <div class="tab-pane" id="hybridprogram">
+                        <!-- TODO hybrid program syntax highlighting and auto-formatting -->
+                        <pre>
+                           a := *;
+                           (?a > 0; <font style="background-color: lightgray">t := 0</font>)
+                           ++ (b := 3; ?a + b < x);
+                           {x' = v, v' = a}
+                        </pre>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="row" ng-controller="ProofProgressCtrl">
+            <div class="col-md-10">
             <p>Proof Progress</p>
-            <div class="col-md-10" id="proofprogress"></div>
+            <div id="proofprogress"></div>
+            </div>
         </div>
     </div>
     <div class="col-md-6" id="sequent">
 
     </div>
 </div>
+
+<!-- Tabs
+================================================== -->
+<script>
+function TabCtrl($scope) {
+  $('#programPosTab a[data-target="#statechart"]').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show')
+  });
+  $('#programPosTab a[data-target="#hybridprogram"]').click(function (e) {
+      e.preventDefault()
+      $(this).tab('show')
+  });
+}
+</script>
 
 <!-- Proof tree controller
 ================================================== -->
@@ -312,7 +349,7 @@ function getTacticName(tacticId) {
 function StateChartCtrl($scope) {
     var color = d3.scale.category20();
 
-    var width = 300,
+    var width = 230,
         height = 50;
 
     var force = d3.layout.force()
@@ -379,7 +416,7 @@ function ProofProgressCtrl($scope) {
         //yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); });
 
     var margin = {top: 40, right: 10, bottom: 20, left: 10},
-        width = 300 - margin.left - margin.right,
+        width = 230 - margin.left - margin.right,
         height = 150 - margin.top - margin.bottom;
 
     var x = d3.scale.ordinal()

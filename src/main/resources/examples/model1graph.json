@@ -7,7 +7,7 @@
     {"name":"{x'=v, v'=a}","group":3,"class":"othernode"},
     {"name":"b := 3","group":3,"class":"othernode"},
     {"name":"?a + b < x","group":3,"class":"othernode"},
-    {"name":"end","group":1,"fixed":true,"x":290,"y":25,"class":"node"}
+    {"name":"end","group":1,"fixed":true,"x":220,"y":25,"class":"node"}
   ],
   "links":[
     {"source":0,"target":1,"value":1,"class":"link"},
