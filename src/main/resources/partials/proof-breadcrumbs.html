@@ -39,16 +39,20 @@
                 </div>
             </div>
         </div>
-        <div class="row" ng-controller="ProofProgressCtrl">
+        <div class="row">
             <div class="col-md-10">
-                <p>Single Alternative Proof Progress</p>
-                <div id="proofprogress"></div>
-            </div>
-        </div>
-        <div class="row" ng-controller="AlternativesProofProgressCtrl">
-            <div class="col-md-10">
-                <p>All Alternatives Proof Progress</p>
-                <div id="altproofprogress"></div>
+                <p>Proof Progress</p>
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist" id="proofProgressTab">
+                    <li class="active"><a data-target="#currentAltProgress" role="tab" data-toggle="tab">Branch</a></li>
+                    <li><a data-target="#allAltsProgress" role="tab" data-toggle="tab">All</a></li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="currentAltProgress" ng-controller="ProofProgressCtrl"></div>
+                    <div class="tab-pane" id="allAltsProgress" ng-controller="AllAltsProofProgressCtrl"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -446,13 +450,13 @@ function ProofProgressCtrl($scope) {
         .tickPadding(6)
         .orient("bottom");
 
-    var svg = d3.select("#proofprogress").append("svg")
+    var svg = d3.select("#currentAltProgress").append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    var svgclosed = d3.select("#proofprogress").append("svg")
+    var svgclosed = d3.select("#currentAltProgress").append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
@@ -584,29 +588,13 @@ function togglePopover (d) {
 }
 </script>
 
-<!-- Progress meter
+<!-- Background progress popup
 ================================================== -->
-<style>
-
-.progress-meter .background {
-    fill: #ccc;
-    }
-
-.progress-meter .foreground {
-    fill: #000;
-    }
-
-.progress-meter text {
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 10px;
-    font-weight: bold;
-    }
-</style>
-
-<!-- TODO must later be generatet from JavaScript -->
-<div class="hidden" id="popover_content_wrapper" ng-controller="BackgroundProgressController">
+<link href="css/keymaera-ui/progress-meter.css" rel="stylesheet" type="text/css">
+<!-- TODO must later be generated from JavaScript -->
+<div class="hidden" id="popover_content_wrapper">
     <div class="row">
-        <div class="col-md-3" id="progressMeter"></div>
+        <div class="col-md-3"><k4-progress-meter progress="1" total="3"></k4-progress-meter></div>
         <div class="col-md-2">37:14</div>
         <div class="col-md-2">[QE]</div>
         <div class="col-md-1 glyphicon glyphicon-pause"></div>
@@ -615,52 +603,12 @@ function togglePopover (d) {
     </div>
 </div>
 
-<script>
-function BackgroundProgressController($scope) {
-    var width = 40,
-        height = 40,
-        twoPi = 2 * Math.PI,
-        progress = 1,
-        total = 3,
-        formatPercent = d3.format(".0%");
-
-    //$("#progressMeter").html("<p>Foo</p>");
-
-    var arc = d3.svg.arc()
-        .startAngle(0)
-        .innerRadius(15)
-        .outerRadius(20);
-
-    var svg = d3.select("#progressMeter").append("svg")
-        .attr("width", width)
-        .attr("height", height)
-      .append("g")
-        .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
-
-    var meter = svg.append("g")
-        .attr("class", "progress-meter");
-
-    meter.append("path")
-        .attr("class", "background")
-        .attr("d", arc.endAngle(twoPi));
-
-    var foreground = meter.append("path")
-        .attr("class", "foreground");
-
-    var text = meter.append("text")
-        .attr("text-anchor", "middle")
-        .attr("dy", ".35em");
-
-    foreground.attr("d", arc.endAngle(twoPi * progress / total));
-    //text.text(formatPercent(progress/total));
-    text.text(progress + "/" + total)
-}
-</script>
-
 <!-- Proof progress control
 ================================================== -->
 <script>
-function AlternativesProofProgressCtrl($scope) {
+function AllAltsProofProgressCtrl($scope) {
 
 }
 </script>
+
+<script src="js/keymaera-ui/progress-meter.js"></script>

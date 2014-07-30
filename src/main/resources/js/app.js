@@ -1,7 +1,8 @@
 var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngRoute',
   'keymaeraProofControllers',
-  'treeControl'
+  'treeControl',
+  'progressMeter'
 ]);
 
 keymaeraProofApp.config(['$routeProvider',

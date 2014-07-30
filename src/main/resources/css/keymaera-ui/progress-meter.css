@@ -1,0 +1,13 @@
+.progress-meter .background {
+    fill: #ccc;
+    }
+
+.progress-meter .foreground {
+    fill: #000;
+    }
+
+.progress-meter text {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10px;
+    font-weight: bold;
+    }
