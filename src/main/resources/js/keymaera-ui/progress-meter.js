@@ -6,8 +6,9 @@ angular.module('progressMeter', [])
           width = (attrs.width == undefined ? 40 : attrs.width),
           height = (attrs.height == undefined ? 40 : attrs.height),
           startAngle = (attrs.startAngle == undefined ? 0 : attrs.startAngle),
-          innerRadius = (attrs.innerRadius == undefined ? 15 : attrs.innerRadius),
-          outerRadius = (attrs.outerRadius == undefined ? 20 : attrs.outerRadius),
+          radiusRatio = (attrs.radiusRatio == undefined ? .75 : attrs.radiusRatio),
+          outerRadius = d3.min([width,height])/2,
+          innerRadius = outerRadius * radiusRatio,
           format = (attrs.format == undefined ? 'progress-of-total' : attrs.format),
           formatPercent = d3.format(".0%");
 

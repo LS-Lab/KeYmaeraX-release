@@ -29,3 +29,10 @@ table .btn{
 
 .hl {background: transparent; }
 .hlhover { background:#00aaaa; }
+
+.k4-progress-table td {
+  text-align: center;
+}
+.k4-progress-table th {
+  text-align: center;
+}
