@@ -42,6 +42,13 @@ open http://localhost:8080/static/index.html in web browser
 open .key file in KeYmaera 4 HyDRA
 right click to interact
 
+UI Mockup
+=========
+
+mongod —config /usr/local/etc/mongod.conf
+sbt “~ re-start"
+open http://localhost:8090/index_bootstrap.html
+
 Proof Tree Viewer
 =================
 
