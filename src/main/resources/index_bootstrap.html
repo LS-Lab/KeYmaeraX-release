@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="author" content="Logical Systems Lab, Carnegie Mellon University">
     <link rel="icon" href="../../favicon.ico">
 
     <title>KeYmaera 4</title>
@@ -16,6 +16,46 @@
     <!-- Custom styles for this template -->
     <link href="css/jumbotron.css" rel="stylesheet">
     <link href="css/sticky-footer-navbar.css" rel="stylesheet">
+
+    <!-- LS-Lab Javascript Libraries -->
+    <script src="js/eventHandler.js" type="text/javascript"></script>
+    <script src="js/ui.js" type="text/javascript"></script>
+    <script src="js/api.js" type="text/javascript"></script>
+
+    <!-- Navigation / global operations... -->
+    <script type="text/javascript">
+        // We should find a better home for this function.
+
+        function processLogin() {
+            var username = $("#username").val()
+            var password = $("#password").val()
+            if(username === undefined || password === undefined) {
+                alert("Please fill out the Email and Password files before logging in.");
+            }
+            else {
+              ApiClient.login(username,password);
+            }
+        }
+
+        function processRegistration() {
+            var username = $("#username").val()
+            var password = $("#password").val()
+            if(username === undefined || password === undefined) {
+                alert("Please fill out the Email and Password files before logging in.");
+            }
+            else {
+                ApiClient.createNewUser(username,password, function(result) { 
+                  if(result.success === true) {
+                    processLogin();
+                  }
+                  else {
+                    alert("Please choose a different username.");
+                  }
+                }
+              )
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -32,15 +72,15 @@
             <a class="navbar-brand" href="#">KeYmaera 4</a>
         </div>
         <div class="navbar-collapse collapse">
-            <!-- TODO actually sign in -->
-            <form class="navbar-form navbar-right" role="form" action="dashboard.html" method="get">
+            <form class="navbar-form navbar-right" role="form">
                 <div class="form-group">
-                    <input type="text" placeholder="Email" class="form-control">
+                    <input type="text" placeholder="Email" id="username" class="form-control">
                 </div>
                 <div class="form-group">
-                    <input type="password" placeholder="Password" class="form-control">
+                    <input type="password" placeholder="Password" id="password" class="form-control">
                 </div>
-                <button type="submit" class="btn btn-success">Sign in</button>
+                <button type="button" class="btn btn-success" onClick="processLogin()">Sign in</button>
+                <button type="button" class="btn btn-info" onClick="processRegistration()">Register</button>
             </form>
         </div><!--/.navbar-collapse -->
     </div>

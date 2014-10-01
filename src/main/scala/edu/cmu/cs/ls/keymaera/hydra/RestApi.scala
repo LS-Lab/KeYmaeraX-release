@@ -20,36 +20,68 @@ class RestApiActor extends Actor with RestApi {
  * RestApi is the API router. See REAMDE.md for a description of the API.
  */
 trait RestApi extends HttpService {
+  val database = MongoDB //Not sure when or where to create this...
+
   val staticRoute = pathPrefix("") { get { getFromResourceDirectory("") } }
-  val newUser = pathPrefix("user" / IntNumber / "create") { userid => {
-    get {
-      val newKey = ServerState.createSession(userid.toString)
-      respondWithMediaType(`application/json`) {
-        complete("{\"sessionName\": \"" + newKey + "\"}") //TODO-nrf
+  val users = pathPrefix("user" / Segment / Segment) { (username, password) => {
+    pathEnd {
+      get {
+        val request = new LoginRequest(database,username,password)
+        complete(request.getResultingResponses().last.json.prettyPrint)
+      } ~
+      post {
+        val request = new CreateUserRequest(database, username, password)
+        complete(request.getResultingResponses().last.json.prettyPrint)
       }
     }
+  }}
+
+  val models = pathPrefix("model") {
+    //Creating a new model.
+    path(Segment / Segment) { (name, keyFile) => {
+      pathEnd{
+        post {
+//          val request = new
+          complete("")
+        }
+      }
+    }
+    }
   }
-  }
+
+//    post {
+//      complete()
+//    }
+//    get {
+//      val newKey = ServerState.createSession(userid.toString)
+//      respondWithMediaType(`application/json`) {
+//        complete("{\"sessionName\": \"" + newKey + "\"}") //TODO-nrf
+//      }
+//    }
+//  }
+//  }
+
   /**
    * POST /proofs/< useridid > with data containing the .key file to load
    */
   val createProof = pathPrefix("proofs" / IntNumber) { userid => {
     pathEnd {
       post {
-//        decompressRequest()
-        entity(as[String]) { keyFileContents => {
-          ServerState.createSession(userid.toString)
-          val request = new CreateProblemRequest(userid.toString(), keyFileContents)
-          val responses = request.getResultingResponses()
-          if(responses.length != 1) {
-            complete(new ErrorResponse(
-              new Exception("CreateProblemRequest generated too many responses"
-             )).json.prettyPrint)
-          }
-          else {
-            complete(responses.last.json.prettyPrint)
-          }
-        }}
+        complete("")
+////        decompressRequest()
+//        entity(as[String]) { keyFileContents => {
+//          ServerState.createSession(userid.toString)
+//          val request = new CreateModelRequest(userid.toString(), "", keyFileContents)
+//          val responses = request.getResultingResponses()
+//          if(responses.length != 1) {
+//            complete(new ErrorResponse(
+//              new Exception("CreateProblemRequest generated too many responses"
+//             )).json.prettyPrint)
+//          }
+//          else {
+//            complete(responses.last.json.prettyPrint)
+//          }
+//        }}
       }
     }
   }}
@@ -151,7 +183,7 @@ trait RestApi extends HttpService {
     getUpdates ::
     getProof ::
     staticRoute ::
-    newUser ::
+      users ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

@@ -1,3 +1,5 @@
+//Deprecated.
+
 function HydraEventHandler(evt) {
   //alert("Event " + JSON.stringify(evt));
   if(evt.type === "proof") {

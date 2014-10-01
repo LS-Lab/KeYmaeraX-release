@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 /**
  * A Request should handle all expensive computation as well as all
- * possible side-effects of a request (e.g. updating the database), but shold
+ * possible side-effects of a request (e.g. updating the database), but should
  * not modify the internal state of the HyDRA server (e.g. do not update the 
  * event queue).
  * 
@@ -19,13 +19,35 @@ sealed trait Request {
   def getResultingResponses() : List[Response] //see Response.scala.
 }
 
-class CreateProblemRequest(userid : String, keyFileContents : String) extends Request {
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Users
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CreateUserRequest(db : DBAbstraction, username : String, password:String) extends Request {
+  override def getResultingResponses() = {
+    val userExists = db.userExists(username)
+    if(!userExists) db.createUser(username,password)
+    new BooleanResponse(!userExists) :: Nil
+  }
+}
+
+class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    new LoginResponse(db.checkPassword(username, password), username) :: Nil
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Models
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends Request {
   def getResultingResponses() = {
     try {
-      // TODO: use the userid
       val res = ProverBusinessLogic.addModel(keyFileContents)
       //Return the resulting response.
-      new CreateProblemResponse(res) :: Nil
+      val result = db.createModel(userId, nameOfModel, keyFileContents)
+      new BooleanResponse(result) :: Nil
     }
     catch {
       case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil

@@ -1,9 +1,10 @@
 /**
  * HyDRA API Responses
- * @author Nathan Fulton
+ *  @author Nathan Fulton
  * @TODO require the output of each response matches the jschema.
  */
 package edu.cmu.cs.ls.keymaera.hydra
+
 import spray.json._
 import edu.cmu.cs.ls.keymaera.core.Expr
 import edu.cmu.cs.ls.keymaera.core.Sequent
@@ -14,6 +15,22 @@ import edu.cmu.cs.ls.keymaera.core.Sequent
  */
 sealed trait Response {
   val json : JsValue
+}
+
+class BooleanResponse(flag : Boolean) extends Response {
+  val json = JsObject(
+    "success" -> (if(flag) JsTrue else JsFalse),
+    "type" -> JsNull
+  )
+}
+
+class LoginResponse(flag:Boolean, userId:String) extends Response {
+  val json = JsObject(
+    "success" -> (if(flag) JsTrue else JsFalse),
+    "key" -> JsString("userId"),
+    "value" -> JsString(userId),
+    "type" -> JsString("LoginResponse")
+  )
 }
 
 class ErrorResponse(exn : Exception) extends Response {
@@ -29,12 +46,6 @@ class UnimplementedResponse(callUrl : String) extends Response {
       "textStatus" -> JsString("Call unimplemented: " + callUrl),
       "errorThrown" -> JsString("unimplemented"),
       "type" -> JsString("error")
-  )
-}
-
-class CreateProblemResponse(proofid:String) extends Response {
-  val json = JsObject(
-      "proofid" -> JsString(proofid)
   )
 }
 

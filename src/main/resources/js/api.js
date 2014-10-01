@@ -25,8 +25,9 @@ var ApiClient = {
    * This is the function which should be passed to all AJAX requests
    */
   ajaxErrorHandler: function(request, textStatus, errorThrown) {
-    UI.updateStatusDisplay(false);
-    UI.showError(textStatus, errorThrown); //todo include request information.
+    console.log("Error: " + textStatus + ". Error trace following...")
+    console.log(errorThrown)
+    alert("Ajax error! See console log for details.")
   },
 
 
@@ -59,14 +60,26 @@ var ApiClient = {
   // Begin API calls
   //////////////////////////////////////////////////////////////////////////////
   /// /users
-  createNewUser: function(userid) {
+  createNewUser: function(username, password, callback) {
+    $.ajax({
+      type: "POST",
+      dataType: "json",
+      contentType: "application/json",
+      async: false,
+      url: this.url("user/" + username + "/" + password),
+      success: callback,
+      error: this.ajaxErrorHandler
+    });
+  },
+
+  login: function(username, password) {
     $.ajax({
       type: "GET",
       dataType: "json",
       contentType: "application/json",
       async: false,
-      url: this.url("user/"+userid + "/create"),
-      success: function(resp) {},
+      url: this.url("user/" + username + "/" + password),
+      success: eventHandler,
       error: this.ajaxErrorHandler
     });
   },

@@ -12,7 +12,7 @@ Returns a list of all KeYmaera users with a registered account on this server.
  * **Return value**: `[ {"userid": <userid> }, ... ]`
  * **Queue addition values**: none.
 
-#### POST /users/< newuserid >
+#### POST /users/< newusername >/< newpassword >
 
  * **Parameters**: none.
  * **Data**: none.
