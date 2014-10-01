@@ -8,6 +8,10 @@ import com.mongodb.casbah.Imports._
 object MongoDB extends DBAbstraction {
   val mongoClient = MongoClient("localhost", 27017)
 
+
+  val x = ProverBusinessLogic
+
+
   //val proofs = mongoClient("keymaera")("proofs")
   //val tactics = mongoClient("keymaera")("tactics")
   //val positionTactics = mongoClient("keymaera")("positionTactics")

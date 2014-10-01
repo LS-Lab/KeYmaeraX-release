@@ -11,11 +11,13 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics
  * Created by jdq on 6/12/14.
  */
 object ProverBusinessLogic {
+
   val mongoClient = MongoClient("localhost", 27017)
   val proofs = mongoClient("keymaera")("proofs")
   val tactics = mongoClient("keymaera")("tactics")
   val positionTactics = mongoClient("keymaera")("positionTactics")
   val models = mongoClient("keymaera")("models")
+
 
 
   // FIXME: in the long run this should only make sure that the database state is consistent
