@@ -67,42 +67,52 @@ DESIGN DISCUSSION
 REST URI DESIGN
 ===============
 
-/proofs/
-	|- <ns>							- KeYmaera proofs sorted into namespaces
-	|- user/<userid>/<id>/
-		|- lemmas/					- Local (and referenced?) lemmas
-		|- model/					- The model, links to one of /models/...
-		|- tactics/					- Local (and referenced?) tactics
-		|- root/					- Proof root
-			|- <nodeid>/			- Node addressing as discussed above
-				|- tactics			- the applicable tactics
-				|- apply			- apply a tactic (alternative: use tactic name)
-				|- step				- apply the default step
-				|- ante/<pos>/<n>	- a node in a formula at position pos in the antecedent
-					|- tactics		
-					|- apply
-					|- step
-				|- succ/<pos>/<n>	- a node in a formula at position pos in the succedent
-					|- tactics
-					|- apply
-					|- step
-    |- updates/<lastId> - Returns an array of new updates.
-/lemmas/
-	|- <ns>/						- KeYmaera lemmas sorted into namespaces
-	|- user/<userid>/				- User lemmas, can create namespaces below
-/tactics/
-	|- <ns>/						- KeYmaera global tactics sorted into namespaces
-	|- user/<userid>/				- User tactics, can create namespaces below
-/models/
-	|- automotive/
-	|- robotics/
-	|- aviation/
-	|- tutorials/
-	|- <userid>/					- User models, can create namespaces below
-/users/								- KeYmaera users
+    /proofs/
+      |- <ns>							- KeYmaera proofs sorted into namespaces
+      |- user/<userid>/<id>/
+        |- lemmas/					- Local (and referenced?) lemmas
+        |- model/					- The model, links to one of /models/...
+        |- tactics/					- Local (and referenced?) tactics
+        |- root/					- Proof root
+          |- <nodeid>/			- Node addressing as discussed above
+            |- tactics			- the applicable tactics
+            |- apply			- apply a tactic (alternative: use tactic name)
+            |- step				- apply the default step
+            |- ante/<pos>/<n>	- a node in a formula at position pos in the antecedent
+              |- tactics		
+              |- apply
+              |- step
+            |- succ/<pos>/<n>	- a node in a formula at position pos in the succedent
+              |- tactics
+              |- apply
+              |- step
+        |- updates/<lastId> - Returns an array of new updates.
+    /lemmas/
+      |- <ns>/						- KeYmaera lemmas sorted into namespaces
+      |- user/<userid>/				- User lemmas, can create namespaces below
+    /tactics/
+      |- <ns>/						- KeYmaera global tactics sorted into namespaces
+      |- user/<userid>/				- User tactics, can create namespaces below
+    /models/
+      |- automotive/
+      |- robotics/
+      |- aviation/
+      |- tutorials/
+      |- <userid>/					- User models, can create namespaces below
+    /users/								- KeYmaera users
 
 REST METHODS
 ============
+
+
+Models
+------
+
+# /models/< userid >
+
+Output format: schema/modelList.js
+
+    [[name, dateAdded, modelList], ...]
 
 Some examples for the API
 
