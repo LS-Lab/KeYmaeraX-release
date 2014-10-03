@@ -1,3 +1,5 @@
+
+
 <div class="panel panel-default">
     <!-- Default panel contents -->
     <div class="panel-heading">Your Models</div>
@@ -7,9 +9,16 @@
                 <p>Upload new models to KeYmaera</p>
             </div>
             <div class="col-md-6">
+
                 <!-- TODO https://github.com/blueimp/jQuery-File-Upload/wiki/Basic-plugin -->
-                <form>
+                <form ng-submit="addModel()">
+                    <div class="input-group">
+                        <label for="modelName">Model Name</label>
+                        <input type="text" ng-model="name" class="form-control" name="modelName" id="modelName" placeholder="My Very Own Bouncing Ball">
+                    </div>
+                    <label for="keyFile">File</label>
                     <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+
                         <div class="form-control" data-trigger="fileinput">
                             <i class="glyphicon glyphicon-file fileinput-exists"></i>
                             <span class="fileinput-filename"></span>
@@ -17,10 +26,10 @@
                         <span class="input-group-addon btn btn-default btn-file">
                             <span class="fileinput-new">Select file</span>
                             <span class="fileinput-exists">Change</span>
-                            <input type="file" name="source">
+                            <input type="file" name="source" id="keyFile" class="form-control" ng-model="keyFile">
                         </span>
-                        <a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
-                        <a href="#" class="input-group-addon btn btn-default fileinput-exists">Upload</a>
+                        <a class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+                        <a class="input-group-addon btn btn-default fileinput-exists" ng-click="addModel()" id="uploadbtn">Upload</a>
                     </div>
                 </form>
             </div>
@@ -40,10 +49,10 @@
         </thead>
         <tbody>
         <tr ng-repeat="model in models">
-            <td>{{ model.id.substring(0,5) }}</td>
+            <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
             <td>{{ model.name }}</td>
             <td>{{ model.date }}</td>
-            <td>Not in DB</td>
+            <td></td>
             <td class="input-group-btn">
                 <button type="button" class="btn btn-default">Details</button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -83,7 +92,19 @@
     TODO what are we going to do about user data?
     -->
     <script type="text/javascript">
+      $("#keyFile").on('change', function(event) {
+        window.UPLOADED_FILE_CONTENTS = null;
+        var file = event.target.files[0];
 
+        var fr = new FileReader();
+        fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
+        fr.onload = function(e) {
+          var fileContents = e.target.result;
+          window.UPLOADED_FILE_CONTENTS = fileContents;
+        };
+
+        fr.readAsText(file);
+      });
     </script>
 </div>
 <!-- TODO only display if page full -->

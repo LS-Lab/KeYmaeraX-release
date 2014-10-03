@@ -13,52 +13,34 @@ keymaeraProofControllers.controller('DashboardCtrl', ['$scope', '$http', '$cooki
     });
 
     $scope.addModel = function() {
-        var model = {
-            id : $scope.id,
-            name : $scope.name,
-            date : $scope.date,
-            userId : $scope.userId,
-            keyFile: $scope.keyFile
-        }
-        $scope.models.push(model)
+        var filename = $("#keyFile").val();
+        var modelName = $("#modelName").val();
+        var userId = $cookies.userId;
+
+
+
+//        while(window.UPLOADED_FILE_CONTENTS === null) {} //whatever. this all needs rewriting.
+
+        $.ajax({
+              url: "user/" + $cookies.userId + "/modeltextupload/" + modelName,
+              type: "POST",
+              data: window.UPLOADED_FILE_CONTENTS,
+              async: true,
+              dataType: 'json',
+              contentType: 'application/json',
+              success: function(data) {
+                      //For now just completely repopulate...
+                      while($scope.models.length != 0) { $scope.models.shift() }
+                      $http.get("models/users/" + $cookies.userId).success(function(data,status,headers,config) {
+                          for(var i=0;i<data.length;i++) {
+                              $scope.models.push(data[i])
+                          }
+                          console.log("TODO-NRF -- now reset the form as well.")
+                      });
+                      },
+              error: this.ajaxErrorHandler
+            });
     }
-
-
-//    //////////////
-//    // Model List
-//    //////////////
-//    $scope.models = []
-//
-//    var modelList = $http.get("models/user")
-//    alert(modelList)
-////      for(var i = 0 ; i < result.length; i++) {
-////
-////        var currResult = result[i];
-////        table.append(
-////            "<tr>" +
-////                "<td>" + currResult.id.substring(0,5) + "</td>" +
-////                "<td>" + currResult.date + "</td>" +
-////                "<td>" + currResult.name + "</td>" +
-////                "<td>" + "" + "</td>" + //remove description?
-////                "<td>" + makeDropdown(currResult.id) + "</td>" +
-////            "</tr>"
-////        )
-////      }
-//    })
-//
-//    //Adds a model to the view; does not CREATE a new model.
-//    $scope.addModel() {
-//      var model = {
-//        id: $scope.id,
-//        name: $scope.name,
-//        date: $scope.date,
-//        keyFile: $scope.keyFile
-//      };
-//    }
-
-
-    // HACK: want to have signed in users
-    $http.get("user/0/create");
 
     // Set the view for menu active class
     $scope.$on('routeLoaded', function (event, args) {

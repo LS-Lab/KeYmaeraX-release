@@ -115,6 +115,15 @@ trait RestApi extends HttpService {
     }
   }}}}}
 
+  //Because apparently FTP > modern web.
+  val userModel2 = userPrefix {userId => {pathPrefix("modeltextupload" / Segment) {modelNameOrId =>
+  {pathEnd {
+    post {
+      entity(as[String]) { contents => {
+        val request = new CreateModelRequest(database, userId, modelNameOrId, contents)
+        complete(standardCompletion(request))
+      }}}}}}}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // DEPRECATED!
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,6 +249,7 @@ trait RestApi extends HttpService {
     users::
     modelList ::
       userModel ::
+      userModel2 ::
   cookieecho ::
       //    createProof ::
       //    runTacticNode ::
