@@ -12,5 +12,4 @@ function eventHandler(obj) {
       alert("Login failed!");
     }
   }
-
 }

@@ -44,7 +44,6 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : String, keyFileContents : String) extends Request {
   def getResultingResponses() = {
     try {
-      val res = ProverBusinessLogic.addModel(keyFileContents)
       //Return the resulting response.
       val result = db.createModel(userId, nameOfModel, keyFileContents)
       new BooleanResponse(result) :: Nil
@@ -55,33 +54,49 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   }
 }
 
-class GetProblemRequest(userid : String, proofid : String) extends Request {
+class GetModelListRequest(db : DBAbstraction, userId : String) extends Request {
   def getResultingResponses() = {
-    try {
-      val node = ProverBusinessLogic.getModel(proofid)
-      new GetProblemResponse(proofid, node) :: Nil
-    } catch {
-      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
-    }
+    new ModelListResponse(db.getModelList(userId)) :: Nil
   }
 }
 
-class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: String, formulaId: Option[String] = None) extends Request {
+class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
   def getResultingResponses() = {
-    try {
-      // TODO: use the userid
-      println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId + " on formula" + formulaId)
-      //val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => ServerState.addUpdate(userid, s))
-      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => { val sub = ProverBusinessLogic.getSubtree(proofId); println("======= Retrieved a tree " + sub); ServerState.addUpdate(userid, sub)} )
-      res match {
-        case Some(s) => new TacticDispatchedResponse(proofId, nodeId, tacticId.toString, s.toString) :: Nil
-        // TODO think about exception
-        case None => throw new IllegalStateException("Tactic not applicable")
-      }
-    }
-    catch {
-      case e:Exception => new ErrorResponse(e) :: Nil
-    }
+    val model = db.getModel(modelId)
+    new GetModelResponse(model) :: Nil
   }
-
 }
+
+
+//
+//
+//class GetProblemRequest(userid : String, proofid : String) extends Request {
+//  def getResultingResponses() = {
+//    try {
+//      val node = ProverBusinessLogic.getModel(proofid)
+//      new GetProblemResponse(proofid, node) :: Nil
+//    } catch {
+//      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
+//    }
+//  }
+//}
+//
+//class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: String, formulaId: Option[String] = None) extends Request {
+//  def getResultingResponses() = {
+//    try {
+//      // TODO: use the userid
+//      println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId + " on formula" + formulaId)
+//      //val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => ServerState.addUpdate(userid, s))
+//      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => { val sub = ProverBusinessLogic.getSubtree(proofId); println("======= Retrieved a tree " + sub); ServerState.addUpdate(userid, sub)} )
+//      res match {
+//        case Some(s) => new TacticDispatchedResponse(proofId, nodeId, tacticId.toString, s.toString) :: Nil
+//        // TODO think about exception
+//        case None => throw new IllegalStateException("Tactic not applicable")
+//      }
+//    }
+//    catch {
+//      case e:Exception => new ErrorResponse(e) :: Nil
+//    }
+//  }
+//
+//}

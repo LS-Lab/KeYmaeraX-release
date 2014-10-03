@@ -28,7 +28,7 @@
     </div>
 
     <!-- Table -->
-    <table class="table table-hover">
+    <table class="table table-hover" id="ModelList">
         <thead>
         <tr>
             <td>ID</td>
@@ -39,11 +39,11 @@
         </tr>
         </thead>
         <tbody>
-        <tr>
-            <td>1</td>
-            <td>Static Safety</td>
-            <td>JUL/17/2014</td>
-            <td></td>
+        <tr ng-repeat="model in models">
+            <td>{{ model.id.substring(0,5) }}</td>
+            <td>{{ model.name }}</td>
+            <td>{{ model.date }}</td>
+            <td>Not in DB</td>
             <td class="input-group-btn">
                 <button type="button" class="btn btn-default">Details</button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -58,25 +58,7 @@
             </td>
         </tr>
         <tr>
-            <td>2</td>
-            <td>Passive Safety</td>
-            <td>JUL/17/2014</td>
-            <td></td>
-            <td class="input-group-btn">
-                <button type="button" class="btn btn-default">Details</button>
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Details</a></li>
-                    <li><a href="#">Show proofs</a></li>
-                    <li><a onclick="">Start new proof</a></li>
-                </ul>
-            </td>
-        </tr>
-        <tr>
-            <td>3</td>
+            <td>FAKE</td>
             <td>ETCS</td>
             <td>JUL/17/2014</td>
             <td></td>
@@ -95,6 +77,14 @@
         </tr>
         </tbody>
     </table>
+
+    <!--
+    Javascript to populate the table. TODO not sure what the "correct" way to do this is.
+    TODO what are we going to do about user data?
+    -->
+    <script type="text/javascript">
+
+    </script>
 </div>
 <!-- TODO only display if page full -->
 <ul class="pagination pagination-sm">

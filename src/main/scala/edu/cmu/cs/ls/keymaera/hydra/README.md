@@ -98,7 +98,7 @@ REST URI DESIGN
       |- robotics/
       |- aviation/
       |- tutorials/
-      |- <userid>/					- User models, can create namespaces below
+      |- users/<userid>      					- User models, can create namespaces below.
     /users/								- KeYmaera users
 
 REST METHODS

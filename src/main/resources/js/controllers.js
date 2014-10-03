@@ -1,7 +1,62 @@
-var keymaeraProofControllers = angular.module('keymaeraProofControllers', []);
+var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies']);
 
-keymaeraProofControllers.controller('DashboardCtrl', ['$scope', '$http',
-  function ($scope, $http) {
+keymaeraProofControllers.controller('DashboardCtrl', ['$scope', '$http', '$cookies', '$cookieStore',
+  function ($scope, $http, $cookies, $cookieStore) {
+    //MODEL LIST
+    $scope.models = [];
+
+    //Populate the models list with data from the server.
+    $http.get("models/users/" + $cookies.userId).success(function(data,status,headers,config) {
+        for(var i=0;i<data.length;i++) {
+            $scope.models.push(data[i])
+        }
+    });
+
+    $scope.addModel = function() {
+        var model = {
+            id : $scope.id,
+            name : $scope.name,
+            date : $scope.date,
+            userId : $scope.userId,
+            keyFile: $scope.keyFile
+        }
+        $scope.models.push(model)
+    }
+
+
+//    //////////////
+//    // Model List
+//    //////////////
+//    $scope.models = []
+//
+//    var modelList = $http.get("models/user")
+//    alert(modelList)
+////      for(var i = 0 ; i < result.length; i++) {
+////
+////        var currResult = result[i];
+////        table.append(
+////            "<tr>" +
+////                "<td>" + currResult.id.substring(0,5) + "</td>" +
+////                "<td>" + currResult.date + "</td>" +
+////                "<td>" + currResult.name + "</td>" +
+////                "<td>" + "" + "</td>" + //remove description?
+////                "<td>" + makeDropdown(currResult.id) + "</td>" +
+////            "</tr>"
+////        )
+////      }
+//    })
+//
+//    //Adds a model to the view; does not CREATE a new model.
+//    $scope.addModel() {
+//      var model = {
+//        id: $scope.id,
+//        name: $scope.name,
+//        date: $scope.date,
+//        keyFile: $scope.keyFile
+//      };
+//    }
+
+
     // HACK: want to have signed in users
     $http.get("user/0/create");
 

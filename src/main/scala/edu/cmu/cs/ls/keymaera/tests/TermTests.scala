@@ -17,7 +17,6 @@ import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core.ProofStep
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, TacticLibrary, Tactics}
-import edu.cmu.cs.ls.keymaera.hydra.ProverBusinessLogic
 
 object TermTests {
 
@@ -221,21 +220,21 @@ object TermTests {
     println(tree)
     writeToFile(new File(output), tree)
   }
-
-  def test10database {
-    val input = "jsgui/keymaera/resources/input.key"
-    val in = readFile(input)
-    val node = ProverBusinessLogic.addModel(in)
-    println("running tactic on " + node)
-    val tree = ProverBusinessLogic.getSubtree(node)
-    var nTree = tree
-    ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node, "0", None)
-    while(tree == nTree) {
-      nTree = ProverBusinessLogic.getSubtree(node)
-      Thread.sleep(100)
-    }
-    println("Result is: " + nTree)
-  }
+//
+//  def test10database {
+//    val input = "jsgui/keymaera/resources/input.key"
+//    val in = readFile(input)
+//    val node = ProverBusinessLogic.addModel(in)
+//    println("running tactic on " + node)
+//    val tree = ProverBusinessLogic.getSubtree(node)
+//    var nTree = tree
+//    ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(0), node, "0", None)
+//    while(tree == nTree) {
+//      nTree = ProverBusinessLogic.getSubtree(node)
+//      Thread.sleep(100)
+//    }
+//    println("Result is: " + nTree)
+//  }
 
   def test10a(output: String) {
     import TacticLibrary._

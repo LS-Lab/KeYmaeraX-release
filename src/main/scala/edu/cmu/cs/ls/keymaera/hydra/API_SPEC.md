@@ -132,7 +132,7 @@ API Tree
     	|- robotics/
     	|- aviation/
     	|- tutorials/
-    	|- <userid>/					- User models, can create namespaces below
+    	|- users/<userid>/					- User models, can create namespaces below
     /users/								- KeYmaera users
 
 JSON Response Formats

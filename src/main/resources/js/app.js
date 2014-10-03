@@ -1,5 +1,6 @@
 var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngRoute',
+  'ngCookies',
   'keymaeraProofControllers',
   'treeControl',
   'progressMeter',

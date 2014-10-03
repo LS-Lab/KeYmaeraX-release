@@ -1,7 +1,6 @@
 /**
  * HyDRA API Responses
  *  @author Nathan Fulton
- * @TODO require the output of each response matches the jschema.
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
@@ -21,6 +20,26 @@ class BooleanResponse(flag : Boolean) extends Response {
   val json = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
     "type" -> JsNull
+  )
+}
+
+class ModelListResponse(models : List[ModelPOJO]) extends Response {
+  val objs = models.map(modelpojo => JsObject(
+    "id" -> JsString(modelpojo.modelId),
+    "name" -> JsString(modelpojo.name),
+    "date" -> JsString(modelpojo.date),
+    "keyFile" -> JsString(modelpojo.keyFile)
+  ))
+
+  val json = JsArray(objs)
+}
+
+class GetModelResponse(model : ModelPOJO) extends Response {
+  val json = JsObject(
+    "id" -> JsString(model.modelId),
+    "name" -> JsString(model.name),
+    "date" -> JsString(model.date),
+    "keyFile" -> JsString(model.keyFile)
   )
 }
 

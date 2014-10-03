@@ -8,8 +8,20 @@ import com.mongodb.casbah.Imports._
 object MongoDB extends DBAbstraction {
   val mongoClient = MongoClient("localhost", 27017)
 
+  //Collections.
+  val users = mongoClient("keymaera")("users")
+  val models = mongoClient("keymaera")("models")
 
-  val x = ProverBusinessLogic
+  def cleanup() = {
+    users.drop()
+    models.drop()
+
+    //TODO remove this test user.
+    users.insert(MongoDBObject("username" -> "t", "password" -> "t"))
+
+    ()
+  }
+  cleanup() //???
 
 
   //val proofs = mongoClient("keymaera")("proofs")
@@ -20,9 +32,6 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Users
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  val users = mongoClient("keymaera")("users")
-  users.drop() // TODO-nrf remove.
-
   override def getUsername(uid: String): String = uid
 
   override def userExists(username : String) = {
@@ -43,17 +52,47 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Models
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  val models = mongoClient("keymaera")("models")
-
   override def createModel(userId: String, name: String, fileContents: String): Boolean = {
-    var obj = MongoDBObject("userId" -> userId, "name" -> name, "fileContents" -> fileContents)
-    models.insert(obj)
-    return true // should we allow models by the same user and with the same name?
+    val currentDate = new java.util.Date().toString()
+
+    var query = MongoDBObject("userId" -> userId, "name" -> name, "fileContents" -> fileContents) //w/o date
+    if(models.find(query).length == 0) {
+      var obj = MongoDBObject("userId" -> userId, "name" -> name, "date" -> currentDate, "fileContents" -> fileContents)
+      models.insert(obj)
+      true // TODO should we allow models by the same user and with the same name?
+    }
+    else {
+      false
+    }
   }
 
-  override def getModelList(userId : String) = ???
+  override def getModelList(userId : String) = {
+    var query = MongoDBObject("userId" -> userId)
+    val allModels = models.find(query)
+    allModels.map(model =>
+      if(!model.containsField("_id")) ???
+      else new ModelPOJO(
+        model.getAs[ObjectId]("_id").getOrElse(null).toString(),
+        model.getAs[String]("userId").getOrElse(""),
+        model.getAs[String]("name").getOrElse("") ,
+        model.getAs[String]("date").getOrElse(""),
+        model.getAs[String]("fileContents").getOrElse("")
+      )
+    ).toList
+  }
 
-  override def getModel(modelId: String): (String, String) = ???
+  override def getModel(modelId: String): ModelPOJO = {
+    var query = MongoDBObject("_id" -> modelId)
+    val results = models.find(query)
+    if(results.length > 1) ??? //There should only be one response b/c _id is a pk.
+    results.map(result => new ModelPOJO(
+      result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+      result.getAs[String]("userId").getOrElse(""),
+      result.getAs[String]("name").getOrElse("") ,
+      result.getAs[String]("date").getOrElse(""),
+      result.getAs[String]("fileContents").getOrElse("")
+    )).toList.last
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof Nodes
