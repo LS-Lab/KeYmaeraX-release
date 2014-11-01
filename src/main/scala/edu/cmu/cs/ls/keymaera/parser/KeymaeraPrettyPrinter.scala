@@ -15,11 +15,14 @@ object KeYmaeraPrettyPrinter {
   def header(ns : List[NamedSymbol]) : String = ??? 
     
   private def sortPrinter(s:Sort):String = s match {
-    case Bool => "B"
-    case s : EnumT => s.name
-    case GameSort => ???
+    case Bool        => "B"
+    case s : EnumT   => s.name
     case ProgramSort => "P"
-    case Real => "R"
+    case Real        => "R"
+    case Unit        => ???
+    case GameSort    => ???
+    case s:UserSort  => ???
+    case s:TupleT    => ???
   }
 
   private def endsWithColon(e:Expr, parent:Expr)  = e match {
@@ -441,13 +444,16 @@ object KeYmaeraPrettyPrinter {
       val varDecls = ns.map(symbol => sortProofPrinter(symbol.domain) + " " + symbol.name + ".")
       "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
   }
+
   private def sortProofPrinter(s:Sort):String = s match {
-    case Bool => "T"
-    case s : EnumT => s.name
-    case GameSort => ???
+    case Bool        => "T"
+    case s : EnumT   => s.name
+    case GameSort    => ???
     case ProgramSort => "P"
-    case Real => "T"
-    case Unit => "T" //FIXME is this the right thing to return?
+    case Real        => "T"
+    case s:TupleT    => ???
+    case s:UserSort  => ???
+    case Unit        => ???
   }
 
 }
