@@ -99,6 +99,7 @@ REST URI DESIGN
       |- aviation/
       |- tutorials/
       |- users/<userid>      					- User models, can create namespaces below.
+        |- create                     - Create a new proof (POST) (proofName, proofDescription req'd)
     /users/								- KeYmaera users
 
 REST METHODS
