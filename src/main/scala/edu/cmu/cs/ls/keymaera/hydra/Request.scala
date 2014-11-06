@@ -4,6 +4,9 @@
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
+import java.text.SimpleDateFormat
+import java.util.Calendar
+
 /**
  * A Request should handle all expensive computation as well as all
  * possible side-effects of a request (e.g. updating the database), but should
@@ -17,6 +20,11 @@ package edu.cmu.cs.ls.keymaera.hydra
  */
 sealed trait Request {
   def getResultingResponses() : List[Response] //see Response.scala.
+
+  def currentDate() : String = {
+    val format = new SimpleDateFormat("d-M-y")
+    format.format(Calendar.getInstance().getTime())
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,9 +33,6 @@ sealed trait Request {
 
 class CreateUserRequest(db : DBAbstraction, username : String, password:String) extends Request {
   override def getResultingResponses() = {
-    if(username.equals("a")) {
-      db.cleanup
-    }
     val userExists = db.userExists(username)
     if(!userExists) db.createUser(username,password)
     new BooleanResponse(!userExists) :: Nil
@@ -48,7 +53,8 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getResultingResponses() = {
     try {
       //Return the resulting response.
-      val result = db.createModel(userId, nameOfModel, keyFileContents)
+
+      val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
       new BooleanResponse(result) :: Nil
     }
     catch {
@@ -72,14 +78,14 @@ class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) ext
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String) extends Request {
   def getResultingResponses() = {
-    val createdId = db.createProofForModel(modelId, name, description)
+    val createdId = db.createProofForModel(modelId, name, description, currentDate())
     new CreatedIdResponse(createdId) :: Nil
   }
 }
 
-class GetProofsForModel(db : DBAbstraction, userId: String) extends Request {
+class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request {
   def getResultingResponses() = {
-    ???
+    new ProofListResponse(db.getProofsForModel(modelId)) :: Nil
   }
 }
 

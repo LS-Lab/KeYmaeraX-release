@@ -14,17 +14,18 @@ object MongoDB extends DBAbstraction {
   val proofs = mongoClient("keymaera")("proofs")
   val logs    = mongoClient("keymaera")("logs")
   def cleanup() = {
-    users.drop()
-    models.drop()
-    proofs.drop()
-    logs.drop()
-
-    //TODO remove this test user.
-    users.insert(MongoDBObject("username" -> "t", "password" -> "t"))
-
-    ()
+    ???
+//    users.drop()
+//    models.drop()
+//    proofs.drop()
+//    logs.drop()
+//
+//    //TODO remove this test user.
+//    users.insert(MongoDBObject("username" -> "t", "password" -> "t"))
+//
+//    ()
   }
-  cleanup() //???
+//  cleanup() //???
 
 
   //val proofs = mongoClient("keymaera")("proofs")
@@ -55,8 +56,7 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Models
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  override def createModel(userId: String, name: String, fileContents: String): Boolean = {
-    val currentDate = new java.util.Date().toString()
+  override def createModel(userId: String, name: String, fileContents: String, currentDate : String): Boolean = {
 
     var query = MongoDBObject("userId" -> userId, "name" -> name, "fileContents" -> fileContents) //w/o date
     if(models.find(query).length == 0) {
@@ -97,8 +97,8 @@ object MongoDB extends DBAbstraction {
     )).toList.last
   }
 
-  override def createProofForModel(modelId : String, name : String, description : String) : String = {
-    var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description)
+  override def createProofForModel(modelId : String, name : String, description : String, date:String) : String = {
+    var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description, "date" -> date)
     var result = proofs.insert(query)
     query.get("_id").toString()
   }
@@ -108,12 +108,22 @@ object MongoDB extends DBAbstraction {
     var results = proofs.find(query)
     if(results.length < 1) Nil
     else {
-      results.map(result => new ProofPOJO(
-        result.getAs[ObjectId]("_id").getOrElse(null).toString(),
-        result.getAs[ObjectId]("modelId").getOrElse(null).toString(),
-        result.getAs[String]("name").getOrElse(null).toString(),
-        result.getAs[String]("description").getOrElse(null).toString()
-      )).toList
+      results.map(result => {
+        //TODO count the number of steps
+        val stepCount = -1
+        //TODO determine if the proof is closed
+        val isClosed = false
+
+        new ProofPOJO(
+          result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+          result.getAs[String]("modelId").getOrElse(null).toString(),
+          result.getAs[String]("name").getOrElse(null).toString(),
+          result.getAs[String]("description").getOrElse("no description"),
+          result.getAs[String]("date").getOrElse(null).toString(),
+          stepCount,
+          isClosed
+        )
+      }).toList
     }
   }
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

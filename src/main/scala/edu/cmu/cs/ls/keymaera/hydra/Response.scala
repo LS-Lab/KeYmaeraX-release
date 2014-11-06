@@ -24,14 +24,28 @@ class BooleanResponse(flag : Boolean) extends Response {
 }
 
 class ModelListResponse(models : List[ModelPOJO]) extends Response {
-  val objs = models.map(modelpojo => JsObject(
+  val objects = models.map(modelpojo => JsObject(
     "id" -> JsString(modelpojo.modelId),
     "name" -> JsString(modelpojo.name),
     "date" -> JsString(modelpojo.date),
     "keyFile" -> JsString(modelpojo.keyFile)
   ))
 
-  val json = JsArray(objs)
+  val json = JsArray(objects)
+}
+
+class ProofListResponse(proofs : List[ProofPOJO]) extends Response {
+  val objects = proofs.map(proof => JsObject(
+    "id" -> JsString(proof.proofId),
+    "name" -> JsString(proof.name),
+    "description" -> JsString(proof.description),
+    "date" -> JsString(proof.date),
+    "modelId" -> JsString(proof.modelId),
+    "stepCount" -> JsNumber(proof.stepCount),
+    "status" -> JsBoolean(proof.closed)
+  ))
+
+  val json = JsArray(objects)
 }
 
 class GetModelResponse(model : ModelPOJO) extends Response {

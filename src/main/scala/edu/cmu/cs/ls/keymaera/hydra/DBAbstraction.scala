@@ -4,7 +4,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
 
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
-class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String)
+class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
 /**
  * Proof database
  */
@@ -21,11 +21,11 @@ trait DBAbstraction {
   def checkPassword(username : String, password : String) : Boolean
 
   //Models
-  def createModel(userId: String, name : String, fileContents : String) : Boolean
+  def createModel(userId: String, name : String, fileContents : String, date:String) : Boolean
   def getModel(modelId : String) : ModelPOJO
   def getModelList(userId : String) : List[ModelPOJO] // name, date, fileContents
   //Proofs of models
-  def createProofForModel(modelId : String, name : String, description : String) : String //returns id of create object
+  def createProofForModel(modelId : String, name : String, description : String, date : String) : String //returns id of create object
   def getProofsForModel(modelId : String) : List[ProofPOJO]
 
   //Proofs and Proof Nodes

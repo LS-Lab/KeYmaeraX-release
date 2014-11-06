@@ -64,6 +64,31 @@ DESIGN DISCUSSION
 
 - Spring instead of/complementing Spray? would have many libraries, excellent REST support
 
+DATABASE SCHEMA
+===============
+    users
+        _id
+        username
+        password
+    
+    model
+        _id
+        userId
+        name
+        date
+        fileContents
+        
+    proof
+        _id
+        modelId
+        name
+        description
+        date
+        proof           - json
+    
+
+
+
 REST URI DESIGN
 ===============
 

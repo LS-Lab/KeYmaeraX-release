@@ -50,7 +50,8 @@ trait RestApi extends HttpService {
     val responses = r.getResultingResponses()
     responses match {
       case hd :: Nil => hd.json.prettyPrint
-      case _ => ???
+      case _         =>
+        responses.foldLeft("[")( (prefix, response) => prefix + "," + response.json.prettyPrint) + "]"
     }
   }
 
@@ -129,22 +130,30 @@ trait RestApi extends HttpService {
     post {
       entity(as[String]) { x => {
         val obj = x.parseJson
-        val proofName        = obj.asJsObject.getFields("proofName").last.toString()
-        val proofDescription = obj.asJsObject.getFields("proofDescription").last.toString()
+        val proofName        = obj.asJsObject.getFields("proofName").last.asInstanceOf[JsString].value
+        val proofDescription = obj.asJsObject.getFields("proofDescription").last.asInstanceOf[JsString].value
         val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
         complete(standardCompletion(request))
       }}
     }
   }}}
 
+  val proofListForModel = path("models" / "users" / Segment / "model" / Segment / "proofs") { (userId, modelId) => { pathEnd {
+    get {
+      val request = new ProofsForModelRequest(database, modelId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val routes =
-    staticRoute ::
-    users       ::
-    modelList   ::
-    userModel   ::
-    userModel2  ::
-    cookieecho  ::
-    createProof ::
+    staticRoute           ::
+    users                 ::
+    modelList             ::
+    userModel             ::
+    userModel2            ::
+    cookieecho            ::
+    createProof           ::
+    proofListForModel     ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }
