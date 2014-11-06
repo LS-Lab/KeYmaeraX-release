@@ -11,24 +11,25 @@
             <div class="col-md-6">
 
                 <!-- TODO https://github.com/blueimp/jQuery-File-Upload/wiki/Basic-plugin -->
-                <form ng-submit="addModel()">
+                <form ng-submit="addModel()" ng-controller="ModelUploadCtrl">
                     <div class="input-group">
                         <label for="modelName">Model Name</label>
-                        <input type="text" ng-model="name" class="form-control" name="modelName" id="modelName" placeholder="My Very Own Bouncing Ball">
+                        <input type="text" ng-model="modelName" class="form-control" name="modelName" id="modelName" placeholder="Model Name"/>
                     </div>
                     <label for="keyFile">File</label>
                     <div class="fileinput fileinput-new input-group" data-provides="fileinput">
 
                         <div class="form-control" data-trigger="fileinput">
-                            <i class="glyphicon glyphicon-file fileinput-exists"></i>
-                            <span class="fileinput-filename"></span>
+                            <i class="glyphicon glyphicon-file fileinput-exists" />
+                            <span class="fileinput-filename" />
                         </div>
                         <span class="input-group-addon btn btn-default btn-file">
                             <span class="fileinput-new">Select file</span>
                             <span class="fileinput-exists">Change</span>
-                            <input type="file" name="source" id="keyFile" class="form-control" ng-model="keyFile">
+                            <input type="file" name="source" id="keyFile" class="form-control" ng-model="keyFile" />
                         </span>
                         <a class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Remove</a>
+                        <!-- TODO check that model name is not empty -->
                         <a class="input-group-addon btn btn-default fileinput-exists" ng-click="addModel()" id="uploadbtn">Upload</a>
                     </div>
                 </form>
@@ -37,7 +38,7 @@
     </div>
 
     <!-- Table -->
-    <table class="table table-hover" id="ModelList">
+    <table class="table table-hover" id="ModelList" ng-controller="ModelListCtrl">
         <thead>
         <tr>
             <td>ID</td>
@@ -50,7 +51,7 @@
         <tbody>
         <tr ng-repeat="model in models">
             <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
-            <td>{{ model.name }}</td>
+            <td><a href="" data-toggle="modal" data-target="#{{ model.id }}Modal">{{ model.name }}</a></td>
             <td>{{ model.date }}</td>
             <td><!-- description -- currently not included. --></td>
             <td class="input-group-btn" ng-model="model">
@@ -68,6 +69,26 @@
         </tr>
         </tbody>
     </table>
+
+    <!-- Model Dialogs: switch to Angular Bootstrap  -->
+    <div ng-repeat="m in models" class="modal fade" id="{{ m.id }}Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" ng-controller="ModelCtrl">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">Foo</h4>
+                </div>
+                <div class="modal-body">
+                    <!-- TODO display file content -->
+                    <!--{{ model.keyFile }}-->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <!--<button type="button" class="btn btn-primary">Save changes</button>--> <!-- TODO: if there are proofs, create a new version instead -->
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!--
     Javascript to populate the table. TODO not sure what the "correct" way to do this is.

@@ -5,12 +5,14 @@
  *
  * Nathan Fulton 2014
  * Jan-David Quesel 2014
+ * Stefan Mitsch 2014
  */
 var ServerInfo = {
   hostname: "localhost",
   port:     8090,
 }
 
+// TODO Deprecated, we use AngularJS now
 
 var ApiClient = {
   /**
@@ -108,7 +110,6 @@ var ApiClient = {
       error: this.ajaxErrorHandler
     });
   },
-
 
     //////////////////////////////////////////////////////////////////////////////
     // OLD UI
