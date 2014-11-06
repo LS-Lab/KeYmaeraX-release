@@ -126,6 +126,7 @@ REST URI DESIGN
       |- users/<userid>      					- User models, can create namespaces below.
         |- model/<modelid>
             |- createProof          - Create a new proof (POST) (json w/ proofName, proofDescription req'd)
+            |- proofs               - list all proofs associated with this model. output fmt is prooflist.json (below)
     /users/								- KeYmaera users
 
 REST METHODS
@@ -157,6 +158,7 @@ POST /users/					- create a new user
 Delete resources
 ----------------
 DELETE /proofs/<userid>/<id>	- delete proof <id>
+
 
 JSON RESPONSE FORMAT
 ====================
@@ -213,8 +215,12 @@ JSON Format for Formulas
   }
 }
 
-Other JSON Responses (for updates)
----------------------------------
+Other JSON Responses
+====================
+
+
+updates
+-------
 
 These are definitely necessary, since they might result from a tactic or other
 user action:
@@ -224,6 +230,20 @@ user action:
   "type": "CreateProblem | CreateNode",
   "node": <node>
 }
+
+prooflist.json
+--------------
+
+See ProofListResponse.scala
+
+    [
+        {"id": string,
+         "name": string
+         "description": string
+         "date": date
+         "???": ???
+        }
+    ]
 
 I'm not sure if these are necessary; although they can result from a user
 action, there's probably typicallly a 1:1 between a request for the action and 
