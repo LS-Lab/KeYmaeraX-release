@@ -39,3 +39,20 @@ libraryDependencies ++= {
 //libraryDependencies += "net.liftweb" % "lift-json" % "latest.release" 
 
 Revolver.settings
+
+////////////////////////////////////////////////////////////////////////////////
+// Continuous testing/running settgings (i.e., definiting behavior of the ~
+// command
+////////////////////////////////////////////////////////////////////////////////
+
+watchSources <++= baseDirectory map { 
+  path => ((path / "src/main/resources/partials/") ** "*.html").get 
+}
+
+watchSources <++= baseDirectory map { 
+  path => ((path / "src/main/resources/js") ** "*.js").get 
+}
+
+watchSources <++= baseDirectory map { 
+  path => ((path / "src/main/resources") ** "*.html").get 
+}
