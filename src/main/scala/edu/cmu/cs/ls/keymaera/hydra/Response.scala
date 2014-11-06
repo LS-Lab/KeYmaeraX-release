@@ -52,6 +52,10 @@ class LoginResponse(flag:Boolean, userId:String) extends Response {
   )
 }
 
+class CreatedIdResponse(id : String) extends Response {
+  val json = JsString(id)
+}
+
 class ErrorResponse(exn : Exception) extends Response {
   val json = JsObject(
         "textStatus" -> JsString(exn.getMessage()),

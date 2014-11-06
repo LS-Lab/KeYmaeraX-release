@@ -11,10 +11,13 @@ object MongoDB extends DBAbstraction {
   //Collections.
   val users = mongoClient("keymaera")("users")
   val models = mongoClient("keymaera")("models")
-
+  val proofs = mongoClient("keymaera")("proofs")
+  val logs    = mongoClient("keymaera")("logs")
   def cleanup() = {
     users.drop()
     models.drop()
+    proofs.drop()
+    logs.drop()
 
     //TODO remove this test user.
     users.insert(MongoDBObject("username" -> "t", "password" -> "t"))
@@ -94,6 +97,25 @@ object MongoDB extends DBAbstraction {
     )).toList.last
   }
 
+  override def createProofForModel(modelId : String, name : String, description : String) : String = {
+    var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description)
+    var result = proofs.insert(query)
+    query.get("_id").toString()
+  }
+
+  override def getProofsForModel(modelId : String) : List[ProofPOJO] = {
+    var query = MongoDBObject("modelId" -> modelId)
+    var results = proofs.find(query)
+    if(results.length < 1) Nil
+    else {
+      results.map(result => new ProofPOJO(
+        result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+        result.getAs[ObjectId]("modelId").getOrElse(null).toString(),
+        result.getAs[String]("name").getOrElse(null).toString(),
+        result.getAs[String]("description").getOrElse(null).toString()
+      )).toList
+    }
+  }
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof Nodes
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -3,12 +3,13 @@ package edu.cmu.cs.ls.keymaera.hydra
 import java.io.ByteArrayInputStream
 
 import akka.actor.Actor
+import spray.httpx.SprayJsonSupport
 import spray.routing._
 import spray.http._
 import spray.httpx.encoding._
 import MediaTypes._
 import scala.collection.mutable.HashMap
-import spray.json.JsArray
+import spray.json._
 
 class RestApiActor extends Actor with RestApi {
   def actorRefFactory = context
@@ -124,140 +125,26 @@ trait RestApi extends HttpService {
         complete(standardCompletion(request))
       }}}}}}}}
 
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // DEPRECATED!
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//
-//  /**
-//   * POST /proofs/< useridid > with data containing the .key file to load
-//   */
-//  val createProof = pathPrefix("proofs" / IntNumber) { userid => {
-//    pathEnd {
-//      post {
-//        complete("")
-//////        decompressRequest()
-////        entity(as[String]) { keyFileContents => {
-////          ServerState.createSession(userid.toString)
-////          val request = new CreateModelRequest(userid.toString(), "", keyFileContents)
-////          val responses = request.getResultingResponses()
-////          if(responses.length != 1) {
-////            complete(new ErrorResponse(
-////              new Exception("CreateProblemRequest generated too many responses"
-////             )).json.prettyPrint)
-////          }
-////          else {
-////            complete(responses.last.json.prettyPrint)
-////          }
-////        }}
-//      }
-//    }
-//  }}
-//
-//  val getProof = pathPrefix("user" / IntNumber / "proofs" / Segment) { (userid, proofid) =>
-//    pathEnd {
-//      get {
-//        val request = new GetProblemRequest(userid.toString, proofid.toString)
-//        val responses = request.getResultingResponses()
-//        complete(responses.last.json.prettyPrint)
-//      }
-//    }
-//  }
-//
-//  /*val runTactic = pathPrefix("user" / IntNumber / "proofs" / Segment / "tactic" / IntNumber) { (userid, proofid, tacticid) => {
-//    pathEnd {
-//      post {
-////        decompressRequest()
-//        entity(as[String]) { keyFileContents => {
-//          val request = new RunTacticRequest(userid.toString(), tacticid, proofid, "0")
-//          val responses = request.getResultingResponses()
-//          if(responses.length != 1) {
-//            complete(new ErrorResponse(
-//              new Exception("CreateProblemRequest generated too many responses"
-//             )).json.prettyPrint)
-//          }
-//          else {
-//            complete(responses.last.json.prettyPrint)
-//          }
-//        }}
-//      } ~
-//      get {
-//        val response = new UnimplementedResponse("GET proofs/<useridid>")
-//        complete(response.json.prettyPrint)
-//      }
-//    }
-//  }}*/
-//
-//  val runTacticNode = pathPrefix("user" / IntNumber / "proofs" / Segment / "node" / Segment / "tactic" / IntNumber) { (userid, proofid, nodeid, tacticid) => {
-//    pathEnd {
-//      post {
-////        decompressRequest()
-//        entity(as[String]) { keyFileContents => {
-//          val request = new RunTacticRequest(userid.toString(), tacticid, proofid, nodeid)
-//          val responses = request.getResultingResponses()
-//          if(responses.length != 1) {
-//            complete(new ErrorResponse(
-//              new Exception("CreateProblemRequest generated too many responses"
-//             )).json.prettyPrint)
-//          }
-//          else {
-//            complete(responses.last.json.prettyPrint)
-//          }
-//        }}
-//      } ~
-//      get {
-//        val response = new UnimplementedResponse("GET proofs/<useridid>")
-//        complete(response.json.prettyPrint)
-//      }
-//    }
-//  }}
-//
-//  val runTacticFormula = pathPrefix("user" / IntNumber / "proofs" / Segment / "node" / Segment / "formula" / Segment / "tactic" / IntNumber) { (userid, proofid, nodeid, formulaid, tacticid) => {
-//    pathEnd {
-//      post {
-////        decompressRequest()
-//        entity(as[String]) { keyFileContents => {
-//          val request = new RunTacticRequest(userid.toString(), tacticid, proofid, nodeid, Some(formulaid))
-//          val responses = request.getResultingResponses()
-//          if(responses.length != 1) {
-//            complete(new ErrorResponse(
-//              new Exception("CreateProblemRequest generated too many responses"
-//             )).json.prettyPrint)
-//          }
-//          else {
-//            complete(responses.last.json.prettyPrint)
-//          }
-//        }}
-//      } ~
-//      get {
-//        val response = new UnimplementedResponse("GET proofs/<useridid>")
-//        complete(response.json.prettyPrint)
-//      }
-//    }
-//  }}
-//   val getUpdates = path("user" / IntNumber / "getUpdates" / IntNumber) { (userid, count) =>
-//     pathEnd {
-//      post {
-//        val res = new UpdateResponse(ServerState.getUpdates(userid.toString, count)).json.prettyPrint
-//        complete(res)
-//      }
-//    }
-//  }
-//
+  val createProof = path("models" / "users" / Segment / "model" / Segment / "createProof") { (userId, modelId) => { pathEnd {
+    post {
+      entity(as[String]) { x => {
+        val obj = x.parseJson
+        val proofName        = obj.asJsObject.getFields("proofName").last.toString()
+        val proofDescription = obj.asJsObject.getFields("proofDescription").last.toString()
+        val request = new CreateProofRequest(database, userId, modelId, proofName, proofDescription)
+        complete(standardCompletion(request))
+      }}
+    }
+  }}}
+
   val routes =
-    staticRoute::
-    users::
-    modelList ::
-      userModel ::
-      userModel2 ::
-  cookieecho ::
-      //    createProof ::
-      //    runTacticNode ::
-      //    runTacticFormula ::
-      //    getUpdates ::
-      //    getProof ::
-      //    staticRoute ::
-      //    users ::
+    staticRoute ::
+    users       ::
+    modelList   ::
+    userModel   ::
+    userModel2  ::
+    cookieecho  ::
+    createProof ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

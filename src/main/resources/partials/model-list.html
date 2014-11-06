@@ -1,13 +1,13 @@
-
-
 <div class="panel panel-default">
     <!-- Default panel contents -->
     <div class="panel-heading">Your Models</div>
     <div class="panel-body">
         <div class="row">
+            <!--
             <div class="col-md-6">
                 <p>Upload new models to KeYmaera</p>
             </div>
+            -->
             <div class="col-md-6">
 
                 <!-- TODO https://github.com/blueimp/jQuery-File-Upload/wiki/Basic-plugin -->
@@ -42,9 +42,9 @@
         <tr>
             <td>ID</td>
             <td>Name</td>
-            <td>Date</td>
-            <td>Description</td>
-            <td></td>
+            <td>Creation Date</td>
+            <!-- <td>Description</td> -->
+            <td>Actions</td>
         </tr>
         </thead>
         <tbody>
@@ -52,35 +52,17 @@
             <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
             <td>{{ model.name }}</td>
             <td>{{ model.date }}</td>
-            <td></td>
-            <td class="input-group-btn">
+            <td><!-- description -- currently not included. --></td>
+            <td class="input-group-btn" ng-model="model">
                 <button type="button" class="btn btn-default">Details</button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#">Details</a></li>
-                    <li><a href="#">Show proofs</a></li>
-                    <li><a onclick="">Start new proof</a></li>
-                </ul>
-            </td>
-        </tr>
-        <tr>
-            <td>FAKE</td>
-            <td>ETCS</td>
-            <td>JUL/17/2014</td>
-            <td></td>
-            <td class="input-group-btn">
-                <button type="button" class="btn btn-default">Details</button>
-                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="dashboard.html?#/models/3">Details</a></li>
-                    <li><a href="dashboard.html?#/models/3/proofs">Show proofs</a></li>
-                    <li><a href="dashboard.html?#/models/3/proofs/create">Start new proof</a></li>
+                <ul class="dropdown-menu" role="menu" ng-model="model">
+                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/details">Details</a></li>
+                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show proofs</a></li>
+                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>
                 </ul>
             </td>
         </tr>
@@ -107,13 +89,6 @@
       });
     </script>
 </div>
-<!-- TODO only display if page full -->
-<ul class="pagination pagination-sm">
-    <li class="disabled"><a href="#">&laquo;</a></li>
-    <li class="active"><a href="#">1 <span class="sr-only">(current)</span></a></li>
-    <li><a href="#">2</a></li>
-    <li><a href="#">&raquo;</a></li>
-</ul>
 
 <!-- File input
 ================================================== -->

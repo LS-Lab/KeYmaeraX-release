@@ -25,6 +25,9 @@ sealed trait Request {
 
 class CreateUserRequest(db : DBAbstraction, username : String, password:String) extends Request {
   override def getResultingResponses() = {
+    if(username.equals("a")) {
+      db.cleanup
+    }
     val userExists = db.userExists(username)
     if(!userExists) db.createUser(username,password)
     new BooleanResponse(!userExists) :: Nil
@@ -33,7 +36,7 @@ class CreateUserRequest(db : DBAbstraction, username : String, password:String) 
 
 class LoginRequest(db : DBAbstraction, username : String, password : String) extends Request {
   override def getResultingResponses(): List[Response] = {
-    new LoginResponse(db.checkPassword(username, password), username) :: Nil
+    new LoginResponse(db.checkPassword(username, password), username) ::  Nil
   }
 }
 
@@ -64,6 +67,19 @@ class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) ext
   def getResultingResponses() = {
     val model = db.getModel(modelId)
     new GetModelResponse(model) :: Nil
+  }
+}
+
+class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String) extends Request {
+  def getResultingResponses() = {
+    val createdId = db.createProofForModel(modelId, name, description)
+    new CreatedIdResponse(createdId) :: Nil
+  }
+}
+
+class GetProofsForModel(db : DBAbstraction, userId: String) extends Request {
+  def getResultingResponses() = {
+    ???
   }
 }
 
