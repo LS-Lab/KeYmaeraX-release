@@ -126,6 +126,17 @@ trait RestApi extends HttpService {
         complete(standardCompletion(request))
       }}}}}}}}
 
+  val modelInfo = path("models" / "users" / Segment / "model" / Segment) { (userId, modelId) => pathEnd {
+    get {
+      val request = new GetModelRequest(database, userId, modelId)
+      complete(standardCompletion(request))
+    }
+  }}
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Proofs
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   val createProof = path("models" / "users" / Segment / "model" / Segment / "createProof") { (userId, modelId) => { pathEnd {
     post {
       entity(as[String]) { x => {
@@ -145,13 +156,16 @@ trait RestApi extends HttpService {
     }
   }}}
 
-
-  val modelInfo = path("models" / "users" / Segment / "model" / Segment) { (userId, modelId) => pathEnd {
+  val proofInfo = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
-      val request = new GetModelRequest(database, userId, modelId)
+      val request = new GetProofInfoRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
-  }}
+  }}}
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Route precedence
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   val routes =
     staticRoute           ::
@@ -163,6 +177,7 @@ trait RestApi extends HttpService {
     cookieecho            ::
     createProof           ::
     proofListForModel     ::
+    proofInfo             ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

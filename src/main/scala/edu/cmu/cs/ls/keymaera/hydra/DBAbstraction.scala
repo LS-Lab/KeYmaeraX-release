@@ -29,6 +29,7 @@ trait DBAbstraction {
   def getProofsForModel(modelId : String) : List[ProofPOJO]
 
   //Proofs and Proof Nodes
+  def getProofInfo(proofId : String) : ProofPOJO
   /**
    * This method is called when a tactic completes. It should store the result of the method in the DB.
    */

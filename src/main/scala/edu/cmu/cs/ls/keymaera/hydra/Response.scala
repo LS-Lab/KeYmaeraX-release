@@ -115,6 +115,17 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
+class GetProofInfoResponse(proof : ProofPOJO) extends Response {
+  val json = JsObject(
+    "id" -> JsString(proof.proofId),
+    "name" -> JsString(proof.name),
+    "date" -> JsString(proof.date),
+    "model" -> JsString(proof.modelId),
+    "closed" -> JsBoolean(proof.closed),
+    "stepCount" -> JsNumber(proof.stepCount)
+  )
+}
+
 /**
  * @return JSON that is directly usable by angular.treeview
  */

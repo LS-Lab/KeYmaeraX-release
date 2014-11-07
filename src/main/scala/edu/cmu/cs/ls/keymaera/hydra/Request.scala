@@ -89,6 +89,13 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
   }
 }
 
+class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+  def getResultingResponses() = {
+    val proof = db.getProofInfo(proofId)
+    new GetProofInfoResponse(proof) :: Nil
+  }
+}
+
 
 //
 //

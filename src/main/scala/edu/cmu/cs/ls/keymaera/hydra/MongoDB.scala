@@ -127,6 +127,22 @@ object MongoDB extends DBAbstraction {
       }).toList
     }
   }
+
+  override def getProofInfo(proofId: String): ProofPOJO = {
+    var query = MongoDBObject("_id" -> new ObjectId(proofId))
+    val results = proofs.find(query)
+    if(results.length > 1) ??? //There should only be one response b/c _id is a pk.
+    if(results.length < 1) throw new Exception(proofId + " is a bad proofId!")
+    results.map(result => new ProofPOJO(
+      result.getAs[String]("modelId").getOrElse(""),
+      result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+      result.getAs[String]("name").getOrElse(""),
+      result.getAs[String]("description").getOrElse("") ,
+      result.getAs[String]("date").getOrElse(""),
+      result.getAs[Integer]("stepCount").getOrElse(0),
+      result.getAs[Boolean]("closed").getOrElse(false)
+    )).toList.last
+  }
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof Nodes
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
