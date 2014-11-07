@@ -1,4 +1,4 @@
-var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies', 'ngDialog']);
+var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies', 'ngDialog', 'angularTreeview']);
 
 keymaeraProofControllers.factory('Models', function () {
 
@@ -123,11 +123,41 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     $scope.$emit('routeLoaded', {theview: 'proofs'});
   });
 
-//keymaeraProofControllers.controller('ProofDetailCtrl', ['$scope', '$http', '$routeParams',
-//  function($scope, $http, $routeParams) {
-//    $http.get('user/0/proofs/' + $routeParams.proofId).success(function(data) {
-//        $scope.proofId = data.proofid;
-//        $scope.proofTree = data.proofTree;
-//    });
-//    $scope.$emit('routeLoaded', {theview: 'proofs'});
-//  }]);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Proofs
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+keymaeraProofControllers.controller('ProofDetailCtrl',
+  function($scope, $http, $routeParams) {
+    $http.get('user/0/proofs/' + $routeParams.proofId).success(function(data) {
+    $scope.proofId = data.proofid;
+    $scope.proofTree = data.proofTree;
+  });
+  $scope.$emit('routeLoaded', {theview: 'proofs'});
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Testing...
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('TestCtrl',
+  function ($scope, $http, $cookies, $routeParams) {
+    $scope.treedata =
+    [
+        {
+            "label" : "User",
+            "id" : "role1",
+            "children" : [
+                { "label" : "subUser1", "id" : "role11", "children" : [] },
+                { "label" : "subUser2", "id" : "role12", "children" : [
+                    { "label" : "subUser2-1", "id" : "role121", "children" : [
+                        { "label" : "subUser2-1-1", "id" : "role1211", "children" : [] },
+                        { "label" : "subUser2-1-2", "id" : "role1212", "children" : [] }
+                    ]}
+            ]}
+            ]
+        },
+        { "label" : "Admin", "id" : "role2", "children" : [] },
+        { "label" : "Guest", "id" : "role3", "children" : [] }
+    ];
+  });

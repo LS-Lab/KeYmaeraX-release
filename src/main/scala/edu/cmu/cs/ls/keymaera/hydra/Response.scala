@@ -119,11 +119,11 @@ class ProofTreeResponse(tree: String) extends Response {
  * @return JSON that is directly usable by angular.treeview
  */
 class AngularTreeViewResponse(proof : ProofStep) extends Response {
-  def stepToJson(p : ProofStep) : JsValue = {
-    ???
-  }
+  def stepToJson(p : ProofStep) : JsValue = ???
 
   val json = JsObject(
 
   )
+
+  ???
 }
