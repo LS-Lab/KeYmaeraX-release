@@ -71,21 +71,39 @@ DATABASE SCHEMA
         username
         password
     
-    model
+    models
         _id
         userId
         name
         date
         fileContents
         
-    proof
+    proofs
         _id
         modelId
         name
         description
         date
-        proof           - json
+        rootNodeId
+        proof
     
+    tasks
+        _id
+        proofNodeId                - not sure?
+        rootTaskId
+    
+    
+This was some intermediate stuff:
+
+    proofNodes
+        _id
+        sequentId
+        info            - Map string string
+        
+    sequentId
+        _id
+        json
+
 
 
 
