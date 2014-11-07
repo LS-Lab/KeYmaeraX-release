@@ -115,15 +115,34 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
+class GetProofInfoResponse(proof : ProofPOJO) extends Response {
+  val json = JsObject(
+    "id" -> JsString(proof.proofId),
+    "name" -> JsString(proof.name),
+    "date" -> JsString(proof.date),
+    "model" -> JsString(proof.modelId),
+    "closed" -> JsBoolean(proof.closed),
+    "stepCount" -> JsNumber(proof.stepCount)
+  )
+}
+
 /**
  * @return JSON that is directly usable by angular.treeview
  */
-class AngularTreeViewResponse(proof : ProofStep) extends Response {
-  def stepToJson(p : ProofStep) : JsValue = ???
+class AngularTreeViewResponse(root : ProofNode) extends Response {
+  val json = nodeToJson(root)
 
-  val json = JsObject(
+  private def nodeToJson(p : ProofNode) : JsValue = {
+    assert(p.children.length == 1) // when we allow for or-branching, this becomes false and the logic must change.
+    val nodeLabel = p.children.last.rule.name
+    val nodeId    = "" //not sure what should happen here... how do we refer to a node/step?
+    val children = p.children.last.subgoals
+    val childrenJson = JsArray( children.map(n => nodeToJson(n)) )
 
-  )
+    val sequent = p.sequent.toString() //TODO pass in actual json
 
-  ???
+    JsObject("id" -> JsString(nodeId),
+      "label" -> JsString(nodeLabel),
+      "children" -> childrenJson)
+  }
 }

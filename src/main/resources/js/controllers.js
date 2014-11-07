@@ -103,7 +103,7 @@ keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, 
 });
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',
-  function ($scope, $http, $cookies, $routeParams) {
+  function ($scope, $http, $cookies, $routeParams, $location) {
     $scope.createProof = function() {
         var proofName        = $scope.proofName ? $scope.proofName : ""
         var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
@@ -111,13 +111,17 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl',
         var dataObj          = {proofName : proofName, proofDescription : proofDescription}
 
         $http.post(uri, dataObj).
-            success(function(data, status, headers, config) {
-                alert("new proof id: " + data + "\n\t...off to the proof view with this proof id!")
+            success(function(data) {
+                var proofid = data
+                // TODO for some reasone, proofid includes quotation marks "proofid"
+                // we may want to switch to ui.router
+                $location.path('proofs/' + proofid);
             }).
             error(function(data, status, headers, config) {
                 alert('TODO handle errors properly.')
             });
     }
+    $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
   });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,18 +137,24 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     $scope.$emit('routeLoaded', {theview: 'proofs'});
   });
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Proofs
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-keymaeraProofControllers.controller('ProofDetailCtrl',
-  function($scope, $http, $routeParams) {
-    $http.get('user/0/proofs/' + $routeParams.proofId).success(function(data) {
-    $scope.proofId = data.proofid;
-    $scope.proofTree = data.proofTree;
+keymaeraProofControllers.controller('ProofCtrl',
+  function($scope, $http, $cookies, $routeParams) {
+    $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId).success(function(data) {
+        $scope.proofId = data.id;
+        $scope.proofName = data.name;
+        $scope.modelId = data.model;
+        $scope.closed = data.closed;
+        $scope.stepCount= data.stepCount;
+        $scope.date = data.date;
+    });
+//    $http.get('proofs/user/' + $cookies.userId + "/"+ $routeParams.proofId + "/root").success(function(data) {
+//        $scope.proofTree = data
+//    });
+    $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
   });
-  $scope.$emit('routeLoaded', {theview: 'proofs'});
-});
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Testing...
@@ -171,3 +181,4 @@ keymaeraProofControllers.controller('TestCtrl',
         { "label" : "Guest", "id" : "role3", "children" : [] }
     ];
   });
+

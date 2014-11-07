@@ -199,6 +199,8 @@ object Sequent {
   /** 
    * Represents a deduction step in a proof using the indicated rule which leads to the given conjunctive list of subgoals.
    * @TODO Is there a way of proctecting constructor access so that only ProofNode.apply can construct ProofSteps?
+   * @param goal - parent of the step
+   * @param subgoals - children of the step
    */
   sealed case class ProofStep(rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode], tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
     justifiedByProofRule
