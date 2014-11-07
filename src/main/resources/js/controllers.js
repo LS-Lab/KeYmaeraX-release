@@ -97,9 +97,9 @@ keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, 
     $modalInstance.close();
   };
 
-  $scope.cancel = function () {
-    $modalInstance.dismiss('cancel');
-  };
+//  $scope.cancel = function () {
+//    $modalInstance.dismiss('cancel');
+//  };
 });
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',

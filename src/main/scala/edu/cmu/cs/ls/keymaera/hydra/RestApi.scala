@@ -145,10 +145,19 @@ trait RestApi extends HttpService {
     }
   }}}
 
+
+  val modelInfo = path("models" / "users" / Segment / "model" / Segment) { (userId, modelId) => pathEnd {
+    get {
+      val request = new GetModelRequest(database, userId, modelId)
+      complete(standardCompletion(request))
+    }
+  }}
+
   val routes =
     staticRoute           ::
     users                 ::
     modelList             ::
+    modelInfo             ::
     userModel             ::
     userModel2            ::
     cookieecho            ::
