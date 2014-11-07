@@ -9,15 +9,20 @@ object MongoDB extends DBAbstraction {
   val mongoClient = MongoClient("localhost", 27017)
 
   //Collections.
-  val users = mongoClient("keymaera")("users")
-  val models = mongoClient("keymaera")("models")
-  val proofs = mongoClient("keymaera")("proofs")
+  val users   = mongoClient("keymaera")("users")
+  val models  = mongoClient("keymaera")("models")
+  val proofs  = mongoClient("keymaera")("proofs")
   val logs    = mongoClient("keymaera")("logs")
+  val tasks   = mongoClient("keymaera")("tasks")
+  val proofNodes = mongoClient("keymaera")("proofNodes")
+  val sequents = mongoClient("keymaera")("sequents")
+
   def cleanup() = {
     users.drop()
     models.drop()
     proofs.drop()
     logs.drop()
+    tasks.drop()
   }
 
   //val proofs = mongoClient("keymaera")("proofs")
@@ -135,15 +140,67 @@ object MongoDB extends DBAbstraction {
       result.getAs[Boolean]("closed").getOrElse(false)
     )).toList.last
   }
+
+
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof Nodes
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  override def addTask(task : TaskPOJO) = {
+    val taskDbObject = MongoDBObject(
+      "_id"          -> task.taskId,
+      "proofNode"    -> task.proofNode,
+      "rootTaskId"   -> task.rootTaskId
+    )
 
-  override def getSubtree(pnId: Int): String = ???
+    tasks.insert(taskDbObject)
+  }
+
+
+  override def getTask(taskId : String) = {
+    val query = MongoDBObject("_id" -> taskId)
+    val results = tasks.find(query)
+    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
+    val result = results.toList.last
+    new TaskPOJO(
+      result.getAs[String]("_id").getOrElse(""),
+      result.getAs[String]("ProofNode").getOrElse(""),
+      result.getAs[String]("rootTaskId").getOrElse("")
+    )
+  }
+
+  // Proof Nodes
+  def getProofNode(proofNodeId : String) : ProofNodePOJO = {
+    val query = MongoDBObject("_id" -> proofNodeId)
+    val results = proofNodes.find(query)
+    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
+    val result = results.toList.last
+    new ProofNodePOJO(
+      result.getAs[String]("_id").getOrElse(""),
+      result.getAs[String]("sequent").getOrElse(null),
+      result.getAs[String]("info").getOrElse(null)
+    )
+  }
+
+  def addProofNode(pn : ProofNodePOJO) : String = {
+
+  }
 
   /**
    * This method is called when a tactic completes. It should store the result of the method in the DB.
    */
   override def tacticCompletionHook: (Any) => Any = ???
+
+  // Sequents
+  def getSequent(sequentId : String) : SequentPOJO
+  def addSequent(sequent : SequentPOJO) : String
+
+
+  //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //  // Proof Nodes
+  //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  //  override def getSubtree(pnId: Int): String = ???
+  //
 
 }

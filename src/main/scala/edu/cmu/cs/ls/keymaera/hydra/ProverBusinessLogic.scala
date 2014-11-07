@@ -8,8 +8,8 @@
 //import edu.cmu.cs.ls.keymaera.tactics.Tactics
 //
 ///**
-// * Created by jdq on 6/12/14.
-// */
+//* Created by jdq on 6/12/14.
+//*/
 //object ProverBusinessLogic {
 //
 //  val mongoClient = MongoClient("localhost", 27017)
@@ -89,7 +89,7 @@
 //    }
 //  }
 //
-// private def store(q: DBObject, id: ObjectId = new ObjectId): MongoDBObject = {
+//private def store(q: DBObject, id: ObjectId = new ObjectId): MongoDBObject = {
 //    val res = new MongoDBObject
 //    res.put("_id", id)
 //    for(key <- q.keys) {

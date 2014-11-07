@@ -7,6 +7,10 @@ package edu.cmu.cs.ls.keymaera.hydra
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface2
+import edu.cmu.cs.ls.keymaera.core.{Formula, KeYmaera}
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+
 /**
  * A Request should handle all expensive computation as well as all
  * possible side-effects of a request (e.g. updating the database), but should
@@ -53,9 +57,16 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
   def getResultingResponses() = {
     try {
       //Return the resulting response.
+      var p = new KeYmaeraParser()
+      p.runParser(keyFileContents) match {
+        case f : Formula => {
+          val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
+          new BooleanResponse(result) :: Nil
+        }
+        case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
+      }
 
-      val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
-      new BooleanResponse(result) :: Nil
+
     }
     catch {
       case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
@@ -80,6 +91,13 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
   def getResultingResponses() = {
     val createdId = db.createProofForModel(modelId, name, description, currentDate())
     new CreatedIdResponse(createdId) :: Nil
+
+    // Create a "task" for the model associated with this proof.
+    val keyFile = db.getModel(modelId).keyFile
+    val (taskId, proofNode) = KeYmaeraInterface2.addTask(keyFile)
+
+    // Add this task to the database.
+    db.addTask(new TaskPOJO(taskId.toString(), proofNode, taskId.toString()))
   }
 }
 
