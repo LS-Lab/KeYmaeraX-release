@@ -86,7 +86,7 @@ keymaeraProofControllers.controller('ModelListCtrl',
         }
     );
     $scope.$emit('routeLoaded', {theview: 'models'});
-  });
+  })
 
 keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
   $http.get("user/" + $cookies.userId + "/model/" + modelid).success(function(data) {

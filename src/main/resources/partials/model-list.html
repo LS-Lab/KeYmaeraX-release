@@ -55,14 +55,14 @@
             <td>{{ model.date }}</td>
             <!--<td>&lt;!&ndash; description -- currently not included. &ndash;&gt;</td>-->
             <td class="input-group-btn" ng-model="model">
-                <button type="button" class="btn btn-default">Details</button>
+                <button type="button" class="btn btn-default">Show Proofs</button>
+                <!-- $location.path("dashboard.html?#/models/" + model.id + "/proofs") -->
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
                 <ul class="dropdown-menu" role="menu" ng-model="model">
-                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/details">Details</a></li>
-                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show proofs</a></li>
+                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
                     <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>
                 </ul>
             </td>
