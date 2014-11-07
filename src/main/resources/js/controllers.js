@@ -113,9 +113,7 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl',
         $http.post(uri, dataObj).
             success(function(data) {
                 var proofid = data.id
-                // TODO for some reasone, proofid includes quotation marks "proofid"
                 // we may want to switch to ui.router
-                alert("This proof id is : " + proofid)
                 $location.path('proofs/' + proofid);
             }).
             error(function(data, status, headers, config) {
