@@ -1,4 +1,4 @@
-var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies', 'ngDialog']);
+var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies', 'ui.bootstrap']);
 
 keymaeraProofControllers.factory('Models', function () {
 
@@ -23,8 +23,7 @@ keymaeraProofControllers.factory('Models', function () {
 });
 
 keymaeraProofControllers.controller('DashboardCtrl',
-  function ($scope, $http, $rootScope) {
-    $rootScope.theme = 'ngdialog-theme-default';
+  function ($scope, $http) {
     // Set the view for menu active class
     $scope.$on('routeLoaded', function (event, args) {
       $scope.theview = args.theview;
@@ -64,11 +63,23 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
   });
 
 keymaeraProofControllers.controller('ModelListCtrl',
-  function ($scope, $http, $cookies, Models) {
+  function ($scope, $http, $cookies, $modal, Models) {
     $scope.models = [];
     $http.get("models/users/" + $cookies.userId).success(function(data) {
         $scope.models = data
     });
+
+    $scope.open = function (modelid) {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/modeldialog.html',
+          controller: 'ModelDialogCtrl',
+          size: 'lg',
+          resolve: {
+            modelid: function () { return modelid; }
+          }
+        });
+    };
+
     $scope.$watch('models',
         function (newModels) {
             if (newModels) Models.setModels(newModels);
@@ -77,20 +88,19 @@ keymaeraProofControllers.controller('ModelListCtrl',
     $scope.$emit('routeLoaded', {theview: 'models'});
   });
 
-keymaeraProofControllers.controller('ModelCtrl',
-  function ($scope, $http, $cookies, Models) {
-    // TODO I don't like this way of structuring URIs: should be models/ID/... and user handled via session
-    $scope.loadModel = function(modelid) {
-        $http.get("users/" + $cookies.userId + "/model/" + modelid).success(function(data) {
-            $scope.model = data
-        });
-    };
-    $scope.$watch(
-        function () { return Models.getModels(); }
-    );
-
-    $scope.$emit('routeLoaded', {theview: 'models'});
+keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
+  $http.get("user/" + $cookies.userId + "/model/" + modelid).success(function(data) {
+      $scope.model = data
   });
+
+  $scope.ok = function () {
+    $modalInstance.close();
+  };
+
+  $scope.cancel = function () {
+    $modalInstance.dismiss('cancel');
+  };
+});
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',
   function ($scope, $http, $cookies, $routeParams) {
