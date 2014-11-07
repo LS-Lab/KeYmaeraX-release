@@ -5,8 +5,7 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
 import spray.json._
-import edu.cmu.cs.ls.keymaera.core.Expr
-import edu.cmu.cs.ls.keymaera.core.Sequent
+import edu.cmu.cs.ls.keymaera.core.{ProofStep, ProofNode, Expr, Sequent}
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
@@ -113,5 +112,18 @@ class ProofTreeResponse(tree: String) extends Response {
   val json = JsObject(
     "type" -> JsString("proof"),
     "tree" -> JsonParser(tree)
+  )
+}
+
+/**
+ * @return JSON that is directly usable by angular.treeview
+ */
+class AngularTreeViewResponse(proof : ProofStep) extends Response {
+  def stepToJson(p : ProofStep) : JsValue = {
+    ???
+  }
+
+  val json = JsObject(
+
   )
 }

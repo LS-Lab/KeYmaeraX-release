@@ -85,9 +85,10 @@ object MongoDB extends DBAbstraction {
   }
 
   override def getModel(modelId: String): ModelPOJO = {
-    var query = MongoDBObject("_id" -> modelId)
+    var query = MongoDBObject("_id" -> new ObjectId(modelId))
     val results = models.find(query)
     if(results.length > 1) ??? //There should only be one response b/c _id is a pk.
+    if(results.length < 1) throw new Exception(modelId + " is a bad modelId!")
     results.map(result => new ModelPOJO(
       result.getAs[ObjectId]("_id").getOrElse(null).toString(),
       result.getAs[String]("userId").getOrElse(""),
