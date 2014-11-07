@@ -7,9 +7,7 @@ import edu.cmu.cs.ls.keymaera.core.{Sequent, ProofNode}
 
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
 class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
-class TaskPOJO(val taskId:String, val proofNode:ProofNodePOJO, val rootTaskId:String)
-class ProofNodePOJO(val proofNodeId:String, val sequent : SequentPOJO, val info:Map[String,String])
-class SequentPOJO(val sequentId : String, val json : String)
+class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val proofId:String)
 
 /**
  * Proof database
@@ -47,12 +45,5 @@ trait DBAbstraction {
   // Tasks
   def addTask(task : TaskPOJO)
   def getTask(taskId : String) : TaskPOJO
-
-  // Proof Nodes
-  def getProofNode(proofNodeId : String) : ProofNodePOJO
-  def addProofNode(pn : ProofNodePOJO) : String
-
-  // Sequents
-  def getSequent(sequentId : String) : SequentPOJO
-  def addSequent(sequent : SequentPOJO) : String
+  def getProofTasks(proofId : String) : List[TaskPOJO]
 }

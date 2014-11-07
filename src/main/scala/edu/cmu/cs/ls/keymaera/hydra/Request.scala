@@ -7,7 +7,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface2
+import edu.cmu.cs.ls.keymaera.api.{KeYmaeraInterface, KeYmaeraInterface2}
 import edu.cmu.cs.ls.keymaera.core.{Formula, KeYmaera}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
@@ -89,15 +89,14 @@ class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) ext
 
 class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String) extends Request {
   def getResultingResponses() = {
-    val createdId = db.createProofForModel(modelId, name, description, currentDate())
-    new CreatedIdResponse(createdId) :: Nil
+    val proofId = db.createProofForModel(modelId, name, description, currentDate())
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-    val (taskId, proofNode) = KeYmaeraInterface2.addTask(keyFile)
+    val (taskId, taskJson) = KeYmaeraInterface.addTask(keyFile)
+    db.addTask(new TaskPOJO(taskId.toString(), taskJson, taskId.toString(), proofId))
 
-    // Add this task to the database.
-    db.addTask(new TaskPOJO(taskId.toString(), proofNode, taskId.toString()))
+    new CreatedIdResponse(proofId) :: Nil
   }
 }
 
@@ -111,6 +110,13 @@ class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String)
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
     new GetProofInfoResponse(proof) :: Nil
+  }
+}
+
+class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+  def getResultingResponses() = {
+    val tasks = db.getProofTasks(proofId)
+    new ProofTasksResponse(tasks) :: Nil
   }
 }
 

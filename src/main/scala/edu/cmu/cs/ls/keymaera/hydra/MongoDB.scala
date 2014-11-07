@@ -149,8 +149,9 @@ object MongoDB extends DBAbstraction {
   override def addTask(task : TaskPOJO) = {
     val taskDbObject = MongoDBObject(
       "_id"          -> task.taskId,
-      "proofNode"    -> task.proofNode,
-      "rootTaskId"   -> task.rootTaskId
+      "task"         -> task.task,
+      "rootTaskId"   -> task.rootTaskId,
+      "proofId"      -> task.proofId
     )
 
     tasks.insert(taskDbObject)
@@ -164,26 +165,21 @@ object MongoDB extends DBAbstraction {
     val result = results.toList.last
     new TaskPOJO(
       result.getAs[String]("_id").getOrElse(""),
-      result.getAs[String]("ProofNode").getOrElse(""),
-      result.getAs[String]("rootTaskId").getOrElse("")
+      result.getAs[String]("task").getOrElse(""),
+      result.getAs[String]("rootTaskId").getOrElse(""),
+      result.getAs[String]("proofId").getOrElse("")
     )
   }
 
-  // Proof Nodes
-  def getProofNode(proofNodeId : String) : ProofNodePOJO = {
-    val query = MongoDBObject("_id" -> proofNodeId)
-    val results = proofNodes.find(query)
-    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
-    val result = results.toList.last
-    new ProofNodePOJO(
+  override def getProofTasks(proofId : String) = {
+    val query = MongoDBObject("proofId" -> proofId)
+    val results = tasks.find(query)
+    results.map(result => new TaskPOJO(
       result.getAs[String]("_id").getOrElse(""),
-      result.getAs[String]("sequent").getOrElse(null),
-      result.getAs[String]("info").getOrElse(null)
-    )
-  }
-
-  def addProofNode(pn : ProofNodePOJO) : String = {
-
+      result.getAs[String]("task").getOrElse(""),
+      result.getAs[String]("rootTaskId").getOrElse(""),
+      result.getAs[String]("proofId").getOrElse("")
+    )).toList;
   }
 
   /**
@@ -191,16 +187,12 @@ object MongoDB extends DBAbstraction {
    */
   override def tacticCompletionHook: (Any) => Any = ???
 
-  // Sequents
-  def getSequent(sequentId : String) : SequentPOJO
-  def addSequent(sequent : SequentPOJO) : String
-
 
   //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //  // Proof Nodes
   //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //
-  //  override def getSubtree(pnId: Int): String = ???
+  override def getSubtree(pnId: Int): String = ???
   //
 
 }

@@ -126,6 +126,17 @@ class GetProofInfoResponse(proof : ProofPOJO) extends Response {
   )
 }
 
+class ProofTasksResponse(tasks : List[TaskPOJO]) extends Response {
+  val objects = tasks.map(taskpojo => JsObject(
+    "id" -> JsString(taskpojo.taskId),
+    "task" -> JsString(taskpojo.task),
+    "rootTaskId" -> JsString(taskpojo.rootTaskId),
+    "proofId" -> JsString(taskpojo.proofId)
+  ))
+
+  val json = JsArray(objects)
+}
+
 /**
  * @return JSON that is directly usable by angular.treeview
  */

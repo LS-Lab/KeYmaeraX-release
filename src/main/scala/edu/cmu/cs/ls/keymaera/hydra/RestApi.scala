@@ -163,6 +163,13 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val proofTasks = path("proofs" / "user" / Segment / Segment / "tasks") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new GetProofTasksRequest(database, userId, proofId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -177,6 +184,7 @@ trait RestApi extends HttpService {
     createProof           ::
     proofListForModel     ::
     proofInfo             ::
+    proofTasks            ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

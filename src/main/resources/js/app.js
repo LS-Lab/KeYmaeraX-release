@@ -1,12 +1,14 @@
 var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngRoute',
   'ngCookies',
+  'ngSanitize',
   'angularTreeview',
   'ui.bootstrap',
   'keymaeraProofControllers',
   'treeControl',
   'progressMeter',
-  'proofProgressChart'
+  'proofProgressChart',
+  'sequent'
 ]);
 
 keymaeraProofApp.config(['$routeProvider',
@@ -43,7 +45,7 @@ keymaeraProofApp.config(['$routeProvider',
       }).
       when('/proofs/:proofId', {
         //templateUrl: 'partials/proof-detail.html',
-        templateUrl: 'partials/proof-breadcrumbs.html',
+        templateUrl: 'partials/proof.html',
         controller: 'ProofCtrl'
       }).
       otherwise({

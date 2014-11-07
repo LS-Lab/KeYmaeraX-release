@@ -155,6 +155,20 @@ keymaeraProofControllers.controller('ProofCtrl',
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
   });
 
+keymaeraProofControllers.controller('TaskListCtrl',
+  function($scope, $http, $cookies, $routeParams) {
+    $scope.proofId = $routeParams.proofId;
+
+    $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + "/tasks").success(function(data) {
+        $scope.tasks = data;
+    });
+
+    $scope.setSelected = function(task) {
+        $scope.selectedTask = JSON.parse(task);
+    }
+  });
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Testing...
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
