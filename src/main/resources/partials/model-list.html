@@ -51,9 +51,9 @@
         <tbody>
         <tr ng-repeat="model in models">
             <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
-            <td><a href="" data-toggle="modal" data-target="#{{ model.id }}Modal">{{ model.name }}</a></td>
+            <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
             <td>{{ model.date }}</td>
-            <td><!-- description -- currently not included. --></td>
+            <!--<td>&lt;!&ndash; description -- currently not included. &ndash;&gt;</td>-->
             <td class="input-group-btn" ng-model="model">
                 <button type="button" class="btn btn-default">Details</button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -69,26 +69,6 @@
         </tr>
         </tbody>
     </table>
-
-    <!-- Model Dialogs: switch to Angular Bootstrap  -->
-    <div ng-repeat="m in models" class="modal fade" id="{{ m.id }}Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" ng-controller="ModelCtrl">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-                    <h4 class="modal-title" id="myModalLabel">Foo</h4>
-                </div>
-                <div class="modal-body">
-                    <!-- TODO display file content -->
-                    <!--{{ model.keyFile }}-->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-                    <!--<button type="button" class="btn btn-primary">Save changes</button>--> <!-- TODO: if there are proofs, create a new version instead -->
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!--
     Javascript to populate the table. TODO not sure what the "correct" way to do this is.
