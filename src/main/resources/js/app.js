@@ -8,6 +8,8 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'treeControl',
   'progressMeter',
   'proofProgressChart',
+  'formula',
+  'mathjaxformula',
   'sequent'
 ]);
 

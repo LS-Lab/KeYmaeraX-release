@@ -22,6 +22,35 @@ keymaeraProofControllers.factory('Models', function () {
     };
 });
 
+keymaeraProofControllers.factory('Tasks', function () {
+
+    var tasks = [];
+    var selectedTask;
+
+    return {
+        getTasks: function() {
+            return tasks;
+        },
+        setTasks: function(t) {
+            tasks = t;
+        },
+        addTask: function(task) {
+            tasks.push(task);
+        },
+        addTasks: function(t) {
+            for (var i = 0; i < t.length; i++) {
+                tasks.push(t[i]);
+            }
+        },
+        getSelectedTask: function() {
+            return selectedTask;
+        },
+        setSelectedTask: function(t) {
+            selectedTask = t;
+        }
+    };
+});
+
 keymaeraProofControllers.controller('DashboardCtrl',
   function ($scope, $http) {
     // Set the view for menu active class
@@ -55,7 +84,7 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
          });
      };
 
-     $scope.$watch(
+     $scope.$watch('models',
         function () { return Models.getModels(); }
      );
 
@@ -81,9 +110,7 @@ keymaeraProofControllers.controller('ModelListCtrl',
     };
 
     $scope.$watch('models',
-        function (newModels) {
-            if (newModels) Models.setModels(newModels);
-        }
+        function (newModels) { if (newModels) Models.setModels(newModels); }
     );
     $scope.$emit('routeLoaded', {theview: 'models'});
   })
@@ -156,7 +183,7 @@ keymaeraProofControllers.controller('ProofCtrl',
   });
 
 keymaeraProofControllers.controller('TaskListCtrl',
-  function($scope, $http, $cookies, $routeParams) {
+  function($scope, $http, $cookies, $routeParams, Tasks) {
     $scope.proofId = $routeParams.proofId;
 
     $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + "/tasks").success(function(data) {
@@ -166,8 +193,35 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.setSelected = function(task) {
         $scope.selectedTask = JSON.parse(task);
     }
+
+    $scope.$watch('tasks',
+        function (newTasks) { if (newTasks) Tasks.setTasks(newTasks); }
+    );
+    $scope.$watch('selectedTask',
+        function() { return Tasks.getSelectedTask(); },
+        function(t) { if (t) Tasks.setSelectedTask(t); }
+    );
   });
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Sequents and proof rules
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('ProofRuleDialogCtrl',
+        function ($scope, $http, $cookies, $modalInstance, proofid, nodeid, formulaid, formula) {
+//  $http.get("user/" + $cookies.userId + "/model/" + modelid).success(function(data) {
+//      $scope.model = data
+//  });
+
+  $scope.proofid = proofid;
+  $scope.nodeid = nodeid;
+  $scope.formulaid = formulaid;
+  $scope.formula = formula;
+
+  $scope.cancel = function () {
+    $modalInstance.dismiss('cancel');
+  };
+});
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Testing...

@@ -1,16 +1,17 @@
 <span ng-repeat="f in sequent.ante"
       id="{{f.id}}"
-      ng-click="handleFormulaClick(proofId, nId, f.id)">
-    <span ng-bind-html="parseSequent(f.formula)"></span>
+      ng-click="handleFormulaClick(f)">
+    <k4-formula formula="f.formula" highlight="true"></k4-formula>
 </span>
 
 <!-- TODO: Refactor ApiClient into an Angular service -->
-<span><!-- ng-click="ApiClient.runGlobalTactic(ClientState.uid, 0, proofId, nId, function (resp) { alert(JSON.stringify(resp)); });">-->
+<span
+    ng-click="handleTurnstileClick()">
     &#8866;
 </span><br>
 
 <span ng-repeat="f in sequent.succ"
       id="{{f.id}}"
-      ng-click="handleFormulaClick(proofId, nId, f.id)">
-    <span ng-bind-html="parseSequent(f.formula)"></span>
+      ng-click="handleFormulaClick(f)">
+    <k4-formula formula="f.formula" highlight="true"></k4-formula>
 </span>
