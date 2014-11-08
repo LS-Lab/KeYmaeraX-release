@@ -137,6 +137,14 @@ class ProofTasksResponse(tasks : List[TaskPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
+class ApplicableTacticsResponse(tactics : List[TacticsPOJO]) extends Response {
+  val objects = tactics.map(tactic => JsObject(
+    "id" -> JsString(tactic.tacticsId)
+  ))
+
+  val json = JsArray(objects)
+}
+
 /**
  * @return JSON that is directly usable by angular.treeview
  */

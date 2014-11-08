@@ -10,6 +10,7 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'proofProgressChart',
   'formula',
   'mathjaxformula',
+  'mathjaxbind',
   'sequent'
 ]);
 

@@ -1,11 +1,11 @@
-angular.module('mathjaxformula', ['ngSanitize'])
+angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
   .directive('k4Mathjaxformula', function() {
     return {
         restrict: 'AE',
         scope: {
             formula: '='
         },
-        controller: function($scope, $sce) {
+        controller: function($scope, $sce, $attrs) {
             // Recursively generate LaTeX
             function parseFormulaHelper(json, depth) {
                 var items = [];
@@ -45,7 +45,7 @@ angular.module('mathjaxformula', ['ngSanitize'])
                         case "lt":
                             var left = parseFormulaHelper(c[0], depth + 1);
                             var right = parseFormulaHelper(c[1], depth + 1);
-                            content = left + " < " + right;
+                            content = left + " \\lt " + right;
                             break;
 
                         case "leq":
@@ -75,7 +75,7 @@ angular.module('mathjaxformula', ['ngSanitize'])
                         case "gt":
                             var left = parseFormulaHelper(c[0], depth + 1);
                             var right = parseFormulaHelper(c[1], depth + 1);
-                            content = left + " > " + right;
+                            content = left + " \\gt " + right;
                             break;
 
                         case "neg":
@@ -168,9 +168,9 @@ angular.module('mathjaxformula', ['ngSanitize'])
             }
 
             $scope.parseFormula = function(json) {
-                return $sce.trustAsHtml("\\(" + parseFormulaHelper(json, 0) + "\\)");
+                return "\\(" + parseFormulaHelper(json, 0) + "\\)";
             };
         },
-        template: '<span ng-bind-html="parseFormula(formula)"></span>'
+        template: '<span k4-mathjaxbind="parseFormula(formula)"></span>'
     };
   });

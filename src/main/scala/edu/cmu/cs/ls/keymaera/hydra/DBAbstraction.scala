@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaera.core.{Sequent, ProofNode}
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
 class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
 class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val proofId:String)
+class TacticsPOJO(val tacticsId:String)
 
 /**
  * Proof database

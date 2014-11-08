@@ -21,7 +21,6 @@ angular.module('sequent', ['ngSanitize','formula'])
                     formula: function() { return f.formula; }
                   }
                 });
-//                MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
             };
 
             $scope.handleTurnstileClick = function() {

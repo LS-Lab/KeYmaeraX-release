@@ -170,6 +170,13 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val formulaTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, nodeId, formulaId) => { pathEnd {
+    get {
+      val request = new GetApplicableTacticsRequest(database, userId, proofId, nodeId, formulaId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -185,6 +192,7 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofInfo             ::
     proofTasks            ::
+    formulaTactics        ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

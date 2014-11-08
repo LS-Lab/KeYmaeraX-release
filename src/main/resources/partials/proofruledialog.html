@@ -1,12 +1,34 @@
+<!-- MathJax
+================================================== -->
+<!--<script type="text/x-mathjax-config">-->
+  <!--MathJax.Hub.Config(-->
+    <!--{tex2jax: {inlineMath: [['\\(','\\)']]}},-->
+    <!--{TeX: { extensions: ["AMSmath.js", "AMSsymbols.js"] }}-->
+  <!--);-->
+<!--</script>-->
+<!--<script type="text/javascript"-->
+        <!--src="js/bower_components/MathJax/MathJax.js?config=TeX-AMS_HTML">-->
+<!--</script>-->
 <div class="modal-header">
     <h3 class="modal-title">Rule Application</h3>
 </div>
 <div class="modal-body">
 <pre>
-   <k4-formula formula="formula"></k4-formula>
+   <!--<k4-mathjaxformula formula="formula"></k4-mathjaxformula>-->
+   <k4-Formula formula="formula"></k4-Formula>
 </pre>
+
 <div>
-<!-- Display applicable rules as buttons -->
+    <!--<form>-->
+    <span class="input-group-addon">
+        <span class="glyphicon glyphicon-fast-forward"></span>
+        <input type="checkbox">
+        <button class="btn" ng-repeat="t in tactics" ng-click="applyTactics(t)" k4-mathjaxbind="t.latex"></button>
+    </span>
+    <br/>
+    <button class="btn" ng-repeat="t in tactics" ng-click="applyTactics()"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>
+    <button class="btn" ng-repeat="t in tactics" ng-click="hide()"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
+    <!--</form>-->
 </div>
 </div>
 <div class="modal-footer">

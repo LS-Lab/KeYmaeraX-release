@@ -16,10 +16,13 @@
     <!-- MathJax
     ================================================== -->
     <script type="text/x-mathjax-config">
-      MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+      MathJax.Hub.Config(
+        {tex2jax: {inlineMath: [['\\(','\\)']]}},
+        {TeX: { extensions: ["AMSmath.js", "AMSsymbols.js"] }}
+      );
     </script>
     <script type="text/javascript"
-            src="js/bower_components/MathJax/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+            src="js/bower_components/MathJax/MathJax.js?config=TeX-AMS_HTML">
     </script>
 
 
@@ -113,6 +116,7 @@
 <script src="js/keymaera-ui/progress-meter.js"></script>
 <script src="js/keymaera-ui/proof-progress-chart.js"></script>
 <script src="js/keymaera-ui/formula.js"></script>
+<script src="js/keymaera-ui/mathjaxbind.js"></script>
 <script src="js/keymaera-ui/mathjaxformula.js"></script>
 <script src="js/keymaera-ui/sequent.js"></script>
 

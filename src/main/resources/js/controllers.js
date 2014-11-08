@@ -51,6 +51,25 @@ keymaeraProofControllers.factory('Tasks', function () {
     };
 });
 
+keymaeraProofControllers.factory('Tactics', function () {
+
+    var tactics = [
+        // TODO add rules, move into own file
+        { "id" : "0",
+          "latex" : "\\(\\left[\\rightarrow r \\right] \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
+        },
+        { "id" : "1",
+          "latex" : "\\(\\left[\\wedge l \\right] \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
+        }
+    ];
+
+    return {
+        getTactics: function() {
+            return tactics;
+        }
+    };
+});
+
 keymaeraProofControllers.controller('DashboardCtrl',
   function ($scope, $http) {
     // Set the view for menu active class
@@ -208,19 +227,30 @@ keymaeraProofControllers.controller('TaskListCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('ProofRuleDialogCtrl',
-        function ($scope, $http, $cookies, $modalInstance, proofid, nodeid, formulaid, formula) {
-//  $http.get("user/" + $cookies.userId + "/model/" + modelid).success(function(data) {
-//      $scope.model = data
-//  });
-
+        function ($scope, $http, $cookies, $modalInstance, proofid, nodeid, formulaid, formula, Tactics) {
   $scope.proofid = proofid;
   $scope.nodeid = nodeid;
   $scope.formulaid = formulaid;
   $scope.formula = formula;
 
+  $http.get("proofs/user/" + $cookies.userId + "/" + proofid + "/nodes/" + nodeid + "/formulas/" + formulaid + "/tactics").success(function(data) {
+      $scope.tactics = [];
+      for (var i = 0; i < data.length; i++) {
+          var tacticid = data[i].id;
+          var tactic = Tactics.getTactics()[tacticid];
+          $scope.tactics.push(tactic);
+      }
+  });
+
+  $scope.applyTactics = function(t) {
+    alert("Applying " + t)
+    // TODO apply tactics on server
+  }
+
   $scope.cancel = function () {
     $modalInstance.dismiss('cancel');
   };
+
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

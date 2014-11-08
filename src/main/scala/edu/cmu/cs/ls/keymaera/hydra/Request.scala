@@ -120,6 +120,13 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
   }
 }
 
+class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, formulaId : String) extends Request {
+  def getResultingResponses() = {
+    val tactics = new TacticsPOJO("0") :: Nil// TODO implement
+    new ApplicableTacticsResponse(tactics) :: Nil
+  }
+}
+
 
 //
 //
