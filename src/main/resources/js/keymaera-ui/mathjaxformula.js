@@ -3,7 +3,8 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
     return {
         restrict: 'AE',
         scope: {
-            formula: '='
+            formula: '=',
+            delimiter: '='
         },
         controller: function($scope, $sce, $attrs) {
             // Recursively generate LaTeX
@@ -137,7 +138,7 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
 
                         case "Loop":
                             var left = parseFormulaHelper(c[0], depth + 1);
-                            content = "\\left{" + left + "\\right}^*";
+                            content = "\\left\\{" + left + "\\right\\}^*";
                             break;
 
                         case "Sequence":
@@ -167,10 +168,11 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                 return items.join("");
             }
 
-            $scope.parseFormula = function(json) {
-                return "\\(" + parseFormulaHelper(json, 0) + "\\)";
+            $scope.parseFormula = function(json, delimiter) {
+                if (delimiter == "display") { return "\\[" + parseFormulaHelper(json, 0) + "\\]"; }
+                else { return "\\(" + parseFormulaHelper(json, 0) + "\\)"; }
             };
         },
-        template: '<span k4-mathjaxbind="parseFormula(formula)"></span>'
+        template: '<span k4-mathjaxbind="parseFormula(formula, delimiter)"></span>'
     };
   });
