@@ -19,16 +19,33 @@
 </pre>
 
 <div>
-    <!--<form>-->
-    <span class="input-group-addon">
-        <span class="glyphicon glyphicon-fast-forward"></span>
-        <input type="checkbox">
-        <button class="btn" ng-repeat="t in tactics" ng-click="applyTactics(t)" k4-mathjaxbind="t.latex"></button>
-    </span>
-    <br/>
-    <button class="btn" ng-repeat="t in tactics" ng-click="applyTactics()"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>
-    <button class="btn" ng-repeat="t in tactics" ng-click="hide()"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
-    <!--</form>-->
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="btn-group btn-group-lg" ng-repeat="t in tactics">
+                <button type="button" class="btn" ng-click="applyTactics(t)" k4-mathjaxbind="t.latex"></button>
+                <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a href="#" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>
+                    <li><a href="#" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Until inapplicable</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!--<span class="input-group-addon">-->
+        <!--<span class="glyphicon glyphicon-fast-forward"></span>-->
+        <!--<input type="checkbox">-->
+        <!--<button class="btn" ng-repeat="t in tactics" ng-click="applyTactics(t)" k4-mathjaxbind="t.latex"></button>-->
+    <!--</span>-->
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <button class="btn" ng-repeat="t in tactics" ng-click="applyTactics()"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>
+            <button class="btn" ng-repeat="t in tactics" ng-click="hide()"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
+
+        </div>
+    </div>
 </div>
 </div>
 <div class="modal-footer">
