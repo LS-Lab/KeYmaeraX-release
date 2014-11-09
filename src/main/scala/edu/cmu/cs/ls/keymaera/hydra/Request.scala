@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaera.api.{KeYmaeraInterface, KeYmaeraInterface2}
-import edu.cmu.cs.ls.keymaera.core.{Formula, KeYmaera}
+import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, Formula, KeYmaera}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 /**
@@ -93,8 +93,9 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-    val (taskId, taskJson) = KeYmaeraInterface.addTask(keyFile)
-    db.addTask(new TaskPOJO(taskId.toString(), taskJson, taskId.toString(), proofId))
+    val taskId = db.createTask(proofId)
+    val taskJson = KeYmaeraInterface.addTask(taskId, keyFile)
+    db.updateTask(new TaskPOJO(taskId, taskJson, taskId, proofId))
 
     new CreatedIdResponse(proofId) :: Nil
   }
@@ -127,6 +128,27 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
   }
 }
 
+class RunTacticRequest(db : DBAbstraction, userId : String, taskId : String, nodeId : String, formulaId : String, tacticId : String) extends Request {
+  def getResultingResponses() = {
+    val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId)
+    KeYmaeraInterface.runTactic(taskId, Some(nodeId), tacticId.toInt, Some(formulaId), tId,
+      Some(tacticCompleted(db, nodeId)))
+    new TacticDispatchedResponse(taskId, nodeId, tacticId, tId) :: Nil
+  }
+
+  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: Int) {
+    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
+      case Some(s) =>
+        // s is JSON representation of the subtree
+        if (db.getSubtree(nodeId) == null) {
+          db.createSubtree(nodeId, s)
+        } else {
+          db.updateSubtree(nodeId, s)
+        }
+      case None => /* log */
+    }
+  }
+}
 
 //
 //

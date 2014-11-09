@@ -92,9 +92,9 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-class TacticDispatchedResponse(proofId: String, nodeId: String, tacticId: String, tacticInstId: String) extends Response {
+class TacticDispatchedResponse(taskId: String, nodeId: String, tacticId: String, tacticInstId: String) extends Response {
   val json = JsObject(
-    "proofId" -> JsString(proofId),
+    "taskId" -> JsString(taskId),
     "nodeId" -> JsString(nodeId),
     "tacticId" -> JsString(tacticId),
     "tacticInstId" -> JsString(tacticInstId)

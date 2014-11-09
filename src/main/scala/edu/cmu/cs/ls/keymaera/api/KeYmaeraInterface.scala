@@ -21,18 +21,14 @@ import scala.Unit
 object KeYmaeraInterface {
 
   object TaskManagement {
-    private var count = 0
-    @volatile var tasks: Map[Int, (ProofNode, Map[String, ProofNode])] = Map()
+    @volatile var tasks: Map[String, (ProofNode, Map[String, ProofNode])] = Map()
 
-    def addTask(r: ProofNode): Int = this.synchronized {
+    def addTask(r: ProofNode, taskId: String) = this.synchronized {
       assert(r.children.isEmpty)
-      val res = count
-      tasks += (res -> (r, Map()))
-      count = count + 1
-      res
+      tasks += (taskId -> (r, Map()))
     }
 
-    def addNode(tId: Int, nId: String, p: ProofNode) = this.synchronized {
+    def addNode(tId: String, nId: String, p: ProofNode) = this.synchronized {
       tasks.get(tId) match {
         case Some(v) =>
           tasks += (tId -> (v._1, v._2 + (nId -> p)))
@@ -40,12 +36,15 @@ object KeYmaeraInterface {
       }
     }
 
-    def getRoot(id: Int): Option[ProofNode] = tasks.get(id).map(_._1)
+    def containsTask(id: String) = tasks.contains(id)
 
-    def getNode(tId: Int, nId: String): Option[ProofNode] = tasks.get(tId).map(_._2.get(nId)).flatten
+    def getRoot(id: String): Option[ProofNode] = tasks.get(id).map(_._1)
+
+    def getNode(tId: String, nId: String): Option[ProofNode] = tasks.get(tId).map(_._2.get(nId)).flatten
   }
 
   object TacticManagement {
+    // TODO store tactics in DB, let DB issue IDs
     private var count = 0
     @volatile var tactics: Map[Int, () => Tactic] = Map()
     @volatile var positionTactics: Map[Int, () => PositionTactic] = Map()
@@ -95,36 +94,34 @@ object KeYmaeraInterface {
   }
 
   object RunningTactics {
-    @volatile private var count: Int = 0
-    private var tactics: Map[Int, Tactic] = Map()
-    def add(t: Tactic): Int = this.synchronized {
-      val res = count
-      tactics += (res -> t)
-      count = count + 1
-      res
+    private var tactics: Map[String, Tactic] = Map()
+    def add(t: Tactic, tId: String) = this.synchronized {
+      tactics += (tId -> t)
     }
 
-    def get(id: Int): Option[Tactic] = tactics.get(id)
+    def get(id: String): Option[Tactic] = tactics.get(id)
   }
 
   /**
    * Parse the problem and add it to the tasks management system
    *
+   * @param taskId
    * @param content
-   * @return JSON representation of the content + the generated task id
+   * @return JSON representation of the content
    */
-  def addTask(content: String): (Int, String) = {
+  def addTask(taskId: String, content: String): String = {
+    if (TaskManagement.containsTask(taskId)) throw new IllegalArgumentException("Duplicate task ID " + taskId)
     new KeYmaeraParser().runParser(content) match {
       case f: Formula =>
         val seq = Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f) )
         val r = new RootNode(seq)
-        val id = TaskManagement.addTask(r)
-        (id, json(r, id.toString, 0, id))
+        TaskManagement.addTask(r, taskId)
+        json(r, taskId, 0, taskId)
       case a => throw new IllegalStateException("Parsing the input did not result in a formula but in: " + a)
     }
   }
 
-  def getNode(taskId: Int, nodeId: Option[String]): Option[String] = nodeId match {
+  def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId))
       case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId))
   }
@@ -133,7 +130,16 @@ object KeYmaeraInterface {
 
   def getPositionTactics: List[(Int, String)] = TacticManagement.getPositionTactics
 
-  def runTactic(taskId: Int, nodeId: Option[String], tacticId: Int, formulaId: Option[String], callBack: Option[Int => ((Int, Option[String], Int) => Unit)] = None): Option[Int] = {
+  /**
+   *
+   * @param taskId the task for which this tactic is dispatched
+   * @param nodeId the proof node on which to run the tactic (None to execute on the root node)
+   * @param tacticId the tactic to dispatch
+   * @param formulaId the formula (None to execute on the sequent)
+   * @param tId the ID of the dispatched tactic
+   * @param callBack callback executed when the tactic finishes
+   */
+  def runTactic(taskId: String, nodeId: Option[String], tacticId: Int, formulaId: Option[String], tId: String, callBack: Option[String => ((String, Option[String], Int) => Unit)] = None) = {
     (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)
@@ -153,22 +159,21 @@ object KeYmaeraInterface {
         case Some(t) =>
           // attach a info transformation function which later on allows us to track then changes performed by this tactic
           // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
-          val res = RunningTactics.add(t)
+          RunningTactics.add(t, tId)
           // register listener to react on tactic completion
           // this way the business logic can react to the completion if required
-          t.registerCompletionEventListener(_ => callBack.foreach(_(res)(taskId, nodeId, tacticId)))
-          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> res.toString)
-          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> res.toString)
+          t.registerCompletionEventListener(_ => callBack.foreach(_(tId)(taskId, nodeId, tacticId)))
+          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tId.toString)
+          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tId.toString)
           println("Dispatching tactic")
           Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
-          Some(res)
         case None => None
       }
       case None => println("Tasks are + " + TaskManagement.tasks); None
     }
   }
 
-  def isRunning(tacticInstanceId: Int): Boolean = {
+  def isRunning(tacticInstanceId: String): Boolean = {
     RunningTactics.get(tacticInstanceId) match {
       case Some(t) => !t.isComplete
       case None => false
@@ -183,7 +188,7 @@ object KeYmaeraInterface {
    * @param depth
    * @return
    */
-  def getSubtree(taskId: Int, nodeId: Option[String], depth: Int): Option[String] = {
+  def getSubtree(taskId: String, nodeId: Option[String], depth: Int): Option[String] = {
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
       case None => ("", TaskManagement.getRoot(taskId))
@@ -193,7 +198,7 @@ object KeYmaeraInterface {
     }
   }
 
-  def getSubtree(taskId: Int, nodeId: Option[String], filter: (ProofStepInfo => Boolean)): Option[String] = {
+  def getSubtree(taskId: String, nodeId: Option[String], filter: (ProofStepInfo => Boolean)): Option[String] = {
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
       case None => ("", TaskManagement.getRoot(taskId))
@@ -204,15 +209,15 @@ object KeYmaeraInterface {
 
   }
 
-  private def getSubtree(n: ProofNode, id: String, depth: Int, rootId: Int): String = json(n, id, depth, rootId)
+  private def getSubtree(n: ProofNode, id: String, depth: Int, rootId: String): String = json(n, id, depth, rootId)
 
-  private def getSubtree(n: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: Int): String = json(n, id, filter, rootId)
+  private def getSubtree(n: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = json(n, id, filter, rootId)
 
   // TODO: maybe allow listeners to node change events
 
  // def json(p: ProofNode): String = JSONConverter(p)
 
-  def json(p: ProofNode, id: String, l: Int, rootId: Int): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x))
+  def json(p: ProofNode, id: String, l: Int, rootId: String): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x))
 
-  def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: Int): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x))
+  def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x))
 }

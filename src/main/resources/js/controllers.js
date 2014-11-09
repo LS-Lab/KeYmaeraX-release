@@ -243,8 +243,10 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   });
 
   $scope.applyTactics = function(t) {
-    alert("Applying " + t)
-    // TODO apply tactics on server
+    $http.post("proofs/user/" + $cookies.userId + "/" + proofid + "/nodes/" + nodeid + "/formulas/" + formulaid + "/tactics/run/" + t.id)
+            .success(function(data) {
+        alert("Tactic dispatched: " + data)
+    });
   }
 
   $scope.cancel = function () {

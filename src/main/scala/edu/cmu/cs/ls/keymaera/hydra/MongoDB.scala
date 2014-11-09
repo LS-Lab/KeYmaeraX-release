@@ -14,6 +14,8 @@ object MongoDB extends DBAbstraction {
   val proofs  = mongoClient("keymaera")("proofs")
   val logs    = mongoClient("keymaera")("logs")
   val tasks   = mongoClient("keymaera")("tasks")
+  val tactics = mongoClient("keymaera")("tactics")
+  val dispatchedTactics = mongoClient("keymaera")("dispatchedTactics")
   val proofNodes = mongoClient("keymaera")("proofNodes")
   val sequents = mongoClient("keymaera")("sequents")
 
@@ -146,6 +148,13 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof Nodes
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  override def createTask(proofId:String) : String = {
+    val query = MongoDBObject(
+      "proofId"      -> proofId
+    )
+    tasks.insert(query)
+    query.get("_id").toString()
+  }
   override def addTask(task : TaskPOJO) = {
     val taskDbObject = MongoDBObject(
       "_id"          -> task.taskId,
@@ -164,7 +173,7 @@ object MongoDB extends DBAbstraction {
     if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
     val result = results.toList.last
     new TaskPOJO(
-      result.getAs[String]("_id").getOrElse(""),
+      result.getAs[ObjectId]("_id").orNull.toString(),
       result.getAs[String]("task").getOrElse(""),
       result.getAs[String]("rootTaskId").getOrElse(""),
       result.getAs[String]("proofId").getOrElse("")
@@ -175,24 +184,54 @@ object MongoDB extends DBAbstraction {
     val query = MongoDBObject("proofId" -> proofId)
     val results = tasks.find(query)
     results.map(result => new TaskPOJO(
-      result.getAs[String]("_id").getOrElse(""),
+      result.getAs[ObjectId]("_id").orNull.toString(),
       result.getAs[String]("task").getOrElse(""),
       result.getAs[String]("rootTaskId").getOrElse(""),
       result.getAs[String]("proofId").getOrElse("")
     )).toList;
   }
 
-  /**
-   * This method is called when a tactic completes. It should store the result of the method in the DB.
-   */
-  override def tacticCompletionHook: (Any) => Any = ???
+  override def updateTask(task: TaskPOJO) = {
+    val update = MongoDBObject(
+      "task"         -> task.task,
+      "rootTaskId"   -> task.rootTaskId,
+      "proofId"      -> task.proofId
+    )
+    tasks.update(MongoDBObject("_id" -> new ObjectId(task.taskId)), update)
+  }
 
 
-  //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //  // Proof Nodes
-  //  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //
-  override def getSubtree(pnId: Int): String = ???
-  //
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Tactics
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  override def createDispatchedTactics(taskId:String, nodeId:String, formulaId:String, tacticsId:String) : String = {
+    val query = MongoDBObject(
+      "taskId"       -> taskId,
+      "nodeId"       -> nodeId,
+      "formulaId"    -> formulaId,
+      "tacticsId"    -> tacticsId
+    )
+    dispatchedTactics.insert(query)
+    query.get("_id").toString()
+  }
+  override def getDispatchedTactics(tId : String) : DispatchedTacticsPOJO = {
+    val query = MongoDBObject("_id" -> new ObjectId(tId))
+    val results = dispatchedTactics.find(query)
+    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
+    results.map(result => new DispatchedTacticsPOJO(
+      result.getAs[String]("_id").getOrElse(""),
+      result.getAs[String]("taskId").getOrElse(""),
+      result.getAs[String]("nodeId").getOrElse(""),
+      result.getAs[String]("formulaId").getOrElse(""),
+      result.getAs[String]("tacticsId").getOrElse("")
+    )).toList.last
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Proof Nodes
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  override def createSubtree(pnId: String, tree: String): String = ???
+  override def getSubtree(pnId: String): String = ???
+  override def updateSubtree(pnId: String, tree: String) = ???
 
 }

@@ -9,6 +9,7 @@ class ModelPOJO(val modelId:String, val userId:String, val name:String, val date
 class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
 class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val proofId:String)
 class TacticsPOJO(val tacticsId:String)
+class DispatchedTacticsPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)
 
 /**
  * Proof database
@@ -35,16 +36,20 @@ trait DBAbstraction {
 
   //Proofs and Proof Nodes
   def getProofInfo(proofId : String) : ProofPOJO
-  /**
-   * This method is called when a tactic completes. It should store the result of the method in the DB.
-   */
-  def tacticCompletionHook : Any => Any
 
-  def getSubtree(pnId : Int) : String
-
+  // Proof trees
+  def createSubtree(pnId : String, tree : String) : String
+  def getSubtree(pnId : String) : String
+  def updateSubtree(pnId: String, tree : String)
 
   // Tasks
+  def createTask(proofId: String) : String
   def addTask(task : TaskPOJO)
   def getTask(taskId : String) : TaskPOJO
   def getProofTasks(proofId : String) : List[TaskPOJO]
+  def updateTask(task: TaskPOJO)
+
+  // Tactics
+  def createDispatchedTactics(taskId:String, nodeId:String, formulaId:String, tacticsId:String) : String
+  def getDispatchedTactics(tId : String) : DispatchedTacticsPOJO
 }
