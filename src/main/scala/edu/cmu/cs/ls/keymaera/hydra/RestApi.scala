@@ -171,16 +171,30 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val formulaTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, nodeId, formulaId) => { pathEnd {
+  val rootNodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, formulaId) => { pathEnd {
     get {
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, nodeId, formulaId)
+      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, None, formulaId)
       complete(standardCompletion(request))
     }
   }}}
 
-  val runTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
+  val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, nodeId, formulaId) => { pathEnd {
+    get {
+      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, Some(nodeId), formulaId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val rootNodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, formulaId, tacticId) => { pathEnd {
     post {
-      val request = new RunTacticRequest(database, userId, proofId, nodeId, formulaId, tacticId)
+      val request = new RunTacticRequest(database, userId, proofId, taskId, None, formulaId, tacticId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, nodeId, formulaId, tacticId) => { pathEnd {
+    post {
+      val request = new RunTacticRequest(database, userId, proofId, taskId, Some(nodeId), formulaId, tacticId)
       complete(standardCompletion(request))
     }
   }}}
@@ -200,8 +214,10 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofInfo             ::
     proofTasks            ::
-    formulaTactics        ::
-    runTactics            ::
+    rootNodeFormulaTactics::
+    nodeFormulaTactics    ::
+    rootNodeRunTactics    ::
+    nodeRunTactics        ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }
