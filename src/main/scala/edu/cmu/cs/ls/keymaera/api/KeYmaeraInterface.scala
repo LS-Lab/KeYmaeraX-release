@@ -44,51 +44,41 @@ object KeYmaeraInterface {
   }
 
   object TacticManagement {
-    // TODO store tactics in DB, let DB issue IDs
-    private var count = 0
-    @volatile var tactics: Map[Int, () => Tactic] = Map()
-    @volatile var positionTactics: Map[Int, () => PositionTactic] = Map()
-    @volatile var inputTactics: Map[Int, (Formula) => Tactic] = Map()
-    @volatile var inputPositionTactics: Map[Int, (Formula) => PositionTactic] = Map()
+    @volatile var tactics: Map[String, () => Tactic] = Map()
+    @volatile var positionTactics: Map[String, () => PositionTactic] = Map()
+    @volatile var inputTactics: Map[String, (Formula) => Tactic] = Map()
+    @volatile var inputPositionTactics: Map[String, (Formula) => PositionTactic] = Map()
 
-    addTactic(TacticLibrary.default)
-    addPositionTactic(TacticLibrary.step)
+//    addTactic("0", TacticLibrary.default)
+//    addPositionTactic("1", TacticLibrary.step)
 
-    def addTactic(t: Tactic): Int = this.synchronized {
-      val res = count
-      tactics += (res -> (() => t))
-      count = count + 1
-      res
+    def addTactic(id: String, t: Tactic) = this.synchronized {
+      if (tactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+      tactics += (id -> (() => t))
     }
 
-    def addInputTactic(t: (Formula => Tactic)): Int = this.synchronized {
-      val res = count
-      inputTactics += (res -> t)
-      count = count + 1
-      res
+    def addInputTactic(id: String, t: (Formula => Tactic)) = this.synchronized {
+      if (inputTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+      inputTactics += (id -> t)
     }
 
-    def addPositionTactic(t: PositionTactic): Int = this.synchronized {
-      val res = count
-      positionTactics += (res -> (() => t))
-      count = count + 1
-      res
+    def addPositionTactic(id: String, t: PositionTactic) = this.synchronized {
+      if (positionTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+      positionTactics += (id -> (() => t))
     }
 
-    def addInputPositionTactic(t: (Formula => PositionTactic)): Int = this.synchronized {
-      val res = count
-      inputPositionTactics += (res -> t)
-      count = count + 1
-      res
+    def addInputPositionTactic(id: String, t: (Formula => PositionTactic)) = this.synchronized {
+      if (inputPositionTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+      inputPositionTactics += (id -> t)
     }
 
-    def getTactic(id: Int): Option[Tactic] = tactics.get(id).map(_())
+    def getTactic(id: String): Option[Tactic] = tactics.get(id).map(_())
 
-    def getPositionTactic(id: Int): Option[PositionTactic] = positionTactics.get(id).map(_())
+    def getPositionTactic(id: String): Option[PositionTactic] = positionTactics.get(id).map(_())
 
-    def getTactics: List[(Int, String)] = tactics.foldLeft(Nil: List[(Int, String)])((a, p) => a :+ (p._1, p._2().name))
+    def getTactics: List[(String, String)] = tactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2().name))
 
-    def getPositionTactics: List[(Int, String)] = positionTactics.foldLeft(Nil: List[(Int, String)])((a, p) => a :+ (p._1, p._2().name))
+    def getPositionTactics: List[(String, String)] = positionTactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2().name))
 
     // TODO implement getter for the other tactics
   }
@@ -126,9 +116,17 @@ object KeYmaeraInterface {
       case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId))
   }
 
-  def getTactics: List[(Int, String)] = TacticManagement.getTactics
+  def addTactic(id : String, t : Tactic) = {
+    TacticManagement.addTactic(id, t)
+  }
 
-  def getPositionTactics: List[(Int, String)] = TacticManagement.getPositionTactics
+  def addPositionTactic(id : String, t : PositionTactic) = {
+    TacticManagement.addPositionTactic(id, t)
+  }
+
+  def getTactics: List[(String, String)] = TacticManagement.getTactics
+
+  def getPositionTactics: List[(String, String)] = TacticManagement.getPositionTactics
 
   /**
    *
@@ -139,7 +137,7 @@ object KeYmaeraInterface {
    * @param tId the ID of the dispatched tactic
    * @param callBack callback executed when the tactic finishes
    */
-  def runTactic(taskId: String, nodeId: Option[String], tacticId: Int, formulaId: Option[String], tId: String, callBack: Option[String => ((String, Option[String], Int) => Unit)] = None) = {
+  def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String, callBack: Option[String => ((String, Option[String], String) => Unit)] = None) = {
     (nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id)
       case None => TaskManagement.getRoot(taskId)

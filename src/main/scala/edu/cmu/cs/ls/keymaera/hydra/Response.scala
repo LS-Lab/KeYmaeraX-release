@@ -137,9 +137,10 @@ class ProofTasksResponse(tasks : List[TaskPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
-class ApplicableTacticsResponse(tactics : List[TacticsPOJO]) extends Response {
+class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   val objects = tactics.map(tactic => JsObject(
-    "id" -> JsString(tactic.tacticsId)
+    "id" -> JsString(tactic.tacticId),
+    "name" -> JsString(tactic.name)
   ))
 
   val json = JsArray(objects)

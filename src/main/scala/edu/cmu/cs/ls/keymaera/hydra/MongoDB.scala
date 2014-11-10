@@ -204,6 +204,48 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Tactics
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String = {
+    val query = MongoDBObject(
+      "name"    -> name,
+      "clazz"   -> clazz,
+      "kind"    -> kind.toString()
+    )
+    tactics.insert(query)
+    query.get("_id").toString()
+  }
+  def getTactic(id: String) : TacticPOJO = {
+    val query = MongoDBObject("_id" -> new ObjectId(id))
+    val results = dispatchedTactics.find(query)
+    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
+    results.map(result => new TacticPOJO(
+      result.getAs[ObjectId]("_id").orNull.toString(),
+      result.getAs[String]("name").getOrElse(""),
+      result.getAs[String]("clazz").getOrElse(""),
+      TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
+    )).toList.last
+  }
+  def getTacticByName(name: String) : Option[TacticPOJO] = {
+    val query = MongoDBObject("name" -> name)
+    val results = dispatchedTactics.find(query)
+    if(results.length > 1) ??? //TODO handle db errors
+    if (results.length < 1) None
+    else Some(results.map(result => new TacticPOJO(
+      result.getAs[ObjectId]("_id").orNull.toString(),
+      result.getAs[String]("name").getOrElse(""),
+      result.getAs[String]("clazz").getOrElse(""),
+      TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
+    )).toList.last)
+  }
+  override def getTactics() : List[TacticPOJO] = {
+    val results = tactics.find()
+    results.map(result => new TacticPOJO(
+      result.getAs[ObjectId]("_id").orNull.toString(),
+      result.getAs[String]("name").getOrElse(""),
+      result.getAs[String]("clazz").getOrElse(""),
+      TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
+    )).toList
+  }
+
   override def createDispatchedTactics(taskId:String, nodeId:String, formulaId:String, tacticsId:String) : String = {
     val query = MongoDBObject(
       "taskId"       -> taskId,
@@ -214,12 +256,12 @@ object MongoDB extends DBAbstraction {
     dispatchedTactics.insert(query)
     query.get("_id").toString()
   }
-  override def getDispatchedTactics(tId : String) : DispatchedTacticsPOJO = {
+  override def getDispatchedTactics(tId : String) : DispatchedTacticPOJO = {
     val query = MongoDBObject("_id" -> new ObjectId(tId))
     val results = dispatchedTactics.find(query)
     if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
-    results.map(result => new DispatchedTacticsPOJO(
-      result.getAs[String]("_id").getOrElse(""),
+    results.map(result => new DispatchedTacticPOJO(
+      result.getAs[ObjectId]("_id").orNull.toString(),
       result.getAs[String]("taskId").getOrElse(""),
       result.getAs[String]("nodeId").getOrElse(""),
       result.getAs[String]("formulaId").getOrElse(""),

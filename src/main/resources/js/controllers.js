@@ -53,15 +53,17 @@ keymaeraProofControllers.factory('Tasks', function () {
 
 keymaeraProofControllers.factory('Tactics', function () {
 
-    var tactics = [
-        // TODO add rules, move into own file
-        { "id" : "0",
-          "latex" : "\\(\\left[\\rightarrow r \\right] \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
-        },
-        { "id" : "1",
-          "latex" : "\\(\\left[\\wedge l \\right] \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
-        }
-    ];
+    var tactics = {
+        "keymaera.imply-left" :
+            // TODO add rules, move into own file
+            { "name" : "keymaera.imply-left",
+              "latex" : "\\(\\left[\\rightarrow r \\right] \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
+            },
+        "keymaera.and-left" :
+            { "name" : "keymaera.and-left",
+              "latex" : "\\(\\left[\\wedge l \\right] \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
+            }
+    };
 
     return {
         getTactics: function() {
@@ -236,8 +238,8 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   $http.get("proofs/user/" + $cookies.userId + "/" + proofid + "/nodes/" + nodeid + "/formulas/" + formulaid + "/tactics").success(function(data) {
       $scope.tactics = [];
       for (var i = 0; i < data.length; i++) {
-          var tacticid = data[i].id;
-          var tactic = Tactics.getTactics()[tacticid];
+          var tacticName = data[i].name;
+          var tactic = Tactics.getTactics()[tacticName];
           $scope.tactics.push(tactic);
       }
   });

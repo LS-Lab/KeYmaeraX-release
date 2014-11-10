@@ -123,7 +123,7 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
 
 class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, formulaId : String) extends Request {
   def getResultingResponses() = {
-    val tactics = new TacticsPOJO("0") :: Nil// TODO implement
+    val tactics = new TacticPOJO("0", "keymaera.imply-left", "", TacticKind.PositionTactic) :: Nil// TODO implement
     new ApplicableTacticsResponse(tactics) :: Nil
   }
 }
@@ -131,12 +131,12 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 class RunTacticRequest(db : DBAbstraction, userId : String, taskId : String, nodeId : String, formulaId : String, tacticId : String) extends Request {
   def getResultingResponses() = {
     val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId)
-    KeYmaeraInterface.runTactic(taskId, Some(nodeId), tacticId.toInt, Some(formulaId), tId,
+    KeYmaeraInterface.runTactic(taskId, Some(nodeId), tacticId, Some(formulaId), tId,
       Some(tacticCompleted(db, nodeId)))
     new TacticDispatchedResponse(taskId, nodeId, tacticId, tId) :: Nil
   }
 
-  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: Int) {
+  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
     KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
       case Some(s) =>
         // s is JSON representation of the subtree

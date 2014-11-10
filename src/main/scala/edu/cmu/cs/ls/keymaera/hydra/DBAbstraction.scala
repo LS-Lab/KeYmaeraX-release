@@ -4,12 +4,15 @@ import edu.cmu.cs.ls.keymaera.core.{Sequent, ProofNode}
 
 
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
-
+object TacticKind extends Enumeration {
+  type TacticKind = Value
+  val Tactic, PositionTactic, InputTactic, InputPositionTactic, UserTactic = Value
+}
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
 class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
 class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val proofId:String)
-class TacticsPOJO(val tacticsId:String)
-class DispatchedTacticsPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)
+class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
+class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)
 
 /**
  * Proof database
@@ -50,6 +53,10 @@ trait DBAbstraction {
   def updateTask(task: TaskPOJO)
 
   // Tactics
+  def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String
+  def getTactic(id: String) : TacticPOJO
+  def getTacticByName(name: String) : Option[TacticPOJO]
+  def getTactics() : List[TacticPOJO]
   def createDispatchedTactics(taskId:String, nodeId:String, formulaId:String, tacticsId:String) : String
-  def getDispatchedTactics(tId : String) : DispatchedTacticsPOJO
+  def getDispatchedTactics(tId : String) : DispatchedTacticPOJO
 }

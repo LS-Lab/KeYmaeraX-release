@@ -23,7 +23,8 @@ class RestApiActor extends Actor with RestApi {
  * RestApi is the API router. See REAMDE.md for a description of the API.
  */
 trait RestApi extends HttpService {
-  val database = MongoDB //Not sure when or where to create this...
+  val database = MongoDB //Not sure when or where to create this... (should be part of Boot?)
+  val keymaeraInitializer = new KeYmaeraInitializer(database)
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper Methods
