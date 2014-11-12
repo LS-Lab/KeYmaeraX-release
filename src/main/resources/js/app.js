@@ -5,7 +5,6 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'angularTreeview',
   'ui.bootstrap',
   'keymaeraProofControllers',
-  'treeControl',
   'progressMeter',
   'proofProgressChart',
   'formula',
@@ -42,14 +41,14 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/proof-list.html',
         controller: 'ProofListCtrl'
       }).
-      when('/test', {
-        templateUrl: 'partials/test.html',
-        controller: 'TestCtrl'
-      }).
       when('/proofs/:proofId', {
         //templateUrl: 'partials/proof-detail.html',
         templateUrl: 'partials/proof.html',
         controller: 'ProofCtrl'
+      }).
+      when('/dev', {
+        templateUrl: 'partials/dev.html',
+        controller: 'DevCtrl'
       }).
       otherwise({
         redirectTo: '/dashboard'

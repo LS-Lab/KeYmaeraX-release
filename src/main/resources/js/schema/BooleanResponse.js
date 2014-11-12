@@ -1,5 +1,5 @@
 {
-    "title" : "Boolean Response",
+    "title" : "BooleanResponse",
     "type" : "object",
     "properties" : {
         "success" : {

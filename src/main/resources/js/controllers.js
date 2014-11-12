@@ -211,6 +211,13 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.tasks = data;
     });
 
+    // Get & populate the tree.
+    $scope.treedata = [];
+    $http.get("/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
+        .success(function(data) {
+            data.map(function(x) { $scope.treedata.push(x) })
+        });
+
     $scope.setSelected = function(task) {
         $scope.selectedTask = task;
     }
@@ -270,28 +277,16 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Testing...
+// Development Tools -- these can be removed before release.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-keymaeraProofControllers.controller('TestCtrl',
+keymaeraProofControllers.controller('DevCtrl',
   function ($scope, $http, $cookies, $routeParams) {
-    $scope.treedata =
-    [
-        {
-            "label" : "User",
-            "id" : "role1",
-            "children" : [
-                { "label" : "subUser1", "id" : "role11", "children" : [] },
-                { "label" : "subUser2", "id" : "role12", "children" : [
-                    { "label" : "subUser2-1", "id" : "role121", "children" : [
-                        { "label" : "subUser2-1-1", "id" : "role1211", "children" : [] },
-                        { "label" : "subUser2-1-2", "id" : "role1212", "children" : [] }
-                    ]}
-            ]}
-            ]
-        },
-        { "label" : "Admin", "id" : "role2", "children" : [] },
-        { "label" : "Guest", "id" : "role3", "children" : [] }
-    ];
-  });
+    $scope.deletedb = function() {
+        $http.get("/dev/deletedb")
+            .success(function(data) {
+                alert("Database cleared.")
+            })
+    }
+});
 

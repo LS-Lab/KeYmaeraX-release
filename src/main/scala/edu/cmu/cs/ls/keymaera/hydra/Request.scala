@@ -184,11 +184,25 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, ta
 
 
 class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request{
+  private val dummyData = {
+    val a = PredicateConstant("a")
+    val b = PredicateConstant("b")
+    val formulaToProve = Imply(And(a,b), a)
+    val proof : ProofNode = new RootNode(
+      new Sequent(
+        Nil,
+        Vector(),
+        Vector(formulaToProve)
+      )
+    )
+    proof
+  }
+
   override def getResultingResponses(): List[Response] = {
     //TODO load the actual proof here.
-    val proof : ProofNode = new RootNode(new Sequent(Nil, Vector(new PredicateConstant("a", None)), Vector(new PredicateConstant("a", None))))
-    TacticInterface.runSynchronizedTactic(proof)
-    new AngularTreeViewResponse(proof) :: Nil
+    val node = dummyData
+    TacticInterface.runSynchronizedTactic(node)
+    new AngularTreeViewResponse(node) :: Nil
   }
 }
 

@@ -66,6 +66,7 @@ trait RestApi extends HttpService {
 
   //The static directory.
   val staticRoute = pathPrefix("") { get { getFromResourceDirectory("") } }
+  val homePage = path("") { get {getFromResource("index_bootstrap.html")}}
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -197,12 +198,25 @@ trait RestApi extends HttpService {
     }
   }}
 
+  val devAction = path("dev" / Segment) { (action) => {
+    get {
+      if(action.equals("deletedb")) {
+        database.cleanup()
+        complete("{}")
+      }
+      else {
+        complete("{}")
+      }
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   val routes =
     staticRoute           ::
+    homePage              ::
     users                 ::
     modelList             ::
     userModel             ::
@@ -215,6 +229,7 @@ trait RestApi extends HttpService {
     nodeFormulaTactics    ::
     nodeRunTactics        ::
     proofTree             ::
+    devAction             ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }
