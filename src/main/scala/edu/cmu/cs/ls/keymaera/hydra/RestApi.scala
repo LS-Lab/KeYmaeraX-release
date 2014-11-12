@@ -207,6 +207,18 @@ trait RestApi extends HttpService {
     }
   }}
 
+  val devAction = path("dev" / Segment) { (action) => {
+    get {
+      if(action.equals("deletedb")) {
+        database.cleanup()
+        complete("{}")
+      }
+      else {
+        complete("{}")
+      }
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -227,6 +239,7 @@ trait RestApi extends HttpService {
     rootNodeRunTactics    ::
     nodeRunTactics        ::
     proofTree             ::
+    devAction             ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

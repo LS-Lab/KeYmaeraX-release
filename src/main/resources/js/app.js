@@ -51,6 +51,10 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/proof.html',
         controller: 'ProofCtrl'
       }).
+      when('/dev', {
+        templateUrl: 'partials/dev.html',
+        controller: 'DevCtrl'
+      }).
       otherwise({
         redirectTo: '/dashboard'
       });

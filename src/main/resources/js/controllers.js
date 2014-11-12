@@ -211,6 +211,13 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.tasks = data;
     });
 
+    // Get & populate the tree.
+    $scope.treedata = [];
+    $http.get("/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
+        .success(function(data) {
+            data.map(function(x) { $scope.treedata.push(x) })
+        });
+
     $scope.setSelected = function(task) {
         $scope.selectedTask = JSON.parse(task);
     }
@@ -266,6 +273,16 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Testing...
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('DevCtrl',
+  function ($scope, $http, $cookies, $routeParams) {
+    $scope.deletedb = function() {
+        $http.get("/dev/deletedb")
+            .success(function(data) {
+                alert("Database cleared.")
+            })
+    }
+});
 
 keymaeraProofControllers.controller('TestCtrl',
   function ($scope, $http, $cookies, $routeParams) {

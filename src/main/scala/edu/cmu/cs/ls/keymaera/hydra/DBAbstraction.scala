@@ -9,7 +9,7 @@ object TacticKind extends Enumeration {
   val Tactic, PositionTactic, InputTactic, InputPositionTactic, UserTactic = Value
 }
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
-class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
+class ProofPOJO(val proofId:String, val modelId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
 class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val proofId:String)
 class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
 class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)

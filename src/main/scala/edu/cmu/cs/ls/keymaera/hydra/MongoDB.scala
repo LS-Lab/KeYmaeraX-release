@@ -133,8 +133,8 @@ object MongoDB extends DBAbstraction {
     if(results.length > 1) ??? //There should only be one response b/c _id is a pk.
     if(results.length < 1) throw new Exception(proofId + " is a bad proofId!")
     results.map(result => new ProofPOJO(
-      result.getAs[String]("modelId").getOrElse(""),
       result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+      result.getAs[String]("modelId").getOrElse(""),
       result.getAs[String]("name").getOrElse(""),
       result.getAs[String]("description").getOrElse("") ,
       result.getAs[String]("date").getOrElse(""),
