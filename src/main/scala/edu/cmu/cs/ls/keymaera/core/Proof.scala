@@ -275,6 +275,12 @@ object Sequent {
     val tacticInfo: ProofNodeInfo = new ProofNodeInfo(if(parent == null) Map() else parent.tacticInfo.infos, this)
 
     override def toString = "ProofNode(" + sequent + "\nfrom " + parent + ")"
+
+    /**
+     * @return true iff the node is closed.
+     */
+    def isClosed(): Boolean =
+      children.map((f: ProofStep) =>  f.subgoals.foldLeft(true)(_ && _.isClosed())).contains(true)
   }
 
   /**
