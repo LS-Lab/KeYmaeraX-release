@@ -59,6 +59,21 @@ object TacticLibrary {
     ) ~ arithmeticT
   }
 
+  /**
+   * Master tactic without arith.
+   */
+  def noArith(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
+    def repeat(t: Tactic):Tactic = if(exhaustive) repeatT(t) else t
+    repeat(closeT
+      | locateSuccAnte(indecisive(false, true, true))
+      | locateSuccAnte(indecisive(true, true, true))
+      | locateSucc(genInductionT(invGenerator))
+      | eqLeftFind
+      | locateSucc(differentialInduction)
+      | locateSuccAnte(indecisive(true, true, true, true))
+    )
+  }
+  def defaultNoArith = noArith(new NoneGenerate(), true)
 
   /**
    * Make a step in a proof at the given position (except when decision needed)

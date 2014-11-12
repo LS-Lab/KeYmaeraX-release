@@ -8,7 +8,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 
 import edu.cmu.cs.ls.keymaera.api.{KeYmaeraInterface, KeYmaeraInterface2}
-import edu.cmu.cs.ls.keymaera.core.{ProofStepInfo, Formula, KeYmaera}
+import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 /**
@@ -154,6 +154,18 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, ta
     }
   }
 }
+
+
+class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request{
+  override def getResultingResponses(): List[Response] = {
+    //TODO load the actual proof here.
+    val proof : ProofNode = new RootNode(new Sequent(Nil, Vector(new PredicateConstant("a", None)), Vector(new PredicateConstant("a", None))))
+    TacticInterface.runSynchronizedTactic(proof)
+    new AngularTreeViewResponse(proof) :: Nil
+  }
+}
+
+
 
 //
 //

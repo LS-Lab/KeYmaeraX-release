@@ -20,6 +20,9 @@ unmanagedJars in Compile += file("/Applications/Mathematica.app/SystemFiles/Link
 // Hyrda Settings
 // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt
 ////////////////////////////////////////////////////////////////////////////////
+
+resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/" // contains json-schema-validtor.
+
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
 libraryDependencies ++= {
@@ -32,7 +35,8 @@ libraryDependencies ++= {
     "io.spray"            %   "spray-testkit" % sprayV  % "test",
     "com.typesafe.akka"   %%  "akka-actor"    % akkaV,
     "com.typesafe.akka"   %%  "akka-testkit"  % akkaV   % "test",
-    "org.specs2"          %%  "specs2"        % "2.2.3" % "test"
+    "org.specs2"          %%  "specs2"        % "2.2.3" % "test",
+    "com.github.fge"      % "json-schema-validator" % "2.2.6" // only update to even-numbered versions please.
   )
 }
 
