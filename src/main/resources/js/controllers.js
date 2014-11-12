@@ -243,7 +243,8 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   $scope.formula = formula;
   $scope.tactics = [];
 
-  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/tasks/' + taskId + '/nodes/' + nodeId + '/formulas/' + formula.id + '/tactics'
+  var fId = if (formula !== undefined) formula.id else "sequent"
+  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/tasks/' + taskId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
   $http.get(uri).success(function(data) {
       for (var i = 0; i < data.length; i++) {
           var tacticName = data[i].name;
