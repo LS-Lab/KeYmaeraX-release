@@ -134,7 +134,7 @@ object KeYmaeraInterface {
    * @param nodeId the proof node on which to run the tactic (None to execute on the root node)
    * @param tacticId the tactic to dispatch
    * @param formulaId the formula (None to execute on the sequent)
-   * @param tId the ID of the dispatched tactic
+   * @param tId the ID of the dispatched tactic instance
    * @param callBack callback executed when the tactic finishes
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String, callBack: Option[String => ((String, Option[String], String) => Unit)] = None) = {

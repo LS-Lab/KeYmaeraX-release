@@ -207,7 +207,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
   function($scope, $http, $cookies, $routeParams, Tasks) {
     $scope.proofId = $routeParams.proofId;
 
-    $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + "/tasks").success(function(data) {
+    $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + '/tasks').success(function(data) {
         $scope.tasks = data;
     });
 
@@ -229,13 +229,19 @@ keymaeraProofControllers.controller('TaskListCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('ProofRuleDialogCtrl',
-        function ($scope, $http, $cookies, $modalInstance, proofid, nodeid, formulaid, formula, Tactics) {
+        function ($scope, $http, $cookies, $modalInstance, proofid, taskid, nodeid, formulaid, formula, Tactics) {
   $scope.proofid = proofid;
+  $scope.taskid = taskid;
   $scope.nodeid = nodeid;
   $scope.formulaid = formulaid;
   $scope.formula = formula;
 
-  $http.get("proofs/user/" + $cookies.userId + "/" + proofid + "/nodes/" + nodeid + "/formulas/" + formulaid + "/tactics").success(function(data) {
+  var uriPrefix = 'proofs/user/' + $cookies.userId + '/' + proofid + '/tasks/' + taskid;
+  var uri =
+    (nodeid !== undefined) ? ('/nodes/' + nodeid + '/formulas/' + formulaid + '/tactics')
+                           : ('/formulas/' + formulaid + '/tactics');
+
+  $http.get(uriPrefix + uri).success(function(data) {
       $scope.tactics = [];
       for (var i = 0; i < data.length; i++) {
           var tacticName = data[i].name;
@@ -245,7 +251,7 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   });
 
   $scope.applyTactics = function(t) {
-    $http.post("proofs/user/" + $cookies.userId + "/" + proofid + "/nodes/" + nodeid + "/formulas/" + formulaid + "/tactics/run/" + t.id)
+    $http.post(uriPrefix + uri + "/run/" + t.id)
             .success(function(data) {
         alert("Tactic dispatched: " + data)
     });

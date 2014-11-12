@@ -121,19 +121,24 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
   }
 }
 
-class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : String, formulaId : String) extends Request {
+class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String) extends Request {
   def getResultingResponses() = {
+
     val tactics = new TacticPOJO("0", "keymaera.imply-left", "", TacticKind.PositionTactic) :: Nil// TODO implement
     new ApplicableTacticsResponse(tactics) :: Nil
   }
 }
 
-class RunTacticRequest(db : DBAbstraction, userId : String, taskId : String, nodeId : String, formulaId : String, tacticId : String) extends Request {
+class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String, tacticId : String) extends Request {
   def getResultingResponses() = {
-    val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId)
-    KeYmaeraInterface.runTactic(taskId, Some(nodeId), tacticId, Some(formulaId), tId,
-      Some(tacticCompleted(db, nodeId)))
-    new TacticDispatchedResponse(taskId, nodeId, tacticId, tId) :: Nil
+    val nid = nodeId match {
+      case Some(nid) => nid
+      case None => taskId // task is root node
+    }
+    val tId = db.createDispatchedTactics(taskId, nid, formulaId, tacticId)
+    KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, Some(formulaId), tId,
+      Some(tacticCompleted(db, nid)))
+    new TacticDispatchedResponse(proofId, taskId, nid, tacticId, tId) :: Nil
   }
 
   private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
@@ -145,7 +150,7 @@ class RunTacticRequest(db : DBAbstraction, userId : String, taskId : String, nod
         } else {
           db.updateSubtree(nodeId, s)
         }
-      case None => /* log */
+      case None => ???/* log */
     }
   }
 }

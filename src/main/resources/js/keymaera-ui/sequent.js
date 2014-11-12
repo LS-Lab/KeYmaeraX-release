@@ -4,6 +4,7 @@ angular.module('sequent', ['ngSanitize','formula'])
         restrict: 'AE',
         scope: {
             proofid: '=',
+            taskid: '=',
             nodeid: '=',
             sequent: '='
         },
@@ -15,8 +16,9 @@ angular.module('sequent', ['ngSanitize','formula'])
                   controller: 'ProofRuleDialogCtrl',
                   size: 'lg',
                   resolve: {
-                    proofid: function () { return $scope.proofid; },
-                    nodeid: function () { return $scope.nodeid; },
+                    proofid: function() { return $scope.proofid; },
+                    taskid: function() { return $scope.taskid; },
+                    nodeid: function() { return $scope.nodeid; },
                     formulaid: function() { return f.id; },
                     formula: function() { return f.formula; }
                   }
