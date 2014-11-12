@@ -4,7 +4,6 @@
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import spray.json._
