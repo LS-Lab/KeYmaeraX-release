@@ -4,18 +4,47 @@
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.github.fge.jackson.JsonLoader
+import com.github.fge.jsonschema.main.JsonSchemaFactory
 import spray.json._
 import edu.cmu.cs.ls.keymaera.core.{ProofStep, ProofNode, Expr, Sequent}
+import java.io.File
 
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
  * formatted JSON from their parameters.
  */
 sealed trait Response {
-  val json : JsValue
+  protected val json: JsValue
+  val schema: Option[java.io.File] = None
+
+  def getJson() = {
+    validate();
+    json
+  }
+
+  def validate() = {
+    schema match {
+      case None => true //OK.
+      case Some(file) => {
+        val schema = JsonSchemaFactory.byDefault().getJsonSchema(
+          JsonLoader.fromFile(file)
+        )
+        val report = schema.validate(JsonLoader.fromString(json.prettyPrint))
+        if (report.isSuccess())
+          true
+        else {
+          throw new Exception("json schema violation.")
+        }
+      }
+    }
+  }
 }
 
 class BooleanResponse(flag : Boolean) extends Response {
+  override val schema = Some(new File("src/main/resources/js/schema/BooleanResponse.js"))
+
   val json = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
     "type" -> JsNull
@@ -159,15 +188,14 @@ class AngularTreeViewResponse(root : ProofNode) extends Response {
 
   private def nodeToJson(p : ProofNode) : JsValue = {
     assert(p.children.length == 1) // when we allow for or-branching, this becomes false and the logic must change.
-    val nodeLabel = p.children.last.rule.name
-    val nodeId    = "" //not sure what should happen here... how do we refer to a node/step?
-    val children = p.children.last.subgoals
-    val childrenJson = JsArray( children.map(n => nodeToJson(n)) )
+    val step = p.children.last
 
     val sequent = p.sequent.toString() //TODO pass in actual json
 
-    JsObject("id" -> JsString(nodeId),
-      "label" -> JsString(nodeLabel),
-      "children" -> childrenJson)
+    //TODO
+    JsObject("id"       -> JsString(""),
+             "label"    -> JsString(step.rule.name),
+             "children" -> JsArray( step.subgoals.map(n => nodeToJson(n)) )
+    )
   }
 }

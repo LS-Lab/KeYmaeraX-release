@@ -50,9 +50,9 @@ trait RestApi extends HttpService {
   private def standardCompletion(r : Request) : String = {
     val responses = r.getResultingResponses()
     responses match {
-      case hd :: Nil => hd.json.prettyPrint
+      case hd :: Nil => hd.getJson().prettyPrint
       case _         =>
-        responses.foldLeft("[")( (prefix, response) => prefix + "," + response.json.prettyPrint) + "]"
+        responses.foldLeft("[")( (prefix, response) => prefix + "," + response.getJson().prettyPrint) + "]"
     }
   }
 
@@ -75,7 +75,7 @@ trait RestApi extends HttpService {
     pathEnd {
       get {
         val request = new LoginRequest(database,username,password)
-        complete(request.getResultingResponses().last.json.prettyPrint)
+        complete(request.getResultingResponses().last.getJson().prettyPrint)
       } ~
       post {
         val request = new CreateUserRequest(database, username, password)
@@ -164,6 +164,7 @@ trait RestApi extends HttpService {
     }
   }}}
 
+
   val proofTasks = path("proofs" / "user" / Segment / Segment / "tasks") { (userId, proofId) => { pathEnd {
     get {
       val request = new GetProofTasksRequest(database, userId, proofId)
@@ -189,6 +190,13 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val proofTree = path("proofs" / "user" / Segment / Segment / "tree") { (userId, proofId) => {
+    get {
+      val request = new GetProofTreeRequest(database, userId, proofId)
+      complete(standardCompletion(request))
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -206,6 +214,7 @@ trait RestApi extends HttpService {
     proofTasks            ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
+    proofTree             ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }
