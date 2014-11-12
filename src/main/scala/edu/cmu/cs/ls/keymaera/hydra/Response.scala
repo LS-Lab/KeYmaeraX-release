@@ -14,8 +14,19 @@ import java.io.File
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
  * formatted JSON from their parameters.
+ *
+ * To create a new response:
+ * <ol>
+ *   <li>Create a new object extending Response (perhaps with constructor arguments)</li>
+ *   <li>override the json value with the json to be generated.</li>
+ *   <li>override the schema value with Some(File(...)) containing the schema.</li>
+ * </ol>
+ *
+ * See BooleanResponse for the simplest example.
  */
 sealed trait Response {
+  protected val SCHEMA_DIRECTORY = "src/main/resources/js/schema/"
+
   protected val json: JsValue
   val schema: Option[java.io.File] = None
 
@@ -43,7 +54,7 @@ sealed trait Response {
 }
 
 class BooleanResponse(flag : Boolean) extends Response {
-  override val schema = Some(new File("src/main/resources/js/schema/BooleanResponse.js"))
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "BooleanResponse.js"))
 
   val json = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
@@ -180,18 +191,16 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
  * @return JSON that is directly usable by angular.treeview
  */
 class AngularTreeViewResponse(root : ProofNode) extends Response {
-  val json = nodeToJson(root)
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "angular.treeview.js"))
+
+  val json = JsArray( nodeToJson(root) )
 
   private def nodeToJson(p : ProofNode) : JsValue = {
-    assert(p.children.length == 1) // when we allow for or-branching, this becomes false and the logic must change.
     val step = p.children.last
 
-    val sequent = p.sequent.toString() //TODO pass in actual json
-
-    //TODO
     JsObject("id"       -> JsString(""),
              "label"    -> JsString(step.rule.name),
-             "children" -> JsArray( step.subgoals.map(n => nodeToJson(n)) )
-    )
+             "children" -> JsArray(step.subgoals.map(n => nodeToJson(n))))
+
   }
 }

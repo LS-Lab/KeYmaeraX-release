@@ -269,23 +269,13 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
 
 keymaeraProofControllers.controller('TestCtrl',
   function ($scope, $http, $cookies, $routeParams) {
-    $scope.treedata =
-    [
-        {
-            "label" : "User",
-            "id" : "role1",
-            "children" : [
-                { "label" : "subUser1", "id" : "role11", "children" : [] },
-                { "label" : "subUser2", "id" : "role12", "children" : [
-                    { "label" : "subUser2-1", "id" : "role121", "children" : [
-                        { "label" : "subUser2-1-1", "id" : "role1211", "children" : [] },
-                        { "label" : "subUser2-1-2", "id" : "role1212", "children" : [] }
-                    ]}
-            ]}
-            ]
-        },
-        { "label" : "Admin", "id" : "role2", "children" : [] },
-        { "label" : "Guest", "id" : "role3", "children" : [] }
-    ];
+  $scope.treedata = [];
+    $http.get("/proofs/user/a/1/tree")
+        .success(function(data) {
+            alert("ok")
+            alert(JSON.stringify(data))
+            data.map(function(x) { $scope.treedata.push(x) })
+        })
+
   });
 
