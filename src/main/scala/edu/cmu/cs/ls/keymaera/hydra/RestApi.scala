@@ -173,16 +173,18 @@ trait RestApi extends HttpService {
 
   val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, nodeId, formulaId) => { pathEnd {
     get {
-      val nid = if (taskId.equals(nodeId)) None else Some(nodeId)
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, nid, formulaId)
+      val nId = if (taskId.equals(nodeId)) None else Some(nodeId)
+      val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
+      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, nId, fId)
       complete(standardCompletion(request))
     }
   }}}
 
   val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
-      val nid = if (taskId.equals(nodeId)) None else Some(nodeId)
-      val request = new RunTacticRequest(database, userId, proofId, taskId, nid, formulaId, tacticId)
+      val nId = if (taskId.equals(nodeId)) None else Some(nodeId)
+      val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
+      val request = new RunTacticRequest(database, userId, proofId, taskId, nId, fId, tacticId)
       complete(standardCompletion(request))
     }
   }}}

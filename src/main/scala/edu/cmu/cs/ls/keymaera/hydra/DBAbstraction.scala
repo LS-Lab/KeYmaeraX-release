@@ -8,8 +8,29 @@ object TacticKind extends Enumeration {
   type TacticKind = Value
   val Tactic, PositionTactic, InputTactic, InputPositionTactic, UserTactic = Value
 }
+
+/**
+ * Data object for models.
+ * @param modelId Identifies the model.
+ * @param userId Identifies the user.
+ * @param name The name of the model.
+ * @param date The creation date.
+ * @param keyFile The model file content.
+ */
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
-class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
+
+/**
+ * Data object for proofs. A proof
+ * @param modelId Identifies the model.
+ * @param proofId Identifies the proof.
+ * @param name The proof name.
+ * @param description A proof description.
+ * @param date The creation date.
+ * @param stepCount The number of proof steps in the proof.
+ * @param closed Indicates whether the proof is closed (finished proof) or not (partial proof).
+ */
+class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String,
+                val date:String, val stepCount : Integer, val closed : Boolean)
 
 /**
  * Data object for tasks.
@@ -20,8 +41,25 @@ class ProofPOJO(val modelId:String, val proofId:String, val name:String, val des
  * @param proofId Identifies the proof.
  */
 class TaskPOJO(val taskId:String, val nodeId:Option[String], val task:String, val rootTaskId:String, val proofId:String)
+
+/**
+ * Data object for tactics.
+ * @param tacticId Identifies the tactic.
+ * @param name The name of the tactic.
+ * @param clazz The tactic implementation.
+ * @param kind The kind of tactic.
+ */
 class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
-class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)
+
+/**
+ * Data object for a tactic instance running on the specified formula of a particular task (node).
+ * @param id Identifies the tactic instance.
+ * @param taskId Identifies the task.
+ * @param nodeId Identifies the node. If None, it identifies the "root" node of task nodes.
+ * @param formulaId Identifies the formula.
+ * @param tacticsId Identifies the tactic that is being run.
+ */
+class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:Option[String], val formulaId:Option[String], val tacticsId:String)
 
 /**
  * Proof database
@@ -66,6 +104,6 @@ trait DBAbstraction {
   def getTactic(id: String) : TacticPOJO
   def getTacticByName(name: String) : Option[TacticPOJO]
   def getTactics() : List[TacticPOJO]
-  def createDispatchedTactics(taskId:String, nodeId:String, formulaId:String, tacticsId:String) : String
+  def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String) : String
   def getDispatchedTactics(tId : String) : DispatchedTacticPOJO
 }

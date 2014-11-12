@@ -252,9 +252,11 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
     });
   }
   $scope.autoTactic = function() {
+    // run on formula "sequent"
     alert("Auto")
   }
   $scope.stepTactic = function(f) {
+    // if f undefined, run on formula "sequent"
     alert("Step")
   }
   $scope.hideTactic = function(f) {

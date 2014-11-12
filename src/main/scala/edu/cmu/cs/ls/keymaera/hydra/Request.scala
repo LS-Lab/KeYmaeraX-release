@@ -137,11 +137,11 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
  * @param nodeId Identifies the node. If None, request the tactics of the "root" node of the task.
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  */
-class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String) extends Request {
+class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : Option[String]) extends Request {
   def getResultingResponses() = {
-
-    val tactics = new TacticPOJO("0", "keymaera.imply-left", "", TacticKind.PositionTactic) :: Nil// TODO implement
-    new ApplicableTacticsResponse(tactics) :: Nil
+    val applicableTactics = KeYmaeraInterface.getApplicableTactics(taskId, nodeId, formulaId)
+      .map(tId => db.getTactic(tId)).toList
+    new ApplicableTacticsResponse(applicableTactics) :: Nil
   }
 }
 
@@ -156,14 +156,14 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  * @param tacticId Identifies the tactic to run.
  */
-class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String, tacticId : String) extends Request {
+class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : Option[String], tacticId : String) extends Request {
   def getResultingResponses() = {
     val nid = nodeId match {
       case Some(nodeId) => nodeId
       case None => taskId
     }
-    val tId = db.createDispatchedTactics(taskId, nid, formulaId, tacticId)
-    KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, Some(formulaId), tId,
+    val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId)
+    KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, formulaId, tId,
       Some(tacticCompleted(db, nid)))
     new TacticDispatchedResponse(proofId, taskId, nid, tacticId, tId) :: Nil
   }

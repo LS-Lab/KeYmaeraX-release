@@ -261,13 +261,14 @@ object MongoDB extends DBAbstraction {
     )).toList
   }
 
-  override def createDispatchedTactics(taskId:String, nodeId:String, formulaId:String, tacticsId:String) : String = {
-    val query = MongoDBObject(
+  override def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String) : String = {
+    val fields = List(
       "taskId"       -> taskId,
-      "nodeId"       -> nodeId,
-      "formulaId"    -> formulaId,
-      "tacticsId"    -> tacticsId
-    )
+      "tacticsId"    -> tacticsId)
+    if (nodeId.isDefined) { fields :+ ("nodeId" -> nodeId) }
+    if (formulaId.isDefined) { fields :+ ("formulaId" -> formulaId) }
+
+    val query = MongoDBObject(fields)
     dispatchedTactics.insert(query)
     query.get("_id").toString()
   }
@@ -278,8 +279,8 @@ object MongoDB extends DBAbstraction {
     results.map(result => new DispatchedTacticPOJO(
       result.getAs[ObjectId]("_id").orNull.toString(),
       result.getAs[String]("taskId").getOrElse(""),
-      result.getAs[String]("nodeId").getOrElse(""),
-      result.getAs[String]("formulaId").getOrElse(""),
+      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
+      if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").getOrElse("")) else None,
       result.getAs[String]("tacticsId").getOrElse("")
     )).toList.last
   }
