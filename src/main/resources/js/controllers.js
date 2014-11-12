@@ -271,7 +271,7 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Testing...
+// Development Tools -- these can be removed before release.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('DevCtrl',
@@ -283,16 +283,4 @@ keymaeraProofControllers.controller('DevCtrl',
             })
     }
 });
-
-keymaeraProofControllers.controller('TestCtrl',
-  function ($scope, $http, $cookies, $routeParams) {
-  $scope.treedata = [];
-    $http.get("/proofs/user/a/1/tree")
-        .success(function(data) {
-            alert("ok")
-            alert(JSON.stringify(data))
-            data.map(function(x) { $scope.treedata.push(x) })
-        })
-
-  });
 

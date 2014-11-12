@@ -66,6 +66,7 @@ trait RestApi extends HttpService {
 
   //The static directory.
   val staticRoute = pathPrefix("") { get { getFromResourceDirectory("") } }
+  val homePage = path("") { get {getFromResource("index_bootstrap.html")}}
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -225,6 +226,7 @@ trait RestApi extends HttpService {
 
   val routes =
     staticRoute           ::
+    homePage              ::
     users                 ::
     modelList             ::
     userModel             ::
