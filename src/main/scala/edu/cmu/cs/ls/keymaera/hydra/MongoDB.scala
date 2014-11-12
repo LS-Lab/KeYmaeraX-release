@@ -156,12 +156,19 @@ object MongoDB extends DBAbstraction {
     query.get("_id").toString()
   }
   override def addTask(task : TaskPOJO) = {
-    val taskDbObject = MongoDBObject(
-      "_id"          -> task.taskId,
-      "task"         -> task.task,
-      "rootTaskId"   -> task.rootTaskId,
-      "proofId"      -> task.proofId
-    )
+    val taskDbObject = task.nodeId match {
+      case Some(n) => MongoDBObject(
+        "_id"          -> task.taskId,
+        "nodeId"       -> n,
+        "task"         -> task.task,
+        "rootTaskId"   -> task.rootTaskId,
+        "proofId"      -> task.proofId)
+      case None => MongoDBObject(
+        "_id"          -> task.taskId,
+        "task"         -> task.task,
+        "rootTaskId"   -> task.rootTaskId,
+        "proofId"      -> task.proofId)
+    }
 
     tasks.insert(taskDbObject)
   }
@@ -174,6 +181,7 @@ object MongoDB extends DBAbstraction {
     val result = results.toList.last
     new TaskPOJO(
       result.getAs[ObjectId]("_id").orNull.toString(),
+      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
       result.getAs[String]("task").getOrElse(""),
       result.getAs[String]("rootTaskId").getOrElse(""),
       result.getAs[String]("proofId").getOrElse("")
@@ -185,6 +193,7 @@ object MongoDB extends DBAbstraction {
     val results = tasks.find(query)
     results.map(result => new TaskPOJO(
       result.getAs[ObjectId]("_id").orNull.toString(),
+      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
       result.getAs[String]("task").getOrElse(""),
       result.getAs[String]("rootTaskId").getOrElse(""),
       result.getAs[String]("proofId").getOrElse("")
@@ -192,11 +201,17 @@ object MongoDB extends DBAbstraction {
   }
 
   override def updateTask(task: TaskPOJO) = {
-    val update = MongoDBObject(
-      "task"         -> task.task,
-      "rootTaskId"   -> task.rootTaskId,
-      "proofId"      -> task.proofId
-    )
+    val update = task.nodeId match {
+      case Some(n) => MongoDBObject(
+        "nodeId"       -> n,
+        "task"         -> task.task,
+        "rootTaskId"   -> task.rootTaskId,
+        "proofId"      -> task.proofId)
+      case None => MongoDBObject(
+        "task"         -> task.task,
+        "rootTaskId"   -> task.rootTaskId,
+        "proofId"      -> task.proofId)
+    }
     tasks.update(MongoDBObject("_id" -> new ObjectId(task.taskId)), update)
   }
 

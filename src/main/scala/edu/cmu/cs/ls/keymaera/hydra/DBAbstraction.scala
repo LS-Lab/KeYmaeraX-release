@@ -10,7 +10,16 @@ object TacticKind extends Enumeration {
 }
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
 class ProofPOJO(val modelId:String, val proofId:String, val name:String, val description:String, val date:String, val stepCount : Integer, val closed : Boolean)
-class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val proofId:String)
+
+/**
+ * Data object for tasks.
+ * @param taskId Identifies the task.
+ * @param nodeId Identifies the node. If None, it identifies the "root" node of task nodes.
+ * @param task The task description (a sequent in JSON format as created by the backend).
+ * @param rootTaskId Back link to the "root" node of task nodes.
+ * @param proofId Identifies the proof.
+ */
+class TaskPOJO(val taskId:String, val nodeId:Option[String], val task:String, val rootTaskId:String, val proofId:String)
 class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
 class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)
 

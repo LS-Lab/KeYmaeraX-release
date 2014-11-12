@@ -10,8 +10,8 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr ng-repeat="task in tasks" ng-click="setSelected(task.task)">
-                        <td>{{ task.id.substring(0,5) + ".." + task.id.substring(task.id.length-5) }}</td>
+                    <tr ng-repeat="task in tasks" ng-click="setSelected(task)">
+                        <td>{{ task.nodeId.substring(0,5) + ".." + task.nodeId.substring(task.nodeId.length-5) }}</td>
                     </tr>
                     </tbody>
                 </table>
@@ -19,6 +19,6 @@
         </div>
     </div>
     <div class="col-md-6" id="sequent" ng-if="selectedTask">
-        <k4-sequent proofid="proofId" taskid="selectedTask.id" sequent="selectedTask.sequent"></k4-sequent>
+        <k4-sequent proof-id="proofId" task-id="selectedTask.id" node-id="selectedTask.nodeId" sequent="selectedTask.task.sequent"></k4-sequent>
     </div>
 </div>

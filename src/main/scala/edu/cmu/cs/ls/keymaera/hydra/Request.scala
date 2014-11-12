@@ -95,7 +95,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
     val keyFile = db.getModel(modelId).keyFile
     val taskId = db.createTask(proofId)
     val taskJson = KeYmaeraInterface.addTask(taskId, keyFile)
-    db.updateTask(new TaskPOJO(taskId, taskJson, taskId, proofId))
+    db.updateTask(new TaskPOJO(taskId, None, taskJson, taskId, proofId))
 
     new CreatedIdResponse(proofId) :: Nil
   }
@@ -114,6 +114,12 @@ class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String)
   }
 }
 
+/**
+ * Gets all tasks of the specified proof.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ */
 class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val tasks = db.getProofTasks(proofId)
@@ -121,6 +127,16 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
   }
 }
 
+/**
+ * Searches for tactics that are applicable to the specified formula. The sequent, which contains this formula, is
+ * identified by the task ID and the node ID.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ * @param taskId Identifies the task.
+ * @param nodeId Identifies the node. If None, request the tactics of the "root" node of the task.
+ * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
+ */
 class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String) extends Request {
   def getResultingResponses() = {
 
@@ -129,11 +145,22 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
   }
 }
 
+/**
+ * Runs the specified tactic on the formula with the specified ID. The sequent, which contains this formula, is
+ * identified by the task ID and the node ID.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ * @param taskId Identifies the task.
+ * @param nodeId Identifies the node. If None, the tactic is run on the "root" node of the task.
+ * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
+ * @param tacticId Identifies the tactic to run.
+ */
 class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String, tacticId : String) extends Request {
   def getResultingResponses() = {
     val nid = nodeId match {
-      case Some(nid) => nid
-      case None => taskId // task is root node
+      case Some(nodeId) => nodeId
+      case None => taskId
     }
     val tId = db.createDispatchedTactics(taskId, nid, formulaId, tacticId)
     KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, Some(formulaId), tId,

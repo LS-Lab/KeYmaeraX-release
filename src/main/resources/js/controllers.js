@@ -212,7 +212,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
     });
 
     $scope.setSelected = function(task) {
-        $scope.selectedTask = JSON.parse(task);
+        $scope.selectedTask = task;
     }
 
     $scope.$watch('tasks',
@@ -229,20 +229,15 @@ keymaeraProofControllers.controller('TaskListCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('ProofRuleDialogCtrl',
-        function ($scope, $http, $cookies, $modalInstance, proofid, taskid, nodeid, formulaid, formula, Tactics) {
-  $scope.proofid = proofid;
-  $scope.taskid = taskid;
-  $scope.nodeid = nodeid;
-  $scope.formulaid = formulaid;
+        function ($scope, $http, $cookies, $modalInstance, proofId, taskId, nodeId, formula, Tactics) {
+  $scope.proofId = proofId;
+  $scope.taskId = taskId;
+  $scope.nodeId = nodeId;
   $scope.formula = formula;
+  $scope.tactics = [];
 
-  var uriPrefix = 'proofs/user/' + $cookies.userId + '/' + proofid + '/tasks/' + taskid;
-  var uri =
-    (nodeid !== undefined) ? ('/nodes/' + nodeid + '/formulas/' + formulaid + '/tactics')
-                           : ('/formulas/' + formulaid + '/tactics');
-
-  $http.get(uriPrefix + uri).success(function(data) {
-      $scope.tactics = [];
+  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/tasks/' + taskId + '/nodes/' + nodeId + '/formulas/' + formula.id + '/tactics'
+  $http.get(uri).success(function(data) {
       for (var i = 0; i < data.length; i++) {
           var tacticName = data[i].name;
           var tactic = Tactics.getTactics()[tacticName];
@@ -251,10 +246,19 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   });
 
   $scope.applyTactics = function(t) {
-    $http.post(uriPrefix + uri + "/run/" + t.id)
+    $http.post(uri + "/run/" + t.id)
             .success(function(data) {
-        alert("Tactic dispatched: " + data)
+        alert("Tactic dispatched: " + data.taskId + " " + data.nodeId + " " + data.tacticId + " " + data.tacticInstId)
     });
+  }
+  $scope.autoTactic = function() {
+    alert("Auto")
+  }
+  $scope.stepTactic = function(f) {
+    alert("Step")
+  }
+  $scope.hideTactic = function(f) {
+    alert("Hide")
   }
 
   $scope.cancel = function () {

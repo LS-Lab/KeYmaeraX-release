@@ -171,30 +171,18 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val rootNodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, formulaId) => { pathEnd {
-    get {
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, None, formulaId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
   val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, nodeId, formulaId) => { pathEnd {
     get {
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, Some(nodeId), formulaId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
-  val rootNodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, formulaId, tacticId) => { pathEnd {
-    post {
-      val request = new RunTacticRequest(database, userId, proofId, taskId, None, formulaId, tacticId)
+      val nid = if (taskId.equals(nodeId)) None else Some(nodeId)
+      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, nid, formulaId)
       complete(standardCompletion(request))
     }
   }}}
 
   val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
-      val request = new RunTacticRequest(database, userId, proofId, taskId, Some(nodeId), formulaId, tacticId)
+      val nid = if (taskId.equals(nodeId)) None else Some(nodeId)
+      val request = new RunTacticRequest(database, userId, proofId, taskId, nid, formulaId, tacticId)
       complete(standardCompletion(request))
     }
   }}}
@@ -214,9 +202,7 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofInfo             ::
     proofTasks            ::
-    rootNodeFormulaTactics::
     nodeFormulaTactics    ::
-    rootNodeRunTactics    ::
     nodeRunTactics        ::
     Nil
   val myRoute = routes.reduce(_ ~ _)

@@ -3,7 +3,7 @@
 </div>
 <div class="modal-body">
 <pre>
-   <k4-mathjaxformula formula="formula" delimiter="inline"></k4-mathjaxformula>
+   <k4-mathjaxformula ng-if="formula" formula="formula.formula" delimiter="inline"></k4-mathjaxformula>
    <!--<k4-Formula formula="formula"></k4-Formula>-->
 </pre>
 
@@ -25,9 +25,9 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <button class="btn" ng-repeat="t in tactics" ng-click="applyTactics()"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>
-            <button class="btn" ng-repeat="t in tactics" ng-click="hide()"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
-
+            <button class="btn" ng-click="autoTactic()"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>
+            <button class="btn" ng-click="stepTactic(formula)"><span class="glyphicon glyphicon-step-forward"></span><br/><span>Step</span></button>
+            <button class="btn" ng-if="formula" ng-click="hideTactic(formula)"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
         </div>
     </div>
 </div>

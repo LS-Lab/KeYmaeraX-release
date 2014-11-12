@@ -130,7 +130,11 @@ class GetProofInfoResponse(proof : ProofPOJO) extends Response {
 class ProofTasksResponse(tasks : List[TaskPOJO]) extends Response {
   val objects = tasks.map(taskpojo => JsObject(
     "id" -> JsString(taskpojo.taskId),
-    "task" -> JsString(taskpojo.task),
+    "nodeId" -> (taskpojo.nodeId match {
+      case Some(n) => JsString(n)
+      case None => JsString(taskpojo.taskId)
+    }),
+    "task" -> JsonParser(taskpojo.task),
     "rootTaskId" -> JsString(taskpojo.rootTaskId),
     "proofId" -> JsString(taskpojo.proofId)
   ))

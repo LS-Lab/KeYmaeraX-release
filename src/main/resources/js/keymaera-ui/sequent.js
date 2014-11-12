@@ -3,12 +3,13 @@ angular.module('sequent', ['ngSanitize','formula'])
     return {
         restrict: 'AE',
         scope: {
-            proofid: '=',
-            taskid: '=',
-            nodeid: '=',
+            proofId: '=',
+            taskId: '=',
+            nodeId: '=',
             sequent: '='
         },
         controller: function($scope, $sce, $modal, Tasks) {
+            //$scope.sequent = JSON.parse($scope.taskJson)
             // TODO should issue events other controllers can subscribe to
             $scope.handleFormulaClick = function(f) {
                 var modalInstance = $modal.open({
@@ -16,19 +17,26 @@ angular.module('sequent', ['ngSanitize','formula'])
                   controller: 'ProofRuleDialogCtrl',
                   size: 'lg',
                   resolve: {
-                    proofid: function() { return $scope.proofid; },
-                    taskid: function() { return $scope.taskid; },
-                    nodeid: function() { return $scope.nodeid; },
-                    formulaid: function() { return f.id; },
-                    formula: function() { return f.formula; }
+                    proofId: function() { return $scope.proofId; },
+                    taskId: function() { return $scope.taskId; },
+                    nodeId: function() { return $scope.nodeId; },
+                    formula: function() { return f; }
                   }
                 });
             };
 
             $scope.handleTurnstileClick = function() {
-                alert("Turnstile")
-                //ApiClient.runGlobalTactic(ClientState.uid, 0, $scope.proofid, $scope.nodeid,
-                //      function (resp) { alert(JSON.stringify(resp)); });">
+                var modalInstance = $modal.open({
+                  templateUrl: 'partials/proofruledialog.html',
+                  controller: 'ProofRuleDialogCtrl',
+                  size: 'lg',
+                  resolve: {
+                    proofId: function() { return $scope.proofId; },
+                    taskId: function() { return $scope.taskId; },
+                    nodeId: function() { return $scope.nodeId; },
+                    formula: function() { return; }
+                  }
+                });
             }
 
             $scope.$watch('selectedTask',
