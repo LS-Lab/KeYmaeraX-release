@@ -95,6 +95,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
     val keyFile = db.getModel(modelId).keyFile
     val taskId = db.createTask(proofId)
     val taskJson = KeYmaeraInterface.addTask(taskId, keyFile)
+    // TODO do not store JSON
     db.updateTask(new TaskPOJO(taskId, None, taskJson, taskId, proofId))
 
     new CreatedIdResponse(proofId) :: Nil
@@ -123,6 +124,7 @@ class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String)
 class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val tasks = db.getProofTasks(proofId)
+    // TODO retrieve proof node KeYmaeraInterface.getSubtree(taskId)
     new ProofTasksResponse(tasks) :: Nil
   }
 }
@@ -162,17 +164,19 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, ta
       case Some(nodeId) => nodeId
       case None => taskId
     }
-    val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId)
+    val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Prepared)
     KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, formulaId, tId,
       Some(tacticCompleted(db, nid)))
-    new TacticDispatchedResponse(proofId, taskId, nid, tacticId, tId) :: Nil
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, taskId, nodeId, formulaId, tacticId,
+      DispatchedTacticStatus.Running))
+    new TacticDispatchedResponse(proofId, taskId, nid, tacticId, tId, DispatchedTacticStatus.Running) :: Nil
   }
 
   private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
     KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
       case Some(s) =>
-        // s is JSON representation of the subtree
-        if (db.getSubtree(nodeId) == null) {
+        // s is JSON representation of the subtree created by the tactc -> add to the task as a subtree
+        if (!db.subtreeExists(nodeId)) {
           db.createSubtree(nodeId, s)
         } else {
           db.updateSubtree(nodeId, s)

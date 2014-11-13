@@ -9,6 +9,11 @@ object TacticKind extends Enumeration {
   val Tactic, PositionTactic, InputTactic, InputPositionTactic, UserTactic = Value
 }
 
+object DispatchedTacticStatus extends Enumeration {
+  type DispatchedTacticStatus = Value
+  val Prepared, Running, Finished, Aborted = Value
+}
+
 /**
  * Data object for models.
  * @param modelId Identifies the model.
@@ -59,7 +64,8 @@ class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kin
  * @param formulaId Identifies the formula.
  * @param tacticsId Identifies the tactic that is being run.
  */
-class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:Option[String], val formulaId:Option[String], val tacticsId:String)
+class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:Option[String], val formulaId:Option[String],
+                           val tacticsId:String, val status:DispatchedTacticStatus.Value)
 
 /**
  * Proof database
@@ -88,6 +94,7 @@ trait DBAbstraction {
   def getProofInfo(proofId : String) : ProofPOJO
 
   // Proof trees
+  def subtreeExists(pnId : String) : Boolean
   def createSubtree(pnId : String, tree : String) : String
   def getSubtree(pnId : String) : String
   def updateSubtree(pnId: String, tree : String)
@@ -104,6 +111,8 @@ trait DBAbstraction {
   def getTactic(id: String) : TacticPOJO
   def getTacticByName(name: String) : Option[TacticPOJO]
   def getTactics() : List[TacticPOJO]
-  def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String) : String
+  def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
+                              status:DispatchedTacticStatus.Value) : String
+  def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
   def getDispatchedTactics(tId : String) : DispatchedTacticPOJO
 }

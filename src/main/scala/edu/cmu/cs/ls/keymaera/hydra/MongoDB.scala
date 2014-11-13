@@ -230,7 +230,7 @@ object MongoDB extends DBAbstraction {
   }
   def getTactic(id: String) : TacticPOJO = {
     val query = MongoDBObject("_id" -> new ObjectId(id))
-    val results = dispatchedTactics.find(query)
+    val results = tactics.find(query)
     if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
     results.map(result => new TacticPOJO(
       result.getAs[ObjectId]("_id").orNull.toString(),
@@ -241,7 +241,7 @@ object MongoDB extends DBAbstraction {
   }
   def getTacticByName(name: String) : Option[TacticPOJO] = {
     val query = MongoDBObject("name" -> name)
-    val results = dispatchedTactics.find(query)
+    val results = tactics.find(query)
     if(results.length > 1) ??? //TODO handle db errors
     if (results.length < 1) None
     else Some(results.map(result => new TacticPOJO(
@@ -288,8 +288,26 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof Nodes
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  override def createSubtree(pnId: String, tree: String): String = ???
-  override def getSubtree(pnId: String): String = ???
-  override def updateSubtree(pnId: String, tree: String) = ???
+  override def subtreeExists(pnId: String): Boolean = {
+    val query = MongoDBObject("_id" -> new ObjectId(pnId))
+    val results = proofNodes.find(query)
+    results.length > 0
+  }
+  override def createSubtree(pnId: String, tree: String): String = {
+    val query = MongoDBObject()
+    proofNodes.insert(query)
+    query.get("_id").toString()
+  }
+  override def getSubtree(pnId: String): String = {
+    val query = MongoDBObject("_id" -> new ObjectId(pnId))
+    val results = proofNodes.find(query)
+    if (results.length < 1) throw new IllegalArgumentException("Unknown ID " + pnId)
+    if (results.length > 1) throw new IllegalStateException("None-unique ID " + pnId)
+    results.map(result => result.getAs[String]("tree").getOrElse("")).toList.last
+  }
+  override def updateSubtree(pnId: String, tree: String) = {
+    val update = MongoDBObject("tree" -> tree)
+    tasks.update(MongoDBObject("_id" -> new ObjectId(pnId)), update)
+  }
 
 }

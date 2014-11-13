@@ -23,7 +23,8 @@
                     </thead>
                     <tbody>
                     <tr ng-repeat="task in tasks" ng-click="setSelected(task)">
-                        <td>{{ task.nodeId.substring(0,5) + ".." + task.nodeId.substring(task.nodeId.length-5) }}</td>
+                        <td ng-if="defer" cg-busy="defer">{{ task.nodeId.substring(0,5) + ".." + task.nodeId.substring(task.nodeId.length-5) }}</td>
+                        <td ng-if="defer == undefined">{{ task.nodeId.substring(0,5) + ".." + task.nodeId.substring(task.nodeId.length-5) }}</td>
                     </tr>
                     </tbody>
                 </table>
