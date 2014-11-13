@@ -93,9 +93,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-    val taskId = db.createTask(proofId)
-    val taskJson = KeYmaeraInterface.addTask(taskId, keyFile)
-    db.updateTask(new TaskPOJO(taskId, taskJson, taskId, proofId))
+    KeYmaeraInterface.addTask(proofId, keyFile)
 
     new CreatedIdResponse(proofId) :: Nil
   }
@@ -116,51 +114,105 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   }
 }
 
-class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+//class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
-    new GetProofInfoResponse(proof) :: Nil
+
+    // TODO run in background
+    if (!KeYmaeraInterface.containsTask(proof.proofId)) {
+      val model = db.getModel(proof.modelId)
+      KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
+      val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step))
+      // TODO probably need to be replayed sequentially (run next upon completion of previous -> register callback)
+      steps.foreach(step => KeYmaeraInterface.runTactic(proof.proofId, step.nodeId, step.tacticsId, step.formulaId, step.id))
+    }
+
+    new OpenProofResponse(proof) :: Nil
   }
 }
 
+/**
+ * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ */
 class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val tasks = db.getProofTasks(proofId)
-    new ProofTasksResponse(tasks) :: Nil
+    // TODO check if it is loaded into KeYmaera (should be, if not ask user to load the proof)
+    // TODO get all the open goals from the proof loaded in KeYmaera
+    val proof = db.getProofInfo(proofId)
+    val result =
+      (proof, KeYmaeraInterface.getSubtree(proof.proofId, None, 0) match {
+        case Some(proofNode) => proofNode
+        case None => ??? /* proof might still be loading */
+      }
+    )
+    new ProofTasksResponse(result :: Nil) :: Nil
   }
 }
 
-class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String) extends Request {
+/**
+ * Searches for tactics that are applicable to the specified formula. The sequent, which contains this formula, is
+ * identified by the proof ID and the node ID.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ * @param nodeId Identifies the node. If None, request the tactics of the "root" node of the task.
+ * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
+ */
+class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String]) extends Request {
   def getResultingResponses() = {
-
-    val tactics = new TacticPOJO("0", "keymaera.imply-left", "", TacticKind.PositionTactic) :: Nil// TODO implement
-    new ApplicableTacticsResponse(tactics) :: Nil
+    val applicableTactics = KeYmaeraInterface.getApplicableTactics(proofId, nodeId, formulaId)
+      .map(tId => db.getTactic(tId)).toList
+    new ApplicableTacticsResponse(applicableTactics) :: Nil
   }
 }
 
-class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : String, tacticId : String) extends Request {
+/**
+ * Runs the specified tactic on the formula with the specified ID. The sequent, which contains this formula, is
+ * identified by the proof ID and the node ID.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ * @param nodeId Identifies the node. If None, the tactic is run on the "root" node of the task.
+ * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
+ * @param tacticId Identifies the tactic to run.
+ */
+class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String], tacticId : String) extends Request {
   def getResultingResponses() = {
     val nid = nodeId match {
-      case Some(nid) => nid
-      case None => taskId // task is root node
+      case Some(nodeId) => nodeId
+      case None => proofId
     }
-    val tId = db.createDispatchedTactics(taskId, nid, formulaId, tacticId)
-    KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, Some(formulaId), tId,
+    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Prepared)
+    KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
       Some(tacticCompleted(db, nid)))
-    new TacticDispatchedResponse(proofId, taskId, nid, tacticId, tId) :: Nil
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId,
+      DispatchedTacticStatus.Running))
+    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Running)) :: Nil
   }
 
-  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
-    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
-      case Some(s) =>
-        // s is JSON representation of the subtree
-        if (db.getSubtree(nodeId) == null) {
-          db.createSubtree(nodeId, s)
-        } else {
-          db.updateSubtree(nodeId, s)
-        }
-      case None => ???/* log */
-    }
+  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+    val finishedTactic = db.getDispatchedTactics(tId)
+    // TODO the following updates must be an atomic operation on the database
+    db.addFinishedTactic(proofId, tId)
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(
+      finishedTactic.id,
+      finishedTactic.proofId,
+      finishedTactic.nodeId,
+      finishedTactic.formulaId,
+      finishedTactic.tacticsId,
+      DispatchedTacticStatus.Finished
+    ))
+  }
+}
+
+class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : String, tacticInstId : String) extends Request {
+  def getResultingResponses() = {
+    val dispatched = db.getDispatchedTactics(tacticInstId)
+    new DispatchedTacticResponse(dispatched) :: Nil
   }
 }
 

@@ -50,25 +50,114 @@ keymaeraProofControllers.factory('Tasks', function () {
     };
 });
 
-keymaeraProofControllers.factory('Tactics', function () {
+keymaeraProofControllers.factory('Tactics', function ($rootScope) {
 
     var tactics = {
-        "keymaera.imply-left" :
-            // TODO add rules, move into own file
-            { "name" : "keymaera.imply-left",
-              "latex" : "\\(\\left[\\rightarrow r \\right] \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
+        // TODO add rules, move into own file
+        "dl.and-left" :
+            { "name" : "dl.and-left",
+              "latex" : "\\(\\left(\\wedge l \\right) \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
             },
-        "keymaera.and-left" :
-            { "name" : "keymaera.and-left",
-              "latex" : "\\(\\left[\\wedge l \\right] \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
+        "dl.and-right" :
+            { "name" : "dl.and-right",
+              "latex" : "\\(\\left(\\wedge r \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\qquad \\Gamma ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\wedge \\psi,\\Delta}\\)"
+            },
+        "dl.or-left" :
+            { "name" : "dl.or-left",
+              "latex" : "\\(\\left(\\vee l \\right) \\frac{\\Gamma,\\phi ~\\vdash~ \\Delta \\qquad \\Gamma,\\psi ~\\vdash~ \\Delta}{\\Gamma \\phi \\vee \\psi ~\\vdash~ \\Delta}\\)"
+            },
+        "dl.or-right" :
+            { "name" : "dl.or-right",
+              "latex" : "\\(\\left(\\vee r \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\vee \\psi,\\Delta}\\)"
+            },
+        "dl.imply-left" :
+            { "name" : "dl.imply-left",
+              "latex" : "\\(\\left(\\rightarrow l \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\qquad \\Gamma ~\\vdash~ \\psi,\\Delta}{\\Gamma \\phi \\rightarrow \\psi ~\\vdash~ \\Delta}\\)"
+            },
+        "dl.imply-right" :
+            { "name" : "dl.imply-right",
+              "latex" : "\\(\\left(\\rightarrow r \\right) \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
+            },
+        "dl.equiv-left" :
+            { "name" : "dl.equiv-left",
+              "latex" : "TODO: \\(\\leftrightarrow l\\)"
+            },
+        "dl.equiv-right" :
+            { "name" : "dl.equiv-right",
+              "latex" : "TODO: \\(\\leftrightarrow r\\)"
+            },
+        "dl.not-left" :
+            { "name" : "dl.not-left",
+              "latex" : "\\(\\left(\\neg l \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta}{\\Gamma,\\neg\\phi ~\\vdash~ \\Delta}\\)"
+            },
+        "dl.not-right" :
+            { "name" : "dl.not-right",
+              "latex" : "\\(\\left(\\neg r \\right) \\frac{\\Gamma, \\phi ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\neg \\phi, \\Delta}\\)"
+            },
+        "dl.close-true" :
+            { "name" : "dl.close-true",
+              "latex" : "\\(\\left(\\textit{true} r \\right) \\frac{}{\\Gamma ~\\vdash~ \\textit{true},\\Delta}\\)"
+            },
+        "dl.close-false" :
+            { "name" : "dl.close-false",
+              "latex" : "\\(\\left(\\textit{true} r \\right) \\frac{}{\\Gamma, \\textit{false} ~\\vdash~ \\Delta}\\)"
+            },
+        "dl.skolemize" :
+            { "name" : "dl.skolemize",
+              "latex" : "TODO: skolemize"
+            },
+        "dl.box-assign" :
+            { "name" : "dl.box-assign",
+              "latex" : "\\(\\left(\\left[\\coloneq\\right]\\right) \\frac{\\phi(t)}{\\left[x \\coloneq t\\right]\\phi(x)}\\)"
+            },
+        "dl.box-choice" :
+            { "name" : "dl.box-choice",
+              "latex" : "\\(\\left(\\left[\\cup\\right]\\right) \\frac{\\left[\\alpha\\right]\\phi \\qquad \\left[\\beta\\right]\\phi}{\\left[\\alpha \\cup \\beta\\right]\\phi}\\)"
+            },
+        "dl.box-induction" :
+            { "name" : "dl.box-induction",
+              "latex" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\left(\\phi \\wedge \\left[\\alpha^*\\right]\\left(\\phi \\rightarrow \\left[\\alpha\\right] \\phi \\right)\\right) }{\\left[\\alpha^*\\right]\\phi}\\)"
+            },
+        "dl.box-ndetassign" :
+            { "name" : "dl.box-ndetassign",
+              "latex" : "\\(\\left(\\left[\\coloneq *\\right]\\right) \\frac{\\forall x. \\phi(x)}{\\left[x \\coloneq *\\right]\\phi}\\)"
+            },
+        "dl.box-seq" :
+            { "name" : "dl.box-seq",
+              "latex" : "\\(\\left(\\left[\\;\\right]\\right) \\frac{\\left[\\alpha\\right]\\left[\\beta\\right]\\phi}{\\left[\\alpha;\\beta\\right]\\phi}\\)"
+            },
+        "dl.box-test" :
+            { "name" : "dl.box-test",
+              "latex" : "\\(\\left(\\left[\\?\\right]\\right) \\frac{H \\rightarrow \\phi)}{\\left[?H\\right]\\phi}\\)"
             }
     };
 
-    return {
-        getTactics: function() {
-            return tactics;
-        }
+    var dispatchedTacticsIds = [];
+
+    var dispatchedTacticsNotificationService = {};
+
+    //    dispatchedTacticsNotificationService.message = '';
+
+    dispatchedTacticsNotificationService.broadcastDispatchedTactics = function(tId) {
+        $rootScope.$broadcast('handleDispatchedTactics', tId);
     };
+
+    return {
+        getTactics: function() { return tactics; },
+        getDispatchedTactics: function() { return dispatchedTacticsIds; },
+        addDispatchedTactics: function(tId) { dispatchedTacticsIds.push(tId); },
+        removeDispatchedTactics: function(tId) {
+            var i;
+            while((i = arr.indexOf(item)) !== -1) { arr.splice(i, 1); }
+        },
+        getDispatchedTacticsNotificationService: function() { return dispatchedTacticsNotificationService; }
+    };
+});
+
+keymaeraProofControllers.value('cgBusyDefaults',{
+    message:'Running tactics',
+    backdrop: true,
+    templateUrl: 'partials/running-tactics-indicator.html'
 });
 
 keymaeraProofControllers.controller('DashboardCtrl',
@@ -221,21 +310,21 @@ keymaeraProofControllers.controller('ProofCtrl',
         $scope.closed = data.closed;
         $scope.stepCount= data.stepCount;
         $scope.date = data.date;
+
+        // TODO wait for proof to be loaded, then fetch tasks
     });
-//    $http.get('proofs/user/' + $cookies.userId + "/"+ $routeParams.proofId + "/root").success(function(data) {
-//        $scope.proofTree = data
-//    });
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
   });
 
 keymaeraProofControllers.controller('TaskListCtrl',
-  function($scope, $http, $cookies, $routeParams, Tasks) {
+  function($scope, $http, $cookies, $routeParams, $q, Tasks, Tactics) {
     $scope.proofId = $routeParams.proofId;
 
     $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + '/tasks').success(function(data) {
         $scope.tasks = data;
     });
 
+<<<<<<< HEAD
     $scope.addSubtree = function(parentId, subtree) {
         for(var i = 0 ; i < $scope.treedata.length; i++) {
             var node = $scope.treedata[i];
@@ -248,7 +337,32 @@ keymaeraProofControllers.controller('TaskListCtrl',
         }
     }
 
-    // Initialize the tree to an empty array.
+    // Watch running tactics
+    $scope.$on('handleDispatchedTactics', function(event, tId) {
+        // TODO create defer per tId
+        $scope.defer = $q.defer();
+            $scope.defer.promise.then(function (tacticResult) {
+                if (tacticResult == 'Finished') {
+                    // TODO fetch the new open goals, update the tree, update the task list
+                } else {
+                    // TODO not yet used, but could be used to report an error in running the tactic
+                }
+            });
+            (function poll(){
+               setTimeout(function() {
+                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
+                            .success(function(data) {
+                        if (data.tacticInstStatus == 'Running') {
+                          poll();
+                        } else {
+                            $scope.defer.resolve(data.tacticInstStatus)
+                        }
+                    })
+              }, 1000);
+            })();
+    });
+
+    // Get & populate the tree.
     $scope.treedata = [];
 
     $scope.setSelected = function(task) {
@@ -262,6 +376,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 $scope.treedata = data;
             });
 
+        $scope.selectedTask = task;
     }
 
     $scope.$watch('tasks',
@@ -271,6 +386,10 @@ keymaeraProofControllers.controller('TaskListCtrl',
         function() { return Tasks.getSelectedTask(); },
         function(t) { if (t) Tasks.setSelectedTask(t); }
     );
+    $scope.$watch('dispatchedTactics',
+        function() { return Tactics.getDispatchedTactics(); },
+        function(tId) { Tactics.removeDispatchedTactics(tId); }
+    );
   });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -278,38 +397,58 @@ keymaeraProofControllers.controller('TaskListCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('ProofRuleDialogCtrl',
-        function ($scope, $http, $cookies, $modalInstance, proofid, taskid, nodeid, formulaid, formula, Tactics) {
-  $scope.proofid = proofid;
-  $scope.taskid = taskid;
-  $scope.nodeid = nodeid;
-  $scope.formulaid = formulaid;
+        function ($scope, $http, $cookies, $modalInstance, proofId, nodeId, formula, Tactics) {
+  $scope.proofId = proofId;
+  $scope.nodeId = nodeId;
   $scope.formula = formula;
+  $scope.tactics = [];
 
-  var uriPrefix = 'proofs/user/' + $cookies.userId + '/' + proofid + '/tasks/' + taskid;
-  var uri =
-    (nodeid !== undefined) ? ('/nodes/' + nodeid + '/formulas/' + formulaid + '/tactics')
-                           : ('/formulas/' + formulaid + '/tactics');
-
-  $http.get(uriPrefix + uri).success(function(data) {
+  var fId = ((formula !== undefined) ? formula.id : "sequent")
+  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
+  $http.get(uri).success(function(data) {
       $scope.tactics = [];
       for (var i = 0; i < data.length; i++) {
           var tacticName = data[i].name;
           var tactic = Tactics.getTactics()[tacticName];
-          $scope.tactics.push(tactic);
+          if (tactic !== undefined) {
+            tactic.id = data[i].id;
+            $scope.tactics.push(tactic);
+          }
       }
   });
 
   $scope.applyTactics = function(t) {
-    $http.post(uriPrefix + uri + "/run/" + t.id)
+    $http.post(uri + "/run/" + t.id)
             .success(function(data) {
-        alert("Tactic dispatched: " + data)
+        var dispatchedTacticId = data.tacticInstId;
+        $modalInstance.close(dispatchedTacticId);
+        Tactics.addDispatchedTactics(dispatchedTacticId);
+        Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
     });
+  }
+  $scope.autoTactic = function() {
+    // run on formula "sequent"
+    alert("Auto")
+  }
+  $scope.stepTactic = function(f) {
+    // if f undefined, run on formula "sequent"
+    alert("Step")
+  }
+  $scope.hideTactic = function(f) {
+    alert("Hide")
   }
 
   $scope.cancel = function () {
     $modalInstance.dismiss('cancel');
   };
 
+});
+
+keymaeraProofControllers.controller('RunningTacticsCtrl',
+        function ($scope, $http, $cookies, Tactics) {
+   $scope.abort = function() {
+     // TODO implement
+   }
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

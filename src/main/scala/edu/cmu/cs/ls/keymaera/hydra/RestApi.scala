@@ -24,7 +24,7 @@ class RestApiActor extends Actor with RestApi {
  */
 trait RestApi extends HttpService {
   val database = MongoDB //Not sure when or where to create this... (should be part of Boot?)
-  val keymaeraInitializer = new KeYmaeraInitializer(database)
+  new KeYmaeraInitializer(database).initialize()
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper Methods
@@ -158,7 +158,6 @@ trait RestApi extends HttpService {
     }
   }}}
 
-
   val proofList = path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
     get {
       val request = new ProofsForUserRequest(database, userId)
@@ -166,9 +165,10 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val proofInfo = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
+//  val proofInfo = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
+  val openProof = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
-      val request = new GetProofInfoRequest(database, userId, proofId)
+      val request = new OpenProofRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}
@@ -188,30 +188,27 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val rootNodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, formulaId) => { pathEnd {
+  val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, None, formulaId)
+      val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
+      val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
+      val request = new GetApplicableTacticsRequest(database, userId, proofId, nId, fId)
       complete(standardCompletion(request))
     }
   }}}
 
-  val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, taskId, nodeId, formulaId) => { pathEnd {
+  val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
+    post {
+      val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
+      val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
+      val request = new RunTacticRequest(database, userId, proofId, nId, fId, tacticId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val dispatchedTactic = path("proofs" / "user" / Segment / Segment / "dispatchedTactics" / Segment) { (userId, proofId, tacticInstId) => { pathEnd {
     get {
-      val request = new GetApplicableTacticsRequest(database, userId, proofId, taskId, Some(nodeId), formulaId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
-  val rootNodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, formulaId, tacticId) => { pathEnd {
-    post {
-      val request = new RunTacticRequest(database, userId, proofId, taskId, None, formulaId, tacticId)
-      complete(standardCompletion(request))
-    }
-  }}}
-
-  val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "tasks" / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, taskId, nodeId, formulaId, tacticId) => { pathEnd {
-    post {
-      val request = new RunTacticRequest(database, userId, proofId, taskId, Some(nodeId), formulaId, tacticId)
+      val request = new GetDispatchedTacticRequest(database, userId, proofId, tacticInstId)
       complete(standardCompletion(request))
     }
   }}}
@@ -251,12 +248,11 @@ trait RestApi extends HttpService {
     createProof           ::
     proofListForModel     ::
     proofList             ::
-    proofInfo             ::
+    openProof             ::
     proofTasks            ::
-    rootNodeFormulaTactics::
     nodeFormulaTactics    ::
-    rootNodeRunTactics    ::
     nodeRunTactics        ::
+    dispatchedTactic      ::
     proofTree             ::
     devAction             ::
     dashInfo              ::

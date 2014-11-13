@@ -1,6 +1,6 @@
 <div class="panel panel-default">
     <!-- Default panel contents -->
-    <div class="panel-heading">Proofs for Model </div>
+    <div class="panel-heading">Proofs for Model</div>
 
     <!-- Table -->
     <table class="table table-hover">
@@ -11,6 +11,7 @@
             <td>Date</td>
             <td>Proof Steps</td>
             <td>Status</td>
+            <td>Actions</td>
         </tr>
         </thead>
         <tbody>
@@ -22,6 +23,13 @@
             <td><span class="{{ proof.status && 'glyphicon glyphicon-ok' || 'glyphicon glyphicon-remove' }}"></span></td>
             <td class="input-group-btn">
                 <button type="button" class="btn btn-default" ng-click="openPrf(proof.id)">Go to proof</button>
+            <td><span ng-if="proof.status" class="glyphicon glyphicon-check"></span>
+                <span ng-if="proof.status"> Finished</span>
+                <span ng-if="proof.status === false" class="glyphicon glyphicon-edit"></span>
+                <span ng-if="proof.status === false"> Unfinished</span>
+            </td>
+            <td class="btn-group">
+                <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="glyphicon glyphicon-open"></span> Open</a>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>

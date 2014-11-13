@@ -58,9 +58,6 @@ object KeYmaeraInterface {
     @volatile var inputTactics: Map[String, (Formula) => Tactic] = Map()
     @volatile var inputPositionTactics: Map[String, (Formula) => PositionTactic] = Map()
 
-//    addTactic("0", TacticLibrary.default)
-//    addPositionTactic("1", TacticLibrary.step)
-
     def addTactic(id: String, t: Tactic) = this.synchronized {
       if (tactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
       tactics += (id -> (() => t))
@@ -104,9 +101,9 @@ object KeYmaeraInterface {
   /**
    * Parse the problem and add it to the tasks management system
    *
-   * @param taskId
-   * @param content
-   * @return JSON representation of the content
+   * @param taskId Identifies the task.
+   * @param content The model content (keyFile).
+   * @return JSON representation of the content.
    */
   def addTask(taskId: String, content: String): String = {
     if (TaskManagement.containsTask(taskId)) throw new IllegalArgumentException("Duplicate task ID " + taskId)
@@ -116,7 +113,7 @@ object KeYmaeraInterface {
         val r = new RootNode(seq)
         TaskManagement.addTask(r, taskId)
         json(r, taskId, 0, taskId)
-      case a => throw new IllegalStateException("Parsing the input did not result in a formula but in: " + a)
+      case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
   }
 
@@ -124,6 +121,8 @@ object KeYmaeraInterface {
     case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
     case None         => TaskManagement.getRoot(taskId)
   }
+
+  def containsTask(taskId: String): Boolean = TaskManagement.containsTask(taskId)
 
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId))
@@ -139,11 +138,51 @@ object KeYmaeraInterface {
   }
 
   def getTactics: List[(String, String)] = TacticManagement.getTactics
+  def getTactic(id : String) : Option[Tactic] = TacticManagement.getTactic(id)
 
   def getPositionTactics: List[(String, String)] = TacticManagement.getPositionTactics
+  def getPositionTactic(id : String) : Option[PositionTactic] = TacticManagement.getPositionTactic(id)
 
   /**
-   *
+   * Gets the position of an (optional) formula in the node identified by the task ID and node ID.
+   * @param taskId Identifies the task.
+   * @param nodeId Identifies the node. If None, it identifies the "root" task node.
+   * @param formulaId Identifies the formula. If None, it searches for no specific position within the node.
+   * @return A tuple of proof node and optional position within the node.
+   */
+  def getPosition(taskId: String, nodeId: Option[String], formulaId: Option[String]) : (ProofNode, Option[Position]) = {
+    (nodeId match {
+      case Some(id) => TaskManagement.getNode(taskId, id)
+      case None => TaskManagement.getRoot(taskId)
+    }) match {
+      case Some(n) =>
+        formulaId match {
+          case Some(fid) =>
+            val tail = Integer.parseInt(fid.split(":")(1))
+            if(fid.startsWith("ante:")) (n, Some(new AntePosition(tail))) else (n, Some(new SuccPosition(tail)))
+          case None => (n, None)
+        }
+      case None => throw new IllegalArgumentException("Unknown task " + taskId + "/" + nodeId)
+    }
+  }
+
+  /**
+   * Gets the tactics that are applicable to a formula in a sequent identified by task ID and node ID.
+   * @param taskId Identifies the task.
+   * @param nodeId Identifies the node. If None, this method considers the "root" task node.
+   * @param formulaId Identifies the formula. If None, this method returns the tactics applicable to the sequent itself.
+   * @return A list of tactic IDs.
+   */
+  def getApplicableTactics(taskId: String, nodeId: Option[String], formulaId: Option[String]) = {
+    getPosition(taskId, nodeId, formulaId) match {
+      // TODO input tactics and input position tactics
+      case (n, Some(p)) => TacticManagement.positionTactics.filter(t => t._2().applies(n.sequent, p)).map(t => t._1)
+      case (n, None) => TacticManagement.tactics.filter(t => t._2().applicable(n)).map(t => t._1)
+    }
+  }
+
+  /**
+   * Runs the specified tactic on the formula of a sequent identified by task ID and node ID.
    * @param taskId the task for which this tactic is dispatched
    * @param nodeId the proof node on which to run the tactic (None to execute on the root node)
    * @param tacticId the tactic to dispatch
@@ -152,36 +191,27 @@ object KeYmaeraInterface {
    * @param callBack callback executed when the tactic finishes
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String, callBack: Option[String => ((String, Option[String], String) => Unit)] = None) = {
-    (nodeId match {
-      case Some(id) => TaskManagement.getNode(taskId, id)
-      case None => TaskManagement.getRoot(taskId)
-    }) match {
-      case Some(n) =>
-        (formulaId match {
-          case Some(fid) =>
-            val tail = Integer.parseInt(fid.split(":")(1))
-            val pos = if(fid.startsWith("ante:")) new AntePosition(tail) else new SuccPosition(tail)
-            TacticManagement.getPositionTactic(tacticId) match {
-            case Some(t) => Some(t(pos))
-            case None => None
-          }
-          case None =>
-            TacticManagement.getTactic(tacticId)
-        }) match {
-        case Some(t) =>
-          // attach a info transformation function which later on allows us to track then changes performed by this tactic
-          // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
-          RunningTactics.add(t, tId)
-          // register listener to react on tactic completion
-          // this way the business logic can react to the completion if required
-          t.registerCompletionEventListener(_ => callBack.foreach(_(tId)(taskId, nodeId, tacticId)))
-          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tId.toString)
-          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tId.toString)
-          println("Dispatching tactic")
-          Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
-        case None => None
-      }
-      case None => println("Tasks are + " + TaskManagement.tasks); None
+    val (node,position) = getPosition(taskId, nodeId, formulaId)
+    val tactic = position match {
+      case Some(p) =>
+        TacticManagement.getPositionTactic(tacticId) match {
+          case Some(t) => Some(t(p))
+          case None => None
+        }
+      case None => TacticManagement.getTactic(tacticId)
+    }
+    tactic match {
+      case Some(t) =>
+        // attach a info transformation function which later on allows us to track then changes performed by this tactic
+        // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
+        RunningTactics.add(t, tId)
+        // register listener to react on tactic completion
+        // this way the business logic can react to the completion if required
+        t.registerCompletionEventListener(_ => callBack.foreach(_(tId)(taskId, nodeId, tacticId)))
+        t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tId.toString)
+        t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tId.toString)
+        Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, node))
+      case None => None
     }
   }
 

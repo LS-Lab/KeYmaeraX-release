@@ -54,9 +54,14 @@
             <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
             <td>{{ model.date }}</td>
             <!--<td>&lt;!&ndash; description -- currently not included. &ndash;&gt;</td>-->
+<<<<<<< HEAD
             <td class="input-group-btn" ng-model="model">
                 <button type="button" class="btn btn-default" ng-click="showPrfs(model.id)">Show Proofs</button>
                 <!-- $location.path("dashboard.html?#/models/" + model.id + "/proofs") -->
+=======
+            <td class="btn-group" ng-model="model">
+                <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a>
+>>>>>>> master
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
