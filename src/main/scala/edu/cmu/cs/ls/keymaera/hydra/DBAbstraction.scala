@@ -83,12 +83,6 @@ trait DBAbstraction {
   //Proofs and Proof Nodes
   def getProofInfo(proofId : String) : ProofPOJO
 
-  // Proof trees
-  def subtreeExists(pnId : String) : Boolean
-  def createSubtree(pnId : String, tree : String) : String
-  def getSubtree(pnId : String) : String
-  def updateSubtree(pnId: String, tree : String)
-
   // Tactics
   def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String
   def getTactic(id: String) : TacticPOJO

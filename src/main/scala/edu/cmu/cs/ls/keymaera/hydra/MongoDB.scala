@@ -16,7 +16,6 @@ object MongoDB extends DBAbstraction {
   val tasks   = mongoClient("keymaera")("tasks")
   val tactics = mongoClient("keymaera")("tactics")
   val dispatchedTactics = mongoClient("keymaera")("dispatchedTactics")
-  val proofNodes = mongoClient("keymaera")("proofNodes")
   val sequents = mongoClient("keymaera")("sequents")
 
   def cleanup() = {
@@ -224,31 +223,6 @@ object MongoDB extends DBAbstraction {
 
     val update = MongoDBObject(fields)
     dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Proof Nodes
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  override def subtreeExists(pnId: String): Boolean = {
-    val query = MongoDBObject("_id" -> new ObjectId(pnId))
-    val results = proofNodes.find(query)
-    results.length > 0
-  }
-  override def createSubtree(pnId: String, tree: String): String = {
-    val query = MongoDBObject()
-    proofNodes.insert(query)
-    query.get("_id").toString()
-  }
-  override def getSubtree(pnId: String): String = {
-    val query = MongoDBObject("_id" -> new ObjectId(pnId))
-    val results = proofNodes.find(query)
-    if (results.length < 1) throw new IllegalArgumentException("Unknown ID " + pnId)
-    if (results.length > 1) throw new IllegalStateException("None-unique ID " + pnId)
-    results.map(result => result.getAs[String]("tree").getOrElse("")).toList.last
-  }
-  override def updateSubtree(pnId: String, tree: String) = {
-    val update = MongoDBObject("tree" -> tree)
-    tasks.update(MongoDBObject("_id" -> new ObjectId(pnId)), update)
   }
 
 }

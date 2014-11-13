@@ -93,10 +93,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-//    val taskId = db.createTask(proofId)
     KeYmaeraInterface.addTask(proofId, keyFile)
-    // TODO might not need tasks, they're KeYmaera 3 tasks (our proofs), not open goals!
-//    db.updateTask(new TaskPOJO(taskId, None, taskId, proofId))
 
     new CreatedIdResponse(proofId) :: Nil
   }
@@ -123,8 +120,6 @@ class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String)
  */
 class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-//    val tasks = db.getProofTasks(proofId)
-
     // TODO check if it is loaded into KeYmaera (should be, if not ask user to load the proof)
     // TODO get all the open goals from the proof loaded in KeYmaera
     val proof = db.getProofInfo(proofId)
@@ -180,16 +175,26 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
   }
 
   private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
-    KeYmaeraInterface.getSubtree(proofId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
-      case Some(s) =>
-        // s is JSON representation of the subtree created by the tactc -> add to the task as a subtree
-        if (!db.subtreeExists(nodeId)) {
-          db.createSubtree(nodeId, s)
-        } else {
-          db.updateSubtree(nodeId, s)
-        }
-      case None => ???/* log */
-    }
+    val finishedTactic = db.getDispatchedTactics(tId)
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(
+      finishedTactic.id,
+      finishedTactic.proofId,
+      finishedTactic.nodeId,
+      finishedTactic.formulaId,
+      finishedTactic.tacticsId,
+      DispatchedTacticStatus.Finished
+    ))
+    // do not store in database, only store that tactic completed
+//    KeYmaeraInterface.getSubtree(proofId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
+//      case Some(s) =>
+//        // s is JSON representation of the subtree created by the tactc -> add to the task as a subtree
+//        if (!db.subtreeExists(nodeId)) {
+//          db.createSubtree(nodeId, s)
+//        } else {
+//          db.updateSubtree(nodeId, s)
+//        }
+//      case None => ???/* log */
+//    }
   }
 }
 
