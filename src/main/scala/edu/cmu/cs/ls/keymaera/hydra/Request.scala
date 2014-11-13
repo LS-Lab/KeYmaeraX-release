@@ -107,6 +107,15 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
   }
 }
 
+class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
+  def getResultingResponses() = {
+    val proofsWithNames = db.getProofsForUser(userId)
+    val proofs = proofsWithNames.map(_._1)
+    val names  = proofsWithNames.map(_._2)
+    new ProofListResponse(proofs,Some(names)) :: Nil
+  }
+}
+
 class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
@@ -156,31 +165,24 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, ta
 }
 
 
-class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String) extends Request{
-  private val dummyData = {
-    val a = PredicateConstant("a")
-    val b = PredicateConstant("b")
-    val formulaToProve = Imply(And(a,b), a)
-    val proof : ProofNode = new RootNode(
-      new Sequent(
-        Nil,
-        Vector(),
-        Vector(formulaToProve)
-      )
-    )
-    proof
-  }
-
+class GetProofTreeRequest(db : DBAbstraction, userId : String, taskId : String, nodeId : Option[String]) extends Request{
   override def getResultingResponses(): List[Response] = {
-    //TODO load the actual proof here.
-    val node = dummyData
-    TacticInterface.runSynchronizedTactic(node)
-    new AngularTreeViewResponse(node) :: Nil
+    val node = KeYmaeraInterface.getActualNode(taskId, nodeId)
+    throw new Exception("blah")
+    node match {
+      case Some(theNode) => { new AngularTreeViewResponse(theNode) :: Nil }
+      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
+    }
   }
 }
 
+class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
+  override def getResultingResponses() : List[Response] = {
+    val openProofCount : Int = db.openProofs(userId).length
 
-
+    new DashInfoResponse(openProofCount) :: Nil
+  }
+}
 //
 //
 //class GetProblemRequest(userid : String, proofid : String) extends Request {

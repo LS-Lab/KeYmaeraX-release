@@ -14,6 +14,11 @@ class TaskPOJO(val taskId:String, val task:String, val rootTaskId:String, val pr
 class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
 class DispatchedTacticPOJO(val id:String, val taskId:String, val nodeId:String, val formulaId:String, val tacticsId:String)
 
+
+//tasks : _id, model
+//tactics: _id, name, class
+//dispatched_tactics: _id, tactic_id, task_id, node_id, count
+
 /**
  * Proof database
  */
@@ -28,6 +33,8 @@ trait DBAbstraction {
   def createUser(username : String, password : String) : Unit
   def getUsername(uid : String) : String
   def checkPassword(username : String, password : String) : Boolean
+  def getProofsForUser(userId : String) : List[(ProofPOJO, String)] //the string is a model name.
+  def openProofs(userId : String) : List[ProofPOJO]
 
   //Models
   def createModel(userId: String, name : String, fileContents : String, date:String) : Boolean
@@ -39,6 +46,7 @@ trait DBAbstraction {
 
   //Proofs and Proof Nodes
   def getProofInfo(proofId : String) : ProofPOJO
+
 
   // Proof trees
   def createSubtree(pnId : String, tree : String) : String

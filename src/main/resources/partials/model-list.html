@@ -55,7 +55,7 @@
             <td>{{ model.date }}</td>
             <!--<td>&lt;!&ndash; description -- currently not included. &ndash;&gt;</td>-->
             <td class="input-group-btn" ng-model="model">
-                <button type="button" class="btn btn-default">Show Proofs</button>
+                <button type="button" class="btn btn-default" ng-click="showPrfs(model.id)">Show Proofs</button>
                 <!-- $location.path("dashboard.html?#/models/" + model.id + "/proofs") -->
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>

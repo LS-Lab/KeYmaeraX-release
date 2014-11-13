@@ -127,6 +127,21 @@ object MongoDB extends DBAbstraction {
     }
   }
 
+  override def openProofs(userId : String) : List[ProofPOJO] = {
+    //return all the non-closed proofs.
+    getProofsForUser(userId).map(_._1).filter(!_.closed)
+  }
+
+  override def getProofsForUser(userId : String) : List[(ProofPOJO, String)] = {
+    val models = getModelList(userId)
+
+    models.map(model => {
+      val modelName = model.name
+      val proofs = getProofsForModel(model.modelId)
+      proofs.map((_, modelName))
+    }).flatten
+  }
+
   override def getProofInfo(proofId: String): ProofPOJO = {
     var query = MongoDBObject("_id" -> new ObjectId(proofId))
     val results = proofs.find(query)

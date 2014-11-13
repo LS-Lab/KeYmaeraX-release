@@ -38,9 +38,18 @@ object KeYmaeraInterface {
 
     def containsTask(id: String) = tasks.contains(id)
 
-    def getRoot(id: String): Option[ProofNode] = tasks.get(id).map(_._1)
+    def getRoot(id: String): Option[ProofNode] = tasks.get(id) match {
+      case Some(t) => throw new Exception(); Some(t._1)
+      case None => throw new Exception(); None
+    }
 
-    def getNode(tId: String, nId: String): Option[ProofNode] = tasks.get(tId).map(_._2.get(nId)).flatten
+    def getNode(tId: String, nId: String): Option[ProofNode] = {
+      val matchingProofNode = tasks.get(tId) match {
+        case Some(t)  => Some(t._1)
+        case None     => None
+      }
+      matchingProofNode
+    }// old implementation: tasks.get(tId).map(_._2.get(nId)).flatten
   }
 
   object TacticManagement {
@@ -109,6 +118,11 @@ object KeYmaeraInterface {
         json(r, taskId, 0, taskId)
       case a => throw new IllegalStateException("Parsing the input did not result in a formula but in: " + a)
     }
+  }
+
+  def getActualNode(taskId : String, nodeIdOpt : Option[String]) : Option[ProofNode] = nodeIdOpt match {
+    case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
+    case None         => TaskManagement.getRoot(taskId)
   }
 
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {

@@ -1,7 +1,6 @@
 var keymaeraProofControllers = angular.module('keymaeraProofControllers', ['ngCookies', 'angularTreeview', 'ui.bootstrap']);
 
 keymaeraProofControllers.factory('Models', function () {
-
     var models = [];
 
     return {
@@ -73,11 +72,16 @@ keymaeraProofControllers.factory('Tactics', function () {
 });
 
 keymaeraProofControllers.controller('DashboardCtrl',
-  function ($scope, $http) {
+  function ($scope, $cookies, $http) {
     // Set the view for menu active class
     $scope.$on('routeLoaded', function (event, args) {
       $scope.theview = args.theview;
     });
+
+    $http.get('/users/' + $cookies.userId + '/dashinfo')
+        .success(function(data) {
+            $scope.open_proof_count = data.open_proof_count;
+        })
 
     $scope.$emit('routeLoaded', {theview: 'dashboard'});
   });
@@ -113,7 +117,7 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
   });
 
 keymaeraProofControllers.controller('ModelListCtrl',
-  function ($scope, $http, $cookies, $modal, Models) {
+  function ($scope, $http, $cookies, $modal, $location, Models) {
     $scope.models = [];
     $http.get("models/users/" + $cookies.userId).success(function(data) {
         $scope.models = data
@@ -129,6 +133,10 @@ keymaeraProofControllers.controller('ModelListCtrl',
           }
         });
     };
+
+    $scope.showPrfs = function(modelId) {
+        $location.path('/models/' + modelId + "/proofs")
+    }
 
     $scope.$watch('models',
         function (newModels) { if (newModels) Models.setModels(newModels); }
@@ -172,11 +180,28 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl',
   });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// The proof list
+// The proof lists
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Proof list for all models belonging to a user.
+keymaeraProofControllers.controller('ProofListCtrl',
+  function ($scope, $http, $cookies,$location, $routeParams) {
+    $scope.openPrf = function(proofId) {
+        $location.path('/proofs/' + proofId)
+    }
+    //Load the proof list and emit as a view.
+    $http.get('models/users/' + $cookies.userId + "/proofs").success(function(data) {
+      $scope.allproofs = data;
+    });
+    $scope.$emit('routeLoaded', {theview: 'allproofs'});
+  });
+
+// Proof list for an individual model
 keymaeraProofControllers.controller('ModelProofsCtrl',
-  function ($scope, $http, $cookies, $routeParams) {
+  function ($scope, $http, $cookies,$location, $routeParams) {
+    $scope.openPrf = function(proofId) {
+        $location.path('/proofs/' + proofId)
+    }
     //Load the proof list and emit as a view.
     $http.get('models/users/' + $cookies.userId + "/model/" + $routeParams.modelId + "/proofs").success(function(data) {
       $scope.proofs = data;
@@ -211,15 +236,32 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.tasks = data;
     });
 
-    // Get & populate the tree.
+    $scope.addSubtree = function(parentId, subtree) {
+        for(var i = 0 ; i < $scope.treedata.length; i++) {
+            var node = $scope.treedata[i];
+            if(node.id === parentId) {
+                subtree.map(function(x) { node.push(x) })
+            }
+            if(node.children != []) {
+                $scope.addSubtree(parentId, node.children[i]);
+            }
+        }
+    }
+
+    // Initialize the tree to an empty array.
     $scope.treedata = [];
-    $http.get("/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
-        .success(function(data) {
-            data.map(function(x) { $scope.treedata.push(x) })
-        });
 
     $scope.setSelected = function(task) {
         $scope.selectedTask = JSON.parse(task);
+        //pulling this variable out so that I can print it back out.
+        var treeresource = "/proofs/user/" + $cookies.userId + "/tree/" + "TASK ID HERE" + "/" + "NODE ID HERE"
+        alert("getting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
+        $http.get("/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
+            .success(function(data) {
+                alert("setting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
+                $scope.treedata = data;
+            });
+
     }
 
     $scope.$watch('tasks',

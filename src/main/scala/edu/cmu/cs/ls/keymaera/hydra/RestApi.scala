@@ -158,12 +158,27 @@ trait RestApi extends HttpService {
     }
   }}}
 
+
+  val proofList = path("models" / "users" / Segment / "proofs") { (userId) => { pathEnd {
+    get {
+      val request = new ProofsForUserRequest(database, userId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val proofInfo = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
       val request = new GetProofInfoRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}
+
+  val dashInfo = path("users" / Segment / "dashinfo") { userId => pathEnd {
+    get {
+      val request = new DashInfoRequest(database, userId)
+      complete(standardCompletion(request))
+    }
+  }}
 
 
   val proofTasks = path("proofs" / "user" / Segment / Segment / "tasks") { (userId, proofId) => { pathEnd {
@@ -201,9 +216,10 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val proofTree = path("proofs" / "user" / Segment / Segment / "tree") { (userId, proofId) => {
+  // proofs/user/< userid >/tree/< taskid >/< proofnodeid >
+  val proofTree = path("proofs" / "user" / Segment / "tree" / Segment / Segment.?) { (userId, taskId, proofId) => {
     get {
-      val request = new GetProofTreeRequest(database, userId, proofId)
+      val request = new GetProofTreeRequest(database, userId, taskId, proofId)
       complete(standardCompletion(request))
     }
   }}
@@ -234,6 +250,7 @@ trait RestApi extends HttpService {
     cookieecho            ::
     createProof           ::
     proofListForModel     ::
+    proofList             ::
     proofInfo             ::
     proofTasks            ::
     rootNodeFormulaTactics::
@@ -242,6 +259,7 @@ trait RestApi extends HttpService {
     nodeRunTactics        ::
     proofTree             ::
     devAction             ::
+    dashInfo              ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

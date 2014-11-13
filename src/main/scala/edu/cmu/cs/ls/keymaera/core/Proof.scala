@@ -281,6 +281,19 @@ object Sequent {
      */
     def isClosed(): Boolean =
       children.map((f: ProofStep) =>  f.subgoals.foldLeft(true)(_ && _.isClosed())).contains(true)
+
+    /**
+     * @todo I'm not sure if this is implemented correctly.
+     * @return the list of all childless proof nodes in a proof tree.
+     */
+    def openGoals() : List[ProofNode] = {
+      children match {
+        case Nil => if(isClosed()) Nil else (this :: Nil)
+        case _   => children.flatMap(child => {
+          child.subgoals.flatMap(_.openGoals())
+        })
+      }
+    }
   }
 
   /**

@@ -33,7 +33,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     val parser = new KeYmaeraParser(enabledLogging)
     
     //Parse file.
-    val (functions,predicateConstants,variables,problemText) = 
+    val (functions : List[Function],predicateConstants : List[PredicateConstant], variables : List[Variable],problemText : String) =
       parser.parseAll(parser.fileParser, s) match {
         case parser.Success(result,next) => result
         case parser.Failure(_,_) => throw new Exception("parse failed.")
@@ -54,8 +54,8 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     
     //Parse the problem.
     val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programs)
-    val parseResult = parser.parseAll(exprParser, problemText) match {
-        case parser.Success(result,next) => result
+    val parseResult : Expr = parser.parseAll(exprParser, problemText) match {
+        case parser.Success(result,next) => result.asInstanceOf[Expr]
         case parser.Failure(result,next) => throw new Exception(failureMessage(result,next))
         case parser.Error(result,next) => throw new Exception(failureMessage(result,next))
     }
@@ -127,7 +127,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @returns A list of defined function sorts.
+   * Returns a list of defined function sorts.
    */
   lazy val functionsP = {	
     lazy val pattern = ParseSymbols.FUNCTIONS_SECT ~> START_SECT ~> rep1sep(funcdefP, ".") <~ ".".? <~ END_SECT 
@@ -166,7 +166,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
   //////////////////////////////////////////////////////////////////////////////
 
   /**
-   * @returns A list of defined program sorts.
+   * Returns a list of defined program sorts.
    */
   lazy val programVariablesP = {
     lazy val pattern = PVARS_SECT ~> START_SECT ~> rep1sep(vardefP, ".") <~ ".".? <~ END_SECT

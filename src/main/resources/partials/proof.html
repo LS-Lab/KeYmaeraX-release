@@ -23,7 +23,10 @@
                     </thead>
                     <tbody>
                     <tr ng-repeat="task in tasks" ng-click="setSelected(task.task)">
+                        <!-- use the full task id during development.
                         <td>{{ task.id.substring(0,5) + ".." + task.id.substring(task.id.length-5) }}</td>
+                        -->
+                        <td>{{ task.id }}</td>
                     </tr>
                     </tbody>
                 </table>

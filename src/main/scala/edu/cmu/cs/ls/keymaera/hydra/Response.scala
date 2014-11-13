@@ -72,16 +72,42 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
-class ProofListResponse(proofs : List[ProofPOJO]) extends Response {
-  val objects = proofs.map(proof => JsObject(
-    "id" -> JsString(proof.proofId),
-    "name" -> JsString(proof.name),
-    "description" -> JsString(proof.description),
-    "date" -> JsString(proof.date),
-    "modelId" -> JsString(proof.modelId),
-    "stepCount" -> JsNumber(proof.stepCount),
-    "status" -> JsBoolean(proof.closed)
-  ))
+/**
+ *
+ * @param proofs
+ * @param models -- optionally, a list of model names associated with each of the proofs in <em>proofs</em>
+ */
+class ProofListResponse(proofs : List[ProofPOJO], models : Option[List[String]] = None) extends Response {
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "prooflist.js"))
+
+  val objects : List[JsObject] = models match {
+    case None => proofs.map(proof => JsObject(
+      "id" -> JsString(proof.proofId),
+      "name" -> JsString(proof.name),
+      "description" -> JsString(proof.description),
+      "date" -> JsString(proof.date),
+      "modelId" -> JsString(proof.modelId),
+      "stepCount" -> JsNumber(proof.stepCount),
+      "status" -> JsBoolean(proof.closed)
+    ))
+    case Some(modelNames) => {
+      (proofs zip modelNames).map(p => {
+        val proof = p._1
+        val modelName = p._2
+
+        JsObject(
+          "id" -> JsString(proof.proofId),
+          "name" -> JsString(proof.name),
+          "description" -> JsString(proof.description),
+          "date" -> JsString(proof.date),
+          "modelId" -> JsString(proof.modelId),
+          "stepCount" -> JsNumber(proof.stepCount),
+          "status" -> JsBoolean(proof.closed),
+          "modelName" -> JsString(modelName)
+        )
+      })
+    }
+  }
 
   val json = JsArray(objects)
 }
@@ -130,6 +156,7 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
     "proofTree" -> JsonParser(tree)
   )
 }
+
 
 class TacticDispatchedResponse(proofId: String, taskId: String, nodeId: String, tacticId: String, tacticInstId: String) extends Response {
   val json = JsObject(
@@ -202,4 +229,11 @@ class AngularTreeViewResponse(root : ProofNode) extends Response {
              "children" -> JsArray(step.subgoals.map(n => nodeToJson(n))))
 
   }
+}
+
+class DashInfoResponse(openProofs:Int) extends Response {
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "DashInfoResponse.js"))
+  val json = JsObject(
+    "open_proof_count" -> JsNumber(openProofs)
+  )
 }

@@ -21,15 +21,15 @@
             <td>{{ proof.stepCount }}</td>
             <td><span class="{{ proof.status && 'glyphicon glyphicon-ok' || 'glyphicon glyphicon-remove' }}"></span></td>
             <td class="input-group-btn">
-                <button type="button" class="btn btn-default">Go to proof (BROKEN)</button>
+                <button type="button" class="btn btn-default" ng-click="openPrf(proof.id)">Go to proof</button>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
                     <li><a ng-href="dashboard.html?#/proofs/{{ proof.id }}">Go to proof</a></li>
-                    <li><a href="#">Download (BROKEN)</a></li>
-                    <li><a href="#">Delete</a></li>
+                    <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
+                    <li><a href="#">Delete</a></li>-->
                 </ul>
             </td>
         </tr>

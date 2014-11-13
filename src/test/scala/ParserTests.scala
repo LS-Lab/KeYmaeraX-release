@@ -105,7 +105,15 @@ class ParserParenTests extends FlatSpec with Matchers {
     positiveTestsDir.isDirectory() should be (true)
     for(testFile <- positiveTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
-      parser.runParser(src) //test fails on exception.
+      try {
+        parser.runParser(src) //test fails on exception.
+      }
+      catch {
+        case e : Exception => {
+          fail("This file should have parsed correctly: " + testFile.getName() + " BECAUSE: " + e.getMessage(), e)
+        }
+      }
+
     }
   }
   
@@ -114,8 +122,12 @@ class ParserParenTests extends FlatSpec with Matchers {
     negativeTestsDir.isDirectory() should be (true)
     for(testFile <- negativeTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
-      a [Exception] should be thrownBy {
-        parser.runParser(src)
+      try {
+        parser.runParser(src);
+        fail("A negative file parsed correctly: " + testFile.getName() + " \t ( " + testFile.getAbsoluteFile() + ")")
+      }
+      catch {
+        case _ : Throwable => { } // ok
       }
     }
   }
