@@ -131,14 +131,17 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-class TacticDispatchedResponse(proofId: String, nodeId: String, tacticId: String, tacticInstId: String,
-                                status:DispatchedTacticStatus.Value) extends Response {
+class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
+  val nid = t.nodeId match {
+    case Some(nodeId) => nodeId
+    case None => t.proofId
+  }
   val json = JsObject(
-    "proofId" -> JsString(proofId),
-    "nodeId" -> JsString(nodeId),
-    "tacticId" -> JsString(tacticId),
-    "tacticInstId" -> JsString(tacticInstId),
-    "tacticInstStatus" -> JsString(status.toString)
+    "proofId" -> JsString(t.proofId),
+    "nodeId" -> JsString(nid),
+    "tacticId" -> JsString(t.tacticsId),
+    "tacticInstId" -> JsString(t.id),
+    "tacticInstStatus" -> JsString(t.status.toString)
   )
 }
 
@@ -156,7 +159,7 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
-class GetProofInfoResponse(proof : ProofPOJO) extends Response {
+class OpenProofResponse(proof : ProofPOJO) extends Response {
   val json = JsObject(
     "id" -> JsString(proof.proofId),
     "name" -> JsString(proof.name),

@@ -108,6 +108,8 @@ object KeYmaeraInterface {
     }
   }
 
+  def containsTask(taskId: String): Boolean = TaskManagement.containsTask(taskId)
+
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId))
       case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId))
@@ -197,36 +199,6 @@ object KeYmaeraInterface {
         Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, node))
       case None => None
     }
-//    (nodeId match {
-//      case Some(id) => TaskManagement.getNode(taskId, id)
-//      case None => TaskManagement.getRoot(taskId)
-//    }) match {
-//      case Some(n) =>
-//        (formulaId match {
-//          case Some(fid) =>
-//            val tail = Integer.parseInt(fid.split(":")(1))
-//            val pos = if(fid.startsWith("ante:")) new AntePosition(tail) else new SuccPosition(tail)
-//            TacticManagement.getPositionTactic(tacticId) match {
-//            case Some(t) => Some(t(pos))
-//            case None => None
-//          }
-//          case None =>
-//            TacticManagement.getTactic(tacticId)
-//        }) match {
-//        case Some(t) =>
-//          // attach a info transformation function which later on allows us to track then changes performed by this tactic
-//          // observe that since all nodes should be produced by tactics spawned off here, the nodes will all have a tactic label
-//          RunningTactics.add(t, tId)
-//          // register listener to react on tactic completion
-//          // this way the business logic can react to the completion if required
-//          t.registerCompletionEventListener(_ => callBack.foreach(_(tId)(taskId, nodeId, tacticId)))
-//          t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tId.toString)
-//          t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tId.toString)
-//          Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, n))
-//        case None => None
-//      }
-//      case None => throw new IllegalArgumentException("Unknown task " + taskId + "/" + nodeId)
-//    }
   }
 
   def isRunning(tacticInstanceId: String): Boolean = {

@@ -105,10 +105,20 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
   }
 }
 
-class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
-    new GetProofInfoResponse(proof) :: Nil
+
+    // TODO run in background
+    if (!KeYmaeraInterface.containsTask(proof.proofId)) {
+      val model = db.getModel(proof.modelId)
+      KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
+      val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step))
+      // TODO probably need to be replayed sequentially (run next upon completion of previous -> register callback)
+      steps.foreach(step => KeYmaeraInterface.runTactic(proof.proofId, step.nodeId, step.tacticsId, step.formulaId, step.id))
+    }
+
+    new OpenProofResponse(proof) :: Nil
   }
 }
 
@@ -126,7 +136,7 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
     val result =
       (proof, KeYmaeraInterface.getSubtree(proof.proofId, None, 0) match {
         case Some(proofNode) => proofNode
-        case None => ??? /* should never happen */
+        case None => ??? /* proof might still be loading */
       }
     )
     new ProofTasksResponse(result :: Nil) :: Nil
@@ -171,11 +181,13 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
       Some(tacticCompleted(db, nid)))
     db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId,
       DispatchedTacticStatus.Running))
-    new TacticDispatchedResponse(proofId, nid, tacticId, tId, DispatchedTacticStatus.Running) :: Nil
+    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Running)) :: Nil
   }
 
   private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
     val finishedTactic = db.getDispatchedTactics(tId)
+    // TODO the following updates must be an atomic operation on the database
+    db.addFinishedTactic(proofId, tId)
     db.updateDispatchedTactics(new DispatchedTacticPOJO(
       finishedTactic.id,
       finishedTactic.proofId,
@@ -184,17 +196,13 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
       finishedTactic.tacticsId,
       DispatchedTacticStatus.Finished
     ))
-    // do not store in database, only store that tactic completed
-//    KeYmaeraInterface.getSubtree(proofId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
-//      case Some(s) =>
-//        // s is JSON representation of the subtree created by the tactc -> add to the task as a subtree
-//        if (!db.subtreeExists(nodeId)) {
-//          db.createSubtree(nodeId, s)
-//        } else {
-//          db.updateSubtree(nodeId, s)
-//        }
-//      case None => ???/* log */
-//    }
+  }
+}
+
+class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : String, tacticInstId : String) extends Request {
+  def getResultingResponses() = {
+    val dispatched = db.getDispatchedTactics(tacticInstId)
+    new DispatchedTacticResponse(dispatched) :: Nil
   }
 }
 

@@ -97,7 +97,8 @@ object MongoDB extends DBAbstraction {
   }
 
   override def createProofForModel(modelId : String, name : String, description : String, date:String) : String = {
-    var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description, "date" -> date)
+    var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description, "date" -> date,
+      "steps" -> List[String]())
     var result = proofs.insert(query)
     query.get("_id").toString()
   }
@@ -129,8 +130,8 @@ object MongoDB extends DBAbstraction {
   override def getProofInfo(proofId: String): ProofPOJO = {
     var query = MongoDBObject("_id" -> new ObjectId(proofId))
     val results = proofs.find(query)
-    if(results.length > 1) ??? //There should only be one response b/c _id is a pk.
-    if(results.length < 1) throw new Exception(proofId + " is a bad proofId!")
+    if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique") //There should only be one response b/c _id is a pk.
+    if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
     results.map(result => new ProofPOJO(
       result.getAs[ObjectId]("_id").getOrElse(null).toString(),
       result.getAs[String]("modelId").getOrElse(""),
@@ -140,6 +141,24 @@ object MongoDB extends DBAbstraction {
       result.getAs[Integer]("stepCount").getOrElse(0),
       result.getAs[Boolean]("closed").getOrElse(false)
     )).toList.last
+  }
+
+  override def getProofSteps(proofId: String) : List[String] = {
+    val query = MongoDBObject("_id" -> new ObjectId(proofId))
+    val results = proofs.find(query)
+    if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
+    if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
+    results.one().getAs[List[String]]("steps").getOrElse(List[String]())
+  }
+
+  override def addFinishedTactic(proofId: String, tacticInstId: String) = {
+    val query = MongoDBObject("_id" -> new ObjectId(proofId))
+    val results = proofs.find(query)
+    if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
+    if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
+    val steps = results.one().getAs[List[String]]("steps").getOrElse(List[String]()) :+ tacticInstId
+    val update = $set("steps" -> steps)
+    proofs.update(MongoDBObject("_id" -> new ObjectId(proofId)), update)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

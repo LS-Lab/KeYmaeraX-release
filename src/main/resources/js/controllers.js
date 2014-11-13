@@ -285,10 +285,9 @@ keymaeraProofControllers.controller('ProofCtrl',
         $scope.closed = data.closed;
         $scope.stepCount= data.stepCount;
         $scope.date = data.date;
+
+        // TODO wait for proof to be loaded, then fetch tasks
     });
-//    $http.get('proofs/user/' + $cookies.userId + "/"+ $routeParams.proofId + "/root").success(function(data) {
-//        $scope.proofTree = data
-//    });
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
   });
 
@@ -301,23 +300,26 @@ keymaeraProofControllers.controller('TaskListCtrl',
     });
 
     // Watch running tactics
-    $scope.$on('handleDispatchedTactics', function(tId) {
+    $scope.$on('handleDispatchedTactics', function(event, tId) {
         // TODO create defer per tId
         $scope.defer = $q.defer();
-            $scope.defer.promise.then(function () {
-                // TODO update task list
+            $scope.defer.promise.then(function (tacticResult) {
+                if (tacticResult == 'Finished') {
+                    // TODO fetch the new open goals, update the tree, update the task list
+                } else {
+                    // TODO not yet used, but could be used to report an error in running the tactic
+                }
             });
             (function poll(){
                setTimeout(function() {
-                    $scope.defer.resolve();
-        //          $http.get("TODO" + tacticInstId + "/status").success(function(data) {
-        //            //Setup the next poll recursively
-        //            if (data.running) {
-        //                poll();
-        //            } else {
-        //                defer.resolve();
-        //            }
-        //          })
+                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
+                            .success(function(data) {
+                        if (data.tacticInstStatus == 'Running') {
+                          poll();
+                        } else {
+                            $scope.defer.resolve(data.tacticInstStatus)
+                        }
+                    })
               }, 1000);
             })();
     });

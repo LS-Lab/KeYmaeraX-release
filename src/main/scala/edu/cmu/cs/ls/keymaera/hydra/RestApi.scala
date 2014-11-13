@@ -158,9 +158,9 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val proofInfo = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
+  val openProof = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
-      val request = new GetProofInfoRequest(database, userId, proofId)
+      val request = new OpenProofRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}
@@ -187,6 +187,13 @@ trait RestApi extends HttpService {
       val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
       val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
       val request = new RunTacticRequest(database, userId, proofId, nId, fId, tacticId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val dispatchedTactic = path("proofs" / "user" / Segment / Segment / "dispatchedTactics" / Segment) { (userId, proofId, tacticInstId) => { pathEnd {
+    get {
+      val request = new GetDispatchedTacticRequest(database, userId, proofId, tacticInstId)
       complete(standardCompletion(request))
     }
   }}}
@@ -224,10 +231,11 @@ trait RestApi extends HttpService {
     cookieecho            ::
     createProof           ::
     proofListForModel     ::
-    proofInfo             ::
+    openProof             ::
     proofTasks            ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
+    dispatchedTactic      ::
     proofTree             ::
     devAction             ::
     Nil
