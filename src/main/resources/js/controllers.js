@@ -352,15 +352,14 @@ keymaeraProofControllers.controller('TaskListCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('ProofRuleDialogCtrl',
-        function ($scope, $http, $cookies, $modalInstance, proofId, taskId, nodeId, formula, Tactics) {
+        function ($scope, $http, $cookies, $modalInstance, proofId, nodeId, formula, Tactics) {
   $scope.proofId = proofId;
-  $scope.taskId = taskId;
   $scope.nodeId = nodeId;
   $scope.formula = formula;
   $scope.tactics = [];
 
   var fId = ((formula !== undefined) ? formula.id : "sequent")
-  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/tasks/' + taskId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
+  var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
   $http.get(uri).success(function(data) {
       $scope.tactics = [];
       for (var i = 0; i < data.length; i++) {

@@ -93,10 +93,10 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 
     // Create a "task" for the model associated with this proof.
     val keyFile = db.getModel(modelId).keyFile
-    val taskId = db.createTask(proofId)
-    val taskJson = KeYmaeraInterface.addTask(taskId, keyFile)
-    // TODO do not store JSON
-    db.updateTask(new TaskPOJO(taskId, None, taskJson, taskId, proofId))
+//    val taskId = db.createTask(proofId)
+    KeYmaeraInterface.addTask(proofId, keyFile)
+    // TODO might not need tasks, they're KeYmaera 3 tasks (our proofs), not open goals!
+//    db.updateTask(new TaskPOJO(taskId, None, taskId, proofId))
 
     new CreatedIdResponse(proofId) :: Nil
   }
@@ -116,32 +116,40 @@ class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String)
 }
 
 /**
- * Gets all tasks of the specified proof.
+ * Gets all tasks of the specified proof. A task is some work the user has to do. It is not a KeYmaera task!
  * @param db Access to the database.
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
  */
 class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    val tasks = db.getProofTasks(proofId)
-    // TODO retrieve proof node KeYmaeraInterface.getSubtree(taskId)
-    new ProofTasksResponse(tasks) :: Nil
+//    val tasks = db.getProofTasks(proofId)
+
+    // TODO check if it is loaded into KeYmaera (should be, if not ask user to load the proof)
+    // TODO get all the open goals from the proof loaded in KeYmaera
+    val proof = db.getProofInfo(proofId)
+    val result =
+      (proof, KeYmaeraInterface.getSubtree(proof.proofId, None, 0) match {
+        case Some(proofNode) => proofNode
+        case None => ??? /* should never happen */
+      }
+    )
+    new ProofTasksResponse(result :: Nil) :: Nil
   }
 }
 
 /**
  * Searches for tactics that are applicable to the specified formula. The sequent, which contains this formula, is
- * identified by the task ID and the node ID.
+ * identified by the proof ID and the node ID.
  * @param db Access to the database.
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
- * @param taskId Identifies the task.
  * @param nodeId Identifies the node. If None, request the tactics of the "root" node of the task.
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  */
-class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : Option[String]) extends Request {
+class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String]) extends Request {
   def getResultingResponses() = {
-    val applicableTactics = KeYmaeraInterface.getApplicableTactics(taskId, nodeId, formulaId)
+    val applicableTactics = KeYmaeraInterface.getApplicableTactics(proofId, nodeId, formulaId)
       .map(tId => db.getTactic(tId)).toList
     new ApplicableTacticsResponse(applicableTactics) :: Nil
   }
@@ -149,31 +157,30 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
 
 /**
  * Runs the specified tactic on the formula with the specified ID. The sequent, which contains this formula, is
- * identified by the task ID and the node ID.
+ * identified by the proof ID and the node ID.
  * @param db Access to the database.
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
- * @param taskId Identifies the task.
  * @param nodeId Identifies the node. If None, the tactic is run on the "root" node of the task.
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  * @param tacticId Identifies the tactic to run.
  */
-class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, taskId : String, nodeId : Option[String], formulaId : Option[String], tacticId : String) extends Request {
+class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String], tacticId : String) extends Request {
   def getResultingResponses() = {
     val nid = nodeId match {
       case Some(nodeId) => nodeId
-      case None => taskId
+      case None => proofId
     }
-    val tId = db.createDispatchedTactics(taskId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Prepared)
-    KeYmaeraInterface.runTactic(taskId, nodeId, tacticId, formulaId, tId,
+    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Prepared)
+    KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
       Some(tacticCompleted(db, nid)))
-    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, taskId, nodeId, formulaId, tacticId,
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId,
       DispatchedTacticStatus.Running))
-    new TacticDispatchedResponse(proofId, taskId, nid, tacticId, tId, DispatchedTacticStatus.Running) :: Nil
+    new TacticDispatchedResponse(proofId, nid, tacticId, tId, DispatchedTacticStatus.Running) :: Nil
   }
 
-  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
-    KeYmaeraInterface.getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
+  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+    KeYmaeraInterface.getSubtree(proofId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId) }) match {
       case Some(s) =>
         // s is JSON representation of the subtree created by the tactc -> add to the task as a subtree
         if (!db.subtreeExists(nodeId)) {

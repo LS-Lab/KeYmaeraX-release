@@ -143,79 +143,6 @@ object MongoDB extends DBAbstraction {
     )).toList.last
   }
 
-
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Proof Nodes
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  override def createTask(proofId:String) : String = {
-    val query = MongoDBObject(
-      "proofId"      -> proofId
-    )
-    tasks.insert(query)
-    query.get("_id").toString()
-  }
-  override def addTask(task : TaskPOJO) = {
-    val taskDbObject = task.nodeId match {
-      case Some(n) => MongoDBObject(
-        "_id"          -> task.taskId,
-        "nodeId"       -> n,
-        "task"         -> task.task,
-        "rootTaskId"   -> task.rootTaskId,
-        "proofId"      -> task.proofId)
-      case None => MongoDBObject(
-        "_id"          -> task.taskId,
-        "task"         -> task.task,
-        "rootTaskId"   -> task.rootTaskId,
-        "proofId"      -> task.proofId)
-    }
-
-    tasks.insert(taskDbObject)
-  }
-
-
-  override def getTask(taskId : String) = {
-    val query = MongoDBObject("_id" -> taskId)
-    val results = tasks.find(query)
-    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
-    val result = results.toList.last
-    new TaskPOJO(
-      result.getAs[ObjectId]("_id").orNull.toString(),
-      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
-      result.getAs[String]("task").getOrElse(""),
-      result.getAs[String]("rootTaskId").getOrElse(""),
-      result.getAs[String]("proofId").getOrElse("")
-    )
-  }
-
-  override def getProofTasks(proofId : String) = {
-    val query = MongoDBObject("proofId" -> proofId)
-    val results = tasks.find(query)
-    results.map(result => new TaskPOJO(
-      result.getAs[ObjectId]("_id").orNull.toString(),
-      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
-      result.getAs[String]("task").getOrElse(""),
-      result.getAs[String]("rootTaskId").getOrElse(""),
-      result.getAs[String]("proofId").getOrElse("")
-    )).toList;
-  }
-
-  override def updateTask(task: TaskPOJO) = {
-    val update = task.nodeId match {
-      case Some(n) => MongoDBObject(
-        "nodeId"       -> n,
-        "task"         -> task.task,
-        "rootTaskId"   -> task.rootTaskId,
-        "proofId"      -> task.proofId)
-      case None => MongoDBObject(
-        "task"         -> task.task,
-        "rootTaskId"   -> task.rootTaskId,
-        "proofId"      -> task.proofId)
-    }
-    tasks.update(MongoDBObject("_id" -> new ObjectId(task.taskId)), update)
-  }
-
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Tactics
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -261,10 +188,12 @@ object MongoDB extends DBAbstraction {
     )).toList
   }
 
-  override def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String) : String = {
+  override def createDispatchedTactics(proofId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
+                                        status:DispatchedTacticStatus.Value) : String = {
     val fields = List(
-      "taskId"       -> taskId,
-      "tacticsId"    -> tacticsId)
+      "proofId"       -> proofId,
+      "tacticsId"    -> tacticsId,
+      "status"       -> status.toString)
     if (nodeId.isDefined) { fields :+ ("nodeId" -> nodeId) }
     if (formulaId.isDefined) { fields :+ ("formulaId" -> formulaId) }
 
@@ -278,11 +207,23 @@ object MongoDB extends DBAbstraction {
     if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
     results.map(result => new DispatchedTacticPOJO(
       result.getAs[ObjectId]("_id").orNull.toString(),
-      result.getAs[String]("taskId").getOrElse(""),
+      result.getAs[String]("proofId").getOrElse(""),
       if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
       if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").getOrElse("")) else None,
-      result.getAs[String]("tacticsId").getOrElse("")
+      result.getAs[String]("tacticsId").getOrElse(""),
+      DispatchedTacticStatus.withName(result.getAs[String]("status").getOrElse(""))
     )).toList.last
+  }
+  override def updateDispatchedTactics(tactic : DispatchedTacticPOJO) = {
+    val fields = List(
+      "proofId"       -> tactic.proofId,
+      "tacticsId"    -> tactic.tacticsId,
+      "status"       -> tactic.status.toString)
+    if (tactic.nodeId.isDefined) { fields :+ ("nodeId" -> tactic.nodeId) }
+    if (tactic.formulaId.isDefined) { fields :+ ("formulaId" -> tactic.formulaId) }
+
+    val update = MongoDBObject(fields)
+    dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

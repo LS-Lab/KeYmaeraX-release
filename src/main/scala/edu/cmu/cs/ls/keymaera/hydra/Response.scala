@@ -131,11 +131,10 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
   )
 }
 
-class TacticDispatchedResponse(proofId: String, taskId: String, nodeId: String, tacticId: String, tacticInstId: String,
+class TacticDispatchedResponse(proofId: String, nodeId: String, tacticId: String, tacticInstId: String,
                                 status:DispatchedTacticStatus.Value) extends Response {
   val json = JsObject(
     "proofId" -> JsString(proofId),
-    "taskId" -> JsString(taskId),
     "nodeId" -> JsString(nodeId),
     "tacticId" -> JsString(tacticId),
     "tacticInstId" -> JsString(tacticInstId),
@@ -168,17 +167,12 @@ class GetProofInfoResponse(proof : ProofPOJO) extends Response {
   )
 }
 
-class ProofTasksResponse(tasks : List[TaskPOJO]) extends Response {
-  val objects = tasks.map(taskpojo => JsObject(
-    "id" -> JsString(taskpojo.taskId),
-    "nodeId" -> (taskpojo.nodeId match {
-      case Some(n) => JsString(n)
-      case None => JsString(taskpojo.taskId)
-    }),
-    "task" -> JsonParser(taskpojo.task),
-    "rootTaskId" -> JsString(taskpojo.rootTaskId),
-    "proofId" -> JsString(taskpojo.proofId)
-  ))
+class ProofTasksResponse(tasks : List[(ProofPOJO, String)]) extends Response {
+  val objects = tasks.map({ case (proofpojo, proofnodeJson) => JsObject(
+    "proofId" -> JsString(proofpojo.proofId),
+    "nodeId" -> JsString(proofpojo.proofId), /* TODO */
+    "proofNode" -> JsonParser(proofnodeJson)
+  )})
 
   val json = JsArray(objects)
 }

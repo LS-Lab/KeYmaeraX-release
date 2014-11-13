@@ -4,7 +4,6 @@ angular.module('sequent', ['ngSanitize','formula'])
         restrict: 'AE',
         scope: {
             proofId: '=',
-            taskId: '=',
             nodeId: '=',
             sequent: '='
         },
@@ -18,7 +17,6 @@ angular.module('sequent', ['ngSanitize','formula'])
                   size: 'lg',
                   resolve: {
                     proofId: function() { return $scope.proofId; },
-                    taskId: function() { return $scope.taskId; },
                     nodeId: function() { return $scope.nodeId; },
                     formula: function() { return f; }
                   }
@@ -32,7 +30,6 @@ angular.module('sequent', ['ngSanitize','formula'])
                   size: 'lg',
                   resolve: {
                     proofId: function() { return $scope.proofId; },
-                    taskId: function() { return $scope.taskId; },
                     nodeId: function() { return $scope.nodeId; },
                     formula: function() { return; }
                   }
