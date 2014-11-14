@@ -1,0 +1,46 @@
+<h1>Your Proofs</h1>
+<div class="panel panel-default">
+    <!-- Default panel contents -->
+    <div class="panel-heading">Proofs for User</div>
+
+    <!-- Table -->
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Name</td>
+            <td>Model Name</td>
+            <td>Date</td>
+            <td>Proof Steps</td>
+            <td>Status</td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr ng-repeat="proof in allproofs">
+            <td>{{ proof.id }}</td>
+            <td>{{ proof.modelName }}</td>
+            <td>{{ proof.name }}</td>
+            <td>{{ proof.date }}</td>
+            <td>{{ proof.stepCount }}</td>
+            <td><span class="{{ proof.status && 'glyphicon glyphicon-ok' || 'glyphicon glyphicon-remove' }}"></span></td>
+            <td class="input-group-btn">
+                <button type="button" class="btn btn-default" ng-click="openPrf(proof.id)">Go to proof</button>
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <span class="caret"></span>
+                    <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu" role="menu">
+                    <li><a ng-href="dashboard.html?#/proofs/{{ proof.id }}">Go to proof</a></li>
+                    <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
+                    <li><a href="#">Delete</a></li>-->
+                </ul>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- KeYmaera API
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="js/api.js"></script>
