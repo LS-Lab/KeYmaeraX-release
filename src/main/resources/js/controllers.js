@@ -382,13 +382,18 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.setSelected = function(task) {
         $scope.selectedTask = task;
         //pulling this variable out so that I can print it back out.
-        var treeresource = "/proofs/user/" + $cookies.userId + "/tree/" + $scope.proofId + "/" + task.nodeId
-        alert("getting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
-        $http.get("/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
-                .success(function(data) {
-            alert("setting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
-            $scope.treedata = data;
-        });
+        var nodeId = null
+        var uri = (nodeId === null) ?
+            "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/" :
+            "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/" + nodeId;
+
+        $http.get(uri)
+            .success(function(data) {
+                $scope.treedata = data;
+            })
+            .error(function() {
+                alert("error encountered while trying to retrieve the tree.")
+            })
 
 
     }

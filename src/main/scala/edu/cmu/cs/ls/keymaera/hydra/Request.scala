@@ -231,11 +231,10 @@ class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : 
 class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String]) extends Request{
   override def getResultingResponses(): List[Response] = {
     val node = KeYmaeraInterface.getActualNode(proofId, nodeId)
-    Nil
-//    node match {
-//      case Some(theNode) => { new AngularTreeViewResponse(theNode) :: Nil }
-//      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
-//    }
+    node match {
+      case Some(theNode) => { new AngularTreeViewResponse(theNode) :: Nil }
+      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
+    }
   }
 }
 

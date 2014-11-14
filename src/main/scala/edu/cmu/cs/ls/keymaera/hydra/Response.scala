@@ -243,12 +243,24 @@ class AngularTreeViewResponse(root : ProofNode) extends Response {
   val json = JsArray( nodeToJson(root) )
 
   private def nodeToJson(p : ProofNode) : JsValue = {
-    val step = p.children.last
+    //If this node has some children, then they should be displayed.
+    //Otherwise, ???
+    //TODO implement id's correctly.
+    //TODO implement that label of bare proof nodes correctly.
+    if(p.children.length != 0) {
+      val step = p.children.last
 
-    JsObject("id"       -> JsString(""),
-             "label"    -> JsString(step.rule.name),
-             "children" -> JsArray(step.subgoals.map(n => nodeToJson(n))))
+      JsObject("id"       -> JsString(""),
+               "label"    -> JsString(step.rule.name),
+               "children" -> JsArray(step.subgoals.map(n => nodeToJson(n))))
 
+    }
+    else {
+      JsObject("id" -> JsString(""),
+               "label" -> JsString("Leaf?!?!"),
+               "children" -> JsArray()
+      )
+    }
   }
 }
 
