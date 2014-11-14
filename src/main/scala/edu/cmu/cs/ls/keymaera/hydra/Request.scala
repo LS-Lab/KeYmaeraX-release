@@ -114,7 +114,6 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   }
 }
 
-//class GetProofInfoRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
 class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
@@ -217,14 +216,14 @@ class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : 
 }
 
 
-class GetProofTreeRequest(db : DBAbstraction, userId : String, taskId : String, nodeId : Option[String]) extends Request{
+class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String]) extends Request{
   override def getResultingResponses(): List[Response] = {
-    val node = KeYmaeraInterface.getActualNode(taskId, nodeId)
-    throw new Exception("blah")
-    node match {
-      case Some(theNode) => { new AngularTreeViewResponse(theNode) :: Nil }
-      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
-    }
+    val node = KeYmaeraInterface.getActualNode(proofId, nodeId)
+    Nil
+//    node match {
+//      case Some(theNode) => { new AngularTreeViewResponse(theNode) :: Nil }
+//      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
+//    }
   }
 }
 

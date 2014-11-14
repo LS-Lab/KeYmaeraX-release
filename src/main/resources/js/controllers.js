@@ -365,17 +365,17 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.treedata = [];
 
     $scope.setSelected = function(task) {
-        $scope.selectedTask = JSON.parse(task);
+        $scope.selectedTask = task;
         //pulling this variable out so that I can print it back out.
-        var treeresource = "/proofs/user/" + $cookies.userId + "/tree/" + "TASK ID HERE" + "/" + "NODE ID HERE"
+        var treeresource = "/proofs/user/" + $cookies.userId + "/tree/" + $scope.proofId + "/" + task.nodeId
         alert("getting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
         $http.get("/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
-            .success(function(data) {
-                alert("setting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
-                $scope.treedata = data;
-            });
+                .success(function(data) {
+            alert("setting tree data from \n" + "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree")
+            $scope.treedata = data;
+        });
 
-        $scope.selectedTask = task;
+
     }
 
     $scope.$watch('tasks',

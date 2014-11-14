@@ -26,11 +26,6 @@ object MongoDB extends DBAbstraction {
     tasks.drop()
   }
 
-  //val proofs = mongoClient("keymaera")("proofs")
-  //val tactics = mongoClient("keymaera")("tactics")
-  //val positionTactics = mongoClient("keymaera")("positionTactics")
-  //val models = mongoClient("keymaera")("models")
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Users
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,17 +253,4 @@ object MongoDB extends DBAbstraction {
     val update = MongoDBObject(fields)
     dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)
   }
-
-  // Proof trees
-  override def createSubtree(pnId: String, tree: String): String = ???
-
-  override def getTask(taskId: String): TaskPOJO = ???
-
-  //todo ALL OF THIS IS AUTO-GEENERATED SUBS...
-  override def createTask(proofId: String): String = ???
-  override def addTask(task: TaskPOJO): Unit = ???
-  override def updateTask(task: TaskPOJO): Unit = ???
-  override def getSubtree(pnId: String): String = ???
-  override def getProofTasks(proofId: String): List[TaskPOJO] = ???
-  override def updateSubtree(pnId: String, tree: String): Unit = ???
 }

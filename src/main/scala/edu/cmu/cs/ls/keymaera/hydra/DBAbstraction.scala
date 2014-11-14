@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-import edu.cmu.cs.ls.keymaera.core.{Sequent, ProofNode}
+
 
 
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
@@ -57,8 +57,6 @@ class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kin
 class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
                            val tacticsId:String, val status:DispatchedTacticStatus.Value)
 
-class TaskPOJO() //???
-
 //tasks : _id, model
 //tactics: _id, name, class
 //dispatched_tactics: _id, tactic_id, task_id, node_id, count
@@ -90,19 +88,6 @@ trait DBAbstraction {
 
   //Proofs and Proof Nodes
   def getProofInfo(proofId : String) : ProofPOJO
-
-  // Proof trees
-  def createSubtree(pnId : String, tree : String) : String
-  def getSubtree(pnId : String) : String
-  def updateSubtree(pnId: String, tree : String)
-
-  // Tasks
-  def createTask(proofId: String) : String
-  def addTask(task : TaskPOJO)
-  def getTask(taskId : String) : TaskPOJO
-  def getProofTasks(proofId : String) : List[TaskPOJO]
-  def updateTask(task: TaskPOJO)
-
   def getProofSteps(proofId : String) : List[String]
   def addFinishedTactic(proofId : String, tacticInstId : String)
 

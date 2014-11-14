@@ -213,10 +213,10 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  // proofs/user/< userid >/tree/< taskid >/< proofnodeid >
-  val proofTree = path("proofs" / "user" / Segment / "tree" / Segment / Segment.?) { (userId, taskId, proofId) => {
+  // proofs/user/< userid >/< proofid >/tree/< proofnodeid >
+  val proofTree = path("proofs" / "user" / Segment / Segment / "tree" / Segment.?) { (userId, proofId, nodeId) => {
     get {
-      val request = new GetProofTreeRequest(database, userId, taskId, proofId)
+      val request = new GetProofTreeRequest(database, userId, proofId, nodeId)
       complete(standardCompletion(request))
     }
   }}
