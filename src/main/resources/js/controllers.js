@@ -324,7 +324,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.tasks = data;
     });
 
-<<<<<<< HEAD
     $scope.addSubtree = function(parentId, subtree) {
         for(var i = 0 ; i < $scope.treedata.length; i++) {
             var node = $scope.treedata[i];

@@ -39,8 +39,8 @@ object KeYmaeraInterface {
     def containsTask(id: String) = tasks.contains(id)
 
     def getRoot(id: String): Option[ProofNode] = tasks.get(id) match {
-      case Some(t) => throw new Exception(); Some(t._1)
-      case None => throw new Exception(); None
+      case Some(t) => Some(t._1)
+      case None => None
     }
 
     def getNode(tId: String, nId: String): Option[ProofNode] = {
