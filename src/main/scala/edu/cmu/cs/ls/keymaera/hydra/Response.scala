@@ -1,13 +1,14 @@
 /**
  * HyDRA API Responses
  *  @author Nathan Fulton
+ *  @author Stefan Mitsch
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import spray.json._
-import edu.cmu.cs.ls.keymaera.core.{ProofStep, ProofNode, Expr, Sequent}
+import edu.cmu.cs.ls.keymaera.core.ProofNode
 import java.io.File
 
 /**
@@ -29,25 +30,24 @@ sealed trait Response {
   protected val json: JsValue
   val schema: Option[java.io.File] = None
 
-  def getJson() = {
-    validate();
+  def getJson = {
+    validate()
     json
   }
 
   def validate() = {
     schema match {
       case None => true //OK.
-      case Some(file) => {
+      case Some(file) =>
         val schema = JsonSchemaFactory.byDefault().getJsonSchema(
           JsonLoader.fromFile(file)
         )
         val report = schema.validate(JsonLoader.fromString(json.prettyPrint))
-        if (report.isSuccess())
+        if (report.isSuccess)
           true
         else {
           throw new Exception("json schema violation.")
         }
-      }
     }
   }
 }
@@ -74,24 +74,25 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
 
 /**
  *
- * @param proofs
+ * @param proofs The list of proofs with their status in KeYmaera (proof, loadStatus).
  * @param models -- optionally, a list of model names associated with each of the proofs in <em>proofs</em>
  */
-class ProofListResponse(proofs : List[ProofPOJO], models : Option[List[String]] = None) extends Response {
+class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List[String]] = None) extends Response {
   override val schema = Some(new File(SCHEMA_DIRECTORY + "prooflist.js"))
 
   val objects : List[JsObject] = models match {
-    case None => proofs.map(proof => JsObject(
+    case None => proofs.map({case (proof, loadStatus) => JsObject(
       "id" -> JsString(proof.proofId),
       "name" -> JsString(proof.name),
       "description" -> JsString(proof.description),
       "date" -> JsString(proof.date),
       "modelId" -> JsString(proof.modelId),
       "stepCount" -> JsNumber(proof.stepCount),
-      "status" -> JsBoolean(proof.closed)
-    ))
-    case Some(modelNames) => {
-      (proofs zip modelNames).map(p => {
+      "status" -> JsBoolean(proof.closed),
+      "loadStatus" -> JsString(loadStatus)
+    )})
+    case Some(modelNames) =>
+      (proofs zip modelNames).map({case (p,loadStatus) => {
         val proof = p._1
         val modelName = p._2
 
@@ -103,10 +104,10 @@ class ProofListResponse(proofs : List[ProofPOJO], models : Option[List[String]] 
           "modelId" -> JsString(proof.modelId),
           "stepCount" -> JsNumber(proof.stepCount),
           "status" -> JsBoolean(proof.closed),
+          "loadStatus" -> JsString(loadStatus),
           "modelName" -> JsString(modelName)
         )
-      })
-    }
+      }})
   }
 
   val json = JsArray(objects)
@@ -136,8 +137,8 @@ class CreatedIdResponse(id : String) extends Response {
 
 class ErrorResponse(exn : Exception) extends Response {
   val json = JsObject(
-        "textStatus" -> JsString(exn.getMessage()),
-        "errorThrown" -> JsString(exn.getStackTrace().toString()),
+        "textStatus" -> JsString(exn.getMessage),
+        "errorThrown" -> JsString(exn.getStackTrace.toString),
         "type" -> JsString("error")
       )
 }
@@ -149,6 +150,19 @@ class UnimplementedResponse(callUrl : String) extends Response {
       "type" -> JsString("error")
   )
 }
+
+class ProofStatusResponse(proofId : String, error : String) extends Response {
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "proofstatus.js"))
+  val json = JsObject(
+    "textStatus" -> JsString(error + ": " + proofId),
+    "errorThrown" -> JsString(error),
+    "proofId" -> JsString(proofId),
+    "type" -> JsString("error")
+  )
+}
+class ProofIsLoadingResponse(proofId : String) extends ProofStatusResponse(proofId, "proof is loading")
+class ProofNotLoadedResponse(proofId : String) extends ProofStatusResponse(proofId, "proof not loaded")
+
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {
   val json = JsObject(
@@ -187,14 +201,17 @@ class ProofTreeResponse(tree: String) extends Response {
   )
 }
 
-class OpenProofResponse(proof : ProofPOJO) extends Response {
+class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response {
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "proof.js"))
   val json = JsObject(
     "id" -> JsString(proof.proofId),
     "name" -> JsString(proof.name),
+    "description" -> JsString(proof.description),
     "date" -> JsString(proof.date),
-    "model" -> JsString(proof.modelId),
-    "closed" -> JsBoolean(proof.closed),
-    "stepCount" -> JsNumber(proof.stepCount)
+    "modelId" -> JsString(proof.modelId),
+    "stepCount" -> JsNumber(proof.stepCount),
+    "status" -> JsBoolean(proof.closed),
+    "loadStatus" -> JsString(loadStatus)
   )
 }
 

@@ -1,12 +1,11 @@
 package edu.cmu.cs.ls.keymaera.api
 
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement.TaskStatus
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
-import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.core.Sequent
-import scala.Some
-import scala.Unit
 
 /**
  * Open issues:
@@ -21,7 +20,22 @@ import scala.Unit
 object KeYmaeraInterface {
 
   object TaskManagement {
+    object TaskStatus extends Enumeration {
+      type TaskStatus = Value
+      val NotLoaded, Loading, Loaded = Value
+    }
+
+
     @volatile var tasks: Map[String, (ProofNode, Map[String, ProofNode])] = Map()
+    @volatile var loading: Set[String] = Set()
+
+    def startLoadingTask(taskId : String) {
+      loading += taskId
+    }
+
+    def finishedLoadingTask(taskId : String) {
+      loading -= taskId
+    }
 
     def addTask(r: ProofNode, taskId: String) = this.synchronized {
       assert(r.children.isEmpty)
@@ -99,6 +113,31 @@ object KeYmaeraInterface {
   }
 
   /**
+   * Indicates whether the specified task is known (loaded) to the prover.
+   * @param taskId Identifies the task.
+   * @return True, if the task is known (loaded). False otherwise.
+   */
+  def containsTask(taskId: String): Boolean = TaskManagement.containsTask(taskId)
+
+  /**
+   * Indicates whether the specified task is currently loading.
+   * @param taskId Identifies the task.
+   * @return True, if the task is currently loading. False otherwise.
+   */
+  def isLoadingTask(taskId : String) : Boolean = TaskManagement.loading.contains(taskId)
+
+  /**
+   * Gets the status of the specified task.
+   * @param taskId Identifies the task.
+   * @return The task status.
+   */
+  def getTaskStatus(taskId : String) : TaskStatus.Value = {
+    if (containsTask(taskId)) TaskStatus.Loaded
+    else if (isLoadingTask(taskId)) TaskStatus.Loading
+    else TaskStatus.NotLoaded
+  }
+
+  /**
    * Parse the problem and add it to the tasks management system
    *
    * @param taskId Identifies the task.
@@ -107,11 +146,13 @@ object KeYmaeraInterface {
    */
   def addTask(taskId: String, content: String): String = {
     if (TaskManagement.containsTask(taskId)) throw new IllegalArgumentException("Duplicate task ID " + taskId)
+    TaskManagement.startLoadingTask(taskId)
     new KeYmaeraParser().runParser(content) match {
       case f: Formula =>
         val seq = Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f) )
         val r = new RootNode(seq)
         TaskManagement.addTask(r, taskId)
+        TaskManagement.finishedLoadingTask(taskId)
         json(r, taskId, 0, taskId)
       case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
@@ -121,8 +162,6 @@ object KeYmaeraInterface {
     case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
     case None         => TaskManagement.getRoot(taskId)
   }
-
-  def containsTask(taskId: String): Boolean = TaskManagement.containsTask(taskId)
 
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId))

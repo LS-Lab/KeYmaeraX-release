@@ -50,9 +50,9 @@ trait RestApi extends HttpService {
   private def standardCompletion(r : Request) : String = {
     val responses = r.getResultingResponses()
     responses match {
-      case hd :: Nil => hd.getJson().prettyPrint
+      case hd :: Nil => hd.getJson.prettyPrint
       case _         =>
-        responses.foldLeft("[")( (prefix, response) => prefix + "," + response.getJson().prettyPrint) + "]"
+        responses.foldLeft("[")( (prefix, response) => prefix + "," + response.getJson.prettyPrint) + "]"
     }
   }
 
@@ -76,7 +76,7 @@ trait RestApi extends HttpService {
     pathEnd {
       get {
         val request = new LoginRequest(database,username,password)
-        complete(request.getResultingResponses().last.getJson().prettyPrint)
+        complete(request.getResultingResponses().last.getJson.prettyPrint)
       } ~
       post {
         val request = new CreateUserRequest(database, username, password)
@@ -165,7 +165,6 @@ trait RestApi extends HttpService {
     }
   }}}
 
-//  val proofInfo = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
   val openProof = path("proofs" / "user" / Segment / Segment) { (userId, proofId) => { pathEnd {
     get {
       val request = new OpenProofRequest(database, userId, proofId)

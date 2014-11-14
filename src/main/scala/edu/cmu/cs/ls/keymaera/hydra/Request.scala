@@ -101,14 +101,17 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 
 class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request {
   def getResultingResponses() = {
-    new ProofListResponse(db.getProofsForModel(modelId)) :: Nil
+    val proofs = db.getProofsForModel(modelId).map(proof =>
+      (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
+    new ProofListResponse(proofs) :: Nil
   }
 }
 
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   def getResultingResponses() = {
     val proofsWithNames = db.getProofsForUser(userId)
-    val proofs = proofsWithNames.map(_._1)
+    val proofs = proofsWithNames.map(_._1).map(proof =>
+      (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
     val names  = proofsWithNames.map(_._2)
     new ProofListResponse(proofs,Some(names)) :: Nil
   }
@@ -118,7 +121,6 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
 
-    // TODO run in background
     if (!KeYmaeraInterface.containsTask(proof.proofId)) {
       val model = db.getModel(proof.modelId)
       KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
@@ -127,7 +129,9 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
       steps.foreach(step => KeYmaeraInterface.runTactic(proof.proofId, step.nodeId, step.tacticsId, step.formulaId, step.id))
     }
 
-    new OpenProofResponse(proof) :: Nil
+    val status = KeYmaeraInterface.getTaskStatus(proofId)
+
+    new OpenProofResponse(proof, status.toString) :: Nil
   }
 }
 
@@ -139,16 +143,24 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
  */
 class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
-    // TODO check if it is loaded into KeYmaera (should be, if not ask user to load the proof)
-    // TODO get all the open goals from the proof loaded in KeYmaera
-    val proof = db.getProofInfo(proofId)
-    val result =
-      (proof, KeYmaeraInterface.getSubtree(proof.proofId, None, 0) match {
-        case Some(proofNode) => proofNode
-        case None => ??? /* proof might still be loading */
+    // TODO refactor into template method for all tasks that interact with the proof
+    if (!KeYmaeraInterface.containsTask(proofId)) {
+      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
+        new ProofNotLoadedResponse(proofId) :: Nil
+      } else {
+        new ProofIsLoadingResponse(proofId) :: Nil
       }
-    )
-    new ProofTasksResponse(result :: Nil) :: Nil
+    } else {
+      // TODO get all the open goals from the proof loaded in KeYmaera
+      val proof = db.getProofInfo(proofId)
+      val result =
+        (proof, KeYmaeraInterface.getSubtree(proof.proofId, None, 0) match {
+          case Some(proofNode) => proofNode
+          case None => ??? /* proof might still be loading */
+        }
+          )
+      new ProofTasksResponse(result :: Nil) :: Nil
+    }
   }
 }
 

@@ -26,13 +26,19 @@
                 <span ng-if="proof.status === false"> Unfinished</span>
             </td>
             <td class="btn-group">
-                <a class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="glyphicon glyphicon-open"></span> Open</a>
+                <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="glyphicon glyphicon-open"></span> Open</a>
+                <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="glyphicon glyphicon-refresh"></span> Load</a>
+                <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading...</a>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a ng-href="dashboard.html?#/proofs/{{ proof.id }}">Go to proof</a></li>
+                    <li>
+                        <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="glyphicon glyphicon-open"></span> Open</a>
+                        <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="glyphicon glyphicon-refresh"></span> Load</a>
+                        <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading...</a>
+                    </li>
                     <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
                     <li><a href="#">Delete</a></li>-->
                 </ul>
@@ -41,8 +47,3 @@
         </tbody>
     </table>
 </div>
-
-<!-- KeYmaera API
-================================================== -->
-<!-- Placed at the end of the document so the pages load faster -->
-<script src="js/api.js"></script>

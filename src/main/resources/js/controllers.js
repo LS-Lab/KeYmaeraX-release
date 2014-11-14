@@ -291,6 +291,12 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     $scope.openPrf = function(proofId) {
         $location.path('/proofs/' + proofId)
     }
+    $scope.loadProof = function(proof) {
+        proof.loadStatus = 'Loading'
+        $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+            proof.loadStatus = data.loadStatus
+        })
+    }
     //Load the proof list and emit as a view.
     $http.get('models/users/' + $cookies.userId + "/model/" + $routeParams.modelId + "/proofs").success(function(data) {
       $scope.proofs = data;
@@ -322,6 +328,15 @@ keymaeraProofControllers.controller('TaskListCtrl',
 
     $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + '/tasks').success(function(data) {
         $scope.tasks = data;
+    }).error(function(data) {
+        if (data.errorThrown == 'proof not loaded') {
+            // TODO open modal dialog and ask if proof should be loaded
+        } else if (data.errorThrown == 'proof is loading') {
+            $scope.proofIsLoading = $q.defer()
+            $scope.proofIsLoading.promise.then(function() {
+                // TODO proof is now loaded, fetch tree and tasks
+            })
+        }
     });
 
     $scope.addSubtree = function(parentId, subtree) {
@@ -340,25 +355,25 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.$on('handleDispatchedTactics', function(event, tId) {
         // TODO create defer per tId
         $scope.defer = $q.defer();
-            $scope.defer.promise.then(function (tacticResult) {
-                if (tacticResult == 'Finished') {
-                    // TODO fetch the new open goals, update the tree, update the task list
-                } else {
-                    // TODO not yet used, but could be used to report an error in running the tactic
-                }
-            });
-            (function poll(){
-               setTimeout(function() {
-                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
-                            .success(function(data) {
-                        if (data.tacticInstStatus == 'Running') {
-                          poll();
-                        } else {
-                            $scope.defer.resolve(data.tacticInstStatus)
-                        }
-                    })
-              }, 1000);
-            })();
+        $scope.defer.promise.then(function (tacticResult) {
+            if (tacticResult == 'Finished') {
+                // TODO fetch the new open goals, update the tree, update the task list
+            } else {
+                // TODO not yet used, but could be used to report an error in running the tactic
+            }
+        });
+        (function poll(){
+           setTimeout(function() {
+                $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
+                        .success(function(data) {
+                    if (data.tacticInstStatus == 'Running') {
+                      poll();
+                    } else {
+                        $scope.defer.resolve(data.tacticInstStatus)
+                    }
+                })
+          }, 1000);
+        })();
     });
 
     // Get & populate the tree.

@@ -1,8 +1,8 @@
 {
   "title": "prooflist",
   "type": "array",
-  "items" : {
-        "type" : "object",
+  "items": {
+    "type" : "object",
         "properties": {
           "id": {
             "type": "string"
@@ -21,8 +21,11 @@
           },
           "status": {
             "type" : "boolean"
+          },
+          "loadStatus": {
+            "type" : "string"
           }
         },
-        "required" : ["id", "name", "date", "stepCount", "status"]
+        "required" : ["id", "name", "date", "stepCount", "status", "loadStatus"]
   }
 }
