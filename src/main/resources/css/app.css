@@ -58,6 +58,11 @@ table .btn{
   to { -moz-transform: scale(1) rotate(360deg);}
 }
 
+.k4-sequent-index {
+    font-size: x-small;
+    padding-right: 10px;
+}
+
 .k4-busy-container {
     text-align:center;
 }

@@ -8,7 +8,6 @@ angular.module('sequent', ['ngSanitize','formula'])
             sequent: '='
         },
         controller: function($scope, $sce, $modal, Agenda) {
-            //$scope.sequent = JSON.parse($scope.taskJson)
             // TODO should issue events other controllers can subscribe to
             $scope.handleFormulaClick = function(f) {
                 var modalInstance = $modal.open({

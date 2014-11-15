@@ -1,17 +1,30 @@
-<span ng-repeat="f in sequent.ante"
+<div ng-repeat="f in sequent.ante"
       id="{{f.id}}"
       ng-click="handleFormulaClick(f)">
-    <k4-formula formula="f.formula" highlight="true"></k4-formula>
-</span>
+    <table>
+        <tbody>
+            <tr>
+                <td class="k4-sequent-index">a:{{$index}}</td>
+                <td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
 
-<!-- TODO: Refactor ApiClient into an Angular service -->
-<span
+<div
     ng-click="handleTurnstileClick()">
     &#8866;
-</span><br>
+</div>
 
-<span ng-repeat="f in sequent.succ"
+<div ng-repeat="f in sequent.succ"
       id="{{f.id}}"
       ng-click="handleFormulaClick(f)">
-    <k4-formula formula="f.formula" highlight="true"></k4-formula>
-</span>
+    <table>
+        <tbody>
+        <tr>
+            <td class="k4-sequent-index">s:{{$index}}</td>
+            <td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
