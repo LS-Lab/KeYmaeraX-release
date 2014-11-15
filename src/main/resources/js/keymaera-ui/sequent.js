@@ -7,7 +7,7 @@ angular.module('sequent', ['ngSanitize','formula'])
             nodeId: '=',
             sequent: '='
         },
-        controller: function($scope, $sce, $modal, Tasks) {
+        controller: function($scope, $sce, $modal, Agenda) {
             //$scope.sequent = JSON.parse($scope.taskJson)
             // TODO should issue events other controllers can subscribe to
             $scope.handleFormulaClick = function(f) {
@@ -37,7 +37,7 @@ angular.module('sequent', ['ngSanitize','formula'])
             }
 
             $scope.$watch('selectedTask',
-                function () { return Tasks.getSelectedTask(); }
+                function () { return Agenda.getSelectedTask(); }
             );
         },
         templateUrl: 'partials/sequent.html'

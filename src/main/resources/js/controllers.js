@@ -21,7 +21,7 @@ keymaeraProofControllers.factory('Models', function () {
     };
 });
 
-keymaeraProofControllers.factory('Tasks', function () {
+keymaeraProofControllers.factory('Agenda', function () {
 
     var tasks = [];
     var selectedTask;
@@ -316,28 +316,30 @@ keymaeraProofControllers.controller('ProofCtrl',
         $scope.closed = data.closed;
         $scope.stepCount= data.stepCount;
         $scope.date = data.date;
-
-        // TODO wait for proof to be loaded, then fetch tasks
     });
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
   });
 
 keymaeraProofControllers.controller('TaskListCtrl',
-  function($scope, $http, $cookies, $routeParams, $q, Tasks, Tactics) {
+  function($scope, $http, $cookies, $routeParams, $q, Agenda, Tactics) {
     $scope.proofId = $routeParams.proofId;
 
-    $http.get('proofs/user/' + $cookies.userId + "/" + $routeParams.proofId + '/tasks').success(function(data) {
-        $scope.tasks = data;
-    }).error(function(data) {
-        if (data.errorThrown == 'proof not loaded') {
-            // TODO open modal dialog and ask if proof should be loaded
-        } else if (data.errorThrown == 'proof is loading') {
-            $scope.proofIsLoading = $q.defer()
-            $scope.proofIsLoading.promise.then(function() {
-                // TODO proof is now loaded, fetch tree and tasks
-            })
-        }
-    });
+    $scope.fetchAgenda = function(userId, proofId) {
+        $http.get('proofs/user/' + userId + "/" + proofId + '/agenda').success(function(data) {
+            $scope.agenda = data;
+        }).error(function(data) {
+            if (data.errorThrown == 'proof not loaded') {
+                // TODO open modal dialog and ask if proof should be loaded
+            } else if (data.errorThrown == 'proof is loading') {
+                $scope.proofIsLoading = $q.defer()
+                $scope.proofIsLoading.promise.then(function() {
+                    // TODO proof is now loaded, fetch tree and tasks
+                })
+            }
+        });
+    }
+
+    $scope.fetchAgenda($cookies.userId, $routeParams.proofId)
 
     $scope.addSubtree = function(parentId, subtree) {
         for(var i = 0 ; i < $scope.treedata.length; i++) {
@@ -398,12 +400,12 @@ keymaeraProofControllers.controller('TaskListCtrl',
 
     }
 
-    $scope.$watch('tasks',
-        function (newTasks) { if (newTasks) Tasks.setTasks(newTasks); }
+    $scope.$watch('agenda',
+        function (newTasks) { if (newTasks) Agenda.setTasks(newTasks); }
     );
     $scope.$watch('selectedTask',
-        function() { return Tasks.getSelectedTask(); },
-        function(t) { if (t) Tasks.setSelectedTask(t); }
+        function() { return Agenda.getSelectedTask(); },
+        function(t) { if (t) Agenda.setSelectedTask(t); }
     );
     $scope.$watch('dispatchedTactics',
         function() { return Tactics.getDispatchedTactics(); },
