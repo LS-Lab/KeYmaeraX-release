@@ -327,6 +327,9 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.fetchAgenda = function(userId, proofId) {
         $http.get('proofs/user/' + userId + "/" + proofId + '/agenda').success(function(data) {
             $scope.agenda = data;
+            if ($scope.agenda.length > 0) {
+                $scope.setSelected($scope.agenda[0])
+            }
         }).error(function(data) {
             if (data.errorThrown == 'proof not loaded') {
                 // TODO open modal dialog and ask if proof should be loaded
@@ -339,7 +342,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
         });
     }
 
-    $scope.fetchAgenda($cookies.userId, $routeParams.proofId)
+    $scope.fetchAgenda($cookies.userId, $scope.proofId)
 
     $scope.addSubtree = function(parentId, subtree) {
         for(var i = 0 ; i < $scope.treedata.length; i++) {
@@ -359,7 +362,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.defer = $q.defer();
         $scope.defer.promise.then(function (tacticResult) {
             if (tacticResult == 'Finished') {
-                // TODO fetch the new open goals, update the tree, update the task list
+                $scope.fetchAgenda($cookies.userId, $scope.proofId)
             } else {
                 // TODO not yet used, but could be used to report an error in running the tactic
             }
