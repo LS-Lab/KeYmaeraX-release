@@ -27,6 +27,7 @@ object KeYmaeraInterface {
 
 
     @volatile var tasks: Map[String, (ProofNode, Map[String, ProofNode])] = Map()
+    @volatile var proofNodeIds: Map[ProofNode, String] = Map()
     @volatile var loading: Set[String] = Set()
 
     def startLoadingTask(taskId : String) {
@@ -46,11 +47,12 @@ object KeYmaeraInterface {
       tasks.get(tId) match {
         case Some(v) =>
           tasks += (tId -> (v._1, v._2 + (nId -> p)))
+          proofNodeIds += (p -> nId)
         case None => throw new IllegalArgumentException("Task not found " + tId)
       }
     }
 
-    def containsTask(id: String) = tasks.contains(id)
+    def containsTask(taskId: String) = tasks.contains(taskId)
 
     def getRoot(id: String): Option[ProofNode] = tasks.get(id) match {
       case Some(t) => Some(t._1)
@@ -58,12 +60,13 @@ object KeYmaeraInterface {
     }
 
     def getNode(tId: String, nId: String): Option[ProofNode] = {
-      val matchingProofNode = tasks.get(tId) match {
-        case Some(t)  => Some(t._1)
-        case None     => None
-      }
-      matchingProofNode
-    }// old implementation: tasks.get(tId).map(_._2.get(nId)).flatten
+      tasks.get(tId).map(_._2.get(nId)).flatten
+//      val matchingProofNode = tasks.get(tId) match {
+//        case Some(t)  => Some(t._1)
+//        case None     => None
+//      }
+//      matchingProofNode
+    }
   }
 
   object TacticManagement {
@@ -227,9 +230,9 @@ object KeYmaeraInterface {
    * @param tacticId the tactic to dispatch
    * @param formulaId the formula (None to execute on the sequent)
    * @param tId the ID of the dispatched tactic instance
-   * @param callBack callback executed when the tactic finishes
+   * @param callback callback executed when the tactic finishes
    */
-  def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String, callBack: Option[String => ((String, Option[String], String) => Unit)] = None) = {
+  def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String, callback: Option[String => ((String, Option[String], String) => Unit)] = None) = {
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>
@@ -246,7 +249,11 @@ object KeYmaeraInterface {
         RunningTactics.add(t, tId)
         // register listener to react on tactic completion
         // this way the business logic can react to the completion if required
-        t.registerCompletionEventListener(_ => callBack.foreach(_(tId)(taskId, nodeId, tacticId)))
+//        t.registerCompletionEventListener(_ => callback.foreach(_(tId)(taskId, nodeId, tacticId)))
+        t.registerCompletionEventListener(_ => {
+          generateIds()(tId)(taskId, nodeId, tacticId)
+          callback.foreach(_(tId)(taskId, nodeId, tacticId))
+        })
         t.updateInfo = (p: ProofNodeInfo) => p.infos += ("tactic" -> tId.toString)
         t.updateStepInfo = (p: ProofStepInfo) => p.infos += ("tactic" -> tId.toString)
         Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, node))
@@ -258,6 +265,25 @@ object KeYmaeraInterface {
     RunningTactics.get(tacticInstanceId) match {
       case Some(t) => !t.isComplete
       case None => false
+    }
+  }
+
+  /**
+   * Gets the open goals under the specified node (identified by task ID and node ID).
+   * @param taskId Identifies the task.
+   * @param nodeId Identifies the node. If None, then identifies the root node.
+   * @return A list of IDs of open goals (proof nodes without children).
+   */
+  def getOpenGoals(taskId: String, nodeId: Option[String] = None) : List[String] = {
+    (nodeId match {
+      case Some(nid) => TaskManagement.getNode(taskId, nid)
+      case None => TaskManagement.getRoot(taskId)
+    }) match {
+      case Some(pn)=> pn.openGoals.map(p => TaskManagement.proofNodeIds.get(p) match {
+        case Some(pnId) => pnId
+        case None => throw new IllegalStateException("Proof node with unknown ID")
+      })
+      case _ => List()
     }
   }
 
@@ -285,9 +311,26 @@ object KeYmaeraInterface {
       case None => ("", TaskManagement.getRoot(taskId))
     }) match {
       case (id, Some(n)) => Some(getSubtree(n, id, filter, taskId))
-      case (_, None) => println("Not found " + taskId + " " + nodeId); None
+      case (_, None) => None
     }
 
+  }
+
+  /**
+   * Generates IDs for new proof nodes created by the specified tactic.
+   * @param tId Identifies the tactic instance.
+   * @param taskId Identifies the task.
+   * @param nId Identifies the node.
+   * @param tacticId Identifies the tactic.
+   */
+  private def generateIds()(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
+    getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId.toString) }) match {
+      case Some(s) =>
+        // s is JSON representation of proof node. This proof node gets an ID as a side effect of generating
+        // the JSON representation. This is the result that we want. Nothing else to do.
+        // TODO refactor the JSON generation. Generating IDs should not be a side effect of it.
+      case None => // tactic did not yield any result. Nothing to do
+    }
   }
 
   private def getSubtree(n: ProofNode, id: String, depth: Int, rootId: String): String = json(n, id, depth, rootId)

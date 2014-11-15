@@ -215,11 +215,12 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
   )
 }
 
-class ProofTasksResponse(tasks : List[(ProofPOJO, String)]) extends Response {
-  val objects = tasks.map({ case (proofpojo, proofnodeJson) => JsObject(
-    "proofId" -> JsString(proofpojo.proofId),
-    "nodeId" -> JsString(proofpojo.proofId), /* TODO */
-    "proofNode" -> JsonParser(proofnodeJson)
+class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Response {
+  override val schema = Some(new File(SCHEMA_DIRECTORY + "proofagenda.js"))
+  val objects = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
+    "proofId" -> JsString(proofPojo.proofId),
+    "nodeId" -> JsString(nodeId),
+    "proofNode" -> JsonParser(nodeJson)
   )})
 
   val json = JsArray(objects)

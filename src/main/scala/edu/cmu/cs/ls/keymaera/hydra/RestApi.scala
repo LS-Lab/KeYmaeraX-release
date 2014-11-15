@@ -182,7 +182,7 @@ trait RestApi extends HttpService {
 
   val proofTasks = path("proofs" / "user" / Segment / Segment / "tasks") { (userId, proofId) => { pathEnd {
     get {
-      val request = new GetProofTasksRequest(database, userId, proofId)
+      val request = new GetProofAgendaRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}

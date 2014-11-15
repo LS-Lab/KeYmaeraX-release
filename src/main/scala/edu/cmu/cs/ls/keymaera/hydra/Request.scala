@@ -141,7 +141,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
  * @param userId Identifies the user.
  * @param proofId Identifies the proof.
  */
-class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     // TODO refactor into template method for all tasks that interact with the proof
     if (!KeYmaeraInterface.containsTask(proofId)) {
@@ -151,15 +151,14 @@ class GetProofTasksRequest(db : DBAbstraction, userId : String, proofId : String
         new ProofIsLoadingResponse(proofId) :: Nil
       }
     } else {
-      // TODO get all the open goals from the proof loaded in KeYmaera
       val proof = db.getProofInfo(proofId)
-      val result =
-        (proof, KeYmaeraInterface.getSubtree(proof.proofId, None, 0) match {
-          case Some(proofNode) => proofNode
-          case None => ??? /* proof might still be loading */
-        }
-          )
-      new ProofTasksResponse(result :: Nil) :: Nil
+      val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
+
+      val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0) match {
+        case Some(proofNode) => (proof, g, proofNode)
+        case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
+      })
+      new ProofAgendaResponse(result) :: Nil
     }
   }
 }
