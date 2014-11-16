@@ -1,10 +1,15 @@
 KeYmaera4
 =========
 
-Repository for the reimplementation of KeYmaera.
-This reimplementation should include parallel proof search and a simpler
-language to define strategies. Furthermore, there should be support for user
-defined strategies.
+Repository for the clean-slate reimplementation of KeYmaera,
+a theorem prover for hybrid systems.
+KeYmaera 4 combines a small isolated prover core responsible
+for sound implementations of the fundamental proof rules as well
+as a flexible tactic language layer on top that makes it easy to
+provide user-defined proof strategies. KeYmaera 4 is also
+intended to include possibilities for parallel proof search.
+The prover front-end, middleware, and back-end are separated by
+design.
 
 Building
 ========
@@ -37,9 +42,10 @@ https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 Front End
 =========
 
-mongod —config /usr/local/etc/mongod.conf
-sbt “~ re-start"
-open http://localhost:8090/index_bootstrap.html
+    mongod --config /usr/local/etc/mongod.conf
+    sbt "~ re-start"
+    open http://localhost:8090/index_bootstrap.html
+
 
 Proof Tree Viewer
 =================
@@ -162,6 +168,11 @@ André Platzer.
 Dynamic logics of dynamical systems.
 May 2012.
 arXiv:1205.4788
+
+André Platzer. 
+Differential game logic. 
+August 2014.
+arXiv:1408.1980
 
 Jan-David Quesel and André Platzer.
 Playing hybrid games with KeYmaera.
