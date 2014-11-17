@@ -2,6 +2,8 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import com.mongodb.casbah.Imports._
 
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+
 /**
  * Created by nfulton on 9/23/14.
  */
@@ -218,14 +220,14 @@ object MongoDB extends DBAbstraction {
 
   override def createDispatchedTactics(proofId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
                                         status:DispatchedTacticStatus.Value) : String = {
-    val fields = List(
+    var fields = ListBuffer(
       "proofId"       -> proofId,
       "tacticsId"    -> tacticsId,
       "status"       -> status.toString)
-    if (nodeId.isDefined) { fields :+ ("nodeId" -> nodeId) }
-    if (formulaId.isDefined) { fields :+ ("formulaId" -> formulaId) }
+    if (nodeId.isDefined) { fields.append("nodeId" -> nodeId.get) }
+    if (formulaId.isDefined) { fields.append("formulaId" -> formulaId.get) }
 
-    val query = MongoDBObject(fields)
+    val query = MongoDBObject(fields.toList)
     dispatchedTactics.insert(query)
     query.get("_id").toString()
   }
@@ -243,14 +245,14 @@ object MongoDB extends DBAbstraction {
     )).toList.last
   }
   override def updateDispatchedTactics(tactic : DispatchedTacticPOJO) = {
-    val fields = List(
+    val fields = ListBuffer(
       "proofId"       -> tactic.proofId,
       "tacticsId"    -> tactic.tacticsId,
       "status"       -> tactic.status.toString)
-    if (tactic.nodeId.isDefined) { fields :+ ("nodeId" -> tactic.nodeId) }
-    if (tactic.formulaId.isDefined) { fields :+ ("formulaId" -> tactic.formulaId) }
+    if (tactic.nodeId.isDefined) { fields.append("nodeId" -> tactic.nodeId.get) }
+    if (tactic.formulaId.isDefined) { fields.append("formulaId" -> tactic.formulaId.get) }
 
-    val update = MongoDBObject(fields)
+    val update = MongoDBObject(fields.toList)
     dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)
   }
 }

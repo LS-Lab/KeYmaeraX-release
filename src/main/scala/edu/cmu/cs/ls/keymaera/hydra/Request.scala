@@ -125,13 +125,25 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
       val model = db.getModel(proof.modelId)
       KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
       val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step))
-      // TODO probably need to be replayed sequentially (run next upon completion of previous -> register callback)
-      steps.foreach(step => KeYmaeraInterface.runTactic(proof.proofId, step.nodeId, step.tacticsId, step.formulaId, step.id))
+      if (steps.nonEmpty) {
+        val firstStep = steps.head
+        KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
+          firstStep.id, Some(tacticCompleted(steps.toArray, 1)))
+      }
     }
 
     val status = KeYmaeraInterface.getTaskStatus(proofId)
 
     new OpenProofResponse(proof, status.toString) :: Nil
+  }
+
+  private def tacticCompleted(steps : Array[DispatchedTacticPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
+                                                                               tacticId: String) {
+    if (next < steps.length) {
+      val nextStep = steps(next)
+      KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
+        Some(tacticCompleted(steps.toArray, next + 1)))
+    }
   }
 }
 
