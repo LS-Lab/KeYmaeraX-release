@@ -328,6 +328,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $http.get('proofs/user/' + userId + "/" + proofId + '/agenda').success(function(data) {
             $scope.agenda = data;
             if ($scope.agenda.length > 0) {
+                // TODO should only update the view automatically if user did not navigate somewhere else manually
                 $scope.setSelected($scope.agenda[0])
             }
         }).error(function(data) {
@@ -399,8 +400,9 @@ keymaeraProofControllers.controller('TaskListCtrl',
             .error(function() {
                 alert("error encountered while trying to retrieve the tree.")
             })
-
-
+    }
+    $scope.isSelected = function(task) {
+        $scope.selectedTask == task;
     }
 
     $scope.$watch('agenda',

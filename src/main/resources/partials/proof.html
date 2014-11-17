@@ -2,7 +2,7 @@
     <div class="col-md-4">
         <div class="row">
             <div class="col-md-10">
-                <p>Tree</p>
+                <h3>Proof Overview</h3>
                 <div
                         data-angular-treeview="true"
                         data-tree-id="prooftree"
@@ -13,20 +13,38 @@
                 </div>
             </div>
             <div class="col-md-10">
-                <p>Agenda</p>
-                <table class="table table-hover" id="TaskList">
-                    <thead>
-                    <tr>
-                        <td>ID</td>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr ng-repeat="task in agenda" ng-click="setSelected(task)">
-                        <td ng-if="defer" cg-busy="defer">{{ task.nodeId.substring(0,5) + ".." + task.nodeId.substring(task.nodeId.length-5) }}</td>
-                        <td ng-if="defer == undefined">{{ task.nodeId.substring(0,5) + ".." + task.nodeId.substring(task.nodeId.length-5) }}</td>
-                    </tr>
-                    </tbody>
-                </table>
+                <h3>Proof Agenda</h3>
+
+                <div class="list-group">
+                    <a href="" ng-class="{'list-group-item active k4-overflow-box': selectedTask == task,'list-group-item k4-overflow-box':selectedTask !== task}" ng-repeat="task in agenda" ng-click="setSelected(task)">
+                        <div class="row list-group-item-heading">
+                        <div class="col-md-8">
+                            <h4 class="list-group-item-heading">Goal
+                                <span ng-if="task.nodeId.length <= 7">{{task.nodeId}}</span>
+                                <span ng-if="task.nodeId.length > 7">{{task.nodeId.substring(0,2) + ".." + task.nodeId.substring(task.nodeId.length-4)}}</span>
+                            </h4>
+                        </div>
+                        <div ng-if="defer" class="col-md-4" cg-busy="defer"></div>
+                        </div>
+                        <p class="list-group-item-text">
+                            <span class="k4-tiny" ng-if="task.proofNode.sequent.ante.length > 0">
+                                <k4-mathjaxformula formula="task.proofNode.sequent.ante[0].formula" delimiter="inline"></k4-mathjaxformula>
+                            </span>
+                            <span class="k4-tiny" ng-if="task.proofNode.sequent.ante.length > 2">...</span>
+                            <span class="k4-tiny" ng-if="task.proofNode.sequent.ante.length > 1">
+                                <k4-mathjaxformula formula="task.proofNode.sequent.ante[task.proofNode.sequent.ante.length - 1].formula" delimiter="inline"></k4-mathjaxformula>
+                            </span>
+                            <div>&#8866;</div>
+                            <span class="k4-tiny" ng-if="task.proofNode.sequent.succ.length > 0">
+                                <k4-mathjaxformula formula="task.proofNode.sequent.succ[0].formula" delimiter="inline"></k4-mathjaxformula>
+                            </span>
+                            <span class="k4-tiny" ng-if="task.proofNode.sequent.succ.length > 2">...</span>
+                            <span class="k4-tiny" ng-if="task.proofNode.sequent.succ.length > 1">
+                                <k4-mathjaxformula formula="task.proofNode.sequent.succ[task.proofNode.sequent.succ.length - 1].formula" delimiter="inline"></k4-mathjaxformula>
+                            </span>
+                        </p>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
