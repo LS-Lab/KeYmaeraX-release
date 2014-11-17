@@ -21,6 +21,17 @@ http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 Instructions are available at that website as well. Briefly, type
 
+    sbt compile
+
+to compile the source code. First-time compilation may take a while, since it downloads all necessary libraries,
+including Scala itself. The build file includes paths to the Mathematica JLink jar, for example for Mac as follows.
+
+    unmanagedJars in Compile += file("/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar")
+
+If JLink.jar is in a non-default location on your computer, add a new line to build.sbt.
+
+Type
+
     sbt test
 
 to run the regression test case suite. To run the KeYmaera parser use:
@@ -39,6 +50,23 @@ common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 
+IntelliJ IDEA
+=============
+
+Installation
+- Install IntelliJ IDEA
+- Install the Scala plugin
+
+Project Setup
+- Create a new Scala project, backed by SBT
+- Select a JDK as your project SDK, add a new one if not previously added
+- Check update automatically (not checked by default), so that updates to build.sbt are reflected automatically in the project
+
+Create a new run configuration of type Application.
+- Main class: edu.cmu.cs.ls.keymaera.hydra.Boot
+- Set the working directory to the project path
+- Use the classpath of your project module
+
 Front End
 =========
 
@@ -46,6 +74,14 @@ Front End
     sbt "~ re-start"
     open http://localhost:8090/index_bootstrap.html
 
+The option re-start ensures that the server is restarted whenever a source file changes.
+
+Errors related to JLinkNative Library are caused by Java 1.8 in combination with Mathematica 9.
+Either run using Java 1.7, or update to Mathematica 10.
+
+KeYmaera is successfully started when you see the following console output
+
+    Bound to localhost/127.0.0.1:8090
 
 Proof Tree Viewer
 =================
