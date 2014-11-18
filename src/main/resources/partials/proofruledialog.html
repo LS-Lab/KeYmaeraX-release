@@ -4,7 +4,6 @@
 <div class="modal-body">
 <pre>
    <k4-mathjaxformula ng-if="formula" formula="formula.formula" delimiter="inline"></k4-mathjaxformula>
-   <!--<k4-Formula formula="formula"></k4-Formula>-->
 </pre>
 
 <div>
@@ -15,23 +14,23 @@
                     <span ng-if="t.icon" class="t.icon"><br/></span>
                     <span k4-mathjaxbind="t.label"></span>
                 </button>
-                <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu" role="menu">
-                    <li><a href="#" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>
-                    <li><a href="#" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Repeatedly</a></li>
-                </ul>
+                <!-- TODO Not yet implemented -->
+                <!--<button type="button" class="btn dropdown-toggle" data-toggle="dropdown">-->
+                    <!--<span class="caret"></span>-->
+                    <!--<span class="sr-only">Toggle Dropdown</span>-->
+                <!--</button>-->
+                <!--<ul class="dropdown-menu" role="menu">-->
+                    <!--<li><a href="#" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>-->
+                    <!--<li><a href="#" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Repeatedly</a></li>-->
+                <!--</ul>-->
             </div>
         </div>
     </div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <!--<button class="btn" ng-click="applyTactics('keymaera.default')"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>-->
-            <button class="btn" ng-click="applyTactics('keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span><br/><span>Step</span></button>
-            <button class="btn" ng-if="formula" ng-click="applyTactics('dl.hide')"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
-            <button class="btn" ng-if="formula" ng-click="applyTactics('dl.cohide')"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Co-Hide</span></button>
+            <button class="btn" ng-click="applyTacticsByName('keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span><br/><span>Step</span></button>
+            <button class="btn" ng-if="formula" ng-click="applyTacticsByName('dl.hide')"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
+            <button class="btn" ng-if="formula" ng-click="applyTacticsByName('dl.cohide')"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Co-Hide</span></button>
         </div>
     </div>
 </div>

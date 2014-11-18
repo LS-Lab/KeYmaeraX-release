@@ -451,8 +451,8 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
       }
   });
 
-  $scope.applyTactics = function(tIdOrName) {
-    $http.post(uri + "/run/" + tIdOrName)
+  $scope.applyTactics = function(t) {
+    $http.post(uri + "/run/" + t.id)
             .success(function(data) {
         var dispatchedTacticId = data.tacticInstId;
         $modalInstance.close(dispatchedTacticId);
@@ -460,6 +460,15 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
         Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
     });
   }
+  $scope.applyTacticsByName = function(tName) {
+      $http.post(uri + "/runByName/" + tName)
+              .success(function(data) {
+          var dispatchedTacticId = data.tacticInstId;
+          $modalInstance.close(dispatchedTacticId);
+          Tactics.addDispatchedTactics(dispatchedTacticId);
+          Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
+      });
+    }
 
   $scope.cancel = function () {
     $modalInstance.dismiss('cancel');
