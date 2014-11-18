@@ -36,17 +36,22 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
   }
 
-  private def initTactic(name : String, className : String, kind : TacticKind.Value, /* Remove when reflection works */ t : AnyRef) = {
+  private def initTactic(name : String, className : String, kind : TacticKind.Value, /* Remove when reflection works */ tInst : AnyRef) = {
     val tactic = db.getTacticByName(name) match {
       case Some(t) => t
-      case None => val id = db.createTactic(name, className, kind); db.getTactic(id)
+      case None =>
+        val id = db.createTactic(name, className, kind);
+        db.getTactic(id) match {
+          case Some(t) => t
+          case None => throw new IllegalStateException("Unable to insert tactic " + name + " into the database")
+        }
     }
     // TODO reflection
     // TODO get rid of singletons
-    (tactic.kind, t) match {
+    (tactic.kind, tInst) match {
       case (TacticKind.Tactic, t : Tactic) => KeYmaeraInterface.addTactic(tactic.tacticId, t)
       case (TacticKind.PositionTactic, t : PositionTactic) => KeYmaeraInterface.addPositionTactic(tactic.tacticId, t)
-      case _ => throw new IllegalArgumentException("Tactic kind " + tactic.kind.toString() + " and type " + t.getClass.toString + " do not match")
+      case _ => throw new IllegalArgumentException("Tactic kind " + tactic.kind.toString() + " and type " + tInst.getClass.toString + " do not match")
     }
   }
 }

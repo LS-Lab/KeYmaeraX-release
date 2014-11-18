@@ -10,8 +10,11 @@
 <div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <div class="btn-group btn-group-lg" ng-repeat="t in tactics">
-                <button type="button" class="btn" ng-click="applyTactics(t)" k4-mathjaxbind="t.latex"></button>
+            <div class="btn-group btn-group-lg" ng-repeat="t in ruleTactics">
+                <button type="button" class="btn" ng-click="applyTactics(t)">
+                    <span ng-if="t.icon" class="t.icon"><br/></span>
+                    <span k4-mathjaxbind="t.label"></span>
+                </button>
                 <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
@@ -25,9 +28,10 @@
     </div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <button class="btn" ng-click="autoTactic()"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>
-            <button class="btn" ng-click="stepTactic(formula)"><span class="glyphicon glyphicon-step-forward"></span><br/><span>Step</span></button>
-            <button class="btn" ng-if="formula" ng-click="hideTactic(formula)"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
+            <!--<button class="btn" ng-click="applyTactics('keymaera.default')"><span class="glyphicon glyphicon-forward"></span><br/><span>Auto</span></button>-->
+            <button class="btn" ng-click="applyTactics('keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span><br/><span>Step</span></button>
+            <button class="btn" ng-if="formula" ng-click="applyTactics('dl.hide')"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Hide</span></button>
+            <button class="btn" ng-if="formula" ng-click="applyTactics('dl.cohide')"><span class="glyphicon glyphicon-eye-close"></span><br/><span>Co-Hide</span></button>
         </div>
     </div>
 </div>

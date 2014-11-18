@@ -28,7 +28,23 @@ table .btn{
 }
 
 .hl {background: transparent; }
-.hlhover { background:#00aaaa; }
+.hlhover {
+    background-color:#7297A6;
+}
+
+.list-group-item.active,
+.list-group-item.active:hover,
+.list-group-item.active:focus {
+  z-index: 2;
+  color: #fff;
+  background-color: #7297A6;
+  border-color: #2F3640;
+}
+.list-group-item.active .list-group-item-text,
+.list-group-item.active:hover .list-group-item-text,
+.list-group-item.active:focus .list-group-item-text {
+  color: #e1edf7;
+}
 
 .k4-progress-table td {
   text-align: center;
@@ -61,6 +77,9 @@ table .btn{
 .k4-sequent-index {
     font-size: x-small;
     padding-right: 10px;
+    height: auto;
+    display: table-cell;
+    vertical-align: middle;
 }
 
 .k4-busy-container {
@@ -79,12 +98,10 @@ table .btn{
 	border:1px solid #dddddd;
 	border-top-width:0;
 	-webkit-border-radius:7px;
-	-moz-border-radius:7px;
 	border-radius:7px;
 	border-top-left-radius:0;
 	border-top-right-radius:0;
 	-webkit-box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(0,0,0,.05);
-	-moz-box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(0,0,0,.05);
 	box-shadow:inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(0,0,0,.05);
 }
 
@@ -94,4 +111,81 @@ table .btn{
 
 .k4-overflow-box {
     overflow: auto;
+}
+
+.k4-formula.hover > ul:first-child, .k4-formula:hover > ul:first-child {
+  opacity: 1;
+  position: absolute;
+  left: -45px;
+  top: 0px;
+  z-index: 1;
+}
+.k4-formula.hover .k4-formula-content, .k4-formula:hover .k4-formula-content {
+  background: #BACBD9;
+  border: 1px solid #4D6473;
+  padding: 4px 4px 4px 4px;
+}
+.k4-formula.hover .k4-formula-content:before, .k4-formula:hover .k4-formula-content:before {
+    display: none;
+}
+/* TODO: does not quite work yet */
+.k4-formula.hidden .k4-formula-content {
+  opacity: 0.5;
+}
+.k4-formula.hidden ul:first-child li.show {
+  display: inline-block;
+}
+.k4-formula.hidden ul:first-child li.hide {
+  display: none;
+}
+.k4-formula > ul:first-child {
+  list-style-type: none;
+  padding: 0;
+  margin: 0 8px 0 -4px;
+  text-align: left;
+  width: 65px;
+  opacity: 0;
+  display: block;
+  position: absolute;
+  left: -45px;
+  top: 0px;
+  z-index: 1;
+}
+.k4-formula > ul:first-child li {
+  height: 15px;
+  border: 1px solid #4D6473;
+  border-right: 0;
+  display: list-item/*inline-block*/;
+  margin: 0 -1px;
+  background: #BACBD9;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  width: 65px;
+}
+.k4-formula > ul:first-child li.show {
+  display: none;
+  margin-right: 8px;
+}
+.k4-formula > ul:first-child li.hide {
+  display: inline-block;
+  margin-right: 8px;
+}
+.k4-formula > ul:first-child li a {
+  color: #4D6473;
+  padding: 0 10px 0 15px;
+  display: block;
+  line-height: 13px;
+  font-size: 10px;
+}
+.k4-formula > ul:first-child li:hover {
+  background: #7297A6;
+}
+.k4-formula > ul:first-child li:hover a {
+  color: #4D6473;
+}
+.k4-formula .k4-formula-content {
+  padding: 4px 4px 4px 4px;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+  display: table-cell;
 }

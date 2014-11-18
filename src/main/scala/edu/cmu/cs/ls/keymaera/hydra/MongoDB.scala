@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
 import com.mongodb.casbah.Imports._
+import org.bson.types.ObjectId
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
@@ -185,16 +186,25 @@ object MongoDB extends DBAbstraction {
     tactics.insert(query)
     query.get("_id").toString()
   }
-  def getTactic(id: String) : TacticPOJO = {
+  def tacticExists(id : String) : Boolean = {
+    if (ObjectId.isValid(id)) {
+      val query = MongoDBObject("_id" -> new ObjectId(id))
+      tactics.count(query) > 0
+    } else {
+      false
+    }
+  }
+  def getTactic(id: String) : Option[TacticPOJO] = {
     val query = MongoDBObject("_id" -> new ObjectId(id))
     val results = tactics.find(query)
-    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
-    results.map(result => new TacticPOJO(
+    if(results.length > 1) throw new IllegalStateException("Tactic ID " + id + " is not unique")
+    if(results.length < 1) None
+    Some(results.map(result => new TacticPOJO(
       result.getAs[ObjectId]("_id").orNull.toString(),
       result.getAs[String]("name").getOrElse(""),
       result.getAs[String]("clazz").getOrElse(""),
       TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
-    )).toList.last
+    )).toList.last)
   }
   def getTacticByName(name: String) : Option[TacticPOJO] = {
     val query = MongoDBObject("name" -> name)

@@ -249,7 +249,6 @@ object KeYmaeraInterface {
         RunningTactics.add(t, tId)
         // register listener to react on tactic completion
         // this way the business logic can react to the completion if required
-//        t.registerCompletionEventListener(_ => callback.foreach(_(tId)(taskId, nodeId, tacticId)))
         t.registerCompletionEventListener(_ => {
           generateIds()(tId)(taskId, nodeId, tacticId)
           callback.foreach(_(tId)(taskId, nodeId, tacticId))

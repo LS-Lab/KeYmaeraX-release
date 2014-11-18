@@ -52,98 +52,99 @@ keymaeraProofControllers.factory('Agenda', function () {
 
 keymaeraProofControllers.factory('Tactics', function ($rootScope) {
 
-    var tactics = {
+    var ruleTactics = {
         // TODO add rules, move into own file
         "dl.and-left" :
             { "name" : "dl.and-left",
-              "latex" : "\\(\\left(\\wedge l \\right) \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
+              "label" : "\\(\\left(\\wedge l \\right) \\frac{\\Gamma, \\phi, \\psi ~\\vdash~ \\Delta}{\\Gamma,\\phi \\wedge \\psi ~\\vdash~ \\Delta}\\)"
             },
         "dl.and-right" :
             { "name" : "dl.and-right",
-              "latex" : "\\(\\left(\\wedge r \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\qquad \\Gamma ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\wedge \\psi,\\Delta}\\)"
+              "label" : "\\(\\left(\\wedge r \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\qquad \\Gamma ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\wedge \\psi,\\Delta}\\)"
             },
         "dl.or-left" :
             { "name" : "dl.or-left",
-              "latex" : "\\(\\left(\\vee l \\right) \\frac{\\Gamma,\\phi ~\\vdash~ \\Delta \\qquad \\Gamma,\\psi ~\\vdash~ \\Delta}{\\Gamma \\phi \\vee \\psi ~\\vdash~ \\Delta}\\)"
+              "label" : "\\(\\left(\\vee l \\right) \\frac{\\Gamma,\\phi ~\\vdash~ \\Delta \\qquad \\Gamma,\\psi ~\\vdash~ \\Delta}{\\Gamma \\phi \\vee \\psi ~\\vdash~ \\Delta}\\)"
             },
         "dl.or-right" :
             { "name" : "dl.or-right",
-              "latex" : "\\(\\left(\\vee r \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\vee \\psi,\\Delta}\\)"
+              "label" : "\\(\\left(\\vee r \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\vee \\psi,\\Delta}\\)"
             },
         "dl.imply-left" :
             { "name" : "dl.imply-left",
-              "latex" : "\\(\\left(\\rightarrow l \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\qquad \\Gamma ~\\vdash~ \\psi,\\Delta}{\\Gamma \\phi \\rightarrow \\psi ~\\vdash~ \\Delta}\\)"
+              "label" : "\\(\\left(\\rightarrow l \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\qquad \\Gamma ~\\vdash~ \\psi,\\Delta}{\\Gamma \\phi \\rightarrow \\psi ~\\vdash~ \\Delta}\\)"
             },
         "dl.imply-right" :
             { "name" : "dl.imply-right",
-              "latex" : "\\(\\left(\\rightarrow r \\right) \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
+              "label" : "\\(\\left(\\rightarrow r \\right) \\frac{\\Gamma, \\phi ~\\vdash~ \\psi,\\Delta}{\\Gamma ~\\vdash~ \\phi \\rightarrow \\psi,\\Delta}\\)"
             },
         "dl.equiv-left" :
             { "name" : "dl.equiv-left",
-              "latex" : "TODO: \\(\\leftrightarrow l\\)"
+              "label" : "TODO: \\(\\leftrightarrow l\\)"
             },
         "dl.equiv-right" :
             { "name" : "dl.equiv-right",
-              "latex" : "TODO: \\(\\leftrightarrow r\\)"
+              "label" : "TODO: \\(\\leftrightarrow r\\)"
             },
         "dl.not-left" :
             { "name" : "dl.not-left",
-              "latex" : "\\(\\left(\\neg l \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta}{\\Gamma,\\neg\\phi ~\\vdash~ \\Delta}\\)"
+              "label" : "\\(\\left(\\neg l \\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta}{\\Gamma,\\neg\\phi ~\\vdash~ \\Delta}\\)"
             },
         "dl.not-right" :
             { "name" : "dl.not-right",
-              "latex" : "\\(\\left(\\neg r \\right) \\frac{\\Gamma, \\phi ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\neg \\phi, \\Delta}\\)"
+              "label" : "\\(\\left(\\neg r \\right) \\frac{\\Gamma, \\phi ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\neg \\phi, \\Delta}\\)"
             },
         "dl.close-true" :
             { "name" : "dl.close-true",
-              "latex" : "\\(\\left(\\textit{true} r \\right) \\frac{}{\\Gamma ~\\vdash~ \\textit{true},\\Delta}\\)"
+              "label" : "\\(\\left(\\textit{true} r \\right) \\frac{}{\\Gamma ~\\vdash~ \\textit{true},\\Delta}\\)"
             },
         "dl.close-false" :
             { "name" : "dl.close-false",
-              "latex" : "\\(\\left(\\textit{true} r \\right) \\frac{}{\\Gamma, \\textit{false} ~\\vdash~ \\Delta}\\)"
+              "label" : "\\(\\left(\\textit{true} r \\right) \\frac{}{\\Gamma, \\textit{false} ~\\vdash~ \\Delta}\\)"
             },
         "dl.skolemize" :
             { "name" : "dl.skolemize",
-              "latex" : "TODO: skolemize"
+              "label" : "TODO: skolemize"
             },
         "dl.box-assign" :
             { "name" : "dl.box-assign",
-              "latex" : "\\(\\left(\\left[\\coloneq\\right]\\right) \\frac{\\phi(t)}{\\left[x \\coloneq t\\right]\\phi(x)}\\)"
+              "label" : "\\(\\left(\\left[\\coloneq\\right]\\right) \\frac{\\phi(t)}{\\left[x \\coloneq t\\right]\\phi(x)}\\)"
             },
         "dl.box-choice" :
             { "name" : "dl.box-choice",
-              "latex" : "\\(\\left(\\left[\\cup\\right]\\right) \\frac{\\left[\\alpha\\right]\\phi \\qquad \\left[\\beta\\right]\\phi}{\\left[\\alpha \\cup \\beta\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[\\cup\\right]\\right) \\frac{\\left[\\alpha\\right]\\phi \\qquad \\left[\\beta\\right]\\phi}{\\left[\\alpha \\cup \\beta\\right]\\phi}\\)"
             },
         "dl.box-induction" :
             { "name" : "dl.box-induction",
-              "latex" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\left(\\phi \\wedge \\left[\\alpha^*\\right]\\left(\\phi \\rightarrow \\left[\\alpha\\right] \\phi \\right)\\right) }{\\left[\\alpha^*\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\left(\\phi \\wedge \\left[\\alpha^*\\right]\\left(\\phi \\rightarrow \\left[\\alpha\\right] \\phi \\right)\\right) }{\\left[\\alpha^*\\right]\\phi}\\)"
             },
         "dl.box-ndetassign" :
             { "name" : "dl.box-ndetassign",
-              "latex" : "\\(\\left(\\left[\\coloneq *\\right]\\right) \\frac{\\forall x. \\phi(x)}{\\left[x \\coloneq *\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[\\coloneq *\\right]\\right) \\frac{\\forall x. \\phi(x)}{\\left[x \\coloneq *\\right]\\phi}\\)"
             },
         "dl.box-seq" :
             { "name" : "dl.box-seq",
-              "latex" : "\\(\\left(\\left[\\;\\right]\\right) \\frac{\\left[\\alpha\\right]\\left[\\beta\\right]\\phi}{\\left[\\alpha;\\beta\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[\\;\\right]\\right) \\frac{\\left[\\alpha\\right]\\left[\\beta\\right]\\phi}{\\left[\\alpha;\\beta\\right]\\phi}\\)"
             },
         "dl.box-test" :
             { "name" : "dl.box-test",
-              "latex" : "\\(\\left(\\left[\\?\\right]\\right) \\frac{H \\rightarrow \\phi)}{\\left[?H\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[\\?\\right]\\right) \\frac{H \\rightarrow \\phi)}{\\left[?H\\right]\\phi}\\)"
             }
+    };
+    var userTactics = {
+        // TODO has to come from the database
     };
 
     var dispatchedTacticsIds = [];
 
     var dispatchedTacticsNotificationService = {};
-
-    //    dispatchedTacticsNotificationService.message = '';
-
     dispatchedTacticsNotificationService.broadcastDispatchedTactics = function(tId) {
         $rootScope.$broadcast('handleDispatchedTactics', tId);
     };
 
     return {
-        getTactics: function() { return tactics; },
+        getRuleTactics: function() { return ruleTactics; },
+        getUserTactics: function() { return userTactics; },
         getDispatchedTactics: function() { return dispatchedTacticsIds; },
         addDispatchedTactics: function(tId) { dispatchedTacticsIds.push(tId); },
         removeDispatchedTactics: function(tId) {
@@ -427,41 +428,37 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   $scope.proofId = proofId;
   $scope.nodeId = nodeId;
   $scope.formula = formula;
-  $scope.tactics = [];
+  $scope.ruleTactics = [];
+  $scope.userTactics = [];
 
   var fId = ((formula !== undefined) ? formula.id : "sequent")
   var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
   $http.get(uri).success(function(data) {
-      $scope.tactics = [];
+      $scope.ruleTactics = [];
+      $scope.userTactics = [];
       for (var i = 0; i < data.length; i++) {
           var tacticName = data[i].name;
-          var tactic = Tactics.getTactics()[tacticName];
+          var tactic = Tactics.getRuleTactics()[tacticName];
           if (tactic !== undefined) {
-            tactic.id = data[i].id;
-            $scope.tactics.push(tactic);
+              tactic.id = data[i].id;
+              $scope.ruleTactics.push(tactic);
+          }
+          tactic = Tactics.getUserTactics()[tacticName];
+          if (tactic !== undefined) {
+              tactic.id = data[i].id;
+              $scope.userTactics.push(tactic);
           }
       }
   });
 
-  $scope.applyTactics = function(t) {
-    $http.post(uri + "/run/" + t.id)
+  $scope.applyTactics = function(tIdOrName) {
+    $http.post(uri + "/run/" + tIdOrName)
             .success(function(data) {
         var dispatchedTacticId = data.tacticInstId;
         $modalInstance.close(dispatchedTacticId);
         Tactics.addDispatchedTactics(dispatchedTacticId);
         Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
     });
-  }
-  $scope.autoTactic = function() {
-    // run on formula "sequent"
-    alert("Auto")
-  }
-  $scope.stepTactic = function(f) {
-    // if f undefined, run on formula "sequent"
-    alert("Step")
-  }
-  $scope.hideTactic = function(f) {
-    alert("Hide")
   }
 
   $scope.cancel = function () {

@@ -205,6 +205,15 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val nodeRunTacticsByName = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "runByName" / Segment) { (userId, proofId, nodeId, formulaId, tacticName) => { pathEnd {
+    post {
+      val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
+      val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
+      val request = new RunTacticByNameRequest(database, userId, proofId, nId, fId, tacticName)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val dispatchedTactic = path("proofs" / "user" / Segment / Segment / "dispatchedTactics" / Segment) { (userId, proofId, tacticInstId) => { pathEnd {
     get {
       val request = new GetDispatchedTacticRequest(database, userId, proofId, tacticInstId)
@@ -251,6 +260,7 @@ trait RestApi extends HttpService {
     proofTasks            ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
+    nodeRunTacticsByName  ::
     dispatchedTactic      ::
     proofTree             ::
     devAction             ::

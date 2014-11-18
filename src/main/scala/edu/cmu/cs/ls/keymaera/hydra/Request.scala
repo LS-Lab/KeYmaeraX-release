@@ -187,8 +187,31 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
 class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String]) extends Request {
   def getResultingResponses() = {
     val applicableTactics = KeYmaeraInterface.getApplicableTactics(proofId, nodeId, formulaId)
-      .map(tId => db.getTactic(tId)).toList
+      .map(tId => db.getTactic(tId) match {
+        case Some(t) => t
+        case None => throw new IllegalStateException("Tactic " + tId + " not in database")
+    }).toList
     new ApplicableTacticsResponse(applicableTactics) :: Nil
+  }
+}
+
+/**
+ * Runs the specified tactic on the formula with the specified ID. The sequent, which contains this formula, is
+ * identified by the proof ID and the node ID.
+ * @param db Access to the database.
+ * @param userId Identifies the user.
+ * @param proofId Identifies the proof.
+ * @param nodeId Identifies the node. If None, the tactic is run on the "root" node of the task.
+ * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
+ * @param tacticName Identifies the tactic to run.
+ */
+class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String], tacticName : String) extends Request {
+  def getResultingResponses() = {
+    val tacticId = db.getTacticByName(tacticName) match {
+      case Some(t) => t.tacticId
+      case None => throw new IllegalArgumentException("Tactic name " + tacticName + " unknown")
+    }
+    new RunTacticRequest(db, userId, proofId, nodeId, formulaId, tacticId).getResultingResponses()
   }
 }
 

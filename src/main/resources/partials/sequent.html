@@ -1,30 +1,37 @@
 <div ng-repeat="f in sequent.ante"
-      id="{{f.id}}"
-      ng-click="handleFormulaClick(f)">
-    <table>
-        <tbody>
-            <tr>
-                <td class="k4-sequent-index">a:{{$index}}</td>
-                <td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>
-            </tr>
-        </tbody>
-    </table>
+      id="{{f.id}}">
+    <div class="row">
+        <div class="col-md-1 k4-sequent-index">a:{{$index}}</div>
+        <!--<td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>-->
+        <div class="col-md-11 k4-formula">
+            <ul>
+                <li><a href="" ng-click="applyTacticsByName(f,'keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span> Step</a></li>
+                <li><a href="" ng-click="applyTacticsByName(f,'keymaera.hide')"><span class="glyphicon glyphicon-eye-close"></span> Hide</a></li>
+            </ul>
+            <div class="k4-formula-content" ng-click="handleFormulaClick(f)">
+                <k4-formula formula="f.formula" highlight="true"></k4-formula>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div
-    ng-click="handleTurnstileClick()">
-    &#8866;
+<div>
+    <a href="" ng-click="handleTurnstileClick()">&#8866;</a>
 </div>
 
 <div ng-repeat="f in sequent.succ"
-      id="{{f.id}}"
-      ng-click="handleFormulaClick(f)">
-    <table>
-        <tbody>
-        <tr>
-            <td class="k4-sequent-index">s:{{$index}}</td>
-            <td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>
-        </tr>
-        </tbody>
-    </table>
+      id="{{f.id}}">
+    <div class="row">
+        <div class="col-md-1 k4-sequent-index">s:{{$index}}</div>
+        <div class="col-md-11 k4-formula">
+            <ul>
+                <li><a href="" ng-click="applyTacticsByName(f,'keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span> Step</a></li>
+                <li><a href="" ng-click="applyTacticsByName(f,'keymaera.hide')"><span class="glyphicon glyphicon-eye-close"></span> Hide</a></li>
+            </ul>
+            <div class="k4-formula-content" ng-click="handleFormulaClick(f)">
+                <k4-formula formula="f.formula" highlight="true"></k4-formula>
+            </div>
+        </div>
+    </div>
 </div>
+

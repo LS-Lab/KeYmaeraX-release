@@ -93,7 +93,8 @@ trait DBAbstraction {
 
   // Tactics
   def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String
-  def getTactic(id: String) : TacticPOJO
+  def tacticExists(id: String) : Boolean
+  def getTactic(id: String) : Option[TacticPOJO]
   def getTacticByName(name: String) : Option[TacticPOJO]
   def getTactics() : List[TacticPOJO]
   def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,

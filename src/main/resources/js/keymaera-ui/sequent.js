@@ -7,7 +7,7 @@ angular.module('sequent', ['ngSanitize','formula'])
             nodeId: '=',
             sequent: '='
         },
-        controller: function($scope, $sce, $modal, Agenda) {
+        controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
             // TODO should issue events other controllers can subscribe to
             $scope.handleFormulaClick = function(f) {
                 var modalInstance = $modal.open({
@@ -21,6 +21,17 @@ angular.module('sequent', ['ngSanitize','formula'])
                   }
                 });
             };
+
+            $scope.applyTacticsByName = function(formula, tName) {
+                var uri = 'proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/nodes/' + $scope.nodeId
+                        + '/formulas/' + formula.id + '/tactics'
+                $http.post(uri + "/runByName/" + tName)
+                        .success(function(data) {
+                    var dispatchedTacticId = data.tacticInstId;
+                    Tactics.addDispatchedTactics(dispatchedTacticId);
+                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
+                });
+            }
 
             $scope.handleTurnstileClick = function() {
                 var modalInstance = $modal.open({
