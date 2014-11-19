@@ -3,193 +3,193 @@ package edu.cmu.cs.ls.keymaera.api
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraPrettyPrinter, ParseSymbols}
+import spray.json._
 import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaera.core.Sequent
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
-/**
- * Created by jdq on 6/13/14.
- */
-// TODO refactor to use spray JSON and its pretty printer
+import scala.collection.mutable
+
 // TODO fetch sequents only on demand
 object JSONConverter {
   val prettyPrinter = new KeYmaeraPrettyPrinter(ParseSymbols) //todo use appropriate symbol table.
 
-  def printPos(p: PosInExpr): Any =
-    p.pos.mkString(",")
+  def convertPos(p: PosInExpr) = JsString(p.pos.mkString(","))
 
-  def printNamedSymbol(n: NamedSymbol): String = "\"" + n.name + (n.index match { case Some(j) => "_" + j case _ => "" }) + "\""
+  def convertNamedSymbol(n: NamedSymbol) = JsString(n.name + (n.index match { case Some(j) => "_" + j case _ => "" }))
 
-  def printForm(formula: Formula, formulaId: String, nodeId: String): String = {
-    var jsonResult: String = ""
+  def convertFormula(formula: Formula, formulaId: String, nodeId: String): JsObject = {
+    val jsonStack = new mutable.Stack[List[JsValue]]
+
     val fn = new ExpressionTraversalFunction {
-
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        jsonResult += (e match {
-          case True() => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\": \"true\"}"
-          case False() => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\": \"false\"}"
-          case x@PredicateConstant(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\": " + printNamedSymbol(x.asInstanceOf[PredicateConstant]) + "}"
-          case ApplyPredicate(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
-          case Equals(d, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"equals\"" + ", \"children\": [ "
-          case NotEquals(d, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"notEquals\"" + ", \"children\": [ "
-          case ProgramEquals(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"programEquals\"" + ", \"children\": [ "
-          case ProgramNotEquals(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"programNotEquals\"" + ", \"children\": [ "
-          case LessThan(d, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"lt\"" + ", \"children\": [ "
-          case LessEqual(d, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"leq\"" + ", \"children\": [ "
-          case GreaterEqual(d, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"geq\"" + ", \"children\": [ "
-          case GreaterThan(d, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"gt\"" + ", \"children\": [ "
-          case Not(a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"not\"" + ", \"children\": [ "
-          case And(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"and\"" + ", \"children\": [ "
-          case Or(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"or\"" + ", \"children\": [ "
-          case Imply(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"imply\"" + ", \"children\": [ "
-          case Equiv(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"equiv\"" + ", \"children\": [ "
-          case BoxModality(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"boxmodality\"" + ", \"children\": [ "
-          case DiamondModality(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"diamondmodality\"" + ", \"children\": [ "
-          case Forall(v, a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"forall\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
-          case Exists(v, a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"exists\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + prettyPrinter.stringify(e) + " type " + e.getClass)
-        })
+        e match {
+          case True() => /* nothing to do */
+          case False() => /* nothing to do */
+          case x@PredicateConstant(a, b) => /* nothing to do */
+          case ApplyPredicate(a, b) => /* nothing to do */
+          case _ => jsonStack.push(List())
+        }
         Left(None)
       }
 
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        jsonResult += (e match {
-          case Number(s, i) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"" + i + "\"}"
-          case x@Variable(_, _, _) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":" + printNamedSymbol(x.asInstanceOf[Variable]) + "}"
-          case Apply(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
-          case Neg(_, a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"neg\"" + ", \"children\": [ "
-          case Derivative(_, a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"derivative\"" + ", \"children\": [ "
-          case Add(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"add\"" + ", \"children\": [ "
-          case Subtract(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"subtract\"" + ", \"children\": [ "
-          case Multiply(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
-          case Divide(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
-          case Exp(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"exp\"" + ", \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + prettyPrinter.stringify(e) + " type " + e.getClass)
-        })
+        e match {
+          case Number(s, i) => /* Nothing to do here */
+          case x@Variable(_, _, _) => /* Nothing to do here */
+          case _ => jsonStack.push(List())
+        }
         Left(None)
       }
 
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-        jsonResult += (e match {
-          case x@ProgramConstant(_, _) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":" + printNamedSymbol(x.asInstanceOf[ProgramConstant]) + "}"
-          case Assign(_, _) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Assign\"" + ", \"children\": [ "
-          case NDetAssign(_) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"NDetAssign\"" + ", \"children\": [ "
-          case Sequence(_, _) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Sequence\"" + ", \"children\": [ "
-          case Choice(_, _) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Choice\"" + ", \"children\": [ "
-          case Test(_) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Test\"" + ", \"children\": [ "
-          case Loop(_) => "{" + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Loop\"" + ", \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + prettyPrinter.stringify(e) + " type " + e.getClass)
-        })
-        Left(None)
-      }
-      override def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        jsonResult += ", "
-        Left(None)
-      }
-
-      override def inT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        jsonResult += ", "
-        Left(None)
-      }
-
-      override def inP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-        jsonResult += ", "
+        e match {
+          case x@ProgramConstant(_, _) => /* Nothing to do */
+          case _ => jsonStack.push(List())
+        }
         Left(None)
       }
 
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        jsonResult += (e match {
-          case ApplyPredicate(a, b) => "]}"
-          case Equals(d, a, b) => "]}"
-          case NotEquals(d, a, b) => "]}"
-          case ProgramEquals(a, b) => "]}"
-          case ProgramNotEquals(a, b) => "]}"
-          case LessThan(d, a, b) => "]}"
-          case LessEqual(d, a, b) => "]}"
-          case GreaterEqual(d, a, b) => "]}"
-          case GreaterThan(d, a, b) => "]}"
-          case Not(a) => "]}"
-          case And(a, b) => "]}"
-          case Or(a, b) => "]}"
-          case Imply(a, b) => "]}"
-          case Equiv(a, b) => "]}"
-          case Modality(a, b) => "]}"
-          case Forall(v, a) => "]}"
-          case Exists(v, a) => "]}"
-          case _ => ""
-        })
+        val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
+        val o = e match {
+          case True() => Some(JsObject(("name" -> JsString("true")) +: cf))
+          case False() => Some(JsObject(("name" -> JsString("false")) +: cf))
+          case x@PredicateConstant(a, b) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[PredicateConstant])) +: cf))
+          case ApplyPredicate(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) +: jsonStack.pop())) :: Nil ++: cf))
+          case Equals(d, a, b) => Some(JsObject(("name" -> JsString("equals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case NotEquals(d, a, b) => Some(JsObject(("name" -> JsString("notEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case ProgramEquals(a, b) => Some(JsObject(("name" -> JsString("programEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case ProgramNotEquals(a, b) => Some(JsObject(("name" -> JsString("programNotEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case LessThan(d, a, b) => Some(JsObject(("name" -> JsString("lt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case LessEqual(d, a, b) => Some(JsObject(("name" -> JsString("leq")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case GreaterEqual(d, a, b) => Some(JsObject(("name" -> JsString("geq")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case GreaterThan(d, a, b) => Some(JsObject(("name" -> JsString("gt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Not(a) => Some(JsObject(("name" -> JsString("not")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case And(a, b) => Some(JsObject(("name" -> JsString("and")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Or(a, b) => Some(JsObject(("name" -> JsString("or")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Imply(a, b) => Some(JsObject(("name" -> JsString("imply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Equiv(a, b) => Some(JsObject(("name" -> JsString("equiv")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case BoxModality(a, b) => Some(JsObject(("name" -> JsString("boxmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case DiamondModality(a, b) => Some(JsObject(("name" -> JsString("diamondmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Forall(v, a) => Some(JsObject(("name" -> JsString("forall")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Exists(v, a) => Some(JsObject(("name" -> JsString("exists")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case _ => None
+        }
+        o match {
+          case Some(oo) => jsonStack.push(jsonStack.pop() :+ oo)
+          case None => /* nothing to do */
+        }
         Left(None)
       }
 
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        jsonResult += (e match {
-          case Apply(a, b) => "]}"
-          case Neg(_, a) => "]}"
-          case Derivative(_, a) => "]}"
-          case Add(_, a, b) => "]}"
-          case Subtract(_, a, b) => "]}"
-          case Multiply(_, a, b) => "]}"
-          case Divide(_, a, b) => "]}"
-          case Exp(_, a, b) => "]}"
-          case _ =>""
-        })
+        val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
+        val o = e match {
+          case Number(s, i) => Some(JsObject(("name" -> JsString(i.toString)) +: cf))
+          case x@Variable(_, _, _) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf))
+          case Apply(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) :: Nil ++: jsonStack.pop())) :: Nil ++: cf))
+          case Neg(_, a) => Some(JsObject(("name" -> JsString("neg")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Derivative(_, a) => Some(JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Add(_, a, b) => Some(JsObject(("name" -> JsString("add")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Subtract(_, a, b) => Some(JsObject(("name" -> JsString("subtract")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Multiply(_, a, b) => Some(JsObject(("name" -> JsString("multiply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Divide(_, a, b) => Some(JsObject(("name" -> JsString("divide")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Exp(_, a, b) => Some(JsObject(("name" -> JsString("exp")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case _ => None
+        }
+        o match {
+          case Some(oo) => jsonStack.push(jsonStack.pop() :+ oo)
+          case None => /* nothing to do */
+        }
         Left(None)
       }
 
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-        jsonResult += (e match {
-          case Assign(_) => "]}"
-          case NDetAssign(_) => "]}"
-          case Test(_) => "]}"
-          case Loop(_) => "]}"
-          case Sequence(_, _) => "]}"
-          case Choice(_, _) => "]}"
-          case _ =>""
-        })
+        val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
+        val o = e match {
+          case x@ProgramConstant(_, _) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConstant])) +: cf))
+          case Assign(_, _) => Some(JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case NDetAssign(_) => Some(JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Sequence(_, _) => Some(JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Choice(_, _) => Some(JsObject(("name" -> JsString("Choice")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Test(_) => Some(JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case Loop(_) => Some(JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
+          case _ => None
+        }
+        o match {
+          case Some(oo) => jsonStack.push(jsonStack.pop() :+ oo)
+          case None => /* nothing to do */
+        }
         Left(None)
       }
     }
+    jsonStack.push(List())
     ExpressionTraversal.traverse(fn, formula)
-    jsonResult
+    jsonStack.pop().head.asJsObject()
   }
 
-  //def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
-  def print(l: Seq[Formula], ante: String, nodeId: String): String = (for(f <- l.zipWithIndex) yield "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\":\"" + ante + ":" + f._2 + "\", \"formula\":" + printForm(f._1, ante + ":" + f._2, nodeId) + "}").mkString(",")
-  def print(s: Sequent, nodeId: String): String = "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"ante\": [" + print(s.ante, "ante", nodeId) + "], \"succ\": [" + print(s.succ, "succ", nodeId) + "]}"
-  def print(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): String = {
+  def convert(l: Seq[Formula], ante: String, nodeId: String): JsArray =
+    JsArray(l.zipWithIndex.map(f => JsObject(
+        "nodeId"  -> JsString(nodeId),
+        "id"      -> JsString(ante + ":" + f._2),
+        "formula" -> convertFormula(f._1, ante + ":" + f._2, nodeId)
+      )).toList)
+  def convert(s: Sequent, nodeId: String): JsObject =
+    JsObject(
+      "nodeId"  -> JsString(nodeId),
+      "ante"    -> convert(s.ante, "ante", nodeId),
+      "succ"    -> convert(s.succ, "succ", nodeId)
+    )
+  def convert(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): JsObject = {
     store(p, id)
-    "{ \"id\":\"" + id + "\"," + sequent(p, id) + "," + infos(p) +
-      "\"children\": [ " +
-      (limit match {
-        case Some(l) if l > 0 => p.children.zipWithIndex.map(ps => print(id, limit.map(i => i - 1), ps._1, ps._2, store)).mkString(",")
-        case _ => ""}) + "]}"
+    JsObject(
+      "id"    -> JsString(id),
+      "sequent"   -> sequent(p, id),
+      "infos"     -> infos(p),
+      "children"  -> (limit match {
+        case Some(l) if l > 0 => JsArray(p.children.zipWithIndex.map(ps => convert(id, limit.map(i => i - 1), ps._1, ps._2, store)))
+        case _ => JsArray()
+      })
+    )
   }
-  def print(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit)): String =
-    "{\"rule\":\"" + ps.rule.toString + "\", " +
-    "\"id\":\"" + i + "\", " +
-    "\"children\": [" + subgoals(id, limit, store)(ps).mkString(",") + "]" + "}"
+  def convert(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit)): JsObject =
+    JsObject(
+      "rule"      -> JsString(ps.rule.toString),
+      "id"        -> JsNumber(i),
+      "children"  -> subgoals(id, limit, store)(ps)
+    )
 
-  def print(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(p: ProofNode): String = {
+  def convert(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(p: ProofNode): JsObject = {
     store(p, id)
-    "{ " + sequent(p, id) + "," + infos(p) +
-      "\"children\": [ " +
-      p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => print(id, filter, ps._1, ps._2, store)).mkString(",")  + "]}"
+    JsObject(
+      "sequent" -> sequent(p, id),
+      "infos" -> infos(p),
+      "children" -> JsArray(p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => convert(id, filter, ps._1, ps._2, store)))
+    )
   }
 
-  def print(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit): String =
-    "{\"rule\":\"" + ps.rule.toString + "\", " +
-    "\"id\":\"" + i + "\", " +
-    "\"children\": [" + subgoals(id, filter, store)(ps).mkString(",") + "]" + "}"
+  def convert(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit): JsObject =
+    JsObject(
+      "rule"      -> JsString(ps.rule.toString),
+      "id"        -> JsNumber(i),
+      "children"  -> subgoals(id, filter, store)(ps)
+    )
 
-  private def infos(p: ProofNode) = p.tacticInfo.infos.map(s => "\"info-" + s._1 + "\":" + "\"" + s._2 + "\"").mkString(", ") + (if(p.tacticInfo.infos.size > 0) ", " else "")
-  private def sequent(p: ProofNode, nodeId: String) = "\"sequent\":" + print(p.sequent, nodeId)
-  private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "_" + in._2, limit, store)(in._1)
-  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): String = print(id + "_" + in._2, filter, store)(in._1)
-  private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store))
-  private def subgoals(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(ps: ProofStep): Seq[String] = ps.subgoals.zipWithIndex.map(updateIndex(id, filter, store))
+  private def infos(p: ProofNode): JsArray = JsArray(p.tacticInfo.infos.map(s =>
+    JsObject(
+      "key"   -> JsString(s._1),
+      "value" -> JsString(s._2)
+    )).toList
+  )
+  private def sequent(p: ProofNode, nodeId: String) = convert(p.sequent, nodeId)
+  private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, limit, store)(in._1)
+  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, filter, store)(in._1)
+  private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store)))
+  private def subgoals(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, filter, store)))
 
   //def apply(p: ProofNode): String = print("", None, (_, _) => ())(p)
-  def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit): String = print(id, Some(limit), store)(p)
-  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit)): String = print(id, filter, store)(p)
+  def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit): JsObject = convert(id, Some(limit), store)(p)
+  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit)): JsObject = convert(id, filter, store)(p)
 
 }

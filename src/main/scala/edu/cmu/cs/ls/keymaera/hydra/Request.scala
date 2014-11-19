@@ -10,7 +10,7 @@ import java.util.Calendar
 
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
-import edu.cmu.cs.ls.keymaera.api.{KeYmaeraInterface, KeYmaeraInterface2}
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
