@@ -3,15 +3,43 @@
         <div class="row">
             <div class="col-md-10">
                 <h3>Proof Overview</h3>
-                <div
-                        data-angular-treeview="true"
-                        data-tree-id="prooftree"
-                        data-tree-model="treedata"
-                        data-node-id="id"
-                        data-node-label="label"
-                        data-node-children="children" >
+                <script type="text/ng-template" id="nodes_renderer.html">
+                    <div ui-tree-handle class="tree-node tree-node-content">
+                        <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" nodrag ng-click="toggle(this)">
+                            <span class="glyphicon" ng-class="{'glyphicon-chevron-right': collapsed, 'glyphicon-chevron-down': !collapsed}"></span>
+                        </a>
+                        <span class="btn btn-success btn-xs" ng-if="!node.children || node.children.length <= 0" nodrag>
+                            <span class="glyphicon glyphicon-leaf"></span>
+                        </span>
+
+                        <span ng-show="!node.editing" >
+                            <span ng-click="click(this)">{{node.label}}</span>
+                             <a href="" class="btn btn-primary btn-xs pull-right" nodrag ng-click="editLabel(node)"><i class="glyphicon glyphicon-pencil"></i></a>
+                        </span>
+                        <span class="group-title angular-ui-tree-handle" nodrag ng-show="node.editing">
+                            <form class="form-inline" role="form">
+                                <span class="form-group">
+                                     <label class="sr-only" for="nodeLabel">Label</label>
+                                    <input type="text" id="nodeLabel" class="form-control" placeholder="{{ node.label }}" ng-model="node.label">
+                                </span>
+                                <button type="submit" class="btn btn-default" ng-click="saveLabel(node)">Save</button>
+                                <button type="submit" class="btn btn-default" ng-click="cancelEditing(node)">Cancel</button>
+                             </form>
+                        </span>
+                    </div>
+                    <ol ui-tree-nodes="" ng-model="node.children" ng-class="{hidden: collapsed}">
+                        <li ng-repeat="node in node.children" ui-tree-node ng-include="'nodes_renderer.html'" data-nodrag>
+                        </li>
+                    </ol>
+                </script>
+
+                <div ui-tree id="proofTree" nodrag>
+                    <ol ui-tree-nodes ng-model="treedata" nodrag>
+                        <li ng-repeat="node in treedata" ui-tree-node ng-include="'nodes_renderer.html'" data-nodrag></li>
+                    </ol>
                 </div>
             </div>
+
             <div class="col-md-10">
                 <h3>Proof Agenda</h3>
 
