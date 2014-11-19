@@ -351,7 +351,7 @@ object KeYmaeraInterface {
 
  // def json(p: ProofNode): String = JSONConverter(p)
 
-  def json(p: ProofNode, id: String, l: Int, rootId: String): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x))
+  def json(p: ProofNode, id: String, l: Int, rootId: String): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
 
-  def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x))
+  def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
 }

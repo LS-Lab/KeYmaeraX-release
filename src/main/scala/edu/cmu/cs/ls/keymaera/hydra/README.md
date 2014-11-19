@@ -130,6 +130,7 @@ REST URI DESIGN
               |- apply
               |- step
         |- updates/<lastId> - Returns an array of new updates.
+        |- <proofid>/sequent/<nodeid> 
     /lemmas/
       |- <ns>/						- KeYmaera lemmas sorted into namespaces
       |- user/<userid>/				- User lemmas, can create namespaces below

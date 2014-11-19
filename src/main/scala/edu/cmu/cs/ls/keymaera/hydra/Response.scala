@@ -8,7 +8,6 @@ package edu.cmu.cs.ls.keymaera.hydra
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import spray.json._
-import edu.cmu.cs.ls.keymaera.core.ProofNode
 import java.io.File
 
 /**
@@ -43,11 +42,8 @@ sealed trait Response {
           JsonLoader.fromFile(file)
         )
         val report = schema.validate(JsonLoader.fromString(json.prettyPrint))
-        if (report.isSuccess)
-          true
-        else {
-          throw new Exception("json schema violation.")
-        }
+        if (report.isSuccess) true
+        else throw report.iterator().next().asException()
     }
   }
 }
@@ -92,7 +88,7 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
       "loadStatus" -> JsString(loadStatus)
     )})
     case Some(modelNames) =>
-      (proofs zip modelNames).map({case (p,loadStatus) => {
+      (proofs zip modelNames).map({case (p,loadStatus) =>
         val proof = p._1
         val modelName = p._2
 
@@ -107,7 +103,7 @@ class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List
           "loadStatus" -> JsString(loadStatus),
           "modelName" -> JsString(modelName)
         )
-      }})
+      })
   }
 
   val json = JsArray(objects)
