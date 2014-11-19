@@ -13,7 +13,7 @@ trait KeYmaeraSymbols {
   val MULTIPLY:String
   val PLUS:String
   val MINUS:String
-  val DIVIDE:String
+  def divide : (String, String) => String
   val NEGATIVE:String
     
   val OPEN_CBRACKET:String
@@ -108,7 +108,8 @@ object ParseSymbols extends KeYmaeraSymbols {
   val MULTIPLY = "*"
   val PLUS = "+"
   val MINUS = "-"
-  val DIVIDE = "/"
+  val DIVIDE = "/" //We still need the symbol here because it's used by the parser.
+  override def divide : (String,String) => String = (top:String, bot:String) => top + "/" + bot
   val NEGATIVE = "-"
   val EXP = "^"
   val NEQ = "!="
@@ -168,7 +169,7 @@ object ParseSymbols extends KeYmaeraSymbols {
   
   //Abbreviations
   //Parens are always defined in the normal way..
-  def paren(s:String) = "(" + s + ")" 
+  def paren(s:String) = "(" + s + ")"
 }
 
 
@@ -197,6 +198,7 @@ object HTMLSymbols extends KeYmaeraSymbols {
   val PLUS = "+"
   val MINUS = "-"
   val DIVIDE = "/"
+  override def divide : (String,String) => String = (top:String, bot:String) => top + "/" + bot
   val NEGATIVE = "-"
   val EXP = "^"
   val NEQ = "!="
@@ -257,4 +259,90 @@ object HTMLSymbols extends KeYmaeraSymbols {
   //Abbreviations
   //Parens are always defined in the normal way..
   def paren(s:String) = "(" + s + ")" 
+}
+
+/**
+ * symbol table for latex user interfaces.
+ */
+object LaTeXSymbols extends KeYmaeraSymbols {
+
+  /** Section headers */
+  val FUNCTIONS_SECT = "Functions" //RigidVariables
+  val PROBLEM_SECT = "Problem" //Assignables
+  val VARIABLES_SECT = "Variables"
+  val EXTERNAL_FUNCTION = "external"
+  val PVARS_SECT = "ProgramVariables" //ProgramVariables
+  val START_SECT = "."
+  val END_SECT   = "End."
+
+  /** Constants */
+  //**Terms
+  val LEQ = "\\le" //≤
+  val GEQ = "\\ge" //≥
+  val LT = "<"
+  val GT = ">"
+  val EQ = "="
+  val MULTIPLY = "*"
+  val PLUS = "+"
+  val MINUS = "-"
+  override def divide : (String,String) => String = (top:String, bot:String) => "\\frac{" + top + "}{" + bot + "}"
+  val NEGATIVE = "-"
+  val EXP = "^" //I think this works out of the box, as long as groupings are also {}-grouped. 
+  val NEQ = "\\ne"
+
+  val OPEN_CBRACKET = "\\{"
+  val CLOSE_CBRACKET = "\\}"
+  val COMMA = ","
+
+  //**Formulas
+  val TRUE      = "\\top"//"⊤"
+  val FALSE     = "\\bot"//"⊥"
+  val NEGATE    = "\\neg" //¬
+  val AND       = "\\land" //∧
+  val OR        = "\\or" //∨
+  val ARROW     = "\\rightarrow" //⊃
+  val LARROW    = "\\leftarrow"
+
+  //** Temporal Modealities
+  val BOX    = "\\lbox" //◻
+  val DIA    = "\\ldia" //⋄
+
+  //** Dynamic Modalities
+  val BOX_OPEN  = "["
+  val BOX_CLOSE  = "]"
+  val DIA_OPEN  = "\\langle" //〈
+  val DIA_CLOSE  = "\\rangle" //〉
+
+  //** Programs
+  val ASSIGN = ":="
+  val KSTAR    = "^*"
+  val CHOICE  = "++" //∪
+  val SCOLON  = ";"
+  val TEST = "?"
+  val PRIME = "'" //derivative of
+
+  val PARALLEL    = "\\|" //∥
+  val SEND = "!"
+  val RECEIVE = "?"
+
+  //Output-only program constructs
+  val PCOMP_JOINED = "\\not \\|" //for pretty printing.
+  val CURSOR = "."
+
+  //** Provability relations
+  val TUNSTILE  = "⊢"
+  val DTURNSTILE= "⊨"
+  val EQUIV        = "\\equiv" //"≡"
+  val PROGRAM_META = "P"
+  val FORMULA_META = "F"
+
+
+  val PAIR_OPEN = "("
+  val PAIR_CLOSE = ")"
+
+  val EXISTS = "\\exists"
+  val FORALL = "\\forall"
+
+  //put groupings around pairings so that exponentiation works currently.
+  def paren(s:String) = "{(" + s + ")}"
 }

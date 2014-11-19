@@ -40,7 +40,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //arith
   	case Add(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS)
     case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY)
-    case Divide(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.DIVIDE)
+    case Divide(s,l,r) => {
+      //This is a recursive infix.
+      symbolTable.divide(parensIfNeeded(l,expressionToPrint), parensIfNeeded(r,expressionToPrint))
+    }
     case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MINUS)
     
     //quantifiers
