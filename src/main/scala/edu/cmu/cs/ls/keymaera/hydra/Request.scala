@@ -52,6 +52,29 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
   }
 }
 
+class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
+  def getResultingResponses() = {
+    val proofsWithNames = db.getProofsForUser(userId)
+    val proofs = proofsWithNames.map(_._1).map(proof =>
+      (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
+    val names  = proofsWithNames.map(_._2)
+    new ProofListResponse(proofs,Some(names)) :: Nil
+  }
+}
+
+/**
+ * Returns an object containing all information necessary to fill out the global template (e.g., the "new events" bubble)
+ * @param db
+ * @param userId
+ */
+class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
+  override def getResultingResponses() : List[Response] = {
+    val openProofCount : Int = db.openProofs(userId).length
+
+    new DashInfoResponse(openProofCount) :: Nil
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,7 +113,12 @@ class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) ext
   }
 }
 
-class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String) extends Request {
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Proofs of models
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, name : String, description : String)
+ extends Request {
   def getResultingResponses() = {
     val proofId = db.createProofForModel(modelId, name, description, currentDate())
 
@@ -107,16 +135,6 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
     val proofs = db.getProofsForModel(modelId).map(proof =>
       (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
     new ProofListResponse(proofs) :: Nil
-  }
-}
-
-class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
-  def getResultingResponses() = {
-    val proofsWithNames = db.getProofsForUser(userId)
-    val proofs = proofsWithNames.map(_._1).map(proof =>
-      (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
-    val names  = proofsWithNames.map(_._2)
-    new ProofListResponse(proofs,Some(names)) :: Nil
   }
 }
 
@@ -284,13 +302,34 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
   }
 }
 
-class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
-  override def getResultingResponses() : List[Response] = {
-    val openProofCount : Int = db.openProofs(userId).length
-
-    new DashInfoResponse(openProofCount) :: Nil
+/**
+ * like GetProofTreeRequest, but fetches 0 instead of 1000 subnodes.
+ * @param db
+ * @param proofId
+ * @param nodeId
+ */
+class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[String]) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    // TODO fetch only one branch, need to refactor UI for this
+    val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 0)
+    node match {
+      case Some(theNode) => {
+        //        val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
+        //        val report = schema.validate(JsonLoader.fromString(theNode))
+        //        if (report.isSuccess)
+        new NodeResponse(theNode) :: Nil
+        //        else {
+        //          throw new Exception("json schema violation.")
+        //        }
+      }
+      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
+    }
   }
 }
+
+
+
+
 //
 //
 //class GetProblemRequest(userid : String, proofid : String) extends Request {

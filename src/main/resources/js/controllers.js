@@ -23,7 +23,13 @@ keymaeraProofControllers.factory('Models', function () {
 
 keymaeraProofControllers.factory('Agenda', function () {
 
+    /**
+     * tasks is a list of { $hashKey, nodeId = "_0_0...", proofId = hash, proofNode = {sequent, children ...} }
+     */
     var tasks = [];
+    /**
+     * a task looks like { $hashKey, nodeId = "_0_0...", proofId = hash, proofNode = {sequent, children ...} }
+     */
     var selectedTask;
 
     return {
@@ -384,10 +390,10 @@ keymaeraProofControllers.controller('TaskListCtrl',
     });
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    // Subsection on tree operations.
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Get & populate the tree.
     $scope.treedata = [];
-
 
     $scope.proofTree =  {
         beforeDrag: function(x) { false } //disable dragging.
@@ -396,7 +402,28 @@ keymaeraProofControllers.controller('TaskListCtrl',
     // Label editing controllers.
     // Following the example at https://github.com/JimLiu/angular-ui-tree/blob/master/demo/js/groups.js
     $scope.click = function(scope) {
-        alert("this is a click!")
+        var selectedNode = scope.$modelValue
+
+        //todo -- load sequent.
+        $http.get("/proofs/" + $scope.proofId + "/sequent/" + selectedNode.id)
+            .success(function(node) {
+                var found = false;
+                for(var i = 0 ; i < Agenda.getTasks().length; i++) {
+                    var task = Agenda.getTasks()[i]
+                    if(task.nodeId === selectedNode.id) {
+                        Agenda.setSelectedTask(task);
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found) {
+                    var idList = JSON.stringify(
+                        Agenda.getTasks().map(function(x) { return x.nodeId })
+                    )
+                    alert("TODO -- what to do when there is no task associated with this node (" + selectedNode.id + ") in: " + idList)
+                }
+            });
+
     }
 
     $scope.editLabel = function(node) {
@@ -415,7 +442,8 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.toggle = function(scope) { scope.toggle() } // do need this.
     
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    // Subsection on selecting tasks
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     $scope.setSelected = function(task) {
         $scope.selectedTask = task;
         //pulling this variable out so that I can print it back out.

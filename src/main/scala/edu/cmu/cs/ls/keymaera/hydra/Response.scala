@@ -286,3 +286,10 @@ class DashInfoResponse(openProofs:Int) extends Response {
     "open_proof_count" -> JsNumber(openProofs)
   )
 }
+
+
+class NodeResponse(tree : String) extends Response {
+  //todo add schema.
+  val node = JsonParser(tree).asJsObject
+  val json = node
+}

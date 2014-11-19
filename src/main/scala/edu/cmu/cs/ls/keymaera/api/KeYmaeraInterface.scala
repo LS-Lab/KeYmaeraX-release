@@ -25,7 +25,9 @@ object KeYmaeraInterface {
       val NotLoaded, Loading, Loaded = Value
     }
 
-
+    /**
+     * Map from proof id's to (maps from sequent ids to associated nodes)
+     */
     @volatile var tasks: Map[String, (ProofNode, Map[String, ProofNode])] = Map()
     @volatile var proofNodeIds: Map[ProofNode, String] = Map()
     @volatile var loading: Set[String] = Set()
@@ -313,6 +315,15 @@ object KeYmaeraInterface {
       case (_, None) => None
     }
 
+  }
+
+  def getSequent(taskId : String, nodeId : String, branchId : String) : Option[String] = {
+    this.getActualNode(taskId, Some(nodeId)) match {
+      case Some(node) => {
+        None
+      }
+      case None => None
+    }
   }
 
   /**

@@ -221,6 +221,16 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  /**
+   * exactly like getting a proof tree except we get only the node instead of everything under it as well.
+   */
+  val sequent = path("proofs" / Segment / "sequent" / Segment.?) { (proofId, sequentId) => {
+    get {
+      val request = new GetNodeRequest(database, proofId, sequentId)
+      complete(standardCompletion(request))
+    }
+  }}
+
   // proofs/user/< userid >/< proofid >/tree/< proofnodeid >
   val proofTree = path("proofs" / "user" / Segment / Segment / "tree" / Segment.?) { (userId, proofId, nodeId) => {
     get {
@@ -264,6 +274,7 @@ trait RestApi extends HttpService {
     dispatchedTactic      ::
     proofTree             ::
     devAction             ::
+    sequent               ::
     dashInfo              ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
