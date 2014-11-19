@@ -495,5 +495,52 @@ keymaeraProofControllers.controller('DevCtrl',
                 alert("Database cleared.")
             })
     }
+
+    $scope.proofTree =  {
+        beforeDrag: function(x) { false } //disable dragging.
+    }
+
+    // Label editing controllers.
+    // Following the example at https://github.com/JimLiu/angular-ui-tree/blob/master/demo/js/groups.js
+    $scope.click = function(scope) {
+        alert("this is a click!")
+    }
+
+    $scope.editLabel = function(node) {
+        node.editing = true
+    }
+
+    $scope.saveLabel = function(node) {
+        //TODO save the label.... http.put....
+        node.editing = false
+    }
+
+    $scope.cancelEditing = function(node) {
+        node.editing = false
+    }
+
+    $scope.toggle = function(scope) { scope.toggle() } // do need this.
+
+    $scope.list = [
+      {
+        "label": "root one",
+        "children": [
+            {
+             "label": "child 1",
+             "children": [
+                {
+                    "label" : "subchild 1"
+                }
+             ]
+            },
+            {"label": "child 2"}
+        ]
+
+      },
+      {
+        "label": "root two",
+        "children": []
+      }
+    ]
 });
 

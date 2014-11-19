@@ -3,6 +3,7 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngCookies',
   'ngSanitize',
   'angularTreeview',
+  'ui.tree',
   'cgBusy',
   'ui.bootstrap',
   'keymaeraProofControllers',

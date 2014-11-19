@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaera.api
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import scala.Left
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
+import edu.cmu.cs.ls.keymaera.parser.{ParseSymbols, KeYmaeraPrettyPrinter}
 import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaera.core.Sequent
 import scala.Some
@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaera.core.PosInExpr
  * Created by jdq on 6/13/14.
  */
 object JSONConverter {
+  val prettyPrinter = new KeYmaeraPrettyPrinter(ParseSymbols) //todo use appropriate symbol table.
 
   def printPos(p: PosInExpr): Any =
     p.pos.mkString(",")
@@ -46,7 +47,7 @@ object JSONConverter {
           case DiamondModality(a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"diamondmodality\"" + ", \"children\": [ "
           case Forall(v, a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"forall\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
           case Exists(v, a) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"exists\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
+          case _ => throw new UnsupportedOperationException("not implemented yet for " + prettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
       }
@@ -63,7 +64,7 @@ object JSONConverter {
           case Multiply(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
           case Divide(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
           case Exp(_, a, b) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"exp\"" + ", \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
+          case _ => throw new UnsupportedOperationException("not implemented yet for " + prettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
       }
@@ -77,7 +78,7 @@ object JSONConverter {
           case Choice(_, _) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Choice\"" + ", \"children\": [ "
           case Test(_) => "{ " + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Test\"" + ", \"children\": [ "
           case Loop(_) => "{" + "\"nodeId\":\"" + nodeId + "\", " + "\"id\": \"" + printPos(p) + "\", \"name\":\"Loop\"" + ", \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
+          case _ => throw new UnsupportedOperationException("not implemented yet for " + prettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
       }

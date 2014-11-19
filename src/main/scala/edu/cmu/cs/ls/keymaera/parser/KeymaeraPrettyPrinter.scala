@@ -3,13 +3,16 @@ package edu.cmu.cs.ls.keymaera.parser
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
 
+
+object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
+
+}
+
 /**
  * Usage: KeYmaeraPrettyPrinter.stringify(e);
  * @author Nathan Fulton
  */
-object KeYmaeraPrettyPrinter {
-  import edu.cmu.cs.ls.keymaera.parser.ParseSymbols._
-  
+class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   def stringify(e:Expr) = prettyPrinter(e)
       
   def header(ns : List[NamedSymbol]) : String = ??? 
@@ -35,15 +38,18 @@ object KeYmaeraPrettyPrinter {
 
   private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
     //arith
-  	case Add(s,l,r) => recInfix(l,r,expressionToPrint,PLUS)
-    case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,MULTIPLY)
-    case Divide(s,l,r) => recInfix(l,r,expressionToPrint,DIVIDE)
-    case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,MINUS)
+  	case Add(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS)
+    case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY)
+    case Divide(s,l,r) => {
+      //This is a recursive infix.
+      symbolTable.divide(parensIfNeeded(l,expressionToPrint), parensIfNeeded(r,expressionToPrint))
+    }
+    case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MINUS)
     
     //quantifiers
     case Forall(variables, child) => {
       assert(!variables.isEmpty, "no empty universal quantifiers for " + child);
-      FORALL + " " +
+      symbolTable.FORALL + " " +
       variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
       parensIfNeeded(child, expressionToPrint)
@@ -51,7 +57,7 @@ object KeYmaeraPrettyPrinter {
     
     case Exists(variables, child) => {
       assert(!variables.isEmpty, "no empty existential quantifiers for " + child);
-      EXISTS + " " +
+      symbolTable.EXISTS + " " +
       variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
       parensIfNeeded(child, expressionToPrint)
@@ -60,38 +66,38 @@ object KeYmaeraPrettyPrinter {
     //boolean ops
     case And(l,r) => {
       val leftString = l match {
-        case Imply(_,_)	=> paren(prettyPrinter(l))
-        case Or(_,_)	=> paren(prettyPrinter(l))
+        case Imply(_,_)	=> symbolTable.paren(prettyPrinter(l))
+        case Or(_,_)	=> symbolTable.paren(prettyPrinter(l))
         case _			=> prettyPrinter(l)
       }
       val rightString = r match {
-        case Or(_,_)	=> paren(prettyPrinter(r))
-        case Imply(_,_)	=> paren(prettyPrinter(r))
-        case And(_,_) => paren(prettyPrinter(r))
+        case Or(_,_)	=> symbolTable.paren(prettyPrinter(r))
+        case Imply(_,_)	=> symbolTable.paren(prettyPrinter(r))
+        case And(_,_) => symbolTable.paren(prettyPrinter(r))
         case _			=> prettyPrinter(r)
       }
-      leftString + AND + rightString
+      leftString + symbolTable.AND + rightString
     }
     
     case Or(l,r) => {
       val leftString = l match {
-        case Imply(_,_)		=> paren(prettyPrinter(l))
-        case And(_,_)		=> paren(prettyPrinter(l))
+        case Imply(_,_)		=> symbolTable.paren(prettyPrinter(l))
+        case And(_,_)		=> symbolTable.paren(prettyPrinter(l))
         case _				=> prettyPrinter(l)
       }
       val rightString = r match {
-        case And(_,_)	=> paren(prettyPrinter(r))
-        case Imply(_,_)	=> paren(prettyPrinter(r))
-        case Or(_,_) => paren(prettyPrinter(r))
+        case And(_,_)	=> symbolTable.paren(prettyPrinter(r))
+        case Imply(_,_)	=> symbolTable.paren(prettyPrinter(r))
+        case Or(_,_) => symbolTable.paren(prettyPrinter(r))
         case _			=> prettyPrinter(r)
       }
-      leftString + OR + rightString
+      leftString + symbolTable.OR + rightString
     }
     
-    case Not(e) => recPrefix(e,NEGATE)
+    case Not(e) => recPrefix(e,symbolTable.NEGATE)
     
     case Imply(l,r) =>  {
-      parensIfNeeded(l,expressionToPrint) + ARROW + 
+      parensIfNeeded(l,expressionToPrint) + symbolTable.ARROW +
       parensIfNeeded(r,expressionToPrint)
     }
     
@@ -104,17 +110,17 @@ object KeYmaeraPrettyPrinter {
     case ApplyPredicate(function,child) => 
       parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
 
-    case Assign(l,r) => recInfix(l,r,expressionToPrint, ASSIGN) + SCOLON
-    case NDetAssign(l) => prettyPrinter(l) + ASSIGN + KSTAR + SCOLON
+    case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN) + symbolTable.SCOLON
+    case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     
-    case BoxModality(p,f) => BOX_OPEN + parensIfNeeded(p,expressionToPrint) + BOX_CLOSE + parensIfNeeded(f,expressionToPrint)
-    case ContEvolve(child) => prettyPrinter(child) + SCOLON 
-    case Derivative(s, child) => recPostfix(child, PRIME)
-    case DiamondModality(p,f) => DIA_OPEN + parensIfNeeded(p,expressionToPrint) + DIA_CLOSE +parensIfNeeded(f,expressionToPrint)
-    case Equiv(l,r) => recInfix(l,r,expressionToPrint,EQUIV)
+    case BoxModality(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint)
+    case ContEvolve(child) => prettyPrinter(child) + symbolTable.SCOLON
+    case Derivative(s, child) => recPostfix(child, symbolTable.PRIME)
+    case DiamondModality(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint)
+    case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV)
     
 
-    case Exp(s,l,r) => recInfix(l,r,expressionToPrint,EXP)
+    case Exp(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP)
     
     //BinaryProgram
     case Choice(l,r) => {
@@ -126,7 +132,7 @@ object KeYmaeraPrettyPrinter {
         case Choice(rl,rr) => prettyPrinter(r)
         case _ => recurse(r)
       }
-      leftString + CHOICE + rightString
+      leftString + symbolTable.CHOICE + rightString
     }
     
     case Parallel(l,r) => {
@@ -138,14 +144,14 @@ object KeYmaeraPrettyPrinter {
         case Parallel(rl,rr) => prettyPrinter(r)
         case _ => recurse(r)
       }
-      leftString + PARALLEL + rightString
+      leftString + symbolTable.PARALLEL + rightString
     } 
     
     case Sequence(l,r) => {
       val leftString = parensIfNeeded(l, Sequence(l,r))
       val rightString = parensIfNeeded(r, Sequence(l,r))
       if(!endsWithColon(l,Sequence(l,r))) {
-        leftString + SCOLON + rightString
+        leftString + symbolTable.SCOLON + rightString
       }
       else {
         leftString + rightString
@@ -154,22 +160,22 @@ object KeYmaeraPrettyPrinter {
     
     //BinaryRelation
     //TODO is this OK?
-    case Equals(s,l,r) => prettyPrinter(l) + EQ + prettyPrinter(r) 
-    case GreaterEqual(s,l,r) => prettyPrinter(l) + GEQ + prettyPrinter(r)
-    case LessEqual(s,l,r) => prettyPrinter(l) + LEQ + prettyPrinter(r)
-    case LessThan(s,l,r) => prettyPrinter(l) + LT + prettyPrinter(r)
-    case GreaterThan(s,l,r) => prettyPrinter(l) + GT + prettyPrinter(r)
-    case NotEquals(s,l,r) => prettyPrinter(l) + NEQ + prettyPrinter(r)
+    case Equals(s,l,r) => prettyPrinter(l) + symbolTable.EQ + prettyPrinter(r)
+    case GreaterEqual(s,l,r) => prettyPrinter(l) + symbolTable.GEQ + prettyPrinter(r)
+    case LessEqual(s,l,r) => prettyPrinter(l) +symbolTable. LEQ + prettyPrinter(r)
+    case LessThan(s,l,r) => prettyPrinter(l) + symbolTable.LT + prettyPrinter(r)
+    case GreaterThan(s,l,r) => prettyPrinter(l) + symbolTable.GT + prettyPrinter(r)
+    case NotEquals(s,l,r) => prettyPrinter(l) + symbolTable.NEQ + prettyPrinter(r)
     
     case IfThen(l,r) => "if " + "(" + prettyPrinter(l) + ") then " + prettyPrinter(r) + " fi"
     case IfThenElse(test,l,r) => 
       "if " + "(" + prettyPrinter(test) + ") then " + 
       prettyPrinter(l) + " else " + prettyPrinter(r) + " fi"
       
-    case Pair(s,l,r) => PAIR_OPEN + recInfix(l,r,expressionToPrint,COMMA) + PAIR_CLOSE
+    case Pair(s,l,r) => symbolTable.PAIR_OPEN + recInfix(l,r,expressionToPrint,symbolTable.COMMA) + symbolTable.PAIR_CLOSE
     
-    case False() => FALSE
-    case True() => TRUE
+    case False() => symbolTable.FALSE
+    case True() => symbolTable.TRUE
     
     case PredicateConstant(name,i) => name + (i match {
       case Some(idx) => "_" + idx
@@ -192,7 +198,7 @@ object KeYmaeraPrettyPrinter {
     /** Normal form ODE data structures
  * \exists R a,b,c. (\D{x} = \theta & F)
  */
-    case NFContEvolve(vars,x,theta,f) => EXISTS + 
+    case NFContEvolve(vars,x,theta,f) => symbolTable.EXISTS +
       vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
       groupIfNotAtomic(theta, prettyPrinter(theta)) +
       groupIfNotAtomic(f, prettyPrinter(f))
@@ -204,12 +210,12 @@ object KeYmaeraPrettyPrinter {
     }
     
     
-    case Neg(s,e) => NEGATIVE + recurse(e)
-    case Test(e) => TEST + prettyPrinter(e) + SCOLON
+    case Neg(s,e) => symbolTable.NEGATIVE + recurse(e)
+    case Test(e) => symbolTable.TEST + prettyPrinter(e) + symbolTable.SCOLON
     
-    case Loop(p) => recurse(p) + KSTAR
+    case Loop(p) => recurse(p) + symbolTable.KSTAR
    
-    case FormulaDerivative(f) => recPostfix(f, PRIME)
+    case FormulaDerivative(f) => recPostfix(f, symbolTable.PRIME)
     //These we cannot pattern match on...
 //    case edu.cmu.cs.ls.keymaera.core.Quantifier(variables, child)
 //    case edu.cmu.cs.ls.keymaera.core.Finally(f) => BOX + recurse(e)
@@ -265,7 +271,7 @@ object KeYmaeraPrettyPrinter {
   }
   
   /**
-   * @TODO-nrf this is incredible hacky and needs to be replaced!
+   * @todo this is incredible hacky and needs to be replaced!
    */
   private def needsParens(child : Expr, parent : Expr) = {
     val precedenceDS =    
@@ -422,8 +428,8 @@ object KeYmaeraPrettyPrinter {
   //////////////////////////////////////////////////////////////////////////////
   def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
     val namesToDeclare = Helper.freeNames(f).toList
-    val header = KeYmaeraPrettyPrinter.proofHeader(namesToDeclare)
-    val fString = KeYmaeraPrettyPrinter.stringify(f)
+    val header = new KeYmaeraPrettyPrinter(ParseSymbols).proofHeader(namesToDeclare)
+    val fString = new KeYmaeraPrettyPrinter(ParseSymbols).stringify(f)
     
     val fileContents = header + "Lemma " + "\"" + file.getName() + "\"." + "\n" +
     				   fString + "\nEnd.\n" + stringifyEvidence(ev)
