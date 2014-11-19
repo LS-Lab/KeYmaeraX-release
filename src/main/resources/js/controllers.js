@@ -486,5 +486,23 @@ keymaeraProofControllers.controller('DevCtrl',
                 alert("Database cleared.")
             })
     }
+
+    $scope.proofTree =  {
+    }
+
+    $scope.list = [
+      {
+        "title": "root one",
+        "items": [
+            {"title": "child 1"},
+            {"title": "child 2"}
+        ]
+
+      },
+      {
+        "title": "root two",
+        "items": []
+      }
+    ]
 });
 

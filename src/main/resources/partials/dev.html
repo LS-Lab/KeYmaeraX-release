@@ -1,6 +1,29 @@
 <h1>Developer Actions</h1>
 
 <p><a class="btn btn-default" ng-click="deletedb()" role="button">Clear Database &raquo;</a></p>
+
+<p>
+Testing ui.tree
+<div ui-tree="proofTree">
+  <ol ui-tree-nodes="" ng-model="list">
+    <li ng-repeat="item in list" ui-tree-node data-nodrag>
+      <div ui-tree-handle>
+        {{item.title}}
+      </div>
+      <ol ui-tree-nodes="" ng-model="item.items">
+        <li ng-repeat="subItem in item.items" ui-tree-node data-nodrag>
+          <div ui-tree-handle>
+            {{subItem.title}}
+          </div>
+        </li>
+      </ol>
+    </li>
+  </ol>
+</div>
+
+
+</p>
+
 <br/>
 <br/>
 <hr/>
