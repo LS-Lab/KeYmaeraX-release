@@ -271,13 +271,13 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
     val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 1000)
     node match {
       case Some(theNode) => {
-//        val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
-//        val report = schema.validate(JsonLoader.fromString(theNode))
-//        if (report.isSuccess)
+        val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
+        val report = schema.validate(JsonLoader.fromString(theNode))
+        if (report.isSuccess)
           new AngularTreeViewResponse(theNode) :: Nil
-//        else {
-//          throw new Exception("json schema violation.")
-//        }
+        else {
+          throw report.iterator().next().asException()
+        }
       }
       case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
     }
