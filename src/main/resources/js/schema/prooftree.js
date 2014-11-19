@@ -56,20 +56,28 @@
                 }
             }
           }
-        }
+        },
+        "required" : [ "nodeId", "ante", "succ" ]
       },
       "node" : {
          "type": "object",
          "properties": {
            "rule": {
-               "type": "string",
+               "type": "object",
+               "oneOf": [
+                { "$ref": "#/definitions/positionRule" },
+                { "$ref": "#/definitions/assumptionRule" },
+                { "$ref": "#/definitions/twoPositionRule" },
+                { "$ref": "#/definitions/unspecificRule" }
+               ],
                "description": "The rule which produced this node"
            },
            "children": {
                "type": "array",
                "items": { "$ref": "#" }
            }
-         }
+         },
+         "required" : [ "rule" ]
       },
       "formula" : {
           "type": "object",
@@ -90,7 +98,54 @@
                 "type": "array",
                 "items": { "$ref": "#/definitions/formula" }
             }
-          }
+          },
+          "required" : [ "nodeId", "id", "name" ]
+      },
+      "unspecificRule" : {
+          "type" : "object",
+          "properties" : {
+              "name" : { "type" : "string" },
+              "kind" : { "enum" : [ "UnspecificRule" ] }
+          },
+          "required" : [ "name", "kind" ]
+      },
+      "positionRule" : {
+        "type" : "object",
+        "properties" : {
+            "name" : { "type" : "string" },
+            "kind" : { "enum" : [ "PositionRule" ] },
+            "pos" : { "$ref" : "#/definitions/position" }
+        },
+        "required" : [ "name", "kind", "pos" ]
+      },
+      "assumptionRule" : {
+          "type" : "object",
+          "properties" : {
+              "name" : { "type" : "string" },
+              "kind" : { "enum" : [ "AssumptionRule" ] },
+              "pos" : { "$ref" : "#/definitions/position" },
+              "assumption" : { "$ref" : "#/definitions/position"}
+          },
+          "required" : [ "name", "kind", "pos", "assumption" ]
+      },
+      "twoPositionRule" : {
+        "type" : "object",
+        "properties" : {
+            "name" : { "type" : "string" },
+            "kind" : { "enum" : [ "TwoPositionRule" ] },
+            "pos1" : { "$ref" : "#/definitions/position" },
+            "pos2" : { "$ref" : "#/definitions/position"}
+        },
+        "required" : [ "name", "kind", "pos1", "pos2" ]
+      },
+      "position" : {
+        "type" : "object",
+        "properties" : {
+            "kind" : { "type" : "string" },
+            "index" : { "type" : "number"},
+            "inExpr" : { "type" : "string" }
+        },
+        "required" : [ "kind", "index", "inExpr" ]
       }
   }
 }
