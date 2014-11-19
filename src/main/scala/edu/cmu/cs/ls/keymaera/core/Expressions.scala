@@ -119,7 +119,7 @@ object TupleT {
  */
 sealed abstract class Expr(val sort : Sort) extends Annotable {
   override def toString = super.toString() + " (" + prettyString() + ")"
-  def prettyString() = KeYmaeraPrettyPrinter.stringify(this)
+  def prettyString() = new KeYmaeraPrettyPrinter().stringify(this)
 }
 
 /* atom / leaf expression */
