@@ -238,28 +238,43 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
 /**
  * @return JSON that is directly usable by angular.treeview
  */
-class AngularTreeViewResponse(root : ProofNode) extends Response {
+class AngularTreeViewResponse(tree : String) extends Response {
   override val schema = Some(new File(SCHEMA_DIRECTORY + "angular.treeview.js"))
+  
+  val json = JsArray( convert(JsonParser(tree).asJsObject) )
 
-  val json = JsArray( nodeToJson(root) )
-
-  private def nodeToJson(p : ProofNode) : JsValue = {
-    //If this node has some children, then they should be displayed.
-    //Otherwise, ???
-    //TODO implement id's correctly.
+  private def convert(node : JsObject) : JsValue = {
     //TODO implement that label of bare proof nodes correctly.
-    if(p.children.length != 0) {
-      val step = p.children.last
-
-      JsObject("id"       -> JsString(""),
-               "label"    -> JsString(step.rule.name),
-               "children" -> JsArray(step.subgoals.map(n => nodeToJson(n))))
-
+    //TODO switch to Jolt (https://github.com/bazaarvoice/jolt) once they can handle trees
+    val children = (node.fields.get("children") match {
+      case Some(c) => c
+      case None => throw new IllegalArgumentException("Schema violation")
+    }) match {
+      case JsArray(c) => c
+      case _ => throw new IllegalArgumentException("Schema violation")
     }
-    else {
-      JsObject("id" -> JsString(""),
-               "label" -> JsString("Leaf?!?!"),
-               "children" -> JsArray()
+
+    val id = node.fields.get("id") match { case Some(i) => i case None => throw new IllegalArgumentException("Schema violation") }
+    if (children.length > 0) {
+      val step = children.head.asJsObject
+      val rule = step.fields.get("rule") match {
+        case Some(r) => r.asInstanceOf[JsString]
+        case None => throw new IllegalArgumentException("Schema violation")
+      }
+      val subgoals = step.fields.get("children") match {
+        case Some(gl) => gl.asInstanceOf[JsArray].elements.map(g => convert(g.asJsObject()))
+        case None => throw new IllegalArgumentException("Schema violation")
+      }
+      JsObject(
+        "id" -> id,
+        "label" -> rule,
+        "children" -> JsArray(subgoals)
+      )
+    } else {
+      JsObject(
+        "id" -> id,
+        "label" -> JsString("Open Goal"), // TODO only if the goal is closed, which is not yet represented in JSON
+        "children" -> JsArray()
       )
     }
   }

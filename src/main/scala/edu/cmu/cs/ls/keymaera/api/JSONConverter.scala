@@ -2,16 +2,16 @@ package edu.cmu.cs.ls.keymaera.api
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import scala.Left
-import edu.cmu.cs.ls.keymaera.parser.{ParseSymbols, KeYmaeraPrettyPrinter}
+import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraPrettyPrinter, ParseSymbols}
 import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaera.core.Sequent
-import scala.Some
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
 /**
  * Created by jdq on 6/13/14.
  */
+// TODO refactor to use spray JSON and its pretty printer
+// TODO fetch sequents only on demand
 object JSONConverter {
   val prettyPrinter = new KeYmaeraPrettyPrinter(ParseSymbols) //todo use appropriate symbol table.
 

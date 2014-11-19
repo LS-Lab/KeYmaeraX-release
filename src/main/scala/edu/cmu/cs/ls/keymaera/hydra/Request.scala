@@ -4,9 +4,12 @@
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
+import java.io.FileReader
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+import com.github.fge.jackson.JsonLoader
+import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaera.api.{KeYmaeraInterface, KeYmaeraInterface2}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
@@ -264,9 +267,18 @@ class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : 
 
 class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String]) extends Request{
   override def getResultingResponses(): List[Response] = {
-    val node = KeYmaeraInterface.getActualNode(proofId, nodeId)
+    // TODO fetch only one branch, need to refactor UI for this
+    val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 1000)
     node match {
-      case Some(theNode) => { new AngularTreeViewResponse(theNode) :: Nil }
+      case Some(theNode) => {
+//        val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
+//        val report = schema.validate(JsonLoader.fromString(theNode))
+//        if (report.isSuccess)
+          new AngularTreeViewResponse(theNode) :: Nil
+//        else {
+//          throw new Exception("json schema violation.")
+//        }
+      }
       case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
     }
   }
