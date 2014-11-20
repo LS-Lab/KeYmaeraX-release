@@ -26,10 +26,18 @@ object KeYmaeraInterface {
     }
 
     /**
-     * Map from proof id's to (maps from sequent ids to associated nodes)
+     * Map from task IDs to (maps from sequent ids to associated nodes)
      */
     @volatile var tasks: Map[String, (ProofNode, Map[String, ProofNode])] = Map()
-    @volatile var proofNodeIds: Map[ProofNode, String] = Map()
+
+    /**
+     * Map from task IDs (map from proof node to associated node ID)
+     */
+    @volatile var proofNodeIds: Map[String, Map[ProofNode, String]] = Map()
+
+    /**
+     * The tasks currently loading.
+     */
     @volatile var loading: Set[String] = Set()
 
     def startLoadingTask(taskId : String) {
@@ -43,13 +51,17 @@ object KeYmaeraInterface {
     def addTask(r: ProofNode, taskId: String) = this.synchronized {
       assert(r.children.isEmpty)
       tasks += (taskId -> (r, Map()))
+      proofNodeIds += (taskId -> Map())
     }
 
     def addNode(tId: String, nId: String, p: ProofNode) = this.synchronized {
       tasks.get(tId) match {
         case Some(v) =>
           tasks += (tId -> (v._1, v._2 + (nId -> p)))
-          proofNodeIds += (p -> nId)
+          proofNodeIds.get(tId) match {
+            case Some(ids) => proofNodeIds += (tId -> (ids + (p -> nId)))
+            case None => throw new IllegalStateException("Proof node IDs must have been initialized with task")
+          }
         case None => throw new IllegalArgumentException("Task not found " + tId)
       }
     }
@@ -63,49 +75,46 @@ object KeYmaeraInterface {
 
     def getNode(tId: String, nId: String): Option[ProofNode] = {
       tasks.get(tId).map(_._2.get(nId)).flatten
-//      val matchingProofNode = tasks.get(tId) match {
-//        case Some(t)  => Some(t._1)
-//        case None     => None
-//      }
-//      matchingProofNode
     }
   }
 
   object TacticManagement {
-    @volatile var tactics: Map[String, () => Tactic] = Map()
-    @volatile var positionTactics: Map[String, () => PositionTactic] = Map()
-    @volatile var inputTactics: Map[String, (Formula) => Tactic] = Map()
-    @volatile var inputPositionTactics: Map[String, (Formula) => PositionTactic] = Map()
+    @volatile var tactics: Map[String, Tactic] = Map()
+    @volatile var positionTactics: Map[String, PositionTactic] = Map()
+    @volatile var inputTactics: Map[String, (Option[Formula]) => Tactic] = Map()
+    @volatile var inputPositionTactics: Map[String, (Option[Formula]) => PositionTactic] = Map()
 
     def addTactic(id: String, t: Tactic) = this.synchronized {
       if (tactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
-      tactics += (id -> (() => t))
+      tactics += (id -> t)
     }
 
-    def addInputTactic(id: String, t: (Formula => Tactic)) = this.synchronized {
+    def addInputTactic(id: String, t: (Option[Formula] => Tactic)) = this.synchronized {
       if (inputTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
       inputTactics += (id -> t)
     }
 
     def addPositionTactic(id: String, t: PositionTactic) = this.synchronized {
       if (positionTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
-      positionTactics += (id -> (() => t))
+      positionTactics += (id -> t)
     }
 
-    def addInputPositionTactic(id: String, t: (Formula => PositionTactic)) = this.synchronized {
+    def addInputPositionTactic(id: String, t: (Option[Formula] => PositionTactic)) = this.synchronized {
       if (inputPositionTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
       inputPositionTactics += (id -> t)
     }
 
-    def getTactic(id: String): Option[Tactic] = tactics.get(id).map(_())
+    def getTactic(id: String): Option[Tactic] = tactics.get(id)
 
-    def getPositionTactic(id: String): Option[PositionTactic] = positionTactics.get(id).map(_())
+    def getPositionTactic(id: String): Option[PositionTactic] = positionTactics.get(id)
 
-    def getTactics: List[(String, String)] = tactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2().name))
+    def getTactics: List[(String, String)] = tactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2.name))
 
-    def getPositionTactics: List[(String, String)] = positionTactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2().name))
+    def getPositionTactics: List[(String, String)] = positionTactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2.name))
 
-    // TODO implement getter for the other tactics
+    def getInputTactic(id: String, f : Option[Formula]): Option[Tactic] = inputTactics.get(id).map(_(f))
+
+    def getInputPositionTactic(id: String, f : Option[Formula]): Option[PositionTactic] = inputPositionTactics.get(id).map(_(f))
   }
 
   object RunningTactics {
@@ -163,11 +172,6 @@ object KeYmaeraInterface {
     }
   }
 
-  def getActualNode(taskId : String, nodeIdOpt : Option[String]) : Option[ProofNode] = nodeIdOpt match {
-    case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
-    case None         => TaskManagement.getRoot(taskId)
-  }
-
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
       case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId))
       case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId))
@@ -176,9 +180,15 @@ object KeYmaeraInterface {
   def addTactic(id : String, t : Tactic) = {
     TacticManagement.addTactic(id, t)
   }
+  def addTactic(id : String, t : (Option[Formula]) => Tactic) = {
+    TacticManagement.addInputTactic(id, t)
+  }
 
   def addPositionTactic(id : String, t : PositionTactic) = {
     TacticManagement.addPositionTactic(id, t)
+  }
+  def addPositionTactic(id : String, t : (Option[Formula]) => PositionTactic) = {
+    TacticManagement.addInputPositionTactic(id, t)
   }
 
   def getTactics: List[(String, String)] = TacticManagement.getTactics
@@ -219,9 +229,12 @@ object KeYmaeraInterface {
    */
   def getApplicableTactics(taskId: String, nodeId: Option[String], formulaId: Option[String]) = {
     getPosition(taskId, nodeId, formulaId) match {
-      // TODO input tactics and input position tactics
-      case (n, Some(p)) => TacticManagement.positionTactics.filter(t => t._2().applies(n.sequent, p)).map(t => t._1)
-      case (n, None) => TacticManagement.tactics.filter(t => t._2().applicable(n)).map(t => t._1)
+      case (n, Some(p)) =>
+        TacticManagement.positionTactics.filter(t => t._2.applies(n.sequent, p)).map(t => t._1) ++:
+        TacticManagement.inputPositionTactics.filter(t => t._2(None).applies(n.sequent, p)).map(t => t._1)
+      case (n, None) =>
+        TacticManagement.tactics.filter(t => t._2.applicable(n)).map(t => t._1) ++:
+        TacticManagement.inputTactics.filter(t => t._2(None).applicable(n)).map(t => t._1)
     }
   }
 
@@ -280,9 +293,12 @@ object KeYmaeraInterface {
       case Some(nid) => TaskManagement.getNode(taskId, nid)
       case None => TaskManagement.getRoot(taskId)
     }) match {
-      case Some(pn)=> pn.openGoals.map(p => TaskManagement.proofNodeIds.get(p) match {
-        case Some(pnId) => pnId
-        case None => throw new IllegalStateException("Proof node with unknown ID")
+      case Some(pn)=> pn.openGoals().map(p => TaskManagement.proofNodeIds.get(taskId) match {
+        case Some(ids) => ids.get(p) match {
+          case Some(pnId) => pnId
+          case None => throw new IllegalStateException("Proof node with unknown ID")
+        }
+        case None => throw new IllegalStateException("Proof node IDs must have been initialized with task")
       })
       case _ => List()
     }
@@ -290,16 +306,15 @@ object KeYmaeraInterface {
 
   /**
    * This methods allows to poll for updates downwards from a given node
-   *
-   * @param taskId
-   * @param nodeId
-   * @param depth
-   * @return
+   * @param taskId Identifies the task.
+   * @param nodeId Identifies the proof node. If None, identifies the root node of the proof.
+   * @param depth The depth of the sub tree
+   * @return The sub tree serialized to JSON (schema as per prooftree.js)
    */
   def getSubtree(taskId: String, nodeId: Option[String], depth: Int): Option[String] = {
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
-      case None => ("", TaskManagement.getRoot(taskId))
+      case None => (taskId, TaskManagement.getRoot(taskId))
     }) match {
       case (id, Some(n)) => Some(getSubtree(n, id, depth, taskId))
       case (_, None) => None
@@ -319,9 +334,7 @@ object KeYmaeraInterface {
 
   def getSequent(taskId : String, nodeId : String, branchId : String) : Option[String] = {
     this.getActualNode(taskId, Some(nodeId)) match {
-      case Some(node) => {
-        None
-      }
+      case Some(node) => None
       case None => None
     }
   }
@@ -351,7 +364,12 @@ object KeYmaeraInterface {
 
  // def json(p: ProofNode): String = JSONConverter(p)
 
-  def json(p: ProofNode, id: String, l: Int, rootId: String): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
+  private def json(p: ProofNode, id: String, l: Int, rootId: String): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
 
-  def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
+  private def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
+
+  private def getActualNode(taskId : String, nodeIdOpt : Option[String]) : Option[ProofNode] = nodeIdOpt match {
+    case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
+    case None         => TaskManagement.getRoot(taskId)
+  }
 }

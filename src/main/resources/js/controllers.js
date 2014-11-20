@@ -509,8 +509,7 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   });
 
   $scope.applyTactics = function(t) {
-    $http.post(uri + "/run/" + t.id)
-            .success(function(data) {
+    $http.post(uri + "/run/" + t.id).success(function(data) {
         var dispatchedTacticId = data.tacticInstId;
         $modalInstance.close(dispatchedTacticId);
         Tactics.addDispatchedTactics(dispatchedTacticId);
@@ -518,8 +517,7 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
     });
   }
   $scope.applyTacticsByName = function(tName) {
-      $http.post(uri + "/runByName/" + tName)
-              .success(function(data) {
+      $http.post(uri + "/runByName/" + tName).success(function(data) {
           var dispatchedTacticId = data.tacticInstId;
           $modalInstance.close(dispatchedTacticId);
           Tactics.addDispatchedTactics(dispatchedTacticId);

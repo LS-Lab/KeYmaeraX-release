@@ -1,11 +1,13 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
+import edu.cmu.cs.ls.keymaera.core.Formula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
 /**
- * Created by smitsch on 11/10/14.
+ * Initializes KeYmaera and its database.
+ * @param db The database access.
  */
 class KeYmaeraInitializer(db : DBAbstraction) {
   def initialize() {
@@ -34,24 +36,38 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.box-ndetassign", "TacticLibrary.boxNDetAssignT", TacticKind.PositionTactic, TacticLibrary.boxNDetAssign)
     initTactic("dl.box-seq", "TacticLibrary.boxSeqT", TacticKind.PositionTactic, TacticLibrary.boxSeqT)
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
+
+    initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT _)
   }
 
-  private def initTactic(name : String, className : String, kind : TacticKind.Value, /* Remove when reflection works */ tInst : AnyRef) = {
-    val tactic = db.getTacticByName(name) match {
+  private def initTactic(name : String, className : String, kind : TacticKind.Value, t : Tactic) = {
+    val tactic = getOrCreateTactic(name, className, kind)
+    KeYmaeraInterface.addTactic(tactic.tacticId, t)
+  }
+  private def initTactic(name : String, className : String, kind : TacticKind.Value, t : PositionTactic) = {
+    val tactic = getOrCreateTactic(name, className, kind)
+    KeYmaeraInterface.addPositionTactic(tactic.tacticId, t)
+  }
+  private def initInputTactic(name : String, className : String, kind : TacticKind.Value,
+                         tGen : (Option[Formula]) => Tactic) = {
+    val tactic = getOrCreateTactic(name, className, kind)
+    KeYmaeraInterface.addTactic(tactic.tacticId, tGen)
+  }
+  private def initInputPositionTactic(name : String, className : String, kind : TacticKind.Value,
+                         tGen : (Option[Formula]) => PositionTactic) = {
+    val tactic = getOrCreateTactic(name, className, kind)
+    KeYmaeraInterface.addPositionTactic(tactic.tacticId, tGen)
+  }
+
+  private def getOrCreateTactic(name: String, className: String, kind: TacticKind.Value): TacticPOJO = {
+    db.getTacticByName(name) match {
       case Some(t) => t
       case None =>
-        val id = db.createTactic(name, className, kind);
+        val id = db.createTactic(name, className, kind)
         db.getTactic(id) match {
           case Some(t) => t
           case None => throw new IllegalStateException("Unable to insert tactic " + name + " into the database")
         }
-    }
-    // TODO reflection
-    // TODO get rid of singletons
-    (tactic.kind, tInst) match {
-      case (TacticKind.Tactic, t : Tactic) => KeYmaeraInterface.addTactic(tactic.tacticId, t)
-      case (TacticKind.PositionTactic, t : PositionTactic) => KeYmaeraInterface.addPositionTactic(tactic.tacticId, t)
-      case _ => throw new IllegalArgumentException("Tactic kind " + tactic.kind.toString() + " and type " + tInst.getClass.toString + " do not match")
     }
   }
 }
