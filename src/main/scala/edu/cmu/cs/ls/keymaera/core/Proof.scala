@@ -311,7 +311,7 @@ abstract class PositionRule(name: String, val pos: Position) extends Rule(name) 
 }
 
 abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos) {
-  override def toString: String = name + " at " + pos + " assumtion at " + aPos
+  override def toString: String = name + " at " + pos + " assumption at " + aPos
 }
 
 abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name) {

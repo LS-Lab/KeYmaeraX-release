@@ -254,7 +254,10 @@ class AngularTreeViewResponse(tree : String) extends Response {
     if (children.length > 0) {
       val step = children.head.asJsObject
       val rule = step.fields.get("rule") match {
-        case Some(r) => r.asInstanceOf[JsString]
+        case Some(r) => r.asJsObject.fields.get("name") match {
+          case Some(n) => n
+          case None => throw new IllegalArgumentException("Schema violation")
+        }
         case None => throw new IllegalArgumentException("Schema violation")
       }
       val subgoals = step.fields.get("children") match {

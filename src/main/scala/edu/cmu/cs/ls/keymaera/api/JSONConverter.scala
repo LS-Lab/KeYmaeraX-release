@@ -129,6 +129,25 @@ object JSONConverter {
     jsonStack.pop().head.asJsObject()
   }
 
+  def convertPosition(pos : Position) = JsObject(
+    "kind" -> JsString(if (pos.isAnte) "ante" else "succ"),
+    "index" -> JsNumber(pos.getIndex),
+    "inExpr" -> convertPos(pos.inExpr)
+  )
+
+  def convertRule(rule : Rule) = {
+    val cf = ("name" -> JsString(rule.name)) :: Nil
+    rule match {
+      case r : AssumptionRule => JsObject(("kind" -> JsString("AssumptionRule")) :: ("pos" -> convertPosition(r.pos))
+        :: ("assumption" -> convertPosition(r.aPos)) :: Nil ++: cf)
+      case r : PositionRule => JsObject(("kind" -> JsString("PositionRule"))
+        :: ("pos" -> convertPosition(r.pos)) :: Nil ++: cf)
+      case r : TwoPositionRule => JsObject(("kind" -> JsString("TwoPositionRule"))
+        :: ("pos1" -> convertPosition(r.pos1)) :: ("pos2" -> convertPosition(r.pos2)) :: Nil ++: cf)
+      case _ => JsObject(("kind" -> JsString("UnspecificRule")) +: cf)
+    }
+  }
+
   def convert(l: Seq[Formula], ante: String, nodeId: String): JsArray =
     JsArray(l.zipWithIndex.map(f => JsObject(
         "nodeId"  -> JsString(nodeId),
@@ -155,7 +174,7 @@ object JSONConverter {
   }
   def convert(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit)): JsObject =
     JsObject(
-      "rule"      -> JsString(ps.rule.toString),
+      "rule"      -> convertRule(ps.rule),
       "id"        -> JsNumber(i),
       "children"  -> subgoals(id, limit, store)(ps)
     )
@@ -171,7 +190,7 @@ object JSONConverter {
 
   def convert(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit): JsObject =
     JsObject(
-      "rule"      -> JsString(ps.rule.toString),
+      "rule"      -> convertRule(ps.rule),
       "id"        -> JsNumber(i),
       "children"  -> subgoals(id, filter, store)(ps)
     )
