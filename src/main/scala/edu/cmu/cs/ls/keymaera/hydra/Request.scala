@@ -163,7 +163,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
     if (next < steps.length) {
       val nextStep = steps(next)
       KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
-        Some(tacticCompleted(steps.toArray, next + 1)))
+        Some(tacticCompleted(steps, next + 1)))
     }
   }
 }
