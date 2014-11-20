@@ -423,7 +423,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
                     alert("TODO -- what to do when there is no task associated with this node (" + selectedNode.id + ") in: " + idList)
                 }
             });
-
     }
 
     $scope.editLabel = function(node) {
