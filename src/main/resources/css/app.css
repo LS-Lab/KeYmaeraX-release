@@ -46,6 +46,10 @@ table .btn{
   color: #e1edf7;
 }
 
+.k4-nobreak {
+    white-space: nowrap;
+}
+
 .k4-progress-table td {
   text-align: center;
 }
