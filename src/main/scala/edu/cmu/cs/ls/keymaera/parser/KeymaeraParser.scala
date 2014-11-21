@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaera.parser
 
+import java.util.stream.IntStream
+
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.syntactical._
@@ -28,6 +30,42 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
   //////////////////////////////////////////////////////////////////////////////
   // Public-facing interface.
   //////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Returns all occurances of variables in s.
+   * @param s
+   * @return All variables occcuring in s.
+   */
+  private def allVariableOccurances(s:String) = ident.findAllIn(s).map(s => new Variable(s, None, Real)).toList
+
+  /**
+   *
+   * @param s the string to parse into a expr
+   * @return The expression.
+   */
+  def parseBareExpression(s:String) : Option[Expr] = {
+    val variables = allVariableOccurances(s)
+    val parser = new KeYmaeraParser(false)
+
+    val formulaParser = new FormulaParser(variables,Nil,Nil,Nil).parser
+    val exprParser = parser.makeExprParser(variables, Nil, Nil, Nil)
+    parser.parseAll(exprParser, s) match {
+      case parser.Success(result, next) => Some(result.asInstanceOf[Expr])
+      case _ => None //todo actually, pass back an error
+    }
+  }
+
+  def parseBareFormula(s : String) : Option[Formula] = {
+    try {
+      val expr      = this.parseBareExpression(s).get
+      val formula   = expr.asInstanceOf[Formula]
+      val variables = allVariableOccurances(s)
+      Some(Forall(variables, formula))
+    }
+    catch {
+      case e:Exception => None
+    }
+  }
 
   def runParser(s:String):Expr = {
     val parser = new KeYmaeraParser(enabledLogging)
@@ -365,7 +403,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
   class FormulaParser(variables:List[Variable],
       functions:List[Function],
       predicates:List[PredicateConstant],
-      programVariables:List[ProgramConstant]) 
+      programVariables:List[ProgramConstant])
   {
     type SubformulaParser = PackratParser[Formula]
     
@@ -646,7 +684,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
   class ProgramParser(variables:List[Variable],
       functions:List[Function],
       predicates:List[PredicateConstant],
-      programVariables:List[ProgramConstant]) 
+      programVariables:List[ProgramConstant])
   {
     type SubprogramParser = PackratParser[Program]
     
