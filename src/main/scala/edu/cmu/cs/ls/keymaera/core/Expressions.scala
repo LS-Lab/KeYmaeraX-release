@@ -74,8 +74,11 @@ object Bool extends Sort
 /* sort of reals: 0, 1, 2.73 */
 object Real extends Sort
 
+/* sort of modal operators */
+object ModalOpSort extends Sort
+
 /* sort of games */
-object GameSort extends Sort
+//object GameSort extends Sort
 
 /* sort of hybrid probrams */
 object ProgramSort extends Sort
@@ -811,22 +814,22 @@ final class IfThenElseTerm(cond: Formula, thenT: Term, elseT: Term)
  *=======
  */
 
-sealed trait Game extends Expr {
+sealed trait ModalOp extends Expr {
   def reads: Seq[NamedSymbol]
   def writes: Seq[NamedSymbol]
 }
 /* Modality */
 object Modality {
-  def apply(g: Game, f: Formula): Formula = new Modality(g, f)
-  def unapply(e: Any): Option[(Game, Formula)] = e match {
+  def apply(g: ModalOp, f: Formula): Formula = new Modality(g, f)
+  def unapply(e: Any): Option[(ModalOp, Formula)] = e match {
     case x: Modality => (x.left, x.right) match {
-      case (a: Game, b: Formula) => Some((a,b))
+      case (a: ModalOp, b: Formula) => Some((a,b))
       case _ => None
     }
     case _ => None
   }
 }
-final class Modality (left : Game, right : Formula) extends Binary(Bool, TupleT(GameSort, Bool), left, right) with Formula {
+final class Modality (left : ModalOp, right : Formula) extends Binary(Bool, TupleT(ModalOpSort, Bool), left, right) with Formula {
   def reads: Seq[NamedSymbol] = ???
   def writes: Seq[NamedSymbol] = left.writes
 
@@ -837,12 +840,12 @@ final class Modality (left : Game, right : Formula) extends Binary(Bool, TupleT(
   override def hashCode: Int = hash(127, left, right)
 }
 
-abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
-abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, TupleT(GameSort, GameSort), left, right) with Game
+//abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
+//abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, TupleT(GameSort, GameSort), left, right) with Game
 
-/* Games */
+/* Modalities */
 object BoxModality {
-  def apply(child: Program): Game = new BoxModality(child)
+  def apply(child: Program): ModalOp = new BoxModality(child)
   def apply(child: Program, f: Formula): Modality = new Modality(new BoxModality(child), f)
   def unapply(e: Any): Option[(Program, Formula)] = e match {
     case Modality(x: BoxModality, f) => x.child match {
@@ -852,7 +855,7 @@ object BoxModality {
     case _ => None
   }
 }
-final class BoxModality     (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
+final class BoxModality     (child : Program) extends Unary(ModalOpSort, ProgramSort, child) with ModalOp {
   def reads = child.reads
   def writes = child.writes
 
@@ -863,7 +866,7 @@ final class BoxModality     (child : Program) extends Unary(GameSort, ProgramSor
   override def hashCode: Int = hash(131, child)
 }
 object DiamondModality {
-  def apply(child: Program): Game = new DiamondModality(child)
+  def apply(child: Program): ModalOp = new DiamondModality(child)
   def apply(child: Program, f: Formula): Modality = new Modality(new DiamondModality(child), f)
   def unapply(e: Expr): Option[(Program, Formula)] = e match {
     case Modality(x: DiamondModality, f) => x.child match {
@@ -873,7 +876,7 @@ object DiamondModality {
     case _ => None
   }
 }
-final class DiamondModality (child : Program) extends Unary(GameSort, ProgramSort, child) with Game {
+final class DiamondModality (child : Program) extends Unary(ModalOpSort, ProgramSort, child) with ModalOp {
   def reads = child.reads
   def writes = child.writes
 
@@ -884,6 +887,8 @@ final class DiamondModality (child : Program) extends Unary(GameSort, ProgramSor
   override def hashCode: Int = hash(137, child)
 }
 
+/* Games */
+/*
 final class BoxStar         (child : Game)    extends UnaryGame(child){
   def reads = child.reads
   def writes = child.writes
@@ -934,6 +939,7 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
   }
   override def hashCode: Int = hash(163, left, right)
 }
+*/
 
 /**
  * Programs
@@ -1256,6 +1262,7 @@ final class Exists(variables : immutable.Seq[NamedSymbol], child : Formula) exte
  */
 
 private object VSearch {
+  //@TODO See Proof.scala:Substitution and double check with that
   def modified(e: Term): Seq[NamedSymbol] = e match {
     case Pair(dom, a, b) => modified(a) ++ modified(b)
     case Apply(f, args) => Seq(f)

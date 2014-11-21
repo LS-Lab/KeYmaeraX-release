@@ -16,7 +16,7 @@ object ExpressionTraversal {
   // for convenience
   type union[T] = { type and[S] = UnionType[N[T]]#and[S] }
 
-  type FTPG[T] = union[Term]#and[Formula]#and[Program]#and[Game]#andProvideEvidence[T]
+  type FTPG[T] = union[Term]#and[Formula]#and[Program]#and[ModalOp]#andProvideEvidence[T]
 
   def fail(x: Expr) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expr])
   def failFTPG[T, A : FTPG](x: A) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expr])
@@ -25,21 +25,21 @@ object ExpressionTraversal {
   val stop = new StopTraversal {}
 
   /**
-   * TODO: Maybe we need to relax this interface to just the cases: Formula -> Formula, Term -> Term, Program -> Program, Game -> Game in order to make it implementable
+   * TODO: Maybe we need to relax this interface to just the cases: Formula -> Formula, Term -> Term, Program -> Program, ModalOp -> ModalOp in order to make it implementable
    */
   trait ExpressionTraversalFunction {
     def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
     def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
-    def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
+    def preG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = Left(None)
     def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
     def inP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def inT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
-    def inG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
+    def inG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = Left(None)
     def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
     def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
-    def postG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = Left(None)
+    def postG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = Left(None)
   }
 
   /**
@@ -85,8 +85,8 @@ object ExpressionTraversal {
     else
     // return id to ignore this branch
       Right(e)
-    override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if(p == t)
-      traverse(p, cont, e) match { case Some(x: Game) => Right(x) case _ => Left(Some(stop))}
+    override def preG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = if(p == t)
+      traverse(p, cont, e) match { case Some(x: ModalOp) => Right(x) case _ => Left(Some(stop))}
     else if(p.isPrefixOf(t))
     // proceed
       Left(None)
@@ -111,7 +111,7 @@ object ExpressionTraversal {
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
-    case x: Game => f.preG(p, x) match {
+    case x: ModalOp => f.preG(p, x) match {
       case a@Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
@@ -134,7 +134,7 @@ object ExpressionTraversal {
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
-    case x: Game => f.inG(p, x) match {
+    case x: ModalOp => f.inG(p, x) match {
       case a@Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
@@ -157,7 +157,7 @@ object ExpressionTraversal {
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
-    case x: Game => f.postG(p, x) match {
+    case x: ModalOp => f.postG(p, x) match {
       case a@Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
@@ -247,7 +247,7 @@ object ExpressionTraversal {
         case IfThenElseTerm(a, b, c) => matchThree(p, IfThenElseTerm.apply, f, a, b, c)
         case Pair(d, a, b) => matchTwo(p, Pair.apply(d, _: Term, _: Term), f, a, b)
 
-        // Games
+        // ModalOps
         case x: BoxModality => matchOne(p, BoxModality(_: Program), f, x.child.asInstanceOf[Program])
         case x: DiamondModality => matchOne(p, DiamondModality(_: Program), f, x.child.asInstanceOf[Program])
 

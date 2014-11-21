@@ -1087,7 +1087,7 @@ object TacticLibrary {
       }
 
 
-      override def preG(p: PosInExpr, e: Game): Either[Option[StopTraversal], Game] = if (test(e)) {
+      override def preG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = if (test(e)) {
           posInExpr = p
           Left(Some(stop))
         } else Left(None)

@@ -23,7 +23,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case ProgramSort => "P"
     case Real        => "R"
     case Unit        => ???
-    case GameSort    => ???
+    case ModalOpSort => ???
     case s:UserSort  => ???
     case s:TupleT    => ???
   }
@@ -454,7 +454,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   private def sortProofPrinter(s:Sort):String = s match {
     case Bool        => "T"
     case s : EnumT   => s.name
-    case GameSort    => ???
+    case ModalOpSort => ???
     case ProgramSort => "P"
     case Real        => "T"
     case s:TupleT    => ???
