@@ -50,6 +50,26 @@ table .btn{
     white-space: nowrap;
 }
 
+.k4-flexrow {
+    display: flex;
+}
+.k4-flexcell {
+    align-items: stretch;
+}
+.k4-valign-table {
+    display: table;
+    height: 100%;
+}
+.k4-valign-cell {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.k4-inline-block {
+    display: inline-block;
+    margin: 2px;
+}
+
 .k4-progress-table td {
   text-align: center;
 }
