@@ -3,11 +3,8 @@ package edu.cmu.cs.ls.keymaera.hydra
 import com.mongodb.casbah.Imports._
 import org.bson.types.ObjectId
 
-import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.mutable.ListBuffer
 
-/**
- * Created by nfulton on 9/23/14.
- */
 object MongoDB extends DBAbstraction {
   val mongoClient = MongoClient("localhost", 27017)
 
@@ -69,9 +66,9 @@ object MongoDB extends DBAbstraction {
     var query = MongoDBObject("userId" -> userId)
     val allModels = models.find(query)
     allModels.map(model =>
-      if(!model.containsField("_id")) ???
+      if(!model.containsField("_id")) throw new IllegalStateException("Model without ID")
       else new ModelPOJO(
-        model.getAs[ObjectId]("_id").getOrElse(null).toString(),
+        model.getAs[ObjectId]("_id").orNull.toString,
         model.getAs[String]("userId").getOrElse(""),
         model.getAs[String]("name").getOrElse("") ,
         model.getAs[String]("date").getOrElse(""),
@@ -83,10 +80,10 @@ object MongoDB extends DBAbstraction {
   override def getModel(modelId: String): ModelPOJO = {
     var query = MongoDBObject("_id" -> new ObjectId(modelId))
     val results = models.find(query)
-    if(results.length > 1) ??? //There should only be one response b/c _id is a pk.
+    if(results.length > 1) throw new IllegalStateException("Duplicate model ID: " + modelId)
     if(results.length < 1) throw new Exception(modelId + " is a bad modelId!")
     results.map(result => new ModelPOJO(
-      result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+      result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("userId").getOrElse(""),
       result.getAs[String]("name").getOrElse("") ,
       result.getAs[String]("date").getOrElse(""),
@@ -98,7 +95,7 @@ object MongoDB extends DBAbstraction {
     var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description, "date" -> date,
       "steps" -> List[String]())
     var result = proofs.insert(query)
-    query.get("_id").toString()
+    query.get("_id").toString
   }
 
   override def getProofsForModel(modelId : String) : List[ProofPOJO] = {
@@ -113,11 +110,11 @@ object MongoDB extends DBAbstraction {
         val isClosed = false
 
         new ProofPOJO(
-          result.getAs[ObjectId]("_id").getOrElse(null).toString(),
-          result.getAs[String]("modelId").getOrElse(null).toString(),
-          result.getAs[String]("name").getOrElse(null).toString(),
+          result.getAs[ObjectId]("_id").orNull.toString,
+          result.getAs[String]("modelId").orNull.toString,
+          result.getAs[String]("name").orNull.toString,
           result.getAs[String]("description").getOrElse("no description"),
-          result.getAs[String]("date").getOrElse(null).toString(),
+          result.getAs[String]("date").orNull.toString,
           stepCount,
           isClosed
         )
@@ -146,7 +143,7 @@ object MongoDB extends DBAbstraction {
     if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique") //There should only be one response b/c _id is a pk.
     if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
     results.map(result => new ProofPOJO(
-      result.getAs[ObjectId]("_id").getOrElse(null).toString(),
+      result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("modelId").getOrElse(""),
       result.getAs[String]("name").getOrElse(""),
       result.getAs[String]("description").getOrElse("") ,
@@ -181,10 +178,10 @@ object MongoDB extends DBAbstraction {
     val query = MongoDBObject(
       "name"    -> name,
       "clazz"   -> clazz,
-      "kind"    -> kind.toString()
+      "kind"    -> kind.toString
     )
     tactics.insert(query)
-    query.get("_id").toString()
+    query.get("_id").toString
   }
   def tacticExists(id : String) : Boolean = {
     if (ObjectId.isValid(id)) {
@@ -200,7 +197,7 @@ object MongoDB extends DBAbstraction {
     if(results.length > 1) throw new IllegalStateException("Tactic ID " + id + " is not unique")
     if(results.length < 1) None
     Some(results.map(result => new TacticPOJO(
-      result.getAs[ObjectId]("_id").orNull.toString(),
+      result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("name").getOrElse(""),
       result.getAs[String]("clazz").getOrElse(""),
       TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
@@ -209,19 +206,19 @@ object MongoDB extends DBAbstraction {
   def getTacticByName(name: String) : Option[TacticPOJO] = {
     val query = MongoDBObject("name" -> name)
     val results = tactics.find(query)
-    if(results.length > 1) ??? //TODO handle db errors
+    if(results.length > 1) throw new IllegalStateException("Duplicate tactic name: " + name)
     if (results.length < 1) None
     else Some(results.map(result => new TacticPOJO(
-      result.getAs[ObjectId]("_id").orNull.toString(),
+      result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("name").getOrElse(""),
       result.getAs[String]("clazz").getOrElse(""),
       TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
     )).toList.last)
   }
-  override def getTactics() : List[TacticPOJO] = {
+  override def getTactics : List[TacticPOJO] = {
     val results = tactics.find()
     results.map(result => new TacticPOJO(
-      result.getAs[ObjectId]("_id").orNull.toString(),
+      result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("name").getOrElse(""),
       result.getAs[String]("clazz").getOrElse(""),
       TacticKind.withName(result.getAs[String]("kind").getOrElse(""))
@@ -229,30 +226,34 @@ object MongoDB extends DBAbstraction {
   }
 
   override def createDispatchedTactics(proofId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                                        status:DispatchedTacticStatus.Value) : String = {
+                                       input:Option[String],status:DispatchedTacticStatus.Value) : String = {
     var fields = ListBuffer(
-      "proofId"       -> proofId,
-      "tacticsId"    -> tacticsId,
-      "status"       -> status.toString)
+      "proofId"   -> proofId,
+      "tacticsId" -> tacticsId,
+      "status"    -> status.toString)
     if (nodeId.isDefined) { fields.append("nodeId" -> nodeId.get) }
     if (formulaId.isDefined) { fields.append("formulaId" -> formulaId.get) }
+    if (input.isDefined) { fields.append("input" -> input.get) }
 
     val query = MongoDBObject(fields.toList)
     dispatchedTactics.insert(query)
-    query.get("_id").toString()
+    query.get("_id").toString
   }
-  override def getDispatchedTactics(tId : String) : DispatchedTacticPOJO = {
+  override def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO] = {
     val query = MongoDBObject("_id" -> new ObjectId(tId))
     val results = dispatchedTactics.find(query)
-    if(results.length < 1 || results.length > 1) ??? //TODO handle db errors
-    results.map(result => new DispatchedTacticPOJO(
-      result.getAs[ObjectId]("_id").orNull.toString(),
+    if (results.length < 1) None
+    if (results.length > 1) throw new IllegalStateException("Duplicate tactic instance: " + tId)
+    val result = results.map(result => new DispatchedTacticPOJO(
+      result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("proofId").getOrElse(""),
       if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
       if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").getOrElse("")) else None,
       result.getAs[String]("tacticsId").getOrElse(""),
+      if (result.containsField("input")) Some(result.getAs[String]("input").getOrElse("")) else None,
       DispatchedTacticStatus.withName(result.getAs[String]("status").getOrElse(""))
-    )).toList.last
+    )).toList.head
+    Some(result)
   }
   override def updateDispatchedTactics(tactic : DispatchedTacticPOJO) = {
     val fields = ListBuffer(

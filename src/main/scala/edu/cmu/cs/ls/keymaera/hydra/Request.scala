@@ -145,11 +145,15 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
     if (!KeYmaeraInterface.containsTask(proof.proofId)) {
       val model = db.getModel(proof.modelId)
       KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
-      val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step))
+      val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step)).map(_.get)
       if (steps.nonEmpty) {
         val firstStep = steps.head
+        val pFormula =
+          if (firstStep.input.isDefined)
+            new KeYmaeraParser().runParser(firstStep.input.get) match { case f: Formula => Some(f) case _ => None }
+          else None
         KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-          firstStep.id, Some(tacticCompleted(steps.toArray, 1)))
+          firstStep.id, Some(tacticCompleted(steps.toArray, 1)), pFormula)
       }
     }
 
@@ -226,13 +230,14 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  * @param tacticName Identifies the tactic to run.
  */
-class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String], tacticName : String) extends Request {
+class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
+                             formulaId : Option[String], tacticName : String, input : Seq[(String, String)]) extends Request {
   def getResultingResponses() = {
     val tacticId = db.getTacticByName(tacticName) match {
       case Some(t) => t.tacticId
       case None => throw new IllegalArgumentException("Tactic name " + tacticName + " unknown")
     }
-    new RunTacticRequest(db, userId, proofId, nodeId, formulaId, tacticId).getResultingResponses()
+    new RunTacticRequest(db, userId, proofId, nodeId, formulaId, tacticId, input).getResultingResponses()
   }
 }
 
@@ -246,22 +251,34 @@ class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : Stri
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  * @param tacticId Identifies the tactic to run.
  */
-class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], formulaId : Option[String], tacticId : String) extends Request {
+class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
+                       formulaId : Option[String], tacticId : String, input : Seq[(String, String)]) extends Request {
   def getResultingResponses() = {
     val nid = nodeId match {
-      case Some(nodeId) => nodeId
+      case Some(n) => n
       case None => proofId
     }
-    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Prepared)
+    // TODO handle multiple inputs
+    val formula = if (input.size > 0) input.map(p => p._2).head match {
+                      case f: String => Some(f)
+                      case a => throw new IllegalArgumentException("Cannot parse input: " + a)
+                    }
+                else None
+    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, formula, DispatchedTacticStatus.Prepared)
+
     KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-      Some(tacticCompleted(db, nid)))
-    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId,
+      Some(tacticCompleted(db, nid)), formula)
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, formula,
       DispatchedTacticStatus.Running))
-    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, DispatchedTacticStatus.Running)) :: Nil
+    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, formula,
+      DispatchedTacticStatus.Running)) :: Nil
   }
 
   private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
-    val finishedTactic = db.getDispatchedTactics(tId)
+    val finishedTactic = db.getDispatchedTactics(tId) match {
+      case Some(t) => t
+      case _ => throw new IllegalStateException("Finished tactic not found in database: " + tId)
+    }
     // TODO the following updates must be an atomic operation on the database
     db.addFinishedTactic(proofId, tId)
     db.updateDispatchedTactics(new DispatchedTacticPOJO(
@@ -270,15 +287,18 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
       finishedTactic.nodeId,
       finishedTactic.formulaId,
       finishedTactic.tacticsId,
+      finishedTactic.input,
       DispatchedTacticStatus.Finished
     ))
   }
 }
 
-class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : String, tacticInstId : String) extends Request {
+class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : String, tId : String) extends Request {
   def getResultingResponses() = {
-    val dispatched = db.getDispatchedTactics(tacticInstId)
-    new DispatchedTacticResponse(dispatched) :: Nil
+    db.getDispatchedTactics(tId) match {
+      case Some(d) => new DispatchedTacticResponse(d) :: Nil
+      case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched tactic with ID: " + tId)) :: Nil
+    }
   }
 }
 
@@ -288,7 +308,7 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
     // TODO fetch only one branch, need to refactor UI for this
     val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 1000)
     node match {
-      case Some(theNode) => {
+      case Some(theNode) =>
         val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
         val report = schema.validate(JsonLoader.fromString(theNode))
         if (report.isSuccess)
@@ -296,8 +316,7 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
         else {
           throw report.iterator().next().asException()
         }
-      }
-      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
+      case None          => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
     }
   }
 }

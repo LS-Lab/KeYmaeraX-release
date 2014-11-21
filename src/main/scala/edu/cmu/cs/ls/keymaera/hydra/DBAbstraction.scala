@@ -1,8 +1,5 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-
-
-
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
 object TacticKind extends Enumeration {
   type TacticKind = Value
@@ -55,7 +52,7 @@ class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kin
  * @param tacticsId Identifies the tactic that is being run.
  */
 class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
-                           val tacticsId:String, val status:DispatchedTacticStatus.Value)
+                           val tacticsId:String, val input:Option[String], val status:DispatchedTacticStatus.Value)
 
 //tasks : _id, model
 //tactics: _id, name, class
@@ -96,9 +93,9 @@ trait DBAbstraction {
   def tacticExists(id: String) : Boolean
   def getTactic(id: String) : Option[TacticPOJO]
   def getTacticByName(name: String) : Option[TacticPOJO]
-  def getTactics() : List[TacticPOJO]
+  def getTactics : List[TacticPOJO]
   def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                              status:DispatchedTacticStatus.Value) : String
+                              input:Option[String], status:DispatchedTacticStatus.Value) : String
   def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
-  def getDispatchedTactics(tId : String) : DispatchedTacticPOJO
+  def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
 }

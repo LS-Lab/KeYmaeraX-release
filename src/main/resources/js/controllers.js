@@ -124,6 +124,11 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             { "name" : "dl.box-induction",
               "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\left(\\phi \\wedge \\left[\\alpha^*\\right]\\left(\\phi \\rightarrow \\left[\\alpha\\right] \\phi \\right)\\right) }{\\left[\\alpha^*\\right]\\phi}\\)"
             },
+        "dl.induction" :
+            { "name" : "dl.induction",
+              "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\Gamma ~\\vdash~ \\phi, \\Delta \\qquad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\left[\\alpha\\right]\\phi\\right) \\qquad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\psi \\right)}{\\Gamma ~\\vdash~ \\left[\\alpha^*\\right]\\psi,\\Delta}\\)",
+              "input" : [ { "name" : "inv", "label" : "\\(\\phi\\)", "placeholder" : "Invariant" } ]
+            },
         "dl.box-ndetassign" :
             { "name" : "dl.box-ndetassign",
               "label" : "\\(\\left(\\left[\\coloneq *\\right]\\right) \\frac{\\forall x. \\phi(x)}{\\left[x \\coloneq *\\right]\\phi}\\)"
@@ -497,8 +502,14 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
           var tacticName = data[i].name;
           var tactic = Tactics.getRuleTactics()[tacticName];
           if (tactic !== undefined) {
-              tactic.id = data[i].id;
-              $scope.ruleTactics.push(tactic);
+//              tactic.id = data[i].id;
+              var tacticInst = {
+                id: data[i].id,
+                name: tactic.name,
+                label: tactic.label,
+                input: tactic.input !== undefined ? tactic.input.slice() : tactic.input
+              }
+              $scope.ruleTactics.push(tacticInst);
           }
           tactic = Tactics.getUserTactics()[tacticName];
           if (tactic !== undefined) {
@@ -509,7 +520,11 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   });
 
   $scope.applyTactics = function(t) {
-    $http.post(uri + "/run/" + t.id).success(function(data) {
+    var inputParams = {}
+    for (i = 0; i < t.input.length; ++i) {
+        inputParams[t.input[i].name] = t.input[i].value
+    }
+    $http.post(uri + "/run/" + t.id, inputParams).success(function(data) {
         var dispatchedTacticId = data.tacticInstId;
         $modalInstance.close(dispatchedTacticId);
         Tactics.addDispatchedTactics(dispatchedTacticId);
@@ -517,7 +532,11 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
     });
   }
   $scope.applyTacticsByName = function(tName) {
-      $http.post(uri + "/runByName/" + tName).success(function(data) {
+      var inputParams = {}
+      for (i = 0; i < t.input.length; ++i) {
+          inputParams[t.input[i].name] = t.input[i].value
+      }
+      $http.post(uri + "/runByName/" + tName, inputParams).success(function(data) {
           var dispatchedTacticId = data.tacticInstId;
           $modalInstance.close(dispatchedTacticId);
           Tactics.addDispatchedTactics(dispatchedTacticId);

@@ -246,16 +246,26 @@ object KeYmaeraInterface {
    * @param formulaId the formula (None to execute on the sequent)
    * @param tId the ID of the dispatched tactic instance
    * @param callback callback executed when the tactic finishes
+   * @param input the input in case tacticId refers to an input tactic
    */
-  def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String, callback: Option[String => ((String, Option[String], String) => Unit)] = None) = {
+  def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
+                callback: Option[String => ((String, Option[String], String) => Unit)] = None,
+                input: Option[String] = None) = {
+    val formula = None // TODO needs parser update
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>
         TacticManagement.getPositionTactic(tacticId) match {
           case Some(t) => Some(t(p))
-          case None => None
+          case None => TacticManagement.getInputPositionTactic(tacticId, formula) match {
+            case Some(t) => Some(t(p))
+            case None => None
+          }
         }
-      case None => TacticManagement.getTactic(tacticId)
+      case None => TacticManagement.getTactic(tacticId) match {
+        case Some(t) => Some(t)
+        case None => TacticManagement.getInputTactic(tacticId, formula)
+      }
     }
     tactic match {
       case Some(t) =>
