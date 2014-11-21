@@ -9,8 +9,8 @@
 <div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <form ng-repeat="t in ruleTactics">
-                <div class="btn-group btn-group-lg">
+            <div class="k4-inline-block" ng-repeat="t in ruleTactics">
+                <div class="btn-group btn-group-lg k4-inline-block">
                     <a type="button" class="btn btn-default" ng-click="applyTactics(t)">
                         <span ng-if="t.icon" class="t.icon"><br /></span>
                         <span k4-mathjaxbind="t.label"></span>
@@ -30,7 +30,7 @@
                     <!-- TODO validate input -->
                     <input type="text" class="form-control" placeholder="{{i.placeholder}}" ng-model="i.value"/>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
     <div class="panel panel-default">

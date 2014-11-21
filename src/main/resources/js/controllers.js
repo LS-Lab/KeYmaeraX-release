@@ -122,11 +122,11 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.box-induction" :
             { "name" : "dl.box-induction",
-              "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\left(\\phi \\wedge \\left[\\alpha^*\\right]\\left(\\phi \\rightarrow \\left[\\alpha\\right] \\phi \\right)\\right) }{\\left[\\alpha^*\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{ind}\\right) \\frac{\\left(\\phi \\wedge \\left[\\alpha^*\\right]\\left(\\phi \\rightarrow \\left[\\alpha\\right] \\phi \\right)\\right) }{\\left[\\alpha^*\\right]\\phi}\\)"
             },
         "dl.induction" :
             { "name" : "dl.induction",
-              "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{induction}\\right) \\frac{\\Gamma ~\\vdash~ \\phi, \\Delta \\qquad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\left[\\alpha\\right]\\phi\\right) \\qquad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\psi \\right)}{\\Gamma ~\\vdash~ \\left[\\alpha^*\\right]\\psi,\\Delta}\\)",
+              "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{ind}\\right) \\frac{\\Gamma ~\\vdash~ \\phi, \\Delta \\quad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\left[\\alpha\\right]\\phi\\right) \\quad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\psi \\right)}{\\Gamma ~\\vdash~ \\left[\\alpha^*\\right]\\psi,\\Delta}\\)",
               "input" : [ { "name" : "inv", "label" : "\\(\\phi\\)", "placeholder" : "Invariant" } ]
             },
         "dl.box-ndetassign" :
