@@ -1,7 +1,5 @@
 package edu.cmu.cs.ls.keymaera.parser
 
-import java.util.stream.IntStream
-
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.syntactical._

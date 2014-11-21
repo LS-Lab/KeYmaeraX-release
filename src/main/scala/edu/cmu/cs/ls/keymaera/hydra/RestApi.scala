@@ -199,7 +199,7 @@ trait RestApi extends HttpService {
   val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.toString).toSeq
+        val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.asInstanceOf[JsString].value).toSeq
         val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
         val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
         val request = new RunTacticRequest(database, userId, proofId, nId, fId, tacticId, p)

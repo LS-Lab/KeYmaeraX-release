@@ -148,12 +148,8 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
       val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step)).map(_.get)
       if (steps.nonEmpty) {
         val firstStep = steps.head
-        val pFormula =
-          if (firstStep.input.isDefined)
-            new KeYmaeraParser().runParser(firstStep.input.get) match { case f: Formula => Some(f) case _ => None }
-          else None
         KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-          firstStep.id, Some(tacticCompleted(steps.toArray, 1)), pFormula)
+          firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input)
       }
     }
 

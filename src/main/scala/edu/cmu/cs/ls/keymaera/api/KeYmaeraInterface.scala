@@ -251,7 +251,14 @@ object KeYmaeraInterface {
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
                 callback: Option[String => ((String, Option[String], String) => Unit)] = None,
                 input: Option[String] = None) = {
-    val formula = None // TODO needs parser update
+
+    val formula = input match {
+      case Some(s) => new KeYmaeraParser ().parseBareExpression(s) match {
+        case Some(f: Formula) => Some(f)
+        case _ => None
+      }
+      case _ => None
+    }
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>
