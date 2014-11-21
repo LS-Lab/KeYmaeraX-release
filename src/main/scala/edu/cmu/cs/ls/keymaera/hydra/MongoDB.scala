@@ -247,10 +247,10 @@ object MongoDB extends DBAbstraction {
     val result = results.map(result => new DispatchedTacticPOJO(
       result.getAs[ObjectId]("_id").orNull.toString,
       result.getAs[String]("proofId").getOrElse(""),
-      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").getOrElse("")) else None,
-      if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").getOrElse("")) else None,
+      if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").get) else None,
+      if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").get) else None,
       result.getAs[String]("tacticsId").getOrElse(""),
-      if (result.containsField("input")) Some(result.getAs[String]("input").getOrElse("")) else None,
+      if (result.containsField("input")) Some(result.getAs[String]("input").get) else None,
       DispatchedTacticStatus.withName(result.getAs[String]("status").getOrElse(""))
     )).toList.head
     Some(result)
@@ -262,6 +262,7 @@ object MongoDB extends DBAbstraction {
       "status"       -> tactic.status.toString)
     if (tactic.nodeId.isDefined) { fields.append("nodeId" -> tactic.nodeId.get) }
     if (tactic.formulaId.isDefined) { fields.append("formulaId" -> tactic.formulaId.get) }
+    if (tactic.input.isDefined) { fields.append("input" -> tactic.input.get) }
 
     val update = MongoDBObject(fields.toList)
     dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)

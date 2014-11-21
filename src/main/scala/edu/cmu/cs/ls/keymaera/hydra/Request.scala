@@ -250,10 +250,6 @@ class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : Stri
 class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
                        formulaId : Option[String], tacticId : String, input : Seq[(String, String)]) extends Request {
   def getResultingResponses() = {
-    val nid = nodeId match {
-      case Some(n) => n
-      case None => proofId
-    }
     // TODO handle multiple inputs
     val formula = if (input.size > 0) input.map(p => p._2).head match {
                       case f: String => Some(f)
@@ -263,14 +259,14 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
     val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, formula, DispatchedTacticStatus.Prepared)
 
     KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-      Some(tacticCompleted(db, nid)), formula)
+      Some(tacticCompleted(db)), formula)
     db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, formula,
       DispatchedTacticStatus.Running))
     new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, formula,
       DispatchedTacticStatus.Running)) :: Nil
   }
 
-  private def tacticCompleted(db : DBAbstraction, nodeId: String)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+  private def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
     val finishedTactic = db.getDispatchedTactics(tId) match {
       case Some(t) => t
       case _ => throw new IllegalStateException("Finished tactic not found in database: " + tId)

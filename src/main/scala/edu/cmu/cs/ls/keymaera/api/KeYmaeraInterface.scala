@@ -341,7 +341,7 @@ object KeYmaeraInterface {
   def getSubtree(taskId: String, nodeId: Option[String], filter: (ProofStepInfo => Boolean)): Option[String] = {
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
-      case None => ("", TaskManagement.getRoot(taskId))
+      case None => (taskId, TaskManagement.getRoot(taskId))
     }) match {
       case (id, Some(n)) => Some(getSubtree(n, id, filter, taskId))
       case (_, None) => None
