@@ -140,7 +140,12 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
         "dl.box-test" :
             { "name" : "dl.box-test",
               "label" : "\\(\\left(\\left[\\?\\right]\\right) \\frac{H \\rightarrow \\phi)}{\\left[?H\\right]\\phi}\\)"
-            }
+            },
+        "dl.cut" :
+            { "name" : "dl.cut",
+              "label" : "\\(\\left(\\text{cut}\\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\quad \\Gamma,\\phi ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\Delta}\\)",
+              "input" : [ { "name" : "f", "label" : "\\(\\phi\\)", "placeholder" : "Formula" } ]
+            },
     };
     var userTactics = {
         // TODO has to come from the database

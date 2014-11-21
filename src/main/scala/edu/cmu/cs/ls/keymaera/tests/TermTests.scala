@@ -104,7 +104,7 @@ object TermTests {
         Tactics.weakSeqT(
           Tactics.repeatT(TacticLibrary.ImplyRightFindT),
           TacticLibrary.ImplyLeftFindT),
-        TacticLibrary.cutT(getTautology2))
+        TacticLibrary.cutT(Some(getTautology2)))
      , TacticLibrary.hideT(AntePosition(1)))//, (hideT(new Position(true, 0))*) & uniformSubstT(subst, delta) & axiomT("Choice") & AxiomCloseT)
     //val tactic2: Tactic = (ImplyRightFindT*) & ImplyLeftFindT & AxiomCloseT
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))

@@ -13,6 +13,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
   def initialize() {
     initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, TacticLibrary.default)
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
+    initInputTactic("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
 
     initTactic("dl.and-left", "TacticLibrary.AndLeftT", TacticKind.PositionTactic, TacticLibrary.AndLeftT)
     initTactic("dl.and-right", "TacticLibrary.AndRightT", TacticKind.PositionTactic, TacticLibrary.AndRightT)
@@ -37,7 +38,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.box-seq", "TacticLibrary.boxSeqT", TacticKind.PositionTactic, TacticLibrary.boxSeqT)
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
 
-    initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT _)
+    initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)
   }
 
   private def initTactic(name : String, className : String, kind : TacticKind.Value, t : Tactic) = {
@@ -49,7 +50,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     KeYmaeraInterface.addPositionTactic(tactic.tacticId, t)
   }
   private def initInputTactic(name : String, className : String, kind : TacticKind.Value,
-                         tGen : (Option[Formula]) => Tactic) = {
+                         tGen : Option[Formula] => Tactic) = {
     val tactic = getOrCreateTactic(name, className, kind)
     KeYmaeraInterface.addTactic(tactic.tacticId, tGen)
   }

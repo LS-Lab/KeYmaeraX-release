@@ -234,7 +234,7 @@ object KeYmaeraInterface {
         TacticManagement.inputPositionTactics.filter(t => t._2(None).applies(n.sequent, p)).map(t => t._1)
       case (n, None) =>
         TacticManagement.tactics.filter(t => t._2.applicable(n)).map(t => t._1) ++:
-        TacticManagement.inputTactics.filter(t => t._2(None).applicable(n)).map(t => t._1)
+        TacticManagement.inputTactics.filter(t => t._2(Some(null)).applicable(n)).map(t => t._1)
     }
   }
 

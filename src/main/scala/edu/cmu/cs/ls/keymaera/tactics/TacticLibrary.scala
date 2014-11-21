@@ -346,7 +346,7 @@ object TacticLibrary {
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = gen(node.sequent, p) match {
-        case Some(inv) => Some((inductionT(Some(inv))(p)))
+        case Some(inv) => Some(inductionT(Some(inv))(p))
         case None => None
       }
 
@@ -374,7 +374,7 @@ object TacticLibrary {
               val cPos = AntePosition(node.sequent.ante.length)
               val b1 = ImplyLeftT(cPos) & AxiomCloseT
               val b2 = hideT(p)
-              Some(cutT(Imply(BoxModality(a, f), x)) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
+              Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
             case _ => None
           }
           override def applicable(node: ProofNode): Boolean = true
@@ -388,7 +388,7 @@ object TacticLibrary {
           onBranch(("Close Next", AxiomCloseT))
         getBody(node.sequent(p)) match {
           case Some(a) =>
-            Some(cutT(Imply(f, BoxModality(Loop(a), f))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+            Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
           case None => None
         }
         case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
@@ -426,7 +426,7 @@ object TacticLibrary {
           return Some(pos)
         }
       }
-      return None
+      None
     }
   }
 
@@ -443,7 +443,7 @@ object TacticLibrary {
           return Some(pos)
         }
       }
-      return None
+      None
     }
   }
 
@@ -624,7 +624,7 @@ object TacticLibrary {
     }
   }
 
-  def cutT(f: Formula): Tactic = cutT((x: ProofNode) => Some(f))
+  def cutT(f: Option[Formula]): Tactic = cutT((x: ProofNode) => f)
 
   def closeT : Tactic = AxiomCloseT | locateAnte(CloseTrueT) | locateSucc(CloseFalseT)
 
@@ -806,7 +806,7 @@ object TacticLibrary {
                 val axiomPos = SuccPosition(node.sequent.succ.length)
                 println("Axiom instance " + axiomInstance)
                 val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
-                Some(cutT(axiomInstance) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+                Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
                }
               case None => None
             }
@@ -1390,7 +1390,7 @@ object TacticLibrary {
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) & uniformSubstT(Substitution(Seq(new SubstitutionPair(aT, instance))), Map(repl(a, aX) -> repl(a, aX, false))) &
                     (axiomT(axiomName) & alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT)))
-                Some(cutT(axiomInstance) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+                Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
             }
           case None => println("Giving up because the axiom does not exist " + this.name); None
