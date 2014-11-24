@@ -48,7 +48,6 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initInputTactic("dl.equalityRewriting", "TacticLibrary.equalityRewriting", TacticKind.InputTactic, TacticLibrary.equalityRewriting _)
 //    initInputTactic("dl.axiom", "TacticLibrary.axiomT", TacticKind.InputTactic, TacticLibrary.axiomT)
     initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)
-    // TODO need full input already to check applicability
     initInputPositionTactic("dl.equalityRewritingLeft", "TacticLibrary.equalityRewritingLeft", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingLeft)
     initInputPositionTactic("dl.equalityRewritingRight", "TacticLibrary.equalityRewritingRight", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingRight)
 //    initInputPositionTactic[Variable,Expr]("dl.instantiate", "TacticLibrary.instantiateT", TacticKind.PositionTactic, TacticLibrary.instantiateT)

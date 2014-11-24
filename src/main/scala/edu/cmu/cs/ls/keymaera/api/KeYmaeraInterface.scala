@@ -84,7 +84,7 @@ object KeYmaeraInterface {
     @volatile var tactics: Map[String, Tactic] = Map()
     @volatile var positionTactics: Map[String, PositionTactic] = Map()
     @volatile var inputTactics: Map[String, (TypeTag[_], _ => Tactic)] = Map()
-    @volatile var input2Tactics: Map[String, ((TypeTag[_], TypeTag[_]), _ => Tactic)] = Map()
+    @volatile var input2Tactics: Map[String, ((TypeTag[_], TypeTag[_]), (_,_) => Tactic)] = Map()
     @volatile var input3Tactics: Map[String, ((TypeTag[_], TypeTag[_], TypeTag[_]), (_,_,_) => Tactic)] = Map()
     @volatile var inputPositionTactics: Map[String, (TypeTag[_], _ => PositionTactic)] = Map()
 
@@ -97,9 +97,14 @@ object KeYmaeraInterface {
       if (inputTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
       inputTactics += (id -> (m, t))
     }
+    def addInputTactic[T,U](id: String, t: (T,U) => Tactic)(implicit m: TypeTag[T], n: TypeTag[U]) =
+      this.synchronized {
+        if (input2Tactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+        input2Tactics += (id -> ((m,n), t))
+      }
     def addInputTactic[T,U,V](id: String, t: (T,U,V) => Tactic)(implicit m: TypeTag[T], n: TypeTag[U], o: TypeTag[V]) =
         this.synchronized {
-      if (inputTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+      if (input3Tactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
       input3Tactics += (id -> ((m,n,o), t))
     }
 
@@ -121,28 +126,15 @@ object KeYmaeraInterface {
 
     def getPositionTactics: List[(String, String)] = positionTactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2.name))
 
-    def getInputTactic(id: String, input: Map[String,String]): Option[Tactic] = {
-      // TODO handle multiple inputs, need tacticinputfactory or something
-      val inputType = inputTactics.get(id).map({ case (t, _) => t})
-      val theInput = input.map({
-        case (k,v) => new KeYmaeraParser ().parseBareExpression(v) match {
-            case Some(f: Formula) => Some(f)
-            case _ => v
-          }
-        case _ => None
-      })
+    def getInputTactic(id: String, input: Map[Int,String]): Option[Tactic] = {
+      val inputType = inputTactics.get(id).map({ case (t, _) => t}) match { case Some(t) => t }
+      val theInput = TacticInputConverter.convert(input, inputType)
       getInputTactic(id, theInput)
     }
 
-    def getInputPositionTactic(id: String, input: Map[String,String]): Option[PositionTactic] = {
-      val inputType = inputPositionTactics.get(id).map({ case (t, _) => t})
-      val theInput = input.map({
-        case (k,v) => new KeYmaeraParser ().parseBareExpression(v) match {
-          case Some(f: Formula) => Some(f)
-          case _ => v
-        }
-        case _ => None
-      })
+    def getInputPositionTactic(id: String, input: Map[Int,String]): Option[PositionTactic] = {
+      val inputType = inputPositionTactics.get(id).map({ case (t, _) => t}) match { case Some(t) => t }
+      val theInput = TacticInputConverter.convert(input, inputType)
       getInputPositionTactic(id, theInput)
     }
 
@@ -310,14 +302,11 @@ object KeYmaeraInterface {
             else false
 //          case (f: (Int => PositionTactic)) => f(0).applicable(n)
           case _ => throw new IllegalArgumentException("Position tactics " + t + " with unknown input type ")
-        }).map(t => t._1)
+        }).map(t => t._1) ++:
+        // TODO filter
+        TacticManagement.input3Tactics.map(t => t._1)
     }
   }
-
-  //  inputTactics.get(id).map({
-//    case (om, f : (T => Tactic)) => if (m.tpe <:< om.tpe) f(input) else null
-//    case _ => throw new IllegalArgumentException("Unexpected parameter type")
-//  })
 
   /**
    * Runs the specified tactic on the formula of a sequent identified by task ID and node ID.
@@ -331,7 +320,7 @@ object KeYmaeraInterface {
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
                 callback: Option[String => ((String, Option[String], String) => Unit)] = None,
-                input: Map[String,String] = Map.empty) = {
+                input: Map[Int,String] = Map.empty) = {
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>

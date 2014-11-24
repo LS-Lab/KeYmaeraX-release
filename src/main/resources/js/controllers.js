@@ -127,7 +127,7 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
         "dl.induction" :
             { "name" : "dl.induction",
               "label" : "\\(\\left(\\left[\\alpha^*\\right] \\text{ind}\\right) \\frac{\\Gamma ~\\vdash~ \\phi, \\Delta \\quad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\left[\\alpha\\right]\\phi\\right) \\quad \\Gamma ~\\vdash~ \\forall^\\alpha \\left(\\phi \\to \\psi \\right)}{\\Gamma ~\\vdash~ \\left[\\alpha^*\\right]\\psi,\\Delta}\\)",
-              "input" : [ { "name" : "inv", "label" : "\\(\\phi\\)", "placeholder" : "Invariant", "type" : "text" } ]
+              "input" : [ { "name" : "0", "label" : "\\(\\phi\\)", "placeholder" : "Invariant", "type" : "text" } ]
             },
         "dl.box-ndetassign" :
             { "name" : "dl.box-ndetassign",
@@ -144,12 +144,20 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
         "dl.cut" :
             { "name" : "dl.cut",
               "label" : "\\(\\left(\\text{cut}\\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\quad \\Gamma,\\phi ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\Delta}\\)",
-              "input" : [ { "name" : "f", "label" : "\\(\\phi\\)", "placeholder" : "Formula", "type" : "text" } ]
+              "input" : [ { "name" : "0", "label" : "\\(\\phi\\)", "placeholder" : "Formula", "type" : "text" } ]
             },
         "dl.qe" :
             { "name" : "dl.qe",
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{Foo}{Bar}\\)",
-              "input" : [ { "name" : "tool", "label" : "Tool", "placeholder" : "Mathematica", "type" : "text" } ]
+              "input" : [ { "name" : "0", "label" : "Tool", "placeholder" : "Mathematica", "type" : "text" } ]
+            },
+        "dl.equalityRewriting" :
+            { "name" : "dl.equalityRewriting",
+              "label" : "\\(\\left(\\text{Foo}\\right) \\frac{Foo}{Bar}\\)",
+              "input" : [ { "name" : "0", "label" : "Assumption", "placeholder" : "ante:3", "type" : "text" },
+                          { "name" : "1", "label" : "Position", "placeholder" : "succ:2", "type" : "text" },
+                          { "name" : "2", "label" : "Disjoint", "placeholder" : "true", "type" : "text" }
+               ]
             }
     };
     var userTactics = {

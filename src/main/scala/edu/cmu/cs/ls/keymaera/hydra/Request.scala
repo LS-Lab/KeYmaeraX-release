@@ -227,7 +227,7 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
  * @param tacticName Identifies the tactic to run.
  */
 class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
-                             formulaId : Option[String], tacticName : String, input : Map[String,String]) extends Request {
+                             formulaId : Option[String], tacticName : String, input : Map[Int,String]) extends Request {
   def getResultingResponses() = {
     val tacticId = db.getTacticByName(tacticName) match {
       case Some(t) => t.tacticId
@@ -248,7 +248,7 @@ class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : Stri
  * @param tacticId Identifies the tactic to run.
  */
 class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
-                       formulaId : Option[String], tacticId : String, input : Map[String,String]) extends Request {
+                       formulaId : Option[String], tacticId : String, input : Map[Int,String]) extends Request {
   def getResultingResponses() = {
     val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, DispatchedTacticStatus.Prepared)
     KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
