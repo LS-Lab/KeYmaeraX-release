@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.api
 
-import edu.cmu.cs.ls.keymaera.core.{SuccPosition, AntePosition, Position, Formula}
+import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 import scala.reflect.runtime.universe.{TypeTag,typeOf}
@@ -31,10 +31,11 @@ object TacticInputConverter {
    * @tparam U The desired type of the second parameter
    * @return The string input converted to the specified tuple type
    */
-  def convert[T,U](params: Map[Int,String], t: (TypeTag[T], TypeTag[U])): (T,U) = {
+  def convert2[T,U](params: Map[Int,String], t: (TypeTag[_], TypeTag[_])): (T,U) = {
     assert(params.size == 2)
     val theParams = params.map({ case (k,v) => (k, convert(v, t.productElement(k).asInstanceOf[TypeTag[_]])) })
-    (theParams.get(0).asInstanceOf[T], theParams.get(1).asInstanceOf[U])
+    (theParams.getOrElse(0, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[T],
+      theParams.getOrElse(1, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[U])
   }
 
   /**
@@ -46,10 +47,12 @@ object TacticInputConverter {
    * @tparam V The desired type of the third parameter
    * @return The string input converted to the specified tuple type
    */
-  def convert[T,U,V](params: Map[Int,String], t: (TypeTag[T], TypeTag[U], TypeTag[V])): (T,U,V) = {
+  def convert3[T,U,V](params: Map[Int,String], t: (TypeTag[_], TypeTag[_], TypeTag[_])): (T,U,V) = {
     assert(params.size == 3)
     val theParams = params.map({ case (k,v) => (k, convert(v, t.productElement(k).asInstanceOf[TypeTag[_]])) })
-    (theParams.get(0).asInstanceOf[T], theParams.get(1).asInstanceOf[U], theParams.get(2).asInstanceOf[V])
+    (theParams.getOrElse(0, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[T],
+      theParams.getOrElse(1, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[U],
+      theParams.getOrElse(2, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[V])
   }
 
   /**
@@ -67,9 +70,10 @@ object TacticInputConverter {
     } else if (t.tpe =:= typeOf[Boolean]) {
       param.toBoolean.asInstanceOf[T]
     } else if (t.tpe =:= typeOf[Position]) {
-      val pos = param.split(":")(1).toInt
-      if (param.startsWith("ante:")) Some(new AntePosition(pos)).asInstanceOf[T]
-      else Some(new SuccPosition(pos)).asInstanceOf[T]
+      val pos = param.split(":")(1).split(",").map(_.toInt)
+      val posInExpr = if (pos.length > 1) PosInExpr(pos.splitAt(1)._2.toList) else HereP
+      if (param.startsWith("ante:")) new AntePosition(pos(0), posInExpr).asInstanceOf[T]
+      else new SuccPosition(pos(0), posInExpr).asInstanceOf[T]
     } else throw new IllegalArgumentException("Unknown parameter type")
   }
 

@@ -127,9 +127,19 @@ object KeYmaeraInterface {
     def getPositionTactics: List[(String, String)] = positionTactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2.name))
 
     def getInputTactic(id: String, input: Map[Int,String]): Option[Tactic] = {
-      val inputType = inputTactics.get(id).map({ case (t, _) => t}) match { case Some(t) => t }
-      val theInput = TacticInputConverter.convert(input, inputType)
-      getInputTactic(id, theInput)
+      if (inputTactics.contains(id)) {
+        val inputType = inputTactics.get(id).map({ case (t, _) => t}) match { case Some(t) => t }
+        val theInput = TacticInputConverter.convert(input, inputType)
+        getInputTactic(id, theInput)
+      } else if (input2Tactics.contains(id)) {
+        val inputType = input2Tactics.get(id).map({ case (t, _) => t}) match { case Some(t) => t }
+        val theInput = TacticInputConverter.convert2(input, inputType)
+        getInputTactic(id, theInput)
+      } else if (input3Tactics.contains(id)) {
+        val inputType = input3Tactics.get(id).map({ case (t, _) => t}) match { case Some(t) => t }
+        val theInput = TacticInputConverter.convert3(input, inputType)
+        getInputTactic(id, theInput)
+      } else None
     }
 
     def getInputPositionTactic(id: String, input: Map[Int,String]): Option[PositionTactic] = {
@@ -138,29 +148,21 @@ object KeYmaeraInterface {
       getInputPositionTactic(id, theInput)
     }
 
-    private def getInputTactic[T](id: String, input: T)(implicit m : TypeTag[T]): Option[Tactic] = inputTactics.get(id).map({
-      case (om, f : (T => Tactic)) =>
-        if (om.tpe =:= m.tpe) f(input)
-        else throw new IllegalArgumentException("Expected parameter type " + om.tpe + ", but was " + m.tpe)
+    private def getInputTactic[T](id: String, input: T): Option[Tactic] = inputTactics.get(id).map({
+      case (om, f : (T => Tactic)) => f(input)
       case _ => throw new IllegalArgumentException("Unexpected parameter type")
     })
-    private def getInputTactic[T,U](id: String, input : (T,U))(implicit m : TypeTag[T], n : TypeTag[U]): Option[Tactic] = input2Tactics.get(id).map({
-      case ((om, on), f : ((T,U) => Tactic)) =>
-        if (om.tpe =:= m.tpe && on.tpe =:= n.tpe) f(input._1, input._2)
-        else throw new IllegalArgumentException("Expected parameter type (" + om.tpe + "," + on.tpe + "), but was (" + m.tpe + "," + n.tpe + ")")
+    private def getInputTactic[T,U](id: String, input : (T,U)): Option[Tactic] = input2Tactics.get(id).map({
+      case ((om, on), f : ((T,U) => Tactic)) => f(input._1, input._2)
       case _ => throw new IllegalArgumentException("Unexpected parameter type")
     })
-    private def getInputTactic[T,U,V](id: String, input : (T,U,V))(implicit m : TypeTag[T], n : TypeTag[U], o : TypeTag[V]): Option[Tactic] = input3Tactics.get(id).map({
-      case ((om, on, oo), f : ((T,U,V) => Tactic)) =>
-        if (om.tpe =:= m.tpe && on.tpe =:= n.tpe && oo.tpe =:= o.tpe) f(input._1, input._2, input._3)
-        else throw new IllegalArgumentException("Expected parameter type (" + om.tpe + "," + on.tpe + "," + oo.tpe + "), but was (" + m.tpe + "," + n.tpe + "," + o.tpe + ")")
+    private def getInputTactic[T,U,V](id: String, input : (T,U,V)): Option[Tactic] = input3Tactics.get(id).map({
+      case ((om, on, oo), f : ((T,U,V) => Tactic)) => f(input._1, input._2, input._3)
       case _ => throw new IllegalArgumentException("Unexpected parameter type")
     })
 
-    private def getInputPositionTactic[T](id: String, input : T)(implicit m : TypeTag[T]): Option[PositionTactic] = inputPositionTactics.get(id).map({
-      case (om, f : (T => PositionTactic)) =>
-        if (om.tpe <:< m.tpe) f(input)
-        else throw new IllegalArgumentException("Expected parameter type " + om.tpe + ", but was " + m.tpe)
+    private def getInputPositionTactic[T](id: String, input : T): Option[PositionTactic] = inputPositionTactics.get(id).map({
+      case (om, f : (T => PositionTactic)) => f(input)
       case _ => throw new IllegalArgumentException("Unexpected parameter type")
     })
   }
@@ -263,7 +265,7 @@ object KeYmaeraInterface {
       case Some(n) =>
         formulaId match {
           case Some(fid) =>
-            val tail = Integer.parseInt(fid.split(":")(1))
+            val tail = fid.split(":")(1).toInt
             if(fid.startsWith("ante:")) (n, Some(new AntePosition(tail))) else (n, Some(new SuccPosition(tail)))
           case None => (n, None)
         }
