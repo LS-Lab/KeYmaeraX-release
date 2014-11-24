@@ -539,8 +539,10 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
 
   $scope.applyTactics = function(t) {
     var inputParams = {}
-    for (i = 0; i < t.input.length; ++i) {
-        inputParams[t.input[i].name] = t.input[i].value
+    if (t.input !== undefined) {
+        for (i = 0; i < t.input.length; ++i) {
+            inputParams[t.input[i].name] = t.input[i].value
+        }
     }
     $http.post(uri + "/run/" + t.id, inputParams).success(function(data) {
         var dispatchedTacticId = data.tacticInstId;
@@ -551,8 +553,10 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
   }
   $scope.applyTacticsByName = function(tName) {
       var inputParams = {}
-      for (i = 0; i < t.input.length; ++i) {
-          inputParams[t.input[i].name] = t.input[i].value
+      if (t.input !== undefined) {
+          for (i = 0; i < t.input.length; ++i) {
+              inputParams[t.input[i].name] = t.input[i].value
+          }
       }
       $http.post(uri + "/runByName/" + tName, inputParams).success(function(data) {
           var dispatchedTacticId = data.tacticInstId;
