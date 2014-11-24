@@ -283,7 +283,7 @@ object KeYmaeraInterface {
   def getApplicableTactics(taskId: String, nodeId: Option[String], formulaId: Option[String]) = {
     getPosition(taskId, nodeId, formulaId) match {
       case (n, Some(p)) =>
-        TacticManagement.positionTactics.filter(t => t._2.applies(n.sequent, p)).map(t => t._1) ++:
+        TacticManagement.positionTactics.filter(t => t._2.applies(n.sequent, p)).map(_._1) ++:
         TacticManagement.inputPositionTactics
           .filter(t => t._2 match {
           case (om, f: ((_) => PositionTactic)) => if (om.tpe =:= typeTag[Option[Formula]].tpe)
@@ -293,7 +293,7 @@ object KeYmaeraInterface {
         })
           .map(t => t._1)
       case (n, None) =>
-        TacticManagement.tactics.filter(t => t._2.applicable(n)).map(t => t._1) ++:
+        TacticManagement.tactics.filter(t => t._2.applicable(n)).map(_._1) ++:
         TacticManagement.inputTactics.filter(t => t._2 match {
           case (om, f: ((_) => Tactic)) =>
             if (om.tpe =:= typeTag[Option[Formula]].tpe)
@@ -306,7 +306,8 @@ object KeYmaeraInterface {
           case _ => throw new IllegalArgumentException("Position tactics " + t + " with unknown input type ")
         }).map(t => t._1) ++:
         // TODO filter
-        TacticManagement.input3Tactics.map(t => t._1)
+        TacticManagement.input2Tactics.map(_._1) ++:
+        TacticManagement.input3Tactics.map(_._1)
     }
   }
 
