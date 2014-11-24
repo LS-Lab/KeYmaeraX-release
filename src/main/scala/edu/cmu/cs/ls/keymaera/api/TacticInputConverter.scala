@@ -35,7 +35,7 @@ object TacticInputConverter {
     assert(params.size == 2)
     val theParams = params.map({ case (k,v) => (k, convert(v, t.productElement(k).asInstanceOf[TypeTag[_]])) })
     (theParams.getOrElse(0, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[T],
-      theParams.getOrElse(1, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[U])
+      theParams.getOrElse(1, throw new IllegalStateException("Converter messed up parameter 1")).asInstanceOf[U])
   }
 
   /**
@@ -51,8 +51,8 @@ object TacticInputConverter {
     assert(params.size == 3)
     val theParams = params.map({ case (k,v) => (k, convert(v, t.productElement(k).asInstanceOf[TypeTag[_]])) })
     (theParams.getOrElse(0, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[T],
-      theParams.getOrElse(1, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[U],
-      theParams.getOrElse(2, throw new IllegalStateException("Converter messed up parameter 0")).asInstanceOf[V])
+      theParams.getOrElse(1, throw new IllegalStateException("Converter messed up parameter 1")).asInstanceOf[U],
+      theParams.getOrElse(2, throw new IllegalStateException("Converter messed up parameter 2")).asInstanceOf[V])
   }
 
   /**
