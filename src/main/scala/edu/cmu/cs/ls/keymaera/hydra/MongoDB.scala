@@ -226,14 +226,14 @@ object MongoDB extends DBAbstraction {
   }
 
   override def createDispatchedTactics(proofId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                                       input:Option[String],status:DispatchedTacticStatus.Value) : String = {
+                                       input:Map[String,String],status:DispatchedTacticStatus.Value) : String = {
     var fields = ListBuffer(
       "proofId"   -> proofId,
       "tacticsId" -> tacticsId,
-      "status"    -> status.toString)
+      "status"    -> status.toString,
+      "input"     -> input)
     if (nodeId.isDefined) { fields.append("nodeId" -> nodeId.get) }
     if (formulaId.isDefined) { fields.append("formulaId" -> formulaId.get) }
-    if (input.isDefined) { fields.append("input" -> input.get) }
 
     val query = MongoDBObject(fields.toList)
     dispatchedTactics.insert(query)
@@ -250,19 +250,19 @@ object MongoDB extends DBAbstraction {
       if (result.containsField("nodeId")) Some(result.getAs[String]("nodeId").get) else None,
       if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").get) else None,
       result.getAs[String]("tacticsId").getOrElse(""),
-      if (result.containsField("input")) Some(result.getAs[String]("input").get) else None,
+      result.getAs[Map[String,String]]("input").get,
       DispatchedTacticStatus.withName(result.getAs[String]("status").getOrElse(""))
     )).toList.head
     Some(result)
   }
   override def updateDispatchedTactics(tactic : DispatchedTacticPOJO) = {
     val fields = ListBuffer(
-      "proofId"       -> tactic.proofId,
+      "proofId"      -> tactic.proofId,
       "tacticsId"    -> tactic.tacticsId,
-      "status"       -> tactic.status.toString)
+      "status"       -> tactic.status.toString,
+      "input"        -> tactic.input)
     if (tactic.nodeId.isDefined) { fields.append("nodeId" -> tactic.nodeId.get) }
     if (tactic.formulaId.isDefined) { fields.append("formulaId" -> tactic.formulaId.get) }
-    if (tactic.input.isDefined) { fields.append("input" -> tactic.input.get) }
 
     val update = MongoDBObject(fields.toList)
     dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)

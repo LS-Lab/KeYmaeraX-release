@@ -5,6 +5,8 @@ import edu.cmu.cs.ls.keymaera.core.Formula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
+import scala.reflect.runtime.universe.TypeTag
+
 /**
  * Initializes KeYmaera and its database.
  * @param db The database access.
@@ -13,7 +15,6 @@ class KeYmaeraInitializer(db : DBAbstraction) {
   def initialize() {
     initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, TacticLibrary.default)
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
-    initInputTactic("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
 
     initTactic("dl.and-left", "TacticLibrary.AndLeftT", TacticKind.PositionTactic, TacticLibrary.AndLeftT)
     initTactic("dl.and-right", "TacticLibrary.AndRightT", TacticKind.PositionTactic, TacticLibrary.AndRightT)
@@ -29,7 +30,11 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.cohide", "TacticLibrary.cohideT", TacticKind.PositionTactic, TacticLibrary.cohideT)
     initTactic("dl.close-true", "TacticLibrary.CloseTrueT", TacticKind.PositionTactic, TacticLibrary.CloseTrueT)
     initTactic("dl.close-false", "TacticLibrary.CloseFalseT", TacticKind.PositionTactic, TacticLibrary.CloseFalseT)
+    initTactic("dl.close", "TacticLibrary.CloseT", TacticKind.PositionTactic, TacticLibrary.closeT)
     initTactic("dl.skolemize", "TacticLibrary.skolemizeT", TacticKind.PositionTactic, TacticLibrary.skolemizeT)
+    initTactic("dl.decompose-quan", "TacticLibrary.decomposeQuanT", TacticKind.PositionTactic, TacticLibrary.decomposeQuanT)
+    initTactic("dl.abstraction", "TacticLibrary.abstractionT", TacticKind.PositionTactic, TacticLibrary.abstractionT)
+    initTactic("dl.axiomclose", "TacticLibrary.AxiomCloseT", TacticKind.InputTactic, TacticLibrary.AxiomCloseT)
 
     initTactic("dl.box-assign", "TacticLibrary.boxAssignT", TacticKind.PositionTactic, TacticLibrary.boxAssignT)
     initTactic("dl.box-choice", "TacticLibrary.boxChoiceT", TacticKind.PositionTactic, TacticLibrary.boxChoiceT)
@@ -38,7 +43,15 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.box-seq", "TacticLibrary.boxSeqT", TacticKind.PositionTactic, TacticLibrary.boxSeqT)
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
 
+    initInputTactic[Option[Formula]]("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
+    initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT _)
+    initInputTactic("dl.equalityRewriting", "TacticLibrary.equalityRewriting", TacticKind.InputTactic, TacticLibrary.equalityRewriting _)
+//    initInputTactic("dl.axiom", "TacticLibrary.axiomT", TacticKind.InputTactic, TacticLibrary.axiomT)
     initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)
+    // TODO need full input already to check applicability
+    initInputPositionTactic("dl.equalityRewritingLeft", "TacticLibrary.equalityRewritingLeft", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingLeft)
+    initInputPositionTactic("dl.equalityRewritingRight", "TacticLibrary.equalityRewritingRight", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingRight)
+//    initInputPositionTactic[Variable,Expr]("dl.instantiate", "TacticLibrary.instantiateT", TacticKind.PositionTactic, TacticLibrary.instantiateT)
   }
 
   private def initTactic(name : String, className : String, kind : TacticKind.Value, t : Tactic) = {
@@ -49,13 +62,18 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     val tactic = getOrCreateTactic(name, className, kind)
     KeYmaeraInterface.addPositionTactic(tactic.tacticId, t)
   }
-  private def initInputTactic(name : String, className : String, kind : TacticKind.Value,
-                         tGen : Option[Formula] => Tactic) = {
+  private def initInputTactic[T](name : String, className : String, kind : TacticKind.Value,
+                         tGen : T => Tactic)(implicit m : TypeTag[T]) = {
     val tactic = getOrCreateTactic(name, className, kind)
     KeYmaeraInterface.addTactic(tactic.tacticId, tGen)
   }
-  private def initInputPositionTactic(name : String, className : String, kind : TacticKind.Value,
-                         tGen : (Option[Formula]) => PositionTactic) = {
+  private def initInputTactic[T,U,V](name : String, className : String, kind : TacticKind.Value,
+                                 tGen : (T,U,V) => Tactic)(implicit m : TypeTag[T], n : TypeTag[U], o : TypeTag[V]) = {
+    val tactic = getOrCreateTactic(name, className, kind)
+    KeYmaeraInterface.addTactic(tactic.tacticId, tGen)
+  }
+  private def initInputPositionTactic[T](name : String, className : String, kind : TacticKind.Value,
+                         tGen : T => PositionTactic)(implicit m : TypeTag[T]) = {
     val tactic = getOrCreateTactic(name, className, kind)
     KeYmaeraInterface.addPositionTactic(tactic.tacticId, tGen)
   }

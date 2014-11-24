@@ -1,14 +1,8 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-import java.io.ByteArrayInputStream
-
 import akka.actor.Actor
-import spray.httpx.SprayJsonSupport
 import spray.routing._
 import spray.http._
-import spray.httpx.encoding._
-import MediaTypes._
-import scala.collection.mutable.HashMap
 import spray.json._
 
 class RestApiActor extends Actor with RestApi {
@@ -199,7 +193,7 @@ trait RestApi extends HttpService {
   val nodeRunTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment) { (userId, proofId, nodeId, formulaId, tacticId) => { pathEnd {
     post {
       entity(as[String]) { params => {
-        val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.asInstanceOf[JsString].value).toSeq
+        val p = JsonParser(params).asJsObject.fields.map(param => param._1 -> param._2.asInstanceOf[JsString].value)
         val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
         val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
         val request = new RunTacticRequest(database, userId, proofId, nId, fId, tacticId, p)
@@ -211,10 +205,14 @@ trait RestApi extends HttpService {
 
   val nodeRunTacticsByName = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "runByName" / Segment) { (userId, proofId, nodeId, formulaId, tacticName) => { pathEnd {
     post {
-      parameterSeq { params =>
+      entity(as[String]) { params =>
+        val p : Map[String,String] = params match {
+          case s : String if !s.isEmpty => JsonParser (params).asJsObject.fields.map (param => param._1 -> param._2.asInstanceOf[JsString].value)
+          case _ => Map.empty
+        }
         val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
         val fId = if (formulaId.equals("sequent")) None else Some(formulaId)
-        val request = new RunTacticByNameRequest(database, userId, proofId, nId, fId, tacticName, params)
+        val request = new RunTacticByNameRequest(database, userId, proofId, nId, fId, tacticName, p)
         complete(standardCompletion(request))
       }
     }

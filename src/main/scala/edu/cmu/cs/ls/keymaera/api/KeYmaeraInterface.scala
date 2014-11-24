@@ -7,6 +7,8 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.core.Sequent
 
+import scala.reflect.runtime.universe.{TypeTag,typeTag}
+
 /**
  * Open issues:
  * - How do we identify where changes came from?
@@ -81,17 +83,24 @@ object KeYmaeraInterface {
   object TacticManagement {
     @volatile var tactics: Map[String, Tactic] = Map()
     @volatile var positionTactics: Map[String, PositionTactic] = Map()
-    @volatile var inputTactics: Map[String, (Option[Formula]) => Tactic] = Map()
-    @volatile var inputPositionTactics: Map[String, (Option[Formula]) => PositionTactic] = Map()
+    @volatile var inputTactics: Map[String, (TypeTag[_], _ => Tactic)] = Map()
+    @volatile var input2Tactics: Map[String, ((TypeTag[_], TypeTag[_]), _ => Tactic)] = Map()
+    @volatile var input3Tactics: Map[String, ((TypeTag[_], TypeTag[_], TypeTag[_]), (_,_,_) => Tactic)] = Map()
+    @volatile var inputPositionTactics: Map[String, (TypeTag[_], _ => PositionTactic)] = Map()
 
     def addTactic(id: String, t: Tactic) = this.synchronized {
       if (tactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
       tactics += (id -> t)
     }
 
-    def addInputTactic(id: String, t: (Option[Formula] => Tactic)) = this.synchronized {
+    def addInputTactic[T](id: String, t: T => Tactic)(implicit m: TypeTag[T]) = this.synchronized {
       if (inputTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
-      inputTactics += (id -> t)
+      inputTactics += (id -> (m, t))
+    }
+    def addInputTactic[T,U,V](id: String, t: (T,U,V) => Tactic)(implicit m: TypeTag[T], n: TypeTag[U], o: TypeTag[V]) =
+        this.synchronized {
+      if (inputTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
+      input3Tactics += (id -> ((m,n,o), t))
     }
 
     def addPositionTactic(id: String, t: PositionTactic) = this.synchronized {
@@ -99,9 +108,9 @@ object KeYmaeraInterface {
       positionTactics += (id -> t)
     }
 
-    def addInputPositionTactic(id: String, t: (Option[Formula] => PositionTactic)) = this.synchronized {
+    def addInputPositionTactic[T](id: String, t: T => PositionTactic)(implicit m : TypeTag[T]) = this.synchronized {
       if (inputPositionTactics.contains(id)) throw new IllegalArgumentException("Duplicate ID " + id)
-      inputPositionTactics += (id -> t)
+      inputPositionTactics += (id -> (m, t))
     }
 
     def getTactic(id: String): Option[Tactic] = tactics.get(id)
@@ -112,9 +121,56 @@ object KeYmaeraInterface {
 
     def getPositionTactics: List[(String, String)] = positionTactics.foldLeft(Nil: List[(String, String)])((a, p) => a :+ (p._1, p._2.name))
 
-    def getInputTactic(id: String, f : Option[Formula]): Option[Tactic] = inputTactics.get(id).map(_(f))
+    def getInputTactic(id: String, input: Map[String,String]): Option[Tactic] = {
+      // TODO handle multiple inputs, need tacticinputfactory or something
+      val inputType = inputTactics.get(id).map({ case (t, _) => t})
+      val theInput = input.map({
+        case (k,v) => new KeYmaeraParser ().parseBareExpression(v) match {
+            case Some(f: Formula) => Some(f)
+            case _ => v
+          }
+        case _ => None
+      })
+      getInputTactic(id, theInput)
+    }
 
-    def getInputPositionTactic(id: String, f : Option[Formula]): Option[PositionTactic] = inputPositionTactics.get(id).map(_(f))
+    def getInputPositionTactic(id: String, input: Map[String,String]): Option[PositionTactic] = {
+      val inputType = inputPositionTactics.get(id).map({ case (t, _) => t})
+      val theInput = input.map({
+        case (k,v) => new KeYmaeraParser ().parseBareExpression(v) match {
+          case Some(f: Formula) => Some(f)
+          case _ => v
+        }
+        case _ => None
+      })
+      getInputPositionTactic(id, theInput)
+    }
+
+    private def getInputTactic[T](id: String, input: T)(implicit m : TypeTag[T]): Option[Tactic] = inputTactics.get(id).map({
+      case (om, f : (T => Tactic)) =>
+        if (om.tpe =:= m.tpe) f(input)
+        else throw new IllegalArgumentException("Expected parameter type " + om.tpe + ", but was " + m.tpe)
+      case _ => throw new IllegalArgumentException("Unexpected parameter type")
+    })
+    private def getInputTactic[T,U](id: String, input : (T,U))(implicit m : TypeTag[T], n : TypeTag[U]): Option[Tactic] = input2Tactics.get(id).map({
+      case ((om, on), f : ((T,U) => Tactic)) =>
+        if (om.tpe =:= m.tpe && on.tpe =:= n.tpe) f(input._1, input._2)
+        else throw new IllegalArgumentException("Expected parameter type (" + om.tpe + "," + on.tpe + "), but was (" + m.tpe + "," + n.tpe + ")")
+      case _ => throw new IllegalArgumentException("Unexpected parameter type")
+    })
+    private def getInputTactic[T,U,V](id: String, input : (T,U,V))(implicit m : TypeTag[T], n : TypeTag[U], o : TypeTag[V]): Option[Tactic] = input3Tactics.get(id).map({
+      case ((om, on, oo), f : ((T,U,V) => Tactic)) =>
+        if (om.tpe =:= m.tpe && on.tpe =:= n.tpe && oo.tpe =:= o.tpe) f(input._1, input._2, input._3)
+        else throw new IllegalArgumentException("Expected parameter type (" + om.tpe + "," + on.tpe + "," + oo.tpe + "), but was (" + m.tpe + "," + n.tpe + "," + o.tpe + ")")
+      case _ => throw new IllegalArgumentException("Unexpected parameter type")
+    })
+
+    private def getInputPositionTactic[T](id: String, input : T)(implicit m : TypeTag[T]): Option[PositionTactic] = inputPositionTactics.get(id).map({
+      case (om, f : (T => PositionTactic)) =>
+        if (om.tpe <:< m.tpe) f(input)
+        else throw new IllegalArgumentException("Expected parameter type " + om.tpe + ", but was " + m.tpe)
+      case _ => throw new IllegalArgumentException("Unexpected parameter type")
+    })
   }
 
   object RunningTactics {
@@ -180,14 +236,17 @@ object KeYmaeraInterface {
   def addTactic(id : String, t : Tactic) = {
     TacticManagement.addTactic(id, t)
   }
-  def addTactic(id : String, t : (Option[Formula]) => Tactic) = {
+  def addTactic[T](id : String, t : T => Tactic)(implicit m : TypeTag[T]) = {
+    TacticManagement.addInputTactic(id, t)
+  }
+  def addTactic[T,U,V](id : String, t : (T,U,V) => Tactic)(implicit m : TypeTag[T], n : TypeTag[U], o : TypeTag[V]) = {
     TacticManagement.addInputTactic(id, t)
   }
 
   def addPositionTactic(id : String, t : PositionTactic) = {
     TacticManagement.addPositionTactic(id, t)
   }
-  def addPositionTactic(id : String, t : (Option[Formula]) => PositionTactic) = {
+  def addPositionTactic[T](id : String, t : T => PositionTactic)(implicit m : TypeTag[T]) = {
     TacticManagement.addInputPositionTactic(id, t)
   }
 
@@ -231,12 +290,34 @@ object KeYmaeraInterface {
     getPosition(taskId, nodeId, formulaId) match {
       case (n, Some(p)) =>
         TacticManagement.positionTactics.filter(t => t._2.applies(n.sequent, p)).map(t => t._1) ++:
-        TacticManagement.inputPositionTactics.filter(t => t._2(None).applies(n.sequent, p)).map(t => t._1)
+        TacticManagement.inputPositionTactics
+          .filter(t => t._2 match {
+          case (om, f: ((_) => PositionTactic)) => if (om.tpe =:= typeTag[Option[Formula]].tpe)
+            f.asInstanceOf[Option[Formula] => PositionTactic].apply(Some(null)).applies(n.sequent, p)
+          else false
+          case _ => throw new IllegalArgumentException("Tactics " + t + " with unknown input type ")
+        })
+          .map(t => t._1)
       case (n, None) =>
         TacticManagement.tactics.filter(t => t._2.applicable(n)).map(t => t._1) ++:
-        TacticManagement.inputTactics.filter(t => t._2(Some(null)).applicable(n)).map(t => t._1)
+        TacticManagement.inputTactics.filter(t => t._2 match {
+          case (om, f: ((_) => Tactic)) =>
+            if (om.tpe =:= typeTag[Option[Formula]].tpe)
+              f.asInstanceOf[Option[Formula] => Tactic].apply(Some(null)).applicable(n)
+            else if (om.tpe =:= typeTag[String].tpe)
+              // TODO axiomT... how should we ever find out which ones? just try all of them?
+              f.asInstanceOf[String => Tactic].apply(null).applicable(n)
+            else false
+//          case (f: (Int => PositionTactic)) => f(0).applicable(n)
+          case _ => throw new IllegalArgumentException("Position tactics " + t + " with unknown input type ")
+        }).map(t => t._1)
     }
   }
+
+  //  inputTactics.get(id).map({
+//    case (om, f : (T => Tactic)) => if (m.tpe <:< om.tpe) f(input) else null
+//    case _ => throw new IllegalArgumentException("Unexpected parameter type")
+//  })
 
   /**
    * Runs the specified tactic on the formula of a sequent identified by task ID and node ID.
@@ -250,28 +331,20 @@ object KeYmaeraInterface {
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
                 callback: Option[String => ((String, Option[String], String) => Unit)] = None,
-                input: Option[String] = None) = {
-
-    val formula = input match {
-      case Some(s) => new KeYmaeraParser ().parseBareExpression(s) match {
-        case Some(f: Formula) => Some(f)
-        case _ => None
-      }
-      case _ => None
-    }
+                input: Map[String,String] = Map.empty) = {
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>
         TacticManagement.getPositionTactic(tacticId) match {
           case Some(t) => Some(t(p))
-          case None => TacticManagement.getInputPositionTactic(tacticId, formula) match {
+          case None => TacticManagement.getInputPositionTactic(tacticId, input) match {
             case Some(t) => Some(t(p))
             case None => None
           }
         }
       case None => TacticManagement.getTactic(tacticId) match {
         case Some(t) => Some(t)
-        case None => TacticManagement.getInputTactic(tacticId, formula)
+        case None => TacticManagement.getInputTactic(tacticId, input)
       }
     }
     tactic match {

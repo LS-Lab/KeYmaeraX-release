@@ -11,7 +11,7 @@
         <div class="panel-body">
             <div class="k4-inline-block" ng-repeat="t in ruleTactics">
                 <div class="btn-group btn-group-lg k4-inline-block">
-                    <a type="button" class="btn btn-default" ng-click="applyTactics(t)">
+                    <a type="button" class="btn btn-default input-block-level" ng-click="applyTactics(t)">
                         <span ng-if="t.icon" class="t.icon"><br /></span>
                         <span k4-mathjaxbind="t.label"></span>
                     </a>
@@ -28,7 +28,7 @@
                 <div ng-if="t.input" class="input-group" ng-repeat="i in t.input">
                     <span class="input-group-addon" k4-mathjaxbind="i.label"></span>
                     <!-- TODO validate input -->
-                    <input type="text" class="form-control" placeholder="{{i.placeholder}}" ng-model="i.value"/>
+                    <input type="{{i.type}}" class="form-control" placeholder="{{i.placeholder}}" ng-model="i.value"/>
                 </div>
             </div>
         </div>

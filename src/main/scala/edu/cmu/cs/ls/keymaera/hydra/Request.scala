@@ -227,7 +227,7 @@ class GetApplicableTacticsRequest(db : DBAbstraction, userId : String, proofId :
  * @param tacticName Identifies the tactic to run.
  */
 class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
-                             formulaId : Option[String], tacticName : String, input : Seq[(String, String)]) extends Request {
+                             formulaId : Option[String], tacticName : String, input : Map[String,String]) extends Request {
   def getResultingResponses() = {
     val tacticId = db.getTacticByName(tacticName) match {
       case Some(t) => t.tacticId
@@ -248,21 +248,14 @@ class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : Stri
  * @param tacticId Identifies the tactic to run.
  */
 class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
-                       formulaId : Option[String], tacticId : String, input : Seq[(String, String)]) extends Request {
+                       formulaId : Option[String], tacticId : String, input : Map[String,String]) extends Request {
   def getResultingResponses() = {
-    // TODO handle multiple inputs
-    val formula = if (input.size > 0) input.map(p => p._2).head match {
-                      case f: String => Some(f)
-                      case a => throw new IllegalArgumentException("Cannot parse input: " + a)
-                    }
-                else None
-    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, formula, DispatchedTacticStatus.Prepared)
-
+    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, DispatchedTacticStatus.Prepared)
     KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-      Some(tacticCompleted(db)), formula)
-    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, formula,
+      Some(tacticCompleted(db)), input)
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input,
       DispatchedTacticStatus.Running))
-    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, formula,
+    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input,
       DispatchedTacticStatus.Running)) :: Nil
   }
 
