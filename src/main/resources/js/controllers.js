@@ -114,7 +114,7 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.box-assign" :
             { "name" : "dl.box-assign",
-              "label" : "\\(\\left(\\left[\\coloneq\\right]\\right) \\frac{\\phi(t)}{\\left[x \\coloneq t\\right]\\phi(x)}\\)"
+              "label" : "\\(\\left(\\left[:=\\right]\\right) \\frac{\\phi(t)}{\\left[x := t\\right]\\phi(x)}\\)"
             },
         "dl.box-choice" :
             { "name" : "dl.box-choice",
@@ -131,15 +131,15 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.box-ndetassign" :
             { "name" : "dl.box-ndetassign",
-              "label" : "\\(\\left(\\left[\\coloneq *\\right]\\right) \\frac{\\forall x. \\phi(x)}{\\left[x \\coloneq *\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[:= *\\right]\\right) \\frac{\\forall x. \\phi(x)}{\\left[x := *\\right]\\phi}\\)"
             },
         "dl.box-seq" :
             { "name" : "dl.box-seq",
-              "label" : "\\(\\left(\\left[\\;\\right]\\right) \\frac{\\left[\\alpha\\right]\\left[\\beta\\right]\\phi}{\\left[\\alpha;\\beta\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[~;~\\right]\\right) \\frac{\\left[\\alpha\\right]\\left[\\beta\\right]\\phi}{\\left[\\alpha;\\beta\\right]\\phi}\\)"
             },
         "dl.box-test" :
             { "name" : "dl.box-test",
-              "label" : "\\(\\left(\\left[\\?\\right]\\right) \\frac{H \\rightarrow \\phi)}{\\left[?H\\right]\\phi}\\)"
+              "label" : "\\(\\left(\\left[?\\right]\\right) \\frac{H \\rightarrow \\phi)}{\\left[?H\\right]\\phi}\\)"
             },
         "dl.cut" :
             { "name" : "dl.cut",
