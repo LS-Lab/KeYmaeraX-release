@@ -85,6 +85,7 @@ trait DBAbstraction {
 
   //Proofs and Proof Nodes
   def getProofInfo(proofId : String) : ProofPOJO
+  def updateProofInfo(proof: ProofPOJO)
   def getProofSteps(proofId : String) : List[String]
   def addFinishedTactic(proofId : String, tacticInstId : String)
 

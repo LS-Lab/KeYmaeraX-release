@@ -260,11 +260,11 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
   }
 
   private def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
+    // TODO the following updates must be an atomic operation on the database
     val finishedTactic = db.getDispatchedTactics(tId) match {
       case Some(t) => t
       case _ => throw new IllegalStateException("Finished tactic not found in database: " + tId)
     }
-    // TODO the following updates must be an atomic operation on the database
     db.addFinishedTactic(proofId, tId)
     db.updateDispatchedTactics(new DispatchedTacticPOJO(
       finishedTactic.id,
@@ -275,6 +275,12 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
       finishedTactic.input,
       DispatchedTacticStatus.Finished
     ))
+    val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
+    if (openGoals == 0) {
+      val p = db.getProofInfo(proofId)
+      // TODO update step count
+      db.updateProofInfo(new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount, closed = true))
+    }
   }
 }
 

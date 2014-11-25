@@ -216,15 +216,16 @@ object KeYmaeraInterface {
         val seq = Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f) )
         val r = new RootNode(seq)
         TaskManagement.addTask(r, taskId)
+        val result = json(r, taskId, 0, taskId, printSequent = false)
         TaskManagement.finishedLoadingTask(taskId)
-        json(r, taskId, 0, taskId, false)
+        result
       case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
   }
 
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
-      case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId, true))
-      case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId, true))
+      case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId, printSequent = true))
+      case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId, printSequent = true))
   }
 
   def addTactic(id : String, t : Tactic) = {
@@ -383,6 +384,22 @@ object KeYmaeraInterface {
         case None => throw new IllegalStateException("Proof node IDs must have been initialized with task")
       })
       case _ => List()
+    }
+  }
+
+  /**
+   * Returns the number of open goals under the specified node (identified by task ID and node ID).
+   * @param taskId Identifies the task.
+   * @param nodeId Identifies the node. If None, then identifies the root node.
+   * @return The number of open goals.
+   */
+  def getOpenGoalCount(taskId: String, nodeId: Option[String] = None) : Int = {
+    (nodeId match {
+      case Some(nid) => TaskManagement.getNode(taskId, nid)
+      case None => TaskManagement.getRoot(taskId)
+    }) match {
+      case Some(pn)=> pn.openGoals().size
+      case _ => 0
     }
   }
 

@@ -1,7 +1,6 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
 import com.mongodb.casbah.Imports._
-import com.mongodb.casbah.commons.ValidBSONType.BasicDBObject
 import org.bson.types.ObjectId
 
 import scala.collection.mutable.ListBuffer
@@ -13,18 +12,21 @@ object MongoDB extends DBAbstraction {
   val users   = mongoClient("keymaera")("users")
   val models  = mongoClient("keymaera")("models")
   val proofs  = mongoClient("keymaera")("proofs")
+  val proofSteps  = mongoClient("keymaera")("proofSteps")
   val logs    = mongoClient("keymaera")("logs")
   val tasks   = mongoClient("keymaera")("tasks")
   val tactics = mongoClient("keymaera")("tactics")
   val dispatchedTactics = mongoClient("keymaera")("dispatchedTactics")
-  val sequents = mongoClient("keymaera")("sequents")
 
   def cleanup() = {
     users.drop()
     models.drop()
     proofs.drop()
+    proofSteps.drop()
     logs.drop()
     tasks.drop()
+    tactics.drop()
+    dispatchedTactics.drop()
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,10 +95,11 @@ object MongoDB extends DBAbstraction {
   }
 
   override def createProofForModel(modelId : String, name : String, description : String, date:String) : String = {
-    var query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description, "date" -> date,
-      "steps" -> List[String]())
-    var result = proofs.insert(query)
-    query.get("_id").toString
+    val query = MongoDBObject("modelId" -> modelId, "name" -> name, "description" -> description, "date" -> date)
+    proofs.insert(query)
+    val proofId = query.get("_id").toString
+    proofSteps.insert(MongoDBObject("proofId" -> proofId, "steps" -> List[String]()))
+    proofId
   }
 
   override def getProofsForModel(modelId : String) : List[ProofPOJO] = {
@@ -105,19 +108,14 @@ object MongoDB extends DBAbstraction {
     if(results.length < 1) Nil
     else {
       results.map(result => {
-        //TODO count the number of steps
-        val stepCount = -1
-        //TODO determine if the proof is closed
-        val isClosed = false
-
         new ProofPOJO(
           result.getAs[ObjectId]("_id").orNull.toString,
           result.getAs[String]("modelId").orNull.toString,
           result.getAs[String]("name").orNull.toString,
           result.getAs[String]("description").getOrElse("no description"),
           result.getAs[String]("date").orNull.toString,
-          stepCount,
-          isClosed
+          result.getAs[Integer]("stepCount").getOrElse(0),
+          result.getAs[Boolean]("closed").getOrElse(false)
         )
       }).toList
     }
@@ -154,22 +152,35 @@ object MongoDB extends DBAbstraction {
     )).toList.last
   }
 
+  override def updateProofInfo(proof: ProofPOJO) = {
+    val update = MongoDBObject(
+      "_id"         -> new ObjectId(proof.proofId),
+      "modelId"     -> proof.modelId,
+      "name"        -> proof.name,
+      "description" -> proof.description,
+      "date"        -> proof.date,
+      "stepCount"   -> proof.stepCount,
+      "closed"      -> proof.closed
+    )
+    proofs.update(MongoDBObject("_id" -> new ObjectId(proof.proofId)), update)
+  }
+
   override def getProofSteps(proofId: String) : List[String] = {
-    val query = MongoDBObject("_id" -> new ObjectId(proofId))
-    val results = proofs.find(query)
+    val query = MongoDBObject("proofId" -> proofId)
+    val results = proofSteps.find(query)
     if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
     if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
     results.one().getAs[List[String]]("steps").getOrElse(List[String]())
   }
 
   override def addFinishedTactic(proofId: String, tacticInstId: String) = {
-    val query = MongoDBObject("_id" -> new ObjectId(proofId))
-    val results = proofs.find(query)
+    val query = MongoDBObject("proofId" -> proofId)
+    val results = proofSteps.find(query)
     if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
     if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
     val steps = results.one().getAs[List[String]]("steps").getOrElse(List[String]()) :+ tacticInstId
     val update = $set("steps" -> steps)
-    proofs.update(MongoDBObject("_id" -> new ObjectId(proofId)), update)
+    proofSteps.update(MongoDBObject("_id" -> new ObjectId(proofId)), update)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

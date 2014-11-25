@@ -20,10 +20,10 @@
             <td>{{ proof.name }}</td>
             <td>{{ proof.date }}</td>
             <td>{{ proof.stepCount }}</td>
-            <td><span ng-if="proof.status" class="glyphicon glyphicon-check"></span>
-                <span ng-if="proof.status"> Finished</span>
-                <span ng-if="proof.status === false" class="glyphicon glyphicon-edit"></span>
-                <span ng-if="proof.status === false"> Unfinished</span>
+            <td><span ng-if="proof.status" class="glyphicon glyphicon-ok"></span>
+                <span ng-if="proof.status"> Proved</span>
+                <span ng-if="proof.status === false" class="glyphicon glyphicon-pencil"></span>
+                <span ng-if="proof.status === false"> In Progress</span>
             </td>
             <td class="btn-group">
                 <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="glyphicon glyphicon-open"></span> Open</a>
