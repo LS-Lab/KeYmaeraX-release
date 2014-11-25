@@ -27,7 +27,6 @@ object JSONConverter {
           case True() => /* nothing to do */
           case False() => /* nothing to do */
           case x@PredicateConstant(a, b) => /* nothing to do */
-          case ApplyPredicate(a, b) => /* nothing to do */
           case _ => jsonStack.push(List())
         }
         Left(None)
