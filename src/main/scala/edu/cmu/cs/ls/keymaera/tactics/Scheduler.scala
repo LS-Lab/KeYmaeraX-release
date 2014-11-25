@@ -103,6 +103,7 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
           }
         } catch {
           case ex : NoSuchElementException => {
+            // TODO swallows useful exceptions, implement waiting for real
             /* poll vs. wait */
             scheduler.synchronized {
               scheduler.blocked = scheduler.blocked + 1
