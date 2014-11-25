@@ -55,7 +55,7 @@ object JSONConverter {
           case True() => Some(JsObject(("name" -> JsString("true")) +: cf))
           case False() => Some(JsObject(("name" -> JsString("false")) +: cf))
           case x@PredicateConstant(a, b) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[PredicateConstant])) +: cf))
-          case ApplyPredicate(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) +: jsonStack.pop())) :: Nil ++: cf))
+          case ApplyPredicate(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("function" -> convertNamedSymbol(a)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
           case Equals(d, a, b) => Some(JsObject(("name" -> JsString("equals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
           case NotEquals(d, a, b) => Some(JsObject(("name" -> JsString("notEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
           case ProgramEquals(a, b) => Some(JsObject(("name" -> JsString("programEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
