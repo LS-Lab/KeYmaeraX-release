@@ -479,10 +479,10 @@ keymaeraProofControllers.controller('TaskListCtrl',
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     $scope.setSelected = function(agendaItem) {
         $scope.selectedTask = agendaItem;
+        $scope.refreshTree();
     }
     $scope.isSelected = function(agendaItem) {
         $scope.selectedTask == agendaItem;
-        $scope.refreshTree();
     }
 
     $scope.refreshTree = function() {
