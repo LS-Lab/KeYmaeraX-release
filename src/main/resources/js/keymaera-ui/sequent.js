@@ -22,9 +22,9 @@ angular.module('sequent', ['ngSanitize','formula'])
                 });
             };
 
-            $scope.applyTacticsByName = function(formula, tName) {
+            $scope.applyTacticsByName = function(tName) {
                 var uri = 'proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/nodes/' + $scope.nodeId
-                        + '/formulas/' + formula.id + '/tactics'
+                        + '/formulas/sequent/tactics'
                 $http.post(uri + "/runByName/" + tName)
                         .success(function(data) {
                     var dispatchedTacticId = data.tacticInstId;

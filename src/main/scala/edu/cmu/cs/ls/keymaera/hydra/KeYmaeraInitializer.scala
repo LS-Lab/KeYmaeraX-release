@@ -14,6 +14,7 @@ import scala.reflect.runtime.universe.TypeTag
 class KeYmaeraInitializer(db : DBAbstraction) {
   def initialize() {
     initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, TacticLibrary.default)
+    initTactic("keymaera.defaultNoArith", "TacticLibrary.defaultNoArith", TacticKind.Tactic, TacticLibrary.defaultNoArith)
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
 
     initTactic("dl.and-left", "TacticLibrary.AndLeftT", TacticKind.PositionTactic, TacticLibrary.AndLeftT)
