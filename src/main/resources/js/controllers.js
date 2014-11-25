@@ -148,14 +148,14 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.qe" :
             { "name" : "dl.qe",
-              "label" : "\\(\\left(\\text{QE}\\right) \\frac{Foo}{Bar}\\)",
+              "label" : "\\(\\left(\\text{QE}\\right) \\frac{\\text{QE}(\\phi)}{\\phi} \\)",
               "input" : [ { "name" : "0", "label" : "Tool", "placeholder" : "Mathematica", "type" : "text" } ]
             },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
               "label" : "\\(\\left(\\text{Foo}\\right) \\frac{Foo}{Bar}\\)",
               "input" : [ { "name" : "0", "label" : "Assumption", "placeholder" : "ante:3", "type" : "text" },
-                          { "name" : "1", "label" : "Position", "placeholder" : "succ:2", "type" : "text" },
+                          { "name" : "1", "label" : "Position", "placeholder" : "succ:2,0", "type" : "text" },
                           { "name" : "2", "label" : "Disjoint", "placeholder" : "true", "type" : "text" }
                ]
             }
@@ -351,7 +351,7 @@ keymaeraProofControllers.controller('ProofCtrl',
   });
 
 keymaeraProofControllers.controller('TaskListCtrl',
-  function($scope, $http, $cookies, $routeParams, $q, Agenda, Tactics) {
+  function($scope, $http, $cookies, $routeParams, $q, $modal, Agenda, Tactics) {
     $scope.proofId = $routeParams.proofId;
 
     $scope.fetchAgenda = function(userId, proofId) {
@@ -359,7 +359,18 @@ keymaeraProofControllers.controller('TaskListCtrl',
             $scope.agenda = data;
             if ($scope.agenda.length > 0) {
                 // TODO should only update the view automatically if user did not navigate somewhere else manually
-                $scope.setSelected($scope.agenda[0])
+                $scope.setSelected($scope.agenda[0]);
+            } else {
+                // proof finished
+                $scope.refreshTree();
+                var modalInstance = $modal.open({
+                  templateUrl: 'partials/prooffinisheddialog.html',
+                  controller: 'ProofFinishedDialogCtrl',
+                  size: 'md',
+                  resolve: {
+                    proofId: function() { return $scope.proofId; }
+                  }
+                });
             }
         }).error(function(data) {
             if (data.errorThrown == 'proof not loaded') {
@@ -466,8 +477,15 @@ keymaeraProofControllers.controller('TaskListCtrl',
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Subsection on selecting tasks
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    $scope.setSelected = function(task) {
-        $scope.selectedTask = task;
+    $scope.setSelected = function(agendaItem) {
+        $scope.selectedTask = agendaItem;
+    }
+    $scope.isSelected = function(agendaItem) {
+        $scope.selectedTask == agendaItem;
+        $scope.refreshTree();
+    }
+
+    $scope.refreshTree = function() {
         //pulling this variable out so that I can print it back out.
         var nodeId = null
         var uri = (nodeId === null) ?
@@ -482,9 +500,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 alert("error encountered while trying to retrieve the tree.")
             })
     }
-    $scope.isSelected = function(task) {
-        $scope.selectedTask == task;
-    }
 
     $scope.$watch('agenda',
         function (newTasks) { if (newTasks) Agenda.setTasks(newTasks); }
@@ -498,6 +513,13 @@ keymaeraProofControllers.controller('TaskListCtrl',
         function(tId) { Tactics.removeDispatchedTactics(tId); }
     );
   });
+
+keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
+        function($scope, $http, $modalInstance, proofId) {
+    $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+    };
+});
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Sequents and proof rules
