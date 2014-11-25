@@ -6,6 +6,7 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ui.tree',
   'cgBusy',
   'ui.bootstrap',
+  'ui.bootstrap.tabs',
   'keymaeraProofControllers',
   'progressMeter',
   'proofProgressChart',
