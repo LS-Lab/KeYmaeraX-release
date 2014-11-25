@@ -83,6 +83,7 @@
     </div>
 
     <div class="col-md-6" id="sequent" ng-if="selectedTask">
+        <h4>Goal {{selectedTask.nodeId}}</h4>
         <k4-sequent proof-id="proofId" node-id="selectedTask.nodeId" sequent="selectedTask.proofNode.sequent"></k4-sequent>
     </div>
 
