@@ -14,7 +14,7 @@
       "items": { "$ref": "#/definitions/node" }
     }
   },
-  "required": ["id", "sequent", "children"],
+  "required": ["id", "children"],
   "definitions" : {
       "sequent" : {
         "type": "object",

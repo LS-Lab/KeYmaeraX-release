@@ -85,7 +85,7 @@ object JSONConverter {
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
-          case Number(s, i) => Some(JsObject(("name" -> JsString(i.toString)) +: cf))
+          case Number(s, i) => Some(JsObject(("name" -> JsString(i.toString())) +: cf))
           case x@Variable(_, _, _) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf))
           case Apply(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) :: Nil ++: jsonStack.pop())) :: Nil ++: cf))
           case Neg(_, a) => Some(JsObject(("name" -> JsString("neg")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
@@ -159,39 +159,40 @@ object JSONConverter {
       "ante"    -> convert(s.ante, "ante", nodeId),
       "succ"    -> convert(s.succ, "succ", nodeId)
     )
-  def convert(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit))(p: ProofNode): JsObject = {
+  def convert(id: String, limit: Option[Int], store: ((ProofNode, String) => Unit), printSequent: Boolean)(p: ProofNode): JsObject = {
     store(p, id)
-    JsObject(
-      "id"    -> JsString(id),
-      "sequent"   -> sequent(p, id),
-      "infos"     -> infos(p),
+    var fields =
+      "id"        -> JsString(id) ::
+      "infos"     -> infos(p) ::
       "children"  -> (limit match {
-        case Some(l) if l > 0 => JsArray(p.children.zipWithIndex.map(ps => convert(id, limit.map(i => i - 1), ps._1, ps._2, store)))
+        case Some(l) if l > 0 => JsArray(p.children.zipWithIndex.map(ps => convert(id, limit.map(i => i - 1), ps._1, ps._2, store, printSequent)))
         case _ => JsArray()
-      })
-    )
+      }) :: Nil
+    if (printSequent) fields = "sequent"   -> sequent(p, id) :: fields
+    JsObject(fields)
   }
-  def convert(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit)): JsObject =
+  def convert(id: String, limit: Option[Int], ps: ProofStep, i: Int, store: ((ProofNode, String) => Unit), printSequent: Boolean): JsObject =
     JsObject(
       "rule"      -> convertRule(ps.rule),
       "id"        -> JsNumber(i),
-      "children"  -> subgoals(id, limit, store)(ps)
+      "children"  -> subgoals(id, limit, store, printSequent)(ps)
     )
 
-  def convert(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(p: ProofNode): JsObject = {
+  def convert(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit, printSequent: Boolean)(p: ProofNode): JsObject = {
     store(p, id)
-    JsObject(
-      "sequent" -> sequent(p, id),
-      "infos" -> infos(p),
-      "children" -> JsArray(p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => convert(id, filter, ps._1, ps._2, store)))
-    )
+    var fields =
+      "id"       -> JsString(id) ::
+      "infos"    -> infos(p) ::
+      "children" -> JsArray(p.children.zipWithIndex.filter(ps => filter(ps._1.tacticInfo)).map(ps => convert(id, filter, ps._1, ps._2, store, printSequent))) :: Nil
+    if (printSequent) fields = "sequent"  -> sequent(p, id) :: fields
+    JsObject(fields)
   }
 
-  def convert(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit): JsObject =
+  def convert(id: String, filter: (ProofStepInfo => Boolean), ps: ProofStep, i: Int, store: (ProofNode, String) => Unit, printSequent: Boolean): JsObject =
     JsObject(
       "rule"      -> convertRule(ps.rule),
       "id"        -> JsNumber(i),
-      "children"  -> subgoals(id, filter, store)(ps)
+      "children"  -> subgoals(id, filter, store, printSequent)(ps)
     )
 
   private def infos(p: ProofNode): JsArray = JsArray(p.tacticInfo.infos.map(s =>
@@ -201,13 +202,13 @@ object JSONConverter {
     )).toList
   )
   private def sequent(p: ProofNode, nodeId: String) = convert(p.sequent, nodeId)
-  private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, limit, store)(in._1)
-  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, filter, store)(in._1)
-  private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store)))
-  private def subgoals(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, filter, store)))
+  private def updateIndex(id: String, limit: Option[Int], store: (ProofNode, String) => Unit, printSequent: Boolean)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, limit, store, printSequent)(in._1)
+  private def updateIndex(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit, printSequent: Boolean)(in: (ProofNode, Int)): JsObject = convert(id + "_" + in._2, filter, store, printSequent)(in._1)
+  private def subgoals(id: String, limit: Option[Int], store: (ProofNode, String) => Unit, printSequent: Boolean)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, limit, store, printSequent)))
+  private def subgoals(id: String, filter: (ProofStepInfo => Boolean), store: (ProofNode, String) => Unit, printSequent: Boolean)(ps: ProofStep): JsArray = JsArray(ps.subgoals.zipWithIndex.map(updateIndex(id, filter, store, printSequent)))
 
   //def apply(p: ProofNode): String = print("", None, (_, _) => ())(p)
-  def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit): JsObject = convert(id, Some(limit), store)(p)
-  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit)): JsObject = convert(id, filter, store)(p)
+  def apply(p: ProofNode, id: String, limit: Int, store: (ProofNode, String) => Unit, printSequent: Boolean): JsObject = convert(id, Some(limit), store, printSequent)(p)
+  def apply(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), store: ((ProofNode, String) => Unit), printSequent: Boolean): JsObject = convert(id, filter, store, printSequent)(p)
 
 }

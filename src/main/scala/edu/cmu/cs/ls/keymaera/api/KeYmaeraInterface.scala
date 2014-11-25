@@ -217,14 +217,14 @@ object KeYmaeraInterface {
         val r = new RootNode(seq)
         TaskManagement.addTask(r, taskId)
         TaskManagement.finishedLoadingTask(taskId)
-        json(r, taskId, 0, taskId)
+        json(r, taskId, 0, taskId, false)
       case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
   }
 
   def getNode(taskId: String, nodeId: Option[String]): Option[String] = nodeId match {
-      case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId))
-      case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId))
+      case Some(id) => TaskManagement.getNode(taskId, id).map(json(_: ProofNode, id, 0, taskId, true))
+      case None => TaskManagement.getRoot(taskId).map(json(_: ProofNode, taskId.toString, 0, taskId, true))
   }
 
   def addTactic(id : String, t : Tactic) = {
@@ -393,22 +393,22 @@ object KeYmaeraInterface {
    * @param depth The depth of the sub tree
    * @return The sub tree serialized to JSON (schema as per prooftree.js)
    */
-  def getSubtree(taskId: String, nodeId: Option[String], depth: Int): Option[String] = {
+  def getSubtree(taskId: String, nodeId: Option[String], depth: Int, printSequent: Boolean): Option[String] = {
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
       case None => (taskId, TaskManagement.getRoot(taskId))
     }) match {
-      case (id, Some(n)) => Some(getSubtree(n, id, depth, taskId))
+      case (id, Some(n)) => Some(getSubtree(n, id, depth, taskId, printSequent))
       case (_, None) => None
     }
   }
 
-  def getSubtree(taskId: String, nodeId: Option[String], filter: (ProofStepInfo => Boolean)): Option[String] = {
+  def getSubtree(taskId: String, nodeId: Option[String], filter: (ProofStepInfo => Boolean), printSequent: Boolean): Option[String] = {
     (nodeId match {
       case Some(id) => (id, TaskManagement.getNode(taskId, id))
       case None => (taskId, TaskManagement.getRoot(taskId))
     }) match {
-      case (id, Some(n)) => Some(getSubtree(n, id, filter, taskId))
+      case (id, Some(n)) => Some(getSubtree(n, id, filter, taskId, printSequent))
       case (_, None) => None
     }
 
@@ -429,7 +429,7 @@ object KeYmaeraInterface {
    * @param tacticId Identifies the tactic.
    */
   private def generateIds()(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
-    getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId.toString) }) match {
+    getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId.toString) }, false) match {
       case Some(s) =>
         // s is JSON representation of proof node. This proof node gets an ID as a side effect of generating
         // the JSON representation. This is the result that we want. Nothing else to do.
@@ -438,17 +438,19 @@ object KeYmaeraInterface {
     }
   }
 
-  private def getSubtree(n: ProofNode, id: String, depth: Int, rootId: String): String = json(n, id, depth, rootId)
+  private def getSubtree(n: ProofNode, id: String, depth: Int, rootId: String, printSequent: Boolean): String =
+    json(n, id, depth, rootId, printSequent)
 
-  private def getSubtree(n: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = json(n, id, filter, rootId)
+  private def getSubtree(n: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String,
+                         printSequent: Boolean): String = json(n, id, filter, rootId, printSequent)
 
   // TODO: maybe allow listeners to node change events
 
  // def json(p: ProofNode): String = JSONConverter(p)
 
-  private def json(p: ProofNode, id: String, l: Int, rootId: String): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
+  private def json(p: ProofNode, id: String, l: Int, rootId: String, printSequent: Boolean): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x), printSequent).prettyPrint
 
-  private def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x)).prettyPrint
+  private def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String, printSequent: Boolean): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x), printSequent).prettyPrint
 
   private def getActualNode(taskId : String, nodeIdOpt : Option[String]) : Option[ProofNode] = nodeIdOpt match {
     case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)

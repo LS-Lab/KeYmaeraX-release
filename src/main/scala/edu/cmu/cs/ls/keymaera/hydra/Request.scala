@@ -187,7 +187,7 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
       val proof = db.getProofInfo(proofId)
       val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
 
-      val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0) match {
+      val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0, true) match {
         case Some(proofNode) => (proof, g, proofNode)
         case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
       })
@@ -291,7 +291,7 @@ class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : 
 class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String]) extends Request{
   override def getResultingResponses(): List[Response] = {
     // TODO fetch only one branch, need to refactor UI for this
-    val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 1000)
+    val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 1000, false)
     node match {
       case Some(theNode) =>
         val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
@@ -315,7 +315,7 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
 class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[String]) extends Request {
   override def getResultingResponses(): List[Response] = {
     // TODO fetch only one branch, need to refactor UI for this
-    val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 0)
+    val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 0, true)
     node match {
       case Some(theNode) => {
         //        val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
