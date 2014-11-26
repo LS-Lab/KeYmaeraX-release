@@ -183,18 +183,6 @@ object TacticLibrary {
   def NotLeftT = PropositionalTacticsImpl.NotLeftT
   def NotRightT = PropositionalTacticsImpl.NotRightT
 
-  // TODO get rid of those
-  def AndLeftFindT: Tactic = locateAnte(AndLeftT)
-  def AndRightFindT: Tactic = locateSucc(AndRightT)
-  def OrLeftFindT: Tactic = locateAnte(OrLeftT)
-  def OrRightFindT: Tactic = locateSucc(OrRightT)
-  def ImplyLeftFindT: Tactic = locateAnte(ImplyLeftT)
-  def ImplyRightFindT: Tactic = locateSucc(ImplyRightT)
-  def EquivLeftFindT: Tactic = locateAnte(EquivLeftT)
-  def EquivRightFindT: Tactic = locateSucc(EquivRightT)
-  def NotLeftFindT: Tactic = locateAnte(NotLeftT)
-  def NotRightFindT: Tactic = locateSucc(NotRightT)
-
   def hideT = PropositionalTacticsImpl.hideT
   def cutT(f: Option[Formula]) = PropositionalTacticsImpl.cutT(f)
 
