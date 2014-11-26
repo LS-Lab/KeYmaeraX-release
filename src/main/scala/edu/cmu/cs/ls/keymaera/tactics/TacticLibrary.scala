@@ -13,7 +13,8 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
-import EqualityRewritingImpl.{equalityRewriting,isEquality}
+import EqualityRewritingImpl._
+import PropositionalTacticsImpl._
 import BranchLabels._
 
 /**
@@ -279,16 +280,16 @@ object TacticLibrary {
    */
   def locateSuccAnte(posT: PositionTactic): Tactic = locateSucc(posT) | locateAnte(posT)
 
-  val AndLeftT = PropositionalTacticsImpl.AndLeftT
-  val AndRightT = PropositionalTacticsImpl.AndRightT
-  val OrLeftT = PropositionalTacticsImpl.OrLeftT
-  val OrRightT = PropositionalTacticsImpl.OrRightT
-  val ImplyLeftT = PropositionalTacticsImpl.ImplyLeftT
-  val ImplyRightT = PropositionalTacticsImpl.ImplyRightT
-  val EquivLeftT = PropositionalTacticsImpl.EquivLeftT
-  val EquivRightT = PropositionalTacticsImpl.EquivRightT
-  val NotLeftT = PropositionalTacticsImpl.NotLeftT
-  val NotRightT = PropositionalTacticsImpl.NotRightT
+  def AndLeftT = PropositionalTacticsImpl.AndLeftT
+  def AndRightT = PropositionalTacticsImpl.AndRightT
+  def OrLeftT = PropositionalTacticsImpl.OrLeftT
+  def OrRightT = PropositionalTacticsImpl.OrRightT
+  def ImplyLeftT = PropositionalTacticsImpl.ImplyLeftT
+  def ImplyRightT = PropositionalTacticsImpl.ImplyRightT
+  def EquivLeftT = PropositionalTacticsImpl.EquivLeftT
+  def EquivRightT = PropositionalTacticsImpl.EquivRightT
+  def NotLeftT = PropositionalTacticsImpl.NotLeftT
+  def NotRightT = PropositionalTacticsImpl.NotRightT
 
   // TODO get rid of those
   def AndLeftFindT: Tactic = locateAnte(AndLeftT)
@@ -302,85 +303,16 @@ object TacticLibrary {
   def NotLeftFindT: Tactic = locateAnte(NotLeftT)
   def NotRightFindT: Tactic = locateSucc(NotRightT)
 
-
-  def hideT: PositionTactic = new PositionTactic("Hide") {
-    def applies(s: Sequent, p: Position) = p.isIndexDefined(s) && p.isTopLevel
-
-    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) HideLeft(pos) else HideRight(pos)) {
-      override def applicable(node: ProofNode): Boolean = pos.isIndexDefined(node.sequent) && pos.isTopLevel
-      //@TODO Shouldn't this be = pos.isDefined(node.sequent) here and everywhere?
-    }
-  }
-
-  def cohideT: PositionTactic = new PositionTactic("CoHide") {
-    def applies(s: Sequent, p: Position) = p.isIndexDefined(s) && p.isTopLevel
-
-    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) CoHideLeft(pos) else CoHideRight(pos)) {
-      override def applicable(node: ProofNode): Boolean = pos.isIndexDefined(node.sequent) && pos.isTopLevel
-    }
-  }
-
-  def cutT(g: (ProofNode => Option[Formula])): Tactic = new ConstructionTactic("Cut") {
-    def applicable(pn: ProofNode): Boolean = g(pn) match {
-      case Some(_) => true
-      case _ => false
-    }
-
-    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
-      case Some(t) =>
-        Some(new Tactics.ApplyRule(Cut(t)) {
-          override def applicable(node: ProofNode): Boolean = true
-        } & (LabelBranch(BranchLabels.cutUseLbl), LabelBranch(BranchLabels.cutShowLbl)))
-      case _ => None
-    }
-  }
-
-  def cutT(f: Option[Formula]): Tactic = cutT((x: ProofNode) => f)
+  def hideT = PropositionalTacticsImpl.hideT
+  def cutT(f: Option[Formula]): Tactic = PropositionalTacticsImpl.cutT((x: ProofNode) => f)
 
   def closeT : Tactic = AxiomCloseT | locateAnte(CloseTrueT) | locateSucc(CloseFalseT)
+  def AxiomCloseT(a: Position, b: Position) = PropositionalTacticsImpl.AxiomCloseT(a, b)
+  def AxiomCloseT = PropositionalTacticsImpl.AxiomCloseT
+  def CloseTrueT = PropositionalTacticsImpl.CloseTrueT
+  def CloseFalseT = PropositionalTacticsImpl.CloseFalseT
 
-  def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(AxiomClose(a, b)) {
-      override def applicable(node: ProofNode): Boolean = a.isAnte && !b.isAnte && getFormula(node.sequent, a) == getFormula(node.sequent, b)
-  }
 
-  def AxiomCloseT: Tactic = new ConstructionTactic("AxiomClose") {
-    def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = findPositions(p.sequent) match {
-      case Some((a, b)) => Some(AxiomCloseT(a, b))
-      case None => None
-    }
-
-    def findPositions(s: Sequent): Option[(Position, Position)] = {
-      for (f <- s.ante; g <- s.succ)
-        if (f == g) return Some((AntePosition(s.ante.indexOf(f)), SuccPosition(s.succ.indexOf(g))))
-      None
-    }
-
-    override def applicable(node: ProofNode): Boolean = findPositions(node.sequent) match {
-      case Some(_) => true
-      case _ => false
-    }
-  }
-
-  def CloseTrueT: PositionTactic = new PositionTactic("CloseTrue") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && (getFormula(s, p) match {
-      case True() => true
-      case _ => false
-    })
-
-    override def apply(p: Position): Tactic = new ApplyRule(CloseTrue(p)) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-  def CloseFalseT: PositionTactic = new PositionTactic("CloseFalse") {
-    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
-      case False() => true
-      case _ => false
-    })
-
-    override def apply(p: Position): Tactic = new ApplyRule(CloseFalse(p)) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
   
   /**
    * Axiom lookup imports an axiom into the antecedent.

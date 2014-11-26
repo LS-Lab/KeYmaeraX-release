@@ -31,7 +31,6 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.not-left", "TacticLibrary.NotLeftT", TacticKind.PositionTactic, TacticLibrary.NotLeftT)
     initTactic("dl.not-right", "TacticLibrary.NotRightT", TacticKind.PositionTactic, TacticLibrary.NotRightT)
     initTactic("dl.hide", "TacticLibrary.hideT", TacticKind.PositionTactic, TacticLibrary.hideT)
-    initTactic("dl.cohide", "TacticLibrary.cohideT", TacticKind.PositionTactic, TacticLibrary.cohideT)
     initTactic("dl.close-true", "TacticLibrary.CloseTrueT", TacticKind.PositionTactic, TacticLibrary.CloseTrueT)
     initTactic("dl.close-false", "TacticLibrary.CloseFalseT", TacticKind.PositionTactic, TacticLibrary.CloseFalseT)
     initTactic("dl.close", "TacticLibrary.CloseT", TacticKind.PositionTactic, TacticLibrary.closeT)

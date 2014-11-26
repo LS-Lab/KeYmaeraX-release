@@ -2,14 +2,14 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{LabelBranch, Tactic, PositionTactic}
-import TacticLibrary._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 /**
  * Implementation of tactics for handling propositions.
  */
 object PropositionalTacticsImpl {
-  def AndLeftT: PositionTactic = new PositionTactic("AndLeft") {
+  protected[tactics] def AndLeftT: PositionTactic = new PositionTactic("AndLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case And(_, _) => true
       case _ => false
@@ -20,7 +20,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def AndRightT: PositionTactic = new PositionTactic("AndRight") {
+  protected[tactics] def AndRightT: PositionTactic = new PositionTactic("AndRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case And(_, _) => true
       case _ => false
@@ -31,7 +31,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def OrLeftT: PositionTactic = new PositionTactic("OrLeft") {
+  protected[tactics] def OrLeftT: PositionTactic = new PositionTactic("OrLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Or(_, _) => true
       case _ => false
@@ -42,7 +42,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def OrRightT: PositionTactic = new PositionTactic("OrRight") {
+  protected[tactics] def OrRightT: PositionTactic = new PositionTactic("OrRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case Or(_, _) => true
       case _ => false
@@ -53,7 +53,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def ImplyLeftT: PositionTactic = new PositionTactic("ImplyLeft") {
+  protected[tactics] def ImplyLeftT: PositionTactic = new PositionTactic("ImplyLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Imply(_, _) => p.inExpr == HereP
       case _ => false
@@ -64,7 +64,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
+  protected[tactics] def ImplyRightT: PositionTactic = new PositionTactic("ImplyRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && p.inExpr == HereP && (s.succ(p.index) match {
       case Imply(_, _) => true
       case _ => false
@@ -75,7 +75,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def EquivLeftT: PositionTactic = new PositionTactic("EquivLeft") {
+  protected[tactics] def EquivLeftT: PositionTactic = new PositionTactic("EquivLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Equiv(_, _) => true
       case _ => false
@@ -86,7 +86,7 @@ object PropositionalTacticsImpl {
     } & (LabelBranch(equivLeftLbl), LabelBranch(equivRightLbl))
   }
 
-  def EquivRightT: PositionTactic = new PositionTactic("EquivRight") {
+  protected[tactics] def EquivRightT: PositionTactic = new PositionTactic("EquivRight") {
     def applies(s: Sequent, p: Position) = !p.isAnte && (s.succ(p.index) match {
       case Equiv(_, _) => true
       case _ => false
@@ -97,7 +97,7 @@ object PropositionalTacticsImpl {
     } & (LabelBranch(equivLeftLbl), LabelBranch(equivRightLbl))
   }
 
-  def NotLeftT: PositionTactic = new PositionTactic("NotLeft") {
+  protected[tactics] def NotLeftT: PositionTactic = new PositionTactic("NotLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Not(_) => true
       case _ => false
@@ -108,7 +108,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def NotRightT: PositionTactic = new PositionTactic("NotRight") {
+  protected[tactics] def NotRightT: PositionTactic = new PositionTactic("NotRight") {
     def applies(s: Sequent, p: Position) = if (!p.isAnte) s.succ(p.index) match {
       case Not(_) => true
       case _ => false
@@ -116,6 +116,83 @@ object PropositionalTacticsImpl {
 
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(NotRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+  }
+
+  protected[tactics] def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(AxiomClose(a, b)) {
+    override def applicable(node: ProofNode): Boolean = a.isAnte && !b.isAnte &&
+      getFormula(node.sequent, a) == getFormula(node.sequent, b)
+  }
+
+  protected[tactics] def AxiomCloseT: Tactic = new ConstructionTactic("AxiomClose") {
+    def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = findPositions(p.sequent) match {
+      case Some((a, b)) => Some(AxiomCloseT(a, b))
+      case None => None
+    }
+
+    def findPositions(s: Sequent): Option[(Position, Position)] = {
+      for (f <- s.ante; g <- s.succ)
+        if (f == g) return Some((AntePosition(s.ante.indexOf(f)), SuccPosition(s.succ.indexOf(g))))
+      None
+    }
+
+    override def applicable(node: ProofNode): Boolean = findPositions(node.sequent) match {
+      case Some(_) => true
+      case _ => false
+    }
+  }
+
+  protected[tactics] def CloseTrueT: PositionTactic = new PositionTactic("CloseTrue") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && (getFormula(s, p) match {
+      case True() => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ApplyRule(CloseTrue(p)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  protected[tactics] def CloseFalseT: PositionTactic = new PositionTactic("CloseFalse") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
+      case False() => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ApplyRule(CloseFalse(p)) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  protected[tactics] def hideT: PositionTactic = new PositionTactic("Hide") {
+    def applies(s: Sequent, p: Position) = p.isIndexDefined(s) && p.isTopLevel
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) HideLeft(pos) else HideRight(pos)) {
+      override def applicable(node: ProofNode): Boolean = pos.isIndexDefined(node.sequent) && pos.isTopLevel
+      //@TODO Shouldn't this be = pos.isDefined(node.sequent) here and everywhere?
+    }
+  }
+
+  protected[tactics] def cohideT: PositionTactic = new PositionTactic("CoHide") {
+    def applies(s: Sequent, p: Position) = p.isIndexDefined(s) && p.isTopLevel
+
+    def apply(pos: Position): Tactic = new Tactics.ApplyRule(if (pos.isAnte) CoHideLeft(pos) else CoHideRight(pos)) {
+      override def applicable(node: ProofNode): Boolean = pos.isIndexDefined(node.sequent) && pos.isTopLevel
+    }
+  }
+
+  protected[tactics] def cutT(g: (ProofNode => Option[Formula])): Tactic = new ConstructionTactic("Cut") {
+    def applicable(pn: ProofNode): Boolean = g(pn) match {
+      case Some(_) => true
+      case _ => false
+    }
+
+    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
+      case Some(t) =>
+        Some(new Tactics.ApplyRule(Cut(t)) {
+          override def applicable(node: ProofNode): Boolean = true
+        } & (LabelBranch(BranchLabels.cutUseLbl), LabelBranch(BranchLabels.cutShowLbl)))
+      case _ => None
     }
   }
 }
