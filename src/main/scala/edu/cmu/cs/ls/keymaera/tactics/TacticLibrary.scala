@@ -379,30 +379,6 @@ object TacticLibrary {
         } & hideT(p.topLevel)
   }
 
-
-
-  // K modal  modus ponens
-  def kModalModusPonensT = new AxiomTactic("K modal modus ponens", "K modal modus ponens") {
-    override def applies(f: Formula): Boolean = f match {
-      case Imply(BoxModality(a, _), BoxModality(b, _)) if(a == b) => true
-      case _ => false
-    }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case Imply(BoxModality(a, p), BoxModality(b, q)) if(a == b) =>
-        // construct substitution
-        val aA = ProgramConstant("a")
-        val aP = PredicateConstant("p")
-        val aQ = PredicateConstant("q")
-        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
-        // construct axiom instance: [a](p->q) -> (([a]p) -> ([a]q))
-        val g = BoxModality(a, Imply(p, q))
-        val axiomInstance = Imply(g, f)
-        Some(axiomInstance, Substitution(l))
-      case _ => None
-    }
-  }
-
   /*********************************************
    * Differential Tactics
    *********************************************/
