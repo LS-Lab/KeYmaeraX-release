@@ -1,3 +1,4 @@
+import edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaera.tests.TermTests
 import org.scalatest._

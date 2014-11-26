@@ -18,6 +18,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
     initTactic("keymaera.propositional", "TacticLibrary.propositional", TacticKind.Tactic, TacticLibrary.propositional)
     initTactic("keymaera.arithmetic", "TacticLibrary.arithmeticT", TacticKind.Tactic, TacticLibrary.arithmeticT)
+    initTactic("dl.axiomclose", "TacticLibrary.AxiomCloseT", TacticKind.Tactic, TacticLibrary.AxiomCloseT)
 
     initTactic("dl.and-left", "TacticLibrary.AndLeftT", TacticKind.PositionTactic, TacticLibrary.AndLeftT)
     initTactic("dl.and-right", "TacticLibrary.AndRightT", TacticKind.PositionTactic, TacticLibrary.AndRightT)
@@ -37,7 +38,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.skolemize", "TacticLibrary.skolemizeT", TacticKind.PositionTactic, TacticLibrary.skolemizeT)
     initTactic("dl.decompose-quan", "TacticLibrary.decomposeQuanT", TacticKind.PositionTactic, TacticLibrary.decomposeQuanT)
     initTactic("dl.abstraction", "TacticLibrary.abstractionT", TacticKind.PositionTactic, TacticLibrary.abstractionT)
-    initTactic("dl.axiomclose", "TacticLibrary.AxiomCloseT", TacticKind.InputTactic, TacticLibrary.AxiomCloseT)
+    initTactic("dl.decomposequant", "TacticLibrary.decomposeQuanT", TacticKind.PositionTactic, TacticLibrary.decomposeQuanT)
 
     initTactic("dl.box-assign", "TacticLibrary.boxAssignT", TacticKind.PositionTactic, TacticLibrary.boxAssignT)
     initTactic("dl.box-choice", "TacticLibrary.boxChoiceT", TacticKind.PositionTactic, TacticLibrary.boxChoiceT)
@@ -47,7 +48,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
 
     initInputTactic[Option[Formula]]("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
-    initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT _)
+    initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT)
     initInputTactic("dl.equalityRewriting", "TacticLibrary.equalityRewriting", TacticKind.InputTactic, TacticLibrary.equalityRewriting _)
 //    initInputTactic("dl.axiom", "TacticLibrary.axiomT", TacticKind.InputTactic, TacticLibrary.axiomT)
     initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)

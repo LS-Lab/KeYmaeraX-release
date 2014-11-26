@@ -1,6 +1,9 @@
 package edu.cmu.cs.ls.keymaera.tests
 
 // favoring immutable Seqs
+
+import edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep
+
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -15,7 +18,6 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import java.io._
 import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaera.core.ProofStep
 import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, TacticLibrary, Tactics}
 
 object TermTests {

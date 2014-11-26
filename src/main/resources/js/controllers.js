@@ -114,7 +114,7 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.box-assign" :
             { "name" : "dl.box-assign",
-              "label" : "\\(\\left(\\left[:=\\right]\\right) \\frac{\\phi(t)}{\\left[x := t\\right]\\phi(x)}\\)"
+              "label" : "\\(\\left(\\left[:=\\right]\\right) \\frac{\\forall x. x = t \\to \\phi(x)}{\\left[x := t\\right]\\phi(x)}\\)"
             },
         "dl.box-choice" :
             { "name" : "dl.box-choice",

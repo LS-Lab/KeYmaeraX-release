@@ -7,6 +7,7 @@ import spray.json._
 import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaera.core.Sequent
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
+import edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep
 
 import scala.collection.mutable
 
