@@ -5,10 +5,11 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.{universalClosure,instantiateT,closeT,hideT,CloseTrueT}
+import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT}
 import BuiltinHigherTactics.stepAt
 import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT}
 import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
+import FOQuantifierTacticsImpl.instantiateT
 
 import scala.collection.immutable.{Set, Seq}
 
@@ -73,7 +74,7 @@ object ArithmeticTacticsImpl {
                       val resG = reInst(g)
                       if (v.isEmpty) resG
                       else {
-                        val vars = v.map(n => n match {
+                        val vars = v.map({
                           case x: Variable => x
                           case _ => throw new IllegalArgumentException("Can only handle quantifiers over variables")
                         })

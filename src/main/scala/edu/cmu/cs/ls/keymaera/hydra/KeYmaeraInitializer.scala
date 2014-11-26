@@ -35,9 +35,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.close-false", "TacticLibrary.CloseFalseT", TacticKind.PositionTactic, TacticLibrary.CloseFalseT)
     initTactic("dl.close", "TacticLibrary.CloseT", TacticKind.PositionTactic, TacticLibrary.closeT)
     initTactic("dl.skolemize", "TacticLibrary.skolemizeT", TacticKind.PositionTactic, TacticLibrary.skolemizeT)
-    initTactic("dl.decompose-quan", "TacticLibrary.decomposeQuanT", TacticKind.PositionTactic, TacticLibrary.decomposeQuanT)
     initTactic("dl.abstraction", "TacticLibrary.abstractionT", TacticKind.PositionTactic, TacticLibrary.abstractionT)
-    initTactic("dl.decomposequant", "TacticLibrary.decomposeQuanT", TacticKind.PositionTactic, TacticLibrary.decomposeQuanT)
 
     initTactic("dl.box-assign", "TacticLibrary.boxAssignT", TacticKind.PositionTactic, TacticLibrary.boxAssignT)
     initTactic("dl.box-choice", "TacticLibrary.boxChoiceT", TacticKind.PositionTactic, TacticLibrary.boxChoiceT)
