@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import PropositionalTacticsImpl.{hideT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,AndRightT}
 import TacticLibrary.{kModalModusPonensT,abstractionT,onBranch}
+import SearchTacticsImpl.{locateSucc,locateAnte}
 
 import scala.collection.immutable.{List,Seq}
 
@@ -265,9 +266,9 @@ object HybridProgramTacticsImpl {
     */
 
   /**
-   *
-   * @param inv
-   * @return
+   * Creates a new position tactic to apply the induction rule.
+   * @param inv The invariant.
+   * @return The position tactic.
    */
   def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
     def getBody(g: Formula): Option[Program] = g match {
@@ -310,4 +311,27 @@ object HybridProgramTacticsImpl {
       }
     }
   }
+
+  /**
+   * Creates a new position tactic for the assignment rule.
+   * @return The assignment rule tactic.
+   */
+  protected[tactics] def assignment = new PositionTactic("Assignment") {
+    // for now only on top level
+    override def applies(s: Sequent, p: Position): Boolean = {
+      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
+        case BoxModality(Assign(Variable(_, _, _), _), _) => true
+        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
+        case _ => false
+      })
+    }
+
+    override def apply(p: Position): Tactic = Tactics.weakSeqT(TacticLibrary.uniquify(p), new ApplyRule(new AssignmentRule(p)) {
+      override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
+    })
+  }
+
+  // it would be great if we could access the same position to apply the imply right rule
+  // FIXME: this only works for toplevel positions since there the positions are stable
+  private def assignmentFindImpl = locateSucc(assignment & ImplyRightT) | locateAnte(assignment & ImplyLeftT)
 }

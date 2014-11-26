@@ -484,35 +484,14 @@ object TacticLibrary {
 
   }
 
-  // assignment tactic (alpha renaming and then assignment rule)
+  // TODO replace this with the assignment axiom tactic
+  def assignment = HybridProgramTacticsImpl.assignment
 
-  // it would be great if we could access the same position to apply the imply right rule
-  // FIXME: this only works for toplevel positions since there the positions are stable
-  private def assignmentFindImpl = locateSucc(assignment & ImplyRightT) | locateAnte(assignment & ImplyLeftT)
-
-  val assignment = new PositionTactic("Assignment") {
-    // for now only on top level
-    override def applies(s: Sequent, p: Position): Boolean = {
-      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Assign(Variable(_, _, _), _), _) => true
-        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
-        case _ => false
-      })
-    }
-
-    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
-      override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
-    })
-  }
-  
   // axiom wrappers
 
   // axiomatic version of assignment axiom assignaxiom
-  val assignT = boxAssignT /*@TODO | diamondAssignT*/
-  val boxAssignT = HybridProgramTacticsImpl.boxAssignT
-
-
-
+  def boxAssignT = HybridProgramTacticsImpl.boxAssignT
+  def assignT = boxAssignT /*@TODO | diamondAssignT*/
 
   def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Option[Position] =
     findPosInExpr(s, blacklist, search == _, Some(ignore))

@@ -5,7 +5,8 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import SearchTacticsImpl.{locateAnte,locateSucc}
+import SearchTacticsImpl.locateSucc
+import HybridProgramTacticsImpl.assignment
 
 /**
  * Implementation of builtin higher tactics composed of base tactics.
