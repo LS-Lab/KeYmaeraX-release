@@ -198,35 +198,6 @@ object TacticLibrary {
     case _ => throw new IllegalArgumentException("Unknown axiom " + id)
   }
 
-  /**
-   * Tactic to perform uniform substitution. In most cases this is called on a sequent that only contains a single
-   * formula in order to show that a formula is an instance of an axiom (modulo an alpha renaming of that).
-   *
-   * @param subst the substitution to perform
-   * @param delta a map with replacement for formulas in the sequent. That is, for all (f, g) in delta we will replace
-   *              every top-level occurrence of formula f in the conclusion by the respective g
-   *              in order to construct the origin of the uniform substitution.
-   * @return an instance of a tactic that performs the given uniform substitution
-   */
-  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
-    def applicable(pn: ProofNode) = true
-
-    def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
-      val ante = for (f <- p.sequent.ante) yield delta.get(f) match {
-        case Some(frm) => frm
-        case _ => f
-      }
-      val succ = for (f <- p.sequent.succ) yield delta.get(f) match {
-        case Some(frm) => frm
-        case _ => f
-      }
-      Some(new Tactics.ApplyRule(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))) {
-        override def applicable(node: ProofNode): Boolean = true
-      })
-    }
-
-  }
-
   // axiom wrapper shell
   // TODO: Use findPosInExpr to find a position that matches the left side of the axiom and cut in the resulting instance
   // we start with just using findPos to get a top level position

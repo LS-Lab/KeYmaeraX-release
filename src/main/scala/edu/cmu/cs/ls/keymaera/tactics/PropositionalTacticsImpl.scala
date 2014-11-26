@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomTactic
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{Map, List}
 
 /**
  * Implementation of tactics for handling propositions.
@@ -232,5 +232,34 @@ object PropositionalTacticsImpl {
         Some(axiomInstance, Substitution(l))
       case _ => None
     }
+  }
+
+  /**
+   * Tactic to perform uniform substitution. In most cases this is called on a sequent that only contains a single
+   * formula in order to show that a formula is an instance of an axiom (modulo an alpha renaming of that).
+   *
+   * @param subst the substitution to perform
+   * @param delta a map with replacement for formulas in the sequent. That is, for all (f, g) in delta we will replace
+   *              every top-level occurrence of formula f in the conclusion by the respective g
+   *              in order to construct the origin of the uniform substitution.
+   * @return an instance of a tactic that performs the given uniform substitution
+   */
+  protected[tactics] def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
+    def applicable(pn: ProofNode) = true
+
+    def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
+      val ante = for (f <- p.sequent.ante) yield delta.get(f) match {
+        case Some(frm) => frm
+        case _ => f
+      }
+      val succ = for (f <- p.sequent.succ) yield delta.get(f) match {
+        case Some(frm) => frm
+        case _ => f
+      }
+      Some(new Tactics.ApplyRule(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))) {
+        override def applicable(node: ProofNode): Boolean = true
+      })
+    }
+
   }
 }
