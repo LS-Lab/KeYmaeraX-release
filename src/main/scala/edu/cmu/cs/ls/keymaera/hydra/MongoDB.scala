@@ -180,7 +180,7 @@ object MongoDB extends DBAbstraction {
     if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
     val steps = results.one().getAs[List[String]]("steps").getOrElse(List[String]()) :+ tacticInstId
     val update = $set("steps" -> steps)
-    proofSteps.update(MongoDBObject("_id" -> new ObjectId(proofId)), update)
+    proofSteps.update(MongoDBObject("proofId" -> proofId), update)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
