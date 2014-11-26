@@ -15,7 +15,7 @@ import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
 import EqualityRewritingImpl._
 import PropositionalTacticsImpl._
-import HybridProgramTacticsImpl._
+import BuiltinHigherTactics._
 import BranchLabels._
 
 /**
@@ -34,6 +34,25 @@ object TacticLibrary {
     }
   }
   import TacticHelper._
+
+  /**
+   * apply results in a formula to try.
+   * Results do not have to be deterministic, e.g., calls to apply might advance to the next candidate.
+   * Results can also be deterministic.
+   */
+  trait Generator[A] extends ((Sequent, Position) => Option[A]) {
+    def peek(s: Sequent, p: Position): Option[A]
+  }
+
+  class Generate[A](f: A) extends Generator[A] {
+    def apply(s: Sequent, p: Position) = Some(f)
+    def peek(s: Sequent, p: Position) = Some(f)
+  }
+
+  class NoneGenerate[A] extends Generator[A] {
+    def apply(s: Sequent, p: Position) = None
+    def peek(s: Sequent, p: Position) = None
+  }
 
   /*******************************************************************
    * Major tactics
@@ -56,10 +75,11 @@ object TacticLibrary {
    * Tactic that applies propositional proof rules exhaustively.
    */
   // TODO Implement for real. This strategy uses more than propositional steps.
-  def propositional = (closeT | locate(indecisive(true, false, false, true)))*
+  def propositional = (closeT | locate(stepAt(beta = true, simplifyProg = false,
+                                                                   quantifiers = false, equiv = true)))*
 
   def indecisive(beta: Boolean, simplifyProg: Boolean, quantifiers: Boolean, equiv: Boolean = false) =
-    BuiltinHigherTactics.stepAt(beta, simplifyProg, quantifiers, equiv)
+    stepAt(beta, simplifyProg, quantifiers, equiv)
 
   /*******************************************************************
    * Arithmetic tactics
@@ -81,24 +101,7 @@ object TacticLibrary {
    * Elementary tactics
    *******************************************************************/
 
-  /**
-   * apply results in a formula to try.
-   * Results do not have to be deterministic, e.g., calls to apply might advance to the next candidate.
-   * Results can also be deterministic.
-   */
-  trait Generator[A] extends ((Sequent, Position) => Option[A]) {
-    def peek(s: Sequent, p: Position): Option[A]
-  }
 
-  class Generate[A](f: A) extends Generator[A] {
-    def apply(s: Sequent, p: Position) = Some(f)
-    def peek(s: Sequent, p: Position) = Some(f)
-  }
-
-  class NoneGenerate[A] extends Generator[A] {
-    def apply(s: Sequent, p: Position) = None
-    def peek(s: Sequent, p: Position) = None
-  }
 
   def universalClosure(f: Formula): Formula = {
     val vars = Helper.certainlyFreeNames(f)
