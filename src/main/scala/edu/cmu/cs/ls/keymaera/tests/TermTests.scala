@@ -133,7 +133,11 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true)) | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val tactic = ((AxiomCloseT | locateSucc(indecisive(false, true, true))
+      | locateAnte(indecisive(false, true, true))
+      | locateSucc(indecisive(true, true, true))
+      | locateAnte(indecisive(true, true, true))
+      | locateAnte(eqLeft(false)) )*) ~ quantifierEliminationT("Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -188,7 +192,9 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val master = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true)) | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true)) |  eqLeftFind )*) ~ quantifierEliminationT("Mathematica")
+    val master = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true))
+      | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true))
+      | locateAnte(eqLeft(false)) )*) ~ quantifierEliminationT("Mathematica")
     val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(PredicateConstant("inv")))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)

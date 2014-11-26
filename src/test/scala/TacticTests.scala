@@ -411,7 +411,7 @@ class TacticTests extends FlatSpec with Matchers {
       val p1 = Function("q", None, Real, Bool)
       val assume = Imply(ApplyPredicate(p1, Number(2)),
         BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
-      prove(assume, step(SuccPosition(0)) & assignment(SuccPosition(0)) & (closeT | eqLeftFind | arithmeticT)*) should be (Provable)
+      prove(assume, step(SuccPosition(0)) & assignment(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
   }
   
   it should "prove q(2)->[x:=2]q(x) by assign axiom" in {
@@ -420,7 +420,7 @@ class TacticTests extends FlatSpec with Matchers {
       val p1 = Function("q", None, Real, Bool)
       val assume = Imply(ApplyPredicate(p1, Number(2)),
         BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
-      prove(assume, step(SuccPosition(0)) & assignT(SuccPosition(0)) & (closeT | eqLeftFind | arithmeticT)*) should be (Provable)
+      prove(assume, step(SuccPosition(0)) & assignT(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
   }
 
   it should "prove [x:=2]p(x)<->p(2)" in {

@@ -6,6 +6,7 @@ import TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import SearchTacticsImpl.locateSucc
+import EqualityRewritingImpl.eqLeft
 import HybridProgramTacticsImpl.{assignment,genInductionT}
 
 /**
@@ -68,7 +69,7 @@ object BuiltinHigherTactics {
       | locateSuccAnte(stepAt(beta = false, simplifyProg = true, quantifiers = true))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true))
       | locateSucc(genInductionT(invGenerator))
-      | eqLeftFind
+      | locateAnte(eqLeft(exhaustive = false))
       | locateSucc(differentialInduction)
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))
     ) ~ arithmeticT
@@ -86,7 +87,7 @@ object BuiltinHigherTactics {
       | locateSuccAnte(stepAt(beta = false, simplifyProg = true, quantifiers = true))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true))
       | locateSucc(genInductionT(invGenerator))
-      | eqLeftFind
+      | locateAnte(eqLeft(exhaustive = false))
       | locateSucc(differentialInduction)
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))
     )

@@ -154,8 +154,8 @@ object TacticLibrary {
     * *******************************************
     */
 
-  val locateAnte = SearchTacticsImpl.locateAnte _
-  val locateSucc = SearchTacticsImpl.locateSucc _
+  def locateAnte(posT: PositionTactic) = SearchTacticsImpl.locateAnte(posT)
+  def locateSucc(posT: PositionTactic) = SearchTacticsImpl.locateSucc(posT)
 
   /**
    * tactic locating an antecedent or succedent position where PositionTactic is applicable.
@@ -344,7 +344,8 @@ object TacticLibrary {
     EqualityRewritingImpl.equalityRewriting(eqPos, p, checkDisjoint)
   def equalityRewritingLeft(eqPos: Position) = EqualityRewritingImpl.equalityRewritingLeft(eqPos)
   def equalityRewritingRight(eqPos: Position) = EqualityRewritingImpl.equalityRewritingRight(eqPos)
-
+  def eqLeft(exhaustive: Boolean) = EqualityRewritingImpl.eqLeft(exhaustive)
+  def eqRight(exhaustive: Boolean) = EqualityRewritingImpl.eqLeft(exhaustive)
 
   val uniquify = new PositionTactic("Uniquify") {
     // for now only on top level
@@ -411,12 +412,6 @@ object TacticLibrary {
   // axiomatic version of assignment axiom assignaxiom
   def boxAssignT = HybridProgramTacticsImpl.boxAssignT
   def assignT = boxAssignT /*@TODO | diamondAssignT*/
-
-  // TODO remove
-  val eqLeftFind = locateAnte(eqLeft(false))
-  val eqLeftFindExhaustive = locateAnte(eqLeft(true))
-  val eqRightFind = locateAnte(eqRight(false))
-  val eqRightFindExhaustive = locateAnte(eqRight(true))
 
   def debugT(s: String): Tactic = new Tactic("Debug") {
     override def applicable(node: ProofNode): Boolean = true
