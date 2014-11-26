@@ -23,8 +23,11 @@ angular.module('sequent', ['ngSanitize','formula'])
             };
 
             $scope.applyTacticsByName = function(tName) {
+                $scope.applyTacticsOnFormulaByName('sequent', tName)
+            }
+            $scope.applyTacticsOnFormulaByName = function(formula, tName) {
                 var uri = 'proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/nodes/' + $scope.nodeId
-                        + '/formulas/sequent/tactics'
+                        + '/formulas/' + formula + '/tactics'
                 $http.post(uri + "/runByName/" + tName)
                         .success(function(data) {
                     var dispatchedTacticId = data.tacticInstId;
