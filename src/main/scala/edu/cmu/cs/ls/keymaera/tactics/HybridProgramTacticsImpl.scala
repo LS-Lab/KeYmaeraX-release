@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomTactic
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import PropositionalTacticsImpl.{hideT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,AndRightT}
-import TacticLibrary.{kModalModusPonensT,abstractionT,onBranch}
+import TacticLibrary.{kModalModusPonensT,abstractionT,onBranch,Generator}
 import SearchTacticsImpl.{locateSucc,locateAnte}
 
 import scala.collection.immutable.{List,Seq}
@@ -270,7 +270,7 @@ object HybridProgramTacticsImpl {
    * @param inv The invariant.
    * @return The position tactic.
    */
-  def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
+  protected[tactics] def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
     def getBody(g: Formula): Option[Program] = g match {
       case BoxModality(Loop(a), _) => Some(a)
       case _ => None
@@ -309,6 +309,27 @@ object HybridProgramTacticsImpl {
           }
         case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
       }
+    }
+  }
+
+  /**
+   * Induction tactic that generates an invariant using the specified generator.
+   * @param gen The invariant generator.
+   * @return The induction tactic.
+   */
+  protected[tactics] def genInductionT(gen: Generator[Formula]): PositionTactic = new PositionTactic("Generate Invariant") {
+    override def applies(s: Sequent, p: Position): Boolean = gen.peek(s, p) match {
+      case Some(inv) => inductionT(Some(inv)).applies(s, p)
+      case None => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = gen(node.sequent, p) match {
+        case Some(inv) => Some(inductionT(Some(inv))(p))
+        case None => None
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
 

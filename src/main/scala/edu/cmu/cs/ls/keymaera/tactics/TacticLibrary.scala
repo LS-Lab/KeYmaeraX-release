@@ -188,24 +188,6 @@ object TacticLibrary {
       Some(pt(SuccPosition(node.sequent.ante.length - 1)))
   }
 
-  def genInductionT(gen: Generator[Formula]): PositionTactic = new PositionTactic("Generate Invariant") {
-    override def applies(s: Sequent, p: Position): Boolean = gen.peek(s, p) match {
-      case Some(inv) => inductionT(Some(inv)).applies(s, p)
-      case None => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = gen(node.sequent, p) match {
-        case Some(inv) => Some(inductionT(Some(inv))(p))
-        case None => None
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-
-
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(_, _) => true
