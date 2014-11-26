@@ -175,21 +175,7 @@ object TacticLibrary {
       })
 
 
-  def lastSucc(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " succ.length - 1") {
-    override def applicable(node: ProofNode): Boolean =
-      pt.applies(node.sequent, SuccPosition(node.sequent.succ.length - 1))
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-      Some(pt(SuccPosition(node.sequent.succ.length - 1)))
-  }
-
-  def lastAnte(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " ante.length - 1") {
-    override def applicable(node: ProofNode): Boolean =
-      pt.applies(node.sequent, AntePosition(node.sequent.ante.length - 1))
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-      Some(pt(SuccPosition(node.sequent.ante.length - 1)))
-  }
 
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {

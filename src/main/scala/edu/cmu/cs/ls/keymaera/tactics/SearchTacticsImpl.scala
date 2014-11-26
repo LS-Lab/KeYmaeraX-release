@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyPositionTactic, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, ApplyPositionTactic, Tactic, PositionTactic}
 
 /**
  * Implementation of search tactics.
@@ -44,5 +44,31 @@ object SearchTacticsImpl {
       }
       None
     }
+  }
+
+  /**
+   * Applies a position tactic at the last position in the succedent.
+   * @param pt The position tactic.
+   * @return The new tactic to apply said position tactic at the last position.
+   */
+  protected[tactics] def lastSucc(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " succ.length - 1") {
+    override def applicable(node: ProofNode): Boolean =
+      pt.applies(node.sequent, SuccPosition(node.sequent.succ.length - 1))
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+      Some(pt(SuccPosition(node.sequent.succ.length - 1)))
+  }
+
+  /**
+   * Applies a position tactic at the last position in the antecedent.
+   * @param pt The position tactic.
+   * @return The new tactic to apply said position tactic at the last position.
+   */
+  protected[tactics] def lastAnte(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " ante.length - 1") {
+    override def applicable(node: ProofNode): Boolean =
+      pt.applies(node.sequent, AntePosition(node.sequent.ante.length - 1))
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+      Some(pt(SuccPosition(node.sequent.ante.length - 1)))
   }
 }
