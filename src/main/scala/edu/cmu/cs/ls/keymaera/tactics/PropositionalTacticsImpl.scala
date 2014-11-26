@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomTactic
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 

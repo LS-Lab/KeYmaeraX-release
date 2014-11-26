@@ -8,8 +8,9 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.{alphaRenamingT,axiomT}
+import TacticLibrary.alphaRenamingT
 import PropositionalTacticsImpl.uniformSubstT
+import AxiomTactic.axiomT
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Seq
