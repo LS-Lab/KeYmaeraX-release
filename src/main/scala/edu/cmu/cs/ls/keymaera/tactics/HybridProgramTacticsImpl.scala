@@ -7,8 +7,8 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomTactic
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import PropositionalTacticsImpl.{hideT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,AndRightT}
-import TacticLibrary.{kModalModusPonensT,abstractionT,onBranch,Generator}
-import SearchTacticsImpl.{locateSucc,locateAnte}
+import TacticLibrary.{kModalModusPonensT,abstractionT,Generator}
+import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
 
 import scala.collection.immutable.{List,Seq}
 

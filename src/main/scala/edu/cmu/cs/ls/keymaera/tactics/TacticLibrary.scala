@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaera.core.PosInExpr
 import EqualityRewritingImpl._
 import PropositionalTacticsImpl._
 import BuiltinHigherTactics._
+import SearchTacticsImpl.onBranch
 import BranchLabels._
 
 /**
@@ -135,47 +136,6 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
-
-
-
-  def onBranch(s: String, t: Tactic): Tactic = ifT(_.tacticInfo.infos.get("branchLabel") == Some(s), t)
-
-  /**
-   * used on line 236 to say "do equiv-r. On the left branch of that, do my
-   * branch1 tactic and on the right brance I want to follow branch2 as a tactic.
-   * 
-   * onBranch is used when you have a very specific tactic you only want to run
-   * on a branch where you know it will work. e.g. "I know that tacticX will work
-   * on the left side because it's exactly what we need, but tacticX is not useful
-   * anywhere else."
-   * 
-   * This could be useful for macro recording so that we can provide a concise
-   * proof script of what we did. That way this can be used on another proof where
-   * the exact proof steps might not be necessary but the tactic might be very
-   * useful.
-   * 
-   * Idea: tie together the interface that we had in KeYmaera with tactic writing
-   * (I have an idea what my proof will look like
-   */
-  def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic =
-    if(spec.isEmpty)
-     ifT(_.tacticInfo.infos.get("branchLabel") == Some(s1._1), s1._2)
-    else
-      switchT((pn: ProofNode) => {
-        pn.tacticInfo.infos.get("branchLabel") match {
-          case None => NilT
-          case Some(l) =>
-            val candidates = (s1 +: spec).filter((s: (String, Tactic)) => l == s._1)
-            if(candidates.isEmpty) NilT
-            else {
-              require(candidates.length == 1, "There should be a unique branch with label " + l + " however there are " + candidates.length + " containing " + candidates.map(_._1))
-              candidates.head._2
-            }
-        }
-      })
-
-
-
 
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {

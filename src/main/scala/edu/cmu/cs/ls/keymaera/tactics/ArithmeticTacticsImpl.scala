@@ -5,10 +5,10 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.{universalClosure,instantiateT,closeT,hideT,onBranch,CloseTrueT}
+import TacticLibrary.{universalClosure,instantiateT,closeT,hideT,CloseTrueT}
 import BuiltinHigherTactics.stepAt
 import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT}
-import SearchTacticsImpl.{locateAnte,locateSucc}
+import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 
 import scala.collection.immutable.{Set, Seq}
 
