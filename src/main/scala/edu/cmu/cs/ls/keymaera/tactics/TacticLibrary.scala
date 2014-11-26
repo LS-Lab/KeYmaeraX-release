@@ -56,6 +56,19 @@ object TacticLibrary {
   }
 
   /*******************************************************************
+   * Debug tactics
+   *******************************************************************/
+
+  def debugT(s: String): Tactic = new Tactic("Debug") {
+    override def applicable(node: ProofNode): Boolean = true
+
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      println("===== " + s + " ==== " + node.sequent + " =====")
+      continuation(this, Success, Seq(node))
+    }
+  }
+
+  /*******************************************************************
    * Major tactics
    *******************************************************************/
  
@@ -412,16 +425,6 @@ object TacticLibrary {
   // axiomatic version of assignment axiom assignaxiom
   def boxAssignT = HybridProgramTacticsImpl.boxAssignT
   def assignT = boxAssignT /*@TODO | diamondAssignT*/
-
-  def debugT(s: String): Tactic = new Tactic("Debug") {
-    override def applicable(node: ProofNode): Boolean = true
-
-    override def apply(tool: Tool, node: ProofNode): Unit = {
-      println("===== " + s + " ==== " + node.sequent + " =====")
-      continuation(this, Success, Seq(node))
-    }
-  }
-
   def boxTestT = HybridProgramTacticsImpl.boxTestT
   def boxNDetAssign = HybridProgramTacticsImpl.boxNDetAssign
   def boxSeqT = HybridProgramTacticsImpl.boxSeqT
