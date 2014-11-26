@@ -181,6 +181,7 @@ object PropositionalTacticsImpl {
     }
   }
 
+  protected[tactics] def cutT(f: Option[Formula]): Tactic = cutT((x: ProofNode) => f)
   protected[tactics] def cutT(g: (ProofNode => Option[Formula])): Tactic = new ConstructionTactic("Cut") {
     def applicable(pn: ProofNode): Boolean = g(pn) match {
       case Some(_) => true

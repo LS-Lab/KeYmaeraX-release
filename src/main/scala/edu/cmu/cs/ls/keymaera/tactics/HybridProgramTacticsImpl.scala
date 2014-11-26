@@ -2,8 +2,12 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomTactic
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+
+import PropositionalTacticsImpl.{hideT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,AndRightT}
+import TacticLibrary.{kModalModusPonensT,abstractionT,onBranch}
 
 import scala.collection.immutable.{List,Seq}
 
@@ -11,6 +15,11 @@ import scala.collection.immutable.{List,Seq}
  * Implementation of tactics for handling hybrid programs.
  */
 object HybridProgramTacticsImpl {
+
+  /** *******************************************
+    * Axiom Tactics
+    * *******************************************
+    */
 
   /**
    * Creates a new axiom tactic for box assignment [x := t;]
@@ -248,5 +257,57 @@ object HybridProgramTacticsImpl {
       case _ => None
     }
 
+  }
+
+  /** *******************************************
+    * Rule Tactics
+    * *******************************************
+    */
+
+  /**
+   *
+   * @param inv
+   * @return
+   */
+  def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
+    def getBody(g: Formula): Option[Program] = g match {
+      case BoxModality(Loop(a), _) => Some(a)
+      case _ => None
+    }
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) & (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
+        case Some(f) =>
+          val cutAPos = AntePosition(node.sequent.ante.length, HereP)
+          val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+              case x@BoxModality(a, _) =>
+                val cPos = AntePosition(node.sequent.ante.length)
+                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b2 = hideT(p)
+                Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
+              case _ => None
+            }
+            override def applicable(node: ProofNode): Boolean = true
+          }
+          val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
+          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) & hideT(cutSPos) & LabelBranch(indUseCaseLbl)
+          val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
+          val branch2Tactic = hideT(p) &
+            ImplyRightT(cutSPos) &
+            ind(cutSPos, hideT(cutAPos) & LabelBranch(indStepLbl)) &
+            onBranch(("Close Next", AxiomCloseT))
+          getBody(node.sequent(p)) match {
+            case Some(a) =>
+              Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+            case None => None
+          }
+        case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
+      }
+    }
   }
 }
