@@ -16,10 +16,9 @@ import scala.collection.immutable.{List,Seq}
  */
 object HybridProgramTacticsImpl {
 
-  /** *******************************************
-    * Axiom Tactics
-    * *******************************************
-    */
+  /*********************************************
+   * Axiom Tactics
+   *********************************************/
 
   /**
    * Creates a new axiom tactic for box assignment [x := t;]
@@ -259,10 +258,9 @@ object HybridProgramTacticsImpl {
 
   }
 
-  /** *******************************************
-    * Rule Tactics
-    * *******************************************
-    */
+  /*********************************************
+   * Rule Tactics
+   *********************************************/
 
   /**
    * Creates a new position tactic to apply the induction rule.

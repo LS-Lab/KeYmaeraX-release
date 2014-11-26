@@ -2,20 +2,14 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 // favoring immutable Seqs
 import scala.collection.immutable.Seq
-
 import scala.collection.immutable.List
-import scala.collection.immutable.Map
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
-import PropositionalTacticsImpl._
 import BuiltinHigherTactics._
-import SearchTacticsImpl.onBranch
-import BranchLabels._
 
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
@@ -32,7 +26,6 @@ object TacticLibrary {
       if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
     }
   }
-  import TacticHelper._
 
   /**
    * apply results in a formula to try.
@@ -113,17 +106,10 @@ object TacticLibrary {
    * Elementary tactics
    *******************************************************************/
 
-
-
   def universalClosure(f: Formula): Formula = {
     val vars = Helper.certainlyFreeNames(f)
     if(vars.isEmpty) f else Forall(vars.toList, f)
   }
-
-//  def deskolemize(f : Formula) = {
-//    val FV = SimpleExprRecursion.getFreeVariables(f)
-//    Forall(FV, f)
-//  }
 
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
@@ -137,10 +123,9 @@ object TacticLibrary {
     }
   }
 
-  /** *******************************************
-    * Basic Tactics
-    * *******************************************
-    */
+  /*********************************************
+   * Basic Tactics
+   *********************************************/
 
   def locateAnte(posT: PositionTactic) = SearchTacticsImpl.locateAnte(posT)
   def locateSucc(posT: PositionTactic) = SearchTacticsImpl.locateSucc(posT)
