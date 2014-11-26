@@ -446,7 +446,8 @@ object KeYmaeraInterface {
    * @param tacticId Identifies the tactic.
    */
   private def generateIds()(tId: String)(taskId: String, nId: Option[String], tacticId: String) {
-    getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId.toString) }, false) match {
+    getSubtree(taskId, nId, (p: ProofStepInfo) => { p.infos.get("tactic") == Some(tId.toString) },
+        printSequent = false) match {
       case Some(s) =>
         // s is JSON representation of proof node. This proof node gets an ID as a side effect of generating
         // the JSON representation. This is the result that we want. Nothing else to do.
