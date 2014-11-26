@@ -338,6 +338,7 @@ object HybridProgramTacticsImpl {
    * @return The assignment rule tactic.
    */
   protected[tactics] def assignment = new PositionTactic("Assignment") {
+    import FOQuantifierTacticsImpl.uniquify
     // for now only on top level
     override def applies(s: Sequent, p: Position): Boolean = {
       (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
@@ -347,7 +348,7 @@ object HybridProgramTacticsImpl {
       })
     }
 
-    override def apply(p: Position): Tactic = Tactics.weakSeqT(TacticLibrary.uniquify(p), new ApplyRule(new AssignmentRule(p)) {
+    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
       override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
     })
   }

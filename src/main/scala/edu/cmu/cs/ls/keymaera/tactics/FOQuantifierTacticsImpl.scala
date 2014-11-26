@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import TacticLibrary.{alphaRenamingT,uniformSubstT,axiomT}
 
@@ -137,5 +137,84 @@ object FOQuantifierTacticsImpl {
     override def apply(p: Position): Tactic = new ApplyRule(DecomposeQuantifiers(p)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
+  }
+
+  /**
+   * Creates a new tactic for skolemization.
+   * @return The skolemization tactic.
+   */
+  protected[tactics] def skolemizeT = new PositionTactic("Skolemize") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+      case Forall(_, _) => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(uniquify(p) ~ new ApplyRule(new Skolemize(p)) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        })
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  protected[tactics] val uniquify = new PositionTactic("Uniquify") {
+    // for now only on top level
+    def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
+      case Forall(v, _) => Some(v.map(_ match {
+        case Variable(n, i, _) => (n, i)
+        case _ => ???
+      }))
+      case Exists(v, _) => Some(v.map(_ match {
+        case Variable(n, i, _) => (n, i)
+        case _ => ???
+      }))
+      case BoxModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
+      case BoxModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
+      case DiamondModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
+      case DiamondModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
+      case a => None
+    }
+    override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getBoundVariables(s, p).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        getBoundVariables(node.sequent, p) match {
+          case Some(s) =>
+            var otherVars = (Helper.namesIgnoringPosition(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s)
+            val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
+              val vars = otherVars.filter(_._1 == n)
+              //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
+              // we do not have to rename if there are no name clashes
+              if (vars.size > 0) {
+                val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+                  case Some(a) => i match {
+                    case Some(b) => if (a < b) Some(b) else Some(a)
+                    case None => Some(a)
+                  }
+                  case None => i
+                })
+                val tIdx: Option[Int] = maxIdx match {
+                  case None => Some(0)
+                  case Some(a) => Some(a + 1)
+                }
+                otherVars = otherVars ++ Seq((n, tIdx))
+                Some(alphaRenamingT(n, idx, n, tIdx)(p))
+              } else {
+                None
+              }
+            }
+            val tactic = res.flatten.reduceRight(seqT)
+            Some(tactic)
+          case None => None
+        }
+      }
+    }
+
   }
 }

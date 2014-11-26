@@ -13,10 +13,10 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
-import EqualityRewritingImpl._
 import PropositionalTacticsImpl._
 import BuiltinHigherTactics._
 import SearchTacticsImpl.onBranch
+import FOQuantifierTacticsImpl.skolemizeT
 import BranchLabels._
 
 /**
@@ -161,6 +161,10 @@ object TacticLibrary {
    * tactic locating an succedent or antecedent position where PositionTactic is applicable.
    */
   def locateSuccAnte(posT: PositionTactic): Tactic = locateSucc(posT) | locateAnte(posT)
+
+  /*********************************************
+   * Propositional Tactics
+   *********************************************/
 
   def AndLeftT = PropositionalTacticsImpl.AndLeftT
   def AndRightT = PropositionalTacticsImpl.AndRightT
@@ -330,6 +334,10 @@ object TacticLibrary {
 
   }
 
+  /*********************************************
+   * Equality Rewriting Tactics
+   *********************************************/
+
   def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true) =
     EqualityRewritingImpl.equalityRewriting(eqPos, p, checkDisjoint)
   def equalityRewritingLeft(eqPos: Position) = EqualityRewritingImpl.equalityRewritingLeft(eqPos)
@@ -337,62 +345,15 @@ object TacticLibrary {
   def eqLeft(exhaustive: Boolean) = EqualityRewritingImpl.eqLeft(exhaustive)
   def eqRight(exhaustive: Boolean) = EqualityRewritingImpl.eqLeft(exhaustive)
 
-  val uniquify = new PositionTactic("Uniquify") {
-    // for now only on top level
-    def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
-        case Forall(v, _) => Some(v.map(_ match {
-          case Variable(n, i, _) => (n, i)
-          case _ => ???
-        }))
-        case Exists(v, _) => Some(v.map(_ match {
-          case Variable(n, i, _) => (n, i)
-          case _ => ???
-        }))
-        case BoxModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
-        case BoxModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
-        case DiamondModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
-        case DiamondModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
-        case a => None
-      }
-    override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getBoundVariables(s, p).isDefined
+  /*********************************************
+   * First-Order Quantifier Tactics
+   *********************************************/
 
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+  def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        getBoundVariables(node.sequent, p) match {
-          case Some(s) =>
-            var otherVars = (Helper.namesIgnoringPosition(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s)
-            val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
-              val vars = otherVars.filter(_._1 == n)
-              //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
-              // we do not have to rename if there are no name clashes
-              if (vars.size > 0) {
-                val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
-                  case Some(a) => i match {
-                    case Some(b) => if (a < b) Some(b) else Some(a)
-                    case None => Some(a)
-                  }
-                  case None => i
-                })
-                val tIdx: Option[Int] = maxIdx match {
-                  case None => Some(0)
-                  case Some(a) => Some(a + 1)
-                }
-                otherVars = otherVars ++ Seq((n, tIdx))
-                Some(alphaRenamingT(n, idx, n, tIdx)(p))
-              } else {
-                None
-              }
-            }
-            val tactic = res.flatten.reduceRight(seqT)
-            Some(tactic)
-          case None => None
-        }
-      }
-    }
-
-  }
+  /*********************************************
+   * Hybrid Program Tactics
+   *********************************************/
 
   // TODO replace this with the assignment axiom tactic
   def assignment = HybridProgramTacticsImpl.assignment
@@ -413,9 +374,9 @@ object TacticLibrary {
     new PositionTactic("Alpha Renaming") {
       override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicablity
 
-      override def apply(p: Position): Tactic = (new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
+      override def apply(p: Position): Tactic = new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
         override def applicable(node: ProofNode): Boolean = true
-        } & hideT(p.topLevel))
+        } & hideT(p.topLevel)
   }
 
 
@@ -442,25 +403,9 @@ object TacticLibrary {
     }
   }
 
-
-
-  def skolemizeT = new PositionTactic("Skolemize") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case Forall(_, _) => true
-      case _ => false
-    })
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(uniquify(p) ~ new ApplyRule(new Skolemize(p)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        })
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
+  /*********************************************
+   * Differential Tactics
+   *********************************************/
 
   def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with " + h.prettyString()) {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {

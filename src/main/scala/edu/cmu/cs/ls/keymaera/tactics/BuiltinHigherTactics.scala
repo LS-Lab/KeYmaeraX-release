@@ -26,6 +26,7 @@ object BuiltinHigherTactics {
     override def applies(s: Sequent, p: Position): Boolean = getTactic(s, p).isDefined
 
     def getTactic(s: Sequent, p: Position): Option[Tactic] = {
+      import FOQuantifierTacticsImpl.skolemizeT
       val f = getFormula(s, p)
       val res = f match {
         case Not(_) => if(p.isAnte) Some(NotLeftT(p)) else Some(NotRightT(p))
