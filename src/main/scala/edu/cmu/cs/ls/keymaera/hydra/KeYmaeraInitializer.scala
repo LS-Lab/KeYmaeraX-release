@@ -16,6 +16,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, TacticLibrary.default)
     initTactic("keymaera.defaultNoArith", "TacticLibrary.defaultNoArith", TacticKind.Tactic, TacticLibrary.defaultNoArith)
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
+    initTactic("keymaera.propositional", "TacticLibrary.propositional", TacticKind.Tactic, TacticLibrary.propositional)
 
     initTactic("dl.and-left", "TacticLibrary.AndLeftT", TacticKind.PositionTactic, TacticLibrary.AndLeftT)
     initTactic("dl.and-right", "TacticLibrary.AndRightT", TacticKind.PositionTactic, TacticLibrary.AndRightT)
