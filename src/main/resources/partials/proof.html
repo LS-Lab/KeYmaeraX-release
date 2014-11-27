@@ -48,7 +48,11 @@
                         </span>
 
                         <span ng-show="!node.editing" >
-                            <span ng-click="click(this)">{{node.label}}</span>
+                            <span ng-click="click(this)">
+                                <!-- Underline iff  selected. todo better indications. todo pre-select. -->
+                                <span ng-if="node.selected"><u>{{node.label}}</u></span>
+                                <span ng-if="!node.selected">{{node.label}}</span>
+                            </span>
                              <a href="" class="btn btn-primary btn-xs pull-right" nodrag ng-click="editLabel(node)"><i class="fa fa-pencil"></i></a>
                         </span>
                         <span class="group-title angular-ui-tree-handle" nodrag ng-show="node.editing">

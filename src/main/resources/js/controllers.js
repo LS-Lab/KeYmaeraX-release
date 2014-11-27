@@ -458,6 +458,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 //select agenda item. The sequent view listens to the agenda.
                 $scope.setSelected(task);
                 isAgendaItem = true;
+                scope.node.selected = true;
                 break;
             }
         }
@@ -470,6 +471,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                         "enabled" : false
                     };
                     $scope.setSelected(task);
+                    scope.node.selected = true;
                 })
                 .error(function() {
                     var msg = "Error: this proof is not on the Agenda and the server could not find it.";
