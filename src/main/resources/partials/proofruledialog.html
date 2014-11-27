@@ -21,8 +21,8 @@
                         <span class="sr-only">Toggle Dropdown</span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                        <li><a href="#" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>
-                        <li><a href="#" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Saturate</a></li>
+                        <li><a type="button" class="btn" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>
+                        <li><a type="button" class="btn" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Saturate</a></li>
                     </ul>
                 </div>
                 <div ng-if="t.input" class="input-group" ng-repeat="i in t.input">
