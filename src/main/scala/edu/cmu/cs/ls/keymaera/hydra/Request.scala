@@ -246,13 +246,21 @@ class RunTacticByNameRequest(db : DBAbstraction, userId : String, proofId : Stri
  * @param nodeId Identifies the node. If None, the tactic is run on the "root" node of the task.
  * @param formulaId Identifies the formula in the sequent on which to apply the tactic.
  * @param tacticId Identifies the tactic to run.
+ * @param input The input to the tactic.
+ * @param auto Indicates the degree of automation for position tactics. Ignored if formulaId != None.
+ * @see KeYmaeraInterface.PositionTacticAutomation for valid values of auto
  */
 class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String],
-                       formulaId : Option[String], tacticId : String, input : Map[Int,String]) extends Request {
+                       formulaId : Option[String], tacticId : String, input : Map[Int,String],
+                       auto: Option[String] = None) extends Request {
   def getResultingResponses() = {
     val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, DispatchedTacticStatus.Prepared)
+    val automation = auto match {
+      case Some(s) => KeYmaeraInterface.PositionTacticAutomation.withName(s.toLowerCase)
+      case _ => KeYmaeraInterface.PositionTacticAutomation.None
+    }
     KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-      Some(tacticCompleted(db)), input)
+      Some(tacticCompleted(db)), input, automation)
     db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input,
       DispatchedTacticStatus.Running))
     new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input,

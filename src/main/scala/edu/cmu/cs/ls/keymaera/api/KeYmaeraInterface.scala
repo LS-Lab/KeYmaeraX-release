@@ -1,10 +1,11 @@
 package edu.cmu.cs.ls.keymaera.api
 
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement.TaskStatus
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
-import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.core.Sequent
 
 import scala.reflect.runtime.universe.{TypeTag,typeTag}
@@ -20,6 +21,21 @@ import scala.reflect.runtime.universe.{TypeTag,typeTag}
  * Created by jdq on 6/12/14.
  */
 object KeYmaeraInterface {
+
+  /**
+   * Indicates the degree of automation in applying position tactics.
+   */
+  object PositionTacticAutomation extends Enumeration {
+    type PositionTacticAutomation = Value
+    val None = Value("none")
+    val FindAnte = Value("findante")
+    val FindSucc = Value("findsucc")
+    val FindAll = Value("findall")
+    val SaturateAnte = Value("saturateante")
+    val SaturateSucc = Value("saturatesucc")
+    val SaturateAll = Value("saturateall")
+    val SaturateCurrent = Value("saturatecurrent")
+  }
 
   object TaskManagement {
     object TaskStatus extends Enumeration {
@@ -321,24 +337,36 @@ object KeYmaeraInterface {
    * @param tId the ID of the dispatched tactic instance
    * @param callback callback executed when the tactic finishes
    * @param input the input in case tacticId refers to an input tactic
+   * @param auto The degree of automation in applying the tactic
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
                 callback: Option[String => ((String, Option[String], String) => Unit)] = None,
-                input: Map[Int,String] = Map.empty) = {
+                input: Map[Int,String] = Map.empty, auto: PositionTacticAutomation = PositionTacticAutomation.None) = {
+    import TacticLibrary.{locateAnte,locateSucc,locate}
+    import Tactics.repeatT
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>
-        TacticManagement.getPositionTactic(tacticId) match {
-          case Some(t) => Some(t(p))
-          case None => TacticManagement.getInputPositionTactic(tacticId, input) match {
-            case Some(t) => Some(t(p))
-            case None => None
-          }
+        auto match {
+          case PositionTacticAutomation.None => findPositionTactic(tacticId, input, t => t(p))
+          case PositionTacticAutomation.SaturateCurrent => findPositionTactic(tacticId, input, t => repeatT(t(p)))
+          case t => throw new IllegalArgumentException("Automation " + t + " only possible without specific formula position")
         }
-      case None => TacticManagement.getTactic(tacticId) match {
-        case Some(t) => Some(t)
-        case None => TacticManagement.getInputTactic(tacticId, input)
-      }
+      case None =>
+        auto match {
+          case PositionTacticAutomation.None => TacticManagement.getTactic(tacticId) match {
+            case Some(t) => Some(t)
+            case None => TacticManagement.getInputTactic(tacticId, input)
+          }
+          case PositionTacticAutomation.FindAnte => findPositionTactic(tacticId, input, t => locateAnte(t))
+          case PositionTacticAutomation.FindSucc => findPositionTactic(tacticId, input, t => locateSucc(t))
+          case PositionTacticAutomation.FindAll => findPositionTactic(tacticId, input, t => locate(t))
+          case PositionTacticAutomation.SaturateAnte => findPositionTactic(tacticId, input, t => repeatT(locateAnte(t)))
+          case PositionTacticAutomation.SaturateSucc => findPositionTactic(tacticId, input, t => repeatT(locateSucc(t)))
+          case PositionTacticAutomation.SaturateAll => findPositionTactic(tacticId, input, t => repeatT(locateAnte(t))
+            ~ repeatT(locateSucc(t)))
+          case t => throw new IllegalArgumentException("Automation " + t + " only possible with formula position")
+        }
     }
     tactic match {
       case Some(t) =>
@@ -473,5 +501,22 @@ object KeYmaeraInterface {
   private def getActualNode(taskId : String, nodeIdOpt : Option[String]) : Option[ProofNode] = nodeIdOpt match {
     case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
     case None         => TaskManagement.getRoot(taskId)
+  }
+
+  /**
+   * Finds the tactic with the specified ID. This tactic can be either a position tactic or an input position tactic,
+   * and might be repeated or automatically applied.
+   * @param tacticId The ID of the position tactic.
+   * @param input The input to said position tactic, may be empty.
+   * @param tGen Generates the actual tactic.
+   * @return The tactic.
+   */
+  private def findPositionTactic(tacticId: String, input: Map[Int,String], tGen : PositionTactic => Tactic):
+  Option[Tactic] = TacticManagement.getPositionTactic(tacticId) match {
+    case Some(t) => Some(tGen(t))
+    case None => TacticManagement.getInputPositionTactic(tacticId, input) match {
+      case Some(t) => Some(tGen(t))
+      case None => None
+    }
   }
 }

@@ -12,7 +12,7 @@
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span> Step</a></li>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="glyphicon glyphicon-eye-close"></span> Hide</a></li>
             </ul>
-            <div class="k4-formula-content" ng-click="handleFormulaClick(f)">
+            <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
                 <k4-formula formula="f.formula" highlight="true"></k4-formula>
             </div>
         </div>
@@ -52,7 +52,7 @@
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span> Step</a></li>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="glyphicon glyphicon-eye-close"></span> Hide</a></li>
             </ul>
-            <div class="k4-formula-content" ng-click="handleFormulaClick(f)">
+            <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">
                 <k4-formula formula="f.formula" highlight="true"></k4-formula>
             </div>
         </div>

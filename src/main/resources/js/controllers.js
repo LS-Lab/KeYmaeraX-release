@@ -526,15 +526,17 @@ keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('ProofRuleDialogCtrl',
-        function ($scope, $http, $cookies, $modalInstance, proofId, nodeId, formula, Tactics) {
+        function ($scope, $http, $cookies, $modalInstance, proofId, nodeId, formula, isAnte, Tactics) {
   $scope.proofId = proofId;
   $scope.nodeId = nodeId;
   $scope.formula = formula;
+  $scope.isAnte = isAnte;
   $scope.ruleTactics = [];
   $scope.userTactics = [];
 
   var fId = ((formula !== undefined) ? formula.id : "sequent")
   var uri = 'proofs/user/' + $cookies.userId + '/' + proofId + '/nodes/' + nodeId + '/formulas/' + fId + '/tactics'
+
   $http.get(uri).success(function(data) {
       $scope.ruleTactics = [];
       $scope.userTactics = [];
@@ -559,34 +561,36 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
       }
   });
 
-  $scope.applyTactics = function(t) {
-    var inputParams = {}
-    if (t.input !== undefined) {
-        for (i = 0; i < t.input.length; ++i) {
-            inputParams[t.input[i].name] = t.input[i].value
+  var internalApplyTactics = function(t, uriPostfix, saturate) {
+        var inputParams = {}
+        if (t.input !== undefined) {
+            for (i = 0; i < t.input.length; ++i) {
+                inputParams[t.input[i].name] = t.input[i].value
+            }
         }
+        var saturateWhere = saturate ? '/' + ($scope.formula !== undefined ? 'saturateCurrent'
+                                                                           : (isAnte ? "saturateAnte" : "saturateSucc"))
+                                     : '';
+        $http.post(uri + '/' + uriPostfix + saturateWhere, inputParams).success(function(data) {
+            var dispatchedTacticId = data.tacticInstId;
+            $modalInstance.close(dispatchedTacticId);
+            Tactics.addDispatchedTactics(dispatchedTacticId);
+            Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
+        });
     }
-    $http.post(uri + "/run/" + t.id, inputParams).success(function(data) {
-        var dispatchedTacticId = data.tacticInstId;
-        $modalInstance.close(dispatchedTacticId);
-        Tactics.addDispatchedTactics(dispatchedTacticId);
-        Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
-    });
+
+  $scope.applyTactics = function(t) {
+    internalApplyTactics(t, 'run/' + t.id, false)
   }
   $scope.applyTacticsByName = function(tName) {
-      var inputParams = {}
-      if (t.input !== undefined) {
-          for (i = 0; i < t.input.length; ++i) {
-              inputParams[t.input[i].name] = t.input[i].value
-          }
-      }
-      $http.post(uri + "/runByName/" + tName, inputParams).success(function(data) {
-          var dispatchedTacticId = data.tacticInstId;
-          $modalInstance.close(dispatchedTacticId);
-          Tactics.addDispatchedTactics(dispatchedTacticId);
-          Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTactics(dispatchedTacticId);
-      });
-    }
+    internalApplyTactics(t, 'runByName/' + tName, false)
+  }
+  $scope.applyTacticsFF = function(t) {
+    internalApplyTactics(t, 'run/' + t.id, true)
+  }
+  $scope.applyTacticsByNameFF = function(tName) {
+    internalApplyTactics(t, 'runByName/' + tName, true)
+  }
 
   $scope.cancel = function () {
     $modalInstance.dismiss('cancel');

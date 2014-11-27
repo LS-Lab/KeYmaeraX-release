@@ -16,14 +16,14 @@
                         <span k4-mathjaxbind="t.label"></span>
                     </a>
                     <!-- TODO Not yet implemented -->
-                    <!--<a type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">-->
-                        <!--<span class="caret"></span>-->
-                        <!--<span class="sr-only">Toggle Dropdown</span>-->
-                    <!--</a>-->
-                    <!--<ul class="dropdown-menu dropdown-menu-right" role="menu">-->
-                        <!--<li><a href="#" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>-->
-                        <!--<li><a href="#" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Repeatedly</a></li>-->
-                    <!--</ul>-->
+                    <a type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                        <li><a href="#" ng-click="applyTactics(t)"><span class="glyphicon glyphicon-step-forward"></span> Once</a></li>
+                        <li><a href="#" ng-click="applyTacticsFF(t)"><span class="glyphicon glyphicon-fast-forward"></span> Saturate</a></li>
+                    </ul>
                 </div>
                 <div ng-if="t.input" class="input-group" ng-repeat="i in t.input">
                     <span class="input-group-addon" k4-mathjaxbind="i.label"></span>

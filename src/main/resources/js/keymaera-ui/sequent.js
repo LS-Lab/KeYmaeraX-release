@@ -9,7 +9,7 @@ angular.module('sequent', ['ngSanitize','formula'])
         },
         controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
             // TODO should issue events other controllers can subscribe to
-            $scope.handleFormulaClick = function(f) {
+            $scope.handleFormulaClick = function(f,isAnte) {
                 var modalInstance = $modal.open({
                   templateUrl: 'partials/proofruledialog.html',
                   controller: 'ProofRuleDialogCtrl',
@@ -17,7 +17,8 @@ angular.module('sequent', ['ngSanitize','formula'])
                   resolve: {
                     proofId: function() { return $scope.proofId; },
                     nodeId: function() { return $scope.nodeId; },
-                    formula: function() { return f; }
+                    formula: function() { return f; },
+                    isAnte: function() { return isAnte; }
                   }
                 });
             };
