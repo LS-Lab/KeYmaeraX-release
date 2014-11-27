@@ -27,7 +27,6 @@ object KeYmaeraInterface {
    */
   object PositionTacticAutomation extends Enumeration {
     type PositionTacticAutomation = Value
-    val None = Value("none")
     val FindAnte = Value("findante")
     val FindSucc = Value("findsucc")
     val FindAll = Value("findall")
@@ -341,31 +340,34 @@ object KeYmaeraInterface {
    */
   def runTactic(taskId: String, nodeId: Option[String], tacticId: String, formulaId: Option[String], tId: String,
                 callback: Option[String => ((String, Option[String], String) => Unit)] = None,
-                input: Map[Int,String] = Map.empty, auto: PositionTacticAutomation = PositionTacticAutomation.None) = {
+                input: Map[Int,String] = Map.empty, auto: Option[PositionTacticAutomation] = None) = {
     import TacticLibrary.{locateAnte,locateSucc,locate}
     import Tactics.repeatT
     val (node,position) = getPosition(taskId, nodeId, formulaId)
     val tactic = position match {
       case Some(p) =>
         auto match {
-          case PositionTacticAutomation.None => findPositionTactic(tacticId, input, t => t(p))
-          case PositionTacticAutomation.SaturateCurrent => findPositionTactic(tacticId, input, t => repeatT(t(p)))
-          case t => throw new IllegalArgumentException("Automation " + t + " only possible without specific formula position")
+          case None => findPositionTactic(tacticId, input, t => t(p))
+          case Some(PositionTacticAutomation.SaturateCurrent) =>
+            findPositionTactic(tacticId, input, t => repeatT(t(p)))
+          case t => throw new IllegalArgumentException("Automation " + t + " not allowed on specific formula")
         }
       case None =>
         auto match {
-          case PositionTacticAutomation.None => TacticManagement.getTactic(tacticId) match {
+          case None => TacticManagement.getTactic(tacticId) match {
             case Some(t) => Some(t)
             case None => TacticManagement.getInputTactic(tacticId, input)
           }
-          case PositionTacticAutomation.FindAnte => findPositionTactic(tacticId, input, t => locateAnte(t))
-          case PositionTacticAutomation.FindSucc => findPositionTactic(tacticId, input, t => locateSucc(t))
-          case PositionTacticAutomation.FindAll => findPositionTactic(tacticId, input, t => locate(t))
-          case PositionTacticAutomation.SaturateAnte => findPositionTactic(tacticId, input, t => repeatT(locateAnte(t)))
-          case PositionTacticAutomation.SaturateSucc => findPositionTactic(tacticId, input, t => repeatT(locateSucc(t)))
-          case PositionTacticAutomation.SaturateAll => findPositionTactic(tacticId, input, t => repeatT(locateAnte(t))
-            ~ repeatT(locateSucc(t)))
-          case t => throw new IllegalArgumentException("Automation " + t + " only possible with formula position")
+          case Some(PositionTacticAutomation.FindAnte) => findPositionTactic(tacticId, input, t => locateAnte(t))
+          case Some(PositionTacticAutomation.FindSucc) => findPositionTactic(tacticId, input, t => locateSucc(t))
+          case Some(PositionTacticAutomation.FindAll) => findPositionTactic(tacticId, input, t => locate(t))
+          case Some(PositionTacticAutomation.SaturateAnte) =>
+            findPositionTactic(tacticId, input, t => repeatT(locateAnte(t)))
+          case Some(PositionTacticAutomation.SaturateSucc) =>
+            findPositionTactic(tacticId, input, t => repeatT(locateSucc(t)))
+          case Some(PositionTacticAutomation.SaturateAll) =>
+            findPositionTactic(tacticId, input, t => repeatT(locateAnte(t)) ~ repeatT(locateSucc(t)))
+          case t => throw new IllegalArgumentException("Automation " + t + " only allowed with formula position")
         }
     }
     tactic match {

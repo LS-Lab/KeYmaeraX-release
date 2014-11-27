@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
 import com.mongodb.casbah.Imports._
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
 import org.bson.types.ObjectId
 
 import scala.collection.mutable.ListBuffer
@@ -239,6 +240,7 @@ object MongoDB extends DBAbstraction {
 
   override def createDispatchedTactics(proofId: String, nodeId: Option[String], formulaId: Option[String],
                                        tacticsId: String, input: Map[Int,String],
+                                       auto: Option[PositionTacticAutomation.Value],
                                        status: DispatchedTacticStatus.Value): String = {
     var fields = ListBuffer(
       "proofId"   -> proofId,
@@ -247,6 +249,7 @@ object MongoDB extends DBAbstraction {
       "input"     -> input.map({ case (k,v) => (k.toString, v) }))
     if (nodeId.isDefined) { fields.append("nodeId" -> nodeId.get) }
     if (formulaId.isDefined) { fields.append("formulaId" -> formulaId.get) }
+    if (auto.isDefined) { fields.append("auto" -> auto.toString) }
 
     val query = MongoDBObject(fields.toList)
     dispatchedTactics.insert(query)
@@ -264,6 +267,8 @@ object MongoDB extends DBAbstraction {
       if (result.containsField("formulaId")) Some(result.getAs[String]("formulaId").get) else None,
       result.getAs[String]("tacticsId").getOrElse(""),
       result.getAs[Map[String,String]]("input").get.map({ case (k,v) => (k.toInt, v) }),
+      if (result.containsField("auto")) Some(PositionTacticAutomation.withName(result.getAs[String]("auto").get))
+      else None,
       DispatchedTacticStatus.withName(result.getAs[String]("status").getOrElse(""))
     )).toList.head
     Some(result)
@@ -276,6 +281,7 @@ object MongoDB extends DBAbstraction {
       "input"        -> tactic.input.map({ case (k,v) => (k.toString, v) }))
     if (tactic.nodeId.isDefined) { fields.append("nodeId" -> tactic.nodeId.get) }
     if (tactic.formulaId.isDefined) { fields.append("formulaId" -> tactic.formulaId.get) }
+    if (tactic.auto.isDefined) { fields.append("auto" -> tactic.auto.get.toString) }
 
     val update = MongoDBObject(fields.toList)
     dispatchedTactics.update(MongoDBObject("_id" -> new ObjectId(tactic.id)), update)

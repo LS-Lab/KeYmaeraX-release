@@ -1,5 +1,8 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
+
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
 object TacticKind extends Enumeration {
   type TacticKind = Value
@@ -52,7 +55,8 @@ class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kin
  * @param tacticsId Identifies the tactic that is being run.
  */
 class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
-                           val tacticsId:String, val input:Map[Int,String], val status:DispatchedTacticStatus.Value)
+                           val tacticsId:String, val input:Map[Int,String],
+                           val auto:Option[PositionTacticAutomation.Value], val status:DispatchedTacticStatus.Value)
 
 //tasks : _id, model
 //tactics: _id, name, class
@@ -96,7 +100,8 @@ trait DBAbstraction {
   def getTacticByName(name: String) : Option[TacticPOJO]
   def getTactics : List[TacticPOJO]
   def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                              input:Map[Int, String], status:DispatchedTacticStatus.Value) : String
+                              input:Map[Int, String], auto: Option[PositionTacticAutomation.Value],
+                              status:DispatchedTacticStatus.Value) : String
   def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
   def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
 }

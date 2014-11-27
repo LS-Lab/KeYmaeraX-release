@@ -149,7 +149,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
       if (steps.nonEmpty) {
         val firstStep = steps.head
         KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-          firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input)
+          firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
       }
     }
 
@@ -163,7 +163,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
     if (next < steps.length) {
       val nextStep = steps(next)
       KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
-        Some(tacticCompleted(steps, next + 1)), nextStep.input)
+        Some(tacticCompleted(steps, next + 1)), nextStep.input, nextStep.auto)
     }
   }
 }
@@ -254,16 +254,16 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
                        formulaId : Option[String], tacticId : String, input : Map[Int,String],
                        auto: Option[String] = None) extends Request {
   def getResultingResponses() = {
-    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, DispatchedTacticStatus.Prepared)
     val automation = auto match {
-      case Some(s) => KeYmaeraInterface.PositionTacticAutomation.withName(s.toLowerCase)
-      case _ => KeYmaeraInterface.PositionTacticAutomation.None
+      case Some(s) => Some(KeYmaeraInterface.PositionTacticAutomation.withName(s.toLowerCase))
+      case _ => None
     }
+    val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
     KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
       Some(tacticCompleted(db)), input, automation)
-    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input,
+    db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running))
-    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input,
+    new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running)) :: Nil
   }
 
@@ -281,6 +281,7 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
       finishedTactic.formulaId,
       finishedTactic.tacticsId,
       finishedTactic.input,
+      finishedTactic.auto,
       DispatchedTacticStatus.Finished
     ))
     val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
