@@ -335,16 +335,8 @@ class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[Strin
     // TODO fetch only one branch, need to refactor UI for this
     val node = KeYmaeraInterface.getSubtree(proofId, nodeId, 0, true)
     node match {
-      case Some(theNode) => {
-        //        val schema = JsonSchemaFactory.byDefault().getJsonSchema(JsonLoader.fromReader(new FileReader("src/main/resources/js/schema/prooftree.js")))
-        //        val report = schema.validate(JsonLoader.fromString(theNode))
-        //        if (report.isSuccess)
-        new NodeResponse(theNode) :: Nil
-        //        else {
-        //          throw new Exception("json schema violation.")
-        //        }
-      }
-      case None          => { new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil }
+      case Some(theNode) => new NodeResponse(theNode) :: Nil
+      case None => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
     }
   }
 }

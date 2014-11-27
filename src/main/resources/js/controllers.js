@@ -21,6 +21,9 @@ keymaeraProofControllers.factory('Models', function () {
     };
 });
 
+/**
+ * Definition of Agenda
+ */
 keymaeraProofControllers.factory('Agenda', function () {
 
     /**
@@ -434,29 +437,46 @@ keymaeraProofControllers.controller('TaskListCtrl',
     }
 
     // Label editing controllers.
-    // Following the example at https://github.com/JimLiu/angular-ui-tree/blob/master/demo/js/groups.js
+
+    //
+    /**
+     * Update the sequent view when a node of the proof tree is clicked.
+     *
+     * When the node is an open node, it's associated with an agenda item (which has a sequent).
+     * Otherwise, we need to construct a new task (not in the agenda).
+     *
+     * Following the example at https://github.com/JimLiu/angular-ui-tree/blob/master/demo/js/groups.js
+     * $scope is the controller scope while scope is the tree scope. See UI Tree documentation.
+     */
     $scope.click = function(scope) {
         var selectedNode = scope.$modelValue
 
-        //todo -- load sequent.
-        $http.get("/proofs/" + $scope.proofId + "/sequent/" + selectedNode.id)
-            .success(function(node) {
-                var found = false;
-                for(var i = 0 ; i < Agenda.getTasks().length; i++) {
-                    var task = Agenda.getTasks()[i]
-                    if(task.nodeId === selectedNode.id) {
-                        Agenda.setSelectedTask(task);
-                        found = true;
-                        break;
-                    }
-                }
-                if(!found) {
-                    var idList = JSON.stringify(
-                        Agenda.getTasks().map(function(x) { return x.nodeId })
-                    )
-                    alert("TODO -- what to do when there is no task associated with this node (" + selectedNode.id + ") in: " + idList)
-                }
-            });
+        var isAgendaItem = false;
+        for(var i = 0 ; i < Agenda.getTasks().length; i++) {
+            var task = Agenda.getTasks()[i]
+            if(task.nodeId === selectedNode.id) {
+                //select agenda item. The sequent view listens to the agenda.
+                $scope.setSelected(task);
+                isAgendaItem = true;
+                break;
+            }
+        }
+        if(!isAgendaItem) {
+            $http.get("/proofs/" + $scope.proofId + "/sequent/" + selectedNode.id)
+                .success(function(proofNode) {
+                    //Todo -- figure out what else has to go in the task object.
+                    var task = {
+                        "proofNode" : proofNode,
+                        "enabled" : false
+                    };
+                    $scope.setSelected(task);
+                })
+                .error(function() {
+                    var msg = "Error: this proof is not on the Agenda and the server could not find it.";
+                    alert(msg);
+                    console.error(msg);
+                })
+        }
     }
 
     $scope.editLabel = function(node) {
