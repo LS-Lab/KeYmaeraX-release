@@ -9,8 +9,8 @@
         <!--<td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>-->
         <div class="col-md-11 k4-formula k4-flexcell">
             <ul>
-                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span> Step</a></li>
-                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="glyphicon glyphicon-eye-close"></span> Hide</a></li>
+                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="fa fa-step-forward"></span> Step</a></li>
+                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
             <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
                 <k4-formula formula="f.formula" highlight="true"></k4-formula>
@@ -27,11 +27,16 @@
     </div>
     <div class="col-md-11 k4-formula k4-flexcell">
         <ul>
-            <li><a href="" ng-click="applyTacticsByName('keymaera.default')"><span class="glyphicon glyphicon-forward"></span> All</a></li>
-            <li><a href="" ng-click="applyTacticsByName('keymaera.defaultNoArith')"><span class="glyphicon glyphicon-forward"></span> w/o Arithmetic</a></li>
-            <li><a href="" ng-click="applyTacticsByName('keymaera.propositional')"><span class="glyphicon glyphicon-forward"></span> Propositional</a></li>
-            <li><a href="" ng-click="applyTacticsByName('keymaera.arithmetic')"><span class="glyphicon glyphicon-forward"></span> Arithmetic</a></li>
-            <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaera.cut')"><span class="glyphicon glyphicon-pencil"></span> Cut</a></li>-->
+            <li><a href="" ng-click="applyTacticsByName('keymaera.default')"><i class="fa fa-magic"></i> Auto</a></li>
+            <li><a href="" ng-click="applyTacticsByName('keymaera.propositional')"><i class="fa fa-forward"></i> Propositional</a></li>
+            <li><a href="" ng-click="applyTacticsByName('keymaera.arithmetic')"><i class="fa fa-calculator"></i> Arithmetic</a></li>
+            <li><a href="" ng-click="applyTacticsByName('keymaera.defaultNoArith')">
+                <span class="fa-stack">
+                    <i class="fa fa-calculator fa-stack-1x"></i>
+                    <i class="fa fa-ban fa-stack-2x"></i>
+                </span> w/o Arith.</a>
+            </li>
+            <!--<li><a href="" ng-click="applyTacticsByName(f,'keymaera.cut')"><span class="fa fa-pencil"></span> Cut</a></li>-->
         </ul>
         <div class="k4-formula-content">
             <a type="button" class="btn" ng-click="handleTurnstileClick()">&#8866;</a>
@@ -49,8 +54,8 @@
         </div>
         <div class="col-md-11 k4-formula k4-flexcell">
             <ul>
-                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="glyphicon glyphicon-step-forward"></span> Step</a></li>
-                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="glyphicon glyphicon-eye-close"></span> Hide</a></li>
+                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="fa fa-step-forward"></span> Step</a></li>
+                <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
             <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">
                 <k4-formula formula="f.formula" highlight="true"></k4-formula>

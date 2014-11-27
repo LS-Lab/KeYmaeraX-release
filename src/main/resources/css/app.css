@@ -77,27 +77,6 @@ table .btn{
   text-align: center;
 }
 
-.glyphicon-refresh-animate {
-    -animation: k4-spin 700ms infinite linear;
-    -webkit-animation: k4-spin2 700ms infinite linear;
-    -moz-animation: k4-spin3 .7s infinite linear;
-}
-
-@-webkit-keyframes k4-spin2 {
-    from { -webkit-transform: rotate(0deg);}
-    to { -webkit-transform: rotate(360deg);}
-}
-
-@keyframes k4-spin {
-    from { transform: scale(1) rotate(0deg);}
-    to { transform: scale(1) rotate(360deg);}
-}
-
-@-moz-keyframes k4-spin3 {
-  from { -moz-transform: scale(1) rotate(0deg);}
-  to { -moz-transform: scale(1) rotate(360deg);}
-}
-
 .k4-sequent-index {
     font-size: x-small;
     padding-right: 10px;

@@ -3,7 +3,7 @@
         <tabset justified="true">
             <tab active="true">
                 <tab-heading>
-                    <i class="glyphicon glyphicon-list-alt"></i> Agenda
+                    <i class="fa fa-list-alt"></i> Agenda
                 </tab-heading>
                 <div class="list-group">
                     <a href="" ng-class="{'list-group-item active k4-overflow-box': selectedTask == task,'list-group-item k4-overflow-box':selectedTask !== task}" ng-repeat="task in agenda" ng-click="setSelected(task)">
@@ -36,20 +36,20 @@
             </tab>
             <tab>
                 <tab-heading>
-                    <i class="glyphicon glyphicon-tree-conifer"></i> Overview
+                    <i class="fa fa-sitemap"></i> Overview
                 </tab-heading>
                 <script type="text/ng-template" id="nodes_renderer.html">
                     <div ui-tree-handle class="tree-node tree-node-content">
                         <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" nodrag ng-click="toggle(this)">
-                            <span class="glyphicon" ng-class="{'glyphicon-chevron-right': collapsed, 'glyphicon-chevron-down': !collapsed}"></span>
+                            <span class="fa" ng-class="{'fa-chevron-right': collapsed, 'fa-chevron-down': !collapsed}"></span>
                         </a>
                         <span class="btn btn-success btn-xs" ng-if="!node.children || node.children.length <= 0" nodrag>
-                            <span class="glyphicon glyphicon-leaf"></span>
+                            <span class="fa fa-leaf"></span>
                         </span>
 
                         <span ng-show="!node.editing" >
                             <span ng-click="click(this)">{{node.label}}</span>
-                             <a href="" class="btn btn-primary btn-xs pull-right" nodrag ng-click="editLabel(node)"><i class="glyphicon glyphicon-pencil"></i></a>
+                             <a href="" class="btn btn-primary btn-xs pull-right" nodrag ng-click="editLabel(node)"><i class="fa fa-pencil"></i></a>
                         </span>
                         <span class="group-title angular-ui-tree-handle" nodrag ng-show="node.editing">
                             <form class="form-inline" role="form">
@@ -76,7 +76,7 @@
             </tab>
             <tab>
                 <tab-heading>
-                    <i class="glyphicon glyphicon-tasks"></i> Progress
+                    <i class="fa fa-tasks"></i> Progress
                 </tab-heading>
             </tab>
         </tabset>
