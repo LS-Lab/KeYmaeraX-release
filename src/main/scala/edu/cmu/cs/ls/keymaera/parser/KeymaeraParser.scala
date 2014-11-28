@@ -1186,7 +1186,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     /**
      * Type of parsers for proof steps.
      */
-    type StepParser = PackratParser[ProofStep]
+    type StepParser = PackratParser[edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep]
     
     lazy val parserList = 
       branchP ::
