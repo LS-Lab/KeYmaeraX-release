@@ -100,16 +100,10 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
                 //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
                 //@TODO If Pos.isAnte the following position management seems wrong since unstable.
-                case Equiv(_, _) => equalityRewriting(axiomInstPos, pos)
-                  & ((assertPT(axiomInstance)&hideT)(axiomInstPos)
-                    & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
-                case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos, checkDisjoint = false)
-                  & ((assertPT(axiomInstance)&hideT)(axiomInstPos)
-                    & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
+                case Equiv(_, _) => equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
+                case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos, checkDisjoint = false) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
                 case Imply(_, _) if pos.isAnte  && pos.inExpr == HereP => modusPonensT(pos, axiomInstPos)
-                case Imply(_, _) if !pos.isAnte && pos.inExpr == HereP => ImplyLeftT(axiomInstPos)
-                  & ((assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos),
-                    AxiomCloseT(axiomInstPos.topLevel, pos))
+                case Imply(_, _) if !pos.isAnte && pos.inExpr == HereP => ImplyLeftT(axiomInstPos) & ((assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos), AxiomCloseT(axiomInstPos.topLevel, pos))
                 case _ => ???
               })
               // // hide in reverse order since hiding changes positions
@@ -126,9 +120,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               }
               val axiomPos = SuccPosition(node.sequent.succ.length)
               println("Axiom instance " + axiomInstance)
-              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1)
-                & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax))
-                & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }
