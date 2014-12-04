@@ -39,23 +39,19 @@
                     <i class="fa fa-sitemap"></i> Overview
                 </tab-heading>
                 <script type="text/ng-template" id="nodes_renderer.html">
-                    <div ui-tree-handle class="tree-node tree-node-content">
-                        <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" nodrag ng-click="toggle(this)">
+                    <div ng-class="{'tree-node-selected tree-node-content': node.selected, 'tree-node tree-node-content': !node.selected}">
+                        <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" ng-click="toggle(this)">
                             <span class="fa" ng-class="{'fa-chevron-right': collapsed, 'fa-chevron-down': !collapsed}"></span>
                         </a>
-                        <span class="btn btn-success btn-xs" ng-if="!node.children || node.children.length <= 0" nodrag>
+                        <span class="btn btn-success btn-xs" ng-if="!node.children || node.children.length <= 0">
                             <span class="fa fa-leaf"></span>
                         </span>
 
                         <span ng-show="!node.editing" >
-                            <span ng-click="click(this)">
-                                <!-- Underline iff  selected. todo better indications. todo pre-select. -->
-                                <span ng-if="node.selected"><u>{{node.label}}</u></span>
-                                <span ng-if="!node.selected">{{node.label}}</span>
-                            </span>
-                             <a href="" class="btn btn-primary btn-xs pull-right" nodrag ng-click="editLabel(node)"><i class="fa fa-pencil"></i></a>
+                            <a href="" ng-click="click(node)"><span>{{node.label}}</span></a>
+                            <a href="" class="btn btn-primary btn-xs pull-right" ng-click="editLabel(node)"><i class="fa fa-pencil"></i></a>
                         </span>
-                        <span class="group-title angular-ui-tree-handle" nodrag ng-show="node.editing">
+                        <span class="group-title" ng-show="node.editing">
                             <form class="form-inline" role="form">
                                 <span class="form-group">
                                      <label class="sr-only" for="nodeLabel">Label</label>

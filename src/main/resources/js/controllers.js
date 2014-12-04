@@ -363,6 +363,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
             if ($scope.agenda.length > 0) {
                 // TODO should only update the view automatically if user did not navigate somewhere else manually
                 $scope.setSelected($scope.agenda[0]);
+                $scope.refreshTree();
             } else {
                 // proof finished
                 $scope.refreshTree();
@@ -444,34 +445,37 @@ keymaeraProofControllers.controller('TaskListCtrl',
      *
      * When the node is an open node, it's associated with an agenda item (which has a sequent).
      * Otherwise, we need to construct a new task (not in the agenda).
-     *
-     * Following the example at https://github.com/JimLiu/angular-ui-tree/blob/master/demo/js/groups.js
-     * $scope is the controller scope while scope is the tree scope. See UI Tree documentation.
      */
-    $scope.click = function(scope) {
-        var selectedNode = scope.$modelValue
+    var internalSelectNode = function(node, task) {
+      $scope.setSelected(task);
+      $scope.selectedNode = node;
+      node.selected = true;
+    }
 
+    $scope.click = function(node) {
+        if ($scope.selectedNode !== undefined) {
+          if ($scope.selectedNode.id != node.id) $scope.selectedNode.selected = false;
+          else return;
+        }
         var isAgendaItem = false;
         for(var i = 0 ; i < Agenda.getTasks().length; i++) {
             var task = Agenda.getTasks()[i]
-            if(task.nodeId === selectedNode.id) {
+            if(task.nodeId === node.id) {
                 //select agenda item. The sequent view listens to the agenda.
-                $scope.setSelected(task);
                 isAgendaItem = true;
-                scope.node.selected = true;
+                internalSelectNode(node, task)
                 break;
             }
         }
         if(!isAgendaItem) {
-            $http.get("/proofs/" + $scope.proofId + "/sequent/" + selectedNode.id)
+            $http.get("/proofs/" + $scope.proofId + "/sequent/" + node.id)
                 .success(function(proofNode) {
-                    //Todo -- figure out what else has to go in the task object.
-                    var task = {
-                        "proofNode" : proofNode,
-                        "enabled" : false
-                    };
-                    $scope.setSelected(task);
-                    scope.node.selected = true;
+                    //TODO -- sufficient to display sequent, but may need more for interaction
+                    var agendaItem = {
+                      "proofNode": proofNode,
+                      "enabled": false
+                    }
+                    internalSelectNode(node, agendaItem)
                 })
                 .error(function() {
                     var msg = "Error: this proof is not on the Agenda and the server could not find it.";
@@ -501,7 +505,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     $scope.setSelected = function(agendaItem) {
         $scope.selectedTask = agendaItem;
-        $scope.refreshTree();
     }
     $scope.isSelected = function(agendaItem) {
         $scope.selectedTask == agendaItem;
