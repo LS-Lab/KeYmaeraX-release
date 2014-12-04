@@ -2,6 +2,7 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'ngRoute',
   'ngCookies',
   'ngSanitize',
+  'ngDragDrop',
   'angularTreeview',
   'ui.tree',
   'cgBusy',
@@ -14,7 +15,9 @@ var keymaeraProofApp = angular.module('keymaeraProofApp', [
   'mathjaxformula',
   'mathjaxbind',
   'sequent'
-]);
+], function($rootScopeProvider) {
+  $rootScopeProvider.digestTtl(1000);
+});
 
 keymaeraProofApp.config(['$routeProvider',
   function($routeProvider) {

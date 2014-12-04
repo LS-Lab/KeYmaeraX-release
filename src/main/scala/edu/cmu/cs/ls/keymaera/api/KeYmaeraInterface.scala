@@ -249,6 +249,9 @@ object KeYmaeraInterface {
   def addTactic[T](id : String, t : T => Tactic)(implicit m : TypeTag[T]) = {
     TacticManagement.addInputTactic(id, t)
   }
+  def addTactic[T,U](id : String, t : (T,U) => Tactic)(implicit m : TypeTag[T], n : TypeTag[U]) = {
+    TacticManagement.addInputTactic(id, t)
+  }
   def addTactic[T,U,V](id : String, t : (T,U,V) => Tactic)(implicit m : TypeTag[T], n : TypeTag[U], o : TypeTag[V]) = {
     TacticManagement.addInputTactic(id, t)
   }

@@ -12,7 +12,11 @@
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="fa fa-step-forward"></span> Step</a></li>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
-            <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)">
+            <div class="k4-formula-content" ng-click="handleFormulaClick(f,true)"
+            <!-- TODO drag&drop only works with formula2.js (significantly slower than formula.js) -->
+                 <!--data-jqyoui-options="{revert: 'invalid', helper: 'clone'}"-->
+                 <!--jqyoui-draggable="{placeholder:'keep'}" data-drag="true" ng-model="f"-->
+                    >
                 <k4-formula formula="f.formula" highlight="true"></k4-formula>
             </div>
         </div>
@@ -57,8 +61,12 @@
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="fa fa-step-forward"></span> Step</a></li>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
             </ul>
-            <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)">
-                <k4-formula formula="f.formula" highlight="true"></k4-formula>
+            <div class="k4-formula-content" ng-click="handleFormulaClick(f,false)"
+                    <!-- TODO drag&drop only works with formula2.js (significantly slower than formula.js) -->
+                     <!--data-jqyoui-options="{revert: 'invalid', helper: 'clone'}"-->
+                     <!--jqyoui-draggable="{placeholder:'keep'}" data-drag="true" ng-model="f"-->
+                    >
+                <k4-formula pId="proofId" nId="nodeId" formula="f.formula" highlight="true"></k4-formula>
             </div>
         </div>
     </div>
