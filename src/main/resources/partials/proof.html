@@ -43,7 +43,7 @@
                         <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" ng-click="toggle(this)">
                             <span class="fa" ng-class="{'fa-chevron-right': collapsed, 'fa-chevron-down': !collapsed}"></span>
                         </a>
-                        <span class="btn btn-success btn-xs" ng-if="!node.children || node.children.length <= 0">
+                        <span ng-class="{'btn btn-danger btn-xs': node.label == 'Open Goal', 'btn btn-success btn-xs': node.label !== 'Open Goal'}" ng-if="!node.children || node.children.length <= 0">
                             <span class="fa fa-leaf"></span>
                         </span>
 
