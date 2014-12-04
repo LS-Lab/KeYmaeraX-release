@@ -464,7 +464,8 @@ keymaeraProofControllers.controller('TaskListCtrl',
                       //TODO -- sufficient to display sequent, but may need more for interaction
                       var agendaItem = {
                         "nodeId": proofNode.id,
-                        "proofNode": proofNode
+                        "proofNode": proofNode,
+                        "readOnly": true
                       }
                       $scope.setSelected(agendaItem);
                   })

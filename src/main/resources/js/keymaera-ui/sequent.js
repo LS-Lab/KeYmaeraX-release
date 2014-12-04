@@ -5,7 +5,8 @@ angular.module('sequent', ['ngSanitize','formula'])
         scope: {
             proofId: '=',
             nodeId: '=',
-            sequent: '='
+            sequent: '=',
+            readOnly: '=?'
         },
         controller: function($scope, $sce, $modal, $http, $cookies, Agenda, Tactics) {
             // TODO should issue events other controllers can subscribe to

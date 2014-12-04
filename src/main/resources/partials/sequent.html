@@ -7,7 +7,7 @@
             </div>
         </div>
         <!--<td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>-->
-        <div class="col-md-11 k4-formula k4-flexcell">
+        <div class="col-md-11 k4-formula k4-flexcell" ng-if="!readOnly">
             <ul>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="fa fa-step-forward"></span> Step</a></li>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
@@ -19,6 +19,9 @@
                 <k4-formula formula="f.formula" highlight="true"></k4-formula>
             </div>
         </div>
+        <div class="col-md-11 k4-formula k4-flexcell" ng-if="readOnly">
+            <k4-formula formula="f.formula" highlight="false"></k4-formula>
+        </div>
     </div>
 </div>
 
@@ -28,7 +31,7 @@
             <div class="k4-valign-cell">0</div>
         </div>
     </div>
-    <div class="col-md-11 k4-formula k4-flexcell">
+    <div class="col-md-11 k4-formula k4-flexcell" ng-if="!readOnly">
         <ul>
             <li><a href="" ng-click="applyTacticsByName('keymaera.default')"><i class="fa fa-magic"></i> Auto</a></li>
             <li><a href="" ng-click="applyTacticsByName('keymaera.propositional')"><i class="fa fa-forward"></i> Propositional</a></li>
@@ -45,6 +48,7 @@
             <a type="button" class="btn" ng-click="handleTurnstileClick()">&#8866;</a>
         </div>
     </div>
+    <div class="col-md-11 k4-formula k4-flexcell" ng-if="readOnly">&#8866;</div>
 </div>
 
 <div ng-repeat="f in sequent.succ"
@@ -55,7 +59,7 @@
                 <div class="k4-valign-cell">s:{{$index}}</div>
             </div>
         </div>
-        <div class="col-md-11 k4-formula k4-flexcell">
+        <div class="col-md-11 k4-formula k4-flexcell" ng-if="!readOnly">
             <ul>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'keymaera.step')"><span class="fa fa-step-forward"></span> Step</a></li>
                 <li><a href="" ng-click="applyTacticsOnFormulaByName(f.id,'dl.hide')"><span class="fa fa-eye-slash"></span> Hide</a></li>
@@ -66,6 +70,9 @@
                      <!--jqyoui-draggable="{placeholder:'keep'}" data-drag="true" ng-model="f">-->
                 <k4-formula pId="proofId" nId="nodeId" formula="f.formula" highlight="true"></k4-formula>
             </div>
+        </div>
+        <div class="col-md-11 k4-formula k4-flexcell" ng-if="readOnly">
+            <k4-formula formula="f.formula" highlight="false"></k4-formula>
         </div>
     </div>
 </div>
