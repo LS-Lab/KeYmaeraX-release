@@ -449,39 +449,36 @@ keymaeraProofControllers.controller('TaskListCtrl',
     var internalSelectNode = function(node, task) {
       $scope.setSelected(task);
       $scope.selectedNode = node;
-      node.selected = true;
     }
 
     $scope.click = function(node) {
-        if ($scope.selectedNode !== undefined) {
-          if ($scope.selectedNode.id != node.id) $scope.selectedNode.selected = false;
-          else return;
-        }
-        var isAgendaItem = false;
-        for(var i = 0 ; i < Agenda.getTasks().length; i++) {
-            var task = Agenda.getTasks()[i]
-            if(task.nodeId === node.id) {
-                //select agenda item. The sequent view listens to the agenda.
-                isAgendaItem = true;
-                internalSelectNode(node, task)
-                break;
-            }
-        }
-        if(!isAgendaItem) {
-            $http.get("/proofs/" + $scope.proofId + "/sequent/" + node.id)
-                .success(function(proofNode) {
-                    //TODO -- sufficient to display sequent, but may need more for interaction
-                    var agendaItem = {
-                      "proofNode": proofNode,
-                      "enabled": false
-                    }
-                    internalSelectNode(node, agendaItem)
-                })
-                .error(function() {
-                    var msg = "Error: this proof is not on the Agenda and the server could not find it.";
-                    alert(msg);
-                    console.error(msg);
-                })
+        if ($scope.selectedNode == undefined || $scope.selectedNode.id != node.id) {
+          var isAgendaItem = false;
+          for(var i = 0 ; i < Agenda.getTasks().length; i++) {
+              var task = Agenda.getTasks()[i]
+              if(task.nodeId === node.id) {
+                  //select agenda item. The sequent view listens to the agenda.
+                  isAgendaItem = true;
+                  internalSelectNode(node, task)
+                  break;
+              }
+          }
+          if(!isAgendaItem) {
+              $http.get("/proofs/" + $scope.proofId + "/sequent/" + node.id)
+                  .success(function(proofNode) {
+                      //TODO -- sufficient to display sequent, but may need more for interaction
+                      var agendaItem = {
+                        "proofNode": proofNode,
+                        "enabled": false
+                      }
+                      internalSelectNode(node, agendaItem)
+                  })
+                  .error(function() {
+                      var msg = "Error: this proof is not on the Agenda and the server could not find it.";
+                      alert(msg);
+                      console.error(msg);
+                  })
+          }
         }
     }
 
