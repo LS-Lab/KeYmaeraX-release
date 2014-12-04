@@ -446,20 +446,15 @@ keymaeraProofControllers.controller('TaskListCtrl',
      * When the node is an open node, it's associated with an agenda item (which has a sequent).
      * Otherwise, we need to construct a new task (not in the agenda).
      */
-    var internalSelectNode = function(node, task) {
-      $scope.setSelected(task);
-      $scope.selectedNode = node;
-    }
-
     $scope.click = function(node) {
-        if ($scope.selectedNode == undefined || $scope.selectedNode.id != node.id) {
+        if ($scope.selectedTask == undefined || $scope.selectedTask.nodeId != node.id) {
           var isAgendaItem = false;
           for(var i = 0 ; i < Agenda.getTasks().length; i++) {
               var task = Agenda.getTasks()[i]
               if(task.nodeId === node.id) {
                   //select agenda item. The sequent view listens to the agenda.
                   isAgendaItem = true;
-                  internalSelectNode(node, task)
+                  $scope.setSelected(task);
                   break;
               }
           }
@@ -468,10 +463,10 @@ keymaeraProofControllers.controller('TaskListCtrl',
                   .success(function(proofNode) {
                       //TODO -- sufficient to display sequent, but may need more for interaction
                       var agendaItem = {
-                        "proofNode": proofNode,
-                        "enabled": false
+                        "nodeId": proofNode.id,
+                        "proofNode": proofNode
                       }
-                      internalSelectNode(node, agendaItem)
+                      $scope.setSelected(agendaItem);
                   })
                   .error(function() {
                       var msg = "Error: this proof is not on the Agenda and the server could not find it.";

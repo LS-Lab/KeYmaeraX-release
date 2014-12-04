@@ -39,7 +39,7 @@
                     <i class="fa fa-sitemap"></i> Overview
                 </tab-heading>
                 <script type="text/ng-template" id="nodes_renderer.html">
-                    <div ng-class="{'tree-node-selected tree-node-content': selectedNode == node, 'tree-node tree-node-content': selectedNode !== node}">
+                    <div ng-class="{'tree-node-selected tree-node-content': selectedTask.nodeId == node.id, 'tree-node tree-node-content': selectedTask.nodeId !== node.id}">
                         <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" ng-click="toggle(this)">
                             <span class="fa" ng-class="{'fa-chevron-right': collapsed, 'fa-chevron-down': !collapsed}"></span>
                         </a>
