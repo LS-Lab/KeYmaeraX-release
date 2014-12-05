@@ -113,7 +113,8 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.skolemize" :
             { "name" : "dl.skolemize",
-              "label" : "TODO: skolemize"
+              "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)",
+              "tooltip" : "s is a new (Skolem) function symbol and \\( X_1,\\ldots,X_n \\) are all free logical variables of \\( \\forall x . \\phi(x) \\)"
             },
         "dl.box-assign" :
             { "name" : "dl.box-assign",
@@ -567,6 +568,7 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
                 id: data[i].id,
                 name: tactic.name,
                 label: tactic.label,
+                tooltip: tactic.tooltip,
                 input: tactic.input !== undefined ? tactic.input.slice() : tactic.input
               }
               $scope.ruleTactics.push(tacticInst);
