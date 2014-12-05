@@ -116,6 +116,10 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
               "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)",
               "tooltip" : "s is a new (Skolem) function symbol and \\( X_1,\\ldots,X_n \\) are all free logical variables of \\( \\forall x . \\phi(x) \\)"
             },
+        "dl.decomposeQuan" :
+            { "name" : "dl.decomposeQuan",
+              "label" : "\\( \\left( \\textit{decompose} \\right) \\frac{(\\forall/\\exists) x_1. \\left( \\ldots (\\forall/\\exists) x_n . \\phi \\right)}{(\\forall/\\exists) \\vec{x} . \\phi } \\)"
+            },
         "dl.box-assign" :
             { "name" : "dl.box-assign",
               "label" : "\\(\\left(\\left[:=\\right]\\right) \\frac{\\forall x. x = t \\to \\phi(x)}{\\left[x := t\\right]\\phi(x)}\\)"

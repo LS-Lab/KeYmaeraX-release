@@ -185,6 +185,7 @@ object TacticLibrary {
    *********************************************/
 
   def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
+  def decomposeQuanT = FOQuantifierTacticsImpl.decomposeQuanT
 
   /*********************************************
    * Hybrid Program Tactics
