@@ -1,0 +1,130 @@
+<!-- TODO ng-switch makes it slow, but we don't get drag&drop on formula.js -->
+<script type="text/ng-template" id="formula-renderer.html">
+    <span class="hl" ng-if="highlight" id="::formula.id"
+          onmouseover="$(event.target).addClass('hlhover');"
+          onmouseout="$(event.target).removeClass('hlhover');"
+          ng-switch on="::formula.name">
+        <span ng-switch-when="not">
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&not;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="and">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&#8743;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="or">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&#8744;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="imply">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">-></span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="equiv">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">==</span>
+            <span  ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="lt">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&lt;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="leq">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&leq;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="equals">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">=</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="notEquals">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&ne;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="geq">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&geq;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="gt">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&gt;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="neg">
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">-</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="add">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">+</span>
+            <span  ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="subtract">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">-</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="multiply">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">&middot;</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="divide">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">/</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="exp">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            <sup>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+            </sup>
+        </span>
+        <span ng-switch-when="boxmodality">
+            [<span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>]
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="Assign">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            :=
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="NDetAssign">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            := *
+        </span>
+        <span ng-switch-when="Test">
+            ?<span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="Loop">
+            {<span ng-repeat="formula in ::formula.children track by formula.id" ng-include="'formula-renderer.html'"></span>}*
+        </span>
+        <span ng-switch-when="Sequence">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            ;
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-when="Choice">
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 0" ng-include="'formula-renderer.html'"></span>
+            &#8746;
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-if="$index == 1" ng-include="'formula-renderer.html'"></span>
+        </span>
+        <span ng-switch-default>
+            <span data-drop="true" data-jqyoui-options jqyoui-droppable="{onDrop:'onDropFormula(::formula)'}" ng-model="dropped">{{::formula.name}}</span>
+            <span ng-repeat="formula in ::formula.children track by formula.id" ng-include="'formula-renderer.html'"></span>
+        </span>
+    </span>
+    <!--<span ng-if="!highlight" id="::formula.id">-->
+        <!-- TODO copy from above -->
+    <!--</span>-->
+</script>
+
+<span ng-include="'formula-renderer.html'"></span>

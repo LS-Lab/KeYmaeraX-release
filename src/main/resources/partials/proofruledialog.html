@@ -9,9 +9,17 @@
 <div>
     <div class="panel panel-default">
         <div class="panel-body">
-            <div class="k4-inline-block" ng-repeat="t in ruleTactics">
+            <div class="k4-inline-block" ng-repeat="t in ruleTactics" k4-popover>
                 <div class="btn-group btn-group-lg k4-inline-block">
-                    <a type="button" class="btn btn-default input-block-level" ng-click="applyTactics(t)">
+                    <a ng-if="t.tooltip == undefined" type="button" class="btn btn-default input-block-level"
+                       ng-click="applyTactics(t)">
+                        <span ng-if="t.icon" class="t.icon"><br /></span>
+                        <span k4-mathjaxbind="t.label"></span>
+                    </a>
+                    <a ng-if="t.tooltip !== undefined" type="button" class="btn btn-default input-block-level"
+                       ng-click="applyTactics(t)"
+                       rel="tooltip"
+                       data-toggle="tooltip" data-placement="bottom" data-container="body" title="{{t.tooltip}}">
                         <span ng-if="t.icon" class="t.icon"><br /></span>
                         <span k4-mathjaxbind="t.label"></span>
                     </a>
@@ -43,3 +51,12 @@
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="cancel()">Close</button>
 </div>
+
+<script type="text/javascript">
+$(document).ready(function(){
+  $('[data-toggle="tooltip"]').tooltip();
+});
+$('body').tooltip({
+    selector: '[rel="tooltip"]'
+});
+</script>

@@ -104,4 +104,5 @@ trait DBAbstraction {
                               status:DispatchedTacticStatus.Value) : String
   def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
   def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
+  def updateProofOnTacticCompletion(proofId: String, tId: String)
 }

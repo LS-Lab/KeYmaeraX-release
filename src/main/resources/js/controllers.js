@@ -113,7 +113,12 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.skolemize" :
             { "name" : "dl.skolemize",
-              "label" : "TODO: skolemize"
+              "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)",
+              "tooltip" : "s is a new (Skolem) function symbol and \\( X_1,\\ldots,X_n \\) are all free logical variables of \\( \\forall x . \\phi(x) \\)"
+            },
+        "dl.decomposeQuan" :
+            { "name" : "dl.decomposeQuan",
+              "label" : "\\( \\left( \\textit{decompose} \\right) \\frac{(\\forall/\\exists) x_1. \\left( \\ldots (\\forall/\\exists) x_n . \\phi \\right)}{(\\forall/\\exists) \\vec{x} . \\phi } \\)"
             },
         "dl.box-assign" :
             { "name" : "dl.box-assign",
@@ -363,6 +368,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
             if ($scope.agenda.length > 0) {
                 // TODO should only update the view automatically if user did not navigate somewhere else manually
                 $scope.setSelected($scope.agenda[0]);
+                $scope.refreshTree();
             } else {
                 // proof finished
                 $scope.refreshTree();
@@ -444,40 +450,36 @@ keymaeraProofControllers.controller('TaskListCtrl',
      *
      * When the node is an open node, it's associated with an agenda item (which has a sequent).
      * Otherwise, we need to construct a new task (not in the agenda).
-     *
-     * Following the example at https://github.com/JimLiu/angular-ui-tree/blob/master/demo/js/groups.js
-     * $scope is the controller scope while scope is the tree scope. See UI Tree documentation.
      */
-    $scope.click = function(scope) {
-        var selectedNode = scope.$modelValue
-
-        var isAgendaItem = false;
-        for(var i = 0 ; i < Agenda.getTasks().length; i++) {
-            var task = Agenda.getTasks()[i]
-            if(task.nodeId === selectedNode.id) {
-                //select agenda item. The sequent view listens to the agenda.
-                $scope.setSelected(task);
-                isAgendaItem = true;
-                scope.node.selected = true;
-                break;
-            }
-        }
-        if(!isAgendaItem) {
-            $http.get("/proofs/" + $scope.proofId + "/sequent/" + selectedNode.id)
-                .success(function(proofNode) {
-                    //Todo -- figure out what else has to go in the task object.
-                    var task = {
-                        "proofNode" : proofNode,
-                        "enabled" : false
-                    };
-                    $scope.setSelected(task);
-                    scope.node.selected = true;
-                })
-                .error(function() {
-                    var msg = "Error: this proof is not on the Agenda and the server could not find it.";
-                    alert(msg);
-                    console.error(msg);
-                })
+    $scope.click = function(node) {
+        if ($scope.selectedTask == undefined || $scope.selectedTask.nodeId != node.id) {
+          var isAgendaItem = false;
+          for(var i = 0 ; i < Agenda.getTasks().length; i++) {
+              var task = Agenda.getTasks()[i]
+              if(task.nodeId === node.id) {
+                  //select agenda item. The sequent view listens to the agenda.
+                  isAgendaItem = true;
+                  $scope.setSelected(task);
+                  break;
+              }
+          }
+          if(!isAgendaItem) {
+              $http.get("/proofs/" + $scope.proofId + "/sequent/" + node.id)
+                  .success(function(proofNode) {
+                      //TODO -- sufficient to display sequent, but may need more for interaction
+                      var agendaItem = {
+                        "nodeId": proofNode.id,
+                        "proofNode": proofNode,
+                        "readOnly": true
+                      }
+                      $scope.setSelected(agendaItem);
+                  })
+                  .error(function() {
+                      var msg = "Error: this proof is not on the Agenda and the server could not find it.";
+                      alert(msg);
+                      console.error(msg);
+                  })
+          }
         }
     }
 
@@ -501,7 +503,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     $scope.setSelected = function(agendaItem) {
         $scope.selectedTask = agendaItem;
-        $scope.refreshTree();
     }
     $scope.isSelected = function(agendaItem) {
         $scope.selectedTask == agendaItem;
@@ -571,6 +572,7 @@ keymaeraProofControllers.controller('ProofRuleDialogCtrl',
                 id: data[i].id,
                 name: tactic.name,
                 label: tactic.label,
+                tooltip: tactic.tooltip,
                 input: tactic.input !== undefined ? tactic.input.slice() : tactic.input
               }
               $scope.ruleTactics.push(tacticInst);

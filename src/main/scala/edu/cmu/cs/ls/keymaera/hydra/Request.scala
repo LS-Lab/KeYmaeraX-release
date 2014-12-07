@@ -271,27 +271,8 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
   }
 
   private def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
-    // TODO the following updates must be an atomic operation on the database
-    val finishedTactic = db.getDispatchedTactics(tId) match {
-      case Some(t) => t
-      case _ => throw new IllegalStateException("Finished tactic not found in database: " + tId)
-    }
-    db.addFinishedTactic(proofId, tId)
-    db.updateDispatchedTactics(new DispatchedTacticPOJO(
-      finishedTactic.id,
-      finishedTactic.proofId,
-      finishedTactic.nodeId,
-      finishedTactic.formulaId,
-      finishedTactic.tacticsId,
-      finishedTactic.input,
-      finishedTactic.auto,
-      DispatchedTacticStatus.Finished
-    ))
-    val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
-    if (openGoals == 0) {
-      val p = db.getProofInfo(proofId)
-      // TODO update step count
-      db.updateProofInfo(new ProofPOJO(p.proofId, p.modelId, p.name, p.description, p.date, p.stepCount, closed = true))
+    db.synchronized {
+      db.updateProofOnTacticCompletion(proofId, tId)
     }
   }
 }
@@ -340,39 +321,3 @@ class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[Strin
     }
   }
 }
-
-
-
-
-//
-//
-//class GetProblemRequest(userid : String, proofid : String) extends Request {
-//  def getResultingResponses() = {
-//    try {
-//      val node = ProverBusinessLogic.getModel(proofid)
-//      new GetProblemResponse(proofid, node) :: Nil
-//    } catch {
-//      case e:Exception => e.printStackTrace(); new ErrorResponse(e) :: Nil
-//    }
-//  }
-//}
-//
-//class RunTacticRequest(userid: String, tacticId: Int, proofId: String, nodeId: String, formulaId: Option[String] = None) extends Request {
-//  def getResultingResponses() = {
-//    try {
-//      // TODO: use the userid
-//      println("Running tactic " + tacticId + " on proof " + proofId + " on node " + nodeId + " on formula" + formulaId)
-//      //val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => ServerState.addUpdate(userid, s))
-//      val res = ProverBusinessLogic.runTactic(ProverBusinessLogic.getTactic(tacticId), proofId, nodeId, formulaId, s => { val sub = ProverBusinessLogic.getSubtree(proofId); println("======= Retrieved a tree " + sub); ServerState.addUpdate(userid, sub)} )
-//      res match {
-//        case Some(s) => new TacticDispatchedResponse(proofId, nodeId, tacticId.toString, s.toString) :: Nil
-//        // TODO think about exception
-//        case None => throw new IllegalStateException("Tactic not applicable")
-//      }
-//    }
-//    catch {
-//      case e:Exception => new ErrorResponse(e) :: Nil
-//    }
-//  }
-//
-//}

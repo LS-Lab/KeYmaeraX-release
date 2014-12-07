@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
-import edu.cmu.cs.ls.keymaera.core.Formula
+import edu.cmu.cs.ls.keymaera.core.{Position, Formula}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
@@ -35,6 +35,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.close-false", "TacticLibrary.CloseFalseT", TacticKind.PositionTactic, TacticLibrary.CloseFalseT)
     initTactic("dl.close", "TacticLibrary.CloseT", TacticKind.PositionTactic, TacticLibrary.closeT)
     initTactic("dl.skolemize", "TacticLibrary.skolemizeT", TacticKind.PositionTactic, TacticLibrary.skolemizeT)
+    initTactic("dl.decomposeQuan", "TacticLibrary.decomposeQuanT", TacticKind.PositionTactic, TacticLibrary.decomposeQuanT)
     initTactic("dl.abstraction", "TacticLibrary.abstractionT", TacticKind.PositionTactic, TacticLibrary.abstractionT)
 
     initTactic("dl.box-assign", "TacticLibrary.boxAssignT", TacticKind.PositionTactic, TacticLibrary.boxAssignT)
@@ -47,6 +48,7 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initInputTactic[Option[Formula]]("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
     initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT)
     initInputTactic("dl.equalityRewriting", "TacticLibrary.equalityRewriting", TacticKind.InputTactic, TacticLibrary.equalityRewriting _)
+    initInputTactic[Position,Position]("dl.axiomClose", "TacticLibrary.AxiomCloseT", TacticKind.InputTactic, TacticLibrary.AxiomCloseT)
 //    initInputTactic("dl.axiom", "TacticLibrary.axiomT", TacticKind.InputTactic, TacticLibrary.axiomT)
     initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)
     initInputPositionTactic("dl.equalityRewritingLeft", "TacticLibrary.equalityRewritingLeft", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingLeft)
@@ -64,6 +66,11 @@ class KeYmaeraInitializer(db : DBAbstraction) {
   }
   private def initInputTactic[T](name : String, className : String, kind : TacticKind.Value,
                          tGen : T => Tactic)(implicit m : TypeTag[T]) = {
+    val tactic = getOrCreateTactic(name, className, kind)
+    KeYmaeraInterface.addTactic(tactic.tacticId, tGen)
+  }
+  private def initInputTactic[T,U](name : String, className : String, kind : TacticKind.Value,
+                                     tGen : (T,U) => Tactic)(implicit m : TypeTag[T], n : TypeTag[U]) = {
     val tactic = getOrCreateTactic(name, className, kind)
     KeYmaeraInterface.addTactic(tactic.tacticId, tGen)
   }

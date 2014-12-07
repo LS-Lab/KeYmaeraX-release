@@ -191,3 +191,29 @@ table .btn{
   border-bottom-right-radius: 3px;
   display: table-cell;
 }
+
+/*
+ *  Overridden UI-Tree
+ */
+.tree-node {
+    border: 0px solid #black;
+    color: black;
+    font-weight: normal;
+    font-size: small;
+}
+.tree-node-selected {
+    border: 1px solid #4D6473;
+    color: black;
+    background: #BACBD9;
+    font-weight: bold;
+    font-size: small;
+}
+.tree-node-content {
+    margin: 0px;
+}
+.tree-handle {
+    padding: 10px;
+    background: #4D6473;
+    color: #FFF;
+    margin-right: 10px;
+}
