@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -92,9 +93,15 @@ class DifferentialTests extends FlatSpec with Matchers {
       ),
       Equals(Real, Variable("x",None,Real), Number(1))
     )
+
+    val x = ProvabilityTestHelper.tacticClosesProof(
+      TacticLibrary.default,
+      formulaToNode(ProvabilityTestHelper.parseFormula("[x:=1;]x=1"))
+    ) should be (true)
+
 //    val formula = new KeYmaeraParser().parseBareExpression("[x:=1]x=1").asInstanceOf[Formula]
-    val result = runTactic(TacticLibrary.default, formulaToNode(formula))
-    result.isClosed() should be (true)
+//    val result = runTactic(TacticLibrary.default, formulaToNode(formula))
+//    result.isClosed() should be (true)
   }
 
   "Assignment using assignT" should "Not throw initialization exceptions" in {
