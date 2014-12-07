@@ -212,23 +212,32 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
   function ($scope, $http, $cookies, $cookieStore, Models) {
 
      $scope.addModel = function() {
-         $.ajax({
-               url: "user/" + $cookies.userId + "/modeltextupload/" + $scope.modelName,
-               type: "POST",
-               data: window.UPLOADED_FILE_CONTENTS,
-               async: true,
-               dataType: 'json',
-               contentType: 'application/json',
-               success: function(data) {
-                   while (Models.getModels().length != 0) { Models.getModels().shift() }
-                   $http.get("models/users/" + $cookies.userId).success(function(data) {
-                       Models.addModels(data);
-                       $scope.modelName = '';
-                       // TODO reset file chooser
-                   });
-               },
-               error: this.ajaxErrorHandler
-         });
+          var file = keyFile.files[0];
+
+          var fr = new FileReader();
+          fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
+          fr.onload = function(e) {
+               $.ajax({
+                     url: "user/" + $cookies.userId + "/modeltextupload/" + $scope.modelName,
+                     type: "POST",
+                     data: e.target.result,
+                     async: true,
+                     dataType: 'json',
+                     contentType: 'application/json',
+                     success: function(data) {
+                         //Update the models list -- this should result in the view being updated?
+                         while (Models.getModels().length != 0) { Models.getModels().shift() }
+                         $http.get("models/users/" + $cookies.userId).success(function(data) {
+                             Models.addModels(data);
+                         });
+                         //This is a hack...
+                         $route.reload();
+                     },
+                     error: this.ajaxErrorHandler
+               });
+          };
+
+          fr.readAsText(file);
      };
 
      $scope.$watch('models',
