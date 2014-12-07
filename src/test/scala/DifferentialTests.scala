@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tests
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{Matchers, FlatSpec}
 
@@ -86,23 +87,33 @@ class DifferentialTests extends FlatSpec with Matchers {
 //  }
 
   "Normal assignment" should "work" in {
-    val formula = BoxModality(
-      Assign(
-        Variable("x",None,Real),
-        Number(1)
-      ),
-      Equals(Real, Variable("x",None,Real), Number(1))
-    )
+//    val formula = BoxModality(
+//      Assign(
+//        Variable("x",None,Real),
+//        Number(1)
+//      ),
+//      Equals(Real, Variable("x",None,Real), Number(1))
+//    )
 
-    val x = ProvabilityTestHelper.tacticClosesProof(
+    val node = formulaToNode(ProvabilityTestHelper.parseFormula("x^4 + 2*y^2 = 2*y^2 + x^4"))
+
+    ProvabilityTestHelper.tacticClosesProof(
       TacticLibrary.default,
-      formulaToNode(ProvabilityTestHelper.parseFormula("[x:=1;]x=1"))
-    ) should be (true)
+      node) should be (true)
+
+    ProvabilityTestHelper.runTacticWithTimeout(999999, TacticLibrary.default, node) should not be (None)
 
 //    val formula = new KeYmaeraParser().parseBareExpression("[x:=1]x=1").asInstanceOf[Formula]
 //    val result = runTactic(TacticLibrary.default, formulaToNode(formula))
 //    result.isClosed() should be (true)
   }
+
+
+
+
+
+
+
 
   "Assignment using assignT" should "Not throw initialization exceptions" in {
     val formula = BoxModality(
@@ -154,6 +165,10 @@ class DifferentialTests extends FlatSpec with Matchers {
     val result = assign
     report(result)
   }
+
+
+
+
 
   //First class of tests.
 //  {

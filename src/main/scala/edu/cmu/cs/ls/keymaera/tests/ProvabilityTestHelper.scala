@@ -94,19 +94,19 @@ object ProvabilityTestHelper {
     }
 
     //Dispatching the tactic.
-    println("Dispatching tactic " + tactic.name)
+    if(verbose) println("Dispatching tactic " + tactic.name)
     tactic.apply(tool, rootNode)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
-    println("beginning wait sequence for " + tactic.name)
+    if(verbose) println("beginning wait sequence for " + tactic.name)
     tactic.synchronized {
       tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll));
       tactic.wait();
       tactic.unregister;
     }
 
-    println("Ending wait sequence for " + tactic.name)
-    println("Proof is closed: " + rootNode.isClosed())
+    if(verbose) println("Ending wait sequence for " + tactic.name)
+    if(verbose) println("Proof is closed: " + rootNode.isClosed())
 
     rootNode
   }
@@ -124,20 +124,37 @@ object ProvabilityTestHelper {
   def runTacticWithTimeout(timeoutMs : Long, tactic : Tactic, rootNode : ProofNode,
                            mustApply:Boolean=false, verbose:Boolean=false) : Option[ProofNode] = {
     val future = Future { runTactic(tactic, rootNode, mustApply, verbose) }
-    eliminateFutureOrTimeout(future, timeoutMs)
+    eliminateFutureOrTimeout(future, Duration(timeoutMs, "millis"))
+  }
+
+  /**
+   * Exactly like runTacticWithTimeout, but accepts a duration.
+   * @param duration A duration.
+   * @param tactic @see runTactic
+   * @param rootNode @see runTactic
+   * @param mustApply @see runTactic
+   * @param verbose @see runTactic
+   * @return Some[node] if the tactic finishes in time, where node is the rootNode passed in.
+   *         If the tactic does not end in time, returns None.
+   */
+  def runTacticWithTimeout(duration : Duration, tactic : Tactic, rootNode : ProofNode,
+                           mustApply:Boolean=false, verbose:Boolean=false) : Option[ProofNode] = {
+    val future = Future { runTactic(tactic, rootNode, mustApply, verbose) }
+    eliminateFutureOrTimeout(future, duration)
   }
 
   /**
    *
    * @param x
-   * @param timeoutMs
+   * @param timeout
    * @tparam T
    * @return Some(result of x) if x completes in timeoutMs milliseconds, or None if not.
    *         Any exception which is not a TimeoutException is propagated.
    */
-  private def eliminateFutureOrTimeout[T](x : Future[T], timeoutMs : Long) : Option[T] = {
+  private def eliminateFutureOrTimeout[T](x : Future[T], timeout : Duration) : Option[T] = {
     try {
-      val result : T = Await.result(x, Duration(timeoutMs, "millis"));
+//      val result : T = Await.result(x, Duration(timeoutMs, "nanos"));
+      val result : T = Await.result(x, timeout;
       Some(result)
     }
     catch {
