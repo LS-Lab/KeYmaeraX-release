@@ -6,10 +6,10 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
-import org.joda.time.DateTimeUtils.MillisProvider
 
-import scala.concurrent.duration.{FiniteDuration, DurationConversions, Duration}
+import scala.concurrent.duration.Duration
 import scala.concurrent.{Future, Await}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * These are helper functions for writing tactic tests.
@@ -28,6 +28,13 @@ object ProvabilityTestHelper {
    * @return result of parse on success, or None
    */
   def parse(s:String) : Option[Expr] = new KeYmaeraParser().parseBareExpression(s)
+
+  /**
+   * Automatically do the projection and formula conversion. Be sure not to wrap this in an overly permissive try/catch.
+   * @param s
+   * @return
+   */
+  def parseFormula(s:String) = parse(s).get.asInstanceOf[Formula]
 
   /**
    *
