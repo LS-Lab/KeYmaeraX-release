@@ -2,6 +2,7 @@
  * Sequent prover, proof rules, and axioms of KeYmaera
  * @author Jan-David Quesel
  * @author aplatzer
+ * @author nfulton
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -1572,6 +1573,56 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
   }
 }
 
+/**
+ * @author Nathan Fulton
+ * @param p
+ */
+class DerivativeAssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
+
+  import Helper._
+
+  override def apply(s: Sequent): List[Sequent] = {
+    // we need to make sure that the variable does not occur in any other formula in the sequent
+    val vars = namesIgnoringPosition(s, p)
+
+    // TODO: we have to make sure that the variable does not occur in the formula itself
+    // if we want to have positions different from HereP
+    require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
+
+    //exp = the left-hand side of the assignment (i.e., the x' in x' := t).
+    //res = result of assignment (i.e., x'=t -> post)
+    //rhs = the right-hnd side of the assignment.
+    val (exp, res, rhs) = s(p) match {
+      case BoxModality(Assign(l:Derivative, r), post) => (l, Imply(Equals(l.sort, l, r), post), r)
+      case DiamondModality(Assign(l:Derivative, r), post) => (l, Imply(Equals(l.sort, l, r), post), r)
+      case _ => throw new InapplicableRuleException("The assigment rule is only applicable to box and diamond modalities" +
+        "containing a single assignment", this, s)
+    }
+
+    // check that v is not contained in any other formula
+    val rhsVars = names(rhs)
+    val v: Variable = exp match {
+      case Derivative(dsort, Variable(name, idx, sort)) => {
+        val x: Variable = Variable(name, idx, sort)
+        if(!vars.contains(x) && !rhsVars.contains(x))
+          x
+        else if(vars.contains(x) || rhsVars.contains(x))
+          throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
+        else
+          ???
+      }
+      case _ => throw new UnknownOperatorException("Assignment handling is only implemented for varibles right now, not for " + exp.toString(), exp) //?
+    }
+
+    //Return the sequent with the appropriate position updated to the result (i.e., res).
+    List(
+      if (p.isAnte)
+        Sequent(s.pref :+ v, s.ante.updated(p.index, res), s.succ)
+      else
+        Sequent(s.pref :+ v, s.ante, s.succ.updated(p.index, res)))
+  }
+}
+
 // @TODO Review. Will turn into axiom.
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
@@ -1634,13 +1685,24 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
   }
 }
 
+/**
+ * [x' = t, H]p <- (H -> [x' = t]p')
+ * @author Jan
+ *         @author nfulton added case where there's no domain constraint.
+ * @param p
+ */
 class DiffInd(p: Position) extends PositionRule("Differential Induction", p) {
   override def apply(s: Sequent): List[Sequent] = {
-       val fn = new ExpressionTraversalFunction {
+    val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
         case BoxModality(ev@ContEvolve(And(Equals(s, xp@Derivative(_, _), t), h)), f) =>
           //TODO: require that t and h do not contain derivatives
           Right(BoxModality(ev, Imply(h, BoxModality(Assign(xp, t), FormulaDerivative(f)))))
+        case BoxModality(evolution@ContEvolve(Equals(s, xp@Derivative(_, _), t)), f) =>
+          //TODO: require that t and h do not contain derivatives
+          Right(
+            BoxModality(evolution, BoxModality(Assign(xp, t), FormulaDerivative(f)))
+          )
         case _ => ???
       }
     }

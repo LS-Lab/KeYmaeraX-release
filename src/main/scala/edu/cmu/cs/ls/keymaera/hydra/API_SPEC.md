@@ -30,7 +30,7 @@ Returns a list of all the user's proofs.
  * **Data**: none.
  * **Return value**: `[ {"proofid": <proofid> } ]`. We might want to include more information (e.g. short names or something).
  * **Queue addition values**: none.
- * 
+
 #### POST
 
 Creates a new proof.
