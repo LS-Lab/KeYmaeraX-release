@@ -134,6 +134,14 @@ angular.module('formula', ['ngSanitize'])
                             content = "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1) + ")"
                             break;
 
+                        case "exists":
+                            var vars = json.variables[0];
+                            for (var i = 1; i < json.variables.length; i++) {
+                                vars = vars + "," + json.variables[i];
+                            }
+                            content = "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1) + ")"
+                            break;
+
                         case "boxmodality":
                             var left = parseFormulaHelper(c[0], depth + 1);
                             var right = parseFormulaHelper(c[1], depth + 1);
