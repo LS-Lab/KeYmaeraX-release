@@ -163,7 +163,7 @@ object TacticLibrary {
   def hideT = PropositionalTacticsImpl.hideT
   def cutT(f: Option[Formula]) = PropositionalTacticsImpl.cutT(f)
 
-  def closeT : Tactic = AxiomCloseT | locateAnte(CloseTrueT) | locateSucc(CloseFalseT)
+  def closeT : Tactic = AxiomCloseT | locateSucc(CloseTrueT) | locateAnte(CloseFalseT)
   def AxiomCloseT(a: Position, b: Position) = PropositionalTacticsImpl.AxiomCloseT(a, b)
   def AxiomCloseT = PropositionalTacticsImpl.AxiomCloseT
   def CloseTrueT = PropositionalTacticsImpl.CloseTrueT
