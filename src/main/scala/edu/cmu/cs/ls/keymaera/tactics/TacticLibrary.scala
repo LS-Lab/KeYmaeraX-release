@@ -194,11 +194,15 @@ object TacticLibrary {
   // TODO replace this with the assignment axiom tactic
   def assignment = HybridProgramTacticsImpl.assignment
 
+  def derivativeAssignment = HybridProgramTacticsImpl.derivativeAssignment
+
   // axiom wrappers
 
   // axiomatic version of assignment axiom assignaxiom
   def boxAssignT = HybridProgramTacticsImpl.boxAssignT
+  def boxDerivativeAssignT = HybridProgramTacticsImpl.boxDerivativeAssignT
   def assignT = boxAssignT /*@TODO | diamondAssignT*/
+
   def boxTestT = HybridProgramTacticsImpl.boxTestT
   def boxNDetAssign = HybridProgramTacticsImpl.boxNDetAssign
   def boxSeqT = HybridProgramTacticsImpl.boxSeqT
@@ -206,6 +210,12 @@ object TacticLibrary {
   def boxChoiceT = HybridProgramTacticsImpl.boxChoiceT
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.inductionT(inv)
 
+  def uniformSubstitution(from : Term, to : Term): PositionTactic =
+    new PositionTactic("Uniform Substitution") {
+      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
+      override def apply(p: Position): Tactic = ??? //new ApplyRule(UniformSubstitution())
+
+    }
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
     new PositionTactic("Alpha Renaming") {
       override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicablity
@@ -218,6 +228,12 @@ object TacticLibrary {
   /*********************************************
    * Differential Tactics
    *********************************************/
+//  <<<<<<< Updated upstream
+//  =======
+//  override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
+//    override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
+//  })
+//}
 
   def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with " + h.prettyString()) {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {

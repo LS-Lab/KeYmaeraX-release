@@ -76,25 +76,7 @@
         </tbody>
     </table>
 
-    <!--
-    Javascript to populate the table. TODO not sure what the "correct" way to do this is.
-    TODO what are we going to do about user data?
-    -->
-    <script type="text/javascript">
-      $("#keyFile").on('change', function(event) {
-        window.UPLOADED_FILE_CONTENTS = null;
-        var file = event.target.files[0];
 
-        var fr = new FileReader();
-        fr.onerror = function(e) { alert("Could not even open your file: " + e.getMessage()); };
-        fr.onload = function(e) {
-          var fileContents = e.target.result;
-          window.UPLOADED_FILE_CONTENTS = fileContents;
-        };
-
-        fr.readAsText(file);
-      });
-    </script>
 </div>
 
 <!-- File input

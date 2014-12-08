@@ -12,11 +12,11 @@ import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
- * These are helper functions for writing tactic tests. Suggested use:
- *    import edu.cmu.cs.ls.keymaera.ProvabilityTestHelper.scala
+ * These are helper functions for writing tactic tests.
  * Created by nfulton on 12/6/14.
  */
-class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool : Tool = new Mathematica()) {
+object ProvabilityTestHelper {
+  val tool = new Mathematica()
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Utility Functions
@@ -69,28 +69,6 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
   def tacticDoesNotApply(tactic : Tactic, rootNode : ProofNode):Boolean = !tactic.applicable(rootNode)
 
   /**
-   *
-   * @param duration
-   * @param tactic
-   * @param rootNode
-   * @return true iff tactic finishes in duration.
-   */
-  def tacticFinishesAndClosesProof(duration: Duration, tactic : Tactic, rootNode : ProofNode):Boolean = runTacticWithTimeoutDuration(duration, tactic, rootNode) match {
-    case Some(pn) => pn.isClosed()
-    case None    => false
-  }
-
-  /**
-   *
-   * @param timeoutMs
-   * @param tactic
-   * @param rootNode
-   * @return true iff tactic finishes in timeoutMs milliseconds
-   */
-  def tacticFinishesAndClosesProof(timeoutMs : Long, tactic : Tactic, rootNode : ProofNode):Boolean =
-    tacticFinishesAndClosesProof(Duration(timeoutMs, "millis"), tactic, rootNode)
-
-  /**
    * Converts a position tactic to a tactic by finding an applicable position. Use with care; you might want to find the
    * position yourself using the location tactics in the TacticsLibrary.
    * @param positionTactic
@@ -107,30 +85,28 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
    * @param tactic
    * @param rootNode
    * @param mustApply If true, an exception is thrown if the tactic does not apply. Default: false.
+   * @param verbose If true, start/end messages are printed, which can be useful for diagnosing diverging tactics. Default: false.
    * @return the rootNode after tactic application completes.
    */
-  def runTactic(tactic : Tactic, rootNode : ProofNode, mustApply:Boolean=false):ProofNode = {
+  def runTactic(tactic : Tactic, rootNode : ProofNode, mustApply:Boolean=false, verbose:Boolean=false):ProofNode = {
     if(!tactic.applicable(rootNode)) {
       throw new Exception("runTactic was called on tactic " + tactic.name + ", but is not applicable on the node.")
     }
 
     //Dispatching the tactic.
-    logger("Dispatching tactic " + tactic.name)
+    if(verbose) println("Dispatching tactic " + tactic.name)
     tactic.apply(tool, rootNode)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
-    logger("beginning wait sequence for " + tactic.name)
+    if(verbose) println("beginning wait sequence for " + tactic.name)
     tactic.synchronized {
       tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll));
       tactic.wait();
       tactic.unregister;
     }
 
-    logger("Ending wait sequence for " + tactic.name)
-    logger("Proof is closed: " + rootNode.isClosed())
-    if(!rootNode.isClosed()) {
-      rootNode.openGoals().map(x => logger("Open Goal: " + x.sequent.toString()))
-    }
+    if(verbose) println("Ending wait sequence for " + tactic.name)
+    if(verbose) println("Proof is closed: " + rootNode.isClosed())
 
     rootNode
   }
@@ -141,12 +117,13 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
    * @param tactic @see runTactic
    * @param rootNode @see runTactic
    * @param mustApply @see runTactic
+   * @param verbose @see runTactic
    * @return Some[node] if the tactic finishes in time, where node is the rootNode passed in.
    *         If the tactic does not end in time, returns None.
    */
   def runTacticWithTimeout(timeoutMs : Long, tactic : Tactic, rootNode : ProofNode,
-                           mustApply:Boolean=false) : Option[ProofNode] = {
-    val future = Future { runTactic(tactic, rootNode, mustApply) }
+                           mustApply:Boolean=false, verbose:Boolean=false) : Option[ProofNode] = {
+    val future = Future { runTactic(tactic, rootNode, mustApply, verbose) }
     eliminateFutureOrTimeout(future, Duration(timeoutMs, "millis"))
   }
 
@@ -156,12 +133,13 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
    * @param tactic @see runTactic
    * @param rootNode @see runTactic
    * @param mustApply @see runTactic
+   * @param verbose @see runTactic
    * @return Some[node] if the tactic finishes in time, where node is the rootNode passed in.
    *         If the tactic does not end in time, returns None.
    */
-  def runTacticWithTimeoutDuration(duration : Duration, tactic : Tactic, rootNode : ProofNode,
-                           mustApply:Boolean=false) : Option[ProofNode] = {
-    val future = Future { runTactic(tactic, rootNode, mustApply) }
+  def runTacticWithTimeout(duration : Duration, tactic : Tactic, rootNode : ProofNode,
+                           mustApply:Boolean=false, verbose:Boolean=false) : Option[ProofNode] = {
+    val future = Future { runTactic(tactic, rootNode, mustApply, verbose) }
     eliminateFutureOrTimeout(future, duration)
   }
 
@@ -170,12 +148,13 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
    * @param x
    * @param timeout
    * @tparam T
-   * @return Some(result of x) if x completes within the duration, or None if not.
+   * @return Some(result of x) if x completes in timeoutMs milliseconds, or None if not.
    *         Any exception which is not a TimeoutException is propagated.
    */
   private def eliminateFutureOrTimeout[T](x : Future[T], timeout : Duration) : Option[T] = {
     try {
-      val result : T = Await.result(x, timeout)
+//      val result : T = Await.result(x, Duration(timeoutMs, "nanos"));
+      val result : T = Await.result(x, timeout;
       Some(result)
     }
     catch {
@@ -183,5 +162,6 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
       case e : Exception => throw e
     }
   }
+
 
 }
