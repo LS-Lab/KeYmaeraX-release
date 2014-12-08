@@ -19,6 +19,73 @@ angular.module('formula', ['ngSanitize'])
                 }
             }
 
+
+            function needsParens(parent, child) {
+                var precedence =
+                  [
+                  //Terms.
+                  "add" ,
+                  "subtract" ,
+                  "multiply" ,
+                  "divide" ,
+                  "exp" ,
+                  "neg" ,
+                  "derivative" ,
+                  "apply" ,
+                  "function" ,
+                  "programconstant" , //real-valued.
+                  "number"   ,
+                  //Formulas
+                  "equiv" ,
+                  "imply" ,
+                  "or" ,
+                  "and" ,
+                  "not" ,
+                  "boxmodality"  ,
+                  "diamondmodality" ,
+                  "modality" ,
+                  "forall" ,
+                  "exists" ,
+                  "equal" ,
+                  "notEqual" ,
+                  "lt"  ,
+                  "leq" ,
+                  "geq" ,
+                  "gt" ,
+                  "formuladerivative" ,
+                  "predicateconstant" ,
+                  "applypredicate" ,
+                  "true" ,
+                  "false" ,
+                  //Programs.
+                  "Choice" ,
+                  "Sequence" ,
+                  "Loop" ,
+                  "Assign" ,
+                  "NDetAssign" ,
+                  "Test" ,
+                  "ContEvolve" ,
+                  "ProgramConstant" ,
+                  "Variable",
+                  "Number"].reverse()
+
+                var childPrecedence = precedence.indexOf(child.name);
+                var parentPrecedence = precedence.indexOf(parent.name);
+                return childPrecedence > parentPrecedence;
+            }
+
+            function parensIfNeeded(parent, child, depth) {
+                var parens = [ "(", ")" ]
+//                  if(child.isInstanceOf[Program]) ["{","}"]
+//                  else ["(",")"]
+
+                if(needsParens(parent, child)) {
+                  return parens[0] + parseFormulaHelper(child, depth) + parens[1]
+                } else {
+                  return parseFormulaHelper(child, depth)
+                }
+              }
+
             // Recursively generate sequent HTML
             function parseFormulaHelper(json, depth) {
                 var items = [];
@@ -27,37 +94,37 @@ angular.module('formula', ['ngSanitize'])
                     var content;
                     switch (json.name) {
                         case "not":
-                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "&not;" + left;
                             break;
 
                         case "and":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &#8743; " + right;
                             break;
 
                         case "or":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &#8744; " + right;
                             break;
 
                         case "imply":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " → " + (depth === 0 ? "<br/>" : "") + right;
                             break;
 
                         case "equiv":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &#8596 " + right;
                             break;
 
                         case "lt":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &lt; " + right;
                             break;
 
@@ -68,101 +135,126 @@ angular.module('formula', ['ngSanitize'])
                             break;
 
                         case "equals":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " = " + right;
                             break;
 
                         case "notEquals":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &ne; " + right;
                             break;
 
                         case "geq":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &geq; " + right;
                             break;
 
                         case "gt":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &gt; " + right;
                             break;
 
                         case "neg":
-                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "-" + left;
                             break;
 
                         case "add":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " + " + right;
                             break;
 
                         case "subtract":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " - " + right;
                             break;
 
                         case "multiply":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &middot; " + right;
                             break;
 
                         case "divide":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " / " + right;
                             break;
 
                         case "exp":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + "<sup>" + right + "</sup>";
                             break;
 
+                        case "forall":
+                            var vars = json.variables[0];
+                            for (var i = 1; i < json.variables.length; i++) {
+                                vars = vars + "," + json.variables[i];
+                            }
+                            content = "&forall;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1) + ")"
+                            break;
+
+                        case "exists":
+                            var vars = json.variables[0];
+                            for (var i = 1; i < json.variables.length; i++) {
+                                vars = vars + "," + json.variables[i];
+                            }
+                            content = "&exist;" + vars + ". (" + parseFormulaHelper(c[0], depth + 1) + ")"
+                            break;
+
                         case "boxmodality":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = "[" + left + "] " + right;
                             break;
 
                         case "Assign":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " := " + right;
                             break;
 
                         case "NDetAssign":
-                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
                             content = left + ":= *";
                             break;
 
                         case "Test":
-                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
                             content = " ? " + left;
                             break;
 
                         case "Loop":
-                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "{" + left + "}<sup>*</sup>";
                             break;
 
                         case "Sequence":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + "; " + right;
                             break;
 
                         case "Choice":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
                             content = left + " &#8746; " + right;
+                            break;
+
+                        case "ContEvolve":
+                            content = parensIfNeeded(json, c[0], depth + 1);
+                            break;
+
+                        case "derivative":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            content = left + "'";
                             break;
 
                         default:
