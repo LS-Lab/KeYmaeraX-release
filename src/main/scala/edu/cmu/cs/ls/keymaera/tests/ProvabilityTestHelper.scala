@@ -153,8 +153,7 @@ object ProvabilityTestHelper {
    */
   private def eliminateFutureOrTimeout[T](x : Future[T], timeout : Duration) : Option[T] = {
     try {
-//      val result : T = Await.result(x, Duration(timeoutMs, "nanos"));
-      val result : T = Await.result(x, timeout;
+      val result : T = Await.result(x, timeout)
       Some(result)
     }
     catch {
