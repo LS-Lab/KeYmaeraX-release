@@ -165,6 +165,15 @@ angular.module('formula', ['ngSanitize'])
                             content = left + " &#8746; " + right;
                             break;
 
+                        case "ContEvolve":
+                            content = parseFormulaHelper(c[0], depth + 1);
+                            break;
+
+                        case "derivative":
+                            var left = parseFormulaHelper(c[0], depth + 1);
+                            content = left + "'";
+                            break;
+
                         default:
                             var seqs = [];
                             for (var i = 0; i < c.length; i++) {
