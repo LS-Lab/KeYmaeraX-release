@@ -235,6 +235,13 @@ object TacticLibrary {
 //  })
 //}
 
+  def differentialInvariant : PositionTactic = new PositionTactic("Perform differential induction using an invariant") {
+    //todo implement just like the induction tactic.
+    override def applies(s: Sequent, p: Position): Boolean = ???
+
+    override def apply(p: Position): Tactic = ???
+  }
+
   def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with " + h.prettyString()) {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
       case BoxModality(ContEvolve(_), _) => true

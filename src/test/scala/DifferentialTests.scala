@@ -95,13 +95,13 @@ class DifferentialTests extends FlatSpec with Matchers {
 //      Equals(Real, Variable("x",None,Real), Number(1))
 //    )
 
-    val node = formulaToNode(ProvabilityTestHelper.parseFormula("x^4 + 2*y^2 = 2*y^2 + x^4"))
-
-    ProvabilityTestHelper.tacticClosesProof(
-      TacticLibrary.default,
-      node) should be (true)
-
-    ProvabilityTestHelper.runTacticWithTimeout(999999, TacticLibrary.default, node) should not be (None)
+//    val node = formulaToNode(ProvabilityTestHelper.parseFormula("x^4 + 2*y^2 = 2*y^2 + x^4"))
+//
+//    ProvabilityTestHelper.tacticClosesProof(
+//      TacticLibrary.default,
+//      node) should be (true)
+//
+//    ProvabilityTestHelper.runTacticWithTimeout(999999, TacticLibrary.default, node) should not be (None)
 
 //    val formula = new KeYmaeraParser().parseBareExpression("[x:=1]x=1").asInstanceOf[Formula]
 //    val result = runTactic(TacticLibrary.default, formulaToNode(formula))
