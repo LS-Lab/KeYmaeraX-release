@@ -53,74 +53,63 @@ object JSONConverter {
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
-          case True() => Some(JsObject(("name" -> JsString("true")) +: cf))
-          case False() => Some(JsObject(("name" -> JsString("false")) +: cf))
-          case x@PredicateConstant(a, b) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[PredicateConstant])) +: cf))
-          case ApplyPredicate(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("function" -> convertNamedSymbol(a)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Equals(d, a, b) => Some(JsObject(("name" -> JsString("equals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case NotEquals(d, a, b) => Some(JsObject(("name" -> JsString("notEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case ProgramEquals(a, b) => Some(JsObject(("name" -> JsString("programEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case ProgramNotEquals(a, b) => Some(JsObject(("name" -> JsString("programNotEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case LessThan(d, a, b) => Some(JsObject(("name" -> JsString("lt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case LessEqual(d, a, b) => Some(JsObject(("name" -> JsString("leq")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case GreaterEqual(d, a, b) => Some(JsObject(("name" -> JsString("geq")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case GreaterThan(d, a, b) => Some(JsObject(("name" -> JsString("gt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Not(a) => Some(JsObject(("name" -> JsString("not")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case And(a, b) => Some(JsObject(("name" -> JsString("and")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Or(a, b) => Some(JsObject(("name" -> JsString("or")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Imply(a, b) => Some(JsObject(("name" -> JsString("imply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Equiv(a, b) => Some(JsObject(("name" -> JsString("equiv")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case BoxModality(a, b) => Some(JsObject(("name" -> JsString("boxmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case DiamondModality(a, b) => Some(JsObject(("name" -> JsString("diamondmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Forall(v, a) => Some(JsObject(("name" -> JsString("forall")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Exists(v, a) => Some(JsObject(("name" -> JsString("exists")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case _ => None
+          case True() => JsObject(("name" -> JsString("true")) +: cf)
+          case False() => JsObject(("name" -> JsString("false")) +: cf)
+          case x@PredicateConstant(a, b) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[PredicateConstant])) +: cf)
+          case ApplyPredicate(a, b) => JsObject(("name" -> JsString("apply")) :: ("function" -> convertNamedSymbol(a)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Equals(d, a, b) => JsObject(("name" -> JsString("equals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case NotEquals(d, a, b) => JsObject(("name" -> JsString("notEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case ProgramEquals(a, b) => JsObject(("name" -> JsString("programEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case ProgramNotEquals(a, b) => JsObject(("name" -> JsString("programNotEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case LessThan(d, a, b) => JsObject(("name" -> JsString("lt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case LessEqual(d, a, b) => JsObject(("name" -> JsString("leq")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case GreaterEqual(d, a, b) => JsObject(("name" -> JsString("geq")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case GreaterThan(d, a, b) => JsObject(("name" -> JsString("gt")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Not(a) => JsObject(("name" -> JsString("not")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case And(a, b) => JsObject(("name" -> JsString("and")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Or(a, b) => JsObject(("name" -> JsString("or")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Imply(a, b) => JsObject(("name" -> JsString("imply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Equiv(a, b) => JsObject(("name" -> JsString("equiv")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case BoxModality(a, b) => JsObject(("name" -> JsString("boxmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case DiamondModality(a, b) => JsObject(("name" -> JsString("diamondmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Forall(v, a) => JsObject(("name" -> JsString("forall")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Exists(v, a) => JsObject(("name" -> JsString("exists")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
-        o match {
-          case Some(oo) => jsonStack.push(jsonStack.pop() :+ oo)
-          case None => /* nothing to do */
-        }
+        jsonStack.push(jsonStack.pop() :+ o)
         Left(None)
       }
 
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
-          case Number(s, i) => Some(JsObject(("name" -> JsString(i.toString())) +: cf))
-          case x@Variable(_, _, _) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf))
-          case Apply(a, b) => Some(JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) :: Nil ++: jsonStack.pop())) :: Nil ++: cf))
-          case Neg(_, a) => Some(JsObject(("name" -> JsString("neg")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Derivative(_, a) => Some(JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Add(_, a, b) => Some(JsObject(("name" -> JsString("add")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Subtract(_, a, b) => Some(JsObject(("name" -> JsString("subtract")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Multiply(_, a, b) => Some(JsObject(("name" -> JsString("multiply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Divide(_, a, b) => Some(JsObject(("name" -> JsString("divide")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Exp(_, a, b) => Some(JsObject(("name" -> JsString("exp")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case _ => None
+          case Number(s, i) => JsObject(("name" -> JsString(i.toString())) +: cf)
+          case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
+          case Apply(a, b) => JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) :: Nil ++: jsonStack.pop())) :: Nil ++: cf)
+          case Neg(_, a) => JsObject(("name" -> JsString("neg")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Derivative(_, a) => JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Add(_, a, b) => JsObject(("name" -> JsString("add")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Subtract(_, a, b) => JsObject(("name" -> JsString("subtract")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Multiply(_, a, b) => JsObject(("name" -> JsString("multiply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Divide(_, a, b) => JsObject(("name" -> JsString("divide")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Exp(_, a, b) => JsObject(("name" -> JsString("exp")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
-        o match {
-          case Some(oo) => jsonStack.push(jsonStack.pop() :+ oo)
-          case None => /* nothing to do */
-        }
+        jsonStack.push(jsonStack.pop() :+ o)
         Left(None)
       }
 
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
-          case x@ProgramConstant(_, _) => Some(JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConstant])) +: cf))
-          case Assign(_, _) => Some(JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case NDetAssign(_) => Some(JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Sequence(_, _) => Some(JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Choice(_, _) => Some(JsObject(("name" -> JsString("Choice")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Test(_) => Some(JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case Loop(_) => Some(JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf))
-          case _ => None
+          case x@ProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConstant])) +: cf)
+          case Assign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case NDetAssign(_) => JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Sequence(_, _) => JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Choice(_, _) => JsObject(("name" -> JsString("Choice")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Test(_) => JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Loop(_) => JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case ContEvolve(_) => JsObject(("name" -> JsString("ContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
-        o match {
-          case Some(oo) => jsonStack.push(jsonStack.pop() :+ oo)
-          case None => /* nothing to do */
-        }
+        jsonStack.push(jsonStack.pop() :+ o)
         Left(None)
       }
     }
