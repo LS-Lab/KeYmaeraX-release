@@ -166,9 +166,9 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             {
                 "name" : "dl.di",
                 "label" : makeRuleLabel("\\text{DI}",
-                "\\Gamma, H ~\\vdash~ F, \\Delta \\quad \\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow F_{x_i}^{\\theta_i}, \\Delta)",
-                "\\Gamma ~\\vdash~ \\left[ x_i' = \\theta_i, H \\right]F"),
-                "input" : [ {"name" : "0", "label" : "Invariant", "placeholder" : "Formula", "type" : "text"} ]
+                "\\Gamma, H ~\\vdash~ F, \\Delta \\quad \\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow F_{x_1, \\ldots , x_n}^{\\theta_1, \\ldots , \\theta_n}, \\Delta)",
+                "\\Gamma ~\\vdash~ \\left[ x_1' = \\theta_1, \\ldots , x_n' = \\theta_n, H \\right]F, \\Delta"),
+                "input" : [ {"name" : "0", "label" : "Differential Invariant", "placeholder" : "Formula", "type" : "text"} ]
             },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
