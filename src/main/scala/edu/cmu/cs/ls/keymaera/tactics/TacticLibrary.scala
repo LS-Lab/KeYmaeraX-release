@@ -303,10 +303,10 @@ object TacticLibrary {
     }
   }
 
-  def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with " + h.prettyString()) {
+  def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with ") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case BoxModality(ContEvolve(_), _) => true
-      case BoxModality(_: NFContEvolve, _) => true
+      case Some(BoxModality(ContEvolve(_), _)) => true
+      case Some(BoxModality(_: NFContEvolve, _)) => true
       case _ => false
     }
 
