@@ -363,6 +363,25 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     $scope.openPrf = function(proofId) {
         $location.path('/proofs/' + proofId)
     }
+
+    //Todo: should "inherit" this from the modelproofscreatectrl rather than copy/pasting here.
+    $scope.createProof = function() {
+        var proofName        = $scope.proofName ? $scope.proofName : ""
+        var proofDescription = $scope.proofDescription ? $scope.proofDescription : ""
+        var uri              = 'models/users/' + $cookies.userId + '/model/' + $routeParams.modelId + '/createProof'
+        var dataObj          = {proofName : proofName, proofDescription : proofDescription}
+
+        $http.post(uri, dataObj).
+            success(function(data) {
+                var proofid = data.id
+                // we may want to switch to ui.router
+                $location.path('proofs/' + proofid);
+            }).
+            error(function(data, status, headers, config) {
+                alert('TODO handle errors properly.')
+            });
+    }
+
     $scope.loadProof = function(proof) {
         proof.loadStatus = 'Loading'
         $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
