@@ -1,13 +1,17 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 // favoring immutable Seqs
+
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+
 import scala.collection.immutable.Seq
 import scala.collection.immutable.List
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaera.core.PosInExpr
 
 import BuiltinHigherTactics._
 
@@ -235,11 +239,68 @@ object TacticLibrary {
 //  })
 //}
 
-  def differentialInvariant : PositionTactic = new PositionTactic("Perform differential induction using an invariant") {
-    //todo implement just like the induction tactic.
-    override def applies(s: Sequent, p: Position): Boolean = ???
+  //not at all sure about this...
+  def differentialInvariant(invariant : Option[Formula]) : PositionTactic = new PositionTactic("differential induction") {
+    /**
+     *
+     * @param g
+     * @return the body of the continuous evolution operation.
+     */
+    def getBody(g: Formula): Option[Formula] = g match {
+      case BoxModality(ContEvolve(a), _) => Some(a)
+      case BoxModality(NFContEvolve(variables, x, theta, f), _) => Some(And(Equals(Real, x, theta), f)) //?
+      case _ => None
+    }
 
-    override def apply(p: Position): Tactic = ???
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      def ind(cutSPos: Position, cont: Tactic) = differentialInduction(cutSPos) & AndRightT(cutSPos) &(LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = invariant match {
+        case Some(f) => {
+          //cutAPos is the location where the differential invariant is cut into the antecedent.
+          val cutAPos = AntePosition(node.sequent.ante.length, HereP)
+
+          //This is copied from the box induction tactic and I'm not so sure about it.
+          val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+              case x@BoxModality(a, _) =>
+                val cPos = AntePosition(node.sequent.ante.length)
+                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b2 = hideT(p)
+                Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
+              case _ => None
+            }
+
+            override def applicable(node: ProofNode): Boolean = true
+          }
+
+          //cutSPos is the location of the box containg the diffeq?
+          val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
+
+          //not sure what this is for.
+          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) & hideT(cutSPos) & LabelBranch(indUseCaseLbl)
+
+          //@todo change these so that the proof closes appropriately.
+          val branch1Tactic = ImplyLeftT(cutAPos) &(hideT(p) & LabelBranch(indInitLbl), useCase)
+          val branch2Tactic = hideT(p) &
+            ImplyRightT(cutSPos) &
+            ind(cutSPos, hideT(cutAPos) & LabelBranch(indStepLbl)) &
+            onBranch(("Close Next", AxiomCloseT))
+
+          //Cut in the assumption and
+          getBody(node.sequent(p)) match {
+            case Some(a) =>
+              Some(cutT(Some(Imply(f, BoxModality(ContEvolve(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+            case None => None
+          }
+        }
+        case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
+      }
+    }
   }
 
   def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with " + h.prettyString()) {

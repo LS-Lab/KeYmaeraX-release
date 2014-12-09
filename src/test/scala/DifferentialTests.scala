@@ -13,10 +13,13 @@ import org.scalatest.{Matchers, FlatSpec}
  * Created by nfulton on 12/1/14.
  */
 class DifferentialTests extends FlatSpec with Matchers {
+  val helper = new ProvabilityTestHelper((x) => println(x))
+
   //Constants
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
   def d(e : Variable) = Derivative(Real, e)
+
 
   //Helper functions
   def parse(s:String) = new KeYmaeraParser().parseBareExpression(s).get.asInstanceOf[Formula]
@@ -108,13 +111,6 @@ class DifferentialTests extends FlatSpec with Matchers {
 //    result.isClosed() should be (true)
   }
 
-
-
-
-
-
-
-
   "Assignment using assignT" should "Not throw initialization exceptions" in {
     val formula = BoxModality(
       Assign(
@@ -164,6 +160,26 @@ class DifferentialTests extends FlatSpec with Matchers {
 
     val result = assign
     report(result)
+  }
+
+  "induction with invariant input" should "work with a bit of help" in {
+    val sequent = new Sequent(Nil,
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("x>0")),
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x' = 1;]x>-1")))
+
+    val node = new RootNode(sequent)
+    val invariant = helper.parseFormula("x > 0")
+
+    val positionTactic = differentialInvariant(Some(invariant))
+    val tactic = helper.positionTacticToTactic(positionTactic)
+
+    helper.runTactic(tactic, node)
+    val diffInductionTactic = helper.positionTacticToTactic(TacticLibrary.differentialInduction)
+    helper.runTactic(diffInductionTactic*, node) //saturate?
+    helper.runTactic(TacticLibrary.default, node)
+    helper.runTactic(TacticLibrary.default, node)
+
+    helper.report(node)
   }
 
 

@@ -46,6 +46,21 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
     new RootNode(sequent)
   }
 
+  /**
+   * prints out a report about the node.
+   * @param node
+   */
+  def report(node : ProofNode) = {
+    logger("REPORT")
+    logger("------")
+    logger("\tclosed: " + node.isClosed())
+    logger("\tOpen Goals:")
+    for(open <- node.openGoals()) {
+      logger("\t\t" + open.sequent)
+    }
+    logger("------")
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Tactics
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
