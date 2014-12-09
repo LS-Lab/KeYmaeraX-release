@@ -104,7 +104,7 @@ object TacticLibrary {
   /**
    * Quantifier elimination.
    */
-  val quantifierEliminationT = ArithmeticTacticsImpl.quantifierEliminationT _
+  def quantifierEliminationT(toolId: String) = ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
   /*******************************************************************
    * Elementary tactics
