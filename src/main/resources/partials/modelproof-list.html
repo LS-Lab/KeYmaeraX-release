@@ -25,7 +25,7 @@
                 <span ng-if="proof.status === false" class="fa fa-pencil"></span>
                 <span ng-if="proof.status === false"> In Progress</span>
             </td>
-            <td class="btn-group">
+            <td class="input-btn-group">
                 <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
                 <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
                 <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i></span> Loading...</a>

@@ -346,6 +346,14 @@ keymaeraProofControllers.controller('ProofListCtrl',
     $http.get('models/users/' + $cookies.userId + "/proofs").success(function(data) {
       $scope.allproofs = data;
     });
+
+    $scope.loadProof = function(proof) {
+        proof.loadStatus = 'Loading'
+        $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+            proof.loadStatus = data.loadStatus
+        })
+    }
+
     $scope.$emit('routeLoaded', {theview: 'allproofs'});
   });
 

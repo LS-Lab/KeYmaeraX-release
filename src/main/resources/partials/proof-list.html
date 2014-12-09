@@ -13,6 +13,7 @@
             <td>Date</td>
             <td>Proof Steps</td>
             <td>Status</td>
+            <td>Actions</td>
         </tr>
         </thead>
         <tbody>
@@ -22,15 +23,25 @@
             <td>{{ proof.name }}</td>
             <td>{{ proof.date }}</td>
             <td>{{ proof.stepCount }}</td>
-            <td><span class="{{ proof.status && 'glyphicon glyphicon-ok' || 'glyphicon glyphicon-remove' }}"></span></td>
-            <td class="input-group-btn">
-                <button type="button" class="btn btn-default" ng-click="openPrf(proof.id)">Go to proof</button>
+            <td><span ng-if="proof.status" class="fa fa-check"></span>
+                <span ng-if="proof.status"> Proved</span>
+                <span ng-if="proof.status === false" class="fa fa-pencil"></span>
+                <span ng-if="proof.status === false"> In Progress</span>
+            </td>
+            <td class="input-btn-group">
+                <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
+                <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
+                <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i></span> Loading...</a>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
                 </button>
                 <ul class="dropdown-menu" role="menu">
-                    <li><a ng-href="dashboard.html?#/proofs/{{ proof.id }}">Go to proof</a></li>
+                    <li>
+                        <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
+                        <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
+                        <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i></span> Loading...</a>
+                    </li>
                     <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
                     <li><a href="#">Delete</a></li>-->
                 </ul>

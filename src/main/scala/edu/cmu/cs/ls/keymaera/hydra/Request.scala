@@ -54,11 +54,9 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   def getResultingResponses() = {
-    val proofsWithNames = db.getProofsForUser(userId)
-    val proofs = proofsWithNames.map(_._1).map(proof =>
-      (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
-    val names  = proofsWithNames.map(_._2)
-    new ProofListResponse(proofs,Some(names)) :: Nil
+    val proofs = db.getProofsForUser(userId).map(proof =>
+      (proof._1, KeYmaeraInterface.getTaskStatus(proof._1.proofId).toString))
+    new ProofListResponse(proofs) :: Nil
   }
 }
 
