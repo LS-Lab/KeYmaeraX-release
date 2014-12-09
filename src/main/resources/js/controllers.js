@@ -247,12 +247,13 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                      contentType: 'application/json',
                      success: function(data) {
                          //Update the models list -- this should result in the view being updated?
-                         while (Models.getModels().length != 0) { Models.getModels().shift() }
+                         while (Models.getModels().length != 0) {
+                            Models.getModels().shift()
+                         }
                          $http.get("models/users/" + $cookies.userId).success(function(data) {
                              Models.addModels(data);
+                             $route.reload();
                          });
-                         //This is a hack...
-                         $route.reload();
                      },
                      error: this.ajaxErrorHandler
                });
