@@ -305,7 +305,7 @@ object MongoDB extends DBAbstraction {
     if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
     if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
 
-    val update = $push("completedSteps" -> new ObjectId(tId)) ++ $set(
+    val update = $addToSet("completedSteps" -> new ObjectId(tId)) ++ $set(
       // TODO update step count
       if (openGoals == 0) "closed" -> true else "closed" -> false,
       "dispatchedTactics.$.status" -> DispatchedTacticStatus.Finished.toString

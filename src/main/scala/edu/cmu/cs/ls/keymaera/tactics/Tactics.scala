@@ -296,7 +296,11 @@ object Tactics {
         runningTactics.remove(t)
 //        println("removing " + t.name + " from running tactics. Remaining: " + runningTactics.size)
         // if there are no more running tactics notify our listeners
-        if(runningTactics.isEmpty) listeners.foreach(_(this))
+        if(runningTactics.isEmpty) {
+          val theListeners = listeners
+          listeners = Nil
+          theListeners.foreach(_(this))
+        }
       case Some(x) => x.unregister(t)
     }
 
