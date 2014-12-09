@@ -305,9 +305,15 @@ object KeYmaeraInterface {
         TacticManagement.positionTactics.filter(t => t._2.applies(n.sequent, p)).map(_._1) ++:
         TacticManagement.inputPositionTactics
           .filter(t => t._2 match {
-          case (om, f: ((_) => PositionTactic)) => if (om.tpe =:= typeTag[Option[Formula]].tpe)
-            f.asInstanceOf[Option[Formula] => PositionTactic].apply(Some(null)).applies(n.sequent, p)
-          else false
+          case (om, f: ((_) => PositionTactic)) =>
+            // TODO need some generic way of telling when a tactic is applicable. the current tactics already want their input
+            if (om.tpe =:= typeTag[Option[Formula]].tpe) {
+              f.asInstanceOf[Option[Formula] => PositionTactic].apply(Some(null)).applies(n.sequent, p)
+            } else if (om.tpe =:= typeTag[Formula].tpe) {
+              f.asInstanceOf[Formula => PositionTactic].apply(null).applies(n.sequent, p)
+            } else {
+              false
+            }
           case _ => throw new IllegalArgumentException("Tactics " + t + " with unknown input type ")
         })
           .map(t => t._1)

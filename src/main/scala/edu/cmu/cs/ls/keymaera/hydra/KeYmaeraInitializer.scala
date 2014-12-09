@@ -46,13 +46,14 @@ class KeYmaeraInitializer(db : DBAbstraction) {
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
 
     initInputTactic[Option[Formula]]("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
-    initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT)
+    initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT _)
     initInputTactic("dl.equalityRewriting", "TacticLibrary.equalityRewriting", TacticKind.InputTactic, TacticLibrary.equalityRewriting _)
     initInputTactic[Position,Position]("dl.axiomClose", "TacticLibrary.AxiomCloseT", TacticKind.InputTactic, TacticLibrary.AxiomCloseT)
 //    initInputTactic("dl.axiom", "TacticLibrary.axiomT", TacticKind.InputTactic, TacticLibrary.axiomT)
     initInputPositionTactic("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)
     initInputPositionTactic("dl.equalityRewritingLeft", "TacticLibrary.equalityRewritingLeft", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingLeft)
     initInputPositionTactic("dl.equalityRewritingRight", "TacticLibrary.equalityRewritingRight", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingRight)
+    initInputPositionTactic("dl.diffcut", "TacticLibrary.diffCutT", TacticKind.InputPositionTactic, TacticLibrary.diffCutT)
 //    initInputPositionTactic[Variable,Expr]("dl.instantiate", "TacticLibrary.instantiateT", TacticKind.PositionTactic, TacticLibrary.instantiateT)
   }
 

@@ -154,6 +154,11 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
               "label" : "\\(\\left(\\text{cut}\\right) \\frac{\\Gamma ~\\vdash~ \\phi,\\Delta \\quad \\Gamma,\\phi ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\Delta}\\)",
               "input" : [ { "name" : "0", "label" : "\\(\\phi\\)", "placeholder" : "Formula", "type" : "text" } ]
             },
+        "dl.diffcut" :
+            { "name" : "dl.diffcut",
+              "label" : "\\(\\left(\\text{diff. cut}\\right) \\frac{\\Gamma ~\\vdash~ \\left[x'=\\theta \\& H \\right] C, \\Delta \\quad \\Gamma ~\\vdash~ \\left[x'=\\theta \\& H \\wedge C \\right]\\phi, \\Delta}{\\Gamma ~\\vdash~ \\left[x' = \\theta \\& H \\right] \\phi, \\Delta}\\)",
+              "input" : [ { "name" : "0", "label" : "\\(C\\)", "placeholder" : "Formula", "type" : "text" } ]
+            },
         "dl.qe" :
             { "name" : "dl.qe",
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{\\text{QE}(\\phi)}{\\phi} \\)",

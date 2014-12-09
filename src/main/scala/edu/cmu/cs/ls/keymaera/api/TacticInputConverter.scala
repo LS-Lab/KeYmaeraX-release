@@ -65,6 +65,8 @@ object TacticInputConverter {
   private def convert[T](param: String, t: TypeTag[T]): T = {
     if (t.tpe =:= typeOf[Option[Formula]]) new KeYmaeraParser ().parseBareExpression(param) match {
       case Some(f: Formula) => Some(f).asInstanceOf[T]
+    } else if (t.tpe =:= typeOf[Formula]) new KeYmaeraParser ().parseBareExpression(param) match {
+      case Some(f: Formula) => f.asInstanceOf[T]
     } else if (t.tpe =:= typeOf[String]) {
       param.asInstanceOf[T]
     } else if (t.tpe =:= typeOf[Boolean]) {
