@@ -213,6 +213,7 @@ object TacticLibrary {
   def boxInductionT = HybridProgramTacticsImpl.boxInductionT
   def boxChoiceT = HybridProgramTacticsImpl.boxChoiceT
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.inductionT(inv)
+  def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
 
   def uniformSubstitution(from : Term, to : Term): PositionTactic =
     new PositionTactic("Uniform Substitution") {

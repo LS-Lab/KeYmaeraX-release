@@ -74,6 +74,7 @@ object JSONConverter {
           case DiamondModality(a, b) => JsObject(("name" -> JsString("diamondmodality")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Forall(v, a) => JsObject(("name" -> JsString("forall")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Exists(v, a) => JsObject(("name" -> JsString("exists")) :: ("variables" -> JsArray(v.map(convertNamedSymbol).toList)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case FormulaDerivative(a) => JsObject(("name" -> JsString("formuladerivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)

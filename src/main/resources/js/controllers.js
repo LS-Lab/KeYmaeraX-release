@@ -60,6 +60,9 @@ keymaeraProofControllers.factory('Agenda', function () {
 });
 
 keymaeraProofControllers.factory('Tactics', function ($rootScope) {
+    var makeRuleLabel = function(name, top, bot) {
+        return "\\(\\left(" + name + "  \\right) " + "\\frac{" + top + "}{" + bot + "}\\)";
+    }
 
     var ruleTactics = {
         // TODO add rules, move into own file
@@ -163,6 +166,14 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             { "name" : "dl.qe",
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{\\text{QE}(\\phi)}{\\phi} \\)",
               "input" : [ { "name" : "0", "label" : "Tool", "placeholder" : "Mathematica", "type" : "text" } ]
+            },
+        "dl.di" :
+            {
+                "name" : "dl.di",
+                "label" : makeRuleLabel("\\text{DI}",
+                "\\Gamma, H ~\\vdash~ F, \\Delta \\quad \\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow F_{x_1, \\ldots , x_n}^{\\theta_1, \\ldots , \\theta_n}, \\Delta)",
+                "\\Gamma ~\\vdash~ \\left[ x_1' = \\theta_1, \\ldots , x_n' = \\theta_n, H \\right]F, \\Delta"),
+                "input" : [ {"name" : "0", "label" : "Differential Invariant", "placeholder" : "Formula", "type" : "text"} ]
             },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
