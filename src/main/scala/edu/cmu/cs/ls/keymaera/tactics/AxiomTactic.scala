@@ -95,7 +95,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
       axiom match {
         case Some(ax) =>
           constructInstanceAndSubst(getFormula(node.sequent, pos.topLevel), ax, pos) match {
-            case Some((_, axiomInstance, subst, ptac)) =>
+            case Some((modAx, axiomInstance, subst, ptac)) =>
               val axiomInstPos = AntePosition(node.sequent.ante.length)
               val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
                 //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
@@ -120,7 +120,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               }
               val axiomPos = SuccPosition(node.sequent.succ.length)
               println("Axiom instance " + axiomInstance)
-              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }
