@@ -53,6 +53,22 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     }
   }
 
+  /**
+   *
+   * @param s the string to parse into a expr
+   * @return The expression.
+   */
+  def parseBareTerm(s:String) : Option[Term] = {
+    val variables = allVariableOccurances(s)
+    val parser = new KeYmaeraParser(false)
+
+    val exprParser = parser.makeTermParser(variables, Nil)
+    parser.parseAll(exprParser, s) match {
+      case parser.Success(result, next) => Some(result.asInstanceOf[Term])
+      case _ => None //todo actually, pass back an error
+    }
+  }
+
   def parseBareFormula(s : String) : Option[Formula] = {
     try {
       val expr      = this.parseBareExpression(s).get
@@ -860,6 +876,17 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     
     lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs).parser
     lazy val ret = formulaParser ^^ {
+      case e => e
+    }
+    ret
+  }
+
+  /**
+   * Gets a term parser based upon the function and programVariable sections.
+   */
+  def makeTermParser(variables:List[Variable], functions:List[Function]):PackratParser[Expr] = {
+    lazy val termParser = new TermParser(variables,functions).parser
+    lazy val ret = termParser ^^ {
       case e => e
     }
     ret
