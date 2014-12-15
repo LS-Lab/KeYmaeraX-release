@@ -215,12 +215,6 @@ object TacticLibrary {
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.inductionT(inv)
   def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
 
-  def uniformSubstitution(from : Term, to : Term): PositionTactic =
-    new PositionTactic("Uniform Substitution") {
-      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
-      override def apply(p: Position): Tactic = ??? //new ApplyRule(UniformSubstitution())
-
-    }
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
     new PositionTactic("Alpha Renaming") {
       override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicablity
