@@ -1623,7 +1623,7 @@ class DerivativeAssignmentRule(p: Position) extends PositionRule("AssignmentRule
   }
 }
 
-// @TODO Review. Will turn into axiom.
+// @TODO Review. Will turn into axiom QuantifierAbstraction.
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
