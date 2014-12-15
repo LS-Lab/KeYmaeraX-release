@@ -190,6 +190,7 @@ object TacticLibrary {
 
   def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
   def decomposeQuanT = FOQuantifierTacticsImpl.decomposeQuanT
+  def instantiateQuanT(q: Variable, t: Term) = FOQuantifierTacticsImpl.instantiateT(q, t)
 
   /*********************************************
    * Hybrid Program Tactics
