@@ -225,7 +225,7 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
 
                         case "derivative":
                             var left = parensIfNeeded(json, c[0], depth + 1);
-                            content = left + "'";
+                            content = "\\dot{" + left + "}";
                             break;
 
                         default:
