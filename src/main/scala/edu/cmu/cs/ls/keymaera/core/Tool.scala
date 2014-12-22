@@ -17,6 +17,9 @@ import edu.cmu.cs.ls.keymaera.tools.{JLinkMathematicaLink, QETool}
  */
 abstract class Tool(val name: String) {
 
+  // TODO replace with constructor and dependency injection
+  def init(config : Map[String,String]) {}
+
   /**
    * Check whether the managed tool is still alive and recover it if not.
    * Yes, this is the mathematica kernel dies on interrupt fix-up!
@@ -34,4 +37,16 @@ object KeYmaera extends Tool("KeYmaera") {}
 
 class Mathematica extends Tool("Mathematica") {
   private[core] val cricitalQE: QETool = new JLinkMathematicaLink
+
+  // TODO replace with constructor and dependency injection
+  override def init(config: Map[String,String]) = {
+    val linkName = config.get("linkName") match {
+      case Some(l) => l
+      case None => throw new IllegalArgumentException("Missing configuration parameter 'linkName'")
+    }
+    cricitalQE match {
+      case t: JLinkMathematicaLink => t.init(linkName)
+      case _ => throw new IllegalStateException("Unknown tool")
+    }
+  }
 }

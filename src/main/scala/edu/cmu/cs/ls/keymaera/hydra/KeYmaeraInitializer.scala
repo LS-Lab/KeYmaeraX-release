@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
+import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
 import scala.reflect.runtime.universe.TypeTag
@@ -13,6 +13,14 @@ import scala.reflect.runtime.universe.TypeTag
  */
 class KeYmaeraInitializer(db : DBAbstraction) {
   def initialize() {
+    // TODO move to DB initialization
+    db.createConfiguration("mathematica")
+    // TODO replace with dependency injection
+    getMathematicaLinkName match {
+      case Some(l) => Tactics.MathematicaScheduler.init(Map("linkName" -> l))
+      case None => println("Warning: Mathematica not configured")
+    }
+
     initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, TacticLibrary.default)
     initTactic("keymaera.defaultNoArith", "TacticLibrary.defaultNoArith", TacticKind.Tactic, TacticLibrary.defaultNoArith)
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
@@ -103,5 +111,9 @@ class KeYmaeraInitializer(db : DBAbstraction) {
           case None => throw new IllegalStateException("Unable to insert tactic " + name + " into the database")
         }
     }
+  }
+
+  private def getMathematicaLinkName = {
+    db.getConfiguration("mathematica").config.get("linkName")
   }
 }

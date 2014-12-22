@@ -55,6 +55,8 @@ class DifferentialTests extends FlatSpec with Matchers {
 
   //Running tactics
   val tool = new Mathematica()
+  // TODO test configuration
+  tool.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
 
   def runTactic(tactic : Tactic, rootNode : ProofNode) = {
     if(!tactic.applicable(rootNode)) {

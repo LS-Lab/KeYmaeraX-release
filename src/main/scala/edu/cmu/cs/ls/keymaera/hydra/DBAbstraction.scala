@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
+import java.util
+
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
 
@@ -58,6 +60,8 @@ class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[
                            val tacticsId:String, val input:Map[Int,String],
                            val auto:Option[PositionTacticAutomation.Value], val status:DispatchedTacticStatus.Value)
 
+class ConfigurationPOJO(val name: String, val config: Map[String,String])
+
 //tasks : _id, model
 //tactics: _id, name, class
 //dispatched_tactics: _id, tactic_id, task_id, node_id, count
@@ -70,6 +74,12 @@ trait DBAbstraction {
    * Initializes a new database.
    */
   def cleanup() : Unit
+
+  // Configuration
+  def getAllConfigurations: Set[ConfigurationPOJO]
+  def getConfiguration(configName: String) : ConfigurationPOJO
+  def createConfiguration(configName: String) : Boolean
+  def updateConfiguration(config: ConfigurationPOJO)
 
   // Users
   def userExists(username : String) : Boolean

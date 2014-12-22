@@ -141,6 +141,10 @@ class Scheduler(tools : Seq[Tool]) {
 
   thread.foreach(_.start())
 
+  def init(config: Map[String,String]) = {
+    tools.foreach(_.init(config))
+  }
+
   def dispatch(t : TacticWrapper) : this.type = {
     prioList += t
     this.synchronized {

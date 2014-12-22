@@ -22,6 +22,8 @@ class TacticTests extends FlatSpec with Matchers {
   Config.mathlicenses = 1
   Config.maxCPUs = 1
   val math = new Mathematica
+  // TODO test configuration
+  math.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
   val qet = new JLinkMathematicaLink()
   
   val randomTrials = 10
