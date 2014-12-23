@@ -18,7 +18,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import java.io._
 import scala.language.postfixOps
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaera.tactics.{TacticWrapper, TacticLibrary, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticWrapper, TacticLibrary, Tactics}
 
 object TermTests {
 

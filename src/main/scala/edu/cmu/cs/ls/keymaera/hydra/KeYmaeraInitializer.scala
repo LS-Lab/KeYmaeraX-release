@@ -1,28 +1,29 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
+import edu.cmu.cs.ls.keymaera.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary2, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
 import scala.reflect.runtime.universe.TypeTag
 
 /**
  * Initializes KeYmaera and its database.
- * @param db The database access.
+ * @param env The dependency injection environment
  */
-class KeYmaeraInitializer(db : DBAbstraction) {
+class KeYmaeraInitializer(env : {val db: DBAbstraction
+                                 val tacticLibrary: TacticLibrary2}) {
   def initialize() {
     // TODO move to DB initialization
-    db.createConfiguration("mathematica")
+    env.db.createConfiguration("mathematica")
     // TODO replace with dependency injection
     getMathematicaLinkName match {
       case Some(l) => Tactics.MathematicaScheduler.init(Map("linkName" -> l))
       case None => println("Warning: Mathematica not configured")
     }
 
-    initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, TacticLibrary.default)
-    initTactic("keymaera.defaultNoArith", "TacticLibrary.defaultNoArith", TacticKind.Tactic, TacticLibrary.defaultNoArith)
+    initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, env.tacticLibrary.default)
+    initTactic("keymaera.defaultNoArith", "TacticLibrary.defaultNoArith", TacticKind.Tactic, env.tacticLibrary.defaultNoArith)
     initTactic("keymaera.step", "TacticLibrary.step", TacticKind.PositionTactic, TacticLibrary.step)
     initTactic("keymaera.propositional", "TacticLibrary.propositional", TacticKind.Tactic, TacticLibrary.propositional)
     initTactic("keymaera.arithmetic", "TacticLibrary.arithmeticT", TacticKind.Tactic, TacticLibrary.arithmeticT)
@@ -102,11 +103,11 @@ class KeYmaeraInitializer(db : DBAbstraction) {
   }
 
   private def getOrCreateTactic(name: String, className: String, kind: TacticKind.Value): TacticPOJO = {
-    db.getTacticByName(name) match {
+    env.db.getTacticByName(name) match {
       case Some(t) => t
       case None =>
-        val id = db.createTactic(name, className, kind)
-        db.getTactic(id) match {
+        val id = env.db.createTactic(name, className, kind)
+        env.db.getTactic(id) match {
           case Some(t) => t
           case None => throw new IllegalStateException("Unable to insert tactic " + name + " into the database")
         }
@@ -114,6 +115,6 @@ class KeYmaeraInitializer(db : DBAbstraction) {
   }
 
   private def getMathematicaLinkName = {
-    db.getConfiguration("mathematica").config.get("linkName")
+    env.db.getConfiguration("mathematica").config.get("linkName")
   }
 }

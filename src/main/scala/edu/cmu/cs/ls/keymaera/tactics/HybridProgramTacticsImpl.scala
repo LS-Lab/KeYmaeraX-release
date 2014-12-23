@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import PropositionalTacticsImpl.{hideT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,AndRightT,kModalModusPonensT}
-import TacticLibrary.{alphaRenamingT,abstractionT,Generator}
+import TacticLibrary.{alphaRenamingT,abstractionT}
 import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
 
 import scala.collection.immutable.{List,Seq}

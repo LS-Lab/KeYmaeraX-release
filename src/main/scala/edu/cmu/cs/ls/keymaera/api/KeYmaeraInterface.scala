@@ -248,7 +248,8 @@ object KeYmaeraInterface {
   def addTask(taskId: String, content: String): String = {
     if (TaskManagement.containsTask(taskId)) throw new IllegalArgumentException("Duplicate task ID " + taskId)
     TaskManagement.startLoadingTask(taskId)
-    new KeYmaeraParser().runParser(content) match {
+    // TODO ComponentConfig will be provided from outside once KeYmaeraInterface is dependency injection enabled
+    new KeYmaeraParser(false, ComponentConfig).runParser(content) match {
       case f: Formula =>
         val seq = Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f) )
         val r = new RootNode(seq)

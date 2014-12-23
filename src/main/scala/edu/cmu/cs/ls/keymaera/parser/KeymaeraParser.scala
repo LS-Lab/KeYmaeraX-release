@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaera.parser
 
+import edu.cmu.cs.ls.keymaera.tactics.{ConfigurableGenerate, Generator}
+
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
 import scala.util.parsing.combinator.syntactical._
@@ -16,6 +18,7 @@ import java.io.File
 /**
  * The KeYmaera Parser
  * @author Nathan Fulton
+ * @author Stefan Mitsch
  * TODO:
  *  * cleaner distinction between:
  *  	predicates (boolean-valued, rigid)
@@ -23,7 +26,9 @@ import java.io.File
  *      "assignables" (non-rigid, currently called variables)
  *      functions (terms that take arguments
  */
-class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with PackratParsers {
+class KeYmaeraParser(enabledLogging: Boolean = false,
+                     env: { val generator: ConfigurableGenerate[Formula]} = new { lazy val generator = new ConfigurableGenerate[Formula]()})
+  extends RegexParsers with PackratParsers {
   def log[T](p : Parser[T])(name : String) = if(!enabledLogging) p else super.log(p)(name)
   //////////////////////////////////////////////////////////////////////////////
   // Public-facing interface.
@@ -43,7 +48,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
    */
   def parseBareExpression(s:String) : Option[Expr] = {
     val variables = allVariableOccurances(s)
-    val parser = new KeYmaeraParser(false)
+    val parser = new KeYmaeraParser(false, env)
 
     val formulaParser = new FormulaParser(variables,Nil,Nil,Nil).parser
     val exprParser = parser.makeExprParser(variables, Nil, Nil, Nil)
@@ -60,7 +65,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
    */
   def parseBareTerm(s:String) : Option[Term] = {
     val variables = allVariableOccurances(s)
-    val parser = new KeYmaeraParser(false)
+    val parser = new KeYmaeraParser(false, env)
 
     val exprParser = parser.makeTermParser(variables, Nil)
     parser.parseAll(exprParser, s) match {
@@ -82,8 +87,8 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
   }
 
   def runParser(s:String):Expr = {
-    val parser = new KeYmaeraParser(enabledLogging)
-    
+    val parser = new KeYmaeraParser(enabledLogging, env)
+
     //Parse file.
     val (functions : List[Function],predicateConstants : List[PredicateConstant], variables : List[Variable],problemText : String) =
       parser.parseAll(parser.fileParser, s) match {
@@ -91,8 +96,8 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
         case parser.Failure(_,_) => throw new Exception("parse failed.")
         case parser.Error(_,_) => throw new Exception("parse error.")
       }
-    
-    
+
+
     val programs = List[ProgramConstant]() //TODO support these.
     
     
@@ -131,7 +136,8 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     parse:Expr,
     printOfParse:String) = 
   {
-    val parser = new KeYmaeraParser(enabledLogging)
+    /* don't let the checking parser communicate with the objects injected into the real parser */
+    val parser = new KeYmaeraParser(enabledLogging, new { val generator = new ConfigurableGenerate[Formula]() } )
     val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programVariables)
     try{
       val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
@@ -798,9 +804,10 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     }
     
     lazy val closureP:SubprogramParser = {
-      lazy val pattern = tighterParsers(precedence, closureP).reduce(_|_) ~ KSTAR
+      lazy val pattern = (tighterParsers(precedence, closureP).reduce(_|_) <~ KSTAR) ~ opt("@invariant" ~> "(" ~> formulaParser <~ ")")
       log(pattern)("*") ^^ {
-        case p ~ KSTAR => new Loop(p)
+        case p ~ Some(f) => val result = new Loop(p); env.generator.products += result -> f; result
+        case p ~ None => new Loop(p)
       }
     }
     

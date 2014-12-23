@@ -63,10 +63,10 @@ object TacticInputConverter {
    * @return The string input converted to the specified type.
    */
   private def convert[T](param: String, t: TypeTag[T]): T = {
-    if (t.tpe =:= typeOf[Option[Formula]]) new KeYmaeraParser ().parseBareExpression(param) match {
+    if (t.tpe =:= typeOf[Option[Formula]]) new KeYmaeraParser().parseBareExpression(param) match {
       case Some(f: Formula) => Some(f).asInstanceOf[T]
       case None => throw new IllegalArgumentException("Cannot parse " + param)
-    } else if (t.tpe =:= typeOf[Formula]) new KeYmaeraParser ().parseBareExpression(param) match {
+    } else if (t.tpe =:= typeOf[Formula]) new KeYmaeraParser().parseBareExpression(param) match {
       case Some(f: Formula) => f.asInstanceOf[T]
       case None => throw new IllegalArgumentException("Cannot parse " + param)
     } else if (t.tpe =:= typeOf[String]) {
@@ -80,7 +80,7 @@ object TacticInputConverter {
       else new SuccPosition(pos(0), posInExpr).asInstanceOf[T]
     } else if (t.tpe =:= typeOf[Variable]) {
       Variable(param, None, Real).asInstanceOf[T]
-    } else if (t.tpe =:= typeOf[Term]) new KeYmaeraParser ().parseBareTerm(param) match {
+    } else if (t.tpe =:= typeOf[Term]) new KeYmaeraParser().parseBareTerm(param) match {
         case Some(t: Term) => t.asInstanceOf[T]
         case None => throw new IllegalArgumentException("Cannot parse " + param)
     } else throw new IllegalArgumentException("Unknown parameter type")
