@@ -46,7 +46,8 @@ angular.module('sequent', ['ngSanitize','formula'])
                   resolve: {
                     proofId: function() { return $scope.proofId; },
                     nodeId: function() { return $scope.nodeId; },
-                    formula: function() { return; }
+                    formula: function() { return undefined; },
+                    isAnte: function() { return undefined; }
                   }
                 });
             }
