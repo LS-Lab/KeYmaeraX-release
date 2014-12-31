@@ -99,7 +99,9 @@ class JLinkMathematicaLink extends  MathematicaLink {
   def getAnswer() = {
     ml.waitForAnswer()
     val res = ml.getExpr
-    (res.toString, MathematicaToKeYmaera.fromMathematica(res))
+    val keymaeraResult = MathematicaToKeYmaera.fromMathematica(res)
+    // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+    (res.toString, keymaeraResult)
   }
 
   def ready = ???
