@@ -68,6 +68,7 @@ class JLinkMathematicaLink extends  MathematicaLink {
    * Closes the connection to Mathematica.
    */
   def shutdown() = {
+    ml.terminateKernel()
     ml.close()
     ml = null
   }
