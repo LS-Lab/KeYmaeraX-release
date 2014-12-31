@@ -19,8 +19,12 @@ object TacticInputConverter {
    * @return The string input converted to the specified type.
    */
   def convert[T](params: Map[Int,String], t: TypeTag[T]): T = {
-    assert(params.size == 1)
-    params.map({ case (k,v) => convert(v, t) }).head
+    if (t.tpe <:< typeOf[Option[_]] && params.size == 0) {
+      None.asInstanceOf[T]
+    } else {
+      assert(params.size == 1)
+      params.map({ case (k,v) => convert(v, t) }).head
+    }
   }
 
   /**
