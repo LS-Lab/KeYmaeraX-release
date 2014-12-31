@@ -64,7 +64,7 @@ private object NameConversion {
 
     //Add the index if it exists.
     val fullName : String   = ns.index match {
-      case Some(idx) => identifier + SEP + idx.toString()
+      case Some(idx) => identifier + SEP + idx.toString
       case None      => identifier
     }
     new com.wolfram.jlink.Expr(com.wolfram.jlink.Expr.SYMBOL, fullName)
@@ -134,6 +134,7 @@ private object NameConversion {
  * @TODO the correctness of quantifier handling is non-obvious
  * 
  * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 object MathematicaToKeYmaera {
   type MExpr = com.wolfram.jlink.Expr
@@ -142,8 +143,7 @@ object MathematicaToKeYmaera {
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
    */
-  def fromMathematica(e : com.wolfram.jlink.Expr) 
-    : edu.cmu.cs.ls.keymaera.core.Expr = 
+  def fromMathematica(e : MExpr): KExpr =
   {
     //Numbers
     if(e.numberQ() && !e.rationalQ()) {
@@ -152,8 +152,8 @@ object MathematicaToKeYmaera {
         Number(Real, BigDecimal(number))
       }
       catch {
-        case exn : NumberFormatException => throw mathExnMsg(e, "Could not convert number: " + e.toString())
-        case exn : ExprFormatException => throw mathExnMsg(e, "Could not represent number as a big decimal: " + e.toString())
+        case exn : NumberFormatException => throw mathExnMsg(e, "Could not convert number: " + e.toString)
+        case exn : ExprFormatException => throw mathExnMsg(e, "Could not represent number as a big decimal: " + e.toString)
       }
     }
     else if(e.rationalQ()) convertDivision(e)
@@ -174,8 +174,8 @@ object MathematicaToKeYmaera {
     else if(isQuantifier(e)) convertQuantifier(e)
     
     //Boolean algebra
-    else if(isThing(e,MathematicaSymbols.TRUE))    True
-    else if(isThing(e,MathematicaSymbols.FALSE))   False
+    else if(isThing(e, MathematicaSymbols.TRUE))   True
+    else if(isThing(e, MathematicaSymbols.FALSE))  False
     else if(isThing(e, MathematicaSymbols.AND))    convertAnd(e)
     else if(isThing(e, MathematicaSymbols.OR))     convertOr(e)
     else if(isThing(e, MathematicaSymbols.NOT))    convertNot(e)
@@ -183,7 +183,7 @@ object MathematicaToKeYmaera {
     else if(isThing(e, MathematicaSymbols.BIIMPL)) convertEquiv(e)
     
     //Relations
-    else if(isThing(e,MathematicaSymbols.EQUALS))          convertEquals(e)
+    else if(isThing(e, MathematicaSymbols.EQUALS))         convertEquals(e)
     else if(isThing(e, MathematicaSymbols.UNEQUAL))        convertNotEquals(e)
     else if(isThing(e, MathematicaSymbols.GREATER))        convertGreaterThan(e)
     else if(isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertGreaterEqual(e)
@@ -205,16 +205,16 @@ object MathematicaToKeYmaera {
     val result = NameConversion.toKeYmaera(e)
     result match {
       case result : NamedSymbol => result
-      case _ => throw new ConversionException("Expected variables but found non-variable:" + result.getClass().toString())
+      case _ => throw new ConversionException("Expected variables but found non-variable:" + result.getClass.toString)
     }
   }
   
-  def convertName(e : MExpr) : edu.cmu.cs.ls.keymaera.core.Expr = {
+  def convertName(e : MExpr) : KExpr = {
     val result = NameConversion.toKeYmaera(e)
     result match {
       case result : Function => {
         val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
-        if(!arguments.isEmpty) {
+        if(arguments.nonEmpty) {
           val argumentsAsPair = arguments.reduceRight[Term]( 
             (l,r) => Pair(TupleT(l.sort,r.sort), l,r) 
           )
@@ -406,27 +406,27 @@ object MathematicaToKeYmaera {
   }
   
   def isAborted(e : com.wolfram.jlink.Expr) = {
-    e.toString().equalsIgnoreCase("$Aborted") ||
-    e.toString().equalsIgnoreCase("Abort[]")
+    e.toString.equalsIgnoreCase("$Aborted") ||
+    e.toString.equalsIgnoreCase("Abort[]")
   }
   
   def isFailed(e : com.wolfram.jlink.Expr) = {
-    e.toString().equalsIgnoreCase("$Failed")
+    e.toString.equalsIgnoreCase("$Failed")
   }
 
   def failExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationFailedException(e)
   def abortExn(e:com.wolfram.jlink.Expr) = new MathematicaComputationAbortedException(e)
 
   def mathExnMsg(e:MExpr, s:String) : Exception =
-    new ConversionException("Conversion of " + e.toString() + " failed because: " + s)
+    new ConversionException("Conversion of " + e.toString + " failed because: " + s)
   
   def mathExn(e:com.wolfram.jlink.Expr) : Exception = 
-    new ConversionException("conversion not defined for Mathematica expr: " + e.toString() + " with infos: " + mathInfo(e))
+    new ConversionException("conversion not defined for Mathematica expr: " + e.toString + " with infos: " + mathInfo(e))
   
   def mathInfo(e : com.wolfram.jlink.Expr) : String = {
-    "args:\t" + {if(e.args().size == 0) { "empty" } else {e.args().map(_.toString()).reduce(_+","+_)}} +
+    "args:\t" + {if(e.args().size == 0) { "empty" } else {e.args().map(_.toString).reduce(_+","+_)}} +
     "\n" +
-    "toString:\t" + e.toString()
+    "toString:\t" + e.toString
   }
 }
   
@@ -453,7 +453,7 @@ object KeYmaeraToMathematica {
   def convertTerm(t : Term) : MExpr = {
     require(t.sort == Real, "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
-      case t: Apply => ???
+      case Apply(fn, child) => convertFnApply(fn, child)
       case t: IfThenElseTerm => ???
       case t: Pair => ???
       case t: Right => ???
@@ -525,10 +525,15 @@ object KeYmaeraToMathematica {
     val args = Array[MExpr](convertTerm(l), convertTerm(r))
     new MExpr(MathematicaSymbols.EXP, args)
   }
+  def convertFnApply(fn: Function, child: Term) = {
+    val args = Array[MExpr](convertNS(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
+    new MExpr(MathematicaSymbols.APPLY, args)
+  }
   def convertDerivative(t:Term) = {
     val args = Array[MExpr](convertTerm(t))
     new MExpr(MathematicaSymbols.DERIVATIVE, args)
   }
+
   
   /**
    * Converts a named symbol into Mathematica

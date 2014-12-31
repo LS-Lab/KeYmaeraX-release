@@ -1,3 +1,4 @@
+import com.wolfram.jlink.Expr
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
@@ -6,6 +7,8 @@ import java.math.BigDecimal
 import scala.collection.immutable._
 
 class MathematicaConversionTests extends FlatSpec with Matchers {
+  type MExpr = com.wolfram.jlink.Expr
+
   var ml : MathematicaLink = null //var so that we can instantiate within a test case.
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
@@ -158,5 +161,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x
+  }
+
+  "KeYmaera -> Mathematica" should "convert Apply" in {
+    val in = Apply(Function("y", None, Real, Real), Variable("x", None, Real))
+    val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
+      Array[MExpr](
+        new MExpr(Expr.SYMBOL, "KeYmaera`y"),
+        new MExpr(Expr.SYM_LIST, Array[MExpr](new MExpr(Expr.SYMBOL, "KeYmaera`x")))))
+    KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
   }
 }
