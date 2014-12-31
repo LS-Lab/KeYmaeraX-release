@@ -65,6 +65,14 @@ class JLinkMathematicaLink extends  MathematicaLink {
   }
 
   /**
+   * Closes the connection to Mathematica.
+   */
+  def shutdown() = {
+    ml.close()
+    ml = null
+  }
+
+  /**
    * Runs the command and then halts program exception until answer is returned.
    */
   def run(cmd : String) = {

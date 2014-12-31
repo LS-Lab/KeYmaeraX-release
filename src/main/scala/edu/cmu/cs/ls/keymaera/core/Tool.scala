@@ -49,4 +49,11 @@ class Mathematica extends Tool("Mathematica") {
       case _ => throw new IllegalStateException("Unknown tool")
     }
   }
+
+  override def shutdown = {
+    cricitalQE match {
+      case t: JLinkMathematicaLink => t.shutdown()
+      case _ => throw new IllegalStateException("Unknown tool")
+    }
+  }
 }
