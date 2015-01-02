@@ -25,16 +25,43 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
   /**
    * Parses a string to an expression. Free variables may occur.
    * @param s
-   * @return result of parse on success, or None
+   * @return Some result of parse on success, or None
    */
   def parse(s:String) : Option[Expr] = new KeYmaeraParser().parseBareExpression(s)
+
+  /**
+   * Parses a bare program (no modality) into an expression. Free variables may occur.
+   * @param s
+   * @return Some result of parse on success, or None
+   */
+  def parseBareProgram(s : String) : Option[Program] = {
+    //approach: add a modality around the bare program, parse the valid expression, extract the program.
+    val result = new KeYmaeraParser().parseBareExpression("[" + s + "] 1>0");
+    result match {
+      case Some(BoxModality(program, formula)) => Some(program)
+      case _ => None
+    }
+  }
 
   /**
    * Automatically do the projection and formula conversion. Be sure not to wrap this in an overly permissive try/catch.
    * @param s
    * @return
    */
-  def parseFormula(s:String) = parse(s).get.asInstanceOf[Formula]
+  def parseFormula(s:String) = {
+    val parseResult : Option[Expr] = parse(s);
+    parseResult match {
+      case Some(expr) => {
+        if(expr.isInstanceOf[Formula]) {
+          expr.asInstanceOf[Formula]
+        }
+        else {
+          throw new Exception("Expected a formula but found something else.")
+        }
+      }
+      case None => throw new Exception("Failed to parse.")
+    }
+  }
 
   /**
    *
