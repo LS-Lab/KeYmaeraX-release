@@ -636,7 +636,9 @@ object Tactics {
 
     def apply(tool: Tool, node: ProofNode) = {
       if(t.applicable(node)) {
-        t.continuation = onChangeAndOnNoChange(node, onChange(node, repeatT(t)), continuation)
+        val repeat = repeatT(t)
+        repeat.continuation = continuation
+        t.continuation = onChangeAndOnNoChange(node, onChange(node, repeat), continuation)
         t.dispatch(this, node)
       } else {
         continuation(this, Success, Seq(node))
