@@ -148,14 +148,17 @@ class Scheduler(tools : Seq[Tool]) {
   val prioList = new scala.collection.mutable.SynchronizedPriorityQueue[TacticToolBinding]()
   @volatile var blocked = 0/* threads blocked on the scheduler */
 
-  for (x <- 0 to maxThreads - 1) {
-    val te = new TacticExecutor(this, tools(x), x)
-    executors.update(x, te)
-    thread.update(x, new java.lang.Thread(te))
+  def init(config: Map[String,String]) = {
+    for (x <- 0 to maxThreads - 1) {
+      val te = new TacticExecutor(this, tools(x), x)
+      executors.update(x, te)
+      thread.update(x, new java.lang.Thread(te))
+    }
+    blocked = 0
+    tools.foreach(_.init(config))
+    thread.foreach(_.start())
   }
-  thread.foreach(_.start())
 
-  def init(config: Map[String,String]) = tools.foreach(_.init(config))
   def shutdown() = {
     executors.foreach(_.stop())
     // interrupt long running tools to make them check their stopped flag
