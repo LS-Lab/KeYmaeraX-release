@@ -7,13 +7,21 @@ import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tests
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
-import org.scalatest.{Matchers, FlatSpec}
+import edu.cmu.cs.ls.keymaera.tools.JLinkMathematicaLink
+import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+
+import scala.collection.immutable.Map
+
 
 /**
  * Created by nfulton on 12/1/14.
  */
-class DifferentialTests extends FlatSpec with Matchers {
+class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
+
+  //Mathematica
+  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  var tool : Mathematica = null
 
   //Constants
   val x = Variable("x", None, Real)
@@ -54,9 +62,18 @@ class DifferentialTests extends FlatSpec with Matchers {
   def runDefault(pn : ProofNode) = runTactic(TacticLibrary.default, pn)
 
   //Running tactics
-  val tool = new Mathematica()
-  // TODO test configuration
-  tool.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
+
+  override def beforeEach() = {
+    tool = new Mathematica
+    tool.init(mathematicaConfig)
+    Tactics.KeYmaeraScheduler.init(Map())
+  }
+
+  override def afterEach() = {
+    tool.shutdown()
+    tool = null
+    Tactics.KeYmaeraScheduler.shutdown()
+  }
 
   def runTactic(tactic : Tactic, rootNode : ProofNode) = {
     if(!tactic.applicable(rootNode)) {
@@ -70,9 +87,9 @@ class DifferentialTests extends FlatSpec with Matchers {
 
     println("beginning wait sequence for " + tactic.name)
     tactic.synchronized {
-      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll));
-      tactic.wait();
-      tactic.unregister;
+      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll))
+      tactic.wait()
+//      tactic.unregister
     }
 
     println("Ending wait sequence for " + tactic.name)

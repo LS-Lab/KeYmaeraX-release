@@ -1,4 +1,5 @@
 import com.wolfram.jlink.Expr
+import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
@@ -6,10 +7,12 @@ import java.io.File
 import java.math.BigDecimal
 import scala.collection.immutable._
 
-class MathematicaConversionTests extends FlatSpec with Matchers {
-  type MExpr = com.wolfram.jlink.Expr
+class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  var ml : MathematicaLink = null //var so that we can instantiate within a test case.
+  type MExpr = com.wolfram.jlink.Expr
+  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  var ml : JLinkMathematicaLink = null //var so that we can instantiate within a test case.
+
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
   val A = Variable("A", None, Bool)
@@ -20,14 +23,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   def num(n : Integer) = Number(new BigDecimal(n.toString()))
   def snum(n : String) = Number(new BigDecimal(n))
 
-  "MathematicaLink" should "connect" in {
+  override def beforeEach() = {
     ml = new JLinkMathematicaLink()
+    ml.init(mathematicaConfig("linkName"))
+  }
+
+  override def afterEach() = {
+    ml.shutdown()
+    ml = null
   }
 
   it should "convert numbers" in {
     ml.run("2+2")._2 should be (Number(4))
   }
-  
+
    "Mathematica -> KeYmaera" should "convert simple quantifiers" in {
     val f = True //TODO handle true and false!
     ml.run("ForAll[{x}, x==x]")._2 should be (True)
@@ -40,13 +49,13 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   it should "convert equalities and inequalities" in {
     ml.run("x == y")._2 should be (Equals(Real, x, y))
     ml.run("x == 0")._2 should be (Equals(Real, x, zero))
-    
+
     ml.run("x != y")._2 should be (NotEquals(Real, x, y))
     ml.run("x != 0")._2 should be (NotEquals(Real, x, zero))
 
     ml.run("x > y")._2 should be (GreaterThan(Real, x, y))
     ml.run("x > 0")._2 should be (GreaterThan(Real, x, zero))
-    
+
     ml.run("x >= y")._2 should be (GreaterEqual(Real, x, y))
     ml.run("x >= 0")._2 should be (GreaterEqual(Real, x, zero))
 
@@ -83,14 +92,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
     ml.run("x*y")._2 should be (Multiply(Real,x,y))
     ml.run("x-1")._2 should be (Add(Real,Neg(Real,num(1)),x)) //TODO-nrf these two tests are nasty.
     ml.run("x/y")._2 should be (Multiply(Real, x, Exp(Real, y,num(-1))))
-    ml.run("ForAll[{x}, x/4 == 4]")._2 should be 
+    ml.run("ForAll[{x}, x/4 == 4]")._2 should be
     (
-      Forall(Seq(x), 
+      Forall(Seq(x),
         Equals(
           Real,
           Divide(
-            Real, 
-            x, 
+            Real,
+            x,
             num(4)
           ),
           num(4)
@@ -127,7 +136,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers {
   }
 
   it should "not fail on a grab-bag of previous errors" in {
-    ml.run("x^2 + 2x + 4")._2 should be 
+    ml.run("x^2 + 2x + 4")._2 should be
     (
       Add(
         Real,
