@@ -195,13 +195,21 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case None => ""
     })
 
-    /** Normal form ODE data structures
- * \exists R a,b,c. (\D{x} = \theta & F)
- */
-    case NFContEvolve(vars,x,theta,f) => symbolTable.EXISTS +
-      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
-      groupIfNotAtomic(theta, prettyPrinter(theta)) +
-      groupIfNotAtomic(f, prettyPrinter(f))
+    case NFContEvolve(vars,x,theta,f) => {
+      if(vars.length != 0) {
+        symbolTable.EXISTS + " "
+          vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
+          "." +
+          groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.PRIME + symbolTable.EQ +
+          groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
+          groupIfNotAtomic(f, prettyPrinter(f))
+      }
+      else {
+        groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.PRIME + symbolTable.EQ +
+          groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
+          groupIfNotAtomic(f, prettyPrinter(f))
+      }
+    }
     
     case Number(n) => Number.unapply(expressionToPrint) match {
       case Some((ty, number:BigDecimal)) => number.toString()

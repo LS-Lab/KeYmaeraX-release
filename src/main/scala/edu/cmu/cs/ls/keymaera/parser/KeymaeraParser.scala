@@ -276,7 +276,12 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       identP :: //variableP should match first.
       groupP    ::
       Nil
-    
+
+    /**
+     * Terms containing no derivatives.
+     */
+    lazy val nonDerivativeTermP =   (precedence diff (termDerivativeP::Nil)).reduce(_|_)
+
     //non-variable ident parser. TODO-nrf add logging and check anything
     //parsed by identP is always bound.
     lazy val identP : PackratParser[Term] = {
@@ -407,12 +412,22 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     
     lazy val programParser = 
       new ProgramParser(variables,functions,predicates,programVariables).parser
-    
+
+    /**
+     * @TODO Is this unused? If so, why?
+     */
     lazy val termParserObj =
       new TermParser(variables, functions)
-      
+
     lazy val parser = precedence.reduce(_|_)
-    
+
+    /**
+     * This is not included in the precedence list, and is merely a helper for parsing NFContEvolve-form diffeq's.
+     * @TODO this doesn't work because inside the inditividual parser we acutally use the precendence list. We would
+     *      have to make the entire parser parameterized by the precedence list...
+     */
+    lazy val nonDerivativeFormulaP = (precedence diff formulaDerivativeP::Nil).reduce(_|_)
+
     val precedence : List[SubformulaParser] =
       equivP ::
       implP  ::
@@ -437,7 +452,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       falseP ::
       groupP ::
       Nil
-    
+
     lazy val forallP : PackratParser[Formula] = {      
       lazy val pattern = (FORALL ~> rep1sep(ident,",") <~ ".") ~ asTightAsParsers(precedence, boxP).reduce(_|_)
       log(pattern)("Forall") ^^ {
@@ -695,8 +710,11 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
-    lazy val formulaParser = new FormulaParser(variables, functions, predicates,programVariables).parser
-    lazy val termParser = new TermParser(variables,functions).parser
+    val theFormulaParser = new FormulaParser(variables, functions, predicates,programVariables)
+    lazy val formulaParser = theFormulaParser.parser
+
+    val theTermParser = new TermParser(variables,functions)
+    lazy val termParser = theTermParser.parser
    
     val precedence : List[SubprogramParser] =
       choiceP     ::
@@ -707,7 +725,8 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       closureP    ::
       assignP     ::
       ndassignP   ::
-      evolutionP  ::
+      normalFormEvolutionP  ::
+      evolutionP  :: //@TODO should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
       groupP      ::
@@ -802,22 +821,38 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       }
     }
 
-//   // TODO Per Jan's email, use N.F. constructor if v is a var.
-//    lazy val nfEvolutionP:SubprogramParser = {
-////      lazy val diffEqP:SubprogramParser = termParser ~ PRIME ~ EQ ~ termParser ^^ {
-////        case v ~ PRIME ~ EQ ~ t => ContEvolve(Equals(Real,Derivative(v.sort,v),t))
-////      }     
-//    }
-
-    lazy val evolutionP:SubprogramParser = {      
+    //@TODO Per December 2014 systems of diff eqs meeting, ContEvolves are temporarily deprecated.
+    lazy val evolutionP:SubprogramParser = {
       lazy val pattern = (
-                          rep1sep(formulaParser, AND) ~
+                          rep1sep(formulaParser, COMMA) ~
                           AND.? ~ formulaParser.?
                          )
       log(pattern)("Cont Evolution") ^^ {
         case des ~ andOption ~ constraintOption => constraintOption match {
           case Some(constraint) => ContEvolve( And(des.reduceRight(And(_,_)) , constraint) )
           case None => ContEvolve( des.reduceRight(And(_,_)) )
+        }
+      }
+    }
+
+
+    // Normal form is: f' = g & H.
+    lazy val normalFormEvolutionP:SubprogramParser = {
+      /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
+       * intended as an ev. dom. constraint
+       */
+      lazy val pattern = {
+        theTermParser.termDerivativeP ~ EQ ~ termParser ~ (AND ~> theFormulaParser.nonDerivativeFormulaP)
+      }
+
+      log(pattern)("NFContEvolve Parser") ^^ {
+        case lhs ~ EQ ~ rhs ~ constraint => {
+          lhs match {
+            case Derivative(Real, derivativeTerm) => {
+              new NFContEvolve(Nil, derivativeTerm, rhs, constraint)
+            }
+            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing NFContEvolve")
+          }
         }
       }
     }
