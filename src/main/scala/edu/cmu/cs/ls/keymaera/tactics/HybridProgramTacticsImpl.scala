@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import PropositionalTacticsImpl.{hideT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,AndRightT,kModalModusPonensT}
-import TacticLibrary.{abstractionT,Generator}
+import TacticLibrary.{alphaRenamingT,abstractionT}
 import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
 
 import scala.collection.immutable.{List,Seq}
@@ -143,63 +143,6 @@ object HybridProgramTacticsImpl {
 
       tIdx
     }
-
-        // construct axiom instance:
-
-
-
-//
-//        Some(ax, axiomInstance, Substitution(l), cont)
-//        // construct substitution
-//        val aX = Variable("x", None, Real)
-//        val aT = Variable("t", None, Real)
-//        val aP = Function("p", None, Real, Bool)
-//        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, x), p))
-//        // construct a new name for the quantified variable
-//        val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == x.name)
-//        require(vars.size > 0)
-//        val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
-//          case Some(a) => i match {
-//            case Some(b) => if (a < b) Some(b) else Some(a)
-//            case None => Some(a)
-//          }
-//          case None => i
-//        })
-//        val tIdx: Option[Int] = maxIdx match {
-//          case None => Some(0)
-//          case Some(a) => Some(a + 1)
-//        }
-//        val xx = Variable(x.name, tIdx, x.sort)
-//
-//
-//
-//        val g = Forall(Seq(xx), Imply(Equals(Real, xx,t), replace(p)(x, xx)))
-//        val axiomInstance = Equiv(f, g)
-//        def alpha(left: Boolean) = new PositionTactic("Alpha") {
-//          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//            case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
-//            case _ => false
-//          }
-//
-//          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-//            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-//              if(left)
-//                Some(TacticLibrary.alphaRenamingT(x.name, x.index, "x", None)(p.first)
-//                  & TacticLibrary.alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
-//              else
-//                Some(TacticLibrary.alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
-//
-//            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-//          }
-//        }
-//        //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
-//        // rename to match axiom if necessary
-//        val Equiv(lef, right) = axiom
-//        val (ax, cont) = if (x.name == "x" && x.index == None) (Equiv(lef, replace(right)(aX, xx)), Some(alpha(left = false))) else {
-//          (Equiv(replace(lef)(aX, x), replace(right)(aX, xx)), Some(alpha(left = true)))
-//        }
-//        Some(ax, axiomInstance, Substitution(l), cont)
-//      case _ => None
   }
 
   /**
@@ -215,29 +158,33 @@ object HybridProgramTacticsImpl {
     /**
      * Replace the old variable o by the new variable n.
      */
-    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(v, fa) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fa))
-        case Exists(v, fa) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fa))
-        case BoxModality(Assign(x: Variable, t), po) => if(x == o) Right(BoxModality(Assign(n, t), po)) else Right(e)
-        case DiamondModality(Assign(x: Variable, t), po) => if(x == o) Right(DiamondModality(Assign(n, t), po)) else Right(e)
-        case _ => Left(None)
-      }
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
-    }, f) match {
+    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
+      new ExpressionTraversalFunction {
+        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
+          case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
+          case BoxModality(Assign(x: Variable, t), pr) => if(x == o) Right(BoxModality(Assign(n, t), pr)) else Right(e)
+          case DiamondModality(Assign(x: Variable, t), pr) =>
+            if(x == o) Right(DiamondModality(Assign(n, t), pr)) else Right(e)
+          case _ => Left(None)
+        }
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+          if (e == o) Right(n) else Left(None)
+      }, f) match {
       case Some(g) => g
       case None => throw new IllegalStateException("Replacing one variable by another should not fail")
     }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(Assign(x:Variable, t), p) =>
+      case BoxModality(Assign(v:Variable, t), p) =>
+        // TODO check that axiom is of the expected form [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
         // construct substitution
-        val aX = Variable("x", None, Real)
+        val aV = Variable("v", None, Real)
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, x), p))
+        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, v), p))
         // construct a new name for the quantified variable
-        val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == x.name)
+        val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
         require(vars.size > 0)
         val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
           case Some(a) => i match {
@@ -250,10 +197,10 @@ object HybridProgramTacticsImpl {
           case None => Some(0)
           case Some(a) => Some(a + 1)
         }
-        val xx = Variable(x.name, tIdx, x.sort)
+        val newV = Variable(v.name, tIdx, v.sort)
 
-        // construct axiom instance: [x:=t]p(x) <-> \forall x_tIdx . (x_tIdx=t -> p(x_tIdx))
-        val g = Forall(Seq(xx), Imply(Equals(Real, xx,t), replace(p)(x, xx)))
+        // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
+        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replace(p)(v, newV)))
         val axiomInstance = Equiv(f, g)
         def alpha(left: Boolean) = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
@@ -264,20 +211,20 @@ object HybridProgramTacticsImpl {
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
               if(left)
-                Some(TacticLibrary.alphaRenamingT(x.name, x.index, "x", None)(p.first)
-                  & TacticLibrary.alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
+                Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first)
+                  & alphaRenamingT(newV.name, newV.index, aV.name, None)(p.second))
               else
-                Some(TacticLibrary.alphaRenamingT(xx.name, xx.index, "x", None)(p.second))
+                Some(alphaRenamingT(newV.name, newV.index, aV.name, None)(p.second))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
         //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
         // rename to match axiom if necessary
-        val Equiv(lef, right) = axiom
-        val (ax, cont) = if (x.name == "x" && x.index == None) (Equiv(lef, replace(right)(aX, xx)), Some(alpha(left = false))) else {
-          (Equiv(replace(lef)(aX, x), replace(right)(aX, xx)), Some(alpha(left = true)))
-        }
+        val Equiv(left, right) = axiom
+        val (ax, cont) =
+          if (v.name == aV.name && v.index == None) (Equiv(left, replace(right)(aV, newV)), Some(alpha(left = false)))
+          else (Equiv(replace(left)(aV, v), replace(right)(aV, newV)), Some(alpha(left = true)))
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
@@ -318,26 +265,27 @@ object HybridProgramTacticsImpl {
       case _ => false
     }
 
-    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(v, fa) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fa))
-        case Exists(v, fa) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fa))
-        case _ => Left(None)
+    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
+      new ExpressionTraversalFunction {
+        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
+          case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
+          case _ => Left(None)
+        }
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
+      }, f) match {
+        case Some(g) => g
+        case None => throw new IllegalStateException("Replacing one variable by another should not fail")
       }
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
-    }, f) match {
-      case Some(g) => g
-      case None => throw new IllegalStateException("Replacing one variable by another should not fail")
-    }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
       case BoxModality(NDetAssign(x), p) if Variable.unapply(x).isDefined =>
         val v = x.asInstanceOf[Variable]
         // construct substitution
-        val aX = Variable("x", None, Real)
+        val aV = Variable("v", None, Real)
         val aP = Function("p", None, Real, Bool)
         val l = List(new SubstitutionPair(ApplyPredicate(aP, x), p))
-        // construct axiom instance: [x:=*]p(x) <-> \forall x. p(x).
+        // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
         val g = Forall(Seq(v), p)
         val axiomInstance = Equiv(f, g)
         val alpha = new PositionTactic("Alpha") {
@@ -348,14 +296,16 @@ object HybridProgramTacticsImpl {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(TacticLibrary.alphaRenamingT(v.name, v.index, "x", None)(p.first)
-                & TacticLibrary.alphaRenamingT(v.name, v.index, "x", None)(p.second))
+              Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first)
+                & alphaRenamingT(v.name, v.index, aV.name, None)(p.second))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
         // rename to match axiom if necessary
-        val (ax, cont) = if(v.name != "x" || v.index != None) (replace(axiom)(aX, v), Some(alpha)) else (axiom, None)
+        val (ax, cont) =
+          if (v.name != aV.name || v.index != None) (replace(axiom)(aV, v), Some(alpha))
+          else (axiom, None)
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }

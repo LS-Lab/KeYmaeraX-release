@@ -53,32 +53,36 @@ trait MathematicaLink extends QETool {
  * @author Nathan Fulton
  */
 class JLinkMathematicaLink extends  MathematicaLink {
-  val ml : KernelLink = {
-    val call: String = try {
-      import java.io.File
-      val prop = new java.util.Properties()
-      val f = new File(System.getProperties.get("user.home") + File.separator + ".keymaera" + File.separator + "proof-settings.props")
-      prop.load(new FileReader(f))
-      prop.get("[MathematicaOptions]mathKernel").asInstanceOf[String]
-    } catch {
-      case x: java.io.IOException => "MathKernel"
-    }
-    MathLinkFactory.createKernelLink(Array[String](
+  var ml : KernelLink = null
+
+  // HACK assumed to be called before first use of ml
+  // TODO replace with constructor and use dependency injection to provide JLinkMathematicaLink whereever needed
+  def init(linkName : String) = {
+    ml = MathLinkFactory.createKernelLink(Array[String](
       "-linkmode", "launch",
-      "-linkname", call + " -mathlink"))
+      "-linkname", linkName + " -mathlink"))
+    ml.discardAnswer()
   }
-  ml.discardAnswer()
+
+  /**
+   * Closes the connection to Mathematica.
+   */
+  def shutdown() = {
+    ml.terminateKernel()
+    ml.close()
+    ml = null
+  }
 
   /**
    * Runs the command and then halts program exception until answer is returned.
    */
   def run(cmd : String) = {
-    dispatch(cmd);
+    dispatch(cmd)
     getAnswer()
   }
   
   def run(cmd:com.wolfram.jlink.Expr) = {
-    dispatch(cmd);
+    dispatch(cmd)
     getAnswer()
   }
 
@@ -96,7 +100,9 @@ class JLinkMathematicaLink extends  MathematicaLink {
   def getAnswer() = {
     ml.waitForAnswer()
     val res = ml.getExpr
-    (res.toString, MathematicaToKeYmaera.fromMathematica(res))
+    val keymaeraResult = MathematicaToKeYmaera.fromMathematica(res)
+    // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+    (res.toString, keymaeraResult)
   }
 
   def ready = ???
@@ -110,12 +116,9 @@ class JLinkMathematicaLink extends  MathematicaLink {
   def qeInOut(f : Formula) : (Formula, String, String) = {
     val input = "Reduce[" + toMathematica(f) + ",{}, Reals" + "]"
     val (output, result) = run(input)
-    if(result.isInstanceOf[Formula]) {
-      (result.asInstanceOf[Formula], input, output)
-    }
-    else {
-      throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+    result match {
+      case f : Formula => (f, input, output)
+      case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
 }
-

@@ -19,8 +19,12 @@ object TacticInputConverter {
    * @return The string input converted to the specified type.
    */
   def convert[T](params: Map[Int,String], t: TypeTag[T]): T = {
-    assert(params.size == 1)
-    params.map({ case (k,v) => convert(v, t) }).head
+    if (t.tpe <:< typeOf[Option[_]] && params.size == 0) {
+      None.asInstanceOf[T]
+    } else {
+      assert(params.size == 1)
+      params.map({ case (k,v) => convert(v, t) }).head
+    }
   }
 
   /**
@@ -63,10 +67,12 @@ object TacticInputConverter {
    * @return The string input converted to the specified type.
    */
   private def convert[T](param: String, t: TypeTag[T]): T = {
-    if (t.tpe =:= typeOf[Option[Formula]]) new KeYmaeraParser ().parseBareExpression(param) match {
+    if (t.tpe =:= typeOf[Option[Formula]]) new KeYmaeraParser().parseBareExpression(param) match {
       case Some(f: Formula) => Some(f).asInstanceOf[T]
-    } else if (t.tpe =:= typeOf[Formula]) new KeYmaeraParser ().parseBareExpression(param) match {
+      case None => throw new IllegalArgumentException("Cannot parse " + param)
+    } else if (t.tpe =:= typeOf[Formula]) new KeYmaeraParser().parseBareExpression(param) match {
       case Some(f: Formula) => f.asInstanceOf[T]
+      case None => throw new IllegalArgumentException("Cannot parse " + param)
     } else if (t.tpe =:= typeOf[String]) {
       param.asInstanceOf[T]
     } else if (t.tpe =:= typeOf[Boolean]) {
@@ -76,6 +82,11 @@ object TacticInputConverter {
       val posInExpr = if (pos.length > 1) PosInExpr(pos.splitAt(1)._2.toList) else HereP
       if (param.startsWith("ante:")) new AntePosition(pos(0), posInExpr).asInstanceOf[T]
       else new SuccPosition(pos(0), posInExpr).asInstanceOf[T]
+    } else if (t.tpe =:= typeOf[Variable]) {
+      Variable(param, None, Real).asInstanceOf[T]
+    } else if (t.tpe =:= typeOf[Term]) new KeYmaeraParser().parseBareTerm(param) match {
+        case Some(t: Term) => t.asInstanceOf[T]
+        case None => throw new IllegalArgumentException("Cannot parse " + param)
     } else throw new IllegalArgumentException("Unknown parameter type")
   }
 

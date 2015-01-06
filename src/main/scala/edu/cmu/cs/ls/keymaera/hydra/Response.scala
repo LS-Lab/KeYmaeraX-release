@@ -10,6 +10,8 @@ import com.github.fge.jsonschema.main.JsonSchemaFactory
 import spray.json._
 import java.io.File
 
+import scala.collection.mutable.ListBuffer
+
 /**
  * Responses are like views -- they shouldn't do anything except produce appropriately
  * formatted JSON from their parameters.
@@ -240,7 +242,6 @@ class AngularTreeViewResponse(tree : String) extends Response {
   val json = JsArray( convert(JsonParser(tree).asJsObject) )
 
   private def convert(node : JsObject) : JsValue = {
-    //TODO implement that label of bare proof nodes correctly.
     //TODO switch to Jolt (https://github.com/bazaarvoice/jolt) once they can handle trees
     val children = (node.fields.get("children") match {
       case Some(c) => c
@@ -249,9 +250,14 @@ class AngularTreeViewResponse(tree : String) extends Response {
       case JsArray(c) => c
       case _ => throw new IllegalArgumentException("Schema violation")
     }
+    val proofInfo = node.fields.get("infos") match {
+      case Some(info) => info
+      case None => JsArray()
+    }
 
     val id = node.fields.get("id") match { case Some(i) => i case None => throw new IllegalArgumentException("Schema violation") }
     if (children.length > 0) {
+      // TODO only retrieves the first alternative of the bipartite graph
       val step = children.head.asJsObject
       val rule = step.fields.get("rule") match {
         case Some(r) => r.asJsObject.fields.get("name") match {
@@ -267,12 +273,14 @@ class AngularTreeViewResponse(tree : String) extends Response {
       JsObject(
         "id" -> id,
         "label" -> rule,
+        "info" -> proofInfo,
         "children" -> JsArray(subgoals)
       )
     } else {
       JsObject(
         "id" -> id,
         "label" -> JsString("Open Goal"), // TODO only if the goal is closed, which is not yet represented in JSON
+        "info" -> proofInfo,
         "children" -> JsArray()
       )
     }

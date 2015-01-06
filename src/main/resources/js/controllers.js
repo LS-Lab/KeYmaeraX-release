@@ -182,6 +182,20 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
                           { "name" : "1", "label" : "Position", "placeholder" : "succ:2,0", "type" : "text" },
                           { "name" : "2", "label" : "Disjoint", "placeholder" : "true", "type" : "text" }
                ]
+            },
+        "dl.instantiate" :
+            { "name" : "dl.instantiate",
+              "label" : "\\(\\left(\\forall l\\right) \\frac{\\Gamma,\\phi(X) ~\\vdash~ \\Delta}{\\Gamma, \\forall x \\phi(x) ~\\vdash~ \\Delta}\\)",
+              "input" : [ { "name" : "0", "label" : "x", "placeholder" : "v", "type" : "text" },
+                          { "name" : "1", "label" : "X", "placeholder" : "term", "type" : "text" }
+               ]
+            },
+        "dl.axiomClose" :
+            { "name" : "dl.axiomClose",
+              "label" : "\\(\\left(\\text{axiom close}\\right) \\frac{*}{\\Gamma,\\phi ~\\vdash~ \\phi,\\Delta}\\)",
+              "input" : [ { "name" : "0", "label" : "antecedent", "placeholder" : "ante:0", "type" : "text" },
+                          { "name" : "1", "label" : "succedent", "placeholder" : "succ:1", "type" : "text" }
+               ]
             }
     };
     var userTactics = {

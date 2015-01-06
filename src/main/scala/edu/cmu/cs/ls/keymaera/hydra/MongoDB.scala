@@ -11,6 +11,7 @@ object MongoDB extends DBAbstraction {
   val mongoClient = MongoClient("localhost", 27017)
 
   //Collections.
+  val config  = mongoClient("keymaera")("config")
   val users   = mongoClient("keymaera")("users")
   val models  = mongoClient("keymaera")("models")
   val proofs  = mongoClient("keymaera")("proofs")
@@ -18,11 +19,51 @@ object MongoDB extends DBAbstraction {
   val tactics = mongoClient("keymaera")("tactics")
 
   def cleanup() = {
+    config.drop()
     users.drop()
     models.drop()
     proofs.drop()
     logs.drop()
     tactics.drop()
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Configuration
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  override def getAllConfigurations: Set[ConfigurationPOJO] = {
+    val result = config.find()
+    result.map(
+      config => new ConfigurationPOJO(
+        config.getAs[String]("configName").orNull.toString,
+        config.getAs[Map[String,String]]("config").getOrElse(Map())
+        )
+    ).toSet
+  }
+
+  override def getConfiguration(configName: String) : ConfigurationPOJO = {
+    val query = MongoDBObject("configName" -> configName)
+    val results = config.find(query)
+    if(results.length > 1) throw new IllegalStateException("Duplicate config name: " + configName)
+    if(results.length < 1) throw new Exception(configName + " unknown")
+    results.map(config => new ConfigurationPOJO(
+      config.getAs[String]("configName").orNull.toString,
+      config.getAs[Map[String,String]]("config").getOrElse(Map())
+    )).toSet.last
+  }
+
+  override def createConfiguration(configName: String) : Boolean = {
+    val query = MongoDBObject("configName" -> configName)
+    if (config.find(query).length == 0) {
+      config.insert(query)
+      true
+    } else {
+      false
+    }
+  }
+
+  override def updateConfiguration(cfg: ConfigurationPOJO) = {
+    val update = $set(cfg.config.map(c => "config." + c._1 -> c._2).toList:_*)
+    config.update(MongoDBObject("configName" -> cfg.name), update)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -45,28 +45,37 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core.{Failed, Tool, ProofNode}
 import Config._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-
-import scala.Array
-import java.lang.Runnable
-import scala.collection.mutable.SynchronizedPriorityQueue
-import scala.annotation.elidable
-import scala.annotation.elidable._
-
-import java.lang.InterruptedException
 import java.util.NoSuchElementException
 
 /**
- * The thread that traverses the prioList to find and execute tactics
+ * Binds a tactic for execution to a specific tool.
  */
-class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[TacticWrapper] {
+trait TacticToolBinding extends Ordered[TacticToolBinding] {
+  /**
+   * Executes the tactic on the specified tool/
+   * @param tool The tool to execute the tactic.
+   */
+  def execute(tool: Tool)
 
-  def compare(that : TacticWrapper) = this.tactic.priority - that.tactic.priority
+  /**
+   * The tactic to execute.
+   * @return The tactic.
+   */
+  def tactic: Tactic
+}
+
+/**
+ * Executes a tactic on a tool.
+ */
+class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends TacticToolBinding {
+
+  def compare(that : TacticToolBinding) = this.tactic.priority - that.tactic.priority
 
   def execute(tool : Tool) = {
     tactic.incTacs()
     if (tactic.tacs > tacThres) {
       tactic.tacs = 0
-      node.tacticInfo.checkParentClosed
+      node.tacticInfo.checkParentClosed()
     }
     if (!node.tacticInfo.isLocalClosed) {
       try {
@@ -88,9 +97,10 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends Ordered[T
 
 class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) extends java.lang.Runnable {
 
+  @volatile private var stopped: Boolean = false
+
   override def run() {
-    @volatile var runnable : Boolean = true
-    @volatile var stop     : Boolean = false
+    @volatile var runnable: Boolean = true
 
     while (runnable) {
       /* pick tactic; execute apply; wait for interrupts , ... */
@@ -102,26 +112,27 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
             throw new InterruptedException()
           }
         } catch {
-          case ex : NoSuchElementException => {
-            // TODO swallows useful exceptions, implement waiting for real
-            /* poll vs. wait */
-            scheduler.synchronized {
+          case ex: NoSuchElementException => scheduler.synchronized {
+              // TODO swallows useful exceptions, implement waiting for real
+              /* poll vs. wait */
               scheduler.blocked = scheduler.blocked + 1
               scheduler.wait()
             }
-          }
         }
       } catch {
-        case ex : InterruptedException => {
-          if (stop) {
+        case ex: InterruptedException =>
+          if (stopped) {
             tool.shutdown()
             runnable = false
           } else {
             tool.check_and_recover()
           }
-        }
       }
     }
+  }
+
+  def stop(): Unit = {
+    stopped = true
   }
 
 }
@@ -133,23 +144,38 @@ class Scheduler(tools : Seq[Tool]) {
 
   val maxThreads = tools.length
   val thread   : Array[java.lang.Thread] = new Array(maxThreads)
-  val prioList : SynchronizedPriorityQueue[TacticWrapper] = new SynchronizedPriorityQueue()
-  @volatile var blocked  : Int = 0/* threads blocked on the scheduler */
+  val executors: Array[TacticExecutor] = new Array(maxThreads)
+  val prioList = new scala.collection.mutable.SynchronizedPriorityQueue[TacticToolBinding]()
+  @volatile var blocked = 0/* threads blocked on the scheduler */
 
-  for (x <- 0 to maxThreads - 1)
-    thread.update(x, new java.lang.Thread(new TacticExecutor(this, tools(x), x)))
+  def init(config: Map[String,String]) = {
+    for (x <- 0 to maxThreads - 1) {
+      val te = new TacticExecutor(this, tools(x), x)
+      executors.update(x, te)
+      thread.update(x, new java.lang.Thread(te))
+    }
+    blocked = 0
+    tools.foreach(_.init(config))
+    thread.foreach(_.start())
+  }
 
-  thread.foreach(_.start())
+  def shutdown() = {
+    executors.foreach(_.stop())
+    // interrupt long running tools to make them check their stopped flag
+    thread.foreach(_.interrupt())
+    // wait for the threads run to completion
+    thread.foreach(_.join())
+  }
 
-  def dispatch(t : TacticWrapper) : this.type = {
+  def dispatch(t : TacticToolBinding) : this.type = {
     prioList += t
     this.synchronized {
       if (blocked > 0) {
         blocked = blocked - 1
-        notify() /* release one executor at a time to avoid trambling herd */
+        notify() /* release one executor at a time to avoid trampling herd */
       }
     }
-    return this
+    this
   }
 }
 

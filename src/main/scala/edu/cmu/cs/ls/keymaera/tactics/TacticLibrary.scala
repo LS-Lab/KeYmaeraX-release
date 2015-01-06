@@ -31,25 +31,6 @@ object TacticLibrary {
     }
   }
 
-  /**
-   * apply results in a formula to try.
-   * Results do not have to be deterministic, e.g., calls to apply might advance to the next candidate.
-   * Results can also be deterministic.
-   */
-  trait Generator[A] extends ((Sequent, Position) => Option[A]) {
-    def peek(s: Sequent, p: Position): Option[A]
-  }
-
-  class Generate[A](f: A) extends Generator[A] {
-    def apply(s: Sequent, p: Position) = Some(f)
-    def peek(s: Sequent, p: Position) = Some(f)
-  }
-
-  class NoneGenerate[A] extends Generator[A] {
-    def apply(s: Sequent, p: Position) = None
-    def peek(s: Sequent, p: Position) = None
-  }
-
   /*******************************************************************
    * Debug tactics
    *******************************************************************/
@@ -190,6 +171,7 @@ object TacticLibrary {
 
   def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
   def decomposeQuanT = FOQuantifierTacticsImpl.decomposeQuanT
+  def instantiateQuanT(q: Variable, t: Term) = FOQuantifierTacticsImpl.instantiateT(q, t)
 
   /*********************************************
    * Hybrid Program Tactics
@@ -215,12 +197,6 @@ object TacticLibrary {
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.inductionT(inv)
   def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
 
-  def uniformSubstitution(from : Term, to : Term): PositionTactic =
-    new PositionTactic("Uniform Substitution") {
-      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
-      override def apply(p: Position): Tactic = ??? //new ApplyRule(UniformSubstitution())
-
-    }
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
     new PositionTactic("Alpha Renaming") {
       override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicablity

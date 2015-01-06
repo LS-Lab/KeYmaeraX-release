@@ -18,7 +18,6 @@ class RestApiActor extends Actor with RestApi {
  */
 trait RestApi extends HttpService {
   val database = MongoDB //Not sure when or where to create this... (should be part of Boot?)
-  new KeYmaeraInitializer(database).initialize()
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Helper Methods

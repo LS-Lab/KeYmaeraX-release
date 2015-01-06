@@ -26,6 +26,7 @@ private object MathematicaSymbols {
   val MULT = new MExpr(Expr.SYMBOL, "Times")
   val DIV = new MExpr(Expr.SYMBOL, "Divide")
   val EXP = new MExpr(Expr.SYMBOL, "Power")
+  val APPLY = new MExpr(Expr.SYMBOL, "Apply")
   val EQUALS = new MExpr(Expr.SYMBOL, "Equal")
   val UNEQUAL = new MExpr(Expr.SYMBOL, "Unequal")
   val LESS = new MExpr(Expr.SYMBOL, "Less")
