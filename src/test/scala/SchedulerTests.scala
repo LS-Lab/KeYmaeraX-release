@@ -16,12 +16,16 @@ class SchedulerTests extends FlatSpec with Matchers with MockFactory  {
 
   it should "shutdown tool upon scheduler shutdown" in {
     scheduler = new Scheduler(List(tool))
+    (tool.init _).expects(Map[String, String]()).once()
+    scheduler.init(Map())
     (tool.shutdown _).expects().once()
     scheduler.shutdown()
   }
 
   it should "schedule tactic to tool upon dispatch" in {
     scheduler = new Scheduler(List(tool))
+    (tool.init _).expects(Map[String, String]()).once()
+    scheduler.init(Map())
     (tactic.execute _).expects(tool).once()
     scheduler.dispatch(tactic)
     // ScalaMock requires that all interaction is complete before the test ends,
@@ -33,6 +37,9 @@ class SchedulerTests extends FlatSpec with Matchers with MockFactory  {
   it should "dispatch to next available tool" in {
     val tool2 = mock[Tool]
     scheduler = new Scheduler(List(tool, tool2))
+    (tool.init _).expects(Map[String, String]()).once()
+    (tool2.init _).expects(Map[String, String]()).once()
+    scheduler.init(Map())
     // delay tool so that it is not available when next tactic is dispatched
     (tactic.execute _).expects(tool).once().onCall{ x: Tool => Thread.sleep(2000) }
     scheduler.dispatch(tactic)
