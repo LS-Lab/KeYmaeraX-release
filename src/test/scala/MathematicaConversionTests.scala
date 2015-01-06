@@ -130,6 +130,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.run("x")._2 should be (x)
     ml.run("x[y]")._2 should be (Apply(Function("x", None, Real, Real), Variable("y", None, Real)))
     ml.run("x$underscore$0")._2 should be (Variable("x_0", None, Real))
+    ml.run("x$underscore$0$underscore$1")._2 should be (Variable("x_0_1", None, Real))
     ml.run("x[y$underscore$0]")._2 should be (Apply(Function("x", None, Real, Real), Variable("y_0", None, Real)))
   }
 
@@ -184,6 +185,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip num(5)
     round trip x
     round trip Variable("x_0", None, Real)
+    round trip Variable("x_", None, Real)
+    round trip Variable("_", None, Real)
+    round trip Variable("x_0_1", None, Real)
+    round trip Variable("_x_0", None, Real)
     round trip Apply(Function("x", None, Real, Real), Variable("y_0", None, Real))
   }
 
