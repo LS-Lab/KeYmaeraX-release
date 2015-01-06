@@ -180,6 +180,22 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                             content = left + "^" + right;
                             break;
 
+                        case "forall":
+                            var vars = json.variables[0];
+                            for (var i = 1; i < json.variables.length; i++) {
+                                vars = vars + "," + json.variables[i];
+                            }
+                            content = "\\forall " + vars + ". (" + parseFormulaHelper(c[0], depth + 1) + ")"
+                            break;
+
+                        case "exists":
+                            var vars = json.variables[0];
+                            for (var i = 1; i < json.variables.length; i++) {
+                                vars = vars + "," + json.variables[i];
+                            }
+                            content = "\\exist " + vars + ". (" + parseFormulaHelper(c[0], depth + 1) + ")"
+                            break;
+
                         case "boxmodality":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
