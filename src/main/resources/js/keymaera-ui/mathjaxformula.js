@@ -223,6 +223,10 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                             content = parensIfNeeded(json, c[0], depth + 1);
                             break;
 
+                        case "formuladerivative":
+                            content = "(" + parseFormulaHelper(c[0], depth) + ")'"
+                            break;
+
                         case "derivative":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "\\dot{" + left + "}";
