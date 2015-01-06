@@ -14,6 +14,7 @@ import scala.reflect.runtime.universe.TypeTag
 class KeYmaeraInitializer(env : {val db: DBAbstraction
                                  val tacticLibrary: TacticLibrary2}) {
   def initialize() {
+    Tactics.KeYmaeraScheduler.init(Map())
     // TODO move to DB initialization
     env.db.createConfiguration("mathematica")
     // TODO replace with dependency injection
@@ -65,6 +66,7 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
     initInputPositionTactic[Position]("dl.equalityRewritingLeft", "TacticLibrary.equalityRewritingLeft", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingLeft)
     initInputPositionTactic[Position]("dl.equalityRewritingRight", "TacticLibrary.equalityRewritingRight", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingRight)
     initInputPositionTactic[Formula]("dl.diffcut", "TacticLibrary.diffCutT", TacticKind.InputPositionTactic, TacticLibrary.diffCutT)
+    initInputPositionTactic[Option[Formula]]("dl.diffsol", "TacticLibrary.diffSolution", TacticKind.InputPositionTactic, TacticLibrary.diffSolution)
     initInputPositionTactic[Variable,Term]("dl.instantiate", "TacticLibrary.instantiateQuanT", TacticKind.PositionTactic, TacticLibrary.instantiateQuanT)
   }
 
