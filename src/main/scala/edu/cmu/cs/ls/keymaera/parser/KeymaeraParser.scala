@@ -726,6 +726,7 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       assignP     ::
       ndassignP   ::
       normalFormEvolutionP  ::
+      normalFormEvolutionSystemP ::
       evolutionP  :: //@TODO should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
@@ -835,18 +836,43 @@ class KeYmaeraParser(enabledLogging:Boolean=false) extends RegexParsers with Pac
       }
     }
 
+    lazy val normalFormEvolutionSystemP : SubprogramParser = {
+      lazy val pattern = (
+        rep1sep((theTermParser.termDerivativeP <~ EQ) ~ termParser, COMMA) ~ (AND ~> formulaParser).?
+      )
+
+      log(pattern)("Normal Form System of Differential Equations") ^^ {
+        case des ~ constraintOption => {
+          val xs = des.map(_._1)
+          val thetas = des.map(_._2)
+          constraintOption match {
+            case Some(constraint) => {
+              NFContEvolveSystem(Nil, xs, thetas, constraint)
+            }
+            case None => {
+              NFContEvolveSystem(Nil, xs, thetas, True)
+            }
+          }
+        }
+      }
+    }
+
 
     // Normal form is: f' = g & H.
     lazy val normalFormEvolutionP:SubprogramParser = {
       /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
        * intended as an ev. dom. constraint
        */
-      lazy val pattern = {
-        theTermParser.termDerivativeP ~ EQ ~ termParser ~ (AND ~> theFormulaParser.nonDerivativeFormulaP)
-      }
+      lazy val pattern = theTermParser.termDerivativeP ~ EQ ~ termParser ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
+
 
       log(pattern)("NFContEvolve Parser") ^^ {
-        case lhs ~ EQ ~ rhs ~ constraint => {
+        case lhs ~ EQ ~ rhs ~ constraintOption => {
+          val constraint = constraintOption match {
+            case Some(f) => f
+            case None    => True
+          }
+
           lhs match {
             case Derivative(Real, derivativeTerm) => {
               new NFContEvolve(Nil, derivativeTerm, rhs, constraint)

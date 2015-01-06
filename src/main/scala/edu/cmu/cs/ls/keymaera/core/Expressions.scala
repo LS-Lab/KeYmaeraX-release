@@ -1184,7 +1184,8 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
 
 /**
  * Normal form differential equation data structures for explicit ODE
- * NFContEvolve(Seq(a,b,c), x, theta, F) is \exists R a,b,c. (\D{x} = \theta & F)
+ * NFContEvolve(Seq(a,b,c), x, theta, F) is \exists R a,b,c. (\D{x} = \theta & F) where a,b,c are disturbances.
+ * See page 10 of the DAL paper.
  */
 object NFContEvolve {
   def apply(vars: Seq[NamedSymbol], x: Term, theta: Term, f: Formula): NFContEvolve = new NFContEvolve(vars, x, theta, f)
@@ -1205,6 +1206,30 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Ter
   }
   override def hashCode: Int = hash(227, vars, x, theta, f)
 }
+
+/**
+ * A system of differential equations in normal form.
+ */
+object NFContEvolveSystem {
+  def apply(vars: Seq[NamedSymbol], x: Seq[Term], theta: Seq[Term], f: Formula): NFContEvolveSystem = new NFContEvolveSystem(vars, x, theta, f)
+  def unapply(e: Any): Option[(Seq[NamedSymbol], Seq[Term], Seq[Term], Formula)] = e match {
+    case x: NFContEvolveSystem => Some((x.vars, x.x, x.theta, x.f))
+    case _ => None
+  }
+}
+final class NFContEvolveSystem(val vars: Seq[NamedSymbol], val x: Seq[Term], val theta: Seq[Term], val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
+  require(!vars.contains(x), "Quantified disturbance should not have differential equations")
+  //@TODO Why not just "x:Variable"
+  def reads = ???
+  def writes = x.map(VSearch.primed(_)).flatten.distinct
+
+  override def equals(e: Any): Boolean = e match {
+    case o: NFContEvolveSystem => o.vars == vars && o.x == x && o.theta == theta && o.f == f
+    case _ => false
+  }
+  override def hashCode: Int = hash(227, vars, x, theta, f)
+}
+
 
 /**
  * Quantifiers

@@ -306,7 +306,6 @@ object HybridProgramTacticsImpl {
         Some(axiomInstance, Substitution(l))
       case _ => None
     }
-
   }
 
   /**
