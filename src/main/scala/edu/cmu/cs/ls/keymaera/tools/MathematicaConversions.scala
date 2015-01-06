@@ -4,11 +4,6 @@ package edu.cmu.cs.ls.keymaera.tools
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.Set
-
-
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
@@ -18,9 +13,9 @@ import scala.math.BigDecimal
 class ConversionException(s:String) 
   extends Exception(s)
 class MathematicaComputationFailedException(e:com.wolfram.jlink.Expr) 
-  extends ConversionException(e.toString())
+  extends ConversionException(e.toString)
 class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr) 
-  extends ConversionException(e.toString())
+  extends ConversionException(e.toString)
 
 /**
  * Handles conversion to/from Mathematica.
@@ -29,11 +24,13 @@ class MathematicaComputationAbortedException(e:com.wolfram.jlink.Expr)
  * id).
  *
  * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 private object NameConversion {
   private val PREFIX = "KeYmaera`"
   private val SEP    = "$beginIndex$"
   private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
+  private val MUNDERSCOREREGEX = "\\$underscore\\$" //Mathematica Underscore
 
   private def maskIdentifier(name : String) = {
     //Ensure that none of the "special" strings occur in the variable name.
@@ -49,18 +46,10 @@ private object NameConversion {
     //The identifier (portion of name excluding index) has one of the forms:
     //   name (for external functions)
     //   KeYmaera + name
-    val identifier : String = 
-      if(ns.isInstanceOf[Function]) {
-        if(ns.asInstanceOf[Function].external) {
-          ns.name
-        }
-        else {
-          PREFIX + maskIdentifier(ns.name)
-        }
-      }
-      else {
-        PREFIX + maskIdentifier(ns.name)
-      }
+    val identifier : String = ns match {
+      case n: Function if n.external => n.name
+      case _ => PREFIX + maskIdentifier(ns.name)
+    }
 
     //Add the index if it exists.
     val fullName : String   = ns.index match {
@@ -83,7 +72,7 @@ private object NameConversion {
   }
   
   private def variableToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val maskedName = e.asString()
+    val maskedName = e.asString().replaceAll(MUNDERSCOREREGEX, "_")
     if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
       //Get the parts of the masked name.
       val parts = maskedName.replace(PREFIX, "").split(SEP)
@@ -106,7 +95,7 @@ private object NameConversion {
   }
   
   private def functionToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val maskedName = e.asString()
+    val maskedName = e.head().asString().replaceAll(MUNDERSCOREREGEX, "_")
     if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
       //Get the parts of the masked name.
       val parts = maskedName.replace(PREFIX, "").split(SEP)
@@ -143,8 +132,7 @@ object MathematicaToKeYmaera {
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
    */
-  def fromMathematica(e : MExpr): KExpr =
-  {
+  def fromMathematica(e : MExpr): KExpr = {
     //Numbers
     if(e.numberQ() && !e.rationalQ()) {
       try {
@@ -189,16 +177,34 @@ object MathematicaToKeYmaera {
     else if(isThing(e, MathematicaSymbols.GREATER_EQUALS)) convertGreaterEqual(e)
     else if(isThing(e, MathematicaSymbols.LESS))           convertLessThan(e)
     else if(isThing(e, MathematicaSymbols.LESS_EQUALS))    convertLessEqual(e)
-    
+
+    else if(isThing(e, MathematicaSymbols.RULE)) convertRule(e)
+
+    // List of rules
+    else if(e.listQ() && e.args().forall(r => r.listQ() && r.args().forall(isThing(_, MathematicaSymbols.RULE))))
+      convertRuleList(e)
+
+    // Functions
+    else if(e.head().symbolQ() && !MathematicaSymbols.keywords.contains(e.head().toString)) convertName(e)
+
     //Variables. This case intentionally comes last, so that it doesn't gobble up
     //and keywords that were not declared correctly in MathematicaSymbols (should be none)
-    else if(e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString()))
-    {
+    else if(e.symbolQ() && !MathematicaSymbols.keywords.contains(e.asString())) {
       convertName(e)
     }
     else {
       throw mathExn(e) //Other things to handle: integrate, rule, minussign, possibly some list.
     }
+  }
+
+  def convertRuleList(e: MExpr): Formula = {
+    e.args().map(_.args().map(r => convertRule(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
+      .reduceLeft((lhs, rhs) => Or(lhs, rhs))
+  }
+
+  def convertRule(e: MExpr): Formula = {
+    // TODO is Equals correct for rules?
+    Equals(Real, fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
   }
   
   def convertQuantifiedVariable(e : MExpr) : edu.cmu.cs.ls.keymaera.core.NamedSymbol = {
@@ -531,7 +537,7 @@ object KeYmaeraToMathematica {
   }
   def convertDerivative(t:Term) = {
     val args = Array[MExpr](convertTerm(t))
-    new MExpr(MathematicaSymbols.DERIVATIVE, args)
+    new MExpr(new MExpr(MathematicaSymbols.DERIVATIVE, Array[MExpr](new MExpr(1))), args)
   }
 
   

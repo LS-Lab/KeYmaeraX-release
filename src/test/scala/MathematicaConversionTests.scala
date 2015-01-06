@@ -17,6 +17,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   val y = Variable("y", None, Real)
   val A = Variable("A", None, Bool)
   val B = Variable("B", None, Bool)
+  val xFn = Function("x", None, Real, Real)
 
   val zero = Number(new BigDecimal("0"))
 
@@ -116,8 +117,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ???
   }
 
-  ignore should "Conbert rules correctly" in {
-    ???
+  it should "convert rules correctly" in {
+    ml.run("Rule[x,y]")._2 should be (Equals(Real, x, y))
+    ml.run("Rule[x[y],y]")._2 should be (Equals(Real, Apply(xFn, y), y))
+    ml.run("{{Rule[x,y]}}")._2 should be (Equals(Real, x, y))
+    ml.run("{{Rule[x,y], Rule[y,x]}}")._2 should be (And(Equals(Real, x, y), Equals(Real, y, x)))
+    ml.run("{{Rule[x,y], Rule[y,x]}, {Rule[x[y],y]}}")._2 should be
+      (Or(And(Equals(Real, x, y), Equals(Real, y, x)), Equals(Real, Apply(xFn, y), y)))
+  }
+
+  it should "convert names correctly" in {
+    ml.run("x")._2 should be (x)
+    ml.run("x[y]")._2 should be (Apply(Function("x", None, Real, Real), Variable("y", None, Real)))
+    ml.run("x$underscore$0")._2 should be (Variable("x_0", None, Real))
+    ml.run("x[y$underscore$0]")._2 should be (Apply(Function("x", None, Real, Real), Variable("y_0", None, Real)))
   }
 
   it should "convert Boolean Algebra correctly" in {
@@ -170,6 +183,8 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x
+    round trip Variable("x_0", None, Real)
+    round trip Apply(Function("x", None, Real, Real), Variable("y_0", None, Real))
   }
 
   "KeYmaera -> Mathematica" should "convert Apply" in {
