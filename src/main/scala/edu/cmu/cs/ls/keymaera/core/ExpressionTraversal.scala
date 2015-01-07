@@ -263,6 +263,7 @@ object ExpressionTraversal {
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
         case Parallel(a, b) => matchTwo(p, Parallel.apply, f, a, b)
         case Loop(a) => matchOne(p, Loop.apply, f, a)
+        case NFContEvolve(vars, x, theta, h) => matchThree(p, (a: Term, b: Term, c: Formula) => NFContEvolve(vars, a, b, c), f, x, theta, h)
 
         case _ => failFTPG(e)
       }) match {
