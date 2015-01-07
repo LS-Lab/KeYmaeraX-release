@@ -1211,23 +1211,23 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Term, val theta: Ter
  * A system of differential equations in normal form.
  */
 object NFContEvolveSystem {
-  def apply(vars: Seq[NamedSymbol], x: Seq[Term], theta: Seq[Term], f: Formula): NFContEvolveSystem = new NFContEvolveSystem(vars, x, theta, f)
-  def unapply(e: Any): Option[(Seq[NamedSymbol], Seq[Term], Seq[Term], Formula)] = e match {
-    case x: NFContEvolveSystem => Some((x.vars, x.x, x.theta, x.f))
+  def apply(vars: Seq[NamedSymbol], eqs: Seq[(Derivative, Term)], f: Formula): NFContEvolveSystem = new NFContEvolveSystem(vars, eqs, f)
+  def unapply(e: Any): Option[(Seq[NamedSymbol], Seq[(Derivative, Term)], Formula)] = e match {
+    case x: NFContEvolveSystem => Some((x.vars, x.eqs, x.f))
     case _ => None
   }
 }
-final class NFContEvolveSystem(val vars: Seq[NamedSymbol], val x: Seq[Term], val theta: Seq[Term], val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
-  require(!vars.contains(x), "Quantified disturbance should not have differential equations")
+final class NFContEvolveSystem(val vars: Seq[NamedSymbol], val eqs: Seq[(Derivative, Term)], val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
+  require(eqs.forall{ case (v, _) => !vars.contains(v) }, "Quantified disturbance should not have differential equations")
   //@TODO Why not just "x:Variable"
   def reads = ???
-  def writes = x.map(VSearch.primed(_)).flatten.distinct
+  def writes = eqs.map(eq => VSearch.primed(eq._1)).flatten.distinct
 
   override def equals(e: Any): Boolean = e match {
-    case o: NFContEvolveSystem => o.vars == vars && o.x == x && o.theta == theta && o.f == f
+    case o: NFContEvolveSystem => o.vars == vars && o.eqs == eqs && o.f == f
     case _ => false
   }
-  override def hashCode: Int = hash(227, vars, x, theta, f)
+  override def hashCode: Int = hash(227, vars, eqs, f)
 }
 
 

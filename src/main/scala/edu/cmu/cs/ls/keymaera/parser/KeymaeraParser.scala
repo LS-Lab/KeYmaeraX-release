@@ -54,6 +54,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     val exprParser = parser.makeExprParser(variables, Nil, Nil, Nil)
     parser.parseAll(exprParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[Expr])
+      case f: parser.Failure => throw new IllegalArgumentException(f.toString())
+      case e: parser.Error => throw new IllegalArgumentException(e.toString())
       case _ => None //todo actually, pass back an error
     }
   }
@@ -747,8 +749,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       closureP    ::
       assignP     ::
       ndassignP   ::
-      normalFormEvolutionP  ::
       normalFormEvolutionSystemP ::
+      normalFormEvolutionP ::
       evolutionP  :: //@TODO should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
@@ -859,38 +861,33 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    lazy val normalFormEvolutionSystemP : SubprogramParser = {
-      lazy val pattern = (
-        rep1sep((theTermParser.termDerivativeP <~ EQ) ~ termParser, COMMA) ~ (AND ~> formulaParser).?
-      )
+    lazy val normalFormEvolutionSystemP: SubprogramParser = {
+      lazy val pattern =
+      // TODO refactor to only rep1sep once we got rid of the NFContEvolve in favor of NFContEvolveSystem
+        ((theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP) ~ COMMA ~ rep1sep((theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP, COMMA) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
+//        rep1sep((theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP, COMMA) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
 
-      log(pattern)("Normal Form System of Differential Equations") ^^ {
-        case des ~ constraintOption => {
-          val xs = des.map(_._1)
-          val thetas = des.map(_._2)
+      log(pattern)("NFContEvolveSystem Parser") ^^ {
+        case eq ~ COMMA ~ des ~ constraintOption =>
+          val theEq = (eq._1.asInstanceOf[Derivative], eq._2.asInstanceOf[Term])
+          val eqs = des.map(d => (d._1.asInstanceOf[Derivative], d._2.asInstanceOf[Term]))
           constraintOption match {
-            case Some(constraint) => {
-              NFContEvolveSystem(Nil, xs, thetas, constraint)
-            }
-            case None => {
-              NFContEvolveSystem(Nil, xs, thetas, True)
-            }
+            case Some(constraint) => NFContEvolveSystem(Nil, theEq +: eqs, constraint)
+            case None => NFContEvolveSystem(Nil, theEq +: eqs, True)
           }
-        }
       }
     }
 
-
+    // TODO replace with NFContEvolveSystem (needs refactoring in several places)
     // Normal form is: f' = g & H.
-    lazy val normalFormEvolutionP:SubprogramParser = {
+    lazy val normalFormEvolutionP: SubprogramParser = {
       /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
        * intended as an ev. dom. constraint
        */
-      lazy val pattern = theTermParser.termDerivativeP ~ EQ ~ termParser ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
-
+      lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
 
       log(pattern)("NFContEvolve Parser") ^^ {
-        case lhs ~ EQ ~ rhs ~ constraintOption => {
+        case lhs ~ rhs ~ constraintOption => {
           val constraint = constraintOption match {
             case Some(f) => f
             case None    => True

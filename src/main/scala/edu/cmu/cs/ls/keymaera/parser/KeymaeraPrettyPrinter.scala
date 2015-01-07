@@ -210,6 +210,20 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
           groupIfNotAtomic(f, prettyPrinter(f))
       }
     }
+
+    case NFContEvolveSystem(vars,eqs,f) => {
+      if(vars.length != 0) {
+        symbolTable.EXISTS + " "
+        vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
+          "." +
+        eqs.map(eq => prettyPrinter(eq._1) + symbolTable.EQ + prettyPrinter(eq._2)).mkString(",") + " " + symbolTable.AND + " " +
+          groupIfNotAtomic(f, prettyPrinter(f))
+      }
+      else {
+        eqs.map(eq => prettyPrinter(eq._1) + symbolTable.EQ + prettyPrinter(eq._2)).mkString(",") + " " + symbolTable.AND + " " +
+          groupIfNotAtomic(f, prettyPrinter(f))
+      }
+    }
     
     case Number(n) => Number.unapply(expressionToPrint) match {
       case Some((ty, number:BigDecimal)) => number.toString()
