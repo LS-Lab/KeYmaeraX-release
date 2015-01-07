@@ -16,38 +16,23 @@ class DifferentialParserTests extends FlatSpec with Matchers {
 
   "The parser" should "parse diff eqs in normal form into NFContEvolves" in {
     helper.parseBareProgram("x' = 1 & x > 0;") match {
-      case Some(program) => {
-        program should be (NFContEvolve(Nil, x, Number(1), GreaterThan(Real, x, zero)))
-      }
+      case Some(program) => program should be (NFContEvolve(Nil, x, Number(1), GreaterThan(Real, x, zero)))
       case None => fail("Parse failed.")
     }
   }
 
-  it should "Not confuse a portion of the diffeq with the domain constraint" in {
-    helper.parseBareProgram("x' = y , y' = x & true;") match {
-      case Some(program) => {
-        program should be (ContEvolve(
-          And(
-            Equals(Real, Derivative(Real, x), y),
-            And(
-
-              Equals(Real, Derivative(Real, y), x), True
-            )
-          )
-        ))
-      }
+  it should "not confuse a portion of the diffeq with the domain constraint" in {
+    helper.parseBareProgram("x'=y, y'=x & true;") match {
+      case Some(program) =>
+        program should be (NFContEvolveSystem(Nil, (Derivative(Real, x), y) :: (Derivative(Real, y), x) :: Nil, True))
       case None => fail("Failed to parse.")
     }
   }
 
   it should "not confuse a portion of the diffeq system with the evolution domain constraint" in {
-    helper.parseBareProgram("x' = x , y' = y;") match {
-      case Some(program) => {
-        program should be (ContEvolve(And(
-          Equals(Real, Derivative(Real, x), x),
-          Equals(Real, Derivative(Real, y), y)
-        )))
-      }
+    helper.parseBareProgram("x'=x, y'=y;") match {
+      case Some(program) =>
+        program should be (NFContEvolveSystem(Nil, (Derivative(Real, x), x) :: (Derivative(Real, y), y) :: Nil, True))
       case None => fail("Parse failed.")
     }
   }
