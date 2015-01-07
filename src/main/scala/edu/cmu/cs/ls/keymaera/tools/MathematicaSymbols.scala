@@ -45,4 +45,5 @@ private object MathematicaSymbols {
   //val RULE = new MExpr(Expr.SYMBOL, "Rule")
   val LIST = new MExpr(Expr.SYMBOL, "List") //?
   val DERIVATIVE = new MExpr(Expr.SYMBOL, "Derivative")
+  val RULE = new MExpr(Expr.SYMBOL, "Rule")
 }
