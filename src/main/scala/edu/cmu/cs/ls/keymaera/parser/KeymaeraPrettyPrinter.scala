@@ -200,25 +200,21 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
         symbolTable.EXISTS + " "
           vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
           "." +
-          groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.PRIME + symbolTable.EQ +
+          groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.EQ +
           groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
           groupIfNotAtomic(f, prettyPrinter(f))
       }
       else {
-        groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.PRIME + symbolTable.EQ +
+        groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.EQ +
           groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
           groupIfNotAtomic(f, prettyPrinter(f))
       }
     }
 
     case ContEvolveProduct(l, r) => {
-      val leftString = parensIfNeeded(l, Sequence(l,r))
-      val rightString = parensIfNeeded(r, Sequence(l,r))
-      if(!endsWithColon(l,Sequence(l,r))) {
-        leftString + symbolTable.COMMA + rightString
-      } else {
-        leftString + rightString
-      }
+      val leftString = parensIfNeeded(l, Sequence(l, r))
+      val rightString = parensIfNeeded(r, Sequence(l, r))
+      leftString + symbolTable.COMMA + rightString
     }
     
     case Number(n) => Number.unapply(expressionToPrint) match {

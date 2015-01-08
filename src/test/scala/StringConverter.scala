@@ -20,7 +20,7 @@ class StringConverter(val s: String) {
     case Some(t) => t
     case None => throw new IllegalArgumentException(s + " is not a Term")
   }
-  def asFormula: Formula = new KeYmaeraParser().parseBareFormula(s) match {
+  def asFormula: Formula = new KeYmaeraParser().parseBareFormulaUnquantified(s) match {
     case Some(f) => f
     case None => throw new IllegalArgumentException(s + " is not a Formula")
   }

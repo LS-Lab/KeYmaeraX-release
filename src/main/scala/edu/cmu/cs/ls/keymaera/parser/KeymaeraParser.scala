@@ -88,6 +88,17 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
   }
 
+  def parseBareFormulaUnquantified(s : String) : Option[Formula] = {
+    try {
+      val expr      = this.parseBareExpression(s).get
+      val formula   = expr.asInstanceOf[Formula]
+      Some(formula)
+    }
+    catch {
+      case e:Exception => None
+    }
+  }
+
   def runParser(s:String):Expr = {
     val parser = new KeYmaeraParser(enabledLogging, env)
 
