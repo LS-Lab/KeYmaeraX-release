@@ -750,7 +750,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       assignP     ::
       ndassignP   ::
       normalFormEvolutionSystemP ::
-      normalFormEvolutionP ::
       evolutionP  :: //@TODO should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
@@ -862,25 +861,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     lazy val normalFormEvolutionSystemP: SubprogramParser = {
-      lazy val pattern =
-      // TODO refactor to only rep1sep once we got rid of the NFContEvolve in favor of NFContEvolveSystem
-        ((theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP) ~ COMMA ~ rep1sep((theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP, COMMA) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
-//        rep1sep((theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP, COMMA) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
-
-      log(pattern)("NFContEvolveSystem Parser") ^^ {
-        case eq ~ COMMA ~ des ~ constraintOption =>
-          val theEq = (eq._1.asInstanceOf[Derivative], eq._2.asInstanceOf[Term])
-          val eqs = des.map(d => (d._1.asInstanceOf[Derivative], d._2.asInstanceOf[Term]))
-          constraintOption match {
-            case Some(constraint) => NFContEvolveSystem(Nil, theEq +: eqs, constraint)
-            case None => NFContEvolveSystem(Nil, theEq +: eqs, True)
-          }
+      lazy val pattern = rep1sep(normalFormEvolutionP, COMMA)
+      log(pattern)("NFContEvolve (" + COMMA + " NFContEvolve)*") ^^ {
+        case odes => odes.reduceRight{ (a: NFContEvolve, b: ContEvolveProgram) => ContEvolveProduct(a, b) }
       }
     }
 
-    // TODO replace with NFContEvolveSystem (needs refactoring in several places)
     // Normal form is: f' = g & H.
-    lazy val normalFormEvolutionP: SubprogramParser = {
+    lazy val normalFormEvolutionP: PackratParser[NFContEvolve] = {
       /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
        * intended as an ev. dom. constraint
        */
@@ -892,11 +880,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
             case Some(f) => f
             case None    => True
           }
-
           lhs match {
-            case Derivative(Real, derivativeTerm) => {
-              new NFContEvolve(Nil, derivativeTerm, rhs, constraint)
-            }
+            case t: Derivative => new NFContEvolve(Nil, t, rhs, constraint)
             case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing NFContEvolve")
           }
         }

@@ -1020,8 +1020,9 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Test(f) => (u, u, freeVariables(u,f))
     case Assign(x:Variable, e) => (u+x, u+x, freeVariables(u, e))
     case NDetAssign(x:Variable) => (u+x, u+x, Set.empty)
-    case NFContEvolve(v, x:Variable, e, h) => (u+x,u+x,
-      Set(x) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
+    case NFContEvolve(v, Derivative(_, x: Variable), e, h) => (u+x,u+x,
+        Set(x) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
+
     
     //@TODO check implementation
     case a: ProgramConstant => (u, u, Set.empty)
@@ -1156,9 +1157,9 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
     case NDetAssign(x:Variable) => (u+x, p)
-    case NFContEvolve(v, x:Variable, e, h) => if (v.isEmpty) {
+    case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
       if (!u.contains(x)) for (pair <- l) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
-      (u+x, NFContEvolve(v, x, usubst(u++v+x, e), usubst(u++v+x,h)))
+      (u+x, NFContEvolve(v, d, usubst(u++v+x, e), usubst(u++v+x,h)))
     } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
     
     //@TODO check implementation

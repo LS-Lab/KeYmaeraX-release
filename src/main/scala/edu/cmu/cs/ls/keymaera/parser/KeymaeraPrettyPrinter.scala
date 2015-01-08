@@ -211,17 +211,13 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       }
     }
 
-    case NFContEvolveSystem(vars,eqs,f) => {
-      if(vars.length != 0) {
-        symbolTable.EXISTS + " "
-        vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
-          "." +
-        eqs.map(eq => prettyPrinter(eq._1) + symbolTable.EQ + prettyPrinter(eq._2)).mkString(",") + " " + symbolTable.AND + " " +
-          groupIfNotAtomic(f, prettyPrinter(f))
-      }
-      else {
-        eqs.map(eq => prettyPrinter(eq._1) + symbolTable.EQ + prettyPrinter(eq._2)).mkString(",") + " " + symbolTable.AND + " " +
-          groupIfNotAtomic(f, prettyPrinter(f))
+    case ContEvolveProduct(l, r) => {
+      val leftString = parensIfNeeded(l, Sequence(l,r))
+      val rightString = parensIfNeeded(r, Sequence(l,r))
+      if(!endsWithColon(l,Sequence(l,r))) {
+        leftString + symbolTable.COMMA + rightString
+      } else {
+        leftString + rightString
       }
     }
     
@@ -339,7 +335,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Assign.getClass().getCanonicalName() ::
       NDetAssign.getClass().getCanonicalName() ::
       Test.getClass().getCanonicalName() ::
-      NFContEvolveSystem.getClass().getCanonicalName() ::
+      ContEvolveProduct.getClass().getCanonicalName() ::
       NFContEvolve.getClass().getCanonicalName() ::
       ContEvolve.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() ::
