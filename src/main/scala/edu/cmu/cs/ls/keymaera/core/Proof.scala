@@ -918,9 +918,9 @@ object SubstitutionPair {
  * Used for UniformSubstitution rule.
  * @author aplatzer
  */
-sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPair]) {
+sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
-
+  
   /**
    * @param rarg the argument in the substitution.
    * @param instArg the argument to instantiate rarg with in the occurrence.
@@ -930,22 +930,22 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
     // check that we never replace n by something and then again replacing the same n by something
-    val lefts = l.map(sp=>sp.n).toList
-    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + l)
+    val lefts = subsDefs.map(sp=>sp.n).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
     // check that we never replace p(x) by something and also p(t) by something
-    val lambdaNames = l.map(sp=>sp.n match {
+    val lambdaNames = subsDefs.map(sp=>sp.n match {
       case ApplyPredicate(p:Function, _:Variable) => List(p)
       case Apply(f:Function, _:Variable) => List(f)
       case _ => Nil
       }).fold(Nil)((a,b)=>a++b)
       //@TODO check that we never replace p(x) by something and also p(t) by something
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + l)
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
   }
   
   @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
   
 
-  override def toString: String = "Subst(" + l.mkString(", ") + ")"
+  override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
 
   // helper
 
@@ -962,10 +962,10 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Exp(s, l, r) => freeVariables(l) ++ freeVariables(r)
     case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
     // base cases
-    case x:Variable => Set(x)
+    case x: Variable => Set(x)
     case Derivative(s, e) => freeVariables(e)
     case Apply(f, arg) => Set(f) ++ freeVariables(arg)
-    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); Set.empty
+    case True | False | _: NumberObj => Set.empty
   }
   
   private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
@@ -983,12 +983,12 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
   case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
 
-  case Equals(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case NotEquals(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case GreaterEqual(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case GreaterThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case LessEqual(d, l, r) => freeVariables(l) ++ freeVariables(r)
-  case LessThan(d, l, r) => freeVariables(l) ++ freeVariables(r)
+  case Equals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case NotEquals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case GreaterEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case GreaterThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case LessEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+  case LessThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
 
   // binding cases add bound variables to u
   case Forall(vars, g) => freeVariables(u ++ vars, g)
@@ -997,10 +997,10 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
   case BoxModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
   case DiamondModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
 
-  // base cases
-  case p: PredicateConstant => Set(p)
-  case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg)
-  case x: Atom => ???
+  // base cases (remove u)
+  case p: PredicateConstant => Set[NamedSymbol](p) -- u
+  case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg) -- u
+  case True | False => Set.empty
   case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
@@ -1020,8 +1020,9 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Test(f) => (u, u, freeVariables(u,f))
     case Assign(x:Variable, e) => (u+x, u+x, freeVariables(u, e))
     case NDetAssign(x:Variable) => (u+x, u+x, Set.empty)
+    // may free because ODE reads initial value, must bound and may bound because ODE writes
     case NFContEvolve(v, Derivative(_, x: Variable), e, h) => (u+x,u+x,
-        Set(x) ++ freeVariables(u+x, e) ++ freeVariables(u+x, h))
+        Set(x) ++ freeVariables(u+x++v, e) ++ freeVariables(u+x++v, h))
 
     
     //@TODO check implementation
@@ -1067,9 +1068,9 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
     case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
     // uniform substitution base cases
-    case x:Variable => if (u.contains(x)) return x else for(p <- l) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
-    case Derivative(s, e) => for(p <- l) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
-    case Apply(f, arg) => for(rp <- l) {
+    case x:Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
+    case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
+    case Apply(f, arg) => for(rp <- subsDefs) {
       rp.n match {
         //@TODO clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
         case Apply(rf, rarg:Variable) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
@@ -1122,8 +1123,8 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case DiamondModality(p, g) => val (v,q) = usubst(u, p); DiamondModality(q, usubst(v, g))
 
     // uniform substitution base cases
-    case _: PredicateConstant => for(p <- l) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
-    case ApplyPredicate(p, arg) => for(rp <- l) {
+    case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
+    case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
         //@TODO clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
         case ApplyPredicate(rf, rarg:Variable) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
@@ -1158,12 +1159,12 @@ sealed case class Substitution(l: scala.collection.immutable.Seq[SubstitutionPai
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
     case NDetAssign(x:Variable) => (u+x, p)
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-      if (!u.contains(x)) for (pair <- l) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
+      if (!u.contains(x)) for (pair <- subsDefs) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
       (u+x, NFContEvolve(v, d, usubst(u++v+x, e), usubst(u++v+x,h)))
     } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
     
     //@TODO check implementation
-    case a: ProgramConstant => for(pair <- l) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
+    case a: ProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
 
