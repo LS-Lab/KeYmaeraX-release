@@ -920,6 +920,29 @@ object SubstitutionPair {
  */
 sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
+
+  /**
+   * Companion object for [[BindingAssessment]].
+   */
+  private object BindingAssessment {
+    def apply(bound: Set[NamedSymbol], mayBound: Set[NamedSymbol], mayRead: Set[NamedSymbol]) =
+      new BindingAssessment(bound, mayBound, mayRead)
+    def unapply(e: Any): Option[(Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol])] = e match {
+      case b: BindingAssessment => Some((b.bound, b.maybeBound, b.maybeRead))
+      case _ => None
+    }
+  }
+
+  /**
+   * Records which variables are bound, maybe bound, and maybe free when traversing expressions.
+   * @param bound Variables that are certainly bound (definitely written).
+   * @param maybeBound Variables that may or may not be bound (possibly written).
+   * @param maybeRead Variables that may or may not be read (possibly read).
+   */
+  // TODO In principle we could also compute must free, but that doesn't seem useful.
+  private class BindingAssessment(val bound: Set[NamedSymbol],
+                                  val maybeBound: Set[NamedSymbol],
+                                  val maybeRead: Set[NamedSymbol])
   
   /**
    * @param rarg the argument in the substitution.
@@ -977,58 +1000,66 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
 
   private def freeVariables(u: Set[NamedSymbol], f: Formula) : Set[NamedSymbol] = f match {
     // homomorphic cases
-  case Not(g) => freeVariables(u, g)
-  case And(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case Or(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case Not(g) => freeVariables(u, g)
+    case And(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case Or(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
 
-  case Equals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case NotEquals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case GreaterEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case GreaterThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case LessEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-  case LessThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case Equals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case NotEquals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case GreaterEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case GreaterThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case LessEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case LessThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
 
-  // binding cases add bound variables to u
-  case Forall(vars, g) => freeVariables(u ++ vars, g)
-  case Exists(vars, g) => freeVariables(u ++ vars, g)
+    // binding cases add bound variables to u
+    case Forall(vars, g) => freeVariables(u ++ vars, g)
+    case Exists(vars, g) => freeVariables(u ++ vars, g)
 
-  case BoxModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
-  case DiamondModality(p, g) => val (mb,v,fv) = freeVariables(u, p); fv++freeVariables(u++mb, g)
+    case BoxModality(p, g) => val bp = freeVariables(u, p); bp.maybeRead ++ freeVariables(u ++ bp.bound, g)
+    case DiamondModality(p, g) => val bp = freeVariables(u, p); bp.maybeRead ++ freeVariables(u ++ bp.bound, g)
 
-  // base cases (remove u)
-  case p: PredicateConstant => Set[NamedSymbol](p) -- u
-  case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg) -- u
-  case True | False => Set.empty
-  case _ => throw new UnknownOperatorException("Not implemented", f)
+    // base cases (remove u)
+    case p: PredicateConstant => Set[NamedSymbol](p) -- u
+    case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg) -- u
+    case True | False => Set.empty
+    case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
   /**
-   * Returns set of symbols bound by p (must bound = definitely written), (may bound = possibly written), and set of symbols free in p (may free = possibly read).
-   * @TODO In principle we could also compute must free, but that doesn't seem useful.
+   * Returns sets of symbols bound by the program p, categorized into definitely written, possibly written, and possibly
+   * read symbols.
+   * @param u The set of symbols bound outside p so far.
+   * @param p The program.
+   * @return The binding assessment.
    */
-  private def freeVariables(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol]) = {p match {
-    case Choice(a, b) => val (mv,v,fv)=freeVariables(u,a); val (mw,w,fw)=freeVariables(u,b); (mv.intersect(mw), v++w, fv++fw)
-    case Sequence(a, b) => {val (mv,v,fv)=freeVariables(u,a); val (mw,w1,fw)=freeVariables(mv,b); val (mw2,w,fw2)=freeVariables(v,b); 
-      assert(mw.subsetOf(mw2), "must bound monotonicity");
-      assert(fw2.subsetOf(fw), "free variable antitonicity");
-      assert(w1.subsetOf(w), "may bound monotonicity");
-      (mw, w, fv++fw)
-    }
-    case Loop(a) => val (mv,v,fv)=freeVariables(u, a); (u,v,fv)
-    case Test(f) => (u, u, freeVariables(u,f))
-    case Assign(x:Variable, e) => (u+x, u+x, freeVariables(u, e))
-    case NDetAssign(x:Variable) => (u+x, u+x, Set.empty)
-    // may free because ODE reads initial value, must bound and may bound because ODE writes
-    case NFContEvolve(v, Derivative(_, x: Variable), e, h) => (u+x,u+x,
+  private def freeVariables(u: Set[NamedSymbol], p: Program): BindingAssessment = p match {
+    case Choice(a, b) =>
+      val ba = freeVariables(u, a)
+      val bb = freeVariables(u, b)
+      BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
+    case Sequence(a, b) =>
+      val ba = freeVariables(u, a)
+      val bbOfMust = freeVariables(ba.bound, b)
+      val bbOfMay = freeVariables(ba.maybeBound, b)
+      assert(bbOfMust.bound.subsetOf(bbOfMay.bound), "must bound monotonicity")
+      assert(bbOfMay.maybeRead.subsetOf(bbOfMust.maybeRead), "free variable antitonicity")
+      assert(bbOfMust.maybeBound.subsetOf(bbOfMay.maybeBound), "may bound monotonicity")
+      BindingAssessment(bbOfMust.bound, bbOfMay.maybeBound, ba.maybeRead ++ bbOfMust.maybeRead)
+    case Loop(a) => val ba = freeVariables(u, a); BindingAssessment(u, ba.maybeBound, ba.maybeRead)
+    case Test(f) => BindingAssessment(u, u, freeVariables(u, f))
+    case Assign(x: Variable, e) => BindingAssessment(u+x, u+x, freeVariables(u, e))
+    case NDetAssign(x:Variable) => BindingAssessment(u+x, u+x, Set.empty)
+    // x maybe read because ODE reads its initial value, as well as bound and maybe bound because ODE writes it
+    case NFContEvolve(v, Derivative(_, x: Variable), e, h) => BindingAssessment(u+x, u+x,
         Set(x) ++ freeVariables(u+x++v, e) ++ freeVariables(u+x++v, h))
 
     
     //@TODO check implementation
-    case a: ProgramConstant => (u, u, Set.empty)
+    case a: ProgramConstant => BindingAssessment(u, u, Set.empty)
     case _ => throw new UnknownOperatorException("Not implemented", p)
-  }} //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
+  } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
   // uniform substitution on terms
   def apply(t: Term): Term = {
