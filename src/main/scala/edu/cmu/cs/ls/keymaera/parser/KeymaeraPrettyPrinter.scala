@@ -339,6 +339,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Assign.getClass().getCanonicalName() ::
       NDetAssign.getClass().getCanonicalName() ::
       Test.getClass().getCanonicalName() ::
+      NFContEvolveSystem.getClass().getCanonicalName() ::
+      NFContEvolve.getClass().getCanonicalName() ::
       ContEvolve.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() ::
       Variable.getClass().getCanonicalName() ::
