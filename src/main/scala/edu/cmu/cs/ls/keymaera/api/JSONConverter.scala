@@ -109,6 +109,8 @@ object JSONConverter {
           case Test(_) => JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Loop(_) => JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ContEvolve(_) => JsObject(("name" -> JsString("ContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case NFContEvolve(_, _, _, _) => JsObject(("name" -> JsString("NFContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case ContEvolveProduct(_, _) => JsObject(("name" -> JsString("ContEvolveProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)
