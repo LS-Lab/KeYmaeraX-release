@@ -202,19 +202,20 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
           "." +
           groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.EQ +
           groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
-          groupIfNotAtomic(f, prettyPrinter(f))
-      }
-      else {
+          groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
+      } else {
         groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.EQ +
           groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
-          groupIfNotAtomic(f, prettyPrinter(f))
+          groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
       }
     }
 
-    case ContEvolveProduct(l, r) => {
-      val leftString = parensIfNeeded(l, Sequence(l, r))
-      val rightString = parensIfNeeded(r, Sequence(l, r))
-      leftString + symbolTable.COMMA + rightString
+    case p@ContEvolveProduct(l, r) => {
+      val leftString = parensIfNeeded(l, p,
+        c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
+      val rightString = parensIfNeeded(r, p,
+        c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
+      leftString + symbolTable.COMMA + rightString + symbolTable.SCOLON
     }
     
     case Number(n) => Number.unapply(expressionToPrint) match {
@@ -268,7 +269,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     if(isAtomic(e)) s else parens._1+s+parens._2
   }
   
-  private def parensIfNeeded(child:Expr, parent:Expr) = {
+  private def parensIfNeeded(child:Expr, parent:Expr, printer: Expr=>String = prettyPrinter) = {
     val parens = 
       if(child.isInstanceOf[Program]) {
         ("{","}")
@@ -277,10 +278,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
         ("(",")")
       }
     if(needsParens(child,parent)) {
-      parens._1 + prettyPrinter(child) + parens._2
+      parens._1 + printer(child) + parens._2
     }
     else {
-      prettyPrinter(child)
+      printer(child)
     }
   }
   
