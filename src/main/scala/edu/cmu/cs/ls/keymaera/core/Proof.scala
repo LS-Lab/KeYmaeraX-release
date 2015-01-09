@@ -922,27 +922,15 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   applicable
 
   /**
-   * Companion object for [[BindingAssessment]].
-   */
-  private object BindingAssessment {
-    def apply(bound: Set[NamedSymbol], mayBound: Set[NamedSymbol], mayRead: Set[NamedSymbol]) =
-      new BindingAssessment(bound, mayBound, mayRead)
-    def unapply(e: Any): Option[(Set[NamedSymbol], Set[NamedSymbol], Set[NamedSymbol])] = e match {
-      case b: BindingAssessment => Some((b.bound, b.maybeBound, b.maybeRead))
-      case _ => None
-    }
-  }
-
-  /**
    * Records which variables are bound, maybe bound, and maybe free when traversing expressions.
    * @param bound Variables that are certainly bound (definitely written).
    * @param maybeBound Variables that may or may not be bound (possibly written).
    * @param maybeRead Variables that may or may not be read (possibly read).
    */
   // TODO In principle we could also compute must free, but that doesn't seem useful.
-  private class BindingAssessment(val bound: Set[NamedSymbol],
-                                  val maybeBound: Set[NamedSymbol],
-                                  val maybeRead: Set[NamedSymbol])
+  private sealed case class BindingAssessment(bound: Set[NamedSymbol],
+                                              maybeBound: Set[NamedSymbol],
+                                              maybeRead: Set[NamedSymbol])
   
   /**
    * @param rarg the argument in the substitution.
