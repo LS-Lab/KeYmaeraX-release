@@ -64,6 +64,8 @@ angular.module('formula', ['ngSanitize'])
                   "Assign" ,
                   "NDetAssign" ,
                   "Test" ,
+                  "ContEvolveProduct",
+                  "NFContEvolve",
                   "ContEvolve" ,
                   "ProgramConstant" ,
                   "Variable",
@@ -250,6 +252,19 @@ angular.module('formula', ['ngSanitize'])
 
                         case "ContEvolve":
                             content = parensIfNeeded(json, c[0], depth + 1);
+                            break;
+
+                        case "NFContEvolve":
+                            var x = parensIfNeeded(json, c[0], depth + 1);
+                            var theta = parensIfNeeded(json, c[1], depth + 1);
+                            var h = parensIfNeeded(json, c[2], depth + 1);
+                            content = x + " = " + theta + " &amp; " + h;
+                            break;
+
+                        case "ContEvolveProduct":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            content = left + ", " + right;
                             break;
 
                         case "formuladerivative":
