@@ -1,52 +1,39 @@
 import edu.cmu.cs.ls.keymaera.core._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import testHelper.StringConverter
+import scala.collection.immutable.Seq
 import StringConverter._
 
 /**
- * Tests uniform substitution.
- *
- * Created by smitsch on 1/7/15.
- * @author Stefan Mitsch
+ * Created by ran on 09/01/15.
+ * @author Ran Ji
  */
+
 class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   private var s: Substitution = null
 
-  override def beforeEach() = { s = new Substitution(List()) }
-
-  private def V(s: String) = Variable(s, None, Real)
-
-  "Free variables of x>0" should "be {x}" in {
-    s.freeVariables("x>0".asFormula) should be (Set(V("x")))
-  }
-  // TODO similar for <, =, etc.
-
-  "Free variables of x>0 & x>2" should "be {x}" in {
-    s.freeVariables("x>0 & x>2".asFormula) should be (Set(V("x")))
-  }
-  // TODO similar for |, -> etc.
-
-  // TODO why is x not bound?
-  "Free variables of Exists x. x=0" should "be {x}" in {
-    s.freeVariables("\\exists x. x=0".asFormula) should be (Set(V("x")))
-  }
-  "Free variables of Forall x. x=0" should "be {x}" in {
-    s.freeVariables("\\forall x. x=0".asFormula) should be (Set(V("x")))
+  override def beforeEach() = {
+    s = new Substitution(List())
   }
 
-  "Free variables of [x:=*;]x>0" should "be {x}" in {
-    s.freeVariables("[x:=*;]x>0".asFormula) should be (Set(V("x")))
+  "Uniform substitution of (x,1) |-> x=y" should "be 1=y" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm)))
+    s.apply("x=y".asFormula) should be ("1=y".asFormula)
   }
 
-  "Free variables of [x:=* ++ z:=x;]x>0" should "be {x}" in {
-    s.freeVariables("[x:=* ++ z:=x;]x>0".asFormula) should be (Set(V("x")))
+  "Uniform substitution of (x,1) |-> x:=y;" should "be x:=y;" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm)))
+    s.apply("x:=y;".asProgram) should be ("x:=y;".asProgram)
   }
 
-  "Free variables of [x:=* ++ ?z>0;]x>0" should "be {x,z}" in {
-    s.freeVariables("[x:=* ++ ?z>0;]x>0".asFormula) should be (Set(V("x"), V("z")))
+  "Uniform substitution of (x,1) |-> x:=1 ++ x:=x+1 ++ z:=x;" should "be x:=1 ++ x:=1+1 ++ z:=1;" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm)))
+    s.apply("x:=1 ++ x:=x+1 ++ z:=x".asProgram) should be ("x:=1 ++ x:=1+1 ++ z:=1;".asProgram)
   }
 
-  "Free variables of [{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};]x>0" should "be {x}" in {
-    s.freeVariables("[{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};]x>0".asFormula) should be (Set(V("x")))
+  "Uniform substitution of (x,1) |-> {x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};" should "be {x:=1 ++ x:=1+1 ++ z:=1};{x:=1 ++ x:=x+1 ++ z:=x};" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm)))
+    s.apply("{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram) should be ("{x:=1 ++ x:=1+1 ++ z:=1};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram)
   }
 
 }

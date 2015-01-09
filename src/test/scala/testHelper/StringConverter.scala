@@ -1,4 +1,6 @@
-import edu.cmu.cs.ls.keymaera.core.{Formula, Term, Expr}
+package testHelper
+
+import edu.cmu.cs.ls.keymaera.core.{Expr, Formula, Term}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 /**
@@ -24,4 +26,9 @@ class StringConverter(val s: String) {
     case Some(f) => f
     case None => throw new IllegalArgumentException(s + " is not a Formula")
   }
+
+//  def asProgram: Program = new KeYmaeraParser().parseBareFormulaUnquantified(s) match {
+//    case Some(p) => p
+//    case None => throw new IllegalArgumentException(s + " is not a Formula")
+//  }
 }
