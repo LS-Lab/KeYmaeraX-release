@@ -189,6 +189,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case Some(idx) => "_" + idx
       case None => ""
     })
+    case ContEvolveProgramConstant(name, i) => name + (i match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    })
     
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
@@ -336,6 +340,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       NFContEvolve.getClass().getCanonicalName() ::
       ContEvolve.getClass().getCanonicalName() ::
       ProgramConstant.getClass().getCanonicalName() ::
+      ContEvolveProgramConstant.getClass().getCanonicalName ::
       Variable.getClass().getCanonicalName() ::
       Number.NumberObj.getClass().getCanonicalName() ::
       Nil

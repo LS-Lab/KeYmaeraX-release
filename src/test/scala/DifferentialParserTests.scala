@@ -1,6 +1,8 @@
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.parser.{LoadedAxiom, KeYmaeraParser}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
-import org.scalatest.{Matchers, FlatSpec}
+import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+import testHelper.StringConverter
 
 /**
  * Tests for ContEvolve -> NFContEvolve refactoring.
@@ -8,7 +10,7 @@ import org.scalatest.{Matchers, FlatSpec}
  * @author Nathan Fulton
  * @author Stefan Mitsch
  */
-class DifferentialParserTests extends FlatSpec with Matchers {
+class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val helper = new ProvabilityTestHelper()
 
   val x = Variable("x", None, Real)
@@ -83,5 +85,26 @@ class DifferentialParserTests extends FlatSpec with Matchers {
             NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))))
       case None => fail("Failed to parse.")
     }
+  }
+
+  it should "parse ContEvolveProgramConstants" in {
+    new KeYmaeraParser().ProofFileParser.runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [a;]p End.") match {
+      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be (ContEvolveProgramConstant("a"))
+    }
+  }
+
+  it should "parse ContEvolveProgramConstants in a system with NFContEvolve" in {
+    new KeYmaeraParser().ProofFileParser.
+      runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.") match {
+      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be(ContEvolveProduct(
+        NFContEvolve(Nil, Derivative(Real, x), one, GreaterThan(Real, x, Number(BigDecimal(5)))),
+        ContEvolveProgramConstant("a")))
+    }
+  }
+
+  it should "not parse ProgramConstants in a system with NFContEvolve" in {
+    the [Exception] thrownBy (new KeYmaeraParser().ProofFileParser.
+      runParser("Variables. P a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.")) should have message
+      "Failed to parse Lemmas & Axioms at (line: 1, column:60): `'' expected but `;' found"
   }
 }
