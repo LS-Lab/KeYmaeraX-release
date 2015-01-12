@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser.{LoadedAxiom, KeYmaeraParser}
+import edu.cmu.cs.ls.keymaera.parser.{ParseSymbols, LoadedAxiom, KeYmaeraParser}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 import testHelper.StringConverter
@@ -65,6 +65,13 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
     }
   }
 
+  it should "parse a single equation with a constraint as an evolution, not an AND-formula." in {
+    helper.parseBareProgram("x' = y & x >= 0;") match {
+      case Some(p) => p should be (NFContEvolve(Nil, Derivative(Real, x), y, GreaterEqual(Real, x, zero)))
+      case _ => fail("failed to parse.")
+    }
+  }
+
   it should "parse scattered evolution domain constraints into the correct positions" in {
     helper.parseBareProgram("x'=y & x>5, y'=x & y>0 & x<0;") match {
       case Some(program) =>
@@ -106,5 +113,44 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
     the [Exception] thrownBy (new KeYmaeraParser().ProofFileParser.
       runParser("Variables. P a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.")) should have message
       "Failed to parse Lemmas & Axioms at (line: 1, column:60): `'' expected but `;' found"
+  }
+
+  it should "Parse diff assign" in {
+    helper.parseBareProgram("x' := 1;")
+  }
+
+  "The IncompleteSystem Parser" should "parse incomplete systems" in {
+    val systemCommand = "x'=y & x>0, y' =x, t' = 1 & t < eps" //no semicolon.
+    helper.parseBareProgram(systemCommand +";") //Sanity test; it should at least parse.
+    helper.parseBareProgram("$$" + systemCommand + "$$;") //should not throw an exception.
+  }
+
+  {
+    val preamble = "Variables. CP a. T x. T tx. T y. T ty. F H. F Hx. F Hy. F p. End. Axiom \"test123\".\n"
+    val end = "\nEnd."
+    val parse = (x:String) => new KeYmaeraParser().ProofFileParser.runParser(x)
+
+    it should "sanity-check" in {
+      parse(preamble + "1=2" + end) //sanity-check the preamble.
+    }
+
+
+    //@todo these rules need semantically suggestive names.
+    //@todo do the equality tests instead of merely making sure the parse does not choke.
+    it should "parse the System-Diff-Intro rule" in {
+      parse(preamble + "[a;]p <- [$$ a $$;]p" + end)
+    }
+
+    it should "parse the System-Diff-Final rule" in {
+      parse(preamble + "[$$ x' = tx & Hx $$;]p <- [x' := tx;][?Hx;]p" + end)
+    }
+
+    it should "parse the System-Diff-Head-Test rule" in {
+      parse(preamble + "[$$ x' = tx & Hx, a $$;][?H;]p <- [x' := tx;][a;][?H&Hx;]p" + end)
+    }
+
+    it should "parse the System-Diff-NoHead-Test rule" in {
+      parse(preamble + "[$$ x' = tx & Hx, a $$;]p <- [x' := tx;][a;][?Hx;]p" + end)
+    }
   }
 }

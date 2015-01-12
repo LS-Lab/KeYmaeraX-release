@@ -316,6 +316,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     /**
      * Terms containing no derivatives.
+     * @todo This does not actually work. All this does is make sure the *top level* parser is not a termDerivative.
+     *      But, for instance, -x' is still allowed because the negativeP parser does a "tighterThan" on the original
+     *      precedence list. In order to fix this problem, we should make this class parameterized by a precedence list.
      */
     lazy val nonDerivativeTermP =   (precedence diff (termDerivativeP::Nil)).reduce(_|_)
 
@@ -452,7 +455,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       new ProgramParser(variables,functions,predicates,programVariables,contEvolveProgramVariables).parser
 
     /**
-     * @TODO Is this unused? If so, why?
+     * @todo Is this unused? If so, why?
      */
     lazy val termParserObj =
       new TermParser(variables, functions)
@@ -461,7 +464,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     /**
      * This is not included in the precedence list, and is merely a helper for parsing NFContEvolve-form diffeq's.
-     * @TODO this doesn't work because inside the inditividual parser we acutally use the precendence list. We would
+     * @todo this doesn't work because inside the inditividual parser we acutally use the precendence list. We would
      *      have to make the entire parser parameterized by the precedence list...
      */
     lazy val nonDerivativeFormulaP = (precedence diff formulaDerivativeP::Nil).reduce(_|_)
@@ -745,7 +748,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //require a trailing ; removed. These will be captured by sequenceP.
     lazy val parser = choiceP | sequenceP | ifThenElseP | ifThenP | whileP | closureP | groupP
 
-    //TODO do we need to make the program variables into predicates so that they
+    //@todo do we need to make the program variables into predicates so that they
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
@@ -764,8 +767,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       closureP    ::
       assignP     ::
       ndassignP   ::
-      normalFormEvolutionSystemP ::
-      evolutionP  :: //@TODO should be deprecated; for now we just prefer the normal form where it applies.
+      incompleteSystemP ::
+      normalFormEvolutionSystemP :: //@todo document this.
+      evolutionP  :: //@todo should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
@@ -882,7 +886,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    //@TODO Per December 2014 systems of diff eqs meeting, ContEvolves are temporarily deprecated.
+    //@todo Per December 2014 systems of diff eqs meeting, ContEvolves are temporarily deprecated.
     lazy val evolutionP:SubprogramParser = {
       lazy val pattern = (
                           rep1sep(formulaParser, COMMA) ~
@@ -920,6 +924,18 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
             case t: Derivative => new NFContEvolve(Nil, t, rhs, constraint)
             case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing NFContEvolve")
           }
+        }
+      }
+    }
+
+    //@todo find a better term for this construct
+    lazy val incompleteSystemP: PackratParser[IncompleteSystem] = { //PackratParser[IncompleteSystem]
+      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (normalFormEvolutionSystemP <~ END_INCOMPLETE_SYSTEM)
+
+      log(pattern)("Incomplete Differential Equation System") ^^ {
+        case system => system match {
+          case x: ContEvolveProgram => new IncompleteSystem(x)
+          case _ => throw new Exception("Expected the interior of an IncompleteSystem to be a continuous evolution, but found: " + system.getClass().getCanonicalName() + ".")
         }
       }
     }

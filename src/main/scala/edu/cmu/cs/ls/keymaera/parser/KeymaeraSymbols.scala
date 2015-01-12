@@ -46,6 +46,8 @@ trait KeYmaeraSymbols {
   val SCOLON:String
   val TEST:String
   val PRIME:String
+  val START_INCOMPLETE_SYSTEM: String
+  val END_INCOMPLETE_SYSTEM: String
     
   val PARALLEL:String
   val SEND:String
@@ -144,6 +146,8 @@ object ParseSymbols extends KeYmaeraSymbols {
   val SCOLON  = ";"
   val TEST = "?"
   val PRIME = "'" //derivative of
+  val START_INCOMPLETE_SYSTEM = "$$"
+  val END_INCOMPLETE_SYSTEM = "$$"
     
   val PARALLEL    = "||" //∥
   val SEND = "!"
@@ -233,7 +237,9 @@ object HTMLSymbols extends KeYmaeraSymbols {
   val SCOLON  = ";"
   val TEST = "?"
   val PRIME = "'" //derivative of
-    
+  val START_INCOMPLETE_SYSTEM = "$$"
+  val END_INCOMPLETE_SYSTEM = "$$"
+
   val PARALLEL    = "∥"
   val SEND = "!"
   val RECEIVE = "?"
@@ -320,6 +326,8 @@ object LaTeXSymbols extends KeYmaeraSymbols {
   val SCOLON  = ";"
   val TEST = "?"
   val PRIME = "'" //derivative of
+  val START_INCOMPLETE_SYSTEM = "$$"
+  val END_INCOMPLETE_SYSTEM = "$$"
 
   val PARALLEL    = "\\|" //∥
   val SEND = "!"

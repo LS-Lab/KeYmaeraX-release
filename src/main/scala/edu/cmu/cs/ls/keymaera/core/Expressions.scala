@@ -1245,6 +1245,24 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
   override def hashCode: Int = hash(257, left, right)
 }
 
+object IncompleteSystem {
+  def apply(system: ContEvolveProgram) = new IncompleteSystem(system) //@todo should this be contevolve or contevolveprogram?
+  def unapply(e: Any): Option[ContEvolveProgram] = e match {
+      case IncompleteSystem(s) => Some(s)
+      case _                   => None
+  }
+}
+final class IncompleteSystem(system: ContEvolveProgram) extends Expr(ProgramSort)  with Program { //@todo should this extend ContEvolveProgram?
+  def reads = ???
+  def writes = (system.writes).distinct
+
+  override def equals(e: Any): Boolean = e match {
+    case IncompleteSystem(xSystem) => this.system.equals(xSystem)
+    case _ => false
+  }
+  override def hashCode: Int = hash(257, system) //@todo not sure what the numbers are all about? - nrf.
+}
+
 /**
  * A system of differential equations in normal form.
  */
