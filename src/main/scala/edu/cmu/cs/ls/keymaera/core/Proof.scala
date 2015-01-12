@@ -893,6 +893,7 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
       case _:Variable => true
       case _:PredicateConstant => true
       case _:ProgramConstant => true
+      case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
       case ApplyPredicate(_:Function, _:Variable) => true
       case Apply(_:Function, _:Variable) => true
@@ -1051,6 +1052,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     
     //@TODO check implementation
     case a: ProgramConstant => BindingAssessment(u, u, Set.empty)
+    case ContEvolveProduct(a, b) =>
+      val ba = freeVariables(u, a)
+      val bb = freeVariables(u, b)
+      BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
@@ -1189,6 +1194,17 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     
     //@TODO check implementation
     case a: ProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
+    case a: ContEvolveProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u, pair.t.asInstanceOf[ContEvolveProgram])}; return (u, p)
+    case ContEvolveProduct(a, b) =>
+      val (v, as) = usubst(u, a) match {
+        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+      }
+      val (w, bs) = usubst(u, b) match {
+        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+      }
+      (v++w, ContEvolveProduct(as, bs))
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
 
@@ -1445,13 +1461,17 @@ object UniformSubstitution {
 // alpha conversion
 
 /**
- * Alpha conversion works on exactly four positions:
+ * Alpha conversion works on exactly eight positions:
  * (1) Forall(v, phi)
  * (2) Exists(v, phi)
  * (3) Modality(BoxModality(Assign(x, e)), phi)
  * (4) Modality(DiamondModality(Assign(x, e)), phi)
  * (5) Modality(BoxModality(NDetAssign(x)), phi)
  * (6) Modality(DiamondModality(NDetAssign(x)), phi)
+ * (7) Modality(BoxModality(ContEvolveProgram, _), phi)
+ * (8) Modality(DiamondModality(ContEvolveProgram, _), phi)
+ *
+ * The rule should only be extended if absolutely necessary.
  *
  * It always replaces _every_ occurrence of the name in phi
  * @param tPos
@@ -1468,9 +1488,14 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
   }
   def apply(s: Sequent): List[Sequent] = {
 
-    def proceed(f: Formula) = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+    def renamingTraversalFn = new ExpressionTraversalFunction {
       override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
         case x: ProgramConstant => Right(renameProg(x))
+        case NFContEvolve(v, Derivative(ds, x), theta, h) => x match {
+          case Variable(n, i, d) if n == name && i == idx =>
+            Right(NFContEvolve(v, Derivative(ds, Variable(target, tIdx, d)), proceedTerm(theta), proceed(h)))
+          case _ => Left(None)
+        }
         case _ => Left(None)
       }
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
@@ -1485,7 +1510,12 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
         case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
         case _ => Left(None)
       }
-    }, f).get
+    }
+
+    def proceed(f: Formula): Formula = ExpressionTraversal.traverse(renamingTraversalFn, f).get
+    def proceedTerm(t: Term): Term = ExpressionTraversal.traverse(renamingTraversalFn, t).get
+    def proceedProgram(p: ContEvolveProgram): ContEvolveProgram = ExpressionTraversal.traverse(renamingTraversalFn, p).get
+
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) =>
@@ -1518,6 +1548,16 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
             case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
             case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
           }), proceed(c)))
+        case BoxModality(a: ContEvolveProgram, c) =>
+          val targetVar = Variable(target, tIdx, Real)
+          val sourceVar = Variable(name, idx, Real)
+          Right(BoxModality(Assign(targetVar, sourceVar),
+            BoxModality(proceedProgram(a), proceed(c))))
+        case DiamondModality(a: ContEvolveProgram, c) =>
+          val targetVar = Variable(target, tIdx, Real)
+          val sourceVar = Variable(name, idx, Real)
+          Right(DiamondModality(Assign(targetVar, sourceVar),
+            DiamondModality(proceedProgram(a), proceed(c))))
         case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
       }
     }
@@ -1695,12 +1735,27 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
   require(!p.isAnte)
   override def apply(s: Sequent): List[Sequent] = {
+    val prgFn = new ExpressionTraversalFunction {
+      override def postP(pos: PosInExpr, prg: Program) = prg match {
+        case NFContEvolve(v, x, theta, hh) => Right(NFContEvolve(v, x, theta, And(hh, h)))
+        case ContEvolve(f) => Right(ContEvolve(And(f, h)))
+        case _ => super.postP(pos, prg)
+      }
+    }
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
         case BoxModality(ev@ContEvolve(evolve), f) => Right(And(BoxModality(ev, h),
           BoxModality(ContEvolve(And(evolve, h)), f)))
         case BoxModality(ev@NFContEvolve(vs, x, t, dom), f) => Right(And(BoxModality(ev, h),
           BoxModality(NFContEvolve(vs, x, t, And(dom, h)), f)))
+        // append to evolution domain constraint of rightmost (NF)ContEvolve in product
+        case BoxModality(ev@ContEvolveProduct(a, b), f) =>
+          val rightMostCut = ExpressionTraversal.traverse(HereP, prgFn, b) match {
+            case Some(prg) => prg
+            case None => throw new IllegalArgumentException("Unexpected program type at rightmost position in " +
+              "ContEvolveProduct")
+          }
+          Right(And(BoxModality(ev, h), BoxModality(ContEvolveProduct(a, rightMostCut), f)))
         case _ => ???
       }
     }

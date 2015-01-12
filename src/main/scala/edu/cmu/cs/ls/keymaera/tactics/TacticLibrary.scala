@@ -216,7 +216,9 @@ object TacticLibrary {
 //  })
 //}
 
-  //not at all sure about this...
+  def diffWeakenT = ODETactics.diffWeakenT
+
+      //not at all sure about this...
   def differentialInvariant(invariant : Option[Formula]) : PositionTactic = new PositionTactic("differential induction") {
     /**
      *
@@ -282,8 +284,9 @@ object TacticLibrary {
 
   def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with ") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case Some(BoxModality(ContEvolve(_), _)) => true
+      case Some(BoxModality(_: ContEvolve, _)) => true
       case Some(BoxModality(_: NFContEvolve, _)) => true
+      case Some(BoxModality(_: ContEvolveProduct, _)) => true
       case _ => false
     }
 
