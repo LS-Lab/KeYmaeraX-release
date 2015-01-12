@@ -30,7 +30,10 @@ private object NameConversion {
   private val PREFIX = "KeYmaera`"
   private val SEP    = "$beginIndex$"
   private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
-  private val MUNDERSCOREREGEX = "\\$underscore\\$" //Mathematica Underscore
+
+  private def regexOf(s: String) = {
+    s.replace("$", "\\$")
+  }
 
   private def maskIdentifier(name : String) = {
     //Ensure that none of the "special" strings occur in the variable name.
@@ -72,10 +75,10 @@ private object NameConversion {
   }
   
   private def variableToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val maskedName = e.asString().replaceAll(MUNDERSCOREREGEX, "_")
+    val maskedName = e.asString().replaceAll(regexOf(MUNDERSCORE), "_")
     if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
       //Get the parts of the masked name.
-      val parts = maskedName.replace(PREFIX, "").split(SEP)
+      val parts = maskedName.replace(PREFIX, "").split(regexOf(SEP))
       if(parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
       val (name, unparsedIndex) = (parts.head, parts.last)
       
@@ -95,10 +98,10 @@ private object NameConversion {
   }
   
   private def functionToKeYmaera(e : com.wolfram.jlink.Expr) : NamedSymbol = {
-    val maskedName = e.head().asString().replaceAll(MUNDERSCOREREGEX, "_")
+    val maskedName = e.head().asString().replaceAll(regexOf(MUNDERSCORE), "_")
     if(maskedName.contains(PREFIX) && maskedName.contains(SEP)) {
       //Get the parts of the masked name.
-      val parts = maskedName.replace(PREFIX, "").split(SEP)
+      val parts = maskedName.replace(PREFIX, "").split(regexOf(SEP))
       if(parts.size != 2) throw new ConversionException("Expected " + SEP + " once only.")
       val (name, unparsedIndex) = (parts.head, parts.last)
       
