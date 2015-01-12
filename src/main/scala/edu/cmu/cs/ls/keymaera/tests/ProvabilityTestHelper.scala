@@ -18,8 +18,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
  */
 class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool : Tool = new Mathematica()) {
 
-  // TODO test configuration
-  tool.init(Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel"))
+  // @todo this definitely needs to change...
+  val linkName = {
+    def exists(path: String) = new java.io.File(path).exists()
+
+    val macPath = "/Applications/Mathematica.app/Contents/MacOS/MathKernel"
+    val linuxPath = "/usr/local/Wolfram/Mathematica/9.0/Executables/MathKernel"
+
+    if(exists(macPath)) macPath
+    else if(exists(linuxPath)) linuxPath
+    else throw new Exception("Could not find a correct path to mathKernel.")
+
+  }
+  tool.init(Map("linkName" -> linkName))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Utility Functions
