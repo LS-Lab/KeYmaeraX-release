@@ -227,6 +227,18 @@ class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSym
   def writes = Nil
 }
 
+object ContEvolveProgramConstant {
+  def apply(name : String, index: Option[Int] = None): ContEvolveProgramConstant = new ContEvolveProgramConstant(name, index)
+  def unapply(e: Any): Option[(String, Option[Int])] = e match {
+    case x: ContEvolveProgramConstant => Some((x.name, x.index))
+    case _ => None
+  }
+}
+class ContEvolveProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram with ContEvolveProgram {
+  def reads = Nil
+  def writes = Nil
+}
+
 object Function {
   def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Function = new Function(name, index, domain, sort)
   def unapply(e: Any): Option[(String, Option[Int], Sort, Sort)] = e match {
