@@ -10,7 +10,7 @@
 
 package edu.cmu.cs.ls.keymaera.core
 
-import edu.cmu.cs.ls.keymaera.tools.{JLinkMathematicaLink, QETool}
+import edu.cmu.cs.ls.keymaera.tools.{DiffSolutionTool, JLinkMathematicaLink, QETool}
 
 /**
  * Defines the lifecycle for external tools. A tool is available once init is called.
@@ -67,7 +67,8 @@ object KeYmaera extends ToolBase("KeYmaera") {}
 class Mathematica extends ToolBase("Mathematica") {
   private val jlink = new JLinkMathematicaLink
   private[core] val cricitalQE: QETool = jlink
-  
+  val diffSolver: DiffSolutionTool = jlink
+
   // TODO replace with constructor and dependency injection
   override def init(config: Map[String,String]) = {
     val linkName = config.get("linkName") match {
