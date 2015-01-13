@@ -42,10 +42,11 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import BranchLabels.{cutShowLbl, cutUseLbl}
         def createTactic(solution: Formula, diffEqPos: Position) = {
           val cut = diffCutT(solution)(p) & AndRightT(p)
-          val proveSol = onBranch("Show cut", NilT/*differentialInduction(diffEqPos)*/)
-          val useSol = onBranch("Use cut", diffWeakenT(diffEqPos))
+          val proveSol = onBranch(cutShowLbl, NilT/*differentialInduction(diffEqPos)*/)
+          val useSol = onBranch(cutUseLbl, diffWeakenT(diffEqPos))
           Some(cut ~ proveSol ~ useSol)
         }
 
@@ -104,15 +105,15 @@ object ODETactics {
         node.sequent(p) match {
           case BoxModality(_: ContEvolveProduct, _) => Some(
             // introduce $$ markers
-            diffWeakenSystemIntroT(p) ~
+            diffWeakenSystemIntroT(p) &
             // pull out heads until empty
-            ((diffWeakenSystemHeadT(p) ~ boxNDetAssign(p) ~ skolemizeT(p))*) ~
-            (diffWeakenSystemFinalHeadT(p) ~ boxNDetAssign(p) ~ skolemizeT(p)) ~
+            ((diffWeakenSystemHeadT(p) & boxNDetAssign(p) & skolemizeT(p))*) &
+            (diffWeakenSystemFinalHeadT(p) & boxNDetAssign(p) & skolemizeT(p)) &
             // remove empty marker and handle tests
-            diffWeakenSystemNilT(p) ~ (boxTestT(p) ~ ImplyRightT(p))*
+            diffWeakenSystemNilT(p) & ((boxTestT(p) & ImplyRightT(p))*)
           )
-          case BoxModality(_: NFContEvolve, _) => Some(diffWeakenNormalFormT(p) ~
-            boxNDetAssign(p) ~ skolemizeT(p) ~ boxTestT(p) ~ ImplyRightT(p))
+          case BoxModality(_: NFContEvolve, _) => Some(diffWeakenNormalFormT(p) &
+            boxNDetAssign(p) & skolemizeT(p) & boxTestT(p) & ImplyRightT(p))
         }
       }
     }
@@ -172,8 +173,7 @@ object ODETactics {
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
       case BoxModality(c: ContEvolveProduct, p) =>
         // construct instance
-        // TODO mark c
-        val g = BoxModality(/*{*/c/*}*/, p)
+        val g = BoxModality(IncompleteSystem(c), p)
         val axiomInstance = Imply(g, f)
 
         // construct substitution
@@ -194,23 +194,20 @@ object ODETactics {
   def diffWeakenSystemHeadT: PositionTactic = new AxiomTactic("DW differential weaken system head",
       "DW differential weaken system head") {
     def applies(f: Formula) = f match {
-      // TODO ContEvolveProduct must be marked
-      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _), _) => true
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _)), _) => true
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      // TODO ContEvolveProduct must be marked
-      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), c), p) =>
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), c)), p) =>
         // construct instance
         val x = d.child match {
           case v: Variable => v
           case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
         }
-        // TODO mark a
-        val lhs = BoxModality(NDetAssign(x), BoxModality(/*{*/c/*}*/, BoxModality(Test(h), p)))
+        val lhs = BoxModality(NDetAssign(x), BoxModality(IncompleteSystem(c), BoxModality(Test(h), p)))
         val axiomInstance = Imply(lhs, f)
 
         // construct substitution
@@ -240,23 +237,20 @@ object ODETactics {
   def diffWeakenSystemFinalHeadT: PositionTactic = new AxiomTactic("DW differential weaken system final head",
     "DW differential weaken system final head") {
     def applies(f: Formula) = f match {
-      // TODO NFContEvolve must be marked
-      case BoxModality(NFContEvolve(_, d: Derivative, t, h), _) => true
+      case BoxModality(IncompleteSystem(NFContEvolve(_, d: Derivative, t, h)), _) => true
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      // TODO NFContEvolve must be marked
-      case BoxModality(NFContEvolve(_, d: Derivative, t, h), p) =>
+      case BoxModality(IncompleteSystem(NFContEvolve(_, d: Derivative, t, h)), p) =>
         // construct instance
         val x = d.child match {
           case v: Variable => v
           case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
         }
-        // TODO replace test true with empty mark
-        val lhs = BoxModality(NDetAssign(x), BoxModality(/*$*/Test(True)/*$*/, BoxModality(Test(h), p)))
+        val lhs = BoxModality(NDetAssign(x), BoxModality(IncompleteSystem(), BoxModality(Test(h), p)))
         val axiomInstance = Imply(lhs, f)
 
         // construct substitution
@@ -284,16 +278,14 @@ object ODETactics {
   def diffWeakenSystemNilT: PositionTactic = new AxiomTactic("DW differential weaken system nil",
     "DW differential weaken system nil") {
     def applies(f: Formula) = f match {
-      // TODO empty mark instead of Test(True)
-      case BoxModality(Test(True), _) => true
+      case BoxModality(s: IncompleteSystem, _) => !s.system.isDefined
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      // TODO a must be empty mark
-      case BoxModality(a, BoxModality(b@Test(h), p)) =>
+      case BoxModality(s: IncompleteSystem, BoxModality(b@Test(h), p)) if !s.system.isDefined =>
         // construct instance
         val lhs = BoxModality(b, p)
         val axiomInstance = Imply(lhs, f)
@@ -333,6 +325,7 @@ object ODETactics {
   private def alphaInWeakenSystems(oldSymbol: NamedSymbol, newSymbol: NamedSymbol) = new PositionTactic("Alpha") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Imply(BoxModality(_: NDetAssign, _), BoxModality(_: ContEvolveProgram, _)) => true
+      case Imply(BoxModality(_: NDetAssign, _), BoxModality(_: IncompleteSystem, _)) => true
       case _ => false
     }
 
