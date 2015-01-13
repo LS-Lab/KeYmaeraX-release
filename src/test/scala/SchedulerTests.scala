@@ -43,6 +43,7 @@ class SchedulerTests extends FlatSpec with Matchers with MockFactory  {
     // delay tool so that it is not available when next tactic is dispatched
     (tactic.execute _).expects(tool).once().onCall{ x: Tool => Thread.sleep(2000) }
     scheduler.dispatch(tactic)
+    (tactic.compareTo _).expects(*).anyNumberOfTimes()
     (tactic.execute _).expects(tool2).once()
     scheduler.dispatch(tactic)
     // ScalaMock requires that all interaction is complete before the test ends,
