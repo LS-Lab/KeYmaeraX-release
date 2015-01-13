@@ -103,7 +103,7 @@ class ParserParenTests extends FlatSpec with Matchers {
   it should "parse all examples/t/positive files" in {
     val positiveTestsDir = new File("examples/dev/t/parsing/positive")
     positiveTestsDir.isDirectory() should be (true)
-    for(testFile <- positiveTestsDir.listFiles()) {
+    for(testFile <- positiveTestsDir.listFiles().filter(f => f.getName.endsWith(".key"))) {
       val src = io.Source.fromFile(testFile).mkString
       try {
         parser.runParser(src) //test fails on exception.
