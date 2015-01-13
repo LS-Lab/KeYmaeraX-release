@@ -1,8 +1,7 @@
 package testHelper
 
-import edu.cmu.cs.ls.keymaera.core.{Program, Expr, Formula, Term}
+import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 
 /**
  * Implicit conversions from strings into core data structures.
@@ -28,13 +27,8 @@ class StringConverter(val s: String) {
     case None => throw new IllegalArgumentException(s + " is not a Formula")
   }
 
-  def asProgram: Program = new ProvabilityTestHelper().parseBareProgram(s) match {
-    case Some(p) => p
+  def asProgram: Program = new KeYmaeraParser().parseBareExpression("[" + s + "] true") match {
+    case Some(BoxModality(p, f)) => p
     case None => throw new IllegalArgumentException(s + " is not a Program")
   }
-
-//  def asProgram: Program = new KeYmaeraParser().parseBareFormulaUnquantified(s) match {
-//    case Some(p) => p
-//    case None => throw new IllegalArgumentException(s + " is not a Formula")
-//  }
 }

@@ -1,21 +1,30 @@
 import edu.cmu.cs.ls.keymaera.core._
-import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter
 import StringConverter._
 
+import scala.collection.immutable.Set
+
 /**
- * Tests uniform substitution.
+ * Tests free variables
  *
  * Created by smitsch on 1/7/15.
  * @author Stefan Mitsch
  * @author Ran Ji
  */
-class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
   private var s: Substitution = null
 
-  override def beforeEach() = { s = new Substitution(List()) }
+
+  override def beforeEach() = {
+    s = new Substitution(List())
+  }
 
   private def V(s: String) = Variable(s, None, Real)
+  private def freeVariables(p: Program) : Any = {
+    val freeVariables = PrivateMethod[Any]('freeVariables)
+    s invokePrivate freeVariables(p)
+  }
 
   // test cases for terms
 
@@ -200,7 +209,7 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   // test cases for programs
 
   "Free variables of x:=*;" should "be {}" in {
-    s.freeVariables("x:=*;".asProgram) should be (Set())
+    freeVariables("x:=*;".asProgram) should be (Set())
   }
 
   "Free variables of [x:=*;]x>0" should "be {}" in {
@@ -208,7 +217,7 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Free variables of y:=x;" should "be {x}" in {
-    s.freeVariables("y:=x;".asProgram) should be (Set(V("x")))
+    freeVariables("y:=x;".asProgram) should be (Set(V("x")))
   }
 
   "Free variables of [y:=x;]y>0" should "be {x}" in {
@@ -216,7 +225,7 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Free variables of x:=*;y:=x;" should "be {}" in {
-    s.freeVariables("x:=*;y:=x;".asProgram) should be (Set())
+    freeVariables("x:=*;y:=x;".asProgram) should be (Set())
   }
 
   "Free variables of [x:=*;y:=x]y>0" should "be {}" in {
@@ -224,7 +233,7 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Free variables of x:=* ++ y:=x;" should "be {x}" in {
-    s.freeVariables("x:=* ++ y:=x;".asProgram) should be (Set(V("x")))
+    freeVariables("x:=* ++ y:=x;".asProgram) should be (Set(V("x")))
   }
 
   "Free variables of [x:=* ++ y:=x;]y>0" should "be {x,y}" in {
@@ -236,28 +245,23 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   "Free variables of x:=1; x:=x+1; z:=x;" should "be {}" in {
-    s.freeVariables("x:=1; x:=x+1; z:=x;".asProgram) should be (Set())
+    freeVariables("x:=1; x:=x+1; z:=x;".asProgram) should be (Set())
   }
 
   "Free variables of x:=1 ++ x:=x+1 ++ z:=x;" should "be {x}" in {
-    s.freeVariables("x:=1 ++ x:=x+1 ++ z:=x;".asProgram) should be (Set(V("x")))
+    freeVariables("x:=1 ++ x:=x+1 ++ z:=x;".asProgram) should be (Set(V("x")))
   }
 
   "Free variables of {x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};" should "be {x}" in {
-    s.freeVariables("{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram) should be (Set(V("x")))
+    freeVariables("{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram) should be (Set(V("x")))
   }
 
   "Free variables of {x:=1 ++ x:=x+1 ++ z:=x}*;" should "be {x}" in {
-    s.freeVariables("{x:=1 ++ x:=x+1 ++ z:=x}*;".asProgram) should be (Set(V("x")))
+    freeVariables("{x:=1 ++ x:=x+1 ++ z:=x}*;".asProgram) should be (Set(V("x")))
   }
 
-
-//  "Free variables of x':=a;" should "be {}" in {
-//    s.freeVariables("x':=a;".asProgram) should be (Set())
-//  }
-
-// not implemented yet
-
+//not implemented yet
+//
 //  "Free variables of [x':=*;]true" should "be {}" in {
 //    s.freeVariables("[x':=*;]true".asFormula) should be (Set())
 //  }
@@ -269,5 +273,4 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 //  "Free variables of [Forall t. x=0; x:=t+1]x>0" should "be {t}" in {
 //    s.freeVariables("[\\forall t. x=0; x:=t+1]x>0".asFormula) should be (Set(V("t")))
 //  }
-
 }

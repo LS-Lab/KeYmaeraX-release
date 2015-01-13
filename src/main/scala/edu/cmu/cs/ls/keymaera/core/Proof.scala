@@ -987,11 +987,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    */
   def freeVariables(f: Formula) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], f)
 
-  /**
-   * Exactly like freeVariables : Formula -> Set, but for programs instead of formulas.
-   */
-  def freeVariables(p: Program) : Set[NamedSymbol] = freeVariables(BoxModality(p, True))
-
   private def freeVariables(u: Set[NamedSymbol], f: Formula) : Set[NamedSymbol] = f match {
     // homomorphic cases
     case Not(g) => freeVariables(u, g)
@@ -1020,6 +1015,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case True | False => Set.empty
     case _ => throw new UnknownOperatorException("Not implemented", f)
   }
+
+  /**
+   * Return the set of (may) free variables in the program p
+   * Used for unit tests only, may need a better solution
+   */
+  private def freeVariables(p: Program) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], p: Program).maybeRead
 
   /**
    * Returns sets of symbols bound by the program p, categorized into definitely written, possibly written, and possibly
