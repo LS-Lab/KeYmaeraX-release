@@ -221,6 +221,16 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
       leftString + symbolTable.COMMA + rightString + symbolTable.SCOLON
     }
+
+    case p: IncompleteSystem if p.system.isDefined => {
+      val system = parensIfNeeded(p.system.get, p, c => {
+        val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s
+      })
+      symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM + symbolTable.SCOLON
+    }
+    case p: IncompleteSystem if !p.system.isDefined =>
+      symbolTable.START_INCOMPLETE_SYSTEM + symbolTable.END_INCOMPLETE_SYSTEM + symbolTable.SCOLON
+
     
     case Number(n) => Number.unapply(expressionToPrint) match {
       case Some((ty, number:BigDecimal)) => number.toString()
@@ -296,65 +306,66 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     val precedenceDS =    
       //Terms.
       //TODO expP?
-      Add.getClass().getCanonicalName() ::
-      Subtract.getClass().getCanonicalName() ::
-      Multiply.getClass().getCanonicalName() ::
-      Divide.getClass().getCanonicalName() ::
-      Exp.getClass().getCanonicalName() ::
-      Neg.getClass().getCanonicalName() ::
-      Derivative.getClass().getCanonicalName() ::
-      Apply.getClass().getCanonicalName() ::
-      Function.getClass().getCanonicalName() ::
-      ProgramConstant.getClass().getCanonicalName() :: //real-valued.
-      Number.getClass().getCanonicalName()   ::
+      Add.getClass.getCanonicalName ::
+      Subtract.getClass.getCanonicalName ::
+      Multiply.getClass.getCanonicalName ::
+      Divide.getClass.getCanonicalName ::
+      Exp.getClass.getCanonicalName ::
+      Neg.getClass.getCanonicalName ::
+      Derivative.getClass.getCanonicalName ::
+      Apply.getClass.getCanonicalName ::
+      Function.getClass.getCanonicalName ::
+      ProgramConstant.getClass.getCanonicalName :: //real-valued.
+      Number.getClass.getCanonicalName   ::
       //Formulas
-      Equiv.getClass().getCanonicalName() ::
-      Imply.getClass().getCanonicalName()  ::
-      Or.getClass().getCanonicalName() ::
-      And.getClass().getCanonicalName() ::
-      Not.getClass().getCanonicalName() :: 
-      BoxModality.getClass().getCanonicalName()   ::
-      DiamondModality.getClass().getCanonicalName() ::
-      Modality.getClass().getCanonicalName() ::
-      Forall.getClass().getCanonicalName() ::
-      Exists.getClass().getCanonicalName() ::
-      Equals.getClass().getCanonicalName() ::
-      NotEquals.getClass().getCanonicalName() ::
-      LessThan.getClass().getCanonicalName()    ::
-      LessEqual.getClass().getCanonicalName()    ::
-      GreaterEqual.getClass().getCanonicalName()    ::
-      GreaterThan.getClass().getCanonicalName()    ::
-      FormulaDerivative.getClass().getCanonicalName() ::
-      PredicateConstant.getClass().getCanonicalName() ::
-      ApplyPredicate.getClass().getCanonicalName() ::
-      True.getClass().getCanonicalName() ::
-      False.getClass().getCanonicalName() ::
+      Equiv.getClass.getCanonicalName ::
+      Imply.getClass.getCanonicalName  ::
+      Or.getClass.getCanonicalName ::
+      And.getClass.getCanonicalName ::
+      Not.getClass.getCanonicalName ::
+      BoxModality.getClass.getCanonicalName   ::
+      DiamondModality.getClass.getCanonicalName ::
+      Modality.getClass.getCanonicalName ::
+      Forall.getClass.getCanonicalName ::
+      Exists.getClass.getCanonicalName ::
+      Equals.getClass.getCanonicalName ::
+      NotEquals.getClass.getCanonicalName ::
+      LessThan.getClass.getCanonicalName    ::
+      LessEqual.getClass.getCanonicalName    ::
+      GreaterEqual.getClass.getCanonicalName    ::
+      GreaterThan.getClass.getCanonicalName    ::
+      FormulaDerivative.getClass.getCanonicalName ::
+      PredicateConstant.getClass.getCanonicalName ::
+      ApplyPredicate.getClass.getCanonicalName ::
+      True.getClass.getCanonicalName ::
+      False.getClass.getCanonicalName ::
       //Programs.
-      Choice.getClass().getCanonicalName()     ::
-      Sequence.getClass().getCanonicalName()   ::
-      Loop.getClass().getCanonicalName() ::
-      Assign.getClass().getCanonicalName() ::
-      NDetAssign.getClass().getCanonicalName() ::
-      Test.getClass().getCanonicalName() ::
-      ContEvolveProduct.getClass().getCanonicalName() ::
-      NFContEvolve.getClass().getCanonicalName() ::
-      ContEvolve.getClass().getCanonicalName() ::
-      ProgramConstant.getClass().getCanonicalName() ::
-      ContEvolveProgramConstant.getClass().getCanonicalName ::
-      Variable.getClass().getCanonicalName() ::
-      Number.NumberObj.getClass().getCanonicalName() ::
+      Choice.getClass.getCanonicalName     ::
+      Sequence.getClass.getCanonicalName   ::
+      Loop.getClass.getCanonicalName ::
+      Assign.getClass.getCanonicalName ::
+      NDetAssign.getClass.getCanonicalName ::
+      Test.getClass.getCanonicalName ::
+      IncompleteSystem.getClass.getCanonicalName ::
+      ContEvolveProduct.getClass.getCanonicalName ::
+      NFContEvolve.getClass.getCanonicalName ::
+      ContEvolve.getClass.getCanonicalName ::
+      ProgramConstant.getClass.getCanonicalName ::
+      ContEvolveProgramConstant.getClass.getCanonicalName ::
+      Variable.getClass.getCanonicalName ::
+      Number.NumberObj.getClass.getCanonicalName ::
       Nil
     val precedence = precedenceDS.map(_.replace("$",""))
     
-    val childPrecedence = precedence.indexOf(child.getClass().getCanonicalName().replace("$",""))
-    val parentPrecedence = precedence.indexOf(parent.getClass().getCanonicalName().replace("$",""))
+    val childPrecedence = precedence.indexOf(child.getClass.getCanonicalName.replace("$",""))
+    val parentPrecedence = precedence.indexOf(parent.getClass.getCanonicalName.replace("$",""))
     if(childPrecedence == -1) {
       val classes = precedence.reduce(_ + "\n" + _)
-      throw new Exception("child not found in precedence list: " + child.getClass().getCanonicalName() + " in: " + "\n" + classes)
+      throw new Exception("child not found in precedence list: " + child.getClass.getCanonicalName + " in: " + "\n" + classes)
     }
     if(parentPrecedence == -1) {
       val classes = precedence.reduce(_ + "\n" + _)
-      throw new Exception("parent not found in precedence list: " + parent.getClass().getCanonicalName() + " in: " + "\n" + classes)
+      throw new Exception("parent not found in precedence list: " + parent.getClass.getCanonicalName + " in: " + "\n" + classes)
     }
     childPrecedence < parentPrecedence
   }
