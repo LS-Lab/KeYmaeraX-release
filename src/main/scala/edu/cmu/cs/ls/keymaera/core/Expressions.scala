@@ -46,7 +46,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 263
+   * Next free prime is 269
    * @param prime
    * @param a
    * @return
@@ -1246,21 +1246,29 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
 }
 
 object IncompleteSystem {
-  def apply(system: ContEvolveProgram) = new IncompleteSystem(system) //@todo should this be contevolve or contevolveprogram?
+  def apply(system: ContEvolveProgram) = new IncompleteSystem(Some(system))
+  def apply() = new IncompleteSystem(None)
   def unapply(e: Any): Option[ContEvolveProgram] = e match {
-      case IncompleteSystem(s) => Some(s)
+      case s: IncompleteSystem => s.system
       case _                   => None
   }
 }
-final class IncompleteSystem(system: ContEvolveProgram) extends Expr(ProgramSort)  with Program { //@todo should this extend ContEvolveProgram?
-  def reads = ???
-  def writes = (system.writes).distinct
+final class IncompleteSystem(val system: Option[ContEvolveProgram]) extends Expr(ProgramSort) with Program {
+  def reads = system match {
+    case Some(s) => s.reads.distinct
+    case None => Seq()
+  }
+  def writes = system match {
+    case Some(s) => s.writes.distinct
+    case None => Seq()
+  }
 
   override def equals(e: Any): Boolean = e match {
-    case IncompleteSystem(xSystem) => this.system.equals(xSystem)
+    case s: IncompleteSystem if s.system.isDefined => system.isDefined && system.get.equals(s.system.get)
+    case s: IncompleteSystem if !s.system.isDefined => !system.isDefined
     case _ => false
   }
-  override def hashCode: Int = hash(257, system) //@todo not sure what the numbers are all about? - nrf.
+  override def hashCode: Int = hash(263, system)
 }
 
 /**
