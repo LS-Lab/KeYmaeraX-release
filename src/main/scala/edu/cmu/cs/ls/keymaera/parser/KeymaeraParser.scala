@@ -930,12 +930,13 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     //@todo find a better term for this construct
     lazy val incompleteSystemP: PackratParser[IncompleteSystem] = { //PackratParser[IncompleteSystem]
-      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (normalFormEvolutionSystemP <~ END_INCOMPLETE_SYSTEM)
+      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (normalFormEvolutionSystemP.? <~ END_INCOMPLETE_SYSTEM)
 
       log(pattern)("Incomplete Differential Equation System") ^^ {
         case system => system match {
-          case x: ContEvolveProgram => new IncompleteSystem(x)
-          case _ => throw new Exception("Expected the interior of an IncompleteSystem to be a continuous evolution, but found: " + system.getClass().getCanonicalName() + ".")
+          case Some(x: ContEvolveProgram) => IncompleteSystem(x)
+          case None => IncompleteSystem()
+          case _ => throw new Exception("Expected the interior of an IncompleteSystem to be a continuous evolution, but found: " + system.getClass.getCanonicalName + ".")
         }
       }
     }

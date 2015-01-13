@@ -1,5 +1,4 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
@@ -20,69 +19,15 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   //Mathematica
   val mathematicaConfig: Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
-  var tool: Mathematica = null
-
-  //Constants
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
-
-  def d(e: Variable) = Derivative(Real, e)
-
-  val one = Number(1)
-
-
-  //Helper functions
-  def parse(s: String) = new KeYmaeraParser().parseBareExpression(s).get.asInstanceOf[Formula]
-
-  def formulaToSequent(formula: Formula) = {
-    new Sequent(Nil, scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(formula))
-  }
-
-  def formulaToNode(formula: Formula) = {
-    val sequent = new Sequent(Nil, scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(formula))
-    new RootNode(sequent)
-  }
-
-  def report(pn: ProofNode): Unit = {
-    val report = pn.openGoals().map(goal => {
-      "Open Goal: " + goal.sequent.toString() + "\n"
-    })
-
-    println(report.reduce(_ + _))
-  }
-
-  def checkResult(expectedFormula: Formula, result: ProofNode) = {
-    val openGoals = result.openGoals()
-    openGoals.length should be(1)
-    val goal = openGoals.last
-
-    goal.sequent.succ.length should be(1)
-    println("Testing expected result against " + goal.sequent.succ.last.prettyString())
-    goal.sequent.succ.last.equals(expectedFormula) should be(true)
-  }
-
-  def runDefault(pn: ProofNode) = helper.runTactic(TacticLibrary.default, pn)
-
-  //Running tactics
 
   override def beforeEach() = {
-    tool = new Mathematica
-    tool.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
 
   override def afterEach() = {
-    tool.shutdown()
-    tool = null
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
-  }
-
-  "True" should "close trivially" in {
-    val formula = True
-    val node = helper.formulaToNode(formula)
-    runDefault(node) shouldBe 'closed
   }
 
   "differential weaken" should "nondeterministically assign to primed variable and test the evolution domain constraint" in {
@@ -107,8 +52,8 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val diffWeaken = helper.positionTacticToTactic(diffWeakenT)
     helper.runTactic(diffWeaken, new RootNode(sequent)).openGoals().foreach(_.sequent should be(
       new Sequent(scala.collection.immutable.IndexedSeq(Variable("x", Some(0), Real)),
-        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(BigDecimal(2)))),
-        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(BigDecimal(0)))))))
+        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(2))),
+        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(0))))))
   }
 
   it should "perform alpha renaming if necessary" in {
@@ -152,13 +97,13 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         scala.collection.immutable.IndexedSeq(
           // y_0>2 & z<0, x_0>3
           And(
-            GreaterThan(Real, Variable("y", Some(0), Real), Number(BigDecimal(2))),
-            LessThan(Real, Variable("z", None, Real), Number(BigDecimal(0)))),
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(BigDecimal(3)))
+            GreaterThan(Real, Variable("y", Some(0), Real), Number(2)),
+            LessThan(Real, Variable("z", None, Real), Number(0))),
+          GreaterThan(Real, Variable("x", Some(0), Real), Number(3))
         ),
         scala.collection.immutable.IndexedSeq(
           // y_0>0 but cannot use helper because of indices
-          GreaterThan(Real, Variable("y", Some(0), Real), Number(BigDecimal(0)))))
+          GreaterThan(Real, Variable("y", Some(0), Real), Number(0))))
     ))
   }
 
@@ -176,13 +121,13 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           True,
           // y_0>2 & z_0<0, x_0>3
           And(
-            GreaterThan(Real, Variable("y", Some(0), Real), Number(BigDecimal(2))),
-            LessThan(Real, Variable("z", Some(0), Real), Number(BigDecimal(0)))),
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(BigDecimal(3)))
+            GreaterThan(Real, Variable("y", Some(0), Real), Number(2)),
+            LessThan(Real, Variable("z", Some(0), Real), Number(0))),
+          GreaterThan(Real, Variable("x", Some(0), Real), Number(3))
         ),
         scala.collection.immutable.IndexedSeq(
           // y_0>0 but cannot use helper because of indices
-          GreaterThan(Real, Variable("y", Some(0), Real), Number(BigDecimal(0))))
+          GreaterThan(Real, Variable("y", Some(0), Real), Number(0)))
       )))
   }
 
@@ -196,84 +141,84 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     node.openGoals().foreach(_.sequent should be(
       new Sequent(Nil,
         scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/x'=x & x>3, y'=1 & y>2&z<0/*$*/;]y>0")))
+        scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=x & x>3, y'=1 & y>2&z<0$$;]y>0")))
     ))
   }
 
   it should "pull out first ODE from marked system" in {
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/x'=x & x>3, y'=1 & y>2 & z<0/*$*/;]y>0"))
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=x & x>3, y'=1 & y>2 & z<0$$;]y>0"))
     )
     val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
     val node = helper.runTactic(diffWeaken, new RootNode(sequent))
     node.openGoals().foreach(_.sequent should be(
       new Sequent(Nil,
         scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][/*$*/y'=1 & y>2&z<0/*$*/;][?x>3;]y>0")))
+        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0")))
     ))
   }
 
   it should "pull out first ODE from marked system and sort in correctly" in {
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/x'=1 & x>2 & z<0, z'=2/*$*/;][?x>3;]y>0"))
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=1 & x>2 & z<0, z'=2$$;][?x>3;]y>0"))
     )
     val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
     val node = helper.runTactic(diffWeaken, new RootNode(sequent))
     node.openGoals().foreach(_.sequent should be(
       new Sequent(Nil,
         scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][/*$*/z'=2/*$*/;][?x>2&z<0;][?x>3;]y>0")))
+        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$z'=2$$;][?x>2&z<0;][?x>3;]y>0")))
     ))
   }
 
   it should "alpha rename if necessary" in {
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/y'=1 & y>2 & z<0, z'=2/*$*/;][?x>3;]y>0"))
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$y'=1 & y>2 & z<0, z'=2$$;][?x>3;]y>0"))
     )
     val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
     val node = helper.runTactic(diffWeaken, new RootNode(sequent))
     node.openGoals().foreach(_.sequent should be(
       new Sequent(Nil,
         scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[y:=*;][/*$*/z'=2/*$*/;][?y>2&z<0;][?x>3;]y>0")))
+        scala.collection.immutable.IndexedSeq(helper.parseFormula("[y:=*;][$$z'=2$$;][?y>2&z<0;][?x>3;]y>0")))
     ))
   }
 
   it should "pull out sole ODE from marked system and sort in correctly" in {
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/x'=1 & x>2/*$*/;][?x>3;]x>0"))
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=1 & x>2$$;][?x>3;]x>0"))
     )
     val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemFinalHeadT)
     val node = helper.runTactic(diffWeaken, new RootNode(sequent))
     node.openGoals().foreach(_.sequent should be(
       new Sequent(Nil,
         scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][/*$*/?true/*$*/;][?x>2;][?x>3;]x>0")))
+        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$$$;][?x>2;][?x>3;]x>0")))
     ))
   }
 
   it should "alpha rename in sole ODE correctly" in {
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/y'=1 & y>2/*$*/;][?x>3;]x>0"))
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$y'=1 & y>2$$;][?x>3;]x>0"))
     )
     val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemFinalHeadT)
     val node = helper.runTactic(diffWeaken, new RootNode(sequent))
     node.openGoals().foreach(_.sequent should be(
       new Sequent(Nil,
         scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[y:=*;][/*$*/?true/*$*/;][?y>2;][?x>3;]x>0")))
+        scala.collection.immutable.IndexedSeq(helper.parseFormula("[y:=*;][$$$$;][?y>2;][?x>3;]x>0")))
     ))
   }
 
   it should "remove empty marker" in {
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[/*$*/?true/*$*/;][?x>3;]y>0"))
+      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$$$;][?x>3;]y>0"))
     )
     val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemNilT)
     val node = helper.runTactic(diffWeaken, new RootNode(sequent))
@@ -342,12 +287,12 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         Variable("t", Some(0), Real), Variable("x", Some(0), Real), Variable("t", Some(1), Real)),
         scala.collection.immutable.IndexedSeq(
           // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(BigDecimal(0))), True, True),
+          Equals(Real, Variable("t", Some(0), Real), Number(0)), True, True),
         scala.collection.immutable.IndexedSeq(
           // x_0 = x0 + 2*t, see provided solution
           Equals(Real,
             Variable("x", Some(0), Real),
-            Add(Real, Variable("x0", None, Real), Multiply(Real, Number(BigDecimal(2)),
+            Add(Real, Variable("x0", None, Real), Multiply(Real, Number(2),
               Variable("t", None, Real))))
         )
       )
@@ -358,17 +303,17 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         // TODO could simplify all those true &
         scala.collection.immutable.IndexedSeq(
           // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(BigDecimal(0))),
+          Equals(Real, Variable("t", Some(0), Real), Number(0)),
           // true & x_0 = x0 + 2*t
           And(True,
             Equals(Real,
               Variable("x", Some(0), Real),
-              Add(Real, Variable("x0", None, Real), Multiply(Real, Number(BigDecimal(2)),
+              Add(Real, Variable("x0", None, Real), Multiply(Real, Number(2),
                 Variable("t", None, Real))))),
           True),
         scala.collection.immutable.IndexedSeq(
           // x_0 > 0
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(BigDecimal(0)))
+          GreaterThan(Real, Variable("x", Some(0), Real), Number(0))
         )
       )
     )
@@ -389,20 +334,20 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         Variable("t", Some(0), Real), Variable("x", Some(0), Real), Variable("t", Some(1), Real)),
         scala.collection.immutable.IndexedSeq(
           // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(BigDecimal(0))), True, True),
+          Equals(Real, Variable("t", Some(0), Real), Number(0)), True, True),
         scala.collection.immutable.IndexedSeq(
           // x_0 = 2*t + x0 & t_1 = 1*t + t0_0
           // TODO not robust if Mathematica reports equivalent formula but differently formatted
           And(
             Equals(Real,
               Variable("x", Some(0), Real),
-              Add(Real, Multiply(Real, Number(BigDecimal(2)),
+              Add(Real, Multiply(Real, Number(2),
                                  Variable("t", None, Real)),
                 Variable("x0", None, Real)
               )),
             Equals(Real,
               Variable("t", Some(1), Real),
-              Add(Real, Multiply(Real, Number(BigDecimal(1)), Variable("t", None, Real)),
+              Add(Real, Multiply(Real, Number(1), Variable("t", None, Real)),
                 Variable("t0", Some(0), Real))
             )
           )
@@ -415,19 +360,19 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         // TODO could simplify all those true &
         scala.collection.immutable.IndexedSeq(
           // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(BigDecimal(0))),
+          Equals(Real, Variable("t", Some(0), Real), Number(0)),
           // true & x_0 = 2*t + x0 & t_1 = 1*t + t0_0
           And(True,
             And(
               Equals(Real,
                 Variable("x", Some(0), Real),
-                Add(Real, Multiply(Real, Number(BigDecimal(2)),
+                Add(Real, Multiply(Real, Number(2),
                   Variable("t", None, Real)),
                   Variable("x0", None, Real)
                 )),
               Equals(Real,
                 Variable("t", Some(1), Real),
-                Add(Real, Multiply(Real, Number(BigDecimal(1)), Variable("t", None, Real)),
+                Add(Real, Multiply(Real, Number(1), Variable("t", None, Real)),
                   Variable("t0", Some(0), Real))
               )
             )
@@ -435,7 +380,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           True),
         scala.collection.immutable.IndexedSeq(
           // x_0 > 0
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(BigDecimal(0)))
+          GreaterThan(Real, Variable("x", Some(0), Real), Number(0))
         )
       )
     )
