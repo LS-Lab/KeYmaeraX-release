@@ -1056,6 +1056,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val ba = freeVariables(u, a)
       val bb = freeVariables(u, b)
       BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
+    case s: IncompleteSystem if s.system.isDefined => freeVariables(u, s.system.get)
+    case s: IncompleteSystem if !s.system.isDefined => BindingAssessment(u, u, Set.empty)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
@@ -1205,6 +1207,15 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
       }
       (v++w, ContEvolveProduct(as, bs))
+    // $$s$$
+    case s: IncompleteSystem if s.system.isDefined =>
+      val (v, as) = usubst(u, s.system.get) match {
+        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in incomplete ODE systems")
+      }
+      (v, IncompleteSystem(as))
+    // empty $$$$
+    case s: IncompleteSystem if !s.system.isDefined => (u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
 
@@ -1289,6 +1300,7 @@ sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPa
     case x: Binary => names(x.left) ++ names(x.right)
     case x: Ternary => names(x.fst) ++ names(x.snd) ++ names(x.thd)
     case x: NFContEvolve => x.vars ++ names(x.x) ++ names(x.theta) ++ names(x.f)
+    case IncompleteSystem(s) => names(s)
     case x: Atom => Nil
   }
 
@@ -1468,8 +1480,8 @@ object UniformSubstitution {
  * (4) Modality(DiamondModality(Assign(x, e)), phi)
  * (5) Modality(BoxModality(NDetAssign(x)), phi)
  * (6) Modality(DiamondModality(NDetAssign(x)), phi)
- * (7) Modality(BoxModality(ContEvolveProgram, _), phi)
- * (8) Modality(DiamondModality(ContEvolveProgram, _), phi)
+ * (7) Modality(BoxModality(ContEvolveProgram | IncompleteSystem, _), phi)
+ * (8) Modality(DiamondModality(ContEvolveProgram | IncompleteSystem, _), phi)
  *
  * The rule should only be extended if absolutely necessary.
  *
@@ -1514,7 +1526,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 
     def proceed(f: Formula): Formula = ExpressionTraversal.traverse(renamingTraversalFn, f).get
     def proceedTerm(t: Term): Term = ExpressionTraversal.traverse(renamingTraversalFn, t).get
-    def proceedProgram(p: ContEvolveProgram): ContEvolveProgram = ExpressionTraversal.traverse(renamingTraversalFn, p).get
+    def proceedProgram(p: Program): Program = ExpressionTraversal.traverse(renamingTraversalFn, p).get
 
     val fn = new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
@@ -1548,12 +1560,12 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
             case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
             case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
           }), proceed(c)))
-        case BoxModality(a: ContEvolveProgram, c) =>
+        case BoxModality(a@(_:ContEvolveProgram | _:IncompleteSystem), c) =>
           val targetVar = Variable(target, tIdx, Real)
           val sourceVar = Variable(name, idx, Real)
           Right(BoxModality(Assign(targetVar, sourceVar),
             BoxModality(proceedProgram(a), proceed(c))))
-        case DiamondModality(a: ContEvolveProgram, c) =>
+        case DiamondModality(a@(_: ContEvolveProgram | _:IncompleteSystem), c) =>
           val targetVar = Variable(target, tIdx, Real)
           val sourceVar = Variable(name, idx, Real)
           Right(DiamondModality(Assign(targetVar, sourceVar),
