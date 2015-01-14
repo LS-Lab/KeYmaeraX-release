@@ -913,6 +913,15 @@ object SubstitutionPair {
 
 
 /**
+ * Static access to functions of Substitution.
+ * @author Stefan Mitsch
+ */
+object Substitution {
+  def freeVariables(t: Term) : Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
+  def freeVariables(f: Formula) : Set[NamedSymbol] = Substitution(Nil).freeVariables(f)
+  def freeVariables(p: Program) : Set[NamedSymbol] = Substitution(Nil).freeVariables(p)
+}
+/**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  * Explicit construction computing bound variables on the fly.
@@ -979,7 +988,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Apply(f, arg) => Set(f) ++ freeVariables(arg)
     case True | False | _: NumberObj => Set.empty
   }
-  
+
   private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
 
   /**
@@ -1455,7 +1464,7 @@ object UniformSubstitution {
         List(origin)
       } else {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("Uniform substitution " + subst + " did not conclude  \n" + conclusion + "\nfrom\n  " + origin + "\nbut instead\n  " + subst(origin))
+        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
       }
     } 
     
