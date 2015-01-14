@@ -156,26 +156,60 @@ object HybridProgramTacticsImpl {
     }
 
     /**
-     * Replace the old variable o by the new variable n.
+     * Replace the old variable o by the new variable n in formula f, but only if the old variable is contained in
+     * the set of free names.
+     * @param f The formula.
+     * @param o The old variable.
+     * @param n The new variable.
+     * @param free The optional set of free names. If None, all names are considered free.
      */
-    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
+    def replace(f: Formula)(o: Variable, n: Variable, free: Option[Set[NamedSymbol]]): Formula = {
+      import Substitution.freeVariables
+      ExpressionTraversal.traverse(
+        new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if (name == o) n else name),
+              replace(fo)(o, n, Some(freeVariables(fo)))))
+            case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if (name == o) n else name),
+              replace(fo)(o, n, Some(freeVariables(fo)))))
+            case BoxModality(Assign(x: Variable, t), pred) => free match {
+              case Some(freeVars) => Right(BoxModality(Assign(x, replace(t)(o, n)),
+                                                       replace(pred)(o, n, Some(freeVars - x))))
+              case None => Right(BoxModality(Assign(n, t), replace(pred)(o, n, None)))
+            }
+            case DiamondModality(Assign(x: Variable, t), pred) => free match {
+              case Some(freeVars) => Right(DiamondModality(Assign(x, replace(t)(o, n)),
+                                                           replace(pred)(o, n, Some(freeVars - x))))
+              case None => Right(DiamondModality(Assign(n, t), replace(pred)(o, n, None)))
+            }
+            case _ => Left(None)
+          }
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+            case v: Variable if v == o => free match {
+              case Some(freeVars) => if (freeVars.contains(v)) Right(n) else Left(None)
+              case None => Right(n)
+            }
+            case _ => Left(None)
+          }
+
+        }, f) match {
+        case Some(g) => g
+        case None => throw new IllegalStateException("Replacing one variable by another should not fail")
+      }
+    }
+    def replace(t: Term)(o: Variable, n: Variable): Term = ExpressionTraversal.traverse(
       new ExpressionTraversalFunction {
-        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
-          case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
-          case BoxModality(Assign(x: Variable, t), pr) => if(x == o) Right(BoxModality(Assign(n, t), pr)) else Right(e)
-          case DiamondModality(Assign(x: Variable, t), pr) =>
-            if(x == o) Right(DiamondModality(Assign(n, t), pr)) else Right(e)
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case v: Variable if v == o => Right(n)
           case _ => Left(None)
         }
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-          if (e == o) Right(n) else Left(None)
-      }, f) match {
+      }, t) match {
       case Some(g) => g
       case None => throw new IllegalStateException("Replacing one variable by another should not fail")
     }
 
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
+        Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
       case BoxModality(Assign(v:Variable, t), p) =>
         // TODO check that axiom is of the expected form [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
         // construct substitution
@@ -183,6 +217,7 @@ object HybridProgramTacticsImpl {
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, v), p))
+
         // construct a new name for the quantified variable
         val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
         require(vars.size > 0)
@@ -200,8 +235,11 @@ object HybridProgramTacticsImpl {
         val newV = Variable(v.name, tIdx, v.sort)
 
         // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
-        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replace(p)(v, newV)))
+        import Substitution.freeVariables
+        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replace(p)(v, newV, Some(freeVariables(p)))))
         val axiomInstance = Equiv(f, g)
+
+        // rename to match axiom if necessary
         def alpha(left: Boolean) = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
@@ -219,12 +257,13 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-        //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
-        // rename to match axiom if necessary
         val Equiv(left, right) = axiom
         val (ax, cont) =
-          if (v.name == aV.name && v.index == None) (Equiv(left, replace(right)(aV, newV)), Some(alpha(left = false)))
-          else (Equiv(replace(left)(aV, v), replace(right)(aV, newV)), Some(alpha(left = true)))
+          if (v.name == aV.name && v.index == None)
+            (Equiv(left, replace(right)(aV, newV, Some(freeVariables(right)))), Some(alpha(left = false)))
+          else (Equiv(replace(left)(aV, v, None), replace(right)(aV, newV, Some(freeVariables(right)))), Some(alpha(left = true)))
+
+        // return tactic
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
