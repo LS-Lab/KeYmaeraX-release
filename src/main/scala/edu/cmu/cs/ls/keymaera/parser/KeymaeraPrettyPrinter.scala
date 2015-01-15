@@ -193,7 +193,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case Some(idx) => "_" + idx
       case None => ""
     })
-    
+    case CDot => "•"
+
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
       case None => ""
@@ -355,6 +356,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       ContEvolve.getClass.getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName ::
       ContEvolveProgramConstant.getClass.getCanonicalName ::
+      CDot.getClass.getCanonicalName ::
       Variable.getClass.getCanonicalName ::
       Number.NumberObj.getClass.getCanonicalName ::
       Nil

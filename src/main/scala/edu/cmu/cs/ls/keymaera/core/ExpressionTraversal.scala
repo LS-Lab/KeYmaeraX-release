@@ -254,6 +254,7 @@ object ExpressionTraversal {
         // Programs
         case ProgramConstant(_, _) => matchZero(p, f, e)
         case ContEvolveProgramConstant(_, _) => matchZero(p, f, e)
+        case CDot => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
         case Test(a) => matchOne(p, Test.apply, f, a)
