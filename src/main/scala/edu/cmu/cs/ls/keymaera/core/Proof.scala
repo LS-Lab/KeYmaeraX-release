@@ -1187,8 +1187,21 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
     }
   }
-      
-  
+
+  /**
+   *  uniform substitution on a program p with the set of bound variables u
+   *  return only the result set of bound variables
+   *  used for testing only, may need a better solution
+   */
+  private def usubstU(u: Set[NamedSymbol], p:Program) : Set[NamedSymbol] = usubst(u: Set[NamedSymbol], p : Program)._1
+
+  /**
+   *  uniform substitution on a program p with the set of bound variables u
+   *  return only the result program
+   *  used for testing only, may need a better solution
+   */
+  private def usubstP(u: Set[NamedSymbol], p:Program) : Program = usubst(u: Set[NamedSymbol], p : Program)._2
+
   /**
    *
    */

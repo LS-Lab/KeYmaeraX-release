@@ -260,17 +260,14 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     freeVariables("{x:=1 ++ x:=x+1 ++ z:=x}*;".asProgram) should be (Set(V("x")))
   }
 
+
+  "Free variables of [x'=1;]true" should "be {x}" in {
+    s.freeVariables("[x'=1;]true".asFormula) should be (Set(V("x")))
+  }
+
 //not implemented yet
 //
-//  "Free variables of [x':=*;]true" should "be {}" in {
-//    s.freeVariables("[x':=*;]true".asFormula) should be (Set())
-//  }
-//
-//  "Free variables of [x':=*;]x>0" should "be {}" in {
-//    s.freeVariables("[x':=*;]x>0".asFormula) should be (Set())
-//  }
-//
-//  "Free variables of [Forall t. x=0; x:=t+1]x>0" should "be {t}" in {
-//    s.freeVariables("[\\forall t. x=0; x:=t+1]x>0".asFormula) should be (Set(V("t")))
+//  "Free variables of [Forall t.t>0; x:=t+1]x>0" should "be {t}" in {
+//    s.freeVariables("[\\forall t. t>0; x:=t+1]x>0".asFormula) should be (Set(V("t")))
 //  }
 }
