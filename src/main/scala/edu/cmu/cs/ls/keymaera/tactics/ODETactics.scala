@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, Tactic, Posit
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{AndRightT, diffCutT,
   alphaRenamingT, boxNDetAssign, skolemizeT, boxTestT, ImplyRightT}
 import Tactics.NilT
+import AlphaConversionHelper._
 
 import scala.collection.immutable.List
 
@@ -171,12 +172,13 @@ object ODETactics {
 
         // construct substitution
         val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val aT = Apply(Function("f", None, Real, Real), CDot)
         val aC = ContEvolveProgramConstant("c")
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
-                     new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
+        import Substitution.freeVariables
+        val l = List(new SubstitutionPair(aH, replace(h)(x, CDot)), new SubstitutionPair(aP, replace(p)(x, CDot)),
+                     new SubstitutionPair(aT, replace(t)(x, CDot, Some(freeVariables(t)))), new SubstitutionPair(aC, c))
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
@@ -216,21 +218,6 @@ object ODETactics {
         Some(ax, axiomInstance, Substitution(l), None)
       case _ => None
     }
-  }
-
-  /**
-   * Replaces all occurrences of variable o in formula f with variable n.
-   * @param f The formula.
-   * @param o The original variable to replace.
-   * @param n The replacement variable.
-   * @return The formula f where o is replaced by n.
-   */
-  private def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
-    new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, e: Term) = if (e == o) Right(n) else Left(None)
-    }, f) match {
-    case Some(g) => g
-    case None => throw new IllegalStateException("Replacing one variable by another should not fail")
   }
 
   /**

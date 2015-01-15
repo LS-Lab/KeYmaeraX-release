@@ -76,8 +76,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val f = Function("f", None, Real, Real)
-    val t = Variable("t", None, Real)
-    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(Apply(f,t), "t+1".asTerm)))
+    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(Apply(f,CDot), Add(Real, CDot, Number(1)))))
     s.apply(Apply(f,x)) should be ("x+1".asTerm)
   }
 
@@ -85,18 +84,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val f = Function("f", None, Real, Real)
-    val t = Variable("t", None, Real)
-    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(Apply(f,t), "t+x+1".asTerm)))
+    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(Apply(f,CDot), Add(Real, Add(Real, CDot, x), Number(1)))))
     s.apply(Apply(f,x)) should be ("x+x+1".asTerm)
-  }
-
-  "Uniform substitution of (x,y)(f(t),t+1) |-> f(x) with {t} bound" should "be x+1" in {
-    val x = Variable("x", None, Real)
-    val y = Variable("y", None, Real)
-    val f = Function("f", None, Real, Real)
-    val t = Variable("t", None, Real)
-    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(Apply(f,t), "t+1".asTerm)))
-    applySubstitutionT(Set(t),Apply(f,x)) should be ("x+1".asTerm)
   }
 
   // g(\theta) apply on \theta
