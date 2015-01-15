@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, Expressio
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{AndRightT, diffCutT, differentialInduction,
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{AndRightT, diffCutT,
   alphaRenamingT, boxNDetAssign, skolemizeT, boxTestT, ImplyRightT}
 import Tactics.NilT
 
@@ -108,52 +108,11 @@ object ODETactics {
             diffWeakenSystemIntroT(p) &
             // pull out heads until empty
             ((diffWeakenSystemHeadT(p) & boxNDetAssign(p) & skolemizeT(p))*) &
-            (diffWeakenSystemFinalHeadT(p) & boxNDetAssign(p) & skolemizeT(p)) &
             // remove empty marker and handle tests
             diffWeakenSystemNilT(p) & ((boxTestT(p) & ImplyRightT(p))*)
           )
-          case BoxModality(_: NFContEvolve, _) => Some(diffWeakenNormalFormT(p) &
-            boxNDetAssign(p) & skolemizeT(p) & boxTestT(p) & ImplyRightT(p))
         }
       }
-    }
-  }
-
-  /**
-   * Returns the differential weaken tactic for a single normal form ODE.
-   * @return The tactic.
-   */
-  def diffWeakenNormalFormT: PositionTactic = new AxiomTactic("DW differential weaken", "DW differential weaken") {
-    def applies(f: Formula) = f match {
-      case BoxModality(_: NFContEvolve, _) => true
-      case _ => false
-    }
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
-
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(NFContEvolve(_, d: Derivative, t, h), p) =>
-        // construct instance
-        val x = d.child match {
-          case v: Variable => v
-          case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
-        }
-        val g = BoxModality(NDetAssign(x), BoxModality(Test(h), p))
-        val axiomInstance = Imply(g, f)
-
-        // construct substitution
-        val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
-
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
-          else (ax, None)
-
-        Some(axiom, axiomInstance, Substitution(l), cont)
-      case _ => None
     }
   }
 
@@ -164,7 +123,7 @@ object ODETactics {
   def diffWeakenSystemIntroT: PositionTactic = new AxiomTactic("DW differential weaken system introduce",
       "DW differential weaken system introduce") {
     def applies(f: Formula) = f match {
-      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _), _) => true
+      case BoxModality(ContEvolveProduct(_, _), _) => true
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
@@ -217,48 +176,7 @@ object ODETactics {
         val aT = Apply(Function("f", None, Real, Real), x)
         val aC = ContEvolveProgramConstant("c")
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
-          new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
-
-        // alpha renaming of x if necessary
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
-          else (ax, None)
-
-        Some(axiom, axiomInstance, Substitution(l), cont)
-      case _ => None
-    }
-  }
-
-  /**
-   * Returns a tactic to pull out the sole remaining ODE from a marked system of differential equations, and to convert
-   * that ODE into a nondeterministic assignment and a test of its evolution domain constraint.
-   * @return The tactic.
-   */
-  def diffWeakenSystemFinalHeadT: PositionTactic = new AxiomTactic("DW differential weaken system final head",
-    "DW differential weaken system final head") {
-    def applies(f: Formula) = f match {
-      case BoxModality(IncompleteSystem(NFContEvolve(_, d: Derivative, t, h)), _) => true
-      case _ => false
-    }
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
-
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(NFContEvolve(_, d: Derivative, t, h)), p) =>
-        // construct instance
-        val x = d.child match {
-          case v: Variable => v
-          case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
-        }
-        val lhs = BoxModality(NDetAssign(x), BoxModality(IncompleteSystem(), BoxModality(Test(h), p)))
-        val axiomInstance = Imply(lhs, f)
-
-        // construct substitution
-        val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
+                     new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
@@ -278,14 +196,14 @@ object ODETactics {
   def diffWeakenSystemNilT: PositionTactic = new AxiomTactic("DW differential weaken system nil",
     "DW differential weaken system nil") {
     def applies(f: Formula) = f match {
-      case BoxModality(s: IncompleteSystem, _) => !s.system.isDefined
+      case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), _) => true
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(s: IncompleteSystem, BoxModality(b@Test(h), p)) if !s.system.isDefined =>
+      case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), BoxModality(b@Test(h), p)) =>
         // construct instance
         val lhs = BoxModality(b, p)
         val axiomInstance = Imply(lhs, f)
