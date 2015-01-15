@@ -1066,8 +1066,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val ba = freeVariables(u, a)
       val bb = freeVariables(u, b)
       BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
-    case s: IncompleteSystem if s.system.isDefined => freeVariables(u, s.system.get)
-    case s: IncompleteSystem if !s.system.isDefined => BindingAssessment(u, u, Set.empty)
+    case IncompleteSystem(s) => freeVariables(u, s)
+    case s: EmptyContEvolveProgram => BindingAssessment(u, u, Set.empty)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
@@ -1212,20 +1212,29 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         case (symbols, prg: ContEvolveProgram) => (symbols, prg)
         case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
       }
-      val (w, bs) = usubst(u, b) match {
-        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
-        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+      b match {
+        case _: EmptyContEvolveProgram => as match {
+            case ContEvolveProduct(_, _) | _: EmptyContEvolveProgram => (v, as) /* do not substitute, whatever was substituted for a already must have a rightmost EmptyContEvolveProgram */
+            case _ => val (w, bs) = usubst(u, b) match {
+                case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+                case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+              }
+              (v++w, ContEvolveProduct(as, bs))
+          }
+        case _ => val (w, bs) = usubst(u, b) match {
+            case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+            case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+          }
+          (v++w, ContEvolveProduct(as, bs))
       }
-      (v++w, ContEvolveProduct(as, bs))
     // $$s$$
-    case s: IncompleteSystem if s.system.isDefined =>
-      val (v, as) = usubst(u, s.system.get) match {
+    case IncompleteSystem(s) =>
+      val (v, as) = usubst(u, s) match {
         case (symbols, prg: ContEvolveProgram) => (symbols, prg)
         case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in incomplete ODE systems")
       }
       (v, IncompleteSystem(as))
-    // empty $$$$
-    case s: IncompleteSystem if !s.system.isDefined => (u, p)
+    case _: EmptyContEvolveProgram => (u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
 
@@ -1759,7 +1768,8 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
   override def apply(s: Sequent): List[Sequent] = {
     val prgFn = new ExpressionTraversalFunction {
       override def postP(pos: PosInExpr, prg: Program) = prg match {
-        case NFContEvolve(v, x, theta, hh) => Right(NFContEvolve(v, x, theta, And(hh, h)))
+        case ContEvolveProduct(NFContEvolve(v, x, theta, hh), e: EmptyContEvolveProgram) =>
+          Right(ContEvolveProduct(NFContEvolve(v, x, theta, And(hh, h)), e))
         case ContEvolve(f) => Right(ContEvolve(And(f, h)))
         case _ => super.postP(pos, prg)
       }
@@ -1772,12 +1782,12 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
           BoxModality(NFContEvolve(vs, x, t, And(dom, h)), f)))
         // append to evolution domain constraint of rightmost (NF)ContEvolve in product
         case BoxModality(ev@ContEvolveProduct(a, b), f) =>
-          val rightMostCut = ExpressionTraversal.traverse(HereP, prgFn, b) match {
+          val rightMostCut = ExpressionTraversal.traverse(HereP, prgFn, ev) match {
             case Some(prg) => prg
             case None => throw new IllegalArgumentException("Unexpected program type at rightmost position in " +
               "ContEvolveProduct")
           }
-          Right(And(BoxModality(ev, h), BoxModality(ContEvolveProduct(a, rightMostCut), f)))
+          Right(And(BoxModality(ev, h), BoxModality(rightMostCut, f)))
         case _ => ???
       }
     }

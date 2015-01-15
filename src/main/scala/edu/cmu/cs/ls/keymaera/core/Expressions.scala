@@ -46,7 +46,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 269
+   * Next free prime is 271
    * @param prime
    * @param a
    * @return
@@ -1223,6 +1223,19 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Derivative, val thet
   override def hashCode: Int = hash(227, vars, x, theta, f)
 }
 
+object EmptyContEvolveProgram {
+  def apply() = new EmptyContEvolveProgram()
+}
+final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
+  def reads = Nil
+  def writes = Nil
+  override def equals(e: Any): Boolean = e match {
+    case o: EmptyContEvolveProgram => true
+    case _ => false
+  }
+  override def hashCode: Int = hash(269)
+}
+
 object ContEvolveProduct {
   def apply(left: ContEvolveProgram, right: ContEvolveProgram) = new ContEvolveProduct(left, right)
   def unapply(e: Any): Option[(ContEvolveProgram, ContEvolveProgram)] = e match {
@@ -1235,7 +1248,7 @@ object ContEvolveProduct {
 }
 final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
     extends BinaryProgram(left, right) with ContEvolveProgram {
-  def reads = ???
+  def reads = (left.reads ++ right.reads).distinct
   def writes = (left.writes ++ right.writes).distinct
 
   override def equals(e: Any): Boolean = e match {
@@ -1246,26 +1259,19 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
 }
 
 object IncompleteSystem {
-  def apply(system: ContEvolveProgram) = new IncompleteSystem(Some(system))
-  def apply() = new IncompleteSystem(None)
+  def apply(system: ContEvolveProgram) = new IncompleteSystem(system)
+  def apply() = new IncompleteSystem(new EmptyContEvolveProgram)
   def unapply(e: Any): Option[ContEvolveProgram] = e match {
-      case s: IncompleteSystem => s.system
+      case s: IncompleteSystem => Some(s.system)
       case _                   => None
   }
 }
-final class IncompleteSystem(val system: Option[ContEvolveProgram]) extends Expr(ProgramSort) with Program {
-  def reads = system match {
-    case Some(s) => s.reads.distinct
-    case None => Seq()
-  }
-  def writes = system match {
-    case Some(s) => s.writes.distinct
-    case None => Seq()
-  }
+final class IncompleteSystem(val system: ContEvolveProgram) extends Expr(ProgramSort) with Program {
+  def reads = system.reads.distinct
+  def writes = system.writes.distinct
 
   override def equals(e: Any): Boolean = e match {
-    case s: IncompleteSystem if s.system.isDefined => system.isDefined && system.get.equals(s.system.get)
-    case s: IncompleteSystem if !s.system.isDefined => !system.isDefined
+    case IncompleteSystem(s) => system == s
     case _ => false
   }
   override def hashCode: Int = hash(263, system)

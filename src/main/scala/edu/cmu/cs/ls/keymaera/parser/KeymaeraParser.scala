@@ -903,7 +903,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val normalFormEvolutionSystemP: SubprogramParser = {
       lazy val pattern = rep1sep(contEvolvePVarP | normalFormEvolutionP, COMMA)
       log(pattern)("NFContEvolve (" + COMMA + " NFContEvolve)*") ^^ {
-        case odes => odes.reduceRight{ (a: ContEvolveProgram, b: ContEvolveProgram) => ContEvolveProduct(a, b) }
+        case odes => odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram()) {
+          (a: ContEvolveProgram, b: ContEvolveProgram) => ContEvolveProduct(a, b)
+        }
       }
     }
 
