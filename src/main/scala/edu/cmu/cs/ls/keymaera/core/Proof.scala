@@ -891,12 +891,13 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
+      case CDot => true
       case _:PredicateConstant => true
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, _:Variable) => true
-      case Apply(_:Function, _:Variable) => true
+      case ApplyPredicate(_:Function, CDot) => true
+      case Apply(_:Function, CDot) => true
       case _ => false
       }, "Substitutable expression required, found " + n)
   }
@@ -986,7 +987,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case x: Variable => Set(x)
     case Derivative(s, e) => freeVariables(e)
     case Apply(f, arg) => Set(f) ++ freeVariables(arg)
-    case True | False | _: NumberObj => Set.empty
+    case True | False | _: NumberObj | CDot => Set.empty
   }
 
   private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
@@ -1109,12 +1110,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
     case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
     // uniform substitution base cases
+    case CDot => for (p <- subsDefs) { if (CDot == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term]) }; CDot
     case x:Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
     case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- subsDefs) {
       rp.n match {
-        //@TODO clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case Apply(rf, rarg:Variable) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
+        case Apply(rf, CDot) if f == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
         case _ => // skip to next
       }
     }; return Apply(f, usubst(u, arg))
@@ -1167,8 +1168,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
-        //@TODO clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case ApplyPredicate(rf, rarg:Variable) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
+        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
     }; return ApplyPredicate(p, usubst(u, arg))
