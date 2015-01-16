@@ -176,13 +176,13 @@ object ODETactics {
         val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
         val aT = Apply(Function("f", None, Real, Real), CDot)
         val aC = ContEvolveProgramConstant("c")
-        import Substitution.freeVariables
-        val l = List(new SubstitutionPair(aH, replace(h)(x, CDot)), new SubstitutionPair(aP, replace(p)(x, CDot)),
-                     new SubstitutionPair(aT, replace(t)(x, CDot, Some(freeVariables(t)))), new SubstitutionPair(aC, c))
+        import Substitution.maybeFreeVariables
+        val l = List(new SubstitutionPair(aH, replaceFree(h)(x, CDot)), new SubstitutionPair(aP, replaceFree(p)(x, CDot)),
+                     new SubstitutionPair(aT, replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))), new SubstitutionPair(aC, c))
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
@@ -345,7 +345,7 @@ object ODETactics {
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
@@ -406,7 +406,7 @@ object ODETactics {
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
 
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)

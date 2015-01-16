@@ -918,9 +918,17 @@ object SubstitutionPair {
  * @author Stefan Mitsch
  */
 object Substitution {
-  def freeVariables(t: Term) : Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
-  def freeVariables(f: Formula) : Set[NamedSymbol] = Substitution(Nil).freeVariables(f)
-  def freeVariables(p: Program) : Set[NamedSymbol] = Substitution(Nil).freeVariables(p)
+  /** Returns the set of names maybe free in term t (same as certainly free). */
+  def maybeFreeVariables(t: Term) : Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
+  /** Returns the set of names maybe free in formula f. */
+  def maybeFreeVariables(f: Formula) : Set[NamedSymbol] = Substitution(Nil).freeVariables(f)
+  /** Returns the set of names maybe free in program p. */
+  def maybeFreeVariables(p: Program) : Set[NamedSymbol] = Substitution(Nil).freeVariables(p)
+  /** Returns the set of names certainly free in program p. */
+  def freeVariables(p: Program) : Set[NamedSymbol] = {
+    val ba = Substitution(Nil).freeVariables(Set.empty[NamedSymbol], p)
+    ba.maybeRead -- (ba.bound ++ ba.maybeBound)
+  }
 }
 /**
  * A Uniform Substitution.

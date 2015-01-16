@@ -166,7 +166,7 @@ object HybridProgramTacticsImpl {
         val aV = Variable("v", None, Real)
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, CDot), replace(p)(v, CDot)))
+        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, CDot), replaceFree(p)(v, CDot)))
 
         // construct a new name for the quantified variable
         val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
@@ -186,7 +186,7 @@ object HybridProgramTacticsImpl {
         val newV = Variable(v.name, tIdx, v.sort)
 
         // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
-        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replace(p)(v, newV)))
+        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replaceFree(p)(v, newV)))
         val axiomInstance = Equiv(f, g)
 
         // rename to match axiom if necessary
@@ -210,8 +210,8 @@ object HybridProgramTacticsImpl {
         val Equiv(left, right) = axiom
         val (ax, cont) =
           if (v.name == aV.name && v.index == None)
-            (Equiv(left, replace(right)(aV, newV)), Some(alpha(left = false)))
-          else (Equiv(replace(left)(aV, v, None), replace(right)(aV, newV)), Some(alpha(left = true)))
+            (Equiv(left, replaceFree(right)(aV, newV)), Some(alpha(left = false)))
+          else (Equiv(replaceFree(left)(aV, v, None), replaceFree(right)(aV, newV)), Some(alpha(left = true)))
 
         // return tactic
         Some(ax, axiomInstance, Substitution(l), cont)
@@ -260,7 +260,7 @@ object HybridProgramTacticsImpl {
         // construct substitution
         val aV = Variable("v", None, Real)
         val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(ApplyPredicate(aP, CDot), replace(p)(x, CDot)))
+        val l = List(new SubstitutionPair(ApplyPredicate(aP, CDot), replaceFree(p)(x, CDot)))
         // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
         val g = Forall(Seq(v), p)
         val axiomInstance = Equiv(f, g)
@@ -280,7 +280,7 @@ object HybridProgramTacticsImpl {
         }
         // rename to match axiom if necessary
         val (ax, cont) =
-          if (v.name != aV.name || v.index != None) (replace(axiom)(aV, v, None), Some(alpha))
+          if (v.name != aV.name || v.index != None) (replaceFree(axiom)(aV, v, None), Some(alpha))
           else (axiom, None)
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
