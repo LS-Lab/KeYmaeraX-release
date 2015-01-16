@@ -181,13 +181,13 @@ object ODETactics {
         val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
         val aT = Apply(Function("f", None, Real, Real), CDot)
         val aC = ContEvolveProgramConstant("c")
-        import Substitution.freeVariables
-        val l = List(new SubstitutionPair(aH, replace(h)(x, CDot)), new SubstitutionPair(aP, replace(p)(x, CDot)),
-          new SubstitutionPair(aT, replace(t)(x, CDot, Some(freeVariables(t)))), new SubstitutionPair(aC, c))
+        import Substitution.maybeFreeVariables
+        val l = List(new SubstitutionPair(aH, replaceFree(h)(x, CDot)), new SubstitutionPair(aP, replaceFree(p)(x, CDot)),
+                     new SubstitutionPair(aT, replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))), new SubstitutionPair(aC, c))
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
@@ -318,6 +318,7 @@ object ODETactics {
         )
         val axiomInstance = Imply(g, f)
 
+        import Substitution.maybeFreeVariables
         //Original axiom: [ $$x' = f(x) & H(x), c; ][?H;]p <- [x' := f(x);] [c;][?H & H(x);]p
         //@todo it would be nice to factor this out these substitutions so that they can be tested in isolation from the rest of the tactics framework.
         // construct the substitution
@@ -325,11 +326,11 @@ object ODETactics {
         val aX = Variable("x", None, Real)
         // theta substitution @todo this seems fishy; where is the x in f(x)?
         val aTheta = Apply(Function("f", None, Real, Real), CDot)
-        val theta_cdot = replace(theta_x)(x, CDot, None) //@todo beforeCommit nrf: Is none correct here, or should it be something like Some(Substitution.freeVariables(theta_x)?
+        val theta_cdot = replaceFree(theta_x)(x, CDot, Some(maybeFreeVariables(theta_x)))
       val thetaSubstitution = new SubstitutionPair(aTheta, theta_cdot)
         // x' constraint substitution
         val aH_x = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-        val h_cdot = replace(h_x)(x, CDot)
+        val h_cdot = replaceFree(h_x)(x, CDot, Some(maybeFreeVariables(h_x)))
         val xConstraintSubstitution = new SubstitutionPair(aH_x, h_cdot)
         // remaining system substitution
         val aSystem = ContEvolveProgramConstant("c", None)
@@ -350,7 +351,7 @@ object ODETactics {
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
@@ -393,11 +394,12 @@ object ODETactics {
         val aX = Variable("x", None, Real)
         // theta substitution @todo this seems fishy; where is the x in f(x)?
         val aTheta = Apply(Function("f", None, Real, Real), CDot)
-        val theta_cdot = replace(theta_x)(x, CDot, None) //@todo beforeCommit nrf: Is none correct here, or should it be something like Some(Substitution.freeVariables(theta_x)?
+        import Substitution.maybeFreeVariables
+        val theta_cdot = replaceFree(theta_x)(x, CDot, Some(maybeFreeVariables(theta_x)))
       val thetaSubstitution = new SubstitutionPair(aTheta, theta_cdot)
         // x' constraint substitution
         val aH_x = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-        val h_cdot = replace(h_x)(x, CDot)
+        val h_cdot = replaceFree(h_x)(x, CDot, Some(maybeFreeVariables(h_x)))
         val xConstraintSubstitution = new SubstitutionPair(aH_x, h_cdot)
         // remaining system substitution
         val aSystem = ContEvolveProgramConstant("c", None)
@@ -414,7 +416,7 @@ object ODETactics {
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
@@ -504,7 +506,7 @@ object ODETactics {
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
 
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
