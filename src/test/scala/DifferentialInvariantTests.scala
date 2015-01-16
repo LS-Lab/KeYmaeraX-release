@@ -189,7 +189,6 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
   }
 
-
   it should "work even when the primed variable isn't x, but x occurs in the formula" in {
     val f = helper.parseFormula("[$$y'=x, x'=y & z>0$$;][?1=1;]p>0")
     val node = helper.formulaToNode(f)
@@ -200,6 +199,85 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
 
     val expectedResult = helper.parseFormula("[(y'):=x;][$$x'=y & (z>0)$$;][?1=1&true;]p>0")
     require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+  }
+
+  // Head elimination (no test)
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  "Head eliminiation (no test)" should "not apply when there's a test" in {
+    val f = helper.parseFormula("[$$y'=notx, notx'=y & z>0$$;][?true;]p>0")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
+    require(!tactic.applicable(node))
+  }
+
+  "Head Elimination no test" should "apply and peel off a system correctly in the simplest case" in {
+    val f = helper.parseFormula("[$$x'=y, y'=x & z>0$$;]p>0")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
+
+    require(tactic.applicable(node), "applicable.")
+
+    helper.runTactic(tactic, node)
+
+    val expectedResult = helper.parseFormula("[(x'):=y;][$$y'=x & (z>0)$$;][?true;]p>0")
+    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+  }
+
+  it should "handle DAEs correctly" in {
+    val f = helper.parseFormula("[$$x'=y & 2=2, y'=x & z>0$$;]p>0")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
+    require(tactic.applicable(node), "applicable.")
+
+    helper.runTactic(tactic, node)
+
+    val expectedResult = helper.parseFormula("[(x'):=y;][$$y'=x & (z>0)$$;][?2=2;]p>0")
+    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+  }
+//
+//  it should "work even when the primed variable isn't x" in {
+//    val f = helper.parseFormula("[$$y'=notx, notx'=y & z>0$$;]p>0")
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
+//    require(tactic.applicable(node), "applicable.")
+//
+//    helper.runTactic(tactic, node)
+//
+//    val expectedResult = helper.parseFormula("[(y'):=notx;][$$notx'=y & (z>0)$$;][?true;]p>0")
+//    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+//  }
+//
+//
+//  it should "work even when the primed variable isn't x, but x occurs in the formula" in {
+//    val f = helper.parseFormula("[$$y'=x, x'=y & z>0$$;]p>0")
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
+//    require(tactic.applicable(node), "applicable.")
+//
+//    helper.runTactic(tactic, node)
+//
+//    val expectedResult = helper.parseFormula("[(y'):=x;][$$x'=y & (z>0)$$;][?true;]p>0")
+//    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+//  }
+
+  // Nil elimination
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  "Nil Elimination Axiom" should "not apply when there's still a system there" in {
+    val f = helper.parseFormula("[$$y'=notx, notx'=y & z>0$$;][?1=1;]p>0")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNilElimination)
+    require(!tactic.applicable(node))
+  }
+
+  it should "apply when the system starts off empty." in {
+    val f = helper.parseFormula("[$$$$;][?true;]true")
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNilElimination)
+    require(!tactic.applicable(helper.formulaToNode(f)))
+  }
+
+  it should "apply" in {
+    val f = helper.parseFormula("[$$$$;][?true;]x>0")
+    require(!helper.positionTacticToTactic(ODETactics.diffInvariantNilElimination).applicable(helper.formulaToNode(f)))
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
