@@ -17,14 +17,14 @@ object Traversals {
    * @param expression
    * @return A lsit of all free variables in the expression.
    */
-  def freeVariables(expression : Expr) : List[Variable] = {
+  def freeVariables(expression : Expr) : List[NamedSymbol] = {
     val traversal = new ExpressionTraversalFunction {
       /**
        * Variables are only free when binding == 0.
        * binding is incremented when entering a quantified formula and decremented when leaving.
        */
       var binding : Int = 0
-      var variables : List[Variable] = Nil
+      var variables : List[NamedSymbol] = Nil
 
       override def preF(p : PosInExpr, f : Formula) = {
         f match {
@@ -52,11 +52,17 @@ object Traversals {
               variables = e +: variables
             }
           }
+          case e: NamedSymbol => {
+            if(!variables.contains(e) && binding == 0) {
+              variables = e +: variables
+            }
+          }
           case _ => /* nothing to do here */
         };
         Left(None)
       }
     }
+
 
     expression match {
       case expression : Formula => ExpressionTraversal.traverse(traversal, expression)

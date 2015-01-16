@@ -337,4 +337,179 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section DI: Differential Invariant Tactics using the rewrite axioms.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section DI.1: Systems of differential equations.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  def diffInvariantSystemIntroduction: PositionTactic = new AxiomTactic("DI System Introduction", "DI System Introduction") {
+    //@todo I think this always has to be a contevolveproduct because otherwise we would not be handling a system.
+    def applies(f: Formula) = f match {
+      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _),_) => true
+      case _ => false
+    }
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+      case BoxModality(c: ContEvolveProduct, p) =>
+        val g = BoxModality(IncompleteSystem(c), p)
+        val axiomInstance = Imply(g, f)
+
+        // construct substitution
+        val aP = PredicateConstant("p")
+        val aC = ContEvolveProgramConstant("c")
+        val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aC, c))
+
+        //@todo do we need to do the "rename x" thing here?
+        Some(ax, axiomInstance, Substitution(l), None)
+      case _ => None
+    }
+  }
+
+  //Peel off a single equation of a system of differential equations and turn it into a derivative-assign-and-test.
+  //There are two versions of this tactic, and you almost never would want one without also the other. Therefore, I
+  //suggest simply using diSystemHeadElimination instead of using the with/withoutTest versions explicitly.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  def diffInvariantHeadEliminationWithTest: PositionTactic = new AxiomTactic("DI System Head Elimination (test)",
+  "DI System Head Elimination (test)") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(sort, dx: Derivative, theta_x, h_x), c)), BoxModality(Test(h), p:Formula)) => {
+        dx match {
+          case Derivative(_, Variable(_,_,_)) => true
+          case _ => false
+        }
+      }
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(sort, dx: Derivative, theta_x, h_x), c)), BoxModality(Test(h), p:Formula)) =>
+        val x = dx match {
+          case Derivative(_, variable:Variable) => variable
+          case _ => throw new Exception("Expected variable but didn't find one.")
+        }
+
+        val g = BoxModality(
+          Assign(dx, theta_x),
+          BoxModality(
+            IncompleteSystem(c),
+            BoxModality(
+              Test(And(h, h_x)), //is this the correct order? Tests should happen in roughly the same order at last as at first.
+              p
+            )
+          )
+        )
+        val axiomInstance = Imply(g, f)
+
+        //Original axiom: [ $$x' = f(x) & H(x), c; ][?H;]p <- [x' := f(x);] [c;][?H & H(x);]p
+        //@todo it would be nice to factor this out these substitutions so that they can be tested in isolation from the rest of the tactics framework.
+        // construct the substitution
+        // variable substitution
+        val aX = Variable("x", None, Real)
+        // theta substitution @todo this seems fishy; where is the x in f(x)?
+        val aTheta = Apply(Function("f", None, Real, Real), aX)
+        val thetaSubstitution = new SubstitutionPair(aTheta, theta_x)
+        // x' constraint substitution
+        val aH_x = ApplyPredicate(Function("H", None, Real, Bool), aX)
+        val xConstraintSubstitution = new SubstitutionPair(aH_x, h_x)
+        // remaining system substitution
+        val aSystem = ContEvolveProgramConstant("c", None)
+        val systemSubstitution = new SubstitutionPair(aSystem, c)
+        // existing test substitution
+        val aH = PredicateConstant("H", None)
+        val constraintSubstitution = new SubstitutionPair(aH, h)
+        // post-condition substitution
+        val aP = PredicateConstant("p")
+        val predicateSubst = new SubstitutionPair(aP, p)
+
+        val l = thetaSubstitution       ::
+                xConstraintSubstitution ::
+                systemSubstitution      ::
+                constraintSubstitution  ::
+                predicateSubst          ::
+                Nil
+
+        // alpha renaming of x if necessary
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          else (ax, None)
+
+        Some(axiom, axiomInstance, Substitution(l), cont)
+      case _ => None
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section DI.1: Differential invariant for normal forms.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Returns the differential invariant tactic for a single normal form ODE.
+   * @return The tactic.
+   */
+  def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant", "DI differential invariant") {
+    def applies(f: Formula) = {
+      f match {
+        case BoxModality(_: NFContEvolve, _) => true
+        case _ => false
+      }
+    }
+    override def applies(s: Sequent, p: Position): Boolean = {
+      val isntAnte = !p.isAnte
+      val isInExpr = p.inExpr == HereP
+      val superApplies = super.applies(s,p)
+      isntAnte && isInExpr && superApplies
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+      case BoxModality(NFContEvolve(_, d: Derivative, t, h), p) => {
+        // construct instance
+        val x = d.child match {
+          case v: Variable => v
+          case _ => throw new IllegalArgumentException("Normal form expects primes of variables, not of entier terms.")
+        }
+        // [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
+        val g = BoxModality(
+          NFContEvolve(Nil, Derivative(Real,x), t, h),
+          Imply(
+            h,
+            BoxModality(
+              Assign(Derivative(Real,x), t),
+              FormulaDerivative(p)
+            )
+          )
+        )
+        val axiomInstance = Imply(g, f)
+
+
+        // construct substitution
+        // [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
+        val aX = Variable("x", None, Real)
+        val aH = PredicateConstant("H", None)
+        val aP = PredicateConstant("p", None)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
+
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          else (ax, None)
+
+        Some(axiom, axiomInstance, Substitution(l), cont)
+      }
+      case _ => None
+    }
+  }
+
+  //@todo beforeCommit nrf the other differential invariant axiom?
+  //@todo beforeCommit nrf a tactic which takes a differential invariant as input.
 }

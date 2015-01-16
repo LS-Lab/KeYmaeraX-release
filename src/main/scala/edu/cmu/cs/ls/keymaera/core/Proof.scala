@@ -1189,6 +1189,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Loop(a) => val (v,_)=usubst(u,a); val (w,as)=usubst(v,a); (w,Loop(as)) ensuring usubst(w,a)._1==w
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
+    case Assign(Derivative(s, x:Variable), e) => (u+x, Assign(Derivative(s,x), usubst(u,e))) //@todo check NRFbeforeCommit
     case NDetAssign(x:Variable) => (u+x, p)
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
       if (!u.contains(x)) for (pair <- subsDefs) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
@@ -1303,6 +1304,7 @@ sealed case class OSubstitution(l: scala.collection.immutable.Seq[SubstitutionPa
     case x: NFContEvolve => x.vars ++ names(x.x) ++ names(x.theta) ++ names(x.f)
     case IncompleteSystem(s) => names(s)
     case x: Atom => Nil
+    case IncompleteSystem(system) => names(system)
   }
 
   // uniform substitution on formulas

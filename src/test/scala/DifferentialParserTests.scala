@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser.{ParseSymbols, LoadedAxiom, KeYmaeraParser}
+import edu.cmu.cs.ls.keymaera.parser.{LoadedKnowledge, ParseSymbols, LoadedAxiom, KeYmaeraParser}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 import testHelper.StringConverter
@@ -152,5 +152,46 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
     it should "parse the System-Diff-NoHead-Test rule" in {
       parse(preamble + "[$$ x' = tx & Hx, a $$;]p <- [x' := tx;][a;][?Hx;]p" + end)
     }
+
+
+    /**
+     * A test about how the incomplete system axioms will be parsed.
+     */
+    it should "parse formula symbols how I expect" in {
+      val result:List[LoadedKnowledge] = parse("Variables. T f(x). End. Axiom \"expectations\".\n" + "f(x) = 1" + "End.")
+//      result.last.formula.asInstanceOf[Assign].left should be(Function("f", None, Bool, Bool))
+    }
   }
+
+  /**
+   * This test just makes sure that we parse boxes in the expected way, because that's necessary for the system axioms.
+   */
+  "The formula parser" should "parse [x:=1;][x:=1;]1=1 as Box(program, Box(program, formula))" in {
+    val result = helper.parseFormula("[x:=1;][x:=1;]1=1").asInstanceOf[Modality]
+    result match {
+      case BoxModality(p,f) => {
+        p should be (Assign(x,one))
+        f match {
+          case BoxModality(p,f) => {
+            p should be(Assign(x,one))
+            f should be(Equals(Real,one,one))
+          }
+          case _ => fail("bad structure.")
+        }
+      }
+      case _ => fail("didn't have the structure I expected.")
+    }
+    //ok everything now. I think the above tests were just added because a typo (2 instead of 1) was causing the test to
+    //unexpectedly fail. But anyways, the fine-grained information and the gross test is useful so I'm leaving everything.
+    result should be(
+      BoxModality(
+        Assign(x,one),
+        BoxModality(
+          Assign(x,one),
+          Equals(Real,one,one)
+        )
+      )
+    )
+  }
+
 }

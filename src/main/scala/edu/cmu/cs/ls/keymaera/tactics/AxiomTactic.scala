@@ -29,6 +29,9 @@ object AxiomTactic {
  * @param axiomName The name of the axiom.
  */
 abstract class AxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
+  //@todo a java.lang.ExceptionInInitializerError is thrown
+  require(Axiom.axioms != null, "the list of axioms should be defined.")
+  require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.") //@todo remove before production.
   val axiom = Axiom.axioms.get(axiomName)
   def applies(f: Formula): Boolean
   override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))

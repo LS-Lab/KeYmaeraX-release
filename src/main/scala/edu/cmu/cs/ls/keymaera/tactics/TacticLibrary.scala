@@ -218,6 +218,8 @@ object TacticLibrary {
 
   def diffWeakenT = ODETactics.diffWeakenT
 
+  val axdiffInvNormalFormT = ODETactics.diffInvariantNormalFormT
+
       //not at all sure about this...
   def differentialInvariant(invariant : Option[Formula]) : PositionTactic = new PositionTactic("differential induction") {
     /**

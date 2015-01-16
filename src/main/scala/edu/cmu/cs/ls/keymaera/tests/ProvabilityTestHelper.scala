@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 
+import scala.collection.immutable.Map
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Future, Await}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -221,6 +222,8 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
     eliminateFutureOrTimeout(future, duration)
   }
 
+  def runTacticForFiveSeconds(tactic:Tactic, rootNode:ProofNode) = runTacticWithTimeout(5000, tactic, rootNode, true)
+
   /**
    *
    * @param x
@@ -240,4 +243,15 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
     }
   }
 
+  val mathematicaConfig : Map[String, String] = {
+    if(new java.io.File("/Applications/Mathematica.app/Contents/MacOS/MathKernel").exists()) {
+      Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+    }
+    else if(new java.io.File("/usr/local/Wolfram/Mathematica/9.0/Executables/MathKernel").exists()) {
+      Map("linkName" -> "/usr/local/Wolfram/Mathematica/9.0/Executables/MathKernel")
+    }
+    else {
+      throw new Exception("Could not find the absolute resolved path to MathKernel. Use MacOS or Linux+Mathematica9.0")
+    }
+  }
 }

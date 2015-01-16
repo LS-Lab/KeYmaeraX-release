@@ -1192,10 +1192,24 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      * Parses the Variables section of the file
      */
     lazy val variablesP = {
-      lazy val variablesP = ident ~ ident ~ ("(" ~> rep1sep(ident, ",") <~ ")").? ^^ {
-        case ty ~ name ~ tail => tail match {
-          case Some(List(argT)) => makeFunction(ty.toString, name.toString, argT)
-          case None => makeVariable(ty.toString, name.toString)
+      //e.g., T x or T f(x:T) or T f(x). In the latter case, x:T implicitly.
+      // @todo But currently, T f(x:T  y:T) isn't supported. Use product sorts to implement.
+      lazy val variablesP = ident ~ ident ~ ("(" ~> rep1sep(ident ~ (":" ~> ident).?, ",") <~ ")").? ^^ {
+        //if tail is defined then this is a function; else it's a variable.
+        case codomainSort ~ name ~ parameters => parameters match {
+          case Some(arguments:List[(String, Option[String])]) => {
+            //@todo support product domains sorts. Also requires modifying makeFunction
+            require(arguments.length == 1, "don't support functions w/ artiy > 1")
+            val domainType = arguments.last._2 match {
+              case Some(sort) => sort
+              case None => codomainSort
+            }
+            //@todo NRFb4c but then ultimately just ignore that and use "T" like it wants us to...
+//            makeFunction(codomainSort,name,domainType)
+            makeFunction(codomainSort, name, "T")
+          }
+          case Some(_) => throw new Exception("value didn't match expected type.")
+          case None => makeVariable(codomainSort.toString, name.toString)
         }
       }
       lazy val pattern =
