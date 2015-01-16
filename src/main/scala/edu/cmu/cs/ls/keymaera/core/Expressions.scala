@@ -1239,6 +1239,7 @@ final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram 
 
 object ContEvolveProduct {
   def apply(left: ContEvolveProgram, right: ContEvolveProgram) = new ContEvolveProduct(left, right)
+  def apply(left: ContEvolveProgram) = new ContEvolveProduct(left, EmptyContEvolveProgram())
   def unapply(e: Any): Option[(ContEvolveProgram, ContEvolveProgram)] = e match {
     case x: ContEvolveProduct => (x.left, x.right) match {
       case (a: ContEvolveProgram, b: ContEvolveProgram) => Some((a, b))
