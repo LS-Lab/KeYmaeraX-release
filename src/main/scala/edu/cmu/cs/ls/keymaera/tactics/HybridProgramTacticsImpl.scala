@@ -1,6 +1,5 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
@@ -10,6 +9,8 @@ import TacticLibrary.{alphaRenamingT,abstractionT}
 import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
 
 import scala.collection.immutable.{List,Seq}
+
+import AlphaConversionHelper._
 
 /**
  * Implementation of tactics for handling hybrid programs.
@@ -75,6 +76,7 @@ object HybridProgramTacticsImpl {
             new SubstitutionPair(axiomDV, Derivative(Real, v)), //@todo why is this not included in the other assignment axiom?
             new SubstitutionPair(axiomV, v), //@todo why is this not included in the other assignment axiom?
             new SubstitutionPair(axiomT, t),
+            // TODO replace with new CDot notation, probably: new SubstitutionPair(ApplyPredicate(axiomP, CDot), replace(p)(axiomDV, CDot))
             new SubstitutionPair(ApplyPredicate(axiomP, axiomDV), p)
           )
         )
@@ -155,38 +157,22 @@ object HybridProgramTacticsImpl {
       case _ => false
     }
 
-    /**
-     * Replace the old variable o by the new variable n.
-     */
-    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
-      new ExpressionTraversalFunction {
-        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
-          case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
-          case BoxModality(Assign(x: Variable, t), pr) => if(x == o) Right(BoxModality(Assign(n, t), pr)) else Right(e)
-          case DiamondModality(Assign(x: Variable, t), pr) =>
-            if(x == o) Right(DiamondModality(Assign(n, t), pr)) else Right(e)
-          case _ => Left(None)
-        }
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-          if (e == o) Right(n) else Left(None)
-      }, f) match {
-      case Some(g) => g
-      case None => throw new IllegalStateException("Replacing one variable by another should not fail")
-    }
-
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(Assign(v:Variable, t), p) =>
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
+        Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+      case BoxModality(Assign(v: Variable, t), p) =>
+        import Substitution.freeVariables
         // TODO check that axiom is of the expected form [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
         // construct substitution
         val aV = Variable("v", None, Real)
         val aT = Variable("t", None, Real)
         val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, v), p))
+        val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, CDot), replace(p)(v, CDot)))
+
         // construct a new name for the quantified variable
         val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
         require(vars.size > 0)
-        val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
+        val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
+            acc match {
           case Some(a) => i match {
             case Some(b) => if (a < b) Some(b) else Some(a)
             case None => Some(a)
@@ -202,6 +188,8 @@ object HybridProgramTacticsImpl {
         // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
         val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replace(p)(v, newV)))
         val axiomInstance = Equiv(f, g)
+
+        // rename to match axiom if necessary
         def alpha(left: Boolean) = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
@@ -219,12 +207,13 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-        //@TODO Also rename the quantified variable of the \forall x in the assignment axiom.
-        // rename to match axiom if necessary
         val Equiv(left, right) = axiom
         val (ax, cont) =
-          if (v.name == aV.name && v.index == None) (Equiv(left, replace(right)(aV, newV)), Some(alpha(left = false)))
-          else (Equiv(replace(left)(aV, v), replace(right)(aV, newV)), Some(alpha(left = true)))
+          if (v.name == aV.name && v.index == None)
+            (Equiv(left, replace(right)(aV, newV)), Some(alpha(left = false)))
+          else (Equiv(replace(left)(aV, v, None), replace(right)(aV, newV)), Some(alpha(left = true)))
+
+        // return tactic
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
     }
@@ -264,27 +253,14 @@ object HybridProgramTacticsImpl {
       case BoxModality(NDetAssign(_), _) => true
       case _ => false
     }
-
-    def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
-      new ExpressionTraversalFunction {
-        override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
-          case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) n else name ), fo))
-          case _ => Left(None)
-        }
-        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
-      }, f) match {
-        case Some(g) => g
-        case None => throw new IllegalStateException("Replacing one variable by another should not fail")
-      }
-
+    
     override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
       case BoxModality(NDetAssign(x), p) if Variable.unapply(x).isDefined =>
         val v = x.asInstanceOf[Variable]
         // construct substitution
         val aV = Variable("v", None, Real)
         val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(ApplyPredicate(aP, x), p))
+        val l = List(new SubstitutionPair(ApplyPredicate(aP, CDot), replace(p)(x, CDot)))
         // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
         val g = Forall(Seq(v), p)
         val axiomInstance = Equiv(f, g)
@@ -304,7 +280,7 @@ object HybridProgramTacticsImpl {
         }
         // rename to match axiom if necessary
         val (ax, cont) =
-          if (v.name != aV.name || v.index != None) (replace(axiom)(aV, v), Some(alpha))
+          if (v.name != aV.name || v.index != None) (replace(axiom)(aV, v, None), Some(alpha))
           else (axiom, None)
         Some(ax, axiomInstance, Substitution(l), cont)
       case _ => None
@@ -503,4 +479,5 @@ object HybridProgramTacticsImpl {
   // it would be great if we could access the same position to apply the imply right rule
   // FIXME: this only works for toplevel positions since there the positions are stable
   private def assignmentFindImpl = locateSucc(assignment & ImplyRightT) | locateAnte(assignment & ImplyLeftT)
+
 }

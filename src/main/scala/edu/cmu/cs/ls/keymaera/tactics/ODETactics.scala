@@ -4,9 +4,10 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, Expressio
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{AndRightT, diffCutT, differentialInduction,
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{AndRightT, diffCutT,
   alphaRenamingT, boxNDetAssign, skolemizeT, boxTestT, ImplyRightT}
 import Tactics.NilT
+import AlphaConversionHelper._
 
 import scala.collection.immutable.List
 
@@ -108,52 +109,11 @@ object ODETactics {
             diffWeakenSystemIntroT(p) &
             // pull out heads until empty
             ((diffWeakenSystemHeadT(p) & boxNDetAssign(p) & skolemizeT(p))*) &
-            (diffWeakenSystemFinalHeadT(p) & boxNDetAssign(p) & skolemizeT(p)) &
             // remove empty marker and handle tests
             diffWeakenSystemNilT(p) & ((boxTestT(p) & ImplyRightT(p))*)
           )
-          case BoxModality(_: NFContEvolve, _) => Some(diffWeakenNormalFormT(p) &
-            boxNDetAssign(p) & skolemizeT(p) & boxTestT(p) & ImplyRightT(p))
         }
       }
-    }
-  }
-
-  /**
-   * Returns the differential weaken tactic for a single normal form ODE.
-   * @return The tactic.
-   */
-  def diffWeakenNormalFormT: PositionTactic = new AxiomTactic("DW differential weaken", "DW differential weaken") {
-    def applies(f: Formula) = f match {
-      case BoxModality(_: NFContEvolve, _) => true
-      case _ => false
-    }
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
-
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(NFContEvolve(_, d: Derivative, t, h), p) =>
-        // construct instance
-        val x = d.child match {
-          case v: Variable => v
-          case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
-        }
-        val g = BoxModality(NDetAssign(x), BoxModality(Test(h), p))
-        val axiomInstance = Imply(g, f)
-
-        // construct substitution
-        val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
-
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
-          else (ax, None)
-
-        Some(axiom, axiomInstance, Substitution(l), cont)
-      case _ => None
     }
   }
 
@@ -164,7 +124,7 @@ object ODETactics {
   def diffWeakenSystemIntroT: PositionTactic = new AxiomTactic("DW differential weaken system introduce",
       "DW differential weaken system introduce") {
     def applies(f: Formula) = f match {
-      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _), _) => true
+      case BoxModality(ContEvolveProduct(_, _), _) => true
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
@@ -212,53 +172,13 @@ object ODETactics {
 
         // construct substitution
         val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val aT = Apply(Function("f", None, Real, Real), CDot)
         val aC = ContEvolveProgramConstant("c")
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
-          new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
-
-        // alpha renaming of x if necessary
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
-          else (ax, None)
-
-        Some(axiom, axiomInstance, Substitution(l), cont)
-      case _ => None
-    }
-  }
-
-  /**
-   * Returns a tactic to pull out the sole remaining ODE from a marked system of differential equations, and to convert
-   * that ODE into a nondeterministic assignment and a test of its evolution domain constraint.
-   * @return The tactic.
-   */
-  def diffWeakenSystemFinalHeadT: PositionTactic = new AxiomTactic("DW differential weaken system final head",
-    "DW differential weaken system final head") {
-    def applies(f: Formula) = f match {
-      case BoxModality(IncompleteSystem(NFContEvolve(_, d: Derivative, t, h)), _) => true
-      case _ => false
-    }
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
-
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(NFContEvolve(_, d: Derivative, t, h)), p) =>
-        // construct instance
-        val x = d.child match {
-          case v: Variable => v
-          case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
-        }
-        val lhs = BoxModality(NDetAssign(x), BoxModality(IncompleteSystem(), BoxModality(Test(h), p)))
-        val axiomInstance = Imply(lhs, f)
-
-        // construct substitution
-        val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
+        import Substitution.freeVariables
+        val l = List(new SubstitutionPair(aH, replace(h)(x, CDot)), new SubstitutionPair(aP, replace(p)(x, CDot)),
+                     new SubstitutionPair(aT, replace(t)(x, CDot, Some(freeVariables(t)))), new SubstitutionPair(aC, c))
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
@@ -278,14 +198,14 @@ object ODETactics {
   def diffWeakenSystemNilT: PositionTactic = new AxiomTactic("DW differential weaken system nil",
     "DW differential weaken system nil") {
     def applies(f: Formula) = f match {
-      case BoxModality(s: IncompleteSystem, _) => !s.system.isDefined
+      case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), _) => true
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(s: IncompleteSystem, BoxModality(b@Test(h), p)) if !s.system.isDefined =>
+      case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), BoxModality(b@Test(h), p)) =>
         // construct instance
         val lhs = BoxModality(b, p)
         val axiomInstance = Imply(lhs, f)
@@ -298,21 +218,6 @@ object ODETactics {
         Some(ax, axiomInstance, Substitution(l), None)
       case _ => None
     }
-  }
-
-  /**
-   * Replaces all occurrences of variable o in formula f with variable n.
-   * @param f The formula.
-   * @param o The original variable to replace.
-   * @param n The replacement variable.
-   * @return The formula f where o is replaced by n.
-   */
-  private def replace(f: Formula)(o: Variable, n: Variable): Formula = ExpressionTraversal.traverse(
-    new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, e: Term) = if (e == o) Right(n) else Left(None)
-    }, f) match {
-    case Some(g) => g
-    case None => throw new IllegalStateException("Replacing one variable by another should not fail")
   }
 
   /**
@@ -351,7 +256,7 @@ object ODETactics {
   def diffInvariantSystemIntroduction: PositionTactic = new AxiomTactic("DI System Introduction", "DI System Introduction") {
     //@todo I think this always has to be a contevolveproduct because otherwise we would not be handling a system.
     def applies(f: Formula) = f match {
-      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _),_) => true
+      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), lhs),_) => !lhs.isInstanceOf[EmptyContEvolveProgram]
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
@@ -416,10 +321,10 @@ object ODETactics {
         // variable substitution
         val aX = Variable("x", None, Real)
         // theta substitution @todo this seems fishy; where is the x in f(x)?
-        val aTheta = Apply(Function("f", None, Real, Real), aX)
+        val aTheta = Apply(Function("f", None, Real, Real), CDot)
         val thetaSubstitution = new SubstitutionPair(aTheta, theta_x)
         // x' constraint substitution
-        val aH_x = ApplyPredicate(Function("H", None, Real, Bool), aX)
+        val aH_x = ApplyPredicate(Function("H", None, Real, Bool), CDot)
         val xConstraintSubstitution = new SubstitutionPair(aH_x, h_x)
         // remaining system substitution
         val aSystem = ContEvolveProgramConstant("c", None)
@@ -459,7 +364,7 @@ object ODETactics {
   def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant", "DI differential invariant") {
     def applies(f: Formula) = {
       f match {
-        case BoxModality(_: NFContEvolve, _) => true
+        case BoxModality(ContEvolveProduct(_: NFContEvolve, e:EmptyContEvolveProgram),_) => true
         case _ => false
       }
     }
@@ -472,7 +377,7 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(NFContEvolve(_, d: Derivative, t, h), p) => {
+      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), empty:EmptyContEvolveProgram), p) => {
         // construct instance
         val x = d.child match {
           case v: Variable => v
@@ -480,7 +385,7 @@ object ODETactics {
         }
         // [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
         val g = BoxModality(
-          NFContEvolve(Nil, Derivative(Real,x), t, h),
+          ContEvolveProduct(NFContEvolve(Nil, Derivative(Real,x), t, h),empty:EmptyContEvolveProgram),
           Imply(
             h,
             BoxModality(

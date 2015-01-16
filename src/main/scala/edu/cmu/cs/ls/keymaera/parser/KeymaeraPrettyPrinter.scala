@@ -193,7 +193,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case Some(idx) => "_" + idx
       case None => ""
     })
-    
+    case CDot => "•"
+
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
       case None => ""
@@ -217,19 +218,21 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case p@ContEvolveProduct(l, r) => {
       val leftString = parensIfNeeded(l, p,
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
-      val rightString = parensIfNeeded(r, p,
-        c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
-      leftString + symbolTable.COMMA + rightString + symbolTable.SCOLON
+      r match {
+        case prg: EmptyContEvolveProgram => leftString + symbolTable.SCOLON
+        case _ => val rightString = parensIfNeeded(r, p,
+          c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
+          leftString + symbolTable.COMMA + rightString + symbolTable.SCOLON
+      }
     }
 
-    case p: IncompleteSystem if p.system.isDefined => {
-      val system = parensIfNeeded(p.system.get, p, c => {
+    case p@IncompleteSystem(s) => {
+      val system = parensIfNeeded(s, p, c => {
         val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s
       })
       symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM + symbolTable.SCOLON
     }
-    case p: IncompleteSystem if !p.system.isDefined =>
-      symbolTable.START_INCOMPLETE_SYSTEM + symbolTable.END_INCOMPLETE_SYSTEM + symbolTable.SCOLON
+    case p: EmptyContEvolveProgram => ""
 
     
     case Number(n) => Number.unapply(expressionToPrint) match {
@@ -346,12 +349,14 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Assign.getClass.getCanonicalName ::
       NDetAssign.getClass.getCanonicalName ::
       Test.getClass.getCanonicalName ::
+      EmptyContEvolveProgram.getClass.getCanonicalName ::
       IncompleteSystem.getClass.getCanonicalName ::
       ContEvolveProduct.getClass.getCanonicalName ::
       NFContEvolve.getClass.getCanonicalName ::
       ContEvolve.getClass.getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName ::
       ContEvolveProgramConstant.getClass.getCanonicalName ::
+      CDot.getClass.getCanonicalName ::
       Variable.getClass.getCanonicalName ::
       Number.NumberObj.getClass.getCanonicalName ::
       Nil

@@ -891,12 +891,13 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
+      case CDot => true
       case _:PredicateConstant => true
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, _:Variable) => true
-      case Apply(_:Function, _:Variable) => true
+      case ApplyPredicate(_:Function, CDot) => true
+      case Apply(_:Function, CDot) => true
       case _ => false
       }, "Substitutable expression required, found " + n)
   }
@@ -912,6 +913,15 @@ object SubstitutionPair {
 }
 
 
+/**
+ * Static access to functions of Substitution.
+ * @author Stefan Mitsch
+ */
+object Substitution {
+  def freeVariables(t: Term) : Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
+  def freeVariables(f: Formula) : Set[NamedSymbol] = Substitution(Nil).freeVariables(f)
+  def freeVariables(p: Program) : Set[NamedSymbol] = Substitution(Nil).freeVariables(p)
+}
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
@@ -977,9 +987,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case x: Variable => Set(x)
     case Derivative(s, e) => freeVariables(e)
     case Apply(f, arg) => Set(f) ++ freeVariables(arg)
-    case True | False | _: NumberObj => Set.empty
+    case True | False | _: NumberObj | CDot => Set.empty
   }
-  
+
   private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
 
   /**
@@ -1045,6 +1055,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Loop(a) => val ba = freeVariables(u, a); BindingAssessment(u, ba.maybeBound, ba.maybeRead)
     case Test(f) => BindingAssessment(u, u, freeVariables(u, f))
     case Assign(x: Variable, e) => BindingAssessment(u+x, u+x, freeVariables(u, e))
+    case Assign(Derivative(_,x:Variable), e) => BindingAssessment(u+x, u+x, freeVariables(u,e)) //@todo check beforeCommit nrf
     case NDetAssign(x:Variable) => BindingAssessment(u+x, u+x, Set.empty)
     // x maybe read because ODE reads its initial value, as well as bound and maybe bound because ODE writes it
     case NFContEvolve(v, Derivative(_, x: Variable), e, h) => BindingAssessment(u+x, u+x,
@@ -1053,12 +1064,14 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     
     //@TODO check implementation
     case a: ProgramConstant => BindingAssessment(u, u, Set.empty)
+    case cpc:ContEvolveProgramConstant => BindingAssessment(u,u,Set.empty) //@todo not adding to u because programconstants aren't either. nrf
     case ContEvolveProduct(a, b) =>
       val ba = freeVariables(u, a)
       val bb = freeVariables(u, b)
       BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
-    case s: IncompleteSystem if s.system.isDefined => freeVariables(u, s.system.get)
-    case s: IncompleteSystem if !s.system.isDefined => BindingAssessment(u, u, Set.empty)
+    case IncompleteSystem(s) => freeVariables(u, s)
+
+    case s: EmptyContEvolveProgram => BindingAssessment(u, u, Set.empty)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
 
@@ -1100,12 +1113,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
     case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
     // uniform substitution base cases
+    case CDot => for (p <- subsDefs) { if (CDot == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term]) }; CDot
     case x:Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
     case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- subsDefs) {
       rp.n match {
-        //@TODO clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case Apply(rf, rarg:Variable) if (f == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
+        case Apply(rf, CDot) if f == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
         case _ => // skip to next
       }
     }; return Apply(f, usubst(u, arg))
@@ -1158,8 +1171,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
-        //@TODO clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case ApplyPredicate(rf, rarg:Variable) if (p == rf) => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
+        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
     }; return ApplyPredicate(p, usubst(u, arg))
@@ -1178,8 +1190,21 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
     }
   }
-      
-  
+
+  /**
+   *  uniform substitution on a program p with the set of bound variables u
+   *  return only the result set of bound variables
+   *  used for testing only, may need a better solution
+   */
+  private def usubstU(u: Set[NamedSymbol], p:Program) : Set[NamedSymbol] = usubst(u: Set[NamedSymbol], p : Program)._1
+
+  /**
+   *  uniform substitution on a program p with the set of bound variables u
+   *  return only the result program
+   *  used for testing only, may need a better solution
+   */
+  private def usubstP(u: Set[NamedSymbol], p:Program) : Program = usubst(u: Set[NamedSymbol], p : Program)._2
+
   /**
    *
    */
@@ -1204,20 +1229,29 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         case (symbols, prg: ContEvolveProgram) => (symbols, prg)
         case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
       }
-      val (w, bs) = usubst(u, b) match {
-        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
-        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+      b match {
+        case _: EmptyContEvolveProgram => as match {
+            case ContEvolveProduct(_, _) | _: EmptyContEvolveProgram => (v, as) /* do not substitute, whatever was substituted for a already must have a rightmost EmptyContEvolveProgram */
+            case _ => val (w, bs) = usubst(u, b) match {
+                case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+                case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+              }
+              (v++w, ContEvolveProduct(as, bs))
+          }
+        case _ => val (w, bs) = usubst(u, b) match {
+            case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+            case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
+          }
+          (v++w, ContEvolveProduct(as, bs))
       }
-      (v++w, ContEvolveProduct(as, bs))
     // $$s$$
-    case s: IncompleteSystem if s.system.isDefined =>
-      val (v, as) = usubst(u, s.system.get) match {
+    case IncompleteSystem(s) =>
+      val (v, as) = usubst(u, s) match {
         case (symbols, prg: ContEvolveProgram) => (symbols, prg)
         case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in incomplete ODE systems")
       }
       (v, IncompleteSystem(as))
-    // empty $$$$
-    case s: IncompleteSystem if !s.system.isDefined => (u, p)
+    case _: EmptyContEvolveProgram => (u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
 
@@ -1457,7 +1491,7 @@ object UniformSubstitution {
         List(origin)
       } else {
         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("Uniform substitution " + subst + " did not conclude  \n" + conclusion + "\nfrom\n  " + origin + "\nbut instead\n  " + subst(origin))
+        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
       }
     } 
     
@@ -1752,7 +1786,8 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
   override def apply(s: Sequent): List[Sequent] = {
     val prgFn = new ExpressionTraversalFunction {
       override def postP(pos: PosInExpr, prg: Program) = prg match {
-        case NFContEvolve(v, x, theta, hh) => Right(NFContEvolve(v, x, theta, And(hh, h)))
+        case ContEvolveProduct(NFContEvolve(v, x, theta, hh), e: EmptyContEvolveProgram) =>
+          Right(ContEvolveProduct(NFContEvolve(v, x, theta, And(hh, h)), e))
         case ContEvolve(f) => Right(ContEvolve(And(f, h)))
         case _ => super.postP(pos, prg)
       }
@@ -1765,12 +1800,12 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
           BoxModality(NFContEvolve(vs, x, t, And(dom, h)), f)))
         // append to evolution domain constraint of rightmost (NF)ContEvolve in product
         case BoxModality(ev@ContEvolveProduct(a, b), f) =>
-          val rightMostCut = ExpressionTraversal.traverse(HereP, prgFn, b) match {
+          val rightMostCut = ExpressionTraversal.traverse(HereP, prgFn, ev) match {
             case Some(prg) => prg
             case None => throw new IllegalArgumentException("Unexpected program type at rightmost position in " +
               "ContEvolveProduct")
           }
-          Right(And(BoxModality(ev, h), BoxModality(ContEvolveProduct(a, rightMostCut), f)))
+          Right(And(BoxModality(ev, h), BoxModality(rightMostCut, f)))
         case _ => ???
       }
     }

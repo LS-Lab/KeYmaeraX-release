@@ -2,7 +2,6 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.{LoadedKnowledge, ParseSymbols, LoadedAxiom, KeYmaeraParser}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
-import testHelper.StringConverter
 
 /**
  * Tests for ContEvolve -> NFContEvolve refactoring.
@@ -11,16 +10,18 @@ import testHelper.StringConverter
  * @author Stefan Mitsch
  */
 class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester {
-  val helper = new ProvabilityTestHelper()
+  val helper = new ProvabilityTestHelper((x:String) => (), new ToolBase("") { override def init(cfg: Map[String, String]) = {}})
 
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)
   val one = Number(1)
   val zero = Number(0)
 
-  "The parser" should "parse diff eqs in normal form into NFContEvolves" in {
+  def finalODE(ode: ContEvolveProgram) = ContEvolveProduct(ode, EmptyContEvolveProgram())
+
+  "The parser" should "parse diff eqs in normal form into Product(NFContEvolve,Empty)" in {
     helper.parseBareProgram("x' = 1 & x > 0;") match {
-      case Some(program) => program should be (NFContEvolve(Nil, Derivative(Real, x), Number(1), GreaterThan(Real, x, zero)))
+      case Some(program) => program should be (finalODE(NFContEvolve(Nil, Derivative(Real, x), Number(1), GreaterThan(Real, x, zero))))
       case None => fail("Parse failed.")
     }
   }
@@ -30,8 +31,24 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       case Some(program) =>
         program should be (ContEvolveProduct(
           NFContEvolve(Nil, Derivative(Real, x), y, True),
-          NFContEvolve(Nil, Derivative(Real, y), x, True)))
+          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, True))))
       case None => fail("Failed to parse.")
+    }
+  }
+
+  it should "parse into normal form when parsing a formula" in {
+    val f = helper.parseFormula("[x'=1 & x>0;]z>=0");
+    f match {
+      case BoxModality(ev, _) => ev match {
+        case ContEvolveProduct(l,r) => l match {
+          case a:NFContEvolve => /* ok */
+          case _ => fail()
+        }; r match {
+          case x:EmptyContEvolveProgram => /* ok */
+          case _ => fail()
+        }
+      }
+      case _ => fail("failed to parse to correct thing")
     }
   }
 
@@ -40,7 +57,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       case Some(program) =>
         program should be (ContEvolveProduct(
           NFContEvolve(Nil, Derivative(Real, x), x, True),
-          NFContEvolve(Nil, Derivative(Real, y), y, True)))
+          finalODE(NFContEvolve(Nil, Derivative(Real, y), y, True))))
       case None => fail("Parse failed.")
     }
   }
@@ -50,7 +67,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       case Some(program) =>
         program should be (ContEvolveProduct(
           NFContEvolve(Nil, Derivative(Real, x), y, True),
-          NFContEvolve(Nil, Derivative(Real, y), x, GreaterThan(Real, y, zero))))
+          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, GreaterThan(Real, y, zero)))))
       case None => fail("Failed to parse.")
     }
   }
@@ -60,14 +77,14 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       case Some(program) =>
         program should be (ContEvolveProduct(
           NFContEvolve(Nil, Derivative(Real, x), y, True),
-          NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero)))))
+          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))))
       case None => fail("Failed to parse.")
     }
   }
 
   it should "parse a single equation with a constraint as an evolution, not an AND-formula." in {
     helper.parseBareProgram("x' = y & x >= 0;") match {
-      case Some(p) => p should be (NFContEvolve(Nil, Derivative(Real, x), y, GreaterEqual(Real, x, zero)))
+      case Some(p) => p should be (finalODE(NFContEvolve(Nil, Derivative(Real, x), y, GreaterEqual(Real, x, zero))))
       case _ => fail("failed to parse.")
     }
   }
@@ -77,7 +94,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       case Some(program) =>
         program should be (ContEvolveProduct(
           NFContEvolve(Nil, Derivative(Real, x), y, GreaterThan(Real, x, Number(BigDecimal(5)))),
-          NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero)))))
+          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))))
       case None => fail("Failed to parse.")
     }
   }
@@ -89,14 +106,14 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
           NFContEvolve(Nil, Derivative(Real, x), y, GreaterThan(Real, x, Number(BigDecimal(5)))),
           ContEvolveProduct(
             NFContEvolve(Nil, Derivative(Real, Variable("z", None, Real)), Number(BigDecimal(5)), True),
-            NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))))
+            finalODE(NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero)))))))
       case None => fail("Failed to parse.")
     }
   }
 
   it should "parse ContEvolveProgramConstants" in {
     new KeYmaeraParser().ProofFileParser.runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [a;]p End.") match {
-      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be (ContEvolveProgramConstant("a"))
+      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be (finalODE(ContEvolveProgramConstant("a")))
     }
   }
 
@@ -105,13 +122,13 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.") match {
       case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be(ContEvolveProduct(
         NFContEvolve(Nil, Derivative(Real, x), one, GreaterThan(Real, x, Number(BigDecimal(5)))),
-        ContEvolveProgramConstant("a")))
+        finalODE(ContEvolveProgramConstant("a"))))
     }
   }
 
   it should "not parse ProgramConstants in a system with NFContEvolve" in {
-    the [Exception] thrownBy (new KeYmaeraParser().ProofFileParser.
-      runParser("Variables. P a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.")) should have message
+    the [Exception] thrownBy new KeYmaeraParser().ProofFileParser.
+      runParser("Variables. P a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.") should have message
       "Failed to parse Lemmas & Axioms at (line: 1, column:60): `'' expected but `;' found"
   }
 

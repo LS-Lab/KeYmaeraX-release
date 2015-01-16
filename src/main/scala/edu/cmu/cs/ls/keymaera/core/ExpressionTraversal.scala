@@ -254,6 +254,7 @@ object ExpressionTraversal {
         // Programs
         case ProgramConstant(_, _) => matchZero(p, f, e)
         case ContEvolveProgramConstant(_, _) => matchZero(p, f, e)
+        case CDot => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
         case Test(a) => matchOne(p, Test.apply, f, a)
@@ -266,8 +267,8 @@ object ExpressionTraversal {
         case Loop(a) => matchOne(p, Loop.apply, f, a)
         case NFContEvolve(v, x, t, h) => matchThree(p, NFContEvolve(v, _: Derivative, _: Term, _: Formula), f, x, t, h)
         case ContEvolveProduct(a, b) => matchTwo(p, ContEvolveProduct.apply, f, a, b)
-        case s: IncompleteSystem if s.system.isDefined => matchOne(p, IncompleteSystem.apply, f, s.system.get)
-        case s: IncompleteSystem if !s.system.isDefined => matchZero(p, f, e)
+        case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s)
+        case _: EmptyContEvolveProgram => matchZero(p, f, e)
 
         case _ => failFTPG(e)
       }) match {

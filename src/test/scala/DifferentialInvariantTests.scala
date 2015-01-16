@@ -38,11 +38,24 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   // Differential invariants where invariant is already part of the formula? @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  "The axiom-based differential invariant tactic" should "simplest example" in {
+  "The axiom-based differential invariant tactic" should "work when there's no test condition" in {
+    val f = helper.parseFormula("[x'=1;]z>=0")
+    f match {
+      case BoxModality(ContEvolveProduct(_: NFContEvolve,_), _) => ()
+      case _ => fail("parsed into wrong form.")
+    }
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(TacticLibrary.axdiffInvNormalFormT)
+
+  }
+
+
+  it should "simplest example with a test" in {
     val f = helper.parseFormula("[x'=1 & z>0;]z>=0")
     f match {
-      case BoxModality(_: NFContEvolve, _) => ()
-      case _ => fail("f doesn't match the applicability condition.")
+      case BoxModality(ContEvolveProduct(_: NFContEvolve, _), _) => ()
+      case BoxModality(pi,phi) => fail("f doesn't match the applicability condition; wanted an NFContEvolve but got a: " + pi)
+      case _ => fail("Expected a modality but got something completely wrong.")
     }
 
     val node = helper.formulaToNode(f)
@@ -143,6 +156,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     val f = helper.parseFormula("[$$x'=y, y'=x & z>0$$;][?1=1;]p>0")
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationWithTest)
+
     require(tactic.applicable(node), "applicable.")
 
     helper.runTactic(tactic, node)
@@ -176,7 +190,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
 
-  ignore should "work even when the primed variable isn't x, but x occurs in the formula" in {
+  it should "work even when the primed variable isn't x, but x occurs in the formula" in {
     val f = helper.parseFormula("[$$y'=x, x'=y & z>0$$;][?1=1;]p>0")
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationWithTest)
