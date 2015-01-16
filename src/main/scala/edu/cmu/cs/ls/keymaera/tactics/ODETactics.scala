@@ -476,7 +476,7 @@ object ODETactics {
         // construct instance
         val x = d.child match {
           case v: Variable => v
-          case _ => throw new IllegalArgumentException("Normal form expects primes of variables, not of entier terms.")
+          case _ => throw new IllegalArgumentException("Normal form expects primes of variables, not of entire terms.")
         }
         // [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
         val g = BoxModality(
