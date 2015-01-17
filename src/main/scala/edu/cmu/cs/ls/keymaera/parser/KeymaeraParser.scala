@@ -39,7 +39,11 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    * @param s
    * @return All variables occcuring in s.
    */
-  private def allVariableOccurances(s:String) = ident.findAllIn(s).map(s => new Variable(s, None, Real)).toList
+  private def allVariableOccurances(s:String) = ident.findAllIn(s).map(s => {
+    val varParts = s.split("_")
+    if (varParts.length == 1 || (!varParts.last.forall(_.isDigit))) new Variable(s, None, Real)
+    else new Variable(varParts.slice(0, varParts.length - 1).mkString("_"), Some(varParts.last.toInt), Real)
+  }).toSet.toList
 
   /**
    *
