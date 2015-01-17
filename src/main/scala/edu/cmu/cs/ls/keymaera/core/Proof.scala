@@ -1562,7 +1562,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       }
       override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
         case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
-        case Exists(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
+        case Exists(v, phi) => Right(Exists(for(i <- v) yield rename(i), phi))
         case x: PredicateConstant => Right(renamePred(x))
         case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
         case _ => Left(None)
@@ -1580,7 +1580,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
           Right(Forall(for (i <- v) yield rename(i), proceed(phi)))
         case Exists(v, phi) =>
           require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
-          Right(Forall(for (i <- v) yield rename(i), proceed(phi)))
+          Right(Exists(for (i <- v) yield rename(i), proceed(phi)))
         case BoxModality(Assign(a, b), c) =>
           Right(BoxModality(Assign(a match {
             case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
