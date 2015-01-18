@@ -380,6 +380,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   private def isAtomic(e:Expr):Boolean = e match {
     case False => true
     case True => true
+    case CDot => true
     case PredicateConstant(name,_) => true
     case ProgramConstant(name, _) => true
     case Variable(name, _,_) => true
