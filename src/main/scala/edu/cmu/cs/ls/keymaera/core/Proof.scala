@@ -1069,7 +1069,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case NDetAssign(x:Variable) => BindingAssessment(u+x, u+x, Set.empty)
     // x maybe read because ODE reads its initial value, as well as bound and maybe bound because ODE writes it
     case NFContEvolve(v, Derivative(_, x: Variable), e, h) => BindingAssessment(u+x, u+x,
-        Set(x) ++ freeVariables(u+x++v, e) ++ freeVariables(u+x++v, h))
+        (if (u.contains(x)) Set() else Set(x)) ++ freeVariables(u+x++v, e) ++ freeVariables(u+x++v, h))
 
     
     //@TODO check implementation
