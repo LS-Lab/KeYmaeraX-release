@@ -993,9 +993,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
     // base cases
     case x: Variable => Set(x)
+    case CDot => Set(CDot)
     case Derivative(s, e) => freeVariables(e)
     case Apply(f, arg) => Set(f) ++ freeVariables(arg)
-    case True | False | _: NumberObj | CDot => Set.empty
+    case True | False | _: NumberObj => Set.empty
   }
 
   private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
@@ -1063,6 +1064,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Loop(a) => val ba = freeVariables(u, a); BindingAssessment(u, ba.maybeBound, ba.maybeRead)
     case Test(f) => BindingAssessment(u, u, freeVariables(u, f))
     case Assign(x: Variable, e) => BindingAssessment(u+x, u+x, freeVariables(u, e))
+    case Assign(CDot, e) => BindingAssessment(u+CDot, u+CDot, freeVariables(u, e))
     case Assign(Derivative(_,x:Variable), e) => BindingAssessment(u+x, u+x, freeVariables(u,e)) //@todo check beforeCommit nrf
     case NDetAssign(x:Variable) => BindingAssessment(u+x, u+x, Set.empty)
     // x maybe read because ODE reads its initial value, as well as bound and maybe bound because ODE writes it
@@ -1078,7 +1080,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val bb = freeVariables(u, b)
       BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
     case IncompleteSystem(s) => freeVariables(u, s)
-
     case s: EmptyContEvolveProgram => BindingAssessment(u, u, Set.empty)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
@@ -1222,6 +1223,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Loop(a) => val (v,_)=usubst(u,a); val (w,as)=usubst(v,a); (w,Loop(as)) ensuring usubst(w,a)._1==w
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
+    case Assign(CDot, e) => for (pair <- subsDefs) { if (CDot == pair.n) return (u+CDot, Assign(pair.t.asInstanceOf[Term], usubst(u, e))) }; (u+CDot, Assign(CDot, usubst(u, e)))
     case Assign(Derivative(s, x:Variable), e) => (u+x, Assign(Derivative(s,x), usubst(u,e))) //@todo check NRFbeforeCommit
     case NDetAssign(x:Variable) => (u+x, p)
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
