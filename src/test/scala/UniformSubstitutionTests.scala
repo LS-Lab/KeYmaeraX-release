@@ -88,6 +88,15 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s.apply(Apply(f,x)) should be ("x+x+1".asTerm)
   }
 
+  "Uniform substitution of (x,y)(f(t),[t:=t+1;]t>0) |-> f(x)" should "be foo" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val f = Function("f", None, Real, Bool)
+    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(ApplyPredicate(f,CDot), BoxModality(Assign(CDot,
+      Add(Real, CDot, Number(1))), GreaterThan(Real, CDot, Number(0))))))
+    s.apply(ApplyPredicate(f,x)) should be ("x+x+1".asTerm)
+  }
+
   // g(\theta) apply on \theta
 
   "Uniform substitution of (x,1)(y,x) |-> g(x)" should "be g(1)" in {
@@ -548,6 +557,23 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s = Substitution(Seq(new SubstitutionPair("y".asTerm, "y0".asTerm)))
     s.apply("\\forall y. (y=1 -> [y:=2+y;]true)".asFormula) should not be "\\forall y0. (y0=1 -> [y0:=2+y0;]true)".asFormula
     s.apply("\\forall y. (y=1 -> [y:=2+y;]true)".asFormula) should be ("\\forall y. (y=1 -> [y:=2+y;]true)".asFormula)
+  }
+
+  "Uniform substitution of [{•:=•+1;}*;]true" should "should not substitute •" in {
+    s = Substitution(Seq(new SubstitutionPair(CDot, "x".asTerm)))
+
+    val o = BoxModality(Loop(Assign(CDot, Add(Real, CDot, Number(1)))), True)
+
+    s.apply(o) should not be "[{x:=x+1;}*;]true".asFormula
+    s.apply(o) should be (o)
+  }
+
+  "Uniform substitution of [{x:=x+1;}*;]true" should "should not substitute x" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "y".asTerm)))
+
+    val o = "[{x:=x+1;}*;]true".asFormula
+    s.apply(o) should not be "[{y:=y+1;}*;]true".asFormula
+    s.apply(o) should be (o)
   }
 
 }

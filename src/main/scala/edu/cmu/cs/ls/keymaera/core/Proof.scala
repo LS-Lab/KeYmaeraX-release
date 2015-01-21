@@ -1122,7 +1122,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
     case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
     // uniform substitution base cases
-    case CDot => for (p <- subsDefs) { if (CDot == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term]) }; CDot
+    case CDot => if (u.contains(CDot)) return CDot else for (p <- subsDefs) { if (CDot == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term]) }; CDot
     case x:Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
     case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- subsDefs) {
@@ -1223,7 +1223,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Loop(a) => val (v,_)=usubst(u,a); val (w,as)=usubst(v,a); (w,Loop(as)) ensuring usubst(w,a)._1==w
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
-    case Assign(CDot, e) => for (pair <- subsDefs) { if (CDot == pair.n) return (u+CDot, Assign(pair.t.asInstanceOf[Term], usubst(u, e))) }; (u+CDot, Assign(CDot, usubst(u, e)))
+    case Assign(CDot, e) => (u+CDot, Assign(CDot, usubst(u, e)))
     case Assign(Derivative(s, x:Variable), e) => (u+x, Assign(Derivative(s,x), usubst(u,e))) //@todo check NRFbeforeCommit
     case NDetAssign(x:Variable) => (u+x, p)
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
