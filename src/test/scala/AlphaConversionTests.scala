@@ -423,6 +423,9 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     AlphaConversionHelper.replaceFree("[z'=2+x;](x>0 & z>0)".asFormula)(x, CDot) should be (
       BoxModality(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z), Add(Real, Number(2), CDot), True)),
         And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
+    AlphaConversionHelper.replaceFree("[z'=2+x;](x>0 & z>0)".asFormula)(z, CDot) should be (
+      BoxModality(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z), Add(Real, Number(2), x), True)),
+        And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
   }
 
   it should "not rename variables bound by assignments in loops" in {

@@ -23,7 +23,7 @@ object AlphaConversionHelper {
    */
   def replaceFree(f: Formula)(o: Term, n: NamedSymbol with Term,
                               free: Option[Set[NamedSymbol]] = Some(maybeFreeVariables(f))): Formula = {
-    // TODO maybe there is a common implementation for certainly free variables
+    // TODO might no longer be necessary to have free an option
     ExpressionTraversal.traverse(
       new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
@@ -43,11 +43,18 @@ object AlphaConversionHelper {
             case None => Right(BoxModality(NFContEvolve(v, Derivative(d, n), replaceFree(t)(o, n, None),
               replaceFree(h)(o, n, None)), replaceFree(pred)(o, n, None)))
           }
-          // TODO systems of ODEs
+          case BoxModality(ContEvolveProduct(lode, rode), pred) => free match {
+            case Some(freeVars) => Right(BoxModality(ContEvolveProduct(
+              replaceFree(lode)(o, n, Some(certainlyFreeVariables(lode, freeVars))),
+              replaceFree(rode)(o, n, Some(certainlyFreeVariables(rode, freeVars)))),
+              replaceFree(pred)(o, n, Some(certainlyFreeVariables(lode, freeVars).intersect(certainlyFreeVariables(rode, freeVars))))))
+            case None => Right(BoxModality(ContEvolveProduct(
+              replaceFree(lode)(o, n, None),
+              replaceFree(rode)(o, n, None)), replaceFree(pred)(o, n, None)))
+          }
           case BoxModality(Loop(a), pred) => free match {
             case Some(freeVars) => Right(BoxModality(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
-              // (freeVars -- maybeFreeVariables(a)) ++ freeVariables(a) computes the certainly free variables of BoxModality
-              replaceFree(pred)(o, n, Some((freeVars -- maybeFreeVariables(a)) ++ freeVariables(a)))))
+              replaceFree(pred)(o, n, Some(certainlyFreeVariables(a, freeVars)))))
             case None => Left(None)
           }
           case DiamondModality(Assign(x: Variable, t), pred) => free match {
@@ -58,8 +65,7 @@ object AlphaConversionHelper {
           }
           case DiamondModality(Loop(a), pred) => free match {
             case Some(freeVars) => Right(DiamondModality(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
-              // (freeVars -- maybeFreeVariables(a)) ++ freeVariables(a) computes the certainly free variables of BoxModality
-              replaceFree(pred)(o, n, Some((freeVars -- maybeFreeVariables(a)) ++ freeVariables(a)))))
+              replaceFree(pred)(o, n, Some(certainlyFreeVariables(a, freeVars)))))
             case None => Left(None)
           }
           case _ => Left(None)
@@ -101,7 +107,7 @@ object AlphaConversionHelper {
     case None => throw new IllegalStateException("Replacing one variable by another should not fail")
   }
 
-  def replaceFree(p: Program)(o: Term, n: Term, free: Option[Set[NamedSymbol]]): Program =
+  def replaceFree[T <: Program](p: T)(o: Term, n: Term, free: Option[Set[NamedSymbol]]): T =
     ExpressionTraversal.traverse(
       new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
@@ -134,4 +140,7 @@ object AlphaConversionHelper {
       case Some(g) => g
       case None => throw new IllegalStateException("Replacing one variable by another should not fail")
     }
+
+  private def certainlyFreeVariables(p: Program, initial: Set[NamedSymbol]) =
+    (initial -- maybeFreeVariables(p)) ++ freeVariables(p)
 }
