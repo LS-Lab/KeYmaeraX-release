@@ -34,7 +34,8 @@ object AlphaConversionHelper {
           case BoxModality(Assign(x: Variable, t), pred) => free match {
             case Some(freeVars) => Right(BoxModality(Assign(x, replaceFree(t)(o, n, free)),
               replaceFree(pred)(o, n, Some(freeVars - x))))
-            case None => Right(BoxModality(Assign(n, t), replaceFree(pred)(o, n, None)))
+            case None => Right(BoxModality(Assign(replaceFree(x)(o, n, None), replaceFree(t)(o, n, None)),
+              replaceFree(pred)(o, n, None)))
           }
           case BoxModality(NFContEvolve(v, xprime@Derivative(d, x: Variable), t, h), pred) => free match {
             case Some(freeVars) => Right(BoxModality(NFContEvolve(v, xprime, replaceFree(t)(o, n, Some(freeVars - x)),
@@ -50,12 +51,15 @@ object AlphaConversionHelper {
             case None => Left(None)
           }
           case DiamondModality(Assign(x: Variable, t), pred) => free match {
-            case Some(freeVars) => Right(DiamondModality(Assign(x, replaceFree(t)(o, n, Some(freeVars - x))),
+            case Some(freeVars) => Right(DiamondModality(Assign(x, replaceFree(t)(o, n, free)),
               replaceFree(pred)(o, n, Some(freeVars - x))))
-            case None => Right(DiamondModality(Assign(n, t), replaceFree(pred)(o, n, None)))
+            case None => Right(DiamondModality(Assign(replaceFree(x)(o, n, None), replaceFree(t)(o, n, None)),
+              replaceFree(pred)(o, n, None)))
           }
-          case DiamondModality(l@Loop(a), pred) => free match {
-            case Some(freeVars) => Right(DiamondModality(l, replaceFree(pred)(o, n, free)))
+          case DiamondModality(Loop(a), pred) => free match {
+            case Some(freeVars) => Right(DiamondModality(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
+              // (freeVars -- maybeFreeVariables(a)) ++ freeVariables(a) computes the certainly free variables of BoxModality
+              replaceFree(pred)(o, n, Some((freeVars -- maybeFreeVariables(a)) ++ freeVariables(a)))))
             case None => Left(None)
           }
           case _ => Left(None)
@@ -108,6 +112,25 @@ object AlphaConversionHelper {
           case _ => Left(None)
         }
       }, p) match {
+      case Some(g) => g
+      case None => throw new IllegalStateException("Replacing one variable by another should not fail")
+    }
+
+  /**
+   * Replace the old term o by a new named term n in formula f.
+   * @param f The formula.
+   * @param o The old term.
+   * @param n The new term
+   * @return The formula where the old term o is replaced with the new term n
+   */
+  def replace(f: Formula)(o: Term, n: Term): Formula =
+    ExpressionTraversal.traverse(
+      new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case t: Term if t == o => Right(n)
+          case _ => Left(None)
+        }
+      }, f) match {
       case Some(g) => g
       case None => throw new IllegalStateException("Replacing one variable by another should not fail")
     }

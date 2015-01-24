@@ -3,9 +3,8 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.{AlphaConversionHelper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
-import testHelper.StringConverter
+import testHelper.StringConverter._
 import testHelper.SequentFactory._
-import StringConverter._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**
@@ -129,12 +128,50 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  "Apply alpha-conversion (x,t) on [x:=x+1;][x:=x+1;]x>0" should "be [t:=x+1;][x:=x+1;]x>0" in {
+  "Apply alpha-conversion (x,t) on [x:=x+1;][x:=x+1;]x>0" should "be [t:=x+1;][t:=t+1;]x>0" in {
     val s = sequent(Nil, Nil, "[x:=x+1;][x:=x+1;]x>0".asFormula :: Nil)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sequent(Nil, Nil, "[t:=x+1;][t:=t+1;]t>0".asFormula :: Nil)
     ))
+  }
+
+  "Apply alpha-conversion (x,t) on [x:=x+1;][x'=1;]x>0" should "be [t:=x;][t:=t+1;][t'=1;]x>0" in {
+    val s = sequent(Nil, Nil, "[x:=x+1;][x'=1;]x>0".asFormula :: Nil)
+    val tactic = locateSucc(alpha("x", "t"))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, Nil, "[t:=x;][t:=t+1;][t'=1;]x>0".asFormula :: Nil)
+    ))
+  }
+
+  "Apply alpha-conversion (x,t) on [y:=1;][x'=1;]x>0" should "be [t:=x;][y:=1;][t'=1;]x>0" in {
+    val s = sequent(Nil, Nil, "[y:=1;][x'=1;]x>0".asFormula :: Nil)
+    val tactic = locateSucc(alpha("x", "t"))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, Nil, "[t:=x;][y:=1;][t'=1;]x>0".asFormula :: Nil)
+    ))
+  }
+
+  "Alpha conversion rule" should "rename in ODEs and store initial value" in {
+    val s = sequent(Nil, Nil, "[y'=1;]true".asFormula :: Nil)
+    def alpha(from: String, to: String): PositionTactic =
+      new PositionTactic("Alpha Renaming") {
+        override def applies(s: Sequent, p: Position): Boolean = true
+        override def apply(p: Position): Tactic = new ApplyRule(new AlphaConversion(p, from, None, to, None)) {
+          override def applicable(node: ProofNode): Boolean = true
+        } & hideT(p.topLevel)
+      }
+
+    val tactic = locateSucc(alpha("y", "x"))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, Nil, "[x:=y;][x'=1;]true".asFormula :: Nil)))
+  }
+
+  ignore should "rename in ODEs, store initial value, and handle implication" in {
+    val s = sequent(Nil, Nil, "[y'=1;]true".asFormula :: Nil)
+    val tactic = locateSucc(alphaRenamingAndInitialValueHandlingT("y", None, "x", None))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent("x_1".asNamedSymbol :: Nil, "x_1=y".asFormula :: Nil, "[x_1'=1;]true".asFormula :: Nil)))
   }
 
   // (4) Modality(DiamondModality(Assign(x, e)), phi)
@@ -170,7 +207,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   "Apply alpha-conversion (x,t) on <x:=x+1;><x:=x+1;>x>0" should "be <t:=x+1;><x:=x+1;>x>0" in {
     val s = sequent(Nil, Nil, "<x:=x+1;><x:=x+1;>x>0".asFormula :: Nil)
     val tactic = locateSucc(alpha("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be(
       sequent(Nil, Nil, "<t:=x+1;><t:=t+1;>t>0".asFormula :: Nil)
     ))
   }
@@ -415,5 +452,16 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     AlphaConversionHelper.replaceFree("[{x:=x+1;}*;](x>0 & z>4)".asFormula)(z, CDot) should be (
       BoxModality(Loop(Assign(x, Add(Real, x, Number(1)))),
         And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, CDot, Number(4)))))
+  }
+
+  it should "only rename variables equal to old name even if free names is None" in {
+    val x = new Variable("x", None, Real)
+    val z = new Variable("z", None, Real)
+    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(x, CDot, None) should be (
+      BoxModality(Assign(CDot, z),
+        GreaterThan(Real, CDot, Number(0))))
+    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(z, CDot, None) should be (
+      BoxModality(Assign(x, CDot),
+        GreaterThan(Real, x, Number(0))))
   }
 }
