@@ -29,8 +29,9 @@ object HybridProgramTacticsImpl {
    */
   protected[tactics] def boxDerivativeAssignT: PositionTactic = new AxiomTactic("[':=] derivative assignment equal", "[':=] derivative assignment equal") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Derivative(Variable(_, _,_)), _), _) => true
-      case _ => false
+      case BoxModality(Assign(Derivative(_,Variable(_)),_),_) => true
+      case Modality(Assign(Derivative(Variable(_), _), _),_) => true //@todo Why do we need to match on both so often?
+      case _ => throw new Exception("wtf?")
     }
 
     /**
@@ -77,7 +78,7 @@ object HybridProgramTacticsImpl {
             new SubstitutionPair(axiomV, v), //@todo why is this not included in the other assignment axiom?
             new SubstitutionPair(axiomT, t),
             // TODO replace with new CDot notation, probably: new SubstitutionPair(ApplyPredicate(axiomP, CDot), replace(p)(axiomDV, CDot))
-            new SubstitutionPair(ApplyPredicate(axiomP, axiomDV), p)
+            new SubstitutionPair(ApplyPredicate(axiomP, axiomDV), p) //used to be just apply(..,axiomDV) and p.
           )
         )
 

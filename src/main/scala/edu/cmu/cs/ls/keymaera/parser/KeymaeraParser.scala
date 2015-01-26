@@ -781,7 +781,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       Nil
 
    
-    lazy val pvarP:PackratParser[Program] = {
+    lazy val pvarP:PackratParser[ProgramConstant] = {
       lazy val pattern = {
         val stringList =  programVariables.map(ProgramConstant.unapply(_) match {
           case Some((n, i)) => n + (i match {case Some(idx) => "_" + idx case None => ""})
@@ -882,7 +882,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         case pvar ~ ASSIGN ~ term => new Assign(pvar, term)
       }
     }
-    
+
     lazy val ndassignP:SubprogramParser = {
       lazy val pattern = termParser ~ ASSIGN ~ KSTAR
       log(pattern)("Non-det assign") ^^ {

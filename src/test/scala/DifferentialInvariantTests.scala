@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{ODETactics, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tactics.{HybridProgramTacticsImpl, ODETactics, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -45,7 +45,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
       case _ => fail("parsed into wrong form.")
     }
     val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(TacticLibrary.axdiffInvNormalFormT)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
 
   }
 
@@ -59,7 +59,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     }
 
     val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(TacticLibrary.axdiffInvNormalFormT)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
 
     tactic.applicable(node) should be (true)
     try {
@@ -165,17 +165,17 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
   }
 
-  it should "handle DAEs correctly" in {
-    val f = helper.parseFormula("[$$x'=y & 2=2, y'=x & z>0$$;][?1=1;]p>0")
-    val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationWithTest)
-    require(tactic.applicable(node), "applicable.")
-
-    helper.runTactic(tactic, node)
-
-    val expectedResult = helper.parseFormula("[(x'):=y;][$$y'=x & (z>0)$$;][?1=1&2=2;]p>0")
-    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
-  }
+//  it should "handle DAEs correctly" in {
+//    val f = helper.parseFormula("[$$x'=y & 2=2, y'=x & z>0$$;][?1=1;]p>0")
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationWithTest)
+//    require(tactic.applicable(node), "applicable.")
+//
+//    helper.runTactic(tactic, node)
+//
+//    val expectedResult = helper.parseFormula("[(x'):=y;][$$y'=x & (z>0)$$;][?1=1&2=2;]p>0")
+//    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+//  }
 
   it should "work even when the primed variable isn't x" in {
     val f = helper.parseFormula("[$$y'=notx, notx'=y & z>0$$;][?1=1;]p>0")
@@ -201,6 +201,15 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
   }
 
+  it should "apply whenever the post-condition, diff eq system and existing test all contain x's" in {
+    val f = helper.parseFormula("[$$x'=y$$;][?x=x;]x>0")
+    val node = helper.formulaToNode(f)
+    helper.runTactic(helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationWithTest), node)
+
+    val expectedResult = helper.parseFormula("[x':=y;][?x=x&true;]x>0")
+    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+  }
+
   // Head elimination (no test)
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "Head eliminiation (no test)" should "not apply when there's a test" in {
@@ -210,7 +219,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     require(!tactic.applicable(node))
   }
 
-  "Head Elimination no test" should "apply and peel off a system correctly in the simplest case" in {
+  it should "apply and peel off a system correctly in the simplest case" in {
     val f = helper.parseFormula("[$$x'=y, y'=x & z>0$$;]p>0")
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
@@ -220,6 +229,17 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     helper.runTactic(tactic, node)
 
     val expectedResult = helper.parseFormula("[(x'):=y;][$$y'=x & (z>0)$$;][?true;]p>0")
+    require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
+  }
+
+  it should "apply whenever the system is x'=theta and the post-condition contains an x" in {
+    val f = helper.parseFormula("[$$x'=1$$;]x>0")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantHeadEliminationNoTest)
+    require(tactic.applicable(node), "applicable")
+    helper.runTactic(tactic, node)
+
+    val expectedResult = helper.parseFormula("[x':=1;][?true;]x>0")
     require(!node.openGoals().filter(_.sequent.succ.last == expectedResult).isEmpty)
   }
 
@@ -276,19 +296,39 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "apply" in {
-    val f = helper.parseFormula("[$$$$;][?true;]x>0")
+    val f = helper.parseFormula("[$$$$;][?true;](x>0)'")
     require(!helper.positionTacticToTactic(ODETactics.diffInvariantNilElimination).applicable(helper.formulaToNode(f)))
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Combining systems of differential equations with the differential invariant axioms
+  // Diff invariant where the invariant is input.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //@todo Friday morning
+
+  //Validating concerns from conversation with Stefan.
+  "Diff Assign" should "apply to something silly" in {
+    val f = helper.parseFormula("[x':=0;]notx=notx")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(TacticLibrary.boxDerivativeAssignT)
+    assert(tactic.applicable(node), "box derivative assignment tactic should be applicable.")
+    helper.runTactic(tactic, node)
+    helper.runTactic(tactic, node)
+  }
+
+//  //This may not necessarily be true.
+//  it should "apply assignment to postcondition" in {
+//    val f = helper.parseFormula("[x' := 1;]x'=1")
+//    println(f.toString())
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(TacticLibrary.boxDerivativeAssignT)
+//    assert(tactic.applicable(node), "Box derivative assignment tactic should be applicable.")
+//    helper.runTactic(tactic, node) //@todo Of course this fails because diffAssign isn't part of the default tactic.
+//    println(helper.report(node))
+//  }
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant where the invariant is input.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  //@todo Friday afternoon
+
 
 }
