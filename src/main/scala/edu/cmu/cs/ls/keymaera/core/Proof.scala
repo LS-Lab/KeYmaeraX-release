@@ -896,8 +896,8 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, CDot) => true
-      case Apply(_:Function, CDot) => true
+      case ApplyPredicate(_:Function, CDot | _:Variable) => true
+      case Apply(_:Function, CDot | _:Variable) => true
       case _ => false
       }, "Substitutable expression required, found " + n)
   }
@@ -1127,6 +1127,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- subsDefs) {
       rp.n match {
+        // clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case Apply(rf, rarg:Variable) if f == rf => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
         case Apply(rf, CDot) if f == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
         case _ => // skip to next
       }
@@ -1180,6 +1182,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
+        // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+        case ApplyPredicate(rf, rarg: Variable) if p == rf => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
         case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
