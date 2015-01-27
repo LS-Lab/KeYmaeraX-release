@@ -97,7 +97,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "work in front of a loop" in {
     import TacticLibrary.{boxAssignT, locateSucc, skolemizeT}
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
     val s = sucSequent("[x:=1;][{x:=x+1;}*;]x>0".asFormula)
     val assignT = locateSucc(boxAssignT) & locateSucc(skolemizeT) & locateSucc(ImplyRightT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
@@ -106,10 +105,10 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "work in front of an ODE" in {
     import TacticLibrary.{boxAssignT, locateSucc, skolemizeT}
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
     val s = sucSequent("[x:=1;][x'=1;]x>0".asFormula)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
     val assignT = locateSucc(boxAssignT) & locateSucc(skolemizeT) & locateSucc(ImplyRightT) &
-      locateSucc(predicateReplaceBoxAssignT)
+      locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sequent("x_1".asNamedSymbol :: Nil, "x_1=1".asFormula :: Nil, "[x_1'=1;]x_1>0".asFormula :: Nil)))
   }
@@ -191,16 +190,16 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Predicate replace box assignment" should "replace with variables" in {
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
     val s = sucSequent("[y:=z;]y>0".asFormula)
-    val assignT = locateSucc(predicateReplaceBoxAssignT)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("z>0".asFormula)))
   }
 
   it should "work on self assignment" in {
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
-    val assignT = locateSucc(predicateReplaceBoxAssignT)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(sucSequent("[y:=y;]y>0".asFormula)))
       .openGoals().foreach(_.sequent should be (sucSequent("y>0".asFormula)))
     helper.runTactic(assignT, new RootNode(sucSequent("[y:=y;][y:=2;]y>0".asFormula)))
@@ -212,31 +211,44 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "update self assignments" in {
     import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
     val s = sucSequent("[y:=z;][y:=y;]y>0".asFormula)
-    val assignT = locateSucc(predicateReplaceBoxAssignT)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
+    helper.runTactic(assignT, new RootNode(sequent(Nil, Nil, "[y:=y;]y>0".asFormula :: Nil)))
+      .openGoals().foreach(_.sequent should be (sequent(Nil, Nil, "y>0".asFormula :: Nil)))
+    helper.runTactic(assignT, new RootNode(sequent(Nil, Nil, "[y:=y;][y:=2;]y>0".asFormula :: Nil)))
+      .openGoals().foreach(_.sequent should be (sequent(Nil, Nil, "[y:=2;]y>0".asFormula :: Nil)))
+    helper.runTactic(assignT, new RootNode(sequent(Nil, Nil, "[y:=y;][{y:=y+1;}*;]y>0".asFormula :: Nil)))
+      .openGoals().foreach(_.sequent should be (sequent(Nil, Nil, "[{y:=y+1;}*;]y>0".asFormula :: Nil)))
+  }
+
+  it should "update self assignments" in {
+    val s = sequent(Nil, Nil, "[y:=z;][y:=y;]y>0".asFormula :: Nil)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[z:=z;]z>0".asFormula)))
   }
 
-  it should "work with arbitrary terms" in {
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
+  ignore should "work with arbitrary terms" in {
     val s = sucSequent("[y:=1;][y:=y;]y>0".asFormula)
-    val assignT = locateSucc(predicateReplaceBoxAssignT)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[y:=1;]y>0".asFormula)))
   }
 
   it should "work on ODEs" in {
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
     val s = sucSequent("[y:=z;][y'=2;]y>0".asFormula)
-    val assignT = locateSucc(predicateReplaceBoxAssignT)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[z'=2;]z>0".asFormula)))
   }
 
   it should "work on loops" in {
-    import HybridProgramTacticsImpl.predicateReplaceBoxAssignT
     val s = sucSequent("[y:=z;][{y:=y+2;}*;]y>0".asFormula)
-    val assignT = locateSucc(predicateReplaceBoxAssignT)
+    val tacticFactory = PrivateMethod[PositionTactic]('predicateReplaceBoxAssignT)
+    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[{z:=z+2;}*;]z>0".asFormula)))
   }

@@ -304,9 +304,8 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box assignment [x := t;]
    * @return The axiom tactic.
    */
-  /*protected[tactics]*/ def predicateReplaceBoxAssignT: PositionTactic = new AxiomTactic("[:=] assignment", "[:=] assignment") {
+  protected[tactics] def predicateReplaceBoxAssignT: PositionTactic = new AxiomTactic("[:=] assignment", "[:=] assignment") {
     override def applies(f: Formula): Boolean = f match {
-//      case BoxModality(Assign(v: Variable, t: Variable), _) => true
       case BoxModality(Assign(v: Variable, t: Term), _) => t match {
         case tv: Variable => true
         case _ => !Helper.names(t).contains(v)
