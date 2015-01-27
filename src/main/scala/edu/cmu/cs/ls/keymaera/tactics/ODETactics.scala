@@ -644,7 +644,7 @@ object ODETactics {
 
   def diffInvSystemTail = new AxiomTactic("DI differential system tail", "DI differential system tail") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality((IncompleteSystem(EmptyContEvolveProgram()), _) => true
+      case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), _) => true
       case _ => false
     }
 
@@ -654,7 +654,7 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(EmptyContEvolveProgram()), p) => {
+      case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), p) => {
         //construct instance
         val axiomInstance = Imply(f, p)
 
