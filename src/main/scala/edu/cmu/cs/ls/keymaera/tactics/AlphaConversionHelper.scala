@@ -21,16 +21,22 @@ object AlphaConversionHelper {
    * @param free The optional set of free names. If None, all names are considered free. Defaults to the names
    *             that may be read in f.
    */
-  def replaceFree(f: Formula)(o: Term, n: NamedSymbol with Term,
+  def replaceFree(f: Formula)(o: Term, n: Term,
                               free: Option[Set[NamedSymbol]] = Some(maybeFreeVariables(f))): Formula = {
     // TODO might no longer be necessary to have free an option
     ExpressionTraversal.traverse(
       new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case Forall(v, fo) => Right(Forall(v.map((name: NamedSymbol) => if (name == o) n else name),
-            replaceFree(fo)(o, n, Some(maybeFreeVariables(fo)))))
-          case Exists(v, fo) => Right(Exists(v.map((name: NamedSymbol) => if (name == o) n else name),
-            replaceFree(fo)(o, n, Some(maybeFreeVariables(fo)))))
+          case fa@Forall(v, fo) => n match {
+            case nname: Variable => Right(Forall(v.map((name: NamedSymbol) => if (name == o) nname else name),
+              replaceFree(fo)(o, n, Some(maybeFreeVariables(fo)))))
+            case _ => Right(fa)
+          }
+          case ex@Exists(v, fo) => n match {
+            case nname: Variable => Right(Exists(v.map((name: NamedSymbol) => if (name == o) nname else name),
+              replaceFree(fo)(o, n, Some(maybeFreeVariables(fo)))))
+            case _ => Right(ex)
+          }
           case BoxModality(Assign(x: Variable, t), pred) => free match {
             case Some(freeVars) => Right(BoxModality(Assign(x, replaceFree(t)(o, n, free)),
               replaceFree(pred)(o, n, Some(freeVars - x))))

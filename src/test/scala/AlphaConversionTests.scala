@@ -167,13 +167,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       sequent(Nil, Nil, "[x:=y;][x'=1;]true".asFormula :: Nil)))
   }
 
-  ignore should "rename in ODEs, store initial value, and handle implication" in {
-    val s = sequent(Nil, Nil, "[y'=1;]true".asFormula :: Nil)
-    val tactic = locateSucc(alphaRenamingAndInitialValueHandlingT("y", None, "x", None))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent("x_1".asNamedSymbol :: Nil, "x_1=y".asFormula :: Nil, "[x_1'=1;]true".asFormula :: Nil)))
-  }
-
   // (4) Modality(DiamondModality(Assign(x, e)), phi)
 
   "Apply alpha-conversion (x,t) on <x:=x+1;>x>0" should "be <t:=x+1;>t>0" in {
@@ -466,5 +459,36 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(z, CDot, None) should be (
       BoxModality(Assign(x, CDot),
         GreaterThan(Real, x, Number(0))))
+  }
+
+  it should "not rename bound occurrences" in {
+    val x = new Variable("x", None, Real)
+    val z = new Variable("z", None, Real)
+    AlphaConversionHelper.replaceFree("[x:=x;]x>0".asFormula)(x, CDot) should be (
+      BoxModality(Assign(x, CDot),
+        GreaterThan(Real, x, Number(0))))
+  }
+
+  it should "only allow variables as new terms if replacing in universal quantifier" in {
+    val x = new Variable("x", None, Real)
+    val z = new Variable("z", None, Real)
+    AlphaConversionHelper.replaceFree("\\forall x. x>0".asFormula)(x, CDot) should be (
+      "\\forall x. x>0".asFormula)
+    AlphaConversionHelper.replaceFree("\\forall x. x>0".asFormula)(x, z) should be (
+      "\\forall z. z>0".asFormula)
+  }
+
+  it should "allow replacement with terms on right-handside in assignments" in {
+    val x = new Variable("x", None, Real)
+    val z = new Variable("z", None, Real)
+    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(z, Number(1)) should be (
+      "[x:=1;]x>0".asFormula)
+  }
+
+  it should "not allow replacement with terms on left-handside in assignments" in {
+    val x = new Variable("x", None, Real)
+    val z = new Variable("z", None, Real)
+    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(x, Number(1)) should be (
+      "[x:=z;]x>0".asFormula)
   }
 }
