@@ -7,6 +7,7 @@
 package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
+
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -1107,7 +1108,35 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     if (freeVariables(f).intersect(u).isEmpty) f
     else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(f).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + f.prettyString, this, original)
   }
-  
+
+  /**
+   * Renames variable orig to ren in formula f, if program prg potentially writes orig and ren is a variable.
+   */
+  private def alphaRenamed(prg: Program, f: Formula, orig: Variable, ren: Term) = {
+    if (freeVariables(Set.empty[NamedSymbol], prg).maybeBound.contains(orig)) {
+      ren match {
+        case renV: Variable =>
+          (new AlphaConversion(null, orig.name, orig.index, renV.name, renV.index))(f)
+        case _ => f
+      }
+    } else f
+  }
+
+  /**
+   * Removes unnecessary self assignments from formula f, i.e., leading self assignments in f that are not present in
+   * formula orig already.
+   */
+  private def removeUnnecessarySelfAssignment(f: Formula, orig: Formula) = f match {
+    case BoxModality(Assign(l: Variable, r: Variable), pred) if l == r => orig match {
+      case BoxModality(Assign(origL: Variable, origR: Variable), _) if origL == origR => f
+      case _ => pred
+    }
+    case DiamondModality(Assign(l: Variable, r: Variable), pred) if l == r => orig match {
+      case DiamondModality(Assign(origL: Variable, origR: Variable), _) if origL == origR => f
+      case _ => pred
+    }
+    case _ => f
+  }
 
   /**
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
@@ -1183,7 +1212,16 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
         // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case ApplyPredicate(rf, rarg: Variable) if p == rf => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
+        case ApplyPredicate(rf, rarg: Variable) if p == rf =>
+          val clashCheckedF = clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula])
+          val alphaF = clashCheckedF match {
+            case BoxModality(prg, _) => alphaRenamed(prg, clashCheckedF, rarg, arg)
+            case DiamondModality(prg, _) => alphaRenamed(prg, clashCheckedF, rarg, arg)
+            case _ => clashCheckedF
+          }
+          val subsAlphaF = instantiate(rarg, arg).usubst(Set.empty[NamedSymbol], alphaF)
+          // remove unnecessary self assignments if created by alpha renaming + uniform substitution
+          return removeUnnecessarySelfAssignment(subsAlphaF, clashCheckedF)
         case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
@@ -1524,7 +1562,7 @@ object UniformSubstitution {
 // alpha conversion
 
 /**
- * Alpha conversion works on exactly eight positions:
+ * Alpha conversion works on exactly the following positions:
  * (1) Forall(v, phi)
  * (2) Exists(v, phi)
  * (3) Modality(BoxModality(Assign(x, e)), phi)
@@ -1533,6 +1571,9 @@ object UniformSubstitution {
  * (6) Modality(DiamondModality(NDetAssign(x)), phi)
  * (7) Modality(BoxModality(ContEvolveProgram | IncompleteSystem, _), phi)
  * (8) Modality(DiamondModality(ContEvolveProgram | IncompleteSystem, _), phi)
+ * (9) ApplyPredicate(f, phi)
+ * (10) Modality(BoxModality(Loop), phi)
+ * (11) Modality(DiamondModality(Loop), phi)
  *
  * The rule should only be extended if absolutely necessary.
  *
@@ -1550,84 +1591,95 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
     if (!(name != target || idx != tIdx)) println("INFO: Unexpected identity renaming " + name + " to " + target + " with same index " + idx)
   }
   def apply(s: Sequent): List[Sequent] = {
-
-    def renamingTraversalFn = new ExpressionTraversalFunction {
-      override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case x: ProgramConstant => Right(renameProg(x))
-        case NFContEvolve(v, Derivative(ds, x), theta, h) => x match {
-          case Variable(n, i, d) if n == name && i == idx =>
-            Right(NFContEvolve(v, Derivative(ds, Variable(target, tIdx, d)), proceedTerm(theta), proceed(h)))
-          case _ => Left(None)
-        }
-        case _ => Left(None)
-      }
-      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case Apply(a, b) => Right(Apply(renameFunc(a), b))
-        case x: Variable => Right(renameVar(x))
-        case _ => Left(None)
-      }
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
-        case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
-        case Exists(v, phi) => Right(Exists(for(i <- v) yield rename(i), phi))
-        case x: PredicateConstant => Right(renamePred(x))
-        case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
-        case _ => Left(None)
-      }
-    }
-
-    def proceed(f: Formula): Formula = ExpressionTraversal.traverse(renamingTraversalFn, f).get
-    def proceedTerm(t: Term): Term = ExpressionTraversal.traverse(renamingTraversalFn, t).get
-    def proceedProgram(p: Program): Program = ExpressionTraversal.traverse(renamingTraversalFn, p).get
-
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
-        case Forall(v, phi) =>
-         require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
-          Right(Forall(for (i <- v) yield rename(i), proceed(phi)))
-        case Exists(v, phi) =>
-          require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
-          Right(Exists(for (i <- v) yield rename(i), proceed(phi)))
-        case BoxModality(Assign(a, b), c) =>
-          Right(BoxModality(Assign(a match {
-            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
-            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
-            case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
-          }, b), proceed(c)))
-        case BoxModality(NDetAssign(a), c) =>
-          Right(BoxModality(NDetAssign(a match {
-            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
-            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
-            case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
-          }), proceed(c)))
-        case DiamondModality(Assign(a, b), c) =>
-          Right(DiamondModality(Assign(a match {
-            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
-            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
-            case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
-          }, b), proceed(c)))
-        case DiamondModality(NDetAssign(a), c) =>
-          Right(DiamondModality(NDetAssign(a match {
-            case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
-            case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
-            case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
-          }), proceed(c)))
-        case BoxModality(a@(_:ContEvolveProgram | _:IncompleteSystem), c) =>
-          val targetVar = Variable(target, tIdx, Real)
-          val sourceVar = Variable(name, idx, Real)
-          Right(BoxModality(Assign(targetVar, sourceVar),
-            BoxModality(proceedProgram(a), proceed(c))))
-        case DiamondModality(a@(_: ContEvolveProgram | _:IncompleteSystem), c) =>
-          val targetVar = Variable(target, tIdx, Real)
-          val sourceVar = Variable(name, idx, Real)
-          Right(DiamondModality(Assign(targetVar, sourceVar),
-            DiamondModality(proceedProgram(a), proceed(c))))
-        case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
-      }
-    }
     ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn), s(tPos)) match {
       case Some(x: Formula) =>
         if (tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
       case _ => throw new CoreException("No alpha renaming possible in " + s(tPos))
+    }
+  }
+
+  def apply(f: Formula) = {
+    ExpressionTraversal.traverse(fn, f) match {
+      case Some(renamed: Formula) => renamed
+      case _ => throw new CoreException("No alpha renaming possible in " + f)
+    }
+  }
+
+  val renamingTraversalFn = new ExpressionTraversalFunction {
+    override def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+      case x: ProgramConstant => Right(renameProg(x))
+      case NFContEvolve(v, Derivative(ds, x), theta, h) => x match {
+        case Variable(n, i, d) if n == name && i == idx =>
+          Right(NFContEvolve(v, Derivative(ds, Variable(target, tIdx, d)), proceedTerm(theta), proceed(h)))
+        case _ => Left(None)
+      }
+      case _ => Left(None)
+    }
+    override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+      case Apply(a, b) => Right(Apply(renameFunc(a), b))
+      case x: Variable => Right(renameVar(x))
+      case _ => Left(None)
+    }
+    override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+      case Forall(v, phi) => Right(Forall(for(i <- v) yield rename(i), phi))
+      case Exists(v, phi) => Right(Exists(for(i <- v) yield rename(i), phi))
+      case x: PredicateConstant => Right(renamePred(x))
+      case ApplyPredicate(a, b) => Right(ApplyPredicate(renameFunc(a), b))
+      case _ => Left(None)
+    }
+  }
+
+  def proceed(f: Formula): Formula = ExpressionTraversal.traverse(renamingTraversalFn, f).get
+  def proceedTerm(t: Term): Term = ExpressionTraversal.traverse(renamingTraversalFn, t).get
+  def proceedProgram(p: Program): Program = ExpressionTraversal.traverse(renamingTraversalFn, p).get
+
+  val fn = new ExpressionTraversalFunction {
+    override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
+      case Forall(v, phi) =>
+        require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+        Right(Forall(for (i <- v) yield rename(i), proceed(phi)))
+      case Exists(v, phi) =>
+        require(v.map((x: NamedSymbol) => x.name).contains(name), "Symbol to be renamed must be bound in " + e)
+        Right(Exists(for (i <- v) yield rename(i), proceed(phi)))
+      case BoxModality(Assign(a, b), c) =>
+        Right(BoxModality(Assign(a match {
+          case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+          case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+          case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
+        }, b), proceed(c)))
+      case BoxModality(NDetAssign(a), c) =>
+        Right(BoxModality(NDetAssign(a match {
+          case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+          case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+          case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
+        }), proceed(c)))
+      case DiamondModality(Assign(a, b), c) =>
+        Right(DiamondModality(Assign(a match {
+          case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+          case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+          case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
+        }, b), proceed(c)))
+      case DiamondModality(NDetAssign(a), c) =>
+        Right(DiamondModality(NDetAssign(a match {
+          case Variable(n, i, d) if (n == name && i == idx) => Variable(target, tIdx, d)
+          case Apply(Function(n, i, d, s), phi) if (n == name && i == idx) => Apply(Function(target, tIdx, d, s), phi)
+          case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
+        }), proceed(c)))
+      case BoxModality(a@(_:ContEvolveProgram | _:IncompleteSystem), c) =>
+        val targetVar = Variable(target, tIdx, Real)
+        val sourceVar = Variable(name, idx, Real)
+        Right(BoxModality(Assign(targetVar, sourceVar), BoxModality(proceedProgram(a), proceed(c))))
+      case DiamondModality(a@(_: ContEvolveProgram | _:IncompleteSystem), c) =>
+        val targetVar = Variable(target, tIdx, Real)
+        val sourceVar = Variable(name, idx, Real)
+        Right(DiamondModality(Assign(targetVar, sourceVar), DiamondModality(proceedProgram(a), proceed(c))))
+      case ApplyPredicate(f, Variable(n, i, d)) if n == name && i == idx =>
+        Right(ApplyPredicate(f, Variable(target, tIdx, d)))
+      case BoxModality(a@Loop(_), c) =>
+        val targetVar = Variable(target, tIdx, Real)
+        val sourceVar = Variable(name, idx, Real)
+        Right(BoxModality(Assign(targetVar, sourceVar), BoxModality(proceedProgram(a), proceed(c))))
+      case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
     }
   }
 

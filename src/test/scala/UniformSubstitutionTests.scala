@@ -588,4 +588,45 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s.apply(o) should be (o)
   }
 
+  "Uniform substitution of p(x)" should "alpha rename x to any other variable in modalities" in {
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "[x:=2;]x>5".asFormula)))
+    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=2;]y>5".asFormula)
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "[x:=y;][x:=z;]x>5".asFormula)))
+    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;]y>5".asFormula)
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "[x:=y;][x:=z;][{x:=x+1;}*;]x>5".asFormula)))
+    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;][{y:=y+1;}*;]y>5".asFormula)
+
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "<x:=2;>x>5".asFormula)))
+    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("<y:=2;>y>5".asFormula)
+  }
+
+  it should "not alpha rename to arbitrary terms in modalities" in {
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "[x:=2;]true".asFormula)))
+
+    val o = ApplyPredicate(Function("p", None, Real, Bool), "a+1".asTerm)
+    s(o) should be ("[x:=2;]true".asFormula)
+    s(o) should not be "[(a+1):=2;]true".asFormula
+  }
+
+  it should "substitute to arbitrary terms in simple formulas" in {
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "x>5".asFormula)))
+
+    s(ApplyPredicate(Function("p", None, Real, Bool), "a+1".asTerm)) should be ("a+1>5".asFormula)
+  }
+
+  it should "not rename bound variables before substitution except in modalities" in {
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula)))
+    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
+
+    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+      "\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)))
+    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
+  }
 }
