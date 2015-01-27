@@ -40,120 +40,120 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   // (1) Forall(v, phi)
 
   "Apply alpha-conversion (x,t) on \\forall x. x>0" should "be \\forall t. t>0" in {
-    val s = sequent(Nil, Nil, "\\forall x. x>0".asFormula :: Nil)
+    val s = sucSequent("\\forall x. x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\forall t. t>0".asFormula :: Nil)
+      sucSequent("\\forall t. t>0".asFormula)
     ))
   }
 
   // shouldn't it be \forall t. [t:=x+1;]t>0?
   "Apply alpha-conversion (x,t) on \\forall x. [x:=x+1;]x>0" should "be \\forall t. [t:=t+1;]t>0" in {
-    val s = sequent(Nil, Nil, "\\forall x. [x:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("\\forall x. [x:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\forall t. [t:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("\\forall t. [t:=t+1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on \\forall x. [y:=x+1;]x>0" should "be \\forall t. [y:=t+1;]t>0" in {
-    val s = sequent(Nil, Nil, "\\forall x. [y:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("\\forall x. [y:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\forall t. [y:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("\\forall t. [y:=t+1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on \\forall x. [x:=x+1;][y:=x+1;]x>0" should "be \\forall t. [t:=t+1;][y:=t+1;]t>0" in {
-    val s = sequent(Nil, Nil, "\\forall x. [x:=x+1;][y:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("\\forall x. [x:=x+1;][y:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\forall t. [t:=t+1;][y:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("\\forall t. [t:=t+1;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   // (2) Exists(v, phi)
 
   "Apply alpha-conversion (x,t) on \\exists x. x>0" should "be \\exists t. t>0" in {
-    val s = sequent(Nil, Nil, "\\exists x. x>0".asFormula :: Nil)
+    val s = sucSequent("\\exists x. x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\exists t. t>0".asFormula :: Nil)
+      sucSequent("\\exists t. t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on \\exists x. [x:=x+1;]x>0" should "be \\exists t. [t:=t+1;]t>0" in {
-    val s = sequent(Nil, Nil, "\\exists x. [x:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("\\exists x. [x:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\exists t. [t:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("\\exists t. [t:=t+1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on \\exists x. [x:=x+1;][y:=x+1;]x>0" should "be \\exists t. [t:=t+1;][y:=t+1;]t>0" in {
-    val s = sequent(Nil, Nil, "\\exists x. [x:=x+1;][y:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("\\exists x. [x:=x+1;][y:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "\\exists t. [t:=t+1;][y:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("\\exists t. [t:=t+1;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   // (3) Modality(BoxModality(Assign(x, e)), phi)
 
   "Apply alpha-conversion (x,t) on [x:=x+1;]x>0" should "be [t:=x+1;]t>0" in {
-    val s = sequent(Nil, Nil, "[x:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x+1;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x+1;]t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on [y:=x+1;]x>0"
   ignore should "be [y:=x+1;]x>0" in {
-    val s = sequent(Nil, Nil, "[y:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[y:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[y:=x+1;]x>0".asFormula :: Nil)
+      sucSequent("[y:=x+1;]x>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on [x:=x+1;][y:=x+1;]x>0"
   ignore should "be [t:=x+1;][y:=x+1;]x>0" in {
-    val s = sequent(Nil, Nil, "[x:=x+1;][y:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x:=x+1;][y:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x+1;][y:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x+1;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [x:=x+1;][x:=x+1;]x>0" should "be [t:=x+1;][t:=t+1;]x>0" in {
-    val s = sequent(Nil, Nil, "[x:=x+1;][x:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x:=x+1;][x:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x+1;][t:=t+1;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x+1;][t:=t+1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [x:=x+1;][x'=1;]x>0" should "be [t:=x;][t:=t+1;][t'=1;]x>0" in {
-    val s = sequent(Nil, Nil, "[x:=x+1;][x'=1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x:=x+1;][x'=1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][t:=t+1;][t'=1;]x>0".asFormula :: Nil)
+      sucSequent("[t:=x;][t:=t+1;][t'=1;]x>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [y:=1;][x'=1;]x>0" should "be [t:=x;][y:=1;][t'=1;]x>0" in {
-    val s = sequent(Nil, Nil, "[y:=1;][x'=1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[y:=1;][x'=1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][y:=1;][t'=1;]x>0".asFormula :: Nil)
+      sucSequent("[t:=x;][y:=1;][t'=1;]x>0".asFormula)
     ))
   }
 
   "Alpha conversion rule" should "rename in ODEs and store initial value" in {
-    val s = sequent(Nil, Nil, "[y'=1;]true".asFormula :: Nil)
+    val s = sucSequent("[y'=1;]true".asFormula)
     def alpha(from: String, to: String): PositionTactic =
       new PositionTactic("Alpha Renaming") {
         override def applies(s: Sequent, p: Position): Boolean = true
@@ -164,44 +164,44 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
     val tactic = locateSucc(alpha("y", "x"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[x:=y;][x'=1;]true".asFormula :: Nil)))
+      sucSequent("[x:=y;][x'=1;]true".asFormula)))
   }
 
   // (4) Modality(DiamondModality(Assign(x, e)), phi)
 
   "Apply alpha-conversion (x,t) on <x:=x+1;>x>0" should "be <t:=x+1;>t>0" in {
-    val s = sequent(Nil, Nil, "<x:=x+1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x:=x+1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x+1;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x+1;>t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on <y:=x+1;>x>0"
   ignore should "be <y:=x+1;>x>0" in {
-    val s = sequent(Nil, Nil, "<y:=x+1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<y:=x+1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<y:=x+1;>x>0".asFormula :: Nil)
+      sucSequent("<y:=x+1;>x>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   // "Apply alpha-conversion (x,t) on <x:=x+1;><y:=x+1;>x>0"
   ignore should "be <t:=x+1;><y:=x+1;>x>0" in {
-    val s = sequent(Nil, Nil, "<x:=x+1;><y:=x+1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x:=x+1;><y:=x+1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x+1;><y:=t+1;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x+1;><y:=t+1;>t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on <x:=x+1;><x:=x+1;>x>0" should "be <t:=x+1;><x:=x+1;>x>0" in {
-    val s = sequent(Nil, Nil, "<x:=x+1;><x:=x+1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x:=x+1;><x:=x+1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be(
-      sequent(Nil, Nil, "<t:=x+1;><t:=t+1;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x+1;><t:=t+1;>t>0".asFormula)
     ))
   }
 
@@ -210,40 +210,40 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on [x:=1 ++ x:=x+1;]x>0"
   ignore should "be [t:=1 ++ t:=x+1;]t>0" in {
-    val s = sequent(Nil, Nil, "[x:=1 ++ x:=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x:=1 ++ x:=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=1 ++ t:=x+1;]t>0".asFormula :: Nil)
+      sucSequent("[t:=1 ++ t:=x+1;]t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on [{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};]x>0"
   ignore should "be [{t:=1 ++ t:=x+1};{t:=1 ++ t:=t+1};]t>0" in {
-    val s = sequent(Nil, Nil, "[{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};]x>0".asFormula :: Nil)
+    val s = sucSequent("[{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[{t:=1 ++ t:=x+1};{t:=1 ++ t:=t+1};]t>0".asFormula :: Nil)
+      sucSequent("[{t:=1 ++ t:=x+1};{t:=1 ++ t:=t+1};]t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on [{x:=1 ++ x:=x+1}*;]x>0"
   ignore should "be [{t:=1 ++ t:=t+1}*;]t>0" in {
-    val s = sequent(Nil, Nil, "[{x:=1 ++ x:=x+1}*;]x>0".asFormula :: Nil)
+    val s = sucSequent("[{x:=1 ++ x:=x+1}*;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][{t:=1 ++ t:=t+1}*;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x;][{t:=1 ++ t:=t+1}*;]t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on [x:=1 ++ x:=x+1 ++ z:=x;]x>0"
   ignore should "be [t:=1 ++ t:=x+1 ++ z:=x;]t>0" in {
-    val s = sequent(Nil, Nil, "[x:=1 ++ x:=x+1 ++ z:=x;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x:=1 ++ x:=x+1 ++ z:=x;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=1 ++ t:=x+1 ++ z:=x;]t>0".asFormula :: Nil)
+      sucSequent("[t:=1 ++ t:=x+1 ++ z:=x;]t>0".asFormula)
     ))
   }
 
@@ -252,124 +252,124 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on <x:=1 ++ x:=x+1;>x>0"
   ignore should "be <t:=1 ++ t:=x+1;>t>0" in {
-    val s = sequent(Nil, Nil, "<x:=1 ++ x:=x+1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x:=1 ++ x:=x+1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=1 ++ t:=x+1;>t>0".asFormula :: Nil)
+      sucSequent("<t:=1 ++ t:=x+1;>t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on <{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};>x>0"
   ignore should "be <{t:=1 ++ t:=x+1};{t:=1 ++ t:=t+1};>t>0" in {
-    val s = sequent(Nil, Nil, "<{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};>x>0".asFormula :: Nil)
+    val s = sucSequent("<{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<{t:=1 ++ t:=x+1};{t:=1 ++ t:=t+1};>t>0".asFormula :: Nil)
+      sucSequent("<{t:=1 ++ t:=x+1};{t:=1 ++ t:=t+1};>t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on <{x:=1 ++ x:=x+1}*;>x>0"
   ignore should "be <{t:=1 ++ t:=t+1}*;>t>0" in {
-    val s = sequent(Nil, Nil, "<{x:=1 ++ x:=x+1}*;>x>0".asFormula :: Nil)
+    val s = sucSequent("<{x:=1 ++ x:=x+1}*;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x;><{t:=1 ++ t:=t+1}*;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x;><{t:=1 ++ t:=t+1}*;>t>0".asFormula)
     ))
   }
 
   // should work with new alpha conversion rule
   "Apply alpha-conversion (x,t) on <x:=1 ++ x:=x+1 ++ z:=x;>x>0"
   ignore should "be <t:=1 ++ t:=x+1 ++ z:=x;>t>0" in {
-    val s = sequent(Nil, Nil, "<x:=1 ++ x:=x+1 ++ z:=x;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x:=1 ++ x:=x+1 ++ z:=x;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=1 ++ t:=x+1 ++ z:=x;>t>0".asFormula :: Nil)
+      sucSequent("<t:=1 ++ t:=x+1 ++ z:=x;>t>0".asFormula)
     ))
   }
 
   // (7) Modality(BoxModality(ContEvolveProgram | IncompleteSystem, _), phi)
 
   "Apply alpha-conversion (x,t) on [x'=1;]x>0" should "be [t:=x;][t'=1;]t>0" in {
-    val s = sequent(Nil, Nil, "[x'=1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x'=1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][t'=1;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x;][t'=1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [x'=x+1;]x>0" should "be [t:=x;][t'=t+1;]t>0" in {
-    val s = sequent(Nil, Nil, "[x'=x+1;]x>0".asFormula :: Nil)
+    val s = sucSequent("[x'=x+1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][t'=t+1;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x;][t'=t+1;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [$$x'=x+1$$;]x>0" should "be [t:=x;][$$t'=t+1$$;]t>0" in {
-    val s = sequent(Nil, Nil, "[$$x'=x+1$$;]x>0".asFormula :: Nil)
+    val s = sucSequent("[$$x'=x+1$$;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][$$t'=t+1$$;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x;][$$t'=t+1$$;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [$$x'=x+1, y'=x$$;]x>0" should "be [t:=x;][$$t'=t+1,y'=t$$;]t>0" in {
-    val s = sequent(Nil, Nil, "[$$x'=x+1,y'=x$$;]x>0".asFormula :: Nil)
+    val s = sucSequent("[$$x'=x+1,y'=x$$;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][$$t'=t+1,y'=t$$;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x;][$$t'=t+1,y'=t$$;]t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on [$$x'=x+1 & x>0, y'=x & y<x$$;]x>0" should "be [t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0" in {
-    val s = sequent(Nil, Nil, "[$$x'=x+1 & x>0, y'=x & y<x$$;]x>0".asFormula :: Nil)
+    val s = sucSequent("[$$x'=x+1 & x>0, y'=x & y<x$$;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "[t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0".asFormula :: Nil)
+      sucSequent("[t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0".asFormula)
     ))
   }
 
   // (8) Modality(DiamondModality(ContEvolveProgram | IncompleteSystem, _), phi)
 
   "Apply alpha-conversion (x,t) on <x'=1;>x>0" should "be <t:=x;><t'=1;>t>0" in {
-    val s = sequent(Nil, Nil, "<x'=1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x'=1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x;><t'=1;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x;><t'=1;>t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on <x'=x+1;>x>0" should "be <t:=x;><t'=t+1;>t>0" in {
-    val s = sequent(Nil, Nil, "<x'=x+1;>x>0".asFormula :: Nil)
+    val s = sucSequent("<x'=x+1;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x;><t'=t+1;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x;><t'=t+1;>t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on <$$x'=x+1$$;>x>0" should "be <t:=x;><$$t'=t+1$$;>t>0" in {
-    val s = sequent(Nil, Nil, "<$$x'=x+1$$;>x>0".asFormula :: Nil)
+    val s = sucSequent("<$$x'=x+1$$;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x;><$$t'=t+1$$;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x;><$$t'=t+1$$;>t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on <$$x'=x+1, y'=x$$;>x>0" should "be <t:=x;><$$t'=t+1,y'=t$$;>t>0" in {
-    val s = sequent(Nil, Nil, "<$$x'=x+1,y'=x$$;>x>0".asFormula :: Nil)
+    val s = sucSequent("<$$x'=x+1,y'=x$$;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x;><$$t'=t+1,y'=t$$;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x;><$$t'=t+1,y'=t$$;>t>0".asFormula)
     ))
   }
 
   "Apply alpha-conversion (x,t) on <$$x'=x+1 & x>0, y'=x & y<x$$;>x>0" should "be <t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0" in {
-    val s = sequent(Nil, Nil, "<$$x'=x+1 & x>0, y'=x & y<x$$;>x>0".asFormula :: Nil)
+    val s = sucSequent("<$$x'=x+1 & x>0, y'=x & y<x$$;>x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "<t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0".asFormula :: Nil)
+      sucSequent("<t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0".asFormula)
     ))
   }
 
