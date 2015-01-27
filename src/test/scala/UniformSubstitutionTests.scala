@@ -454,7 +454,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(y, x)))
     s.apply(Equals(Bool,Apply(p,x),Apply(q,y))) should be (Equals(Bool,Apply(p,y),Apply(q,x)))
   }
-  
+
   // \theta =/>/< \eta
 
   "Uniform substitution of (x,1) |-> x=y" should "be 1=y" in {
@@ -497,6 +497,16 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of (x,1) |-> [x:=y;]x>0" should "be [x:=y;]x>0" in {
     s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm)))
     s.apply("[x:=y;]x>0".asFormula) should be ("[x:=y;]x>0".asFormula)
+  }
+
+  "Uniform substitution of (x,t) |-> [{x:=x+y;}*]x>0" should "be [{x:=x+y;}*]x>0" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "t".asTerm)))
+    s.apply("[{x:=x+y;}*]x>0".asFormula) should be ("[{x:=x+y;}*]x>0".asFormula)
+  }
+
+  "Uniform substitution of (x,t) |-> [{x'=x+y;}*]x>0" should "not be permitted" in {
+    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "t".asTerm)))
+    s.apply("[{x'=x+y;}*]x>0".asFormula) should be ("[{x'=x+y;}*]x>0".asFormula)
   }
 
   "Uniform substitution of (x,1) |-> [x'=y;]x>0" should "not be permitted" in {

@@ -1,6 +1,6 @@
 package testHelper
 
-import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, NamedSymbol}
+import edu.cmu.cs.ls.keymaera.core.{RootNode, Sequent, Formula, NamedSymbol}
 
 /**
  * Created by smitsch on 1/20/15.
@@ -19,4 +19,6 @@ object SequentFactory {
       ante.to[scala.collection.immutable.IndexedSeq],
       succ.to[scala.collection.immutable.IndexedSeq]
     )
+
+  def sucSequent(f: Formula) = sequent(Nil, Nil, f::Nil)
 }
