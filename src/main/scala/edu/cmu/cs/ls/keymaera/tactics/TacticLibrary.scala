@@ -199,7 +199,8 @@ object TacticLibrary {
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
     new PositionTactic("Alpha Renaming") {
-      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicablity
+      import scala.language.postfixOps
+      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
 
       override def apply(p: Position): Tactic = new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
         override def applicable(node: ProofNode): Boolean = true
@@ -209,13 +210,6 @@ object TacticLibrary {
   /*********************************************
    * Differential Tactics
    *********************************************/
-//  <<<<<<< Updated upstream
-//  =======
-//  override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
-//    override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
-//  })
-//}
-
   def diffWeakenT = ODETactics.diffWeakenT
 
   def diffInvariant = ODETactics.diffInvariantT
