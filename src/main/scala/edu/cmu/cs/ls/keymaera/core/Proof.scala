@@ -1093,6 +1093,34 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: SubstitutionClashException => throw ex.inContext(t.prettyString)
     }
   }
+
+  def apply(f: Formula): Formula = {
+    log("\tSubstituting " + f.prettyString + " using " + this)
+    try {
+      val res = usubst(Set.empty[NamedSymbol], f)
+      log("\tSubstituted  " + res.prettyString)
+      res
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString)
+    }
+  }
+
+  def apply(s: Sequent): Sequent = {
+    try {
+      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
+    }
+  }
+
+  // uniform substitution on programs
+  def apply(p: Program): Program = {
+    try {
+      usubst(Set.empty[NamedSymbol], p)._2
+    } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
+    }
+  }
   
   /**
    * Return replacement t after checking for clashes with names in u.
@@ -1109,34 +1137,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(f).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + f.prettyString, this, original)
   }
 
-  /**
-   * Renames variable orig to ren in formula f, if program prg potentially writes orig and ren is a variable.
-   */
-  private def alphaRenamed(prg: Program, f: Formula, orig: Variable, ren: Term) = {
-    if (freeVariables(Set.empty[NamedSymbol], prg).maybeBound.contains(orig)) {
-      ren match {
-        case renV: Variable =>
-          (new AlphaConversion(null, orig.name, orig.index, renV.name, renV.index))(f)
-        case _ => f
-      }
-    } else f
-  }
-
-  /**
-   * Removes unnecessary self assignments from formula f, i.e., leading self assignments in f that are not present in
-   * formula orig already.
-   */
-  private def removeUnnecessarySelfAssignment(f: Formula, orig: Formula) = f match {
-    case BoxModality(Assign(l: Variable, r: Variable), pred) if l == r => orig match {
-      case BoxModality(Assign(origL: Variable, origR: Variable), _) if origL == origR => f
-      case _ => pred
-    }
-    case DiamondModality(Assign(l: Variable, r: Variable), pred) if l == r => orig match {
-      case DiamondModality(Assign(origL: Variable, origR: Variable), _) if origL == origR => f
-      case _ => pred
-    }
-    case _ => f
-  }
+  private def substDiff(s: Seq[SubstitutionPair], u: Set[NamedSymbol]) =
+    new Substitution(s.filter(_.n match { case en: NamedSymbol => !u.contains(en) case _ => true }))
 
   /**
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
@@ -1152,39 +1154,24 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
     // uniform substitution base cases
     case CDot => if (u.contains(CDot)) return CDot else for (p <- subsDefs) { if (CDot == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term]) }; CDot
-    case x:Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
-    case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
+    case x: Variable if !u.contains(x) &&  subsDefs.exists(_.n == x) => clashChecked(u, t, subsDefs.find(_.n == x).get.t.asInstanceOf[Term])
+    case x: Variable if  u.contains(x) || !subsDefs.exists(_.n == x) => x
+    // implementation in one case: case x: Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
+    case Derivative(s, e) if  subsDefs.exists(_.n == t) => clashChecked(u, t, subsDefs.find(_.n == t).get.t.asInstanceOf[Term])
+    case Derivative(s, e) if !subsDefs.exists(_.n == t) => Derivative(s, usubst(u, e))
+    // implementation in one case: case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
     case Apply(f, arg) => for(rp <- subsDefs) {
       rp.n match {
         // clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case Apply(rf, rarg:Variable) if f == rf => return instantiate(rarg, arg).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
-        case Apply(rf, CDot) if f == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
+        case Apply(rf, rarg:Variable) if f == rf => return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
+        case Apply(rf, CDot) if f == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
         case _ => // skip to next
       }
     }; return Apply(f, usubst(u, arg))
     case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
     case _ => throw new UnknownOperatorException("Not implemented yet", t)
   }
-  
-  def apply(f: Formula): Formula = {
-    log("\tSubstituting " + f.prettyString + " using " + this)
-    try {
-      val res = usubst(Set.empty[NamedSymbol], f)
-      log("\tSubstituted  " + res.prettyString)
-      res
-    } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString)
-    }
-  }
-  
-  def apply(s: Sequent): Sequent = {
-    try {
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
-    } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
-    }
-  }
-  
+
   private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
     case Not(g) => Not(usubst(u, g))
@@ -1208,21 +1195,15 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case DiamondModality(p, g) => val (v,q) = usubst(u, p); DiamondModality(q, usubst(v, g))
 
     // uniform substitution base cases
-    case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
+    case _: PredicateConstant if  subsDefs.exists(_.n == f) => clashChecked(u, f, subsDefs.find(_.n == f).get.t.asInstanceOf[Formula])
+    case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
+    // implementation in one case: case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
     case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
         // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
         case ApplyPredicate(rf, rarg: Variable) if p == rf =>
-          val clashCheckedF = clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula])
-          val alphaF = clashCheckedF match {
-            case BoxModality(prg, _) => alphaRenamed(prg, clashCheckedF, rarg, arg)
-            case DiamondModality(prg, _) => alphaRenamed(prg, clashCheckedF, rarg, arg)
-            case _ => clashCheckedF
-          }
-          val subsAlphaF = instantiate(rarg, arg).usubst(Set.empty[NamedSymbol], alphaF)
-          // remove unnecessary self assignments if created by alpha renaming + uniform substitution
-          return removeUnnecessarySelfAssignment(subsAlphaF, clashCheckedF)
-        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, arg).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
+          return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
+        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
         case _ => // skip to next
       }
     }; return ApplyPredicate(p, usubst(u, arg))
@@ -1231,15 +1212,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case FormulaDerivative(g) => FormulaDerivative(usubst(u, g))
     case x: Atom => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
-  }
-
-  // uniform substitution on programs
-  def apply(p: Program): Program = {
-    try {
-      usubst(Set.empty[NamedSymbol], p)._2
-    } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
-    }
   }
 
   /**
@@ -1266,16 +1238,21 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
     case Assign(CDot, e) => (u+CDot, Assign(CDot, usubst(u, e)))
-    case Assign(Derivative(s, x:Variable), e) => (u+x, Assign(Derivative(s,x), usubst(u,e))) //@todo check NRFbeforeCommit
+    case Assign(d@Derivative(_, x: Variable), e) => (u+x, Assign(d, usubst(u,e))) //@todo check NRFbeforeCommit
     case NDetAssign(x:Variable) => (u+x, p)
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-      if (!u.contains(x)) for (pair <- subsDefs) {if (x == pair.n) throw new SubstitutionClashException("Variable " + x + " will be replaced but occurs as differential equation", this, p)}
+      if (!u.contains(x) && subsDefs.exists(_.n == x)) throw new SubstitutionClashException("Variable " + x
+        + " will be replaced but occurs as differential equation", this, p)
       (u+x, NFContEvolve(v, d, usubst(u++v+x, e), usubst(u++v+x,h)))
     } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
     
     //@TODO check implementation
-    case a: ProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
-    case a: ContEvolveProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u, pair.t.asInstanceOf[ContEvolveProgram])}; return (u, p)
+    case a: ProgramConstant if  subsDefs.exists(_.n == p) => (u, subsDefs.find(_.n == p).get.t.asInstanceOf[Program])
+    case a: ProgramConstant if !subsDefs.exists(_.n == p) => (u, p)
+    // implementation in one case: case a: ProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
+    case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) => (u, subsDefs.find(_.n == p).get.t.asInstanceOf[ContEvolveProgram])
+    case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => (u, p)
+    // implementation in one case: case a: ContEvolveProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u, pair.t.asInstanceOf[ContEvolveProgram])}; return (u, p)
     case ContEvolveProduct(a, b) =>
       val (v, as) = usubst(u, a) match {
         case (symbols, prg: ContEvolveProgram) => (symbols, prg)
@@ -1571,9 +1548,8 @@ object UniformSubstitution {
  * (6) Modality(DiamondModality(NDetAssign(x)), phi)
  * (7) Modality(BoxModality(ContEvolveProgram | IncompleteSystem, _), phi)
  * (8) Modality(DiamondModality(ContEvolveProgram | IncompleteSystem, _), phi)
- * (9) ApplyPredicate(f, phi)
- * (10) Modality(BoxModality(Loop), phi)
- * (11) Modality(DiamondModality(Loop), phi)
+ * (9) Modality(BoxModality(Loop), phi)
+ * (10) Modality(DiamondModality(Loop), phi)
  *
  * The rule should only be extended if absolutely necessary.
  *
@@ -1673,8 +1649,6 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
         val targetVar = Variable(target, tIdx, Real)
         val sourceVar = Variable(name, idx, Real)
         Right(DiamondModality(Assign(targetVar, sourceVar), DiamondModality(proceedProgram(a), proceed(c))))
-      case ApplyPredicate(f, Variable(n, i, d)) if n == name && i == idx =>
-        Right(ApplyPredicate(f, Variable(target, tIdx, d)))
       case BoxModality(a@Loop(_), c) =>
         val targetVar = Variable(target, tIdx, Real)
         val sourceVar = Variable(name, idx, Real)
