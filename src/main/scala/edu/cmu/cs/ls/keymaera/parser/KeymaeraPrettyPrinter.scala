@@ -385,6 +385,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case ProgramConstant(name, _) => true
     case Variable(name, _,_) => true
     case NFContEvolve(vars,x,theta,f) => true
+    case ContEvolveProduct(_, _) => false
     case Number(_) => true
     case Number(_,_) => true
     case Loop(p) => true 
