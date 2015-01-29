@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
@@ -10,13 +9,13 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyLeftT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.cutT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.kModalModusPonensT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{alphaRenamingT,abstractionT}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
 
-import scala.collection.immutable.{Set, List, Seq}
+import scala.collection.immutable.{List, Seq}
 
 import AlphaConversionHelper._
 
@@ -301,14 +300,67 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new position tactic for box assignment [x := t;], for the case when followed by ODE or loop
+   * @return The tactic.
+   */
+  def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assignment") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+      case BoxModality(Assign(_: Variable, v: Variable), pred) => pred match {
+        case BoxModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
+        case BoxModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
+        case DiamondModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
+        case DiamondModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
+        case _ => true
+      }
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import scala.language.postfixOps
+        import SearchTacticsImpl.onBranch
+        import BranchLabels.cutShowLbl
+        import PropositionalTacticsImpl.EquivRightT
+
+        val succLength = node.sequent.succ.length
+        val anteLength = node.sequent.ante.length
+
+        node.sequent(p) match {
+          case b@BoxModality(Assign(v: Variable, t: Variable), pred) => Some(
+            cutT(Some(Equiv(b, replace(pred)(v, t)))) &
+            onBranch(
+              (cutShowLbl,
+                alphaRenamingT(t.name, t.index, v.name, v.index)(
+                  new SuccPosition(succLength, new PosInExpr(1 :: Nil))) &
+                  EquivRightT(SuccPosition(succLength)) &
+                  AxiomCloseT(AntePosition(anteLength), SuccPosition(succLength))),
+              (cutUseLbl, equalityRewriting(new AntePosition(anteLength), new SuccPosition(succLength - 1)) &
+                hideT(new AntePosition(anteLength)) & hideT(new SuccPosition(succLength - 1)))
+            )
+          )
+        }
+      }
+    }
+  }
+
+  /**
    * Creates a new axiom tactic for box assignment [x := t;]
    * @return The axiom tactic.
    */
-  protected[tactics] def predicateReplaceBoxAssignT: PositionTactic = new AxiomTactic("[:=] assignment", "[:=] assignment") {
+  protected[tactics] def v2tBoxAssignT: PositionTactic = new AxiomTactic("[:=] assignment", "[:=] assignment") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(v: Variable, t: Term), _) => t match {
-        case tv: Variable => true
-        case _ => !Helper.names(t).contains(v)
+      case BoxModality(Assign(v: Variable, t: Term), pred) => pred match {
+        // loop and ODE are probably a little too strict, but we have v2vBoxAssignT to handle those
+        case BoxModality(_: ContEvolveProgram, _) => false
+        case BoxModality(_: Loop, _) => false
+        case DiamondModality(_: ContEvolveProgram, _) => false
+        case DiamondModality(_: Loop, _) => false
+        case _ => t match {
+          case tv: Variable => true
+          case _ => !Helper.names(t).contains(v)
+        }
       }
       case _ => false
     }
@@ -324,30 +376,19 @@ object HybridProgramTacticsImpl {
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, v), p))
 
         // construct axiom instance: [v:=t]p(v) <-> p(t)
-        val g = t match {
-          case _: Variable => replace(p)(v, t)
-          case _ => replaceFree(p)(v, t)
-        }
+        val g = replaceFree(p)(v, t)
         val axiomInstance = Equiv(f, g)
 
         // rename to match axiom if necessary
-        def alpha(left: Boolean) = new PositionTactic("Alpha") {
+        def alpha = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(_, _), _), _) => true
             case _ => false
           }
 
-          def replaceT(o: Term, n: Variable, p: Position) = o match {
-            case tv: Variable => alphaRenamingT(tv.name, tv.index, n.name, None)(p)
-            case _ => NilT // TODO requires uniform substitution on axiom in "axiom |- axInstance", instead of alpha renaming on axInstance as is required by AxiomTactic right now
-          }
-
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              if (left)
-                Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first))
-              else
-                Some(replaceT(t, aT, p.second))
+              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.first))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
@@ -355,14 +396,10 @@ object HybridProgramTacticsImpl {
 
         val Equiv(lhs, rhs) = axiom
         val (ax, cont) = {
-          val lhsrepl = if (v.name != aV.name || v.index != None) replace(lhs)(aV, v)
-                        else lhs
-          val rhsrepl = replaceFree(rhs)(aT, t)
-          val thealpha =
-            if (v.name != aV.name || v.index != None) Some(alpha(left = true) & alpha(left = false))
-            else Some(alpha(left = false))
+          val lhsrepl = if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs
+          val thealpha = if (v.name != aV.name || v.index != None) Some(alpha) else None
 
-          (Equiv(lhsrepl, rhsrepl), thealpha)
+          (Equiv(lhsrepl, rhs), thealpha)
         }
 
         // return tactic
