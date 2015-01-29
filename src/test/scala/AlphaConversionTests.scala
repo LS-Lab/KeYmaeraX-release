@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.{AlphaConversionHelper, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, AlphaConversionHelper, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import testHelper.StringConverter._
@@ -16,13 +16,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   val helper = new ProvabilityTestHelper((x) => println(x),
     new ToolBase("") { override def init(cfg: Map[String, String]) {} })
 
-  def alpha(from: String, to: String): PositionTactic =
-    new PositionTactic("Alpha Renaming") {
-      override def applies(s: Sequent, p: Position): Boolean = true
-      override def apply(p: Position): Tactic = new ApplyRule(new AlphaConversion(p, from, None, to, None)) {
-        override def applicable(node: ProofNode): Boolean = true
-      } & hideT(p.topLevel)
-    }
+  def alpha(from: String, to: String): PositionTactic = TacticLibrary.alphaRenamingT(from, None, to, None)
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler.init(Map())
@@ -165,6 +159,14 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val tactic = locateSucc(alpha("y", "x"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[x:=y;][x'=1;]true".asFormula)))
+  }
+
+  "Alpha conversion (z,y) on [z'=z+1;]z>0" should "be [y:=z;][y'=y+1;]y>0" in {
+    val s = sucSequent("[z'=z+1;]z>0".asFormula)
+    val tactic = locateSucc(alpha("z", "y"))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[y:=z;][y'=y+1;]y>0".asFormula)
+    ))
   }
 
   // (4) Modality(DiamondModality(Assign(x, e)), phi)
