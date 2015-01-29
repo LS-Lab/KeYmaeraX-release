@@ -1160,6 +1160,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Derivative(s, e) if  subsDefs.exists(_.n == t) => clashChecked(u, t, subsDefs.find(_.n == t).get.t.asInstanceOf[Term])
     case Derivative(s, e) if !subsDefs.exists(_.n == t) => Derivative(s, usubst(u, e))
     // implementation in one case: case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
+
+    //@TODO Change to: case Apply(f, arg) if subsDefs.exists(_.n == f) =>
     case Apply(f, arg) => for(rp <- subsDefs) {
       rp.n match {
         // clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
@@ -1198,6 +1200,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant if  subsDefs.exists(_.n == f) => clashChecked(u, f, subsDefs.find(_.n == f).get.t.asInstanceOf[Formula])
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     // implementation in one case: case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
+    //@TODO Change to: case ApplyPredicate(p, arg) if subsDefs.exists(_.n == p) =>
     case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
       rp.n match {
         // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
