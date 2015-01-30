@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.core.{RootNode, Sequent, Formula, NamedSymbol}
 /**
  * Created by smitsch on 1/20/15.
  * @author Stefan Mitsch
+ * @author Ran Ji
  */
 object SequentFactory {
   /**
@@ -20,5 +21,10 @@ object SequentFactory {
       succ.to[scala.collection.immutable.IndexedSeq]
     )
 
+  /**
+   * Create a new sequent with only succedent f, but no specified prefixes or antecedents
+   * @param f The succedent formula.
+   * @return The new sequent.
+   */
   def sucSequent(f: Formula) = sequent(Nil, Nil, f::Nil)
 }
