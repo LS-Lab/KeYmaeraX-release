@@ -155,13 +155,68 @@ object HybridProgramTacticsImpl {
     }
   }
 
+  protected[tactics] def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+      case BoxModality(Assign(Variable(_, _,_), _), _) => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import scala.language.postfixOps
+
+        val f = node.sequent(p)
+        // construct a new name for the quantified variable
+        val (newV1, newV2) = f match {
+          case BoxModality(Assign(v: Variable, _), _) =>
+            val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
+            require(vars.size > 0)
+            val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
+              acc match {
+                case Some(a) => i match {
+                  case Some(b) => if (a < b) Some(b) else Some(a)
+                  case None => Some(a)
+                }
+                case None => i
+              })
+            val tIdx: Option[Int] = maxIdx match {
+              case None => Some(0)
+              case Some(a) => Some(a + 1)
+            }
+            (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
+          case _ => throw new IllegalStateException("Checked by applies to never happen")
+        }
+
+        node.sequent(p) match {
+          case BoxModality(Assign(v: Variable, _), BoxModality(prg: Loop, _))
+            // TODO might be even further simplified with getting rid of self-assignment
+            if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p) &
+            boxAssignWithoutAlphaT(newV2, checkNewV = false)(p) & v2vBoxAssignT(p.second)
+          )
+          case BoxModality(Assign(v: Variable, _), BoxModality(prg: ContEvolveProgram, _))
+            if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p) &
+              boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
+//            boxAssignWithoutAlphaT(newV)(p) & alphaRenamingT(newV.name, newV.index, v.name, v.index)(
+//              new SuccPosition(p.index, new PosInExpr(0 :: 1 :: Nil)))
+          )
+          case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
+        }
+      }
+    }
+  }
+
   /**
    * Creates a new axiom tactic for box assignment [x := t;]
    * @return The axiom tactic.
    */
-  protected[tactics] def boxAssignT: PositionTactic = new AxiomTactic("[:=] assignment equal", "[:=] assignment equal") {
+  private def boxAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic =
+      new AxiomTactic("[:=] assignment equal", "[:=] assignment equal") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Variable(_, _,_), _), _) => true
+      case BoxModality(Assign(Variable(_, _,_), _), _) => !checkNewV || !Helper.names(f).contains(newV)
       case _ => false
     }
 
@@ -175,25 +230,8 @@ object HybridProgramTacticsImpl {
         val aP = Function("p", None, Real, Bool)
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, v), p))
 
-        // construct a new name for the quantified variable
-        val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
-        require(vars.size > 0)
-        val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
-            acc match {
-          case Some(a) => i match {
-            case Some(b) => if (a < b) Some(b) else Some(a)
-            case None => Some(a)
-          }
-          case None => i
-        })
-        val tIdx: Option[Int] = maxIdx match {
-          case None => Some(0)
-          case Some(a) => Some(a + 1)
-        }
-        val newV = Variable(v.name, tIdx, v.sort)
-
         // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
-        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replace(p)(v, newV)))
+        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replaceFree(p)(v, newV)))
         val axiomInstance = Equiv(f, g)
 
         // rename to match axiom if necessary
@@ -240,8 +278,7 @@ object HybridProgramTacticsImpl {
       val aV = Variable("v", None, Real)
       val aT = Variable("t", None, Real)
       val aP = Function("p", None, Real, Bool)
-      val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, CDot),
-        replaceFree(f)(t, CDot)))
+      val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, t), f))
 
       // check specified name, or construct a new name for the ghost variable if None
       val v = ghost match {
@@ -277,22 +314,15 @@ object HybridProgramTacticsImpl {
           case _ => false
         }
 
-        def alphaRenameTerm(p: Position) = t match {
-          case Variable(tname, tindex, _) => alphaRenamingT(tname, tindex, aT.name, None)(p.second)
-          // TODO need to setup axiom apply tactic the other way around to avoid replacing t with aT
-          case _ => ???
-        }
-
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first)
-                & alphaRenameTerm(p))
+              Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
       }
       val Equiv(left, right) = axiom
-      val (ax, cont) = (Equiv(replace(left)(aV, v), replace(right)(aT, t)), Some(alpha))
+      val (ax, cont) = (Equiv(replace(left)(aV, v), right), Some(alpha))
 
       // return tactic
       Some(ax, axiomInstance, Substitution(l), cont)
@@ -353,10 +383,10 @@ object HybridProgramTacticsImpl {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(v: Variable, t: Term), pred) => pred match {
         // loop and ODE are probably a little too strict, but we have v2vBoxAssignT to handle those
-        case BoxModality(_: ContEvolveProgram, _) => false
-        case BoxModality(_: Loop, _) => false
-        case DiamondModality(_: ContEvolveProgram, _) => false
-        case DiamondModality(_: Loop, _) => false
+        case BoxModality(_: ContEvolveProgram, _) => t match { case tv: Variable => v == tv case _ => false }
+        case BoxModality(_: Loop, _) => t match { case tv: Variable => v == tv case _ => false }
+        case DiamondModality(_: ContEvolveProgram, _) => t match { case tv: Variable => v == tv case _ => false }
+        case DiamondModality(_: Loop, _) => t match { case tv: Variable => v == tv case _ => false }
         case _ => t match {
           case tv: Variable => true
           case _ => !Helper.names(t).contains(v)
@@ -460,8 +490,8 @@ object HybridProgramTacticsImpl {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first)
-                & alphaRenamingT(v.name, v.index, aV.name, None)(p.second))
+              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.first)
+                & alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.second))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
