@@ -479,11 +479,19 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
    * test cases for Alpha Conversion Tactic
    */
 
-  "Alpha-conversion tactic (x,t) on [x:=x+1;][x'=1;]x>0" should "be [t:=x+1;][x:=t;][x'=1;]x>0" in {
+  "Alpha-conversion tactic" should "be [t:=x+1;][t_0:=t;][t_0'=1;]t_0>0 with (x,t) on [x:=x+1;][x'=1;]x>0" in {
     val s = sucSequent("[x:=x+1;][x'=1;]x>0".asFormula)
     val tactic = locateSucc(alpha("x", "t"))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x+1;][t_0:=t;][t_0'=1;]t_0>0".asFormula)
+    ))
+  }
+
+  it should "be [t:=x+1;][t_0:=t;][{t_0:=t_0+1;}*]t_0>0 with (x,t) on [x:=x+1;][{x:=x+1;}*]x>0" in {
+    val s = sucSequent("[x:=x+1;][{x:=x+1;}*]x>0".asFormula)
+    val tactic = locateSucc(alpha("x", "t"))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x+1;][t_0:=t;][{t_0:=t_0+1;}*]t_0>0".asFormula)
     ))
   }
 

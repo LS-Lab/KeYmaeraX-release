@@ -218,10 +218,17 @@ object TacticLibrary {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val prepareRenaming = node.sequent(p) match {
-          // TODO find first program that binds x, if it is an ODE, then rename that one first
-          case BoxModality(Assign(x: Variable, _), BoxModality(ode: ContEvolveProgram, _))
+          // TODO find first program that binds x, if it is an ODE or a loop, then rename that one first
+          case BoxModality(Assign(x: Variable, _), BoxModality(prg: ContEvolveProgram, _))
               if x.name == from && x.index == fromIdx
-                && Substitution.maybeBoundVariables(ode).exists(v => v.name == from && v.index == fromIdx) =>
+                && Substitution.maybeBoundVariables(prg).exists(v => v.name == from && v.index == fromIdx) =>
+            val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
+            new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
+              override def applicable(node: ProofNode): Boolean = true
+            } & hideT(p.topLevel)
+          case BoxModality(Assign(x: Variable, _), BoxModality(prg: Loop, _))
+            if x.name == from && x.index == fromIdx
+              && Substitution.maybeBoundVariables(prg).exists(v => v.name == from && v.index == fromIdx) =>
             val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
             new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
               override def applicable(node: ProofNode): Boolean = true
