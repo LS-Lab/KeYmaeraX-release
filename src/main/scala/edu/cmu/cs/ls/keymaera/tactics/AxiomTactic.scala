@@ -97,7 +97,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
       import AxiomTactic.axiomT
       axiom match {
         case Some(ax) =>
-          constructInstanceAndSubst(getFormula(node.sequent, pos.topLevel), ax, pos) match {
+          constructInstanceAndSubst(getFormula(node.sequent, pos), ax, pos) match {
             case Some((modAx, axiomInstance, subst, ptac)) =>
               val axiomInstPos = AntePosition(node.sequent.ante.length)
               val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {

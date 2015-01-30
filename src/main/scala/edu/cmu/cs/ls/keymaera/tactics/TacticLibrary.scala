@@ -26,8 +26,19 @@ object TacticLibrary {
 
   object TacticHelper {
     def getFormula(s: Sequent, p: Position): Formula = {
-      require(p.inExpr == HereP)
-      if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+      if (p.inExpr == HereP) {
+        if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
+      } else {
+        var f: Formula = null
+        ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+            f = e
+            Left(Some(ExpressionTraversal.stop))
+          }
+        }), if (p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex))
+        if (f != null) f
+        else throw new IllegalArgumentException("Sequent " + s + " at position " + p + " is not a formula")
+      }
     }
   }
 
@@ -198,13 +209,19 @@ object TacticLibrary {
   def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
-    new PositionTactic("Alpha Renaming") {
-      import scala.language.postfixOps
-      override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
+      new PositionTactic("Alpha Renaming") {
+    import scala.language.postfixOps
+    override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
 
-      override def apply(p: Position): Tactic = new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
-        override def applicable(node: ProofNode): Boolean = true
-        } & hideT(p.topLevel)
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
+          override def applicable(node: ProofNode): Boolean = true
+        } & hideT(p.topLevel))
+      }
+    }
   }
 
   /*********************************************
