@@ -363,7 +363,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       } 
     }
     
-    lazy val termDerivativeP:SubtermParser = {
+    lazy val termDerivativeP:PackratParser[Derivative] = {
       lazy val pattern = tighterParsers(precedence, termDerivativeP).reduce(_|_)
       log(pattern ~ PRIME)(PRIME + " parser") ^^ {
         case t ~ PRIME => new Derivative(t.sort, t)
@@ -909,6 +909,16 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       log(pattern)("NFContEvolve (" + COMMA + " NFContEvolve)*") ^^ {
         case odes => odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram()) {
           (a: ContEvolveProgram, b: ContEvolveProgram) => ContEvolveProduct(a, b)
+        }
+      }
+    }
+
+    lazy val checkedEvolutionFragmentP: SubprogramParser = {
+      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser) ~ (AND ~> formulaParser.?)
+      log(pattern)("Checked evolution") ^^ {
+        case derivative ~ term ~ formula => formula match {
+          case Some(h) => CheckedContEvolveFragment(NFContEvolve(Nil, derivative, term, h))
+          case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, derivative, term)))
         }
       }
     }

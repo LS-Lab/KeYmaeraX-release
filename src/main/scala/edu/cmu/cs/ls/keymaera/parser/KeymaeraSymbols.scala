@@ -48,6 +48,7 @@ trait KeYmaeraSymbols {
   val PRIME:String
   val START_INCOMPLETE_SYSTEM: String
   val END_INCOMPLETE_SYSTEM: String
+  val CHECKED_EQ : String
     
   val PARALLEL:String
   val SEND:String
@@ -148,6 +149,7 @@ object ParseSymbols extends KeYmaeraSymbols {
   val PRIME = "'" //derivative of
   val START_INCOMPLETE_SYSTEM = "$$"
   val END_INCOMPLETE_SYSTEM = "$$"
+  val CHECKED_EQ = "$=$"
     
   val PARALLEL    = "||" //∥
   val SEND = "!"
@@ -237,8 +239,10 @@ object HTMLSymbols extends KeYmaeraSymbols {
   val SCOLON  = ";"
   val TEST = "?"
   val PRIME = "'" //derivative of
+  //For DI on systems of differential equations.
   val START_INCOMPLETE_SYSTEM = "$$"
   val END_INCOMPLETE_SYSTEM = "$$"
+  val CHECKED_EQ = "$=$"
 
   val PARALLEL    = "∥"
   val SEND = "!"
@@ -328,6 +332,7 @@ object LaTeXSymbols extends KeYmaeraSymbols {
   val PRIME = "'" //derivative of
   val START_INCOMPLETE_SYSTEM = "$$"
   val END_INCOMPLETE_SYSTEM = "$$"
+  val CHECKED_EQ = "$=$"
 
   val PARALLEL    = "\\|" //∥
   val SEND = "!"

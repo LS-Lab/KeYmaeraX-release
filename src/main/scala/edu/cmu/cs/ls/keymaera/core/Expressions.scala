@@ -1184,7 +1184,7 @@ object ContEvolve {
     case _ => None
   }
 }
-final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
+final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with ContEvolveProgram {
   def reads = ???
   def writes = (VSearch.primed(child)).distinct
 
@@ -1194,6 +1194,25 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
   }
   override def hashCode: Int = hash(223, child)
 }
+
+object CheckedContEvolveFragment {
+  def apply(child: ContEvolveProgram): CheckedContEvolveFragment = new CheckedContEvolveFragment(child)
+  def unapply(e:Any) : Option[ContEvolveProgram] = e match {
+    case x: ContEvolveProgram => Some(x)
+    case _ => None
+  }
+}
+final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(ProgramSort, Bool, child) with AtomicProgram with ContEvolveProgram {
+  def reads = ???
+  def writes = ???
+
+  override def equals(e: Any): Boolean = e match {
+    case x: CheckedContEvolveFragment => x.child == child
+    case _ => false
+  }
+  override def hashCode: Int = hash(224, child)
+}
+
 
 sealed trait ContEvolveProgram extends Program
 
