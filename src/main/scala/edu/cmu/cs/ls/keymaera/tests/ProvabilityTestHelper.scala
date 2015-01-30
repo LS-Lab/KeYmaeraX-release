@@ -173,7 +173,6 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
 
     //Dispatching the tactic.
     logger("Dispatching tactic " + tactic.name)
-    tactic.apply(tool, rootNode)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
     logger("beginning wait sequence for " + tactic.name)
