@@ -217,7 +217,18 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
+        val prepareRenaming = node.sequent(p) match {
+          // TODO find first program that binds x, if it is an ODE, then rename that one first
+          case BoxModality(Assign(x: Variable, _), BoxModality(ode: ContEvolveProgram, _))
+              if x.name == from && x.index == fromIdx
+                && Substitution.maybeBoundVariables(ode).exists(v => v.name == from && v.index == fromIdx) =>
+            val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
+            new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
+              override def applicable(node: ProofNode): Boolean = true
+            } & hideT(p.topLevel)
+          case _ => NilT
+        }
+        Some(prepareRenaming & new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
           override def applicable(node: ProofNode): Boolean = true
         } & hideT(p.topLevel))
       }
