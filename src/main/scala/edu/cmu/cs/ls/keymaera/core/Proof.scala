@@ -932,6 +932,9 @@ object Substitution {
     val ba = Substitution(Nil).freeVariables(Set.empty[NamedSymbol], p)
     ba.maybeRead -- (ba.bound ++ ba.maybeBound)
   }
+  /** Returns the set of names maybe bound in program p. */
+  def maybeBoundVariables(p: Program) : Set[NamedSymbol] =
+    Substitution(Nil).freeVariables(Set.empty[NamedSymbol], p).maybeBound
 }
 /**
  * A Uniform Substitution.
@@ -1582,9 +1585,16 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
         Right(NFContEvolve(vars, d,
           new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(t),
           new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(f)))
-      case Loop(loopPrg) =>
-        val newV = rename(v)
-        Right(Loop(new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(loopPrg)))
+//      case Loop(loopPrg) =>
+//        val newV = rename(v)
+//        Right(Loop(new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(loopPrg)))
+      case _ => Left(None)
+    }
+  }
+
+  private def replaceInLoopFn(v: Variable) = new ExpressionTraversalFunction {
+    override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+      case tv: Variable if tv.name == v.name && tv.index == v.index => Right(renameVar(v))
       case _ => Left(None)
     }
   }
@@ -1596,13 +1606,15 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       case BoxModality(Assign(a, b), phi) => renameAssignment(bound, e, a, b, phi, BoxModality.apply)
       case DiamondModality(Assign(a, b), phi) => renameAssignment(bound, e, a, b, phi, DiamondModality.apply)
       case BoxModality(NDetAssign(a), c) => renameNDetAssignment(e, a, c, BoxModality.apply)
-      case DiamondModality(NDetAssign(a), c) => renameNDetAssignment(e, a, c, DiamondModality.apply)
-      case b@BoxModality(_: Test, _) => Right(b)
-      case b@DiamondModality(_: Test, _) => Right(b)
-      case BoxModality(ode@(_: ContEvolveProgram | _: IncompleteSystem), c) => renameODE(ode, c, BoxModality.apply)
-      case DiamondModality(ode@(_: ContEvolveProgram | _: IncompleteSystem), c) => renameODE(ode, c, DiamondModality.apply)
-      case BoxModality(Loop(a), phi) => renameLoop(a, phi, BoxModality.apply)
-      case DiamondModality(Loop(a), phi) => renameLoop(a, phi, DiamondModality.apply)
+      case DiamondModality(NDetAssign(a), phi) => renameNDetAssignment(e, a, phi, DiamondModality.apply)
+      case BoxModality(t: Test, phi) => renameTest(bound, t, phi, BoxModality.apply)
+      case DiamondModality(t: Test, phi) => renameTest(bound, t, phi, DiamondModality.apply)
+      case BoxModality(ode@(_: ContEvolveProgram | _: IncompleteSystem), phi) =>
+        renameODE(bound, ode, phi, BoxModality.apply)
+      case DiamondModality(ode@(_: ContEvolveProgram | _: IncompleteSystem), phi) =>
+        renameODE(bound, ode, phi, DiamondModality.apply)
+      case BoxModality(a: Loop, phi) => renameLoop(bound, a, phi, BoxModality.apply)
+      case DiamondModality(a: Loop, phi) => renameLoop(bound, a, phi, DiamondModality.apply)
       case BoxModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, BoxModality.apply)
       case DiamondModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, DiamondModality.apply)
       case _ => Right(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(e))
@@ -1618,11 +1630,26 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
     Right(factory(vars.map(rename), traverse(phi, fn(bound + oldVar))))
   }
 
-  private def renameODE[T <: Modality](ode: Program, c: Formula, factory: (Program, Formula) => T) = {
-    require(!Helper.names(c).contains(newVar))
+  private def renameTest[T <: Modality](bound: Set[NamedSymbol], prg: Test, phi: Formula,
+                                        factory: (Program, Formula) => T) = {
+    val subst = new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil)
+    val newPrg = if (bound.intersect(Helper.names(prg)).nonEmpty) subst(prg) else prg
+    val newPhi = if (bound.intersect(Helper.names(phi)).nonEmpty) subst(phi) else phi
+    Right(factory(newPrg, newPhi))
+  }
+
+  private def renameODE[T <: Modality](bound: Set[NamedSymbol], ode: Program, phi: Formula,
+                                       factory: (Program, Formula) => T) = {
+    require(!Helper.names(phi).contains(newVar))
     val newOde = traverse(ode, programFn(oldVar))
-    Right(factory(Assign(newVar, oldVar), factory(newOde,
-      new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(c))))
+    if (bound.isEmpty ) {
+      if (Helper.names(ode).intersect(Set(oldVar)).isEmpty) Right(factory(ode, phi))
+      else Right(factory(Assign(newVar, oldVar), factory(newOde,
+        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi))))
+    } else {
+      Right(factory(newOde,
+        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi)))
+    }
   }
 
   private def renameChoice[T <: Modality](bound: Set[NamedSymbol], e: Formula, a: Program, b: Program, phi: Formula,
@@ -1641,26 +1668,29 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
     Right(factory(Choice(newA, newB), newAPhi))
   }
 
-  private def renameLoop[T <: Modality](a: Program, phi: Formula, factory: (Program, Formula) => T) = {
+  private def renameLoop[T <: Modality](bound: Set[NamedSymbol], a: Loop, phi: Formula,
+                                        factory: (Program, Formula) => T) = {
     require(!Helper.names(phi).contains(newVar))
-    if (Substitution.freeVariables(a).contains(oldVar)) {
-      Right(factory(Loop(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(a)),
-        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi)))
+    val boundInLoop = Substitution.maybeBoundVariables(a)
+    if (bound.isEmpty) {
+      if (boundInLoop.intersect(Set(oldVar)).isEmpty) Right(factory(a, phi))
+      else Right(factory(Assign(newVar, oldVar), factory(traverse(a, replaceInLoopFn(oldVar)),
+        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi))))
     } else {
-      Right(factory(Assign(newVar, oldVar),
-        factory(Loop(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(a)), phi)))
+      Right(factory(traverse(a, replaceInLoopFn(oldVar)),
+        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi)))
     }
   }
 
-  private def renameNDetAssignment[T <: Modality](e: Formula, a: Term, c: Formula, factory: (Program, Formula) => T) = {
+  private def renameNDetAssignment[T <: Modality](e: Formula, a: Term, phi: Formula, factory: (Program, Formula) => T) = {
     val (newName, newT) = a match {
       case Variable(n, i, d) if n == name && i == idx => val v = Variable(target, tIdx, d); (v, v)
       case Apply(Function(n, i, d, s), phi) if n == name && i == idx =>
         val f = Function(target, tIdx, d, s); (f, Apply(f, phi))
       case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
     }
-    require(!Helper.names(c).contains(newName))
-    Right(factory(NDetAssign(newT), new Substitution(new SubstitutionPair(a, newT) :: Nil).apply(c)))
+    require(!Helper.names(phi).contains(newName))
+    Right(factory(NDetAssign(newT), new Substitution(new SubstitutionPair(a, newT) :: Nil).apply(phi)))
   }
 
   private def renameAssignment[T <: Modality](bound: Set[NamedSymbol], e: Formula, a: Term, b: Term,
