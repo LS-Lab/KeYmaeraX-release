@@ -1165,16 +1165,27 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Derivative(s, e) if  subsDefs.exists(_.n == t) => clashChecked(u, t, subsDefs.find(_.n == t).get.t.asInstanceOf[Term])
     case Derivative(s, e) if !subsDefs.exists(_.n == t) => Derivative(s, usubst(u, e))
     // implementation in one case: case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
-
-    //@TODO Change to: case Apply(f, arg) if subsDefs.exists(_.n == f) =>
-    case Apply(f, arg) => for(rp <- subsDefs) {
-      rp.n match {
-        // clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case Apply(rf, rarg:Variable) if f == rf => return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
-        case Apply(rf, CDot) if f == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
-        case _ => // skip to next
-      }
-    }; return Apply(f, usubst(u, arg))
+    case Apply(f, arg) if subsDefs.exists(s => s.n match { case Apply(rf, _: Variable) => f == rf case _ => false }) =>
+      require(subsDefs.count(s => s.n match { case Apply(rf, _: Variable) => f == rf case _ => false }) == 1)
+      val (rArg, rTerm) = subsDefs.filter(s => s.n match { case Apply(rf, _: Variable) => f == rf case _ => false }).
+        map(s => s.n match { case Apply(_, v: Variable) => (v, s.t.asInstanceOf[Term]) }).head
+      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u-rArg, t, rTerm))
+    case Apply(f, arg) if subsDefs.exists(s => s.n match { case Apply(rf, CDot) => f == rf case _ => false }) =>
+      require(subsDefs.count(s => s.n match { case Apply(rf, CDot) => f == rf case _ => false }) == 1)
+      val rTerm = subsDefs.filter(s => s.n match { case Apply(rf, CDot) => f == rf case _ => false }).
+        map(s => s.n match { case Apply(_, CDot) => s.t.asInstanceOf[Term] }).head
+      instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, t, rTerm))
+    case Apply(f, arg) if !subsDefs.map(_.n).exists { case Apply(rf, _) => f == rf case _ => false } =>
+      Apply(f, usubst(u, arg))
+    // implementation in one case
+//    case Apply(f, arg) => for(rp <- subsDefs) {
+//      rp.n match {
+//        // clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+//        case Apply(rf, rarg:Variable) if f == rf => return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
+//        case Apply(rf, CDot) if f == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
+//        case _ => // skip to next
+//      }
+//    }; return Apply(f, usubst(u, arg))
     case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
     case _ => throw new UnknownOperatorException("Not implemented yet", t)
   }
@@ -1585,9 +1596,6 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
         Right(NFContEvolve(vars, d,
           new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(t),
           new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(f)))
-//      case Loop(loopPrg) =>
-//        val newV = rename(v)
-//        Right(Loop(new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(loopPrg)))
       case _ => Left(None)
     }
   }
