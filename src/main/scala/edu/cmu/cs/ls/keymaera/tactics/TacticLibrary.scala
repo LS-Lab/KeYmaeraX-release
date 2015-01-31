@@ -196,9 +196,9 @@ object TacticLibrary {
   // axiom wrappers
 
   // axiomatic version of assignment axiom assignaxiom
-  def boxAssignEqualT = HybridProgramTacticsImpl.boxAssignEqualT
+  def boxAssignT = HybridProgramTacticsImpl.boxAssignT
   def boxDerivativeAssignT = HybridProgramTacticsImpl.boxDerivativeAssignT
-  def assignT = boxAssignEqualT /*@TODO | diamondAssignT*/
+  def assignT = boxAssignT /*@TODO | diamondAssignT*/
 
   def boxTestT = HybridProgramTacticsImpl.boxTestT
   def boxNDetAssign = HybridProgramTacticsImpl.boxNDetAssign

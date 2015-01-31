@@ -155,20 +155,21 @@ object HybridProgramTacticsImpl {
     }
   }
 
-//  protected[tactics] def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
-//    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-//      case BoxModality(Assign(Variable(_, _, _), _), _) => true
-//      case _ => false
-//    })
-//
-//    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-//
-//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-//
-//      }
-//    }
-//  }
+  protected[tactics] def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+      case BoxModality(Assign(Variable(_, _, _), _), _) => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        // TODO exploit formula structure at position p to execute most appropriate tactic. for now: most general tactic
+        Some(boxAssignEqualT(p) & skolemizeT(p) & ImplyRightT(p) & v2vBoxAssignT(p))
+      }
+    }
+  }
 
   def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assignment equal") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
