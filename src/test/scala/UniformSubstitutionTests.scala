@@ -116,6 +116,16 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s.apply(ApplyPredicate(p,x)) should be ("[x:=y+1;]x>0".asFormula)
   }
 
+  "Uniform substitution of (x,y)(p(x),[x:=x+1;]x>0) |-> p(x)" should "be [x:=y+1;]x>0" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val p = Function("p", None, Real, Bool)
+    s = Substitution(Seq(new SubstitutionPair(x, y),
+      new SubstitutionPair(ApplyPredicate(p, x), BoxModality(Assign(x,
+        Add(Real, x, Number(1))), GreaterThan(Real, x, Number(0))))))
+    s.apply(ApplyPredicate(p,x)) should be ("[x:=y+1;]x>0".asFormula)
+  }
+
   "Uniform substitution of (x,y)(p(•),[•:=•+1;]•>0) |-> p(x)" should "be [•:=y+1;]•>0" in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)

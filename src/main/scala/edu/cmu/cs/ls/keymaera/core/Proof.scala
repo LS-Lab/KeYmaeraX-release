@@ -1175,7 +1175,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val rTerm = subsDefs.filter(s => s.n match { case Apply(rf, CDot) => f == rf case _ => false }).
         map(s => s.n match { case Apply(_, CDot) => s.t.asInstanceOf[Term] }).head
       instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, t, rTerm))
-    case Apply(f, arg) if !subsDefs.map(_.n).exists { case Apply(rf, _) => f == rf case _ => false } =>
+    case Apply(f, arg) if !subsDefs.exists(s => s.n match { case Apply(rf, _) => f == rf case _ => false }) =>
       Apply(f, usubst(u, arg))
     // implementation in one case
 //    case Apply(f, arg) => for(rp <- subsDefs) {
@@ -1216,16 +1216,28 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant if  subsDefs.exists(_.n == f) => clashChecked(u, f, subsDefs.find(_.n == f).get.t.asInstanceOf[Formula])
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     // implementation in one case: case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
-    //@TODO Change to: case ApplyPredicate(p, arg) if subsDefs.exists(_.n == p) =>
-    case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
-      rp.n match {
-        // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-        case ApplyPredicate(rf, rarg: Variable) if p == rf =>
-          return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
-        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
-        case _ => // skip to next
-      }
-    }; return ApplyPredicate(p, usubst(u, arg))
+    case ApplyPredicate(p, arg) if subsDefs.exists(s => s.n match { case ApplyPredicate(rf, _: Variable) => p == rf case _ => false }) =>
+      require(subsDefs.count(s => s.n match { case ApplyPredicate(rf, _: Variable) => p == rf case _ => false }) == 1)
+      val (rArg, rFormula) = subsDefs.filter(s => s.n match { case ApplyPredicate(rf, _: Variable) => p == rf case _ => false }).
+        map(s => s.n match { case ApplyPredicate(_, v: Variable) => (v, s.t.asInstanceOf[Formula]) }).head
+      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(u-rArg, f, rFormula))
+    case ApplyPredicate(p, arg) if subsDefs.exists(s => s.n match { case ApplyPredicate(rf, CDot) => p == rf case _ => false }) =>
+      require(subsDefs.count(s => s.n match { case ApplyPredicate(rf, CDot) => p == rf case _ => false }) == 1)
+      val rFormula = subsDefs.filter(s => s.n match { case ApplyPredicate(rf, CDot) => p == rf case _ => false }).
+        map(s => s.n match { case ApplyPredicate(_, CDot) => s.t.asInstanceOf[Formula] }).head
+      instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, f, rFormula))
+    case ApplyPredicate(p, arg) if !subsDefs.exists(s => s.n match { case ApplyPredicate(rf, _) => p == rf case _ => false }) =>
+      ApplyPredicate(p, usubst(u, arg))
+      // implementation in one case
+//    case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
+//      rp.n match {
+//        // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
+//        case ApplyPredicate(rf, rarg: Variable) if p == rf =>
+//          return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
+//        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
+//        case _ => // skip to next
+//      }
+//    }; return ApplyPredicate(p, usubst(u, arg))
     
     // 
     case FormulaDerivative(g) => FormulaDerivative(usubst(u, g))
