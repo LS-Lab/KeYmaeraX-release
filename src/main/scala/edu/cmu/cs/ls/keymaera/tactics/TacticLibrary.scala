@@ -217,22 +217,24 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        def varBoundInPrg(x: Variable, prg: Program) =
+          x.name == from && x.index == fromIdx &&
+            Substitution.maybeBoundVariables(prg).exists(v => v.name == from && v.index == fromIdx)
+        def rename() = {
+          val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
+          new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
+            override def applicable(node: ProofNode): Boolean = true
+          } & hideT(p.topLevel)
+        }
+
         val prepareRenaming = node.sequent(p) match {
           // TODO find first program that binds x, if it is an ODE or a loop, then rename that one first
+          case BoxModality(NDetAssign(x: Variable), BoxModality(prg: ContEvolveProgram, _))
+            if varBoundInPrg(x, prg) => rename()
           case BoxModality(Assign(x: Variable, _), BoxModality(prg: ContEvolveProgram, _))
-              if x.name == from && x.index == fromIdx
-                && Substitution.maybeBoundVariables(prg).exists(v => v.name == from && v.index == fromIdx) =>
-            val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
-            new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
-              override def applicable(node: ProofNode): Boolean = true
-            } & hideT(p.topLevel)
+            if varBoundInPrg(x, prg) => rename()
           case BoxModality(Assign(x: Variable, _), BoxModality(prg: Loop, _))
-            if x.name == from && x.index == fromIdx
-              && Substitution.maybeBoundVariables(prg).exists(v => v.name == from && v.index == fromIdx) =>
-            val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
-            new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
-              override def applicable(node: ProofNode): Boolean = true
-            } & hideT(p.topLevel)
+            if varBoundInPrg(x, prg) => rename()
           case _ => NilT
         }
         Some(prepareRenaming & new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {

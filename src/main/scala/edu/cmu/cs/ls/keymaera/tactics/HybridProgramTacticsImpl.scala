@@ -155,7 +155,7 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  protected[tactics] def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+  def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _, _), _), _) => true
       case _ => false
@@ -475,11 +475,57 @@ object HybridProgramTacticsImpl {
     }
   }
 
+  def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assignment equal") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+      case BoxModality(NDetAssign(v: Variable), _) => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import scala.language.postfixOps
+
+        val f = node.sequent(p)
+        // construct a new name for renaming in ODE
+        val newV = f match {
+          case BoxModality(NDetAssign(v: Variable), _) =>
+            val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
+            require(vars.size > 0)
+            val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
+              acc match {
+                case Some(a) => i match {
+                  case Some(b) => if (a < b) Some(b) else Some(a)
+                  case None => Some(a)
+                }
+                case None => i
+              })
+            val tIdx: Option[Int] = maxIdx match {
+              case None => Some(0)
+              case Some(a) => Some(a + 1)
+            }
+            Variable(v.name, tIdx, v.sort)
+          case _ => throw new IllegalStateException("Checked by applies to never happen")
+        }
+
+        node.sequent(p) match {
+          case BoxModality(NDetAssign(v: Variable), BoxModality(prg: ContEvolveProgram, _))
+            if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            alphaRenamingT(v.name, v.index, newV.name, newV.index)(p) &
+              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vBoxAssignT(p)
+          )
+          case _ => Some(boxNDetAssignWithoutAlpha(p))
+        }
+      }
+    }
+  }
+
   /**
    * Creates a new axiom tactic for non-deterministic assignment [x := *].
    * @return The new tactic.
    */
-  protected[tactics] def boxNDetAssign: PositionTactic = new AxiomTactic("[:*] assignment", "[:*] assignment") {
+  private def boxNDetAssignWithoutAlpha: PositionTactic = new AxiomTactic("[:*] assignment", "[:*] assignment") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(NDetAssign(_), _) => true
       case _ => false

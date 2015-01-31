@@ -227,9 +227,9 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "work in front of a continuous program" in {
     val s = sucSequent("[y:=*;][y'=2;]y>0".asFormula)
-    val assignT = locateSucc(boxNDetAssign) & locateSucc(skolemizeT) & locateSucc(ImplyRightT)
+    val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0'=2;]y_0>0".asFormula :: Nil))
+      sequent("y_2".asNamedSymbol :: Nil, Nil, "[y_2'=2;]y_2>0".asFormula :: Nil))
   }
 
   "v2tBoxAssignT" should "replace with variables" in {
