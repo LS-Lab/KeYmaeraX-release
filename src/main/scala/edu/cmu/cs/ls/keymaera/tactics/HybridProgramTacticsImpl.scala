@@ -155,7 +155,22 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  protected[tactics] def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+//  protected[tactics] def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+//    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+//      case BoxModality(Assign(Variable(_, _, _), _), _) => true
+//      case _ => false
+//    })
+//
+//    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+//
+//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+//
+//      }
+//    }
+//  }
+
+  def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assignment equal") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _,_), _), _) => true
       case _ => false
@@ -191,17 +206,14 @@ object HybridProgramTacticsImpl {
 
         node.sequent(p) match {
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: Loop, _))
-            // TODO might be even further simplified with getting rid of self-assignment
             if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p) &
-            boxAssignWithoutAlphaT(newV2, checkNewV = false)(p) & v2vBoxAssignT(p.second)
+              boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: ContEvolveProgram, _))
             if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
-//            boxAssignWithoutAlphaT(newV)(p) & alphaRenamingT(newV.name, newV.index, v.name, v.index)(
-//              new SuccPosition(p.index, new PosInExpr(0 :: 1 :: Nil)))
           )
           case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
         }

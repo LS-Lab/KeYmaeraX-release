@@ -462,13 +462,13 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   ignore should "prove with differential solution tactic" in {
     import scala.language.postfixOps
-    import TacticLibrary.{boxAssignT, skolemizeT, boxSeqT}
+    import TacticLibrary.{boxAssignEqualT, skolemizeT, boxSeqT}
     val sequent = new Sequent(Nil,
       scala.collection.immutable.IndexedSeq(helper.parseFormula("x>0")),
       scala.collection.immutable.IndexedSeq(helper.parseFormula("[x0:=x; t:=0; t0:=t; x'=2, t'=1 & t>=0;]x>0"))
       )
     // TODO t:=0 leads to a SubstitutionClashException (because subsequently t'=1)
-    val diffNode = helper.runTactic((locateSucc(boxSeqT) ~ locateSucc(boxAssignT) ~ locateSucc(skolemizeT) ~
+    val diffNode = helper.runTactic((locateSucc(boxSeqT) ~ locateSucc(boxAssignEqualT) ~ locateSucc(skolemizeT) ~
       locateSucc(ImplyRightT))*, new RootNode(sequent)).openGoals().head
     // TODO when alpha renaming finally works it should be head instead of tail.tail.head
     val postDiffSolNode = helper.runTactic(locateSucc(diffSolution(None)), diffNode).openGoals().tail.tail.head
