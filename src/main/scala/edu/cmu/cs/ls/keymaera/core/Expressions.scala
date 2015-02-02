@@ -133,7 +133,7 @@ abstract class Unary(sort : Sort, val domain : Sort, val child : Expr) extends E
 
   applicable
 
-  @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr: " + domain + " " + child.sort)
+  @elidable(ASSERTION) def applicable = require(domain == child.sort, "Sort Mismatch in Unary Expr. Required " + domain + " but found " + child.sort)
 
 }
 
@@ -1202,9 +1202,9 @@ object CheckedContEvolveFragment {
     case _ => None
   }
 }
-final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(ProgramSort, Bool, child) with AtomicProgram with ContEvolveProgram {
+final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with ContEvolveProgram {
   def reads = ???
-  def writes = ???
+  def writes = ??? //@todo
 
   override def equals(e: Any): Boolean = e match {
     case x: CheckedContEvolveFragment => x.child == child

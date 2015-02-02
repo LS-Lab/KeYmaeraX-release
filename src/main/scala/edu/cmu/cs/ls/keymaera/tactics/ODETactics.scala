@@ -456,7 +456,7 @@ object ODETactics {
    * Returns the differential invariant tactic for a single normal form ODE.
    * @return The tactic.
    */
-  @deprecated("Unsound", "Jan 2015")
+//  @deprecated("For some reason this doesn't initialize properly?", "Jan 2015")
   def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant", "DI differential invariant") {
     def applies(f: Formula) = {
       f match {

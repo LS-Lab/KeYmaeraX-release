@@ -337,6 +337,20 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system introduction'
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  "DI System Marker Intro" should "introduce a marker when there is a test" in {
+    val f=  helper.parseFormula("[x'=y, y'=x & 1=1]1=1")
+//    val expected =
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemIntro)
+    assert(tactic.applicable(node))
+    helper.runTactic(tactic, node)
+    println(helper.report(node))
+  }
+
+  it should "introduce a marker when there is no test" in {}
+
+  it should "introduce a marker when there are interleaved tests" in {}
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system head'

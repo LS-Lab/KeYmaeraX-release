@@ -774,13 +774,25 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       incompleteSystemP ::
       normalFormEvolutionSystemP :: //@todo document this.
       evolutionP  :: //@todo should be deprecated; for now we just prefer the normal form where it applies.
+      checkedEvolutionFragmentP ::
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
       groupP      ::
       Nil
 
-   
+    //@todo after some refactoring this is now only used with normalFormEvolutionSystemP, with the actual system filtered out.
+    //If that's really the only place we need this, maybe we should move it into local scope.
+    val contEvolveProgramP : Parser[ContEvolveProgram] =
+      (
+          normalFormEvolutionP       ::
+          normalFormEvolutionSystemP ::
+          evolutionP                 ::
+          checkedEvolutionFragmentP  ::
+          contEvolvePVarP            ::
+          Nil
+      ).reduce(_|_)
+
     lazy val pvarP:PackratParser[ProgramConstant] = {
       lazy val pattern = {
         val stringList =  programVariables.map(ProgramConstant.unapply(_) match {
@@ -891,7 +903,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     //@todo Per December 2014 systems of diff eqs meeting, ContEvolves are temporarily deprecated.
-    lazy val evolutionP:SubprogramParser = {
+    lazy val evolutionP:PackratParser[ContEvolve] = {
       lazy val pattern = (
                           rep1sep(formulaParser, COMMA) ~
                           AND.? ~ formulaParser.?
@@ -904,21 +916,24 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    lazy val normalFormEvolutionSystemP: SubprogramParser = {
-      lazy val pattern = rep1sep(contEvolvePVarP | normalFormEvolutionP, COMMA)
-      log(pattern)("NFContEvolve (" + COMMA + " NFContEvolve)*") ^^ {
+    lazy val normalFormEvolutionSystemP : PackratParser[ContEvolveProgram] = {
+      //The pattern is "everything except for another system"
+      lazy val pattern = rep1sep(contEvolveProgramP.filter(_ != normalFormEvolutionSystemP), COMMA)
+      log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
         case odes => odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram()) {
           (a: ContEvolveProgram, b: ContEvolveProgram) => ContEvolveProduct(a, b)
         }
       }
     }
 
-    lazy val checkedEvolutionFragmentP: SubprogramParser = {
-      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser) ~ (AND ~> formulaParser.?)
-      log(pattern)("Checked evolution") ^^ {
-        case derivative ~ term ~ formula => formula match {
-          case Some(h) => CheckedContEvolveFragment(NFContEvolve(Nil, derivative, term, h))
-          case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, derivative, term)))
+    lazy val checkedEvolutionFragmentP: PackratParser[CheckedContEvolveFragment] = {
+      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser) ~ (AND ~> formulaParser).?
+      log(pattern)("checked evolution") ^^ {
+        case d ~ t ~ f => {
+          f match {
+            case Some(f) => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, f))
+            case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, d, t)))
+          }
         }
       }
     }
@@ -945,7 +960,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     //@todo find a better term for this construct
-    lazy val incompleteSystemP: PackratParser[IncompleteSystem] = { //PackratParser[IncompleteSystem]
+    lazy val incompleteSystemP: PackratParser[IncompleteSystem] = {
       lazy val pattern = START_INCOMPLETE_SYSTEM ~> (normalFormEvolutionSystemP.? <~ END_INCOMPLETE_SYSTEM)
 
       log(pattern)("Incomplete Differential Equation System") ^^ {
