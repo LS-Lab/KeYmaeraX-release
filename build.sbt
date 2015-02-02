@@ -14,9 +14,9 @@ libraryDependencies += "org.mongodb" %% "casbah" % "2.7.4"
 // Mathematica Interop
 ////////////////////////////////////////////////////////////////////////////////
 
-unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink/JLink.jar")
+unmanagedJars in Compile += file("/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/JLink.jar")
 
-unmanagedJars in Compile += file("/Applications/Mathematica.app/SystemFiles/Links/JLink/JLink.jar")
+unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink/JLink.jar")
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hyrda Settings

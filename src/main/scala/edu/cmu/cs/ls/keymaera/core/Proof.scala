@@ -883,14 +883,17 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
  *          - ProgramConstant
  *          - Derivative(...)
  * @param t the expression to be used in place of n
+ * @TODO Rename n to match or something
+ * @TODO Rename t to repl or something
  */
 sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   applicable
-  // identity substitution would be correct but is usually unintended
+  // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
   //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
   
   @elidable(ASSERTION) def applicable = {
-    if (!(n != t)) println("INFO: Unexpected identity substitution " + n + " by equal " + t + "\n(non-critical, indicates possible tactics inefficiency)")
+    // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
+    if (!(n != t)) println("INFO: Unnecessary identity substitution " + n + " by equal " + t + "\n(non-critical, just indicates a possible tactics inefficiency)")
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case _:Variable => true
@@ -1145,15 +1148,22 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   private def substDiff(s: Seq[SubstitutionPair], u: Set[NamedSymbol]) =
     new Substitution(s.filter(_.n match { case en: NamedSymbol => !u.contains(en) case _ => true }))
 
-  def fnEquals(left: SubstitutionPair, right: Expr) = left.n match {
+  /**
+   * Check whether the function in right matches with the function in left, i.e. they have the same head.
+   */
+  def sameHead(left: SubstitutionPair, right: Expr) = left.n match {
     case Apply(lf, _: Variable | CDot) => right match { case Apply(rf, _) => lf == rf case _ => false }
     case ApplyPredicate(lf, _: Variable | CDot) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
+  /**
+   * Get the unique element in c to which pred applies.
+   * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
+   */
   private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
-    require(c.count(e => pred(e)) == 1)
-    c.filter(e => pred(e)).head
+    require(c.count(pred) == 1)
+    c.filter(pred).head
   }
 
   /**
@@ -1176,12 +1186,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Derivative(s, e) if  subsDefs.exists(_.n == t) => clashChecked(u, t, subsDefs.find(_.n == t).get.t.asInstanceOf[Term])
     case Derivative(s, e) if !subsDefs.exists(_.n == t) => Derivative(s, usubst(u, e))
     // implementation in one case: case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
-    case app@Apply(_, arg) if subsDefs.exists(fnEquals(_, app)) =>
-      val subs = uniqueElementOf[SubstitutionPair](subsDefs, fnEquals(_, app))
+    case app@Apply(_, arg) if subsDefs.exists(sameHead(_, app)) =>
+      val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
       val (rArg, rTerm) = (subs.n match { case Apply(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Term])
-      val newU = rArg match { case CDot => u case _ => u-rArg }
-      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(newU, t, rTerm))
-    case app@Apply(f, arg) if !subsDefs.exists(fnEquals(_, app)) => Apply(f, usubst(u, arg))
+      val restrictedU = rArg match { case CDot => u case _ => u-rArg }
+      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(restrictedU, t, rTerm))
+    case app@Apply(f, arg) if !subsDefs.exists(sameHead(_, app)) => Apply(f, usubst(u, arg))
     // implementation in one case
 //    case Apply(f, arg) => for(rp <- subsDefs) {
 //      rp.n match {
@@ -1221,12 +1231,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant if  subsDefs.exists(_.n == f) => clashChecked(u, f, subsDefs.find(_.n == f).get.t.asInstanceOf[Formula])
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     // implementation in one case: case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
-    case app@ApplyPredicate(_, arg) if subsDefs.exists(fnEquals(_, app)) =>
-      val subs = uniqueElementOf[SubstitutionPair](subsDefs, fnEquals(_, app))
+    case app@ApplyPredicate(_, arg) if subsDefs.exists(sameHead(_, app)) =>
+      val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
       val (rArg, rFormula) = (subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Formula])
-      val newU = rArg match { case CDot => u case _ => u-rArg }
-      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(newU, f, rFormula))
-    case app@ApplyPredicate(p, arg) if !subsDefs.exists(fnEquals(_, app)) => ApplyPredicate(p, usubst(u, arg))
+      val restrictedU = rArg match { case CDot => u case _ => u-rArg }
+      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(restrictedU, f, rFormula))
+    case app@ApplyPredicate(p, arg) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(u, arg))
       // implementation in one case
 //    case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
 //      rp.n match {
