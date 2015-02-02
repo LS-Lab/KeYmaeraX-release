@@ -285,7 +285,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[y_0:=y;]y_0>0".asFormula))
   }
 
-  ignore should "assign term t to fresh variable" in {
+  it should "assign term t to fresh variable" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(new Variable("z", None, Real)),
       "y+1".asTerm))
@@ -293,7 +293,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[z:=y+1;]z>0".asFormula))
   }
 
-  ignore should "allow arbitrary terms t when a ghost name is specified" in {
+  it should "allow arbitrary terms t when a ghost name is specified" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("z", None, Real)),
       "x+5".asTerm))
@@ -304,14 +304,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "not allow arbitrary terms t when no ghost name is specified" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, "x+5".asTerm))
-//    var node = helper.runTactic(tactic, new RootNode(sucSequent("y>0".asFormula)))
-//    // would like to expect exception, but cannot because of Scheduler
-//    node.openGoals().foreach(_.sequent should be (
-//      sucSequent("y>0".asFormula)))
-
-    var node = getProofGoals(tactic, new RootNode(sucSequent("y>0".asFormula)))
     // would like to expect exception, but cannot because of Scheduler
-    getProofSequentFromGoals(node) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
       sucSequent("y>0".asFormula))
   }
 
@@ -319,12 +313,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(new Variable("y", None, Real)),
       new Variable("y", None, Real)))
-//    val node = helper.runTactic(tactic, new RootNode(sucSequent("y>0".asFormula)))
-//    node.openGoals().foreach(_.sequent should be (
-//      sucSequent("[y:=y;]y>0".asFormula)))
-
-    val node = getProofGoals(tactic, new RootNode(sucSequent("y>0".asFormula)))
-    getProofSequentFromGoals(node) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
       sucSequent("[y:=y;]y>0".asFormula))
   }
 
@@ -376,24 +365,14 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     // will not work because y is bound by y:=2, so equality rewriting does not work
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = (HybridProgramTacticsImpl invokePrivate tacticFactory(None, Variable("y", None, Real)))(new SuccPosition(0, new PosInExpr(1 :: Nil)))
-//    val node = helper.runTactic(tactic, new RootNode(sucSequent("[y:=2;]y>0".asFormula)))
-//    node.openGoals().foreach(_.sequent should be (
-//      sucSequent("[y:=2;][y_0:=y;]y>0".asFormula)))
-
-    val node = getProofGoals(tactic, new RootNode(sucSequent("[y:=2;]y>0".asFormula)))
-    getProofSequentFromGoals(node) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("[y:=2;]y>0".asFormula))) should be (
       sucSequent("[y:=2;][y_0:=y;]y>0".asFormula))
   }
 
   it should "work on loops" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, Variable("y", None, Real)))
-//    val node = helper.runTactic(tactic, new RootNode(sucSequent("[{y:=y+1;}*;]y>0".asFormula)))
-//    node.openGoals().foreach(_.sequent should be (
-//      sucSequent("[y_0:=y;][{y:=y+1;}*;]y>0".asFormula)))
-
-    val node = getProofGoals(tactic, new RootNode(sucSequent("[{y:=y+1;}*;]y>0".asFormula)))
-    getProofSequentFromGoals(node) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("[{y:=y+1;}*;]y>0".asFormula))) should be (
       sucSequent("[y_0:=y;][{y:=y+1;}*;]y>0".asFormula))
   }
 
@@ -404,18 +383,12 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[y_0:=y;][y'=1;]y>0".asFormula))
   }
 
-  ignore should "not propagate arbitrary terms into ODEs" in {
+  it should "not propagate arbitrary terms into ODEs" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("z", None, Real)),
       "y+1".asTerm))
-//    val node = helper.runTactic(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula)))
-//    // would like to check for exception, but not possible because of Scheduler
-//    node.openGoals().foreach(_.sequent should be (
-//      sucSequent("[z:=y+1;][y'=1;]y>0".asFormula)))
-
-    val node = getProofGoals(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula)))
     // would like to check for exception, but not possible because of Scheduler
-    getProofSequentFromGoals(node) should be (
+    getProofSequent(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula))) should be (
       sucSequent("[z:=y+1;][y'=1;]y>0".asFormula))
   }
 }

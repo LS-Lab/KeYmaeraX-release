@@ -592,25 +592,31 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   it should "only allow variables as new terms if replacing in universal quantifier" in {
-    val x = new Variable("x", None, Real)
-    val z = new Variable("z", None, Real)
-    AlphaConversionHelper.replaceFree("\\forall x. x>0".asFormula)(x, CDot) should be (
+    AlphaConversionHelper.replaceFree("\\forall x. x>0".asFormula)("x".asTerm, CDot) should be (
       "\\forall x. x>0".asFormula)
-    AlphaConversionHelper.replaceFree("\\forall x. x>0".asFormula)(x, z) should be (
+    AlphaConversionHelper.replaceFree("\\forall x. x>0".asFormula)("x".asTerm, "z".asTerm) should be (
       "\\forall z. z>0".asFormula)
   }
 
-  it should "allow replacement with terms on right-handside in assignments" in {
-    val x = new Variable("x", None, Real)
-    val z = new Variable("z", None, Real)
-    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(z, Number(1)) should be (
-      "[x:=1;]x>0".asFormula)
+  it should "allow replacement with terms on right-hand side in assignments" in {
+    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)("z".asTerm, "1".asTerm) should be ("[x:=1;]x>0".asFormula)
   }
 
-  it should "not allow replacement with terms on left-handside in assignments" in {
-    val x = new Variable("x", None, Real)
-    val z = new Variable("z", None, Real)
-    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)(x, Number(1)) should be (
-      "[x:=z;]x>0".asFormula)
+  it should "not allow replacement with terms on left-hand side in assignments" in {
+    AlphaConversionHelper.replaceFree("[x:=z;]x>0".asFormula)("x".asTerm, "1".asTerm) should be ("[x:=z;]x>0".asFormula)
+  }
+
+  it should "replace terms if all their symbols are free" in {
+    AlphaConversionHelper.replaceFree("x+1>0".asFormula)("x+1".asTerm, "y".asTerm) should be ("y>0".asFormula)
+  }
+
+  it should "not replace terms if some of their symbols are bound" in {
+    AlphaConversionHelper.replaceFree("[x:=2;]x+1>0".asFormula)("x+1".asTerm, "y".asTerm) should be (
+      "[x:=2;]x+1>0".asFormula)
+  }
+
+  it should "replace terms if forced to, even if some of their symbols are bound" in {
+    AlphaConversionHelper.replaceFree("[x:=2;]x+1>0".asFormula)("x+1".asTerm, "y".asTerm, None) should be (
+      "[x:=2;]y>0".asFormula)
   }
 }

@@ -81,6 +81,10 @@ object AlphaConversionHelper {
             case Some(freeVars) => if (freeVars.contains(v)) Right(n) else Left(None)
             case None => Right(n)
           }
+          case t: Term if t == o => free match {
+            case Some(freeVars) => if (Helper.names(t).subsetOf(freeVars)) Right(n) else Left(None)
+            case None => Right(n)
+          }
           case _ => Left(None)
         }
 
