@@ -34,6 +34,9 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     Tactics.MathematicaScheduler.shutdown()
   }
 
+  private def containsOpenGoal(node:ProofNode, f:Formula) =
+    !node.openGoals().find(_.sequent.succ.contains(f)).isEmpty
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential invariants where invariant is already part of the formula? @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -338,26 +341,64 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   // Diff invariant system introduction'
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "DI System Marker Intro" should "introduce a marker when there is a test" in {
-    val f=  helper.parseFormula("[x'=y, y'=x & 1=1]1=1")
-//    val expected =
+    val f=  helper.parseFormula("[x'=y, y'=x & 1=1;]1=1")
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemIntro)
     assert(tactic.applicable(node))
     helper.runTactic(tactic, node)
-    println(helper.report(node))
+
+    //@todo the introduction of true here is strange behavior, but I think intended. We should document this carefully.
+    val expected = helper.parseFormula("1=1&[$$x'=y & true,y'=x & (1=1)$$;](1=1)'")
+    require(containsOpenGoal(node, expected))
   }
 
-  it should "introduce a marker when there is no test" in {}
+  it should "introduce a marker when there is no test" in {
+    val f=  helper.parseFormula("[x'=y, y'=x;]1=1")
+    val node = helper.formulaToNode(f)
 
-  it should "introduce a marker when there are interleaved tests" in {}
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemIntro)
+    assert(tactic.applicable(node))
+    helper.runTactic(tactic, node)
+
+    //@todo the introduction of true here is strange behavior, but I think intended. We should document this carefully.
+    val expected = helper.parseFormula("1=1&[$$x'=y & true,y'=x$$;](1=1)'")
+    require(containsOpenGoal(node, expected))
+  }
+
+  it should "introduce a marker when there are interleaved tests" in {
+    val f=  helper.parseFormula("[x'=y & 2=2, y'=x & 3=3;]1=1")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemIntro)
+    assert(tactic.applicable(node))
+    helper.runTactic(tactic, node)
+
+    val expected = helper.parseFormula("1=1&[$$x'=y & 2=2,y'=x & 3=3$$;](1=1)'")
+    require(containsOpenGoal(node, expected))
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Diff invariant system head'
+  // Diff invariant system head no test
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  "Diff invariant system head no test" should "peel off 1st equation" in {
+    val f = helper.parseFormula("[$$ x'=y, y'=x$$;]1=1")
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemHeadNoTest)
+    require(tactic.applicable(node))
+
+    helper.runTactic(tactic,node)
+
+    val expected = helper.parseFormula("[$$y'=x & true,x' =` y & true$$;][(x'):=y;]1=1->[$$x'=y & true,y'=x & true$$;]1=1")
+    require(containsOpenGoal(node,expected))
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Diff invariant system head test
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Diff invariant system tail'
+  // Diff invariant system tail
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 

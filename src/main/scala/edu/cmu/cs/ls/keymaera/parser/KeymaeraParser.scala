@@ -593,7 +593,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         case name => {
           val (n, i) = nameAndIndex(name)
           val p = PredicateConstant(n, i)
-          require(predicates.contains(p), "All predicates have to be declared " + p.prettyString() + " not found in " + predicates)
+          require(predicates.contains(p), "All predicates have to be declared, but the predicate named ``" + p.prettyString() + "\" was not found in the list of predicates: " + predicates)
           p
         }
       } 
@@ -773,8 +773,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       ndassignP   ::
       incompleteSystemP ::
       normalFormEvolutionSystemP :: //@todo document this.
+      checkedEvolutionFragmentP :: //@todo not sure where this really should go in the precedence list... If you move it make sure to also move it in the pretty printer list.
       evolutionP  :: //@todo should be deprecated; for now we just prefer the normal form where it applies.
-      checkedEvolutionFragmentP ::
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
@@ -785,10 +785,10 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //If that's really the only place we need this, maybe we should move it into local scope.
     val contEvolveProgramP : Parser[ContEvolveProgram] =
       (
-          normalFormEvolutionP       ::
           normalFormEvolutionSystemP ::
-          evolutionP                 ::
           checkedEvolutionFragmentP  ::
+          normalFormEvolutionP       ::
+          evolutionP                 ::
           contEvolvePVarP            ::
           Nil
       ).reduce(_|_)
@@ -932,7 +932,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         case d ~ t ~ f => {
           f match {
             case Some(f) => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, f))
-            case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, d, t)))
+            case None => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, True)) //@todo this is necessary for usubst
+//            case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, d, t)))
           }
         }
       }

@@ -36,6 +36,31 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case _ => false
   }
 
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Methods extracted from the main pretty printer because they might be parametric in the symbol used for equality
+  // due to "check marks" on evolutions.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * This is extracted from the pretty printer because it is used in both the
+   */
+  private def processNFContEvolve(vars:Seq[NamedSymbol],x:Derivative,theta:Term,f:Formula,eqSymbol:String) = {
+    if(vars.length != 0) {
+      symbolTable.EXISTS + " "
+      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
+        "." +
+        groupIfNotAtomic(x, prettyPrinter(x)) + eqSymbol +
+        groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
+        groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
+    } else {
+      groupIfNotAtomic(x, prettyPrinter(x)) + eqSymbol +
+        groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
+        groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
+    }
+  }
+
+
   private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
     //arith
   	case Add(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS)
@@ -201,18 +226,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     })
 
     case NFContEvolve(vars,x,theta,f) => {
-      if(vars.length != 0) {
-        symbolTable.EXISTS + " "
-          vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
-          "." +
-          groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.EQ +
-          groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
-          groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
-      } else {
-        groupIfNotAtomic(x, prettyPrinter(x)) + symbolTable.EQ +
-          groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
-          groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
-      }
+      processNFContEvolve(vars,x,theta,f,symbolTable.EQ)
     }
 
     case p@ContEvolveProduct(l, r) => {
@@ -239,6 +253,20 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case Some((ty, number:BigDecimal)) => number.toString()
       case _ => ???
       
+    }
+
+    case CheckedContEvolveFragment(child) => {
+      child match {
+        //@todo well this is awkward.
+        case NFContEvolve(vars, x, theta, f) => {
+          processNFContEvolve(vars,x,theta,f,symbolTable.CHECKED_EQ)
+        }
+        case ContEvolve(Equals(sort, left,right)) => {
+          parensIfNeeded(left, expressionToPrint)  + symbolTable.CHECKED_EQ + parensIfNeeded(right, expressionToPrint)
+        }
+        case CheckedContEvolveFragment(_) => throw new NotImplementedError("Why do you have a checked fragment inside another checked fragment? Seems broken.")
+        case _ => throw new NotImplementedError("CheckedContEvolveFragment not implemented for " + child.getClass() + " whose child is a " + child.asInstanceOf[CheckedContEvolveFragment].child.getClass())
+      }
     }
     
     
@@ -354,6 +382,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       ContEvolveProduct.getClass.getCanonicalName ::
       NFContEvolve.getClass.getCanonicalName ::
       ContEvolve.getClass.getCanonicalName ::
+      CheckedContEvolveFragment.getClass().getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName ::
       ContEvolveProgramConstant.getClass.getCanonicalName ::
       CDot.getClass.getCanonicalName ::

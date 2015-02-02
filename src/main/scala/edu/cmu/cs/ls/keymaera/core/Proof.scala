@@ -1270,6 +1270,18 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
     case Assign(CDot, e) => (u+CDot, Assign(CDot, usubst(u, e)))
     case Assign(d@Derivative(_, x: Variable), e) => (u+x, Assign(d, usubst(u,e))) //@todo check NRFbeforeCommit
+    case CheckedContEvolveFragment(child) => { //@todo woah eisegesis I have no idea what I'm doing here...
+      val rec = usubst(u, child)
+      val result = rec._2
+      val rec_u = rec._1
+      assert(result.isInstanceOf[ContEvolveProgram])
+//      assert(result.isInstanceOf[child.type], "Expected equal types for (original,result) but found: (" + child.getClass() + ", " + result.getClass() + ") with values: (" + child.prettyString() + ", " + result.toString()) //anything else wouldn't really make much sense.
+//      assert(child.isInstanceOf[ContEvolveProgram])
+      assert(result.isInstanceOf[ContEvolveProgram]) //obvious at this point by MP, but let's make sure.
+      val retVal : (Set[NamedSymbol], Program) =
+        ( u ++ rec_u, CheckedContEvolveFragment(result.asInstanceOf[ContEvolveProgram]) )
+      retVal
+    }
     case NDetAssign(x:Variable) => (u+x, p)
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
       if (!u.contains(x) && subsDefs.exists(_.n == x)) throw new SubstitutionClashException("Variable " + x

@@ -572,10 +572,13 @@ object ODETactics {
         //[c]p <- p & [{c}]p'
 
         //construct instance
-        val g = BoxModality(
-          IncompleteSystem(c), FormulaDerivative(p)
+        val g = And(
+          p,
+          BoxModality(
+            IncompleteSystem(c), FormulaDerivative(p)
+          )
         )
-        val axiomInstance = Imply(f, g)
+        val axiomInstance = Imply(g, f)
 
         //construct substitution.
         val aC = ContEvolveProgramConstant("c")
@@ -598,7 +601,8 @@ object ODETactics {
   */
   def diffInvSystemHeadNoTest = new AxiomTactic("DI System Head No Test", "DI System Head No Test") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(_,Derivative(Real, x:Variable), t:Term)), _))) => true
+//      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(_,Derivative(Real, x:Variable), t:Term)), _))) => true
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, x:Variable),_,True), _)), _) => true
       case _ => false
     }
 
@@ -608,16 +612,20 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(sort:Sort, Derivative(Real, x:Variable), t:Term)), c:ContEvolveProgram)), p:Formula) => {
-        //construct instance
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(vars, Derivative(Real, x:Variable), t:Term, True), c:ContEvolveProgram)), p:Formula) => {
         val g = BoxModality(
-          ContEvolve(Equals(sort,Derivative(Real,x),t)),
+          IncompleteSystem(
+            ContEvolveProduct(
+              c,
+              CheckedContEvolveFragment(NFContEvolve(vars, Derivative(Real,x), t, True))
+            )
+          ),
           BoxModality(
-            IncompleteSystem(ContEvolveProduct(c, ContEvolve(Equals(sort,Derivative(Real,x),t)))),
-            BoxModality(Assign(Derivative(Real,x), t), p)
+            Assign(Derivative(Real, x), t),
+            p
           )
         )
-        val instance = Imply(f,g)
+        val instance = Imply(g,f)
 
         //construct substitution
         import Substitution.maybeFreeVariables
@@ -628,12 +636,13 @@ object ODETactics {
 
         val aC = ContEvolveProgramConstant("c")
 
-        val aP = PredicateConstant("p")
+        val aP = Apply(Function("p", None, Real, Real), CDot)
+        val p_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(p))) //@todo leaving off here for team building thing... this substitution isn't going through properly.
 
         val subst = Substitution(List(
           new SubstitutionPair(aT, t_cdot),
           new SubstitutionPair(aC,c),
-          new SubstitutionPair(aP, p)
+          new SubstitutionPair(aP, p_cdot)
         ))
 
         val (axiom, cont) =
@@ -651,59 +660,59 @@ object ODETactics {
       [$$x'=f(x) & H(x), c$$;]p(x) <- [$$c, x'$=$f(x)$$;][x' := f(x);](H(x) -> p(x))
     End.
    */
-  def diffInvSystemHeadTest = new AxiomTactic("DI System Head Test", "DI System Head Test") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, v:Variable),_,_),_)), _) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
-    }
-
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(bound,Derivative(Real,x:Variable),t,h), c)), p) => {
-        //construct instance
-        val g = BoxModality(
-          NFContEvolve(bound, Derivative(Real,x), t, h),
-          BoxModality(
-            IncompleteSystem(ContEvolveProduct(c, CheckedContEvolveFragment(NFContEvolve(bound, Derivative(Real,x), t, h)))),
-            Imply(h, BoxModality(Assign(Derivative(Real,x), t), p))
-          )
-        )
-        val instance = Imply(f,g)
-
-        //construct substitution
-        import Substitution.maybeFreeVariables
-        val aX = Variable("x", None, Real)
-
-        val aT = Apply(Function("f", None, Real, Real), CDot)
-        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))
-
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-        val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
-
-        val aC = ContEvolveProgramConstant("c")
-
-        val aP = PredicateConstant("p")
-
-        val subst = Substitution(List(
-          new SubstitutionPair(aT, t_cdot),
-          new SubstitutionPair(aH, h_cdot),
-          new SubstitutionPair(aC,c),
-          new SubstitutionPair(aP, p)
-        ))
-
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
-          else (ax, None)
-
-        Some(axiom, instance, subst, cont)
-      }
-      case _ => None
-    }
-  }
+//  def diffInvSystemHeadTest = new AxiomTactic("DI System Head Test", "DI System Head Test") {
+//    override def applies(f: Formula): Boolean = f match {
+//      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, v:Variable),_,_),_)), _) => true
+//      case _ => false
+//    }
+//
+//    override def applies(s: Sequent, p: Position): Boolean = {
+//      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+//    }
+//
+//    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+//    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+//      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(bound,Derivative(Real,x:Variable),t,h), c)), p) => {
+//        //construct instance
+//        val g = BoxModality(
+//          NFContEvolve(bound, Derivative(Real,x), t, h),
+//          BoxModality(
+//            IncompleteSystem(ContEvolveProduct(c, CheckedContEvolveFragment(NFContEvolve(bound, Derivative(Real,x), t, h)))),
+//            Imply(h, BoxModality(Assign(Derivative(Real,x), t), p))
+//          )
+//        )
+//        val instance = Imply(g,f)
+//
+//        //construct substitution
+//        import Substitution.maybeFreeVariables
+//        val aX = Variable("x", None, Real)
+//
+//        val aT = Apply(Function("f", None, Real, Real), CDot)
+//        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))
+//
+//        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+//        val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
+//
+//        val aC = ContEvolveProgramConstant("c")
+//
+//        val aP = PredicateConstant("p")
+//
+//        val subst = Substitution(List(
+//          new SubstitutionPair(aT, t_cdot),
+//          new SubstitutionPair(aH, h_cdot),
+//          new SubstitutionPair(aC,c),
+//          new SubstitutionPair(aP, p)
+//        ))
+//
+//        val (axiom, cont) =
+//          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+//          else (ax, None)
+//
+//        Some(axiom, instance, subst, cont)
+//      }
+//      case _ => None
+//    }
+//  }
 
   /*
     Axiom "DI System Complete".

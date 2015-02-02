@@ -1196,9 +1196,15 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
 }
 
 object CheckedContEvolveFragment {
-  def apply(child: ContEvolveProgram): CheckedContEvolveFragment = new CheckedContEvolveFragment(child)
+  def apply(child: ContEvolveProgram): CheckedContEvolveFragment = {
+    assert(!child.isInstanceOf[CheckedContEvolveFragment])
+    new CheckedContEvolveFragment(child)
+  }
   def unapply(e:Any) : Option[ContEvolveProgram] = e match {
-    case x: ContEvolveProgram => Some(x)
+    case x: CheckedContEvolveFragment => {
+      assert(x.child.isInstanceOf[ContEvolveProgram]) //the lone constructor should enforce this.
+      Some(x.child.asInstanceOf[ContEvolveProgram])
+    }
     case _ => None
   }
 }
