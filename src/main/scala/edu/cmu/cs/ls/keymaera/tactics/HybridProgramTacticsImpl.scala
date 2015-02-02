@@ -291,7 +291,8 @@ object HybridProgramTacticsImpl {
       val aV = Variable("v", None, Real)
       val aT = Variable("t", None, Real)
       val aP = Function("p", None, Real, Bool)
-      val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, t), f))
+      val l = List(new SubstitutionPair(aT, t),
+        new SubstitutionPair(ApplyPredicate(aP, CDot), replaceFree(f)(t, CDot)))
 
       // check specified name, or construct a new name for the ghost variable if None
       val v = ghost match {
@@ -329,7 +330,7 @@ object HybridProgramTacticsImpl {
 
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first))
+              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.first))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
