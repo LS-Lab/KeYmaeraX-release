@@ -88,6 +88,14 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s.apply(Apply(f,x)) should be ("y+1".asTerm)
   }
 
+  "Uniform substitution of (x,y+z)(f(x),x+1) |-> f(x)" should "be y+z+1" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val f = Function("f", None, Real, Real)
+    s = Substitution(Seq(new SubstitutionPair(x, "y+z".asTerm),new SubstitutionPair(Apply(f, x), "x+1".asTerm)))
+    s.apply(Apply(f,x)) should be ("y+z+1".asTerm)
+  }
+
   "Uniform substitution of (x,y)(f(.),.+x+1) |-> f(x)" should "be y+x+1" in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
