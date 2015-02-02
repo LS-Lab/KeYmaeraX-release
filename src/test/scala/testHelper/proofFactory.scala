@@ -10,7 +10,7 @@ import scala.collection.immutable.List
  * Created by ran on 01/27/15.
  * @author Ran Ji
  */
-object proofFactory {
+object ProofFactory {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
 

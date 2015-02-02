@@ -72,7 +72,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // f(\theta) apply on f
 
-  "Uniform substitution of (x,y)(f(t),t+1) |-> f(x)" should "be y+1" in {
+  "Uniform substitution of (x,y)(f(.),.+1) |-> f(x)" should "be y+1" in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val f = Function("f", None, Real, Real)
@@ -80,13 +80,30 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s.apply(Apply(f,x)) should be ("y+1".asTerm)
   }
 
-  "Uniform substitution of (x,y)(f(t),t+x+1) |-> f(x)" should "be y+x+1" in {
+  "Uniform substitution of (x,y)(f(x),x+1) |-> f(x)" should "be y+1" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val f = Function("f", None, Real, Real)
+    s = Substitution(Seq(new SubstitutionPair(x, y),new SubstitutionPair(Apply(f, x), Add(Real, x, Number(1)))))
+    s.apply(Apply(f,x)) should be ("y+1".asTerm)
+  }
+
+  "Uniform substitution of (x,y)(f(.),.+x+1) |-> f(x)" should "be y+x+1" in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val f = Function("f", None, Real, Real)
     s = Substitution(Seq(new SubstitutionPair(x, y),
       new SubstitutionPair(Apply(f, CDot), Add(Real, Add(Real, CDot, x), Number(1)))))
     s.apply(Apply(f,x)) should be ("y+x+1".asTerm)
+  }
+
+  "Uniform substitution of (x,y)(f(x),x+x+1) |-> f(x)" should "be y+y+1" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val f = Function("f", None, Real, Real)
+    s = Substitution(Seq(new SubstitutionPair(x, y),
+      new SubstitutionPair(Apply(f, x), Add(Real, Add(Real, x, x), Number(1)))))
+    s.apply(Apply(f,x)) should be ("y+y+1".asTerm)
   }
 
   "Uniform substitution of (x,y)(p(•),[x:=•+1;]x>0) |-> p(x)" should "be [x:=y+1;]x>0" in {
@@ -96,6 +113,16 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s = Substitution(Seq(new SubstitutionPair(x, y),
       new SubstitutionPair(ApplyPredicate(p, CDot), BoxModality(Assign(x,
         Add(Real, CDot, Number(1))), GreaterThan(Real, x, Number(0))))))
+    s.apply(ApplyPredicate(p,x)) should be ("[x:=y+1;]x>0".asFormula)
+  }
+
+  "Uniform substitution of (x,y)(p(x),[x:=x+1;]x>0) |-> p(x)" should "be [x:=y+1;]x>0" in {
+    val x = Variable("x", None, Real)
+    val y = Variable("y", None, Real)
+    val p = Function("p", None, Real, Bool)
+    s = Substitution(Seq(new SubstitutionPair(x, y),
+      new SubstitutionPair(ApplyPredicate(p, x), BoxModality(Assign(x,
+        Add(Real, x, Number(1))), GreaterThan(Real, x, Number(0))))))
     s.apply(ApplyPredicate(p,x)) should be ("[x:=y+1;]x>0".asFormula)
   }
 

@@ -163,23 +163,24 @@ object FOQuantifierTacticsImpl {
     }
   }
 
-  protected[tactics] val uniquify = new PositionTactic("Uniquify") {
+  val uniquify = new PositionTactic("Uniquify") {
     // for now only on top level
     def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
-      case Forall(v, _) => Some(v.map(_ match {
+      case Forall(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
         case _ => ???
-      }))
-      case Exists(v, _) => Some(v.map(_ match {
+      })
+      case Exists(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
         case _ => ???
-      }))
-      case BoxModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
-      case BoxModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
-      case DiamondModality(Assign(Variable(name, i, _), e), _) => Some(Seq((name, i)))
-      case DiamondModality(NDetAssign(Variable(name, i, _)), _) => Some(Seq((name, i)))
+      })
+      case BoxModality(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
+      case BoxModality(NDetAssign(Variable(n, i, _)), _) => Some(Seq((n, i)))
+      case DiamondModality(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
+      case DiamondModality(NDetAssign(Variable(n, i, _)), _) => Some(Seq((n, i)))
       case a => None
     }
+
     override def applies(s: Sequent, p: Position): Boolean = (p.inExpr == HereP) && getBoundVariables(s, p).isDefined
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
@@ -188,9 +189,10 @@ object FOQuantifierTacticsImpl {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         getBoundVariables(node.sequent, p) match {
           case Some(s) =>
-            var otherVars = (Helper.namesIgnoringPosition(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s)
+            var otherVars = Helper.namesIgnoringPosition(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s
+            val pVars = Helper.names(node.sequent(p)).map((n: NamedSymbol) => (n.name, n.index))
             val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
-              val vars = otherVars.filter(_._1 == n)
+              val vars = otherVars.filter(_._1 == n) ++ pVars.filter(_._1 == n)
               //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
               // we do not have to rename if there are no name clashes
               if (vars.size > 0) {
