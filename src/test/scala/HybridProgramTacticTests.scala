@@ -371,9 +371,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tactic = (HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("y", None, Real)), Variable("y", None, Real)))(new SuccPosition(0, new PosInExpr(1 :: Nil)))
     getProofSequent(tactic, new RootNode(sucSequent("[x:=1;][y:=2;]y>0".asFormula))) should be (
       sucSequent("[x:=1;][y:=y;][y:=2;]y>0".asFormula))
-    // fails because x bound by x:=x+1
-//    getProofSequent(tactic, new RootNode(sucSequent("[x:=x+1;][x'=2;]x>0".asFormula))) should be (
-//      sucSequent("[x:=x+1;][y:=y;][x'=2;]x>0".asFormula))
   }
 
   it should "not introduce self-assignment ghosts in the middle of formulas when bound" in {
@@ -404,6 +401,14 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, Variable("y", None, Real)))
     getProofSequent(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula))) should be (
       sucSequent("[y_0:=y;][y'=1;]y>0".asFormula))
+  }
+
+  ignore should "introduce self-assignment in front of ODEs" in {
+    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
+    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some("y".asNamedSymbol), "y".asTerm))
+    // substitution clash because y is getting bound by assignment
+    getProofSequent(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula))) should be (
+      sucSequent("[y:=y;][y'=1;]y>0".asFormula))
   }
 
   it should "not propagate arbitrary terms into ODEs" in {
