@@ -267,7 +267,8 @@ object ExpressionTraversal {
         case Loop(a) => matchOne(p, Loop.apply, f, a)
         case NFContEvolve(v, x, t, h) => matchThree(p, NFContEvolve(v, _: Derivative, _: Term, _: Formula), f, x, t, h)
         case ContEvolveProduct(a, b) => matchTwo(p, ContEvolveProduct.apply, f, a, b)
-        case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s)
+        case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s) //@todo eisegesis
+        case CheckedContEvolveFragment(fragment) => matchOne(p, CheckedContEvolveFragment.apply, f, fragment) //@todo eisegesis
         case _: EmptyContEvolveProgram => matchZero(p, f, e)
 
         case _ => failFTPG(e)

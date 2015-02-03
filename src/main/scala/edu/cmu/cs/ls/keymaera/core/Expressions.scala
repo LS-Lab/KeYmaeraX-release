@@ -1284,11 +1284,12 @@ object ContEvolveProduct {
 final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/*Either[EmptyContEvolveProgram, ContEvolveProduct]*/)
     extends BinaryProgram(left, right) with ContEvolveProgram {
   //Enforce a common structure so that equality testing can be simple.
-//  assert(!left.isInstanceOf[ContEvolveProduct]) //@todo this will fail! from Stefan on 3/3: There is also this awkward special case code in uniform substitution to combine two products that each end with an EmptyContEvolveProgram. We should implement that in the data structure at some point.
+//  assert(!left.isInstanceOf[ContEvolveProduct]) //@todo this will fail! from Stefan on 2/3: There is also this awkward special case code in uniform substitution to combine two products that each end with an EmptyContEvolveProgram. We should implement that in the data structure at some point.
   assert(right.isInstanceOf[EmptyContEvolveProgram] || right.isInstanceOf[ContEvolveProduct], "Expected proper form but found a " + right.getClass() + " on the RHS!")
   def reads = (left.reads ++ right.reads).distinct
   def writes = (left.writes ++ right.writes).distinct
 
+  //@todo SYMMETRY!
   override def equals(e: Any): Boolean = e match {
     case e : ContEvolveProduct => {
       this.left.equals(e.left) && this.right.equals(e.right)

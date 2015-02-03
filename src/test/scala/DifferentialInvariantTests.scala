@@ -397,10 +397,17 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     helper.runTactic(tactic,node)
     val expected = helper.parseFormula("[$$y'=x & true,x' =` y & true$$;][(x'):=y;]1=1")
 
-    val openSequents = node.openGoals().map(_.sequent)
-    require(openSequents.length==1)
+    require(containsOpenGoal(node,expected))
+  }
 
-    helper.report(node)
+  it should "peel off 2nd equation" in {
+    val f = helper.parseFormula("[$$y'=x,x' =` y$$;][(x'):=y;]1=1") //expected from last test case minus the tests.
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemHeadNoTest)
+    require(tactic.applicable(node))
+
+    helper.runTactic(tactic,node)
+    val expected = helper.parseFormula("[$$x'=`y & true,y'=`x & true$$;][(y'):=x;][(x'):=y;]1=1")
     require(containsOpenGoal(node,expected))
   }
 

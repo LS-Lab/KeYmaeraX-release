@@ -1088,7 +1088,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val ba = freeVariables(u, a)
       val bb = freeVariables(u, b)
       BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
-    case IncompleteSystem(s) => freeVariables(u, s)
+    case IncompleteSystem(s) => freeVariables(u, s) //@todo eisegesis
+    case CheckedContEvolveFragment(fragment) => freeVariables(u, fragment) //@todo eisegesis.
     case s: EmptyContEvolveProgram => BindingAssessment(u, u, Set.empty)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
