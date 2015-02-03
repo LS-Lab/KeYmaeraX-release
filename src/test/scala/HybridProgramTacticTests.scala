@@ -351,7 +351,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[x:=1;][y_0:=y;][y:=2;]y>0".asFormula))
   }
 
-  it should "introduce self-assignment ghosts in the middle of formulas" in {
+  it should "introduce self-assignment ghosts in the middle of formulas when not bound before" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = (HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("y", None, Real)), Variable("y", None, Real)))(new SuccPosition(0, new PosInExpr(1 :: Nil)))
     getProofSequent(tactic, new RootNode(sucSequent("[x:=1;][y:=2;]y>0".asFormula))) should be (
@@ -359,6 +359,14 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     // fails because x bound by x:=x+1
 //    getProofSequent(tactic, new RootNode(sucSequent("[x:=x+1;][x'=2;]x>0".asFormula))) should be (
 //      sucSequent("[x:=x+1;][y:=y;][x'=2;]x>0".asFormula))
+  }
+
+  it should "not introduce self-assignment ghosts in the middle of formulas when bound" in {
+    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
+    val tactic = (HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("y", None, Real)), Variable("y", None, Real)))(new SuccPosition(0, new PosInExpr(1 :: Nil)))
+    // equivelance rewriting fails because x bound by x:=x+1
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=x+1;][x'=2;]x>0".asFormula))) should be (
+      sequent(Nil, "[y:=y;][x'=2;]x>0 <-> [x'=2;]x>0".asFormula :: Nil, "[x:=x+1;][x'=2;]x>0".asFormula :: Nil))
   }
 
   ignore should "introduce ghosts in modality predicates" in {
