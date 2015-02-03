@@ -177,17 +177,16 @@ object ODETactics {
 
         // construct substitution
         val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val aT = Apply(Function("f", None, Real, Real), CDot)
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
+        val aT = Apply(Function("f", None, Real, Real), x)
         val aC = ContEvolveProgramConstant("c")
-        import Substitution.maybeFreeVariables
-        val l = List(new SubstitutionPair(aH, replaceFree(h)(x, CDot)), new SubstitutionPair(aP, replaceFree(p)(x, CDot)),
-                     new SubstitutionPair(aT, replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))), new SubstitutionPair(aC, c))
+        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
+                     new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
 
         // alpha renaming of x if necessary
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), cont)
@@ -242,8 +241,8 @@ object ODETactics {
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-        Some(alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, None)(p.first)
-          & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, None)(p.second))
+        Some(alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.first)
+          & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.second))
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
