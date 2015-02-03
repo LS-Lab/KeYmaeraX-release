@@ -1308,7 +1308,7 @@ object IncompleteSystem {
       case _                   => None
   }
 }
-final class IncompleteSystem(val system: ContEvolveProgram) extends Expr(ProgramSort) with Program {
+final class IncompleteSystem(val system: ContEvolveProgram) extends Expr(ProgramSort) with ContEvolveProgram {
   def reads = system.reads.distinct
   def writes = system.writes.distinct
 

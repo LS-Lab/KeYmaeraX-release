@@ -6,6 +6,10 @@ import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import ODETactics.{diffWeakenT, diffWeakenSystemIntroT, diffWeakenSystemHeadT,
   diffWeakenSystemNilT, diffSolution}
+import testHelper.StringConverter._
+import testHelper.SequentFactory._
+import testHelper.ProofFactory._
+
 
 import scala.collection.immutable.Map
 
@@ -20,50 +24,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   //Mathematica
   val mathematicaConfig: Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
-  var tool: Mathematica = null
 
-  //Constants
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
-
-  def d(e: Variable) = Derivative(Real, e)
-
-  val one = Number(1)
-
-
-  //Helper functions
-  def parse(s: String) = new KeYmaeraParser().parseBareExpression(s).get.asInstanceOf[Formula]
-
-  def formulaToSequent(formula: Formula) = {
-    new Sequent(Nil, scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(formula))
-  }
-
-  def formulaToNode(formula: Formula) = {
-    val sequent = new Sequent(Nil, scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(formula))
-    new RootNode(sequent)
-  }
-
-  def report(pn: ProofNode): Unit = {
-    val report = pn.openGoals().map(goal => {
-      "Open Goal: " + goal.sequent.toString() + "\n"
-    })
-
-    println(report.reduce(_ + _))
-  }
-
-  def checkResult(expectedFormula: Formula, result: ProofNode) = {
-    val openGoals = result.openGoals()
-    openGoals.length should be(1)
-    val goal = openGoals.last
-
-    goal.sequent.succ.length should be(1)
-    println("Testing expected result against " + goal.sequent.succ.last.prettyString())
-    goal.sequent.succ.last.equals(expectedFormula) should be(true)
-  }
-
-  def runDefault(pn: ProofNode) = helper.runTactic(TacticLibrary.default, pn)
-
-  //Running tactics
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
@@ -75,400 +36,169 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "differential weaken" should "turn nondeterministic assignments and tests of the evolution domain into facts in the antecedent" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=1 & x>2;]x>0"))
-    )
+    val s = sucSequent("[x'=1 & x>2;]x>0".asFormula)
 
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenT)
-    helper.runTactic(diffWeaken, new RootNode(sequent)).openGoals().foreach(_.sequent should be (
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x", Some(0), Real)),
-        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(2))),
-        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(0))))))
+    val diffWeaken = locateSucc(diffWeakenT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sequent("x_0".asNamedSymbol :: Nil, "x_0>2".asFormula :: Nil, "x_0>0".asFormula :: Nil))
   }
 
   // alpha renaming not yet done
   ignore should "perform alpha renaming if necessary" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[y'=y & y>2 & z<0;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    val y0 = new Variable("y", Some(0), Real)
-    val z = new Variable("z", None, Real)
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(y0 :: Nil,
-        scala.collection.immutable.IndexedSeq(And(GreaterThan(Real, y0, Number(2)), LessThan(Real, z, Number(0)))),
-        scala.collection.immutable.IndexedSeq(GreaterThan(Real, y0, Number(0))))
-    ))
+    val s = sucSequent("[y'=y & y>2 & z<0;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sequent("y_0".asNamedSymbol :: Nil, "y_0>2 & z<0".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
   it should "introduce true if there is no evolution domain constraint" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=1;]x>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(Variable("x", Some(0), Real) :: Nil,
-        scala.collection.immutable.IndexedSeq(True),
-        scala.collection.immutable.IndexedSeq(GreaterThan(Real, Variable("x", Some(0), Real), Number(0))))
-    ))
+    val s = sucSequent("[x'=1;]x>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sequent("x_0".asNamedSymbol :: Nil, "true".asFormula :: Nil, "x_0>0".asFormula :: Nil))
   }
 
   // alpha renaming not yet done
   ignore /*"differential weaken of system of ODEs"*/ should "replace system of ODEs with nondeterministic assignments and tests" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=x & x>3, y'=1 & y>2 & z<0;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x", Some(0), Real), Variable("y", Some(0), Real)),
-        scala.collection.immutable.IndexedSeq(
-          // y_0>2 & z<0, x_0>3
-          And(
-            GreaterThan(Real, Variable("y", Some(0), Real), Number(2)),
-            LessThan(Real, Variable("z", None, Real), Number(0))),
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(3))
-        ),
-        scala.collection.immutable.IndexedSeq(
-          // y_0>0 but cannot use helper because of indices
-          GreaterThan(Real, Variable("y", Some(0), Real), Number(0))))
-    ))
+    val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sequent("x_0".asNamedSymbol :: "y_0".asNamedSymbol :: Nil,
+        "y_0>2 & z<0, x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
   // alpha renaming not yet done
   ignore should "replace system of ODEs with nondeterministic assignments and tests and skolemize correctly" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=x & x>3, y'=1 & y>2 & z<0, z'=2;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x", Some(0), Real),
-        Variable("y", Some(0), Real), Variable("z", Some(0), Real)),
-        scala.collection.immutable.IndexedSeq(
-          True,
-          // y_0>2 & z_0<0, x_0>3
-          And(
-            GreaterThan(Real, Variable("y", Some(0), Real), Number(2)),
-            LessThan(Real, Variable("z", Some(0), Real), Number(0))),
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(3))
-        ),
-        scala.collection.immutable.IndexedSeq(
-          // y_0>0 but cannot use helper because of indices
-          GreaterThan(Real, Variable("y", Some(0), Real), Number(0)))
-      )))
+    val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0, z'=2;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sequent("x_0".asNamedSymbol :: "y_0".asNamedSymbol :: "z_0".asNamedSymbol :: Nil,
+        "true".asFormula :: "y_0>2 & z_0<0, x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
   it should "introduce marker when started" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=x & x>3, y'=1 & y>2 & z<0;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemIntroT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=x & x>3, y'=1 & y>2&z<0$$;]y>0")))
-    ))
+    val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemIntroT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sucSequent("[$$x'=x & x>3, y'=1 & y>2&z<0$$;]y>0".asFormula))
   }
 
   it should "pull out first ODE from marked system" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=x & x>3, y'=1 & y>2 & z<0$$;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0")))
-    ))
+    val s = sucSequent("[$$x'=x & x>3, y'=1 & y>2 & z<0$$;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemHeadT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sucSequent("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0".asFormula))
   }
 
   // alpha renaming not yet done
   ignore should "pull out first ODE from marked system repeatedly" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=x & x>3, y'=1 & y>2 & z<0$$;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be (
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0")))
-    ))
+    val s = sucSequent("[$$x'=x & x>3, y'=1 & y>2 & z<0$$;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemHeadT)
+    val node = helper.runTactic(diffWeaken, new RootNode(s))
+    node.openGoals().foreach(_.sequent should be (sucSequent("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0".asFormula)))
 
     val secondNode = helper.runTactic(locateSucc(boxNDetAssign) & locateSucc(skolemizeT) & diffWeaken,
       node.openGoals().head)
-    val x0 = new Variable("x", Some(0), Real)
-    val y = new Variable("y", None, Real)
-    val z = new Variable("z", None, Real)
     secondNode.openGoals().foreach(_.sequent should be (
-      new Sequent(x0 :: Nil,
-        scala.collection.immutable.IndexedSeq(),
-        // [y:=*;][$$$$;][?y>2&z<0;][?x_0>3;]y>0
-        scala.collection.immutable.IndexedSeq(
-          BoxModality(NDetAssign(y),
-            BoxModality(IncompleteSystem(EmptyContEvolveProgram()),
-              BoxModality(Test(And(GreaterThan(Real, y, Number(2)), LessThan(Real, z, Number(0)))),
-                BoxModality(Test(GreaterThan(Real, x0, Number(3))),
-                  GreaterThan(Real, y, Number(0))
-                )
-              )
-            )
-          )
-        ))
-    ))
+      sequent("x_0".asNamedSymbol :: Nil, Nil, "[y:=*;][$$$$;][?y>2&z<0;][?x_0>3;]y>0".asFormula :: Nil)))
   }
 
   it should "pull out first ODE from marked system and sort in correctly" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=1 & x>2 & z<0, z'=2$$;][?x>3;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$z'=2$$;][?x>2&z<0;][?x>3;]y>0")))
-    ))
+    val s = sucSequent("[$$x'=1 & x>2 & z<0, z'=2$$;][?x>3;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemHeadT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be(
+      sucSequent("[x:=*;][$$z'=2$$;][?x>2&z<0;][?x>3;]y>0".asFormula))
   }
 
   // alpha renaming not yet done
   ignore should "alpha rename if necessary" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$y'=1 & y>2 & z<0, z'=2$$;][?x>3;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[y:=*;][$$z'=2$$;][?y>2&z<0;][?x>3;]y>0")))
-    ))
+    val s = sucSequent("[$$y'=1 & y>2 & z<0, z'=2$$;][?x>3;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemHeadT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (
+      sucSequent("[y:=*;][$$z'=2$$;][?y>2&z<0;][?x>3;]y>0".asFormula))
   }
 
   it should "pull out sole ODE from marked system and sort in correctly" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$x'=1 & x>2$$;][?x>3;]x>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x:=*;][$$$$;][?x>2;][?x>3;]x>0")))
-    ))
+    val s = sucSequent("[$$x'=1 & x>2$$;][?x>3;]x>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemHeadT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (sucSequent("[x:=*;][$$$$;][?x>2;][?x>3;]x>0".asFormula))
   }
 
   // alpha renaming not yet done
   ignore should "alpha rename in sole ODE correctly" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$y'=1 & y>2$$;][?x>3;]x>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemHeadT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[y:=*;][$$$$;][?y>2;][?x>3;]x>0")))
-    ))
+    val s = sucSequent("[$$y'=1 & y>2$$;][?x>3;]x>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemHeadT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (sucSequent("[y:=*;][$$$$;][?y>2;][?x>3;]x>0".asFormula))
   }
 
   it should "remove empty marker" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[$$$$;][?x>3;]y>0"))
-    )
-    val diffWeaken = helper.positionTacticToTactic(diffWeakenSystemNilT)
-    val node = helper.runTactic(diffWeaken, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[?x>3;]y>0")))
-    ))
+    val s = sucSequent("[$$$$;][?x>3;]y>0".asFormula)
+    val diffWeaken = locateSucc(diffWeakenSystemNilT)
+    getProofSequent(diffWeaken, new RootNode(s)) should be (sucSequent("[?x>3;]y>0".asFormula))
   }
 
   // TODO tests that tactics don't pull out without marker
 
   "differential cut" should "cut formula into NFContEvolve" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=2;]x>0"))
-    )
-    val tactic = helper.positionTacticToTactic(diffCutT(helper.parseFormula("x>1")))
-    val node = helper.runTactic(tactic, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=2;]x>1 & [x'=2 & (true&x>1);]x>0"))))
-    )
+    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val tactic = locateSucc(diffCutT(helper.parseFormula("x>1")))
+    getProofSequent(tactic, new RootNode(s)) should be (sucSequent("[x'=2;]x>1 & [x'=2 & (true&x>1);]x>0".asFormula))
   }
 
   it should "cut formula into evolution domain constraint of rightmost ODE in ContEvolveProduct" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=2, y'=3, z'=4 & y>4;]x>0"))
-    )
-    val tactic = helper.positionTacticToTactic(diffCutT(helper.parseFormula("x>1")))
-    val node = helper.runTactic(tactic, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=2,y'=3,z'=4&y>4;]x>1 & [x'=2,y'=3,z'=4 & (y>4&x>1);]x>0"))))
-    )
+    val s = sucSequent("[x'=2, y'=3, z'=4 & y>4;]x>0".asFormula)
+    val tactic = locateSucc(diffCutT(helper.parseFormula("x>1")))
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("[x'=2,y'=3,z'=4&y>4;]x>1 & [x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula))
   }
 
   it should "cut formula into rightmost ODE in ContEvolveProduct, even if constraint empty" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=2, y'=3;]x>0"))
-    )
-    val tactic = helper.positionTacticToTactic(diffCutT(helper.parseFormula("x>1")))
-    val node = helper.runTactic(tactic, new RootNode(sequent))
-    node.openGoals().foreach(_.sequent should be(
-      new Sequent(Nil,
-        scala.collection.immutable.IndexedSeq(),
-        scala.collection.immutable.IndexedSeq(helper.parseFormula("[x'=2,y'=3;]x>1 & [x'=2,y'=3 & (true&x>1);]x>0"))))
-    )
+    val s = sucSequent("[x'=2, y'=3;]x>0".asFormula)
+    val tactic = locateSucc(diffCutT(helper.parseFormula("x>1")))
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("[x'=2,y'=3;]x>1 & [x'=2,y'=3 & (true&x>1);]x>0".asFormula))
   }
 
   ignore/*"differential solution tactic"*/ should "use provided solution correctly" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x0:=x; t:=0; x'=2, t'=1;]x>0"))
-    )
+    val s = sucSequent("[x0:=x; t:=0; x'=2, t'=1;]x>0".asFormula)
 
-    val diffNode = helper.runTactic(default, new RootNode(sequent)).openGoals().head
-    val tactic = helper.positionTacticToTactic(diffSolution(Some(helper.parseFormula("x = x0 + 2*t"))))
+    val diffNode = helper.runTactic(default, new RootNode(s)).openGoals().head
+    val tactic = locateSucc(diffSolution(Some("x = x0 + 2*t".asFormula)))
     val node = helper.runTactic(tactic, diffNode)
-    node.openGoals()(0).sequent should be(
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x0", Some(0), Real),
-        Variable("t", Some(0), Real), Variable("x", Some(0), Real), Variable("t", Some(1), Real)),
-        scala.collection.immutable.IndexedSeq(
-          // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(0)), True, True),
-        scala.collection.immutable.IndexedSeq(
-          // x_0 = x0 + 2*t, see provided solution
-          Equals(Real,
-            Variable("x", Some(0), Real),
-            Add(Real, Variable("x0", None, Real), Multiply(Real, Number(2),
-              Variable("t", None, Real))))
-        )
-      )
-    )
-    node.openGoals()(1).sequent should be(
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x0", Some(0), Real),
-        Variable("t", Some(0), Real), Variable("x", Some(0), Real), Variable("t", Some(1), Real)),
+    node.openGoals()(0).sequent should be (
+      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
+        "t_0=0".asFormula :: Nil, "x_0 = x0 + 2*t".asFormula :: Nil))
+    node.openGoals()(1).sequent should be (
+      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
         // TODO could simplify all those true &
-        scala.collection.immutable.IndexedSeq(
-          // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(0)),
-          // true & x_0 = x0 + 2*t
-          And(True,
-            Equals(Real,
-              Variable("x", Some(0), Real),
-              Add(Real, Variable("x0", None, Real), Multiply(Real, Number(2),
-                Variable("t", None, Real))))),
-          True),
-        scala.collection.immutable.IndexedSeq(
-          // x_0 > 0
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(0))
-        )
-      )
-    )
+        "t_0=0".asFormula :: "true & x_0 = x0 + 2*t".asFormula :: "true".asFormula :: Nil, "x_0>0".asFormula :: Nil))
   }
 
   ignore should "use Mathematica to find solution if None is provided" in {
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x0:=x; t:=0; x'=2, t'=1;]x>0"))
-    )
+    val s = sucSequent("[x0:=x; t:=0; x'=2, t'=1;]x>0".asFormula)
 
-    val diffNode = helper.runTactic(default, new RootNode(sequent)).openGoals().head
+    val diffNode = helper.runTactic(default, new RootNode(s)).openGoals().head
     // solution = None -> Mathematica
-    val tactic = helper.positionTacticToTactic(diffSolution(None))
+    val tactic = locateSucc(diffSolution(None))
     val node = helper.runTactic(tactic, diffNode)
-    node.openGoals()(0).sequent should be(
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x0", Some(0), Real),
-        Variable("t", Some(0), Real), Variable("x", Some(0), Real), Variable("t", Some(1), Real)),
-        scala.collection.immutable.IndexedSeq(
-          // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(0)), True, True),
-        scala.collection.immutable.IndexedSeq(
-          // x_0 = 2*t + x0 & t_1 = 1*t + t0_0
-          // TODO not robust if Mathematica reports equivalent formula but differently formatted
-          And(
-            Equals(Real,
-              Variable("x", Some(0), Real),
-              Add(Real, Multiply(Real, Number(2),
-                                 Variable("t", None, Real)),
-                Variable("x0", None, Real)
-              )),
-            Equals(Real,
-              Variable("t", Some(1), Real),
-              Add(Real, Multiply(Real, Number(1), Variable("t", None, Real)),
-                Variable("t0", Some(0), Real))
-            )
-          )
-        )
-      )
-    )
-    node.openGoals()(1).sequent should be(
-      new Sequent(scala.collection.immutable.IndexedSeq(Variable("x0", Some(0), Real),
-        Variable("t", Some(0), Real), Variable("x", Some(0), Real), Variable("t", Some(1), Real)),
+    node.openGoals()(0).sequent should be (
+      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
+        "t_0=0".asFormula :: Nil,
+        // TODO not robust if Mathematica reports equivalent formula but differently formatted
+        "x_0 = 2*t + x0 & t_1 = 1*t + t0_0".asFormula :: Nil))
+    node.openGoals()(1).sequent should be (
+      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
         // TODO could simplify all those true &
-        scala.collection.immutable.IndexedSeq(
-          // t_0 = 0
-          Equals(Real, Variable("t", Some(0), Real), Number(0)),
-          // true & x_0 = 2*t + x0 & t_1 = 1*t + t0_0
-          And(True,
-            And(
-              Equals(Real,
-                Variable("x", Some(0), Real),
-                Add(Real, Multiply(Real, Number(2),
-                  Variable("t", None, Real)),
-                  Variable("x0", None, Real)
-                )),
-              Equals(Real,
-                Variable("t", Some(1), Real),
-                Add(Real, Multiply(Real, Number(1), Variable("t", None, Real)),
-                  Variable("t0", Some(0), Real))
-              )
-            )
-          ),
-          True),
-        scala.collection.immutable.IndexedSeq(
-          // x_0 > 0
-          GreaterThan(Real, Variable("x", Some(0), Real), Number(0))
-        )
-      )
-    )
+        "t_0=0".asFormula :: "true & x_0 = 2*t + x0 & t_1 = 1*t + t0_0".asFormula :: "true".asFormula :: Nil,
+        "x_0>0".asFormula :: Nil))
   }
 
   ignore should "prove with differential solution tactic" in {
     import scala.language.postfixOps
     import TacticLibrary.{boxAssignT, skolemizeT, boxSeqT}
-    val sequent = new Sequent(Nil,
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("x>0")),
-      scala.collection.immutable.IndexedSeq(helper.parseFormula("[x0:=x; t:=0; t0:=t; x'=2, t'=1 & t>=0;]x>0"))
-      )
+    val s = sequent(Nil, "x>0".asFormula :: Nil, "[x0:=x; t:=0; t0:=t; x'=2, t'=1 & t>=0;]x>0".asFormula :: Nil)
     // TODO t:=0 leads to a SubstitutionClashException (because subsequently t'=1)
-    val diffNode = helper.runTactic((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*, new RootNode(sequent)).openGoals().head
+    val diffNode = helper.runTactic((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*, new RootNode(s)).openGoals().head
     // TODO when alpha renaming finally works it should be head instead of tail.tail.head
     val postDiffSolNode = helper.runTactic(locateSucc(diffSolution(None)), diffNode).openGoals().tail.tail.head
     helper.runTactic(default, postDiffSolNode) shouldBe 'closed

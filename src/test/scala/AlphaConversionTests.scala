@@ -543,6 +543,19 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
         And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
   }
 
+  it should "rename free variables but not variables bound by marked ODEs" in {
+    val x = new Variable("x", None, Real)
+    val z = new Variable("z", None, Real)
+    AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(x, CDot) should be (
+      BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z),
+        Add(Real, Number(2), CDot), True))),
+        And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
+    AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(z, CDot) should be (
+      BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z),
+        Add(Real, Number(2), x), True))),
+        And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
+  }
+
   it should "not rename variables bound by assignments in loops" in {
     val x = new Variable("x", None, Real)
     AlphaConversionHelper.replaceFree("[{x:=x+1;}*;]x>0".asFormula)(x, CDot) should be (
