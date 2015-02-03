@@ -348,7 +348,7 @@ object HybridProgramTacticsImpl {
    * @return The tactic.
    */
   def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assignment") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case BoxModality(Assign(_: Variable, v: Variable), pred) => pred match {
         case BoxModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
         case BoxModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
@@ -357,7 +357,7 @@ object HybridProgramTacticsImpl {
         case _ => true
       }
       case _ => false
-    })
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -374,15 +374,14 @@ object HybridProgramTacticsImpl {
         node.sequent(p) match {
           case b@BoxModality(Assign(v: Variable, t: Variable), pred) => Some(
             cutT(Some(Equiv(b, replace(pred)(v, t)))) &
-            onBranch(
-              (cutShowLbl,
-                alphaRenamingT(t.name, t.index, v.name, v.index)(
-                  new SuccPosition(succLength, new PosInExpr(1 :: Nil))) &
-                  EquivRightT(SuccPosition(succLength)) &
-                  AxiomCloseT(AntePosition(anteLength), SuccPosition(succLength))),
-              (cutUseLbl, equalityRewriting(new AntePosition(anteLength), new SuccPosition(succLength - 1)) &
-                hideT(new AntePosition(anteLength)) & hideT(new SuccPosition(succLength - 1)))
-            )
+              onBranch(
+                (cutShowLbl,
+                  alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(succLength, PosInExpr(1 :: Nil))) &
+                    EquivRightT(SuccPosition(succLength)) &
+                    AxiomCloseT(AntePosition(anteLength), SuccPosition(succLength))),
+                (cutUseLbl, equalityRewriting(AntePosition(anteLength), p) &
+                  hideT(AntePosition(anteLength)) & hideT(p))
+              )
           )
         }
       }
