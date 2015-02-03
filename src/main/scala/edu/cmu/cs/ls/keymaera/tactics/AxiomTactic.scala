@@ -51,7 +51,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
    * 1. The form of the axiom before apply the tactic provided in 4
    * 2. The instance of the axiom eventually to be used in the proof
    * 3. The substitution to turn 2 into 1
-   * 4. A tactic to turn the result of 3 into the actual axiom
+   * 4. A tactic to turn the result of 3 into the actual axiom (and/or the other way around)
    *
    * In the long run all this should be computed by unification.
    *
@@ -61,16 +61,19 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
    * @return (Axiom before executing the given position tactic;
    *         the instance of the axiom,
    *         the uniform substitution that transforms the first into the second axiom (Hilbert style);
+   *         an optional position tactic that transforms the actual axiom into the first argument;
    *         an optional position tactic that transforms the first
    *         argument into the actual axiom (usually alpha renaming)).
    * @see #constructInstanceAndSubst(Formula)
    */
-  def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+  def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution,
+      Option[PositionTactic], Option[PositionTactic])] =
     constructInstanceAndSubst(f, ax)
 
-  def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
+  def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, Substitution,
+      Option[PositionTactic], Option[PositionTactic])] = {
     constructInstanceAndSubst(f) match {
-      case Some((instance, subst)) => Some((ax, instance, subst, None))
+      case Some((instance, subst)) => Some((ax, instance, subst, None, None))
       case None => None
     }
   }
@@ -98,7 +101,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
       axiom match {
         case Some(ax) =>
           constructInstanceAndSubst(getFormula(node.sequent, pos), ax, pos) match {
-            case Some((modAx, axiomInstance, subst, ptac)) =>
+            case Some((modAx, axiomInstance, subst, anteTac, succTac)) =>
               val axiomInstPos = AntePosition(node.sequent.ante.length)
               val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
                 //@TODO Prefer simpler sequent proof rule for <->left rather than congruence rewriting if the position to use it on is on top-level of sequent
@@ -116,14 +119,19 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               // val hideAllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
               //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
               //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
-              val cont = ptac match {
+              val anteCont = anteTac match {
+                // AntePosition(0) is the only antecedent position remaining in axiom proof
+                case Some(tactic) => assertT(1, 1) & tactic(AntePosition(0))
+                case None => NilT
+              }
+              val succCont = succTac match {
                 // SuccPosition(0) is the only position remaining in axiom proof
                 case Some(tactic) => assertT(0, 1) & tactic(SuccPosition(0))
                 case None => NilT
               }
               val axiomPos = SuccPosition(node.sequent.succ.length)
               println("Axiom instance " + axiomInstance)
-              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) & assertT(0, 1) & (cont & axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) & assertT(0, 1) & (succCont & axiomT(axiomName) & assertT(1,1) & anteCont & AxiomCloseT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }

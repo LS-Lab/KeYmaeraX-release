@@ -416,7 +416,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(And(p, q))) =>
         // construct substitution
@@ -425,7 +426,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
         val g = And(FormulaDerivative(p), FormulaDerivative(q))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }  }
 
@@ -436,7 +437,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(Or(p, q))) =>
         // construct substitution
@@ -445,7 +447,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
         val g = And(FormulaDerivative(p), FormulaDerivative(q))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -457,7 +459,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(Equals(Real, s, t))) =>
         // construct substitution
@@ -466,7 +469,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -478,7 +481,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(NotEquals(Real, s, t))) =>
         // construct substitution
@@ -487,7 +491,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -499,7 +503,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(GreaterEqual(Real, s, t))) =>
         // construct substitution
@@ -508,7 +513,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = GreaterEqual(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -520,7 +525,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(GreaterThan(Real, s, t))) =>
           // construct substitution
@@ -529,7 +535,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = GreaterEqual(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equiv(f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => None
       }
   }
@@ -541,7 +547,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(LessEqual(Real, s, t))) =>
         // construct substitution
@@ -550,7 +557,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = LessEqual(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -562,7 +569,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(LessThan(Real, s, t))) =>
           // construct substitution
@@ -571,7 +579,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = LessEqual(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equiv(f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => None
       }
   }
@@ -583,7 +591,8 @@ object TacticLibrary {
        case _ => false
      })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Neg(Real, s))) =>
           // construct substitution
@@ -591,7 +600,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s))
           val g = Neg(Real, Derivative(Real, s))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => None
     }
   }
@@ -605,7 +614,8 @@ object TacticLibrary {
        })
      }
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Add(Real, s, t))) =>
           // construct substitution
@@ -614,7 +624,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Add(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => println("Not applicable deriveSumT to " + in.prettyString() + " at " + pos); None
     }
   }
@@ -626,7 +636,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Subtract(Real, s, t))) =>
           // construct substitution
@@ -635,7 +646,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Subtract(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => None
       }
   }
@@ -647,7 +658,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Multiply(Real, s, t))) =>
           // construct substitution
@@ -656,7 +668,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Add(Real, Multiply(Real, Derivative(Real, s), t), Multiply(Real, s, Derivative(Real, t)))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => None
     }
   }
@@ -668,7 +680,8 @@ object TacticLibrary {
       case _ => false
     })
 
-    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution, Option[PositionTactic])] =
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+        Substitution, Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Divide(Real, s, t))) =>
           // construct substitution
@@ -677,7 +690,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Divide(Real, Subtract(Real, Multiply(Real, Derivative(Real, s), t), Multiply(Real, s, Derivative(Real, t))), Exp(Real, t, Number(2)))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None)
+          Some(ax, axiomInstance, Substitution(l), None, None)
         case _ => None
     }
   }

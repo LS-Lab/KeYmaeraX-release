@@ -134,7 +134,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(c: ContEvolveProduct, p) =>
         // construct instance
         val g = BoxModality(IncompleteSystem(c), p)
@@ -145,7 +145,7 @@ object ODETactics {
         val aC = ContEvolveProgramConstant("c")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aC, c))
 
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -165,7 +165,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), c)), p) =>
         // construct instance
         val x = d.child match {
@@ -184,12 +184,12 @@ object ODETactics {
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
                      new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
 
-        // alpha renaming of x if necessary
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+        // alpha renaming of x on axiom if necessary
+        val (axiom, anteCont) =
+          if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), cont)
+        Some(axiom, axiomInstance, Substitution(l), anteCont, None)
       case _ => None
     }
   }
@@ -209,7 +209,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), BoxModality(b@Test(h), p)) =>
         // construct instance
         val lhs = BoxModality(b, p)
@@ -220,7 +220,7 @@ object ODETactics {
         val aH = PredicateConstant("H")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aH, h))
 
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -232,7 +232,7 @@ object ODETactics {
    * @param newSymbol The new symbol.
    * @return The alpha renaming tactic.
    */
-  private def alphaInWeakenSystems(oldSymbol: NamedSymbol, newSymbol: NamedSymbol) = new PositionTactic("Alpha") {
+  private def alphaInWeakenSystems(oldSymbol: Variable, newSymbol: Variable) = new PositionTactic("Alpha") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Imply(BoxModality(_: NDetAssign, _), BoxModality(_: ContEvolveProgram, _)) => true
       case Imply(BoxModality(_: NDetAssign, _), BoxModality(_: IncompleteSystem, _)) => true
@@ -240,9 +240,21 @@ object ODETactics {
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      import TacticLibrary.{abstractionT,ImplyLeftT,ImplyRightT,hideT,instantiateQuanT}
+      import PropositionalTacticsImpl.AxiomCloseT
+      import HybridProgramTacticsImpl.v2vBoxAssignT
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         Some(alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.first)
-          & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.second))
+          & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.second)
+          & (if (p.isAnte) ImplyLeftT(p) else ImplyRightT(p))
+          & (ImplyRightT(SuccPosition(0)) & AxiomCloseT(AntePosition(0), SuccPosition(0)),
+            // HACK need temporary name and not sure if newSymbol.index is max
+            abstractionT(p) & hideT(p) &
+              alphaRenamingT(newSymbol.name, newSymbol.index, "_$" + newSymbol.name, newSymbol.index)(p.first) &
+              instantiateQuanT(newSymbol, newSymbol)(p) &
+              v2vBoxAssignT(p) & ImplyRightT(SuccPosition(0))
+          )
+        )
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
@@ -262,7 +274,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(c: ContEvolveProduct, p) =>
         val g = BoxModality(IncompleteSystem(c), p)
         val axiomInstance = Imply(g, f)
@@ -273,7 +285,7 @@ object ODETactics {
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aC, c))
 
         //@todo do we need to do the "rename x" thing here?
-        Some(ax, axiomInstance, Substitution(l), None)
+        Some(ax, axiomInstance, Substitution(l), None, None)
       case _ => None
     }
   }
@@ -292,7 +304,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(sort, dx: Derivative, theta_x, h_x), c)), BoxModality(Test(h), p: Formula)) =>
         val x = dx match {
           case Derivative(_, variable: Variable) => variable
@@ -347,7 +359,7 @@ object ODETactics {
           if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), cont)
+        Some(axiom, axiomInstance, Substitution(l), None, cont)
       case _ => None
     }
   }
@@ -365,7 +377,7 @@ object ODETactics {
     }
     @deprecated("Unsound", "Jan 2015")
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(sort, dx: Derivative, theta_x, h_x), c)), p: Formula) =>
         val x = dx match {
           case Derivative(_, variable: Variable) => variable
@@ -412,7 +424,7 @@ object ODETactics {
           if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), cont)
+        Some(axiom, axiomInstance, Substitution(l), None, cont)
       case _ => None
     }
   }
@@ -429,7 +441,7 @@ object ODETactics {
 
     //[[$$$$;]][?H;]p <- [?H;]p'
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(empty:EmptyContEvolveProgram, BoxModality(Test(h), p)) => {
         val g = BoxModality(Test(h), p)
         val axiomInstance = Imply(g, f)
@@ -441,7 +453,7 @@ object ODETactics {
             new SubstitutionPair(aP, FormulaDerivative(p)) :: Nil
         )
 
-        Some(ax, axiomInstance, subst, None)
+        Some(ax, axiomInstance, subst, None, None)
       }
       case _ => None
     }
@@ -471,7 +483,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), empty:EmptyContEvolveProgram), p) => {
         // construct instance
         val x = d.child match {
@@ -504,7 +516,7 @@ object ODETactics {
           if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), cont)
+        Some(axiom, axiomInstance, Substitution(l), None, cont)
       }
       case _ => None
     }
@@ -566,7 +578,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(c: ContEvolveProduct, p) => {
         //[c]p <- p & [{c}]p'
 
@@ -587,7 +599,7 @@ object ODETactics {
           new SubstitutionPair(aP, p)
         ))
 
-        Some(ax, axiomInstance, subst, None)
+        Some(ax, axiomInstance, subst, None, None)
       }
       case _ => None
     }
@@ -610,7 +622,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(vars, Derivative(Real, x:Variable), t:Term, True), c:ContEvolveProgram)), p:Formula) => {
         val g = BoxModality(
           IncompleteSystem(
@@ -651,7 +663,7 @@ object ODETactics {
           if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
           else (ax, None)
 
-        Some(axiom, instance, subst, cont)
+        Some(axiom, instance, subst, None, cont)
       }
       case _ => None
     }
@@ -732,7 +744,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(ContEvolveProduct(CheckedContEvolveFragment(_), _)), p) => {
         //construct instance
         val axiomInstance = Imply(f, p)
@@ -743,7 +755,7 @@ object ODETactics {
           new SubstitutionPair(aP, p)
         ))
 
-        Some(ax, axiomInstance, subst, None)
+        Some(ax, axiomInstance, subst, None, None)
       }
       case _ => None
     }

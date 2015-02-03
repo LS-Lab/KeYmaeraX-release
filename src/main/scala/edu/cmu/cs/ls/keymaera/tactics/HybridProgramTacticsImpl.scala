@@ -71,7 +71,8 @@ object HybridProgramTacticsImpl {
      *         argument into the actual axiom (usually alpha renaming)).
      * @see #constructInstanceAndSubst(Formula)
      */
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution,
+        Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(Assign(Derivative(Real, v: Variable), t), p) => {
         // Construct the axiom substitution.
         val axiomV = Variable("v", None, Real)
@@ -108,7 +109,7 @@ object HybridProgramTacticsImpl {
 //        }
 
 
-        Some(axiom, axiomInstance, substitution, None) //?
+        Some(axiom, axiomInstance, substitution, None, None) //?
 
 
 
@@ -234,7 +235,7 @@ object HybridProgramTacticsImpl {
     }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(Assign(v: Variable, t), p) =>
         // TODO check that axiom is of the expected form [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
         // construct substitution
@@ -272,7 +273,7 @@ object HybridProgramTacticsImpl {
           else (Equiv(replaceFree(left)(aV, v, None), replaceFree(right)(aV, newV)), Some(alpha(left = true)))
 
         // return tactic
-        Some(ax, axiomInstance, Substitution(l), cont)
+        Some(ax, axiomInstance, Substitution(l), None, cont)
       case _ => None
     }
   }
@@ -285,7 +286,7 @@ object HybridProgramTacticsImpl {
     override def applies(f: Formula): Boolean = true
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, Substitution, Option[PositionTactic])] = {
+        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
       // TODO check that axiom is of the expected form [v:=t]p(v) <-> p(t)
       // construct substitution
       val aV = Variable("v", None, Real)
@@ -339,7 +340,7 @@ object HybridProgramTacticsImpl {
       val (ax, cont) = (Equiv(replace(left)(aV, v), right), Some(alpha))
 
       // return tactic
-      Some(ax, axiomInstance, Substitution(l), cont)
+      Some(ax, axiomInstance, Substitution(l), None, cont)
     }
   }
 
@@ -409,7 +410,7 @@ object HybridProgramTacticsImpl {
     }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(Assign(v: Variable, t: Term), p) =>
         // TODO check that axiom is of the expected form [v:=t]p(v) <-> p(t))
         // construct substitution
@@ -446,7 +447,7 @@ object HybridProgramTacticsImpl {
         }
 
         // return tactic
-        Some(ax, axiomInstance, Substitution(l), cont)
+        Some(ax, axiomInstance, Substitution(l), None, cont)
       case _ => None
     }
   }
@@ -531,7 +532,8 @@ object HybridProgramTacticsImpl {
       case _ => false
     }
     
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution,
+        Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(NDetAssign(x), p) if Variable.unapply(x).isDefined =>
         val v = x.asInstanceOf[Variable]
         // construct substitution
@@ -559,7 +561,7 @@ object HybridProgramTacticsImpl {
         val (ax, cont) =
           if (v.name != aV.name || v.index != None) (replaceFree(axiom)(aV, v, None), Some(alpha))
           else (axiom, None)
-        Some(ax, axiomInstance, Substitution(l), cont)
+        Some(ax, axiomInstance, Substitution(l), None, cont)
       case _ => None
     }
   }
