@@ -125,6 +125,21 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sequent("x_2".asNamedSymbol :: Nil, "x_2=1".asFormula :: Nil, "[x_2'=1;]x_2>0".asFormula :: Nil))
   }
 
+  it should "handle arbitrary assignments to variables not mentioned in subsequent formulas" in {
+    import HybridProgramTacticsImpl.boxAssignT
+    val tactic = locateSucc(boxAssignT)
+    getProofSequent(tactic, new RootNode(sucSequent("[y_0:=y;][y'=2;]y>0".asFormula))) should be (
+      sequent("y_2".asNamedSymbol :: Nil, "y_2=y".asFormula :: Nil, "[y'=2;]y>0".asFormula :: Nil))
+  }
+
+  it should "handle arbitrary assignments and not fail continuation" in {
+    import HybridProgramTacticsImpl.boxAssignT
+    val tactic = locateSucc(boxAssignT) & locateSucc(diffWeakenT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x_0:=x;][x'=2;]x>0".asFormula))) should be (
+      sequent("x_2".asNamedSymbol :: "x_3".asNamedSymbol :: Nil, "x_2=x".asFormula :: "true".asFormula :: Nil,
+        "x_3>0".asFormula :: Nil))
+  }
+
   it should "handle assignment in front of a loop" in {
     import TacticLibrary.boxAssignT
     val s = sucSequent("[x:=1;][{x:=x+1;}*;]x>0".asFormula)

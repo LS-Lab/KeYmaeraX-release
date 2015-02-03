@@ -166,7 +166,7 @@ object HybridProgramTacticsImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         // TODO exploit formula structure at position p to execute most appropriate tactic. for now: most general tactic
-        Some(boxAssignEqualT(p) & skolemizeT(p) & ImplyRightT(p) & v2vBoxAssignT(p))
+        Some(boxAssignEqualT(p) & skolemizeT(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
       }
     }
   }
