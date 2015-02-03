@@ -1,3 +1,4 @@
+import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser._
@@ -175,5 +176,32 @@ class ParserParenTests extends FlatSpec with Matchers {
     val axiomFile = new File("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp")
     require(axiomFile.exists(), "existence of axiom file.")
     alpParser.runParser(io.Source.fromFile(axiomFile).mkString) //test fails on exception.
+  }
+
+
+
+  val helper = new ProvabilityTestHelper()
+  val x = Variable("x", None, Real)
+  val y = Variable("y", None, Real)
+
+  "Random test cases from development" should "reduce systems of diffEqs correctly." in {
+    val f = helper.parseFormula("[x'=y, y'=x;]true")
+    f match {
+      case BoxModality(pi, phi) => {
+        require(phi.equals(True))
+        pi match {
+          case ContEvolveProduct(l,r) => {
+            require(l.equals(NFContEvolve(Nil, Derivative(Real, x), y, True)), "found " + l.prettyString() + " instead.");
+            r match {
+              case ContEvolveProduct(r1, r2:EmptyContEvolveProgram) => {
+                require(r1.equals(NFContEvolve(Nil, Derivative(Real, y), x, True)), "found " + r1.prettyString() + " of " + r1.getClass() + " instead")
+              } //ok
+              case _ => fail()
+            }
+          }
+          case _ => fail()
+        }
+      };
+    }
   }
 }

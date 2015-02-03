@@ -1567,6 +1567,7 @@ object UniformSubstitution {
      */
     def apply(conclusion: Sequent): List[Sequent] = {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
+      val substAtOrigin = subst(origin) //just for debugging.
       if (subst(origin) == conclusion) {
         assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         List(origin)

@@ -381,17 +381,29 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system head no test
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  "Diff invariant system head no test" should "peel off 1st equation" in {
+  "Diff invariant system head no test" should "not fail tests because of broken equality" in {
+    val expected = helper.parseFormula("[$$y'=x & true,x'=`y & true$$;][(x'):=y;]1=1->[$$x'=y & true,y'=x & true$$;]1=1")
+    val result   = helper.parseFormula("[$$y'=x & true,x'=`y & true$$;][(x'):=y;]1=1->[$$x'=y & true,y'=x & true$$;]1=1")
+    require(expected.equals(result))
+    require(expected == result)
+  }
+
+  it should "peel off 1st equation" in {
     val f = helper.parseFormula("[$$ x'=y, y'=x$$;]1=1")
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvSystemHeadNoTest)
     require(tactic.applicable(node))
 
     helper.runTactic(tactic,node)
+    val expected = helper.parseFormula("[$$y'=x & true,x' =` y & true$$;][(x'):=y;]1=1")
 
-    val expected = helper.parseFormula("[$$y'=x & true,x' =` y & true$$;][(x'):=y;]1=1->[$$x'=y & true,y'=x & true$$;]1=1")
+    val openSequents = node.openGoals().map(_.sequent)
+    require(openSequents.length==1)
+
+    helper.report(node)
     require(containsOpenGoal(node,expected))
   }
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system head test

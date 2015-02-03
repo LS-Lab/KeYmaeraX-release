@@ -916,12 +916,13 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
+    //@todo this is no longer actually a normal form evolution system, which would probably just contain normal forms. But it never was because contevolve was always in this parser. Hm.
     lazy val normalFormEvolutionSystemP : PackratParser[ContEvolveProgram] = {
       //The pattern is "everything except for another system"
       lazy val pattern = rep1sep(contEvolveProgramP.filter(_ != normalFormEvolutionSystemP), COMMA)
       log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
-        case odes => odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram()) {
-          (a: ContEvolveProgram, b: ContEvolveProgram) => ContEvolveProduct(a, b)
+        case odes => {
+          odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram())((a:ContEvolveProgram,b:ContEvolveProgram) => ContEvolveProduct(a,b))
         }
       }
     }

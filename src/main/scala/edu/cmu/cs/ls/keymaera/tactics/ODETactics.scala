@@ -617,7 +617,10 @@ object ODETactics {
           IncompleteSystem(
             ContEvolveProduct(
               c,
-              CheckedContEvolveFragment(NFContEvolve(vars, Derivative(Real,x), t, True))
+              ContEvolveProduct(
+                CheckedContEvolveFragment(NFContEvolve(vars, Derivative(Real,x), t, True)),
+                EmptyContEvolveProgram()
+              )
             )
           ),
           BoxModality(
@@ -636,8 +639,8 @@ object ODETactics {
 
         val aC = ContEvolveProgramConstant("c")
 
-        val aP = Apply(Function("p", None, Real, Real), CDot)
-        val p_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(p))) //@todo leaving off here for team building thing... this substitution isn't going through properly.
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
 
         val subst = Substitution(List(
           new SubstitutionPair(aT, t_cdot),
