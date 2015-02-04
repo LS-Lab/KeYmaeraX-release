@@ -646,7 +646,7 @@ object ODETactics {
         val aX = Variable("x", None, Real)
 
         val aT = Apply(Function("f", None, Real, Real), CDot)
-        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))
+        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t))) //@todo confused about when we want to use cdot and when not...
 
         val aC = ContEvolveProgramConstant("c")
 
@@ -660,10 +660,10 @@ object ODETactics {
         ))
 
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
           else (ax, None)
 
-        Some(axiom, instance, subst, None, cont)
+        Some(axiom, instance, subst, None, cont) //@todo not sure about this...
       }
       case _ => None
     }
@@ -674,6 +674,70 @@ object ODETactics {
       [$$x'=f(x) & H(x), c$$;]p(x) <- [$$c, x'$=$f(x)$$;][x' := f(x);](H(x) -> p(x))
     End.
    */
+  def diffInvSystemHeadTest = new AxiomTactic("DI System Head Test", "DI System Head Test") {
+    override def applies(f: Formula): Boolean = f match {
+      //      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(_,Derivative(Real, x:Variable), t:Term)), _))) => true
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, x:Variable),_,h), _)), _) => h != True
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(vars, Derivative(Real, x:Variable), t:Term, h), c:ContEvolveProgram)), p:Formula) => {
+        if(h == True) throw new Exception("The tactic did not apply because the test was trivially true")
+
+        val g = BoxModality(
+          IncompleteSystem(
+            ContEvolveProduct(
+              c,
+              ContEvolveProduct(
+                CheckedContEvolveFragment(NFContEvolve(vars, Derivative(Real,x), t, h)),
+                EmptyContEvolveProgram()
+              )
+            )
+          ),
+          BoxModality(
+            Assign(Derivative(Real, x), t),
+            Imply(h, p)
+          )
+        )
+        val instance = Imply(g,f)
+
+        //construct substitution
+        import Substitution.maybeFreeVariables
+        val aX = Variable("x", None, Real)
+
+        val aT = Apply(Function("f", None, Real, Real), CDot)
+        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t))) //@todo confused about when we want to use cdot and when not...
+
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+        val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
+
+        val aC = ContEvolveProgramConstant("c")
+
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
+
+        val subst = Substitution(List(
+          new SubstitutionPair(aT, t_cdot),
+          new SubstitutionPair(aC,c),
+          new SubstitutionPair(aP, p_cdot),
+          new SubstitutionPair(aH, h_cdot)
+        ))
+
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+          else (ax, None)
+
+        Some(axiom, instance, subst, None, cont) //@todo not sure about this...
+      }
+      case _ => None
+    }
+  }
 //  def diffInvSystemHeadTest = new AxiomTactic("DI System Head Test", "DI System Head Test") {
 //    override def applies(f: Formula): Boolean = f match {
 //      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, v:Variable),_,_),_)), _) => true
