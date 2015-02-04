@@ -1,5 +1,4 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
@@ -43,8 +42,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sequent("x_0".asNamedSymbol :: Nil, "x_0>2".asFormula :: Nil, "x_0>0".asFormula :: Nil))
   }
 
-  // alpha renaming not yet done
-  ignore should "perform alpha renaming if necessary" in {
+  it should "perform alpha renaming if necessary" in {
     val s = sucSequent("[y'=y & y>2 & z<0;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
@@ -58,22 +56,21 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sequent("x_0".asNamedSymbol :: Nil, "true".asFormula :: Nil, "x_0>0".asFormula :: Nil))
   }
 
-  // alpha renaming not yet done
-  ignore /*"differential weaken of system of ODEs"*/ should "replace system of ODEs with nondeterministic assignments and tests" in {
+  "differential weaken of system of ODEs" should "replace system of ODEs with nondeterministic assignments and tests" in {
     val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
       sequent("x_0".asNamedSymbol :: "y_0".asNamedSymbol :: Nil,
-        "y_0>2 & z<0, x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
+        "y_0>2 & z<0".asFormula :: "x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
-  // alpha renaming not yet done
+  // EmptyContEvolveProgram equality / product normalization needed first
   ignore should "replace system of ODEs with nondeterministic assignments and tests and skolemize correctly" in {
     val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0, z'=2;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
       sequent("x_0".asNamedSymbol :: "y_0".asNamedSymbol :: "z_0".asNamedSymbol :: Nil,
-        "true".asFormula :: "y_0>2 & z_0<0, x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
+        "true".asFormula :: "y_0>2 & z_0<0".asFormula :: "x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
   it should "introduce marker when started" in {
@@ -90,8 +87,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sucSequent("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0".asFormula))
   }
 
-  // alpha renaming not yet done
-  ignore should "pull out first ODE from marked system repeatedly" in {
+  it should "pull out first ODE from marked system repeatedly" in {
     val s = sucSequent("[$$x'=x & x>3, y'=1 & y>2 & z<0$$;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenSystemHeadT)
     val node = helper.runTactic(diffWeaken, new RootNode(s))
@@ -110,8 +106,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sucSequent("[x:=*;][$$z'=2$$;][?x>2&z<0;][?x>3;]y>0".asFormula))
   }
 
-  // alpha renaming not yet done
-  ignore should "alpha rename if necessary" in {
+  it should "alpha rename if necessary" in {
     val s = sucSequent("[$$y'=1 & y>2 & z<0, z'=2$$;][?x>3;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenSystemHeadT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
@@ -124,8 +119,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     getProofSequent(diffWeaken, new RootNode(s)) should be (sucSequent("[x:=*;][$$$$;][?x>2;][?x>3;]x>0".asFormula))
   }
 
-  // alpha renaming not yet done
-  ignore should "alpha rename in sole ODE correctly" in {
+  it should "alpha rename in sole ODE correctly" in {
     val s = sucSequent("[$$y'=1 & y>2$$;][?x>3;]x>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenSystemHeadT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (sucSequent("[y:=*;][$$$$;][?y>2;][?x>3;]x>0".asFormula))
@@ -195,7 +189,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   ignore should "prove with differential solution tactic" in {
     import scala.language.postfixOps
-    import TacticLibrary.{boxAssignT, skolemizeT, boxSeqT}
+    import TacticLibrary.{boxAssignT, boxSeqT}
     val s = sequent(Nil, "x>0".asFormula :: Nil, "[x0:=x; t:=0; t0:=t; x'=2, t'=1 & t>=0;]x>0".asFormula :: Nil)
     // TODO t:=0 leads to a SubstitutionClashException (because subsequently t'=1)
     val diffNode = helper.runTactic((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*, new RootNode(s)).openGoals().head
