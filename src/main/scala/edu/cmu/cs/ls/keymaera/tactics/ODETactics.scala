@@ -378,10 +378,12 @@ object ODETactics {
     End.
    */
   def diffInvariantSystemHeadT = new AxiomTactic("DI System Head Test", "DI System Head Test") {
-    override def applies(f: Formula): Boolean = f match {
-      //      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(_,Derivative(Real, x:Variable), t:Term)), _))) => true
-      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, x:Variable),_,h), _)), _) => h != True
-      case _ => false
+    override def applies(f: Formula): Boolean = {
+      f match {
+        //      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(_,Derivative(Real, x:Variable), t:Term)), _))) => true
+        case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, x:Variable),_,h), _)), _) => true
+        case _ => false
+      }
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
@@ -391,7 +393,6 @@ object ODETactics {
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(vars, Derivative(Real, x:Variable), t:Term, h), c:ContEvolveProgram)), p:Formula) => {
-        if(h == True) throw new Exception("The tactic did not apply because the test was trivially true")
 
         val g = BoxModality(
           IncompleteSystem(
@@ -512,10 +513,8 @@ object ODETactics {
         import scala.language.postfixOps
         node.sequent(p) match {
           case BoxModality(_: ContEvolveProduct, _) => Some(
-            // introduce $$ markers
             diffInvariantSystemIntroT(p) &
-              // pull out heads until empty
-              ((diffInvariantSystemHeadT(p) & TacticLibrary.boxAssignT(p) & skolemizeT(p) & ImplyRightT(p) ) *) ~ //@todo skolemization?
+              (AndRightT(p) & (NilT & TacticLibrary.debugT("test seq"), (TacticLibrary.debugT("inv seq") & diffInvariantSystemHeadT(p)) *)) ~
               // remove empty marker and handle tests
             (diffInvariantSystemTailT(p) & ((TacticLibrary.boxAssignT(p) & ImplyRightT(p)) *))
           )
