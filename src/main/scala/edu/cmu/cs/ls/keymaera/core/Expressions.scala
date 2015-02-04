@@ -1289,8 +1289,36 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/
   def reads = (left.reads ++ right.reads).distinct
   def writes = (left.writes ++ right.writes).distinct
 
+  def flatten():List[ContEvolveProgram] = {
+    val leftList = left match {
+      case left : ContEvolveProduct => left.flatten()
+      case _ => left :: Nil
+    }
+    val rightList = right match {
+      case right : ContEvolveProduct => right.flatten()
+      case _ => right :: Nil
+    }
+    leftList ++ rightList
+  }
+
+
+
   //@todo SYMMETRY!
-  override def equals(e: Any): Boolean = e match {
+  override def equals(e: Any): Boolean = equalsContEvolve(e)
+
+  //Alternative implementations:
+  private def equalsContEvolve(e:Any) = {
+    e match {
+      case e:ContEvolveProduct => {
+        //Note: this has to be a type-level comparison or else equals diverges.
+        def fn(x:ContEvolveProgram) = !x.isInstanceOf[EmptyContEvolveProgram] //the filter function
+        this.flatten().filter(fn).equals(e.flatten().filter(fn))
+      }
+      case _ => false
+    }
+  }
+
+  private def saferEquals(e:Any):Boolean = e match {
     case e : ContEvolveProduct => {
       this.left.equals(e.left) && this.right.equals(e.right)
     }
