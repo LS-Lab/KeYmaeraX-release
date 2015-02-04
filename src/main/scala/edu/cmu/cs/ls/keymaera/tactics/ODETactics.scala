@@ -109,9 +109,9 @@ object ODETactics {
         node.sequent(p) match {
           case BoxModality(_: ContEvolveProduct, _) => Some(
             // introduce $$ markers
-            diffWeakenSystemIntroT(p) &
+            (diffWeakenSystemIntroT(p) &
               // pull out heads until empty
-              ((diffWeakenSystemHeadT(p) & boxNDetAssign(p) & skolemizeT(p)) *) &
+              ((diffWeakenSystemHeadT(p) & boxNDetAssign(p) & skolemizeT(p)) *)) ~
               // remove empty marker and handle tests
               diffWeakenSystemNilT(p) & ((boxTestT(p) & ImplyRightT(p)) *)
           )
@@ -158,7 +158,7 @@ object ODETactics {
   def diffWeakenSystemHeadT: PositionTactic = new AxiomTactic("DW differential weaken system head",
     "DW differential weaken system head") {
     def applies(f: Formula) = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), _)), _) => true
+      case BoxModality(IncompleteSystem(_: ContEvolveProduct), _) => true
       case _ => false
     }
 
@@ -166,30 +166,33 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), c)), p) =>
-        // construct instance
-        val x = d.child match {
-          case v: Variable => v
-          case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
-        }
-        val lhs = BoxModality(NDetAssign(x), BoxModality(IncompleteSystem(c), BoxModality(Test(h), p)))
-        val axiomInstance = Imply(lhs, f)
+      case BoxModality(IncompleteSystem(cep: ContEvolveProduct), p) => cep.normalize() match {
+        case ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), c) =>
+          // construct instance
+          val x = d.child match {
+            case v: Variable => v
+            case _ => throw new IllegalArgumentException("Normal form expects v in v' being a Variable")
+          }
+          val lhs = BoxModality(NDetAssign(x), BoxModality(IncompleteSystem(c), BoxModality(Test(h), p)))
+          val axiomInstance = Imply(lhs, f)
 
-        // construct substitution
-        val aX = Variable("x", None, Real)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-        val aT = Apply(Function("f", None, Real, Real), x)
-        val aC = ContEvolveProgramConstant("c")
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
-                     new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
+          // construct substitution
+          val aX = Variable("x", None, Real)
+          val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
+          val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
+          val aT = Apply(Function("f", None, Real, Real), x)
+          val aC = ContEvolveProgramConstant("c")
+          val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
+            new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
 
-        // alpha renaming of x on axiom if necessary
-        val (axiom, anteCont) =
-          if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
-          else (ax, None)
+          // alpha renaming of x on axiom if necessary
+          val (axiom, anteCont) =
+            if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+            else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), anteCont, None)
+          Some(axiom, axiomInstance, Substitution(l), anteCont, None)
+        case _ => None
+      }
       case _ => None
     }
   }
