@@ -64,8 +64,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         "y_0>2 & z<0".asFormula :: "x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
-  // EmptyContEvolveProgram equality / product normalization needed first
-  ignore should "replace system of ODEs with nondeterministic assignments and tests and skolemize correctly" in {
+  it should "replace system of ODEs with nondeterministic assignments and tests and skolemize correctly" in {
     val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0, z'=2;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (

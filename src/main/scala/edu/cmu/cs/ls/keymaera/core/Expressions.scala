@@ -1223,7 +1223,9 @@ final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(Pro
 }
 
 
-sealed trait ContEvolveProgram extends Program
+sealed trait ContEvolveProgram extends Program {
+  def normalize() = this
+}
 
 /**
  * Normal form differential equation data structures for explicit ODE
@@ -1254,17 +1256,15 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Derivative, val thet
 
 object EmptyContEvolveProgram {
   def apply() = new EmptyContEvolveProgram()
-
-  def unapply(): Unit = {
-    //@todo is there any reason this wasn't implemented?
-  }
+  def unapply(): Unit = { }
 }
 final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   def reads = Nil
   def writes = Nil
 
   override def equals(e: Any): Boolean = e match {
-    case o: EmptyContEvolveProgram => true
+    case _: EmptyContEvolveProgram => true
+    case ContEvolveProduct(_: EmptyContEvolveProgram, _: EmptyContEvolveProgram) => true
     case _ => false
   }
   override def hashCode: Int = hash(269)
@@ -1283,25 +1283,27 @@ object ContEvolveProduct {
 }
 final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/*Either[EmptyContEvolveProgram, ContEvolveProduct]*/)
     extends BinaryProgram(left, right) with ContEvolveProgram {
-  //Enforce a common structure so that equality testing can be simple.
-//  assert(!left.isInstanceOf[ContEvolveProduct]) //@todo this will fail! from Stefan on 2/3: There is also this awkward special case code in uniform substitution to combine two products that each end with an EmptyContEvolveProgram. We should implement that in the data structure at some point.
-  assert(right.isInstanceOf[EmptyContEvolveProgram] || right.isInstanceOf[ContEvolveProduct], "Expected proper form but found a " + right.getClass() + " on the RHS!")
   def reads = (left.reads ++ right.reads).distinct
   def writes = (left.writes ++ right.writes).distinct
 
-  def flatten():List[ContEvolveProgram] = {
+  def flatten(): List[ContEvolveProgram] = {
     val leftList = left match {
-      case left : ContEvolveProduct => left.flatten()
+      case left: ContEvolveProduct => left.flatten()
       case _ => left :: Nil
     }
     val rightList = right match {
-      case right : ContEvolveProduct => right.flatten()
+      case right: ContEvolveProduct => right.flatten()
       case _ => right :: Nil
     }
     leftList ++ rightList
   }
 
-
+  override def normalize() = {
+    //Note: this has to be a type-level comparison or else equals diverges.
+    val pl = flatten().filter(!_.isInstanceOf[EmptyContEvolveProgram])
+    if (pl.isEmpty) EmptyContEvolveProgram()
+    else pl.foldRight[ContEvolveProgram](EmptyContEvolveProgram())((prg, prod) => ContEvolveProduct(prg, prod))
+  }
 
   //@todo SYMMETRY!
   override def equals(e: Any): Boolean = equalsContEvolve(e)
@@ -1309,11 +1311,11 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/
   //Alternative implementations:
   private def equalsContEvolve(e:Any) = {
     e match {
-      case e:ContEvolveProduct => {
-        //Note: this has to be a type-level comparison or else equals diverges.
-        def fn(x:ContEvolveProgram) = !x.isInstanceOf[EmptyContEvolveProgram] //the filter function
+      case e: ContEvolveProduct =>
+        //Note: this has to be a type-level comparison or else equals diverges (also: cannot use normalize here for the same reason)
+        def fn(x: ContEvolveProgram) = !x.isInstanceOf[EmptyContEvolveProgram]
         this.flatten().filter(fn).equals(e.flatten().filter(fn))
-      }
+      case _: EmptyContEvolveProgram => left.isInstanceOf[EmptyContEvolveProgram] && right.isInstanceOf[EmptyContEvolveProgram]
       case _ => false
     }
   }

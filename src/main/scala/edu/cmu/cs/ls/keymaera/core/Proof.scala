@@ -1307,25 +1307,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => (u, p)
     // implementation in one case: case a: ContEvolveProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u, pair.t.asInstanceOf[ContEvolveProgram])}; return (u, p)
     case ContEvolveProduct(a, b) =>
-      val (v, as) = usubst(u, a) match {
-        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
-        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
-      }
-      b match {
-        case _: EmptyContEvolveProgram => as match {
-            case ContEvolveProduct(_, _) | _: EmptyContEvolveProgram => (v, as) /* do not substitute, whatever was substituted for a already must have a rightmost EmptyContEvolveProgram */
-            case _ => val (w, bs) = usubst(u, b) match {
-                case (symbols, prg: ContEvolveProgram) => (symbols, prg)
-                case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
-              }
-              (v++w, ContEvolveProduct(as, bs))
-          }
-        case _ => val (w, bs) = usubst(u, b) match {
-            case (symbols, prg: ContEvolveProgram) => (symbols, prg)
-            case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in ODE systems")
-          }
-          (v++w, ContEvolveProduct(as, bs))
-      }
+      val (v, as: ContEvolveProgram) = usubst(u, a)
+      val (w, bs: ContEvolveProgram) = usubst(u, b)
+      (v++w, ContEvolveProduct(as, bs))
     // $$s$$
     case IncompleteSystem(s) =>
       val (v, as) = usubst(u, s) match {
