@@ -40,6 +40,29 @@ object TacticLibrary {
         else throw new IllegalArgumentException("Sequent " + s + " at position " + p + " is not a formula")
       }
     }
+
+    def freshIndexInFormula(name: String, f: Formula) = {
+      val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == name)
+      require(vars.size > 0)
+      val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
+        acc match {
+          case Some(a) => i match {
+            case Some(b) => if (a < b) Some(b) else Some(a)
+            case None => Some(a)
+          }
+          case None => i
+        })
+      maxIdx match {
+        case None => Some(0)
+        case Some(a) => Some(a + 1)
+      }
+    }
+
+    def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T = t match {
+      case Variable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
+      case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
+      case _ => ???
+    }
   }
 
   /*******************************************************************
