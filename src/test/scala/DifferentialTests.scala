@@ -152,48 +152,52 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sucSequent("[x'=2,y'=3;]x>1 & [x'=2,y'=3 & (true&x>1);]x>0".asFormula))
   }
 
-  ignore/*"differential solution tactic"*/ should "use provided solution correctly" in {
-    val s = sucSequent("[x0:=x; t:=0; x'=2, t'=1;]x>0".asFormula)
+  "differential solution tactic" should "use provided solution correctly" in {
+    import scala.language.postfixOps
+    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1;]x>0".asFormula :: Nil)
 
-    val diffNode = helper.runTactic(default, new RootNode(s)).openGoals().head
-    val tactic = locateSucc(diffSolution(Some("x = x0 + 2*t".asFormula)))
-    val node = helper.runTactic(tactic, diffNode)
-    node.openGoals()(0).sequent should be (
-      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
-        "t_0=0".asFormula :: Nil, "x_0 = x0 + 2*t".asFormula :: Nil))
-    node.openGoals()(1).sequent should be (
-      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
+    val tactic = locateSucc(diffSolution(Some("x=x_2+2*t_3".asFormula)))
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sequent("x_2".asNamedSymbol :: "t_2".asNamedSymbol :: "x_3".asNamedSymbol :: "t_4".asNamedSymbol :: Nil,
         // TODO could simplify all those true &
-        "t_0=0".asFormula :: "true & x_0 = x0 + 2*t".asFormula :: "true".asFormula :: Nil, "x_0>0".asFormula :: Nil))
+        "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula :: "true & x_3=x_2+2*t_3".asFormula :: "true".asFormula :: Nil, "x_3>0".asFormula :: Nil))
   }
 
-  ignore should "use Mathematica to find solution if None is provided" in {
-    val s = sucSequent("[x0:=x; t:=0; x'=2, t'=1;]x>0".asFormula)
+  it should "use Mathematica to find solution if None is provided" in {
+    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1;]x>0".asFormula :: Nil)
 
-    val diffNode = helper.runTactic(default, new RootNode(s)).openGoals().head
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
-    val node = helper.runTactic(tactic, diffNode)
-    node.openGoals()(0).sequent should be (
-      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
-        "t_0=0".asFormula :: Nil,
-        // TODO not robust if Mathematica reports equivalent formula but differently formatted
-        "x_0 = 2*t + x0 & t_1 = 1*t + t0_0".asFormula :: Nil))
-    node.openGoals()(1).sequent should be (
-      sequent("x0".asNamedSymbol :: "t_0".asNamedSymbol :: "x_0".asNamedSymbol :: "t_1".asNamedSymbol :: Nil,
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sequent("x_2".asNamedSymbol :: "t_2".asNamedSymbol :: "x_3".asNamedSymbol :: "t_3".asNamedSymbol :: Nil,
         // TODO could simplify all those true &
-        "t_0=0".asFormula :: "true & x_0 = 2*t + x0 & t_1 = 1*t + t0_0".asFormula :: "true".asFormula :: Nil,
+        // TODO not robust if Mathematica reports equivalent formula but differently formatted
+        "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula ::
+          "true & x_3=2*t_3+x_2 & t_3>=t_2".asFormula :: "true".asFormula :: Nil,
         "x_0>0".asFormula :: Nil))
   }
 
-  ignore should "prove with differential solution tactic" in {
+  it should "preserve time evolution domain constraints when using Mathematica to find solution" in {
+    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1 & t<=5;]x>0".asFormula :: Nil)
+
+    // solution = None -> Mathematica
+    val tactic = locateSucc(diffSolution(None))
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sequent("x_2".asNamedSymbol :: "t_2".asNamedSymbol :: "x_3".asNamedSymbol :: "t_3".asNamedSymbol :: Nil,
+        // TODO could simplify all those true &
+        // TODO not robust if Mathematica reports equivalent formula but differently formatted
+        "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula ::
+          "t_3<=5 & x_3=2*t_3+x_2 & t_3>=t_2".asFormula :: "true".asFormula :: Nil,
+        "x_0>0".asFormula :: Nil))
+  }
+
+  it should "prove with differential solution tactic" in {
     import scala.language.postfixOps
     import TacticLibrary.{boxAssignT, boxSeqT}
-    val s = sequent(Nil, "x>0".asFormula :: Nil, "[x0:=x; t:=0; t0:=t; x'=2, t'=1 & t>=0;]x>0".asFormula :: Nil)
-    // TODO t:=0 leads to a SubstitutionClashException (because subsequently t'=1)
-    val diffNode = helper.runTactic((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*, new RootNode(s)).openGoals().head
-    // TODO when alpha renaming finally works it should be head instead of tail.tail.head
-    val postDiffSolNode = helper.runTactic(locateSucc(diffSolution(None)), diffNode).openGoals().tail.tail.head
+    val s = sucSequent("x>0 -> [t:=0; x'=2, t'=1;]x>0".asFormula)
+    val diffNode = helper.runTactic(locateSucc(ImplyRightT) & locateSucc(boxSeqT) & locateSucc(boxAssignT),
+      new RootNode(s)).openGoals().head
+    val postDiffSolNode = helper.runTactic(locateSucc(diffSolution(None)), diffNode).openGoals().head
     helper.runTactic(default, postDiffSolNode) shouldBe 'closed
   }
 

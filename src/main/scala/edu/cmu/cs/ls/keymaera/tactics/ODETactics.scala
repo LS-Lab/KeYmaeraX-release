@@ -2,11 +2,8 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{AndRightT, diffCutT,
-  alphaRenamingT, boxNDetAssign, skolemizeT, boxTestT, ImplyRightT}
-import Tactics.NilT
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
@@ -24,8 +21,7 @@ object ODETactics {
    */
   def diffSolution(solution: Option[Formula]): PositionTactic = new PositionTactic("differential solution") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case BoxModality(_: NFContEvolve, _) => true
-      case BoxModality(_: ContEvolveProduct, _) => true
+      case BoxModality(odes: ContEvolveProgram, _) => odes != EmptyContEvolveProgram()
       case _ => false
     })
 
@@ -43,47 +39,62 @@ object ODETactics {
     private def constructTactic(p: Position) = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
+      private def primedSymbols(ode: ContEvolveProgram) = {
+        var primedSymbols = Set[Variable]()
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+            case Derivative(_, ps: Variable) => primedSymbols += ps; Left(None)
+            case Derivative(_, _) => throw new IllegalArgumentException("Only derivatives of variables supported")
+            case _ => Left(None)
+          }
+        }, ode)
+        primedSymbols
+      }
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import BranchLabels.{cutShowLbl, cutUseLbl}
-        def createTactic(solution: Formula, diffEqPos: Position) = {
+        import HybridProgramTacticsImpl.{discreteGhostT, boxAssignT}
+        import TacticLibrary.{debugT,hideT}
+        def createTactic(ode: ContEvolveProgram, solution: Formula, iv: Map[Variable, Variable], diffEqPos: Position) = {
+          val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
+            a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(diffEqPos)))
           val cut = diffCutT(solution)(p) & AndRightT(p)
-          val proveSol = onBranch(cutShowLbl, NilT /*differentialInduction(diffEqPos)*/)
-          val useSol = onBranch(cutUseLbl, diffWeakenT(diffEqPos))
-          Some(cut ~ proveSol ~ useSol)
+          val proveSol = debugT("Show") & NilT /*differentialInduction(diffEqPos)*/
+          val useSol = diffWeakenT(diffEqPos)
+          Some(initialGhosts & cut & (proveSol, useSol))
         }
 
-        // HACK assumes presence of variable t and variables for starting values
-        // TODO ghost time
-        // TODO ghosts for starting values
-        val diffEq: Either[NFContEvolve, ContEvolveProduct] = node.sequent(p) match {
-          case BoxModality(e: NFContEvolve, _) => Left(e)
-          case BoxModality(e: ContEvolveProduct, _) => Right(e)
-          case _ => ???
+        val diffEq = node.sequent(p) match {
+          case BoxModality(ode: ContEvolveProgram, _) => ode
+          case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
+        // HACK assumes presence of variable t
+        // TODO ghost time (needs differential auxiliaries)
         var actualTime: Variable = null
         ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-
           import ExpressionTraversal.stop
-
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
             case v@Variable(n, _, _) if n == "t" => actualTime = v.asInstanceOf[Variable]; Left(Some(stop))
             case _ => Left(None)
           }
         }, node.sequent(p))
 
+        val iv = primedSymbols(diffEq).map(v => v -> TacticHelper.freshNamedSymbol(v, node.sequent(p))).toMap
+        // HACK assumes that boxAssignT will increment the index twice (universal quantifier, skolemization)
+        val ivm = iv.map(e =>  (e._1, Variable(e._2.name, Some(e._2.index.get + 2), e._2.sort))).toMap
+
         val theSolution = solution match {
           case sol@Some(_) => sol
           case None => tool match {
-            case x: Mathematica if diffEq.isLeft => x.diffSolver.diffSol(diffEq.left.get, actualTime)
-            case x: Mathematica if diffEq.isRight => x.diffSolver.diffSol(diffEq.right.get, actualTime)
+            case x: Mathematica => x.diffSolver.diffSol(diffEq, actualTime, ivm)
             case _ => ???
           }
         }
 
         val diffEqPos = SuccPosition(p.index)
         theSolution match {
-          case Some(s) => createTactic(s, diffEqPos)
+          // add relation to initial time
+          case Some(s) => createTactic(diffEq, And(s, GreaterEqual(actualTime.sort, actualTime, ivm(actualTime))), iv, diffEqPos)
           case None => ???
         }
       }
