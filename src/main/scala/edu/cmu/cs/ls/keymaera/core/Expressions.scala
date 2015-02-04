@@ -1264,6 +1264,7 @@ final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram 
 
   override def equals(e: Any): Boolean = e match {
     case _: EmptyContEvolveProgram => true
+    case ContEvolveProduct(_: EmptyContEvolveProgram, _: EmptyContEvolveProgram) => true
     case _ => false
   }
   override def hashCode: Int = hash(269)
@@ -1317,6 +1318,7 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/
         //Note: this has to be a type-level comparison or else equals diverges (also: cannot use normalize here for the same reason)
         def fn(x: ContEvolveProgram) = !x.isInstanceOf[EmptyContEvolveProgram]
         this.flatten().filter(fn).equals(e.flatten().filter(fn))
+      case _: EmptyContEvolveProgram => left.isInstanceOf[EmptyContEvolveProgram] && right.isInstanceOf[EmptyContEvolveProgram]
       case _ => false
     }
   }

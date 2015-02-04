@@ -54,6 +54,16 @@ class ExpressionTests extends FlatSpec with Matchers {
     }
   }
 
+  "Equality of EmptyContEvolveProgram" should "consider a product of empty programs an empty program" in {
+    EmptyContEvolveProgram() should be (ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()))
+  }
+
+  "Equality of ContEvolveProducts" should "consider a product of empty programs an empty program" in {
+    ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()) should be {
+      EmptyContEvolveProgram()
+    }
+  }
+
   "Normalization of ContEvolveProducts" should "reduce two empty programs to one" in {
     ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()).normalize() should be (
       EmptyContEvolveProgram())
