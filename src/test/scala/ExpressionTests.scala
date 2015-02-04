@@ -64,6 +64,16 @@ class ExpressionTests extends FlatSpec with Matchers {
     }
   }
 
+  it should "ignore empty programs" in {
+    def nf(x: String) = NFContEvolve(Nil, Derivative(Real, x.asTerm), "1".asTerm, "true".asFormula)
+    ContEvolveProduct(ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"))),
+      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z"), EmptyContEvolveProgram()))) should be (
+      ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"), nf("z"))))
+    ContEvolveProduct(ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("x"), nf("y"))),
+      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))) should be (
+      ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"), nf("z"))))
+  }
+
   "Normalization of ContEvolveProducts" should "reduce two empty programs to one" in {
     ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()).normalize() should be (
       EmptyContEvolveProgram())
@@ -75,10 +85,17 @@ class ExpressionTests extends FlatSpec with Matchers {
       ContEvolveProduct(nf("x"), EmptyContEvolveProgram()))
   }
 
-  it should "have exactly one empty program at the end" in {
+  it should "always start with an ODE in normal form" in {
     def nf(x: String) = NFContEvolve(Nil, Derivative(Real, x.asTerm), "1".asTerm, "true".asFormula)
     ContEvolveProduct(ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"))),
-      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z"), EmptyContEvolveProgram()))).
-      normalize() should be (ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"), ContEvolveProduct(nf("z"), EmptyContEvolveProgram()))))
+      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))).normalize() match {
+      case ContEvolveProduct(_: NFContEvolve, _) =>
+      case _ => fail("First element in normalized system of ODEs is not a normal form ODE")
+    }
+    ContEvolveProduct(ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("x"), nf("y"))),
+      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))).normalize() match {
+      case ContEvolveProduct(_: NFContEvolve, _) =>
+      case _ => fail("First element in normalized system of ODEs is not a normal form ODE")
+    }
   }
 }
