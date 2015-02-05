@@ -295,6 +295,57 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for reversing box assignment [v := t;], i.e., introduces a ghost v for term t
+   * @return The axiom tactic.
+   */
+  def nonAbbrvDiscreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] assignment irrelevant", "[:=] assignment irrelevant") {
+    override def applies(f: Formula): Boolean = true
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
+      // TODO check that axiom is of the expected form [v:=t]p <-> p
+      // construct substitution
+      val aV = Variable("v", None, Real)
+      val aT = Variable("t", None, Real)
+      val aP = PredicateConstant("p")
+      val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(aP, f))
+
+      // check specified name, or construct a new name for the ghost variable if None
+      val v = ghost match {
+        case Some(gv) => require(gv == t || (!Helper.names(f).contains(gv))); gv
+        case None => t match {
+          case v: Variable => TacticHelper.freshNamedSymbol(v, f)
+          case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
+        }
+      }
+
+      // construct axiom instance: [v:=t]p(v) <-> p(t)
+      val g = BoxModality(Assign(v, t), f)
+      val axiomInstance = Equiv(g, f)
+
+      // rename to match axiom if necessary
+      val alpha = new PositionTactic("Alpha") {
+        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+          case Equiv(BoxModality(Assign(_, _), _), _) => true
+          case _ => false
+        }
+
+        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+            Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.first))
+
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
+      }
+      val Equiv(left, right) = axiom
+      val (ax, cont) = (Equiv(replace(left)(aV, v), right), Some(alpha))
+
+      // return tactic
+      Some(ax, axiomInstance, Substitution(l), None, cont)
+    }
+  }
+
+  /**
    * Creates a new position tactic for box assignment [x := t;], for the case when followed by ODE or loop
    * @return The tactic.
    */

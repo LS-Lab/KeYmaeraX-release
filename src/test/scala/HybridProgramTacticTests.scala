@@ -427,4 +427,19 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     getProofSequent(tactic, new RootNode(sucSequent("[y'=1;]y>0".asFormula))) should be (
       sucSequent("[z:=y+1;][y'=1;]y>0".asFormula))
   }
+
+  it should "abbreviate terms in a formula" in {
+    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
+    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("z", None, Real)),
+      "0".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=5+0;]x>0".asFormula))) should be (
+      sucSequent("[z:=0;][x:=5+z;]x>z".asFormula))
+  }
+
+  "nonAbbrDiscreteGhost" should "not abbreviate terms in a formula" in {
+    import HybridProgramTacticsImpl.nonAbbrvDiscreteGhostT
+    val tactic = locateSucc(nonAbbrvDiscreteGhostT(Some(Variable("z", None, Real)), "0".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=5+0;]x>0".asFormula))) should be (
+      sucSequent("[z:=0;][x:=5+0;]x>0".asFormula))
+  }
 }
