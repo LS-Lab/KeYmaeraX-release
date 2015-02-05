@@ -128,14 +128,10 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
-  override def diffSol(diffSys: ContEvolveProgram, diffArg: Variable): Option[Formula] =
-    diffSol(diffArg, toDiffSys(diffSys, diffArg):_*)
-  override def diffSol(diffEq: NFContEvolve, diffArg: Variable): Option[Formula] = diffEq.x match {
-    case Derivative(_, v: Variable) => diffSol(diffArg, (v, diffEq.theta))
-    case _ => ???
-  }
-  override def diffSol(diffSys: ContEvolve, diffArg: Variable): Option[Formula] =
-    diffSol(diffArg, toDiffSys(diffSys.child, diffArg):_*)
+  override def diffSol(diffSys: ContEvolveProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
+    diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
+  override def diffSol(diffSys: ContEvolve, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula] =
+    diffSol(diffArg, iv, toDiffSys(diffSys.child, diffArg):_*)
 
   /**
    * Converts an expression into a differential equation system (list of x'=theta).
@@ -169,6 +165,7 @@ class JLinkMathematicaLink extends MathematicaLink {
         case NFContEvolve(_, Derivative(_, x: Variable), theta, _) if x != diffArg => result = result :+ (x, theta); Left(None)
         case NFContEvolve(_, Derivative(_, x: Variable), theta, _) if x == diffArg => Left(None)
         case ContEvolveProduct(a, b) => Left(None)
+        case _: EmptyContEvolveProgram => Left(None)
       }
     }, diffSys)
     result
@@ -180,7 +177,7 @@ class JLinkMathematicaLink extends MathematicaLink {
    * @param diffSys The system of differential equations of the form x' = theta.
    * @return The solution if found; None otherwise
    */
-  private def diffSol(diffArg: Variable, diffSys: (Variable, Term)*): Option[Formula] = {
+  private def diffSol(diffArg: Variable, iv: Map[Variable, Variable], diffSys: (Variable, Term)*): Option[Formula] = {
     val primedVars = diffSys.map(_._1)
     val functionalizedTerms = diffSys.map{ case (x, theta) => ( x, functionalizeVars(theta, diffArg, primedVars:_*)) }
     val mathTerms = functionalizedTerms.map{case (x, theta) =>
@@ -190,10 +187,8 @@ class JLinkMathematicaLink extends MathematicaLink {
 
     val functions = diffSys.map(t => toMathematica(functionalizeVars(t._1, diffArg)))
 
-    // TODO we need reserved names for initial ghosts (for now: postfix name with 0)
     val initialValues = diffSys.map(t => toMathematica(
-      Equals(Real, functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*),
-        Variable(t._1.name + "0", t._1.index, Real))))
+      Equals(Real, functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), iv(t._1))))
 
     val input = new MExpr(new MExpr(Expr.SYMBOL, "DSolve"),
       Array[MExpr](
@@ -202,7 +197,7 @@ class JLinkMathematicaLink extends MathematicaLink {
         toMathematica(diffArg)))
     val (_, result) = run(input)
     result match {
-      case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name):_*)) // TODO replace initial values
+      case f: Formula => Some(defunctionalize(f, diffArg, primedVars.map(_.name):_*))
       case _ => None
     }
   }

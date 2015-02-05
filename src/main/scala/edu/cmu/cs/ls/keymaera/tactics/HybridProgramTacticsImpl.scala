@@ -91,7 +91,7 @@ object HybridProgramTacticsImpl {
         )
 
         //construct the RHS of the axiom instance: \forall v . (v'=t -> p(v'))
-        val fv = Variable(v.name, getFreshIndex(v,f), v.sort) //fresh variable.
+        val fv = Variable(v.name, TacticHelper.freshIndexInFormula(v.name, f), v.sort) //fresh variable.
         val dfv = Derivative(Real, fv)
         val g = Forall(Seq(fv), Imply(Equals(Real, dfv, t), termReplace(p)(Derivative(Real, v), dfv)))
 
@@ -131,29 +131,6 @@ object HybridProgramTacticsImpl {
       ???
     }
 
-    /**
-     * returns an index value which is not used by variables named ``v.name"
-     * @param v the variable whose name we care about.
-     * @param f the formula in which the new variable v_newIndex must be fresh.
-     * @return newIndex a new index.
-     */
-    private def getFreshIndex(v : Variable, f : Formula):Option[Int] = {
-      val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
-      require(vars.size > 0)
-      val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) => acc match {
-        case Some(a) => i match {
-          case Some(b) => if (a < b) Some(b) else Some(a)
-          case None => Some(a)
-        }
-        case None => i
-      })
-      val tIdx: Option[Int] = maxIdx match {
-        case None => Some(0)
-        case Some(a) => Some(a + 1)
-      }
-
-      tIdx
-    }
   }
 
   def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
@@ -188,20 +165,7 @@ object HybridProgramTacticsImpl {
         // construct a new name for the quantified variable
         val (newV1, newV2) = f match {
           case BoxModality(Assign(v: Variable, _), _) =>
-            val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
-            require(vars.size > 0)
-            val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
-              acc match {
-                case Some(a) => i match {
-                  case Some(b) => if (a < b) Some(b) else Some(a)
-                  case None => Some(a)
-                }
-                case None => i
-              })
-            val tIdx: Option[Int] = maxIdx match {
-              case None => Some(0)
-              case Some(a) => Some(a + 1)
-            }
+            val tIdx = TacticHelper.freshIndexInFormula(v.name, f)
             (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
@@ -299,21 +263,7 @@ object HybridProgramTacticsImpl {
       val v = ghost match {
         case Some(gv) => require(gv == t || (!Helper.names(f).contains(gv))); gv
         case None => t match {
-          case Variable(tname, _, _) => val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == tname)
-            require(vars.size > 0)
-            val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
-              acc match {
-                case Some(a) => i match {
-                  case Some(b) => if (a < b) Some(b) else Some(a)
-                  case None => Some(a)
-                }
-                case None => i
-              })
-            val tIdx: Option[Int] = maxIdx match {
-              case None => Some(0)
-              case Some(a) => Some(a + 1)
-            }
-            Variable(tname, tIdx, t.sort)
+          case v: Variable => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
         }
       }
@@ -491,22 +441,7 @@ object HybridProgramTacticsImpl {
         val f = node.sequent(p)
         // construct a new name for renaming in ODE
         val newV = f match {
-          case BoxModality(NDetAssign(v: Variable), _) =>
-            val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == v.name)
-            require(vars.size > 0)
-            val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
-              acc match {
-                case Some(a) => i match {
-                  case Some(b) => if (a < b) Some(b) else Some(a)
-                  case None => Some(a)
-                }
-                case None => i
-              })
-            val tIdx: Option[Int] = maxIdx match {
-              case None => Some(0)
-              case Some(a) => Some(a + 1)
-            }
-            Variable(v.name, tIdx, v.sort)
+          case BoxModality(NDetAssign(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
