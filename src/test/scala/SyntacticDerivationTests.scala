@@ -126,5 +126,8 @@ class SyntacticDerivationTests extends TacticTestSuite {
   "<=" should "work on x,y" in {
     testTermOperation("x", "y", "<=", LessEqualDerivativeT, LessEqualDerivativeAtomizeT, LessEqualDerivativeAggregateT)
   }
+  "<" should "work on x,y" in {
+    testTermOperation("x", "y", "<", LessThanDerivativeT, LessThanDerivativeAtomizeT, LessThanDerivativeAggregateT)
+  }
 
 }
