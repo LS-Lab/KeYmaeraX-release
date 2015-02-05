@@ -66,14 +66,24 @@ object TacticLibrary {
           case None => i
         })
       maxIdx match {
-        case None => Some(0)
-        case Some(a) => Some(a + 1)
+        case None => 0
+        case Some(a) => a + 1
       }
     }
 
+    def freshIndexInSequent(name: String, s: Sequent) = {
+      (s.ante.map(freshIndexInFormula(name, _)) ++ s.succ.map(freshIndexInFormula(name, _))).max
+    }
+
     def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T = t match {
-      case Variable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
-      case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
+      case Variable(vName, _, vSort) => Variable(vName, Some(freshIndexInFormula(vName, f)), vSort).asInstanceOf[T]
+      case Function(fName, _, fDomain, fSort) => Function(fName, Some(freshIndexInFormula(fName, f)), fDomain, fSort).asInstanceOf[T]
+      case _ => ???
+    }
+
+    def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T = t match {
+      case Variable(vName, _, vSort) => Variable(vName, Some(freshIndexInSequent(vName, s)), vSort).asInstanceOf[T]
+      case Function(fName, _, fDomain, fSort) => Function(fName, Some(freshIndexInSequent(fName, s)), fDomain, fSort).asInstanceOf[T]
       case _ => ???
     }
   }

@@ -91,7 +91,7 @@ object HybridProgramTacticsImpl {
         )
 
         //construct the RHS of the axiom instance: \forall v . (v'=t -> p(v'))
-        val fv = Variable(v.name, TacticHelper.freshIndexInFormula(v.name, f), v.sort) //fresh variable.
+        val fv = TacticHelper.freshNamedSymbol(v, f) //fresh variable.
         val dfv = Derivative(Real, fv)
         val g = Forall(Seq(fv), Imply(Equals(Real, dfv, t), termReplace(p)(Derivative(Real, v), dfv)))
 
@@ -166,7 +166,7 @@ object HybridProgramTacticsImpl {
         val (newV1, newV2) = f match {
           case BoxModality(Assign(v: Variable, _), _) =>
             val tIdx = TacticHelper.freshIndexInFormula(v.name, f)
-            (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
+            (Variable(v.name, Some(tIdx), v.sort), Variable(v.name, Some(tIdx + 1), v.sort))
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
