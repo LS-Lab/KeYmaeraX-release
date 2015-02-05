@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.core.Term
+import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{AxiomTactic, SyntacticDerivationAxiomTactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
@@ -129,5 +129,14 @@ class SyntacticDerivationTests extends TacticTestSuite {
   "<" should "work on x,y" in {
     testTermOperation("x", "y", "<", LessThanDerivativeT, LessThanDerivativeAtomizeT, LessThanDerivativeAggregateT)
   }
+  "!=" should "work on x,y" in {
+    testTermOperation("x", "y", "!=", NotEqualsDerivativeT, NotEqualsDerivativeAtomizeT, NotEqualsDerivativeAggregateT)
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Syntactic derivation of terms
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 }

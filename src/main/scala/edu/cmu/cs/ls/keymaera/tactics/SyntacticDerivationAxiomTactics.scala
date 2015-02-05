@@ -516,4 +516,117 @@ object SyntacticDerivationAxiomTactics {
     }
     override def apply(p: Position): Tactic = LessThanDerivativeT(p)
   }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /*
+   * Axiom "!=' derive !=".
+   *   (s != t)' <-> ((s') = (t'))
+   * End.
+   */
+  def NotEqualsDerivativeT = new AxiomTactic("!=' derive !=", "!=' derive !=") {
+    override def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(NotEquals(eqSort, s, t)) => {
+        true
+      }
+      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+        true
+      }
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
+      val aS = Variable("s",None,Real)      //@todo not sure...
+      val aT = Variable("t", None, Real)
+
+      f match {
+        case FormulaDerivative(NotEquals(eqSort, s, t)) => {
+          val g = NotEquals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
+          val axiomInstance = Equiv(f, g)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(ax, axiomInstance, subst, None, None)
+        }
+        case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
+          val sort = sSort
+
+          val g = FormulaDerivative(NotEquals(sSort, s, t))
+          val axiomInstance = Equiv(g,f)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(ax, axiomInstance, subst, None, None)
+        }
+      }
+    }
+  }
+
+  def NotEqualsDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case FormulaDerivative(NotEquals(eqSort, s, t)) => true
+    }
+    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
+  }
+
+  def NotEqualsDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+    }
+    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
+  }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section 2. Syntactic Total Derivation of Terms.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  /*
+//   * Axiom "-' derive neg".
+//   *   (-s)' = -(s')
+//   * End.
+//   */
+//  def NegDerivativeT = new AxiomTactic("!=' derive !=", "!=' derive !=") {
+//    override def applies(f: Formula): Boolean = f match {
+//
+//    }
+//
+//    override def applies(s: Sequent, p: Position): Boolean = {
+//      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+//    }
+//
+//    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+//    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
+//      val aS = Variable("s",None,Real)      //@todo not sure...
+//      val aT = Variable("t", None, Real)
+//
+//    }
+//  }
+//
+//  def NotEqualsDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
+//    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+//      case FormulaDerivative(NotEquals(eqSort, s, t)) => true
+//    }
+//    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
+//  }
+//
+//  def NotEqualsDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
+//    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+//      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+//    }
+//    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
+//  }
+
 }
