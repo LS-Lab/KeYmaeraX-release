@@ -41,6 +41,19 @@ object TacticLibrary {
       }
     }
 
+    def getTerm(s: Sequent, p: Position): Term = {
+      require(p.inExpr != HereP)
+      var t: Term = null
+      ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          t = e
+          Left(Some(ExpressionTraversal.stop))
+        }
+      }), if (p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex))
+      if (t != null) t
+      else throw new IllegalArgumentException("Sequent " + s + " at position " + p + " is not a term")
+    }
+
     def freshIndexInFormula(name: String, f: Formula) = {
       val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == name)
       require(vars.size > 0)

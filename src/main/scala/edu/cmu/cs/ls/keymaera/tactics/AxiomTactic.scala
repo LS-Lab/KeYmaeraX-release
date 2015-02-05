@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 object AxiomTactic {
@@ -132,6 +133,73 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               val axiomPos = SuccPosition(node.sequent.succ.length)
               println("Axiom instance " + axiomInstance)
               val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) & assertT(0, 1) & (succCont & axiomT(axiomName) & assertT(1,1) & anteCont & AxiomCloseT))
+              Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+            case None => None
+          }
+        case None => None
+      }
+    }
+  }
+
+}
+
+/**
+ * Base class for term axiom tactics.
+ * @param name The name of the tactic.
+ * @param axiomName The name of the axiom.
+ */
+abstract class TermAxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
+  //@todo a java.lang.ExceptionInInitializerError is thrown
+  require(Axiom.axioms != null, "the list of axioms should be defined.")
+  require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
+  val axiom = Axiom.axioms.get(axiomName)
+  def applies(t: Term): Boolean
+  override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getTerm(s, p))
+
+  /**
+   * This methods constructs the axiom instance and substitution to be performed.
+   *
+   * An axiom tactic performs the following steps (Hilbert style):
+   * 1. Guess axiom
+   * 2. Perform Uniform substitution to instantiate the axiom
+   *
+   * Axioms usually have the form ax = OP(a, b). The constructed instance either has the form OP(t, e) or OP(e, t).
+   * Here, t is an input to this function and e is derived from the axiom to be used. The output of this function
+   * should be 2 things:
+   * 1. The instance of the axiom eventually to be used in the proof
+   * 2. The substitution to turn 2 into 1
+   *
+   * In the long run all this should be computed by unification.
+   *
+   * @param t the term that should be rewritten using the axiom
+   * @param ax the axiom to be used
+   * @param pos the position to which this rule is applied to
+   * @return (the instance of the axiom,
+   *         the uniform substitution that transforms the axiom into the axiom instance (Hilbert style)).
+   * @see #constructInstanceAndSubst(Term)
+   */
+  def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)]
+
+  //@TODO Add contract that applies()=>\result fine
+  override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
+    override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      import EqualityRewritingImpl.equalityRewriting
+      import AxiomTactic.axiomT
+      axiom match {
+        case Some(ax) =>
+          constructInstanceAndSubst(getTerm(node.sequent, pos), ax, pos) match {
+            case Some((axiomInstance, subst)) =>
+              val axiomInstPos = AntePosition(node.sequent.ante.length)
+              val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
+                //@TODO If Pos.isAnte the following position management seems wrong since unstable.
+                case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos, checkDisjoint = false) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
+                case _ => ???
+              })
+              val axiomPos = SuccPosition(node.sequent.succ.length)
+              println("Axiom instance " + axiomInstance)
+              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }
