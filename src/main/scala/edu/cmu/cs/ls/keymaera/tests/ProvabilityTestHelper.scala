@@ -158,7 +158,6 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
   }
 
   //Begin Substance.
-
   /**
    * Runs tactic at rootNode, and then blocks while the tactic runs.
    * @param tactic
