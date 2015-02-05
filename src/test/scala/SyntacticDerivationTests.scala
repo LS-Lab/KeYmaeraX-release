@@ -49,7 +49,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeT)
 
     helper.runTactic(tactic, node, true)
-    require(containsOpenGoal(node, helper.parseFormula("(1=1)' | (2=2)'")))
+    require(containsOpenGoal(node, helper.parseFormula("(1=1)' & (2=2)'")))
   }
 
   it should "agree on atomization" in {
@@ -63,13 +63,13 @@ class SyntacticDerivationTests extends TacticTestSuite {
     helper.runTactic(tactic2, node2, true)
 
     require(node1.openGoals().length == node2.openGoals().length)
-    require(containsOpenGoal(node1, helper.parseFormula("(1=1)' | (2=2)'")))
-    require(containsOpenGoal(node2, helper.parseFormula("(1=1)' | (2=2)'")))
+    require(containsOpenGoal(node1, helper.parseFormula("(1=1)' & (2=2)'")))
+    require(containsOpenGoal(node2, helper.parseFormula("(1=1)' & (2=2)'")))
   }
 
   it should "aggregate agreeably" in {
-    val node1 = helper.formulaToNode(helper.parseFormula( " (1=1)' | (2=2)' "))
-    val node2 = helper.formulaToNode(helper.parseFormula( " (1=1)' | (2=2)' "))
+    val node1 = helper.formulaToNode(helper.parseFormula( " (1=1)' & (2=2)' "))
+    val node2 = helper.formulaToNode(helper.parseFormula( " (1=1)' & (2=2)' "))
 
     val tactic1 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeT)
     helper.runTactic(tactic1, node1, true)
@@ -82,7 +82,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node2, helper.parseFormula("(1=1 | 2=2)'")))
   }
 
-  def testTermOperation(sNoParen : String, tNoParen : String, op : String, axTactic : AxiomTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
+  def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : AxiomTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
     val s = "(" + sNoParen + ")"
     val t = "(" + tNoParen + ")"
     val tactic = helper.positionTacticToTactic(axTactic)
@@ -92,45 +92,48 @@ class SyntacticDerivationTests extends TacticTestSuite {
     def primer(x:String) = "("+x+")'"
 
     val node = helper.formulaToNode(helper.parseFormula(
-      primer(s + " " + op + " " + t)
+      primer(s + " " + innerOp + " " + t)
     ))
     val node2 = helper.formulaToNode(helper.parseFormula(
-      primer(s + " " + op + " " + t)
+      primer(s + " " + innerOp + " " + t)
     ))
     helper.runTactic(tactic, node, true)
     helper.runTactic(atomizeTactic, node2, true)
-    require(containsOpenGoal(node, helper.parseFormula(primer(s) + op + primer(t))))
-    require(containsOpenGoal(node2, helper.parseFormula(primer(s) + op + primer(t))))
+    require(containsOpenGoal(node, helper.parseFormula(primer(s) + outerOp + primer(t))))
+    require(containsOpenGoal(node2, helper.parseFormula(primer(s) + outerOp + primer(t))))
 
 
     //aggregation
-    val node3 = helper.formulaToNode(helper.parseFormula(primer(s) + op + primer(t)))
-    val node4 = helper.formulaToNode(helper.parseFormula(primer(s) + op + primer(t)))
+    val node3 = helper.formulaToNode(helper.parseFormula(primer(s) + outerOp + primer(t)))
+    val node4 = helper.formulaToNode(helper.parseFormula(primer(s) + outerOp + primer(t)))
     helper.runTactic(tactic, node3, true)
     helper.runTactic(aggregateTactic, node4, true)
-    require(containsOpenGoal(node3, helper.parseFormula(primer(s + " " + op + " " + t))))
-    require(containsOpenGoal(node4, helper.parseFormula(primer(s + " " + op + " " + t))))
+    require(containsOpenGoal(node3, helper.parseFormula(primer(s + " " + innerOp + " " + t))))
+    require(containsOpenGoal(node4, helper.parseFormula(primer(s + " " + innerOp + " " + t))))
   }
 
   import SyntacticDerivationAxiomTactics._
 
   "=" should "work on x,y" in {
-    testTermOperation("x", "y", "=", EqualsDerivativeT, EqualsDerivativeAtomizeT, EqualsDerivativeAggregateT)
+    testTermOperation("x", "y", "=", "=", EqualsDerivativeT, EqualsDerivativeAtomizeT, EqualsDerivativeAggregateT)
   }
   ">=" should "work on x,y" in {
-    testTermOperation("x", "y", ">=", GreaterEqualDerivativeT, GreaterEqualDerivativeAtomizeT, GreaterEqualDerivativeAggregateT)
-  }
-  ">" should "work on x,y" in {
-    testTermOperation("x", "y", ">", GreaterThanDerivativeT, GreaterThanDerivativeAtomizeT, GreaterThanDerivativeAggregateT)
+    testTermOperation("x", "y", ">=",">=", GreaterEqualDerivativeT, GreaterEqualDerivativeAtomizeT, GreaterEqualDerivativeAggregateT)
   }
   "<=" should "work on x,y" in {
-    testTermOperation("x", "y", "<=", LessEqualDerivativeT, LessEqualDerivativeAtomizeT, LessEqualDerivativeAggregateT)
+    testTermOperation("x", "y", "<=","<=", LessEqualDerivativeT, LessEqualDerivativeAtomizeT, LessEqualDerivativeAggregateT)
+  }
+
+  //These axioms don't follow the above pattern, so we need something slightly modified.
+
+  ">" should "work on x,y" in {
+    testTermOperation("x", "y", ">",">=", GreaterThanDerivativeT, GreaterThanDerivativeAtomizeT, GreaterThanDerivativeAggregateT)
   }
   "<" should "work on x,y" in {
-    testTermOperation("x", "y", "<", LessThanDerivativeT, LessThanDerivativeAtomizeT, LessThanDerivativeAggregateT)
+    testTermOperation("x", "y", "<", "<=", LessThanDerivativeT, LessThanDerivativeAtomizeT, LessThanDerivativeAggregateT)
   }
   "!=" should "work on x,y" in {
-    testTermOperation("x", "y", "!=", NotEqualsDerivativeT, NotEqualsDerivativeAtomizeT, NotEqualsDerivativeAggregateT)
+    testTermOperation("x", "y", "!=", "=", NotEqualsDerivativeT, NotEqualsDerivativeAtomizeT, NotEqualsDerivativeAggregateT)
   }
 
 
@@ -138,5 +141,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
   // Syntactic derivation of terms
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  //@todo this is going to require an axiomtactic implementation that applies at terms.
 
 }
