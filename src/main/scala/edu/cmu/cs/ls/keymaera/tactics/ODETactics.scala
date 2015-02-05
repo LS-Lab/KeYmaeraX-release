@@ -101,6 +101,10 @@ object ODETactics {
     }
   }
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Differential Weakening Section.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
   /**
    * Returns the differential weaken tactic.
    * @return The tactic.
@@ -267,6 +271,84 @@ object ODETactics {
               alphaRenamingT(newSymbol.name, newSymbol.index, "_$" + newSymbol.name, newSymbol.index)(p.first) &
               instantiateQuanT(newSymbol, newSymbol)(p) &
               v2vBoxAssignT(p) & ImplyRightT(SuccPosition(0))
+          )
+        )
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Differential Auxiliary Section.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def diffAuxiliaryT(x: Variable, t: Term, s: Term, psi: Option[Formula] = None): PositionTactic =
+      new AxiomTactic("DA differential auxiliary", "DA differential auxiliary") {
+    def applies(f: Formula) = f match {
+      case BoxModality(ode: ContEvolveProgram, _) => !Helper.names(ode).contains(x) && !Helper.names(t).contains(x) &&
+        !Helper.names(s).contains(x)
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+      case BoxModality(ode: ContEvolveProgram, p) =>
+        // construct instance
+        val q = psi match { case Some(pred) => pred case None => p }
+        val lhs = And(Equiv(p, Exists(x :: Nil, q)), BoxModality(ContEvolveProduct(ode, NFContEvolve(Nil,
+          Derivative(x.sort, x), Add(x.sort, Multiply(x.sort, t, x), s), True)), q))
+        val axiomInstance = Imply(lhs, f)
+
+        // construct substitution
+        val aP = PredicateConstant("p")
+        val aX = Variable("x", None, Real)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), x)
+        val aC = ContEvolveProgramConstant("c")
+        val aS = Variable("s", None, Real)
+        val aT = Variable("t", None, Real)
+        val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q), new SubstitutionPair(aC, ode),
+          new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+
+        // rename to match axiom if necessary
+        val (axiom, succCont) =
+          if (x.name != aX.name || x.index != aX.index) (replaceFree(ax)(aX, x, None), Some(alphaInDiffAuxiliary(x, aX)))
+          else (ax, None)
+
+        Some(axiom, axiomInstance, Substitution(l), succCont, None)
+      case _ => None
+    }
+  }
+
+  /**
+   * Creates an alpha renaming tactic that fits the structure of differential auxiliaries. The tactic renames the old
+   * symbol to the new symbol.
+   * @param oldSymbol The old symbol.
+   * @param newSymbol The new symbol.
+   * @return The alpha renaming tactic.
+   */
+  private def alphaInDiffAuxiliary(oldSymbol: Variable, newSymbol: Variable) = new PositionTactic("Alpha") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Imply(And(Equiv(_, Exists(_, _)), BoxModality(_: ContEvolveProgram, _)), BoxModality(_: ContEvolveProgram, _)) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      import TacticLibrary.{abstractionT,ImplyLeftT,ImplyRightT,hideT,instantiateQuanT}
+      import PropositionalTacticsImpl.AxiomCloseT
+      import HybridProgramTacticsImpl.v2vBoxAssignT
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+        Some(ImplyRightT(SuccPosition(0))
+          & ImplyLeftT(p)
+          & (hideT(SuccPosition(0))
+                & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(AntePosition(p.index, PosInExpr(0 :: 1 :: Nil)))
+                & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(AntePosition(p.index, PosInExpr(1 :: Nil)))
+                & AndLeftT(p) & abstractionT(AntePosition(1)) & hideT(AntePosition(1))
+                & alphaRenamingT(newSymbol.name, newSymbol.index, "_$" + newSymbol.name, newSymbol.index)(AntePosition(1).first)
+                & instantiateQuanT(newSymbol, newSymbol)(AntePosition(1)) & v2vBoxAssignT(AntePosition(1))
+                & AndRightT(SuccPosition(0))
+                & (hideT(AntePosition(1)), hideT(AntePosition(0))) & AxiomCloseT(AntePosition(0), SuccPosition(0)),
+             /* axiom tactic takes care of it */ NilT
           )
         )
 

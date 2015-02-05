@@ -201,4 +201,34 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(default, postDiffSolNode) shouldBe 'closed
   }
 
+  "Differential auxiliaries tactic" should "add y'=1 to [x'=2]x>0" in {
+    import ODETactics.diffAuxiliaryT
+    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "0".asTerm, "1".asTerm))
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("(x>0 <-> \\exists y. x>0) & [x'=2,y'=0*y+1;]x>0".asFormula)
+    )
+  }
+
+  it should "not allow non-linear ghosts (1)" in {
+    import ODETactics.diffAuxiliaryT
+    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "y".asTerm, "1".asTerm))
+    tactic.applicable(new RootNode(s)) should be (false)
+  }
+
+  it should "not allow non-linear ghosts (2)" in {
+    import ODETactics.diffAuxiliaryT
+    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "1".asTerm, "y".asTerm))
+    tactic.applicable(new RootNode(s)) should be (false)
+  }
+
+  it should "not allow ghosts that are already present in the ODE" in {
+    import ODETactics.diffAuxiliaryT
+    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val tactic = locateSucc(diffAuxiliaryT(Variable("x", None, Real), "1".asTerm, "y".asTerm))
+    tactic.applicable(new RootNode(s)) should be (false)
+  }
+
 }
