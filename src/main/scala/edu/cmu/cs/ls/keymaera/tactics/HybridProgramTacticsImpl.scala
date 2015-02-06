@@ -502,7 +502,7 @@ object HybridProgramTacticsImpl {
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p) &
               boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vBoxAssignT(p)
           )
-          case _ => Some(boxNDetAssignWithoutAlpha(p))
+          case _ => Some(boxNDetAssignWithoutAlpha(p) & skolemizeT(p))
         }
       }
     }

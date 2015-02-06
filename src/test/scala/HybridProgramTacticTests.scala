@@ -183,7 +183,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[y:=*;]y>0".asFormula)
     val tactic = locateSucc(boxNDetAssign)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("\\forall y. y>0".asFormula))
+      sequent("y_0".asNamedSymbol :: Nil, Nil, "y_0>0".asFormula :: Nil))
   }
 
   it should "rename free variables in modality predicates" in {
@@ -191,23 +191,23 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[y:=*;][z:=2;](y>0 & z>0)".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y. [z:=2;](y>0 & z>0)".asFormula))
+      sequent("y_0".asNamedSymbol :: Nil, Nil, "[z:=2;](y_0>0 & z>0)".asFormula :: Nil))
   }
 
-  it should "rename free variables but not bound variables" in {
+  it should "rename free variables but not bound variables (subsequent skolemization will, however)" in {
     import TacticLibrary.boxNDetAssign
     val s = sucSequent("[y:=*;][y:=2;]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y. [y:=2;]y>0".asFormula))
+      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0:=2;]y_0>0".asFormula :: Nil))
   }
 
-  it should "rename free variables but not variables bound by assignment in modality predicates" in {
+  it should "rename free variables but not variables bound by assignment in modality predicates (subsequent skolemization will, however)" in {
     import TacticLibrary.boxNDetAssign
     val s = sucSequent("[y:=*;][y:=2+y;]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y. [y:=2+y;]y>0".asFormula))
+      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0:=2+y_0;]y_0>0".asFormula :: Nil))
   }
 
   it should "rename free variables but not variables bound by ODEs in modality predicates" in {
@@ -215,7 +215,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[y:=*;][z'=2+y;](y>0 & z>0)".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall y. [z'=2+y;](y>0 & z>0)".asFormula))
+      sequent("y_0".asNamedSymbol :: Nil, Nil, "[z'=2+y_0;](y_0>0 & z>0)".asFormula :: Nil))
   }
 
   it should "work in front of any discrete program" in {
