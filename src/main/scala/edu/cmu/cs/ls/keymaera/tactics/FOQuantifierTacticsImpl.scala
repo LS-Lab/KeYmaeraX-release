@@ -135,14 +135,14 @@ object FOQuantifierTacticsImpl {
       val aP = ApplyPredicate(Function("p", None, Real, Bool), t)
       val l = List(SubstitutionPair(aT, t), SubstitutionPair(aP, f))
 
-      // construct axiom instance: [v:=t]p(v) <-> p(t)
+      // construct axiom instance: p(t) -> \exists x. p(x)
       val g = Exists(x :: Nil, replaceFree(f)(t, x))
       val axiomInstance = Imply(f, g)
 
       // rename to match axiom if necessary
       val alpha = new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-          case Imply(_, _) => true
+          case Imply(_, Exists(_, _)) => true
           case _ => false
         }
 
@@ -161,10 +161,78 @@ object FOQuantifierTacticsImpl {
   }
 
   /**
+   * Base class for vacuous quantifier elimination/introduction tactics.
+   * @param x The new quantified variable. If None, the tactic eliminates a vacuous quantifier.
+   * @param axiomName The name of the axiom.
+   * @param quantFactory Creates the quantifier.
+   */
+  class VacuousQuantificationTactic(x: Option[Variable], axiomName: String,
+                                            quantFactory: (Seq[NamedSymbol], Formula) => Quantifier)
+      extends AxiomTactic(axiomName, axiomName) {
+    override def applies(f: Formula): Boolean = x match {
+      case Some(v) => !Helper.names(f).contains(v)
+      case None => f match {
+        case q: Quantifier => q.variables.size == 1 && Helper.names(q.child.asInstanceOf[Formula]).
+          intersect(q.variables.toSet).isEmpty
+        case _ => false
+      }
+    }
+
+    private def constructSubstAndAlphaRename(axiom: Formula, f: Formula, axiomInstance: Formula, v: Variable) = {
+      // construct substitution
+      val aX = Variable("x", None, Real)
+      val aP = PredicateConstant("p")
+      val l = List(SubstitutionPair(aP, f))
+
+      // rename to match axiom if necessary
+      val alpha = new PositionTactic("Alpha") {
+        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+          case Equiv(_, _: Quantifier) => true
+          case _ => false
+        }
+
+        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+            Some(alphaRenamingT(v.name, v.index, aX.name, aX.index)(p.second))
+
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
+      }
+      val Equiv(left, right) = axiom
+      val (ax, cont) = (Equiv(left, replaceFree(right)(aX, v)), Some(alpha))
+
+      Some(ax, axiomInstance, Substitution(l), None, cont)
+    }
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
+        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = x match {
+      case Some(v) =>
+        import AlphaConversionHelper.replaceFree
+        require(!Helper.names(f).contains(v))
+        // construct axiom instance: p <-> \exists/\forall x. p
+        constructSubstAndAlphaRename(axiom, f, Equiv(f, quantFactory(v :: Nil, f)), v)
+      case None => f match {
+        case q: Quantifier =>
+          require(q.variables.size == 1 && q.variables.head.isInstanceOf[Variable])
+          val v = q.variables.head.asInstanceOf[Variable]
+          // construct axiom instance: p <-> \exists/\forall x. p
+          constructSubstAndAlphaRename(axiom, q.child.asInstanceOf[Formula],
+            Equiv(q.child.asInstanceOf[Formula], f), v)
+        case _ => None
+      }
+    }
+  }
+
+  def vacuousUniversalQuanT(x: Option[Variable]) = new VacuousQuantificationTactic(x,
+    "Vacuous Universal Quantification", Forall.apply)
+  def vacuousExistentialQuanT(x: Option[Variable]) = new VacuousQuantificationTactic(x,
+    "Vacuous Existential Quantification", Exists.apply)
+
+  /**
    * Creates a tactic to decompose quantifiers.
    * @return The tactic.
    */
-  protected[tactics] def decomposeQuanT = new PositionTactic("Decompose Quantifiers") {
+  def decomposeQuanT = new PositionTactic("Decompose Quantifiers") {
     override def applies(s: Sequent, pos: Position): Boolean = {
       var res = false
       val fn = new ExpressionTraversalFunction {

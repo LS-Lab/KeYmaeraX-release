@@ -6,7 +6,8 @@ import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
-import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateT,existentialGenT}
+import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateT,existentialGenT,
+  vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT}
 
 import scala.collection.immutable.Map
 
@@ -115,5 +116,69 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = locateAnte(existentialGenT(Variable("y", None, Real), "x".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "\\exists y. \\forall x. x>0".asFormula :: Nil, Nil))
+  }
+
+  "Vacuous universal quantification" should "introduce universal quantifier" in {
+    val tactic = vacuousUniversalQuanT(Some(Variable("y", None, Real)))
+    getProofSequent(locateSucc(tactic), new RootNode(sucSequent("x>0".asFormula))) should be (
+      sucSequent("\\forall y. x>0".asFormula))
+    getProofSequent(locateAnte(tactic), new RootNode(sequent(Nil, "x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "\\forall y. x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "not introduce universal quantifier if variable occurs in p" in {
+    val tactic = locateSucc(vacuousUniversalQuanT(Some(Variable("x", None, Real))))
+    tactic.applicable(new RootNode(sucSequent("x>0".asFormula))) shouldBe false
+  }
+
+  it should "remove vacuous universal quantifier" in {
+    val tactic = vacuousUniversalQuanT(None)
+    getProofSequent(locateSucc(tactic), new RootNode(sucSequent("\\forall y. x>0".asFormula))) should be (
+      sucSequent("x>0".asFormula))
+    getProofSequent(locateAnte(tactic), new RootNode(sequent(Nil, "\\forall y. x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "not be applicable if more than one quantified variable occurs" in {
+    val tactic = locateSucc(vacuousUniversalQuanT(None))
+    tactic.applicable(new RootNode(sucSequent("\\forall x,y,z. x>0".asFormula))) shouldBe false
+  }
+
+  it should "be preceded by quantifier decomposition if more than one quantified variable occurs" in {
+    val tactic = Tactics.repeatT(locateSucc(decomposeQuanT) ~ locateSucc(vacuousUniversalQuanT(None)))
+    getProofSequent(tactic, new RootNode(sucSequent("\\forall x,y,z. a>0".asFormula))) should be (
+      sucSequent("a>0".asFormula))
+  }
+
+  "Vacuous existential quantification" should "introduce existential quantifier" in {
+    val tactic = vacuousExistentialQuanT(Some(Variable("y", None, Real)))
+    getProofSequent(locateSucc(tactic), new RootNode(sucSequent("x>0".asFormula))) should be (
+      sucSequent("\\exists y. x>0".asFormula))
+    getProofSequent(locateAnte(tactic), new RootNode(sequent(Nil, "x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "\\exists y. x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "not introduce universal quantifier if variable occurs in p" in {
+    val tactic = locateSucc(vacuousExistentialQuanT(Some(Variable("x", None, Real))))
+    tactic.applicable(new RootNode(sucSequent("x>0".asFormula))) shouldBe false
+  }
+
+  it should "remove vacuous universal quantifier" in {
+    val tactic = vacuousExistentialQuanT(None)
+    getProofSequent(locateSucc(tactic), new RootNode(sucSequent("\\exists y. x>0".asFormula))) should be (
+      sucSequent("x>0".asFormula))
+    getProofSequent(locateAnte(tactic), new RootNode(sequent(Nil, "\\exists y. x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "not be applicable if more than one quantified variable occurs" in {
+    val tactic = locateSucc(vacuousExistentialQuanT(None))
+    tactic.applicable(new RootNode(sucSequent("\\exists x,y,z. x>0".asFormula))) shouldBe false
+  }
+
+  it should "be preceded by quantifier decomposition if more than one quantified variable occurs" in {
+    val tactic = Tactics.repeatT(locateSucc(decomposeQuanT) ~ locateSucc(vacuousExistentialQuanT(None)))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x,y,z. a>0".asFormula))) should be (
+      sucSequent("a>0".asFormula))
   }
 }
