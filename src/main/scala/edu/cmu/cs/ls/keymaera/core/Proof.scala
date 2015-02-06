@@ -1768,20 +1768,21 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
-  require(p.inExpr == HereP, "Can only skolemize top level formulas");
+  require(p.inExpr == HereP, "Can only skolemize top level formulas")
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {
     // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
     val vars = namesIgnoringPosition(s, p)
     val (v,phi) = s(p) match {
-      case Forall(v, phi) if (!p.isAnte) => (v,phi)
-      case Exists(v, phi) if (p.isAnte) => (v,phi)
-      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers", this, s)
+      case Forall(qv, qphi) if !p.isAnte => (qv,qphi)
+      case Exists(qv, qphi) if p.isAnte => (qv,qphi)
+      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
     }
-    if (vars.map(v.contains).contains(true))
+    if (vars.intersect(v.toSet).nonEmpty)
       throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
         vars.intersect(v.toSet))
-    List(if(p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ) else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
+    List(if (p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ)
+         else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
   }
 }
 
