@@ -94,13 +94,13 @@ object SyntacticDerivationAxiomTactics {
 
   /*
    * Axiom "|' derive or".
-   *   (p | q)' <-> ((p') | (q'))
+   *   (p | q)' <-> ((p') & (q'))
    * End.
    */
   def OrDerivativeT = new AxiomTactic("|' derive or","|' derive or") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(Or(_,_)) => true
-      case Or(FormulaDerivative(_), FormulaDerivative(_)) => true
+      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
       case _ => false
     }
 
@@ -115,7 +115,7 @@ object SyntacticDerivationAxiomTactics {
 
       f match {
         case FormulaDerivative(Or(p,q)) => {
-          val g = Or(FormulaDerivative(p), FormulaDerivative(q))
+          val g = And(FormulaDerivative(p), FormulaDerivative(q))
           val axiomInstance = Equiv(f,g)
 
           val subst = Substitution(List(
@@ -125,7 +125,7 @@ object SyntacticDerivationAxiomTactics {
 
           Some(ax, axiomInstance, subst, None, None)
         }
-        case Or(FormulaDerivative(p), FormulaDerivative(q)) => {
+        case And(FormulaDerivative(p), FormulaDerivative(q)) => {
           val g = FormulaDerivative(Or(p,q))
           val axiomInstance = Equiv(g,f)
 
@@ -151,7 +151,7 @@ object SyntacticDerivationAxiomTactics {
 
   def OrDerivativeAggregateT = new PositionTactic("|' derive or\",\"|' derive or Aggregate") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case Or(FormulaDerivative(_), FormulaDerivative(_)) => true
+      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
       case _ => false
     })
 
@@ -314,7 +314,7 @@ object SyntacticDerivationAxiomTactics {
       case FormulaDerivative(GreaterThan(eqSort, s, t)) => {
         true
       }
-      case GreaterThan(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
         true
       }
       case _ => false
@@ -331,7 +331,7 @@ object SyntacticDerivationAxiomTactics {
 
       f match {
         case FormulaDerivative(GreaterThan(eqSort, s, t)) => {
-          val g = GreaterThan(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
+          val g = GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
           val axiomInstance = Equiv(f, g)
 
           val subst = Substitution(List(
@@ -341,7 +341,7 @@ object SyntacticDerivationAxiomTactics {
 
           Some(ax, axiomInstance, subst, None, None)
         }
-        case GreaterThan(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+        case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
           assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
           val sort = sSort
 
@@ -368,7 +368,7 @@ object SyntacticDerivationAxiomTactics {
 
   def GreaterThanDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case GreaterThan(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
     }
     override def apply(p: Position): Tactic = GreaterThanDerivativeT(p)
   }
@@ -450,7 +450,7 @@ object SyntacticDerivationAxiomTactics {
 
   /*
    * Axiom "<' derive <".
-   *   (s < t)' <-> ((s') < (t'))
+   *   (s < t)' <-> ((s') <= (t'))
    * End.
    */
   def LessThanDerivativeT = new AxiomTactic("<' derive <", "<' derive <") {
@@ -458,7 +458,7 @@ object SyntacticDerivationAxiomTactics {
       case FormulaDerivative(LessThan(eqSort, s, t)) => {
         true
       }
-      case LessThan(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
         true
       }
       case _ => false
@@ -475,7 +475,7 @@ object SyntacticDerivationAxiomTactics {
 
       f match {
         case FormulaDerivative(LessThan(eqSort, s, t)) => {
-          val g = LessThan(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
+          val g = LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
           val axiomInstance = Equiv(f, g)
 
           val subst = Substitution(List(
@@ -485,7 +485,7 @@ object SyntacticDerivationAxiomTactics {
 
           Some(ax, axiomInstance, subst, None, None)
         }
-        case LessThan(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+        case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
           assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
           val sort = sSort
 
@@ -512,7 +512,7 @@ object SyntacticDerivationAxiomTactics {
 
   def LessThanDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case LessThan(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
     }
     override def apply(p: Position): Tactic = LessThanDerivativeT(p)
   }
@@ -529,7 +529,7 @@ object SyntacticDerivationAxiomTactics {
       case FormulaDerivative(NotEquals(eqSort, s, t)) => {
         true
       }
-      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
         true
       }
       case _ => false
@@ -546,7 +546,7 @@ object SyntacticDerivationAxiomTactics {
 
       f match {
         case FormulaDerivative(NotEquals(eqSort, s, t)) => {
-          val g = NotEquals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
+          val g = Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
           val axiomInstance = Equiv(f, g)
 
           val subst = Substitution(List(
@@ -556,7 +556,7 @@ object SyntacticDerivationAxiomTactics {
 
           Some(ax, axiomInstance, subst, None, None)
         }
-        case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+        case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
           assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
           val sort = sSort
 
@@ -583,7 +583,7 @@ object SyntacticDerivationAxiomTactics {
 
   def NotEqualsDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
     }
     override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
   }
