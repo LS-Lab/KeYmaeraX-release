@@ -166,7 +166,7 @@ object HybridProgramTacticsImpl {
         val (newV1, newV2) = f match {
           case BoxModality(Assign(v: Variable, _), _) =>
             val tIdx = TacticHelper.freshIndexInFormula(v.name, f)
-            (Variable(v.name, Some(tIdx), v.sort), Variable(v.name, Some(tIdx + 1), v.sort))
+            (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 

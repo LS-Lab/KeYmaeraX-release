@@ -72,4 +72,9 @@ class TacticHelperTests extends FlatSpec with Matchers {
     val s = sequent(Nil, "x=2".asFormula :: "x>3".asFormula :: Nil, "x>5".asFormula :: Nil)
     freshNamedSymbol("x".asNamedSymbol, s) should be ("x_0".asNamedSymbol)
   }
+
+  it should "return index None when variable not present" in {
+    val s = sequent(Nil, "z=2".asFormula :: "y>3".asFormula :: Nil, "z>5".asFormula :: Nil)
+    freshNamedSymbol("x".asNamedSymbol, s) should be ("x".asNamedSymbol)
+  }
 }
