@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
@@ -111,6 +112,51 @@ object FOQuantifierTacticsImpl {
           case None => println("Giving up because the axiom does not exist " + this.name); None
         }
 
+    }
+  }
+
+  /**
+   * Tactic for existential quantifier generalization.
+   * @param x The new existentially quantified variable.
+   * @param t The term to generalize.
+   * @return The tactic.
+   */
+  def existentialGenT(x: Variable, t: Term) = new AxiomTactic("Existential Generalization", "Existential Generalization") {
+    override def applies(f: Formula): Boolean = !Helper.names(f).contains(x)
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
+        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
+      import AlphaConversionHelper.replaceFree
+      require(!Helper.names(f).contains(x))
+
+      // construct substitution
+      val aX = Variable("x", None, Real)
+      val aT = Variable("t", None, Real)
+      val aP = ApplyPredicate(Function("p", None, Real, Bool), t)
+      val l = List(SubstitutionPair(aT, t), SubstitutionPair(aP, f))
+
+      // construct axiom instance: [v:=t]p(v) <-> p(t)
+      val g = Exists(x :: Nil, replaceFree(f)(t, x))
+      val axiomInstance = Imply(f, g)
+
+      // rename to match axiom if necessary
+      val alpha = new PositionTactic("Alpha") {
+        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+          case Imply(_, _) => true
+          case _ => false
+        }
+
+        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+            Some(alphaRenamingT(x.name, x.index, aX.name, aX.index)(p.second))
+
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
+      }
+      val Imply(left, right) = axiom
+      val (ax, cont) = (Imply(left, replaceFree(right)(aX, x)), Some(alpha))
+
+      Some(ax, axiomInstance, Substitution(l), None, cont)
     }
   }
 

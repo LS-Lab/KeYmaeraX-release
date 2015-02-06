@@ -1,22 +1,34 @@
 import edu.cmu.cs.ls.keymaera.core.{Variable, Real, RootNode}
-import edu.cmu.cs.ls.keymaera.tactics.Tactics
+import edu.cmu.cs.ls.keymaera.tactics.{Config, Tactics}
+import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
-import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateT}
+import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateT,existentialGenT}
+
+import scala.collection.immutable.Map
 
 /**
  * Created by smitsch on 1/31/15.
  * @author Stefan Mitsch
  */
 class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+  // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
+  Config.mathlicenses = 1
+  Config.maxCPUs = 1
+
+  val helper = new ProvabilityTestHelper((x) => println(x))
+  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+
   override def beforeEach() = {
+    Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
   }
 
   override def afterEach() = {
+    Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
   }
 
@@ -78,5 +90,30 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y'=1;]y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[y:=z;][y'=1;]y>0".asFormula :: Nil, Nil))
+  }
+
+  "Existential generalization p(t) -> \\exists x. p(x)" should "introduce existential quantifier in antecedent" in {
+    val tactic = locateAnte(existentialGenT(Variable("y", None, Real), "x".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "\\exists y. y>0".asFormula :: Nil, Nil))
+  }
+
+  it should "introduce existential quantifier in antecedent when applied to succedent" in {
+    val tactic = locateSucc(existentialGenT(Variable("y", None, Real), "x".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("x>0".asFormula))) should be (
+      List(sequent(Nil, "\\exists y. y>0".asFormula :: Nil, "x>0".asFormula :: Nil), sucSequent("x>0".asFormula)))
+  }
+
+  it should "replace free occurrences of t with x" in {
+    val tactic = locateAnte(existentialGenT(Variable("y", None, Real), "x".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "[x:=x+1;]x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "\\exists y. [x:=y+1;]x>0".asFormula :: Nil, Nil))
+  }
+
+  // TODO AlphaConversionHelper replaces variable bound by quantifier -> might be needed by some tactics (check before fixing)
+  ignore should "not replace bound occurrences of t with x" in {
+    val tactic = locateAnte(existentialGenT(Variable("y", None, Real), "x".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "\\exists y. \\forall x. x>0".asFormula :: Nil, Nil))
   }
 }
