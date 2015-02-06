@@ -146,8 +146,9 @@ object FOQuantifierTacticsImpl {
    * @return The skolemization tactic.
    */
   protected[tactics] def skolemizeT = new PositionTactic("Skolemize") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case Forall(_, _) => true
+    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
+      case Forall(_, _) => !p.isAnte
+      case Exists(_, _) => p.isAnte
       case _ => false
     })
 
