@@ -1,6 +1,8 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 //@todo minimize imports
+
+import edu.cmu.cs.ls.keymaera.core
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
@@ -592,41 +594,259 @@ object SyntacticDerivationAxiomTactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section 2. Syntactic Total Derivation of Terms.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-//  /*
-//   * Axiom "-' derive neg".
-//   *   (-s)' = -(s')
-//   * End.
-//   */
-//  def NegDerivativeT = new AxiomTactic("!=' derive !=", "!=' derive !=") {
-//    override def applies(f: Formula): Boolean = f match {
-//
-//    }
-//
-//    override def applies(s: Sequent, p: Position): Boolean = {
-//      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
-//    }
-//
-//    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-//    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-//      val aS = Variable("s",None,Real)      //@todo not sure...
-//      val aT = Variable("t", None, Real)
-//
-//    }
-//  }
-//
-//  def NotEqualsDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-//    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//      case FormulaDerivative(NotEquals(eqSort, s, t)) => true
-//    }
-//    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
-//  }
-//
-//  def NotEqualsDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-//    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-//      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-//    }
-//    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
-//  }
+  //@todo throughout this section, the <- direction applicability is disabled in comments because the Atomize/Aggregate thing isn't possible to implement without position tactics for terms.
+  //@todo when re-enabliong these applies lines, uncomment and re-run the relevant tests in SyntacticDerivationTests
 
+  /*
+   * Axiom "-' derive neg".
+   *   (-s)' = -(s')
+   * End.
+   */
+  def NegativeDerivativeT = new TermAxiomTactic("-' derive neg","-' derive neg") {
+    override def applies(t: Term): Boolean = t match {
+      case Derivative(_,Neg(_,_)) => true
+//      case Neg(_,Derivative(_,_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
+      t match {
+        case Derivative(dSort, Neg(nSort, s)) => {
+          val sort = nSort; assert(nSort == dSort)
+
+          val aS = Variable("s", None, sort)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s)
+          ))
+
+          val right = Neg(sort, Derivative(sort, s))
+          val axiomInstance = Equals(sort, t, right)
+
+          Some(axiomInstance, subst)
+        }
+        case Neg(nSort, Derivative(dSort, s)) => {
+          val sort = nSort; assert(nSort == dSort)
+
+          val aS = Variable("s", None, sort)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s)
+          ))
+
+          val left = Derivative(sort, Neg(sort, s))
+          val axiomInstance = Equals(sort, left, t)
+
+          Some(axiomInstance, subst)
+        }
+      }
+    }
+  }
+
+  /*
+   * Axiom "+' derive sum".
+   *  (s + t)' = (s') + (t')
+   * End.
+   */
+  def AddDerivativeT = new TermAxiomTactic("+' derive sum","+' derive sum") {
+    override def applies(t: Term): Boolean = t match {
+      case Derivative(_, Add(_, s, t)) => true
+//      case Add(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
+      term match {
+        case Derivative(dSort, Add(aSort, s, t)) => {
+          val sort = aSort; assert(dSort == aSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val right = Add(sort, Derivative(sort, s), Derivative(sort, t))
+          val axiomInstance = Equals(sort, term, right)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+        case Add(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+          val sort = aSort; assert(aSort == sSort && sSort == tSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val left = Derivative(sort, Add(sort, s, t))
+          val axiomInstance = Equals(sort, left, term)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+      }
+    }
+  }
+
+  /*
+   * Axiom "-' derive minus".
+   *   (s - t)' = (s') - (t')
+   * End.
+ */
+  def SubtractDerivativeT = new TermAxiomTactic("-' derive minus","-' derive minus") {
+    override def applies(t: Term): Boolean = t match {
+      case Derivative(_, Subtract(_, s, t)) => true
+//      case Subtract(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
+      term match {
+        case Derivative(dSort, Subtract(aSort, s, t)) => {
+          val sort = aSort; assert(dSort == aSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val right = Subtract(sort, Derivative(sort, s), Derivative(sort, t))
+          val axiomInstance = Equals(sort, term, right)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+        case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+          val sort = aSort; assert(aSort == sSort && sSort == tSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val left = Derivative(sort, Subtract(sort, s, t))
+          val axiomInstance = Equals(sort, left, term)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+      }
+    }
+  }
+
+  /*
+Axiom "*' derive product".
+  (s * t)' = ((s')*t) + (s*(t'))
+End.
+   */
+  def MultiplyDerivativeT = new TermAxiomTactic("*' derive product","*' derive product") {
+    override def applies(t: Term): Boolean = t match {
+      case Derivative(_, Multiply(_, s, t)) => true
+      case Add(_, Multiply(_,Derivative(_,_), _),Multiply(_,_,Derivative(_))) => true
+//      case Subtract(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
+      term match {
+        case Derivative(dSort, Multiply(aSort, s, t)) => {
+          val sort = aSort; assert(dSort == aSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val right = Add(sort, Multiply(sort, Derivative(sort, s), t), Multiply(sort, s, Derivative(sort, t)))
+          val axiomInstance = Equals(sort, term, right)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+        case Add(aSort, Multiply(mSort,Derivative(_,s),t), Multiply(_,_,_)) => {
+          val sort = aSort; assert(aSort == mSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val left = Derivative(sort, Multiply(sort, s, t))
+          val axiomInstance = Equals(sort, left, term)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+      }
+    }
+  }
+
+  /*
+  Axiom "/' derive quotient".
+  (s / t)' = (((s')*t) - (s*(t'))) / (t^2)
+End.
+   */
+  def DivideDerivativeT = new TermAxiomTactic("/' derive quotient","/' derive quotient") {
+    override def applies(term: Term): Boolean = term match {
+      case Derivative(_, Divide(_, s, t)) => true
+//      case Divide(dSort, Subtract(_, Multiply(_,Derivative(_,s), _),Multiply(_,_,Derivative(_))), Exp(_, t, Number(_))) => true
+      case _ => throw new Exception("doesn't apply to "  + term.getClass())
+    }
+
+    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
+      term match {
+        case Derivative(dSort, Divide(aSort, s, t)) => {
+          val sort = aSort; assert(dSort == aSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val right = Divide(dSort,
+            Subtract(sort,
+              Multiply(sort,Derivative(sort,s), t),
+              Multiply(sort,s,Derivative(sort,t))
+            ),
+            Exp(sort, t, Number(2))
+          )
+          val axiomInstance = Equals(sort, term, right)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+        case Divide(dSort, Exp(_, t, Number(_)), Subtract(_, Multiply(_,Derivative(_,s), _),Multiply(_,_,Derivative(_)))) => {
+          val sort = dSort
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val left = Derivative(Real, Divide(Real, s, t))
+          val axiomInstance = Equals(sort, left, term)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
+      }
+    }
+  }
 }

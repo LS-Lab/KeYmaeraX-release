@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{AxiomTactic, SyntacticDerivationAxiomTactics}
+import edu.cmu.cs.ls.keymaera.tactics.{TermAxiomTactic, AxiomTactic, SyntacticDerivationAxiomTactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
 /**
@@ -141,6 +141,58 @@ class SyntacticDerivationTests extends TacticTestSuite {
   // Syntactic derivation of terms
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  //@todo this is going to require an axiomtactic implementation that applies at terms.
+  "syntactic derivation of negation" should "work on x,y" in {
+    val outerFormula = helper.parseFormula(" (-(x+x))' = 0")
+    val innerFormula = helper.parseFormula(" -((x+x)') = 0")
+
+    val node = helper.formulaToNode(outerFormula)
+    val tactic = NegativeDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    helper.runTactic(tactic,node, true)
+    require(containsOpenGoal(node, innerFormula))
+
+    //@todo not currently testing the other direction because we'll need more infrastructure to support equality being applied in the "other" direction.
+    //@todo uncommenting one line of the applies method in the NegaativeDerivativeT implementation is enough to make these commented-out lines pass.
+//    val node2 = helper.formulaToNode(innerFormula)
+//    helper.runTactic(tactic,node2)
+//    require(containsOpenGoal(node2, outerFormula))
+  }
+
+  def innerOuterTest(innerFormula:Formula, outerFormula:Formula, axTactic:TermAxiomTactic) = {
+    //first one direction.
+    val node = helper.formulaToNode(outerFormula)
+    val tactic = axTactic(SuccPosition(0, PosInExpr(0 :: Nil)))
+    helper.runTactic(tactic,node, true)
+    require(containsOpenGoal(node, innerFormula))
+
+    //Then the other direction as well. @todo We need term position tactics before this can be enabled again.
+//    val node2 = helper.formulaToNode(innerFormula)
+//    helper.runTactic(tactic, node, true)
+//    require(containsOpenGoal(node, innerFormula))
+  }
+
+  "syntactic derivation of addition" should "work on x,y" in {
+    val in = helper.parseFormula(" (x'+y') = 0")
+    val out = helper.parseFormula(" (x+y)' = 0")
+    innerOuterTest(in,out,AddDerivativeT)
+  }
+
+  "syntactic derivation of subtraction" should "work on x,y" in {
+    val in = helper.parseFormula(" (x'-y') = 0")
+    val out = helper.parseFormula(" (x-y)' = 0")
+    innerOuterTest(in,out,SubtractDerivativeT)
+  }
+
+  "syntactic derivation of multiplication" should "work on x,y" in {
+    val in = helper.parseFormula(" ((x')*y) + (x*(y')) = 0")
+    val out = helper.parseFormula(" (x*y)' = 0")
+    innerOuterTest(in,out,MultiplyDerivativeT)
+  }
+
+  "syntactic derivation of division" should "work on x,y" in {
+    val in = helper.parseFormula("(((x')*y) - (x*(y'))) / (y^2) = 0")
+    val out = helper.parseFormula("(x / y)' = 0")
+    innerOuterTest(in,out,DivideDerivativeT)
+
+  }
 
 }

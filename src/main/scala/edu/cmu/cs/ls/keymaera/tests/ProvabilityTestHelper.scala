@@ -44,6 +44,22 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
    */
   def parse(s:String) : Option[Expr] = new KeYmaeraParser().parseBareExpression(s)
 
+
+  /**
+   * Parses a string to a term. Free variables may occur.
+   * @param s
+   * @return Some result of parse on success, or None
+   */
+  def parseBareTerm(s:String) : Term = {
+    parse(s) match {
+      case Some(e) => e match {
+        case t:Term => t
+        case _ => throw new Exception("Expected to find a term but found something else: " + e.getClass())
+      }
+      case None => throw new Exception("Parse failed. Tried to parse: " + s)
+    }
+  }
+
   /**
    * Parses a bare program (no modality) into an expression. Free variables may occur.
    * @param s
