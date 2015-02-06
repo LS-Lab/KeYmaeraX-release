@@ -621,6 +621,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   it should "replace terms if all their symbols are free" in {
     AlphaConversionHelper.replaceFree("x+1>0".asFormula)("x+1".asTerm, "y".asTerm) should be ("y>0".asFormula)
+    AlphaConversionHelper.replaceFree("[x:=x+0;]x>0".asFormula)("0".asTerm, "y".asTerm) should be ("[x:=x+y;]x>y".asFormula)
   }
 
   it should "not replace terms if some of their symbols are bound" in {
