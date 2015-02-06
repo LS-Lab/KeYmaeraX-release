@@ -2,6 +2,14 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxAssignT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxNDetAssign
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxTestT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import AlphaConversionHelper._
@@ -25,18 +33,65 @@ object ODETactics {
       case _ => false
     })
 
+    /**
+     * Searches for a time variable (some derivative x'=1) in the specified formula.
+     * @param f The formula.
+     * @return The time variable, if found. None, otherwise.
+     */
+    private def findTimeInOdes(f: Formula): Option[Variable] = {
+      val odes = f match {
+        case BoxModality(prg: ContEvolveProgram, _) => prg
+        case _ => throw new IllegalStateException("Checked by applies to never happen")
+      }
+
+      var timeInOde: Option[Variable] = None
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        import ExpressionTraversal.stop
+        override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = prg match {
+          // TODO could be complicated 1
+          case NFContEvolve(_, Derivative(_, v: Variable), theta, _) if theta == Number(1) =>
+            timeInOde = Some(v); Left(Some(stop))
+          case _ => Left(None)
+        }
+      }, odes)
+      timeInOde
+    }
+
     override def apply(p: Position): Tactic = new Tactic("") {
       def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       def apply(tool: Tool, node: ProofNode) = {
-        val t = constructTactic(p)
+        import FOQuantifierTacticsImpl.vacuousExistentialQuanT
+        import SearchTacticsImpl.onBranch
+        import BranchLabels.{equivLeftLbl,equivRightLbl}
+
+        val (time, timeTactic, timeZeroInitially) = findTimeInOdes(node.sequent(p)) match {
+          case Some(existingTime) => (existingTime, NilT, false)
+          case None =>
+            val initialTime: Variable = TacticHelper.freshNamedSymbol(Variable("$t", None, Real), node.sequent)
+            // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
+            val time = Variable(initialTime.name,
+              initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
+            // boxAssignT and equivRight will extend antecedent by 2 -> length + 1
+            val lastAntePos = AntePosition(node.sequent.ante.length + 1)
+            val introTime = nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p) &
+              diffAuxiliaryT(time, Number(0), Number(1))(p) & AndRightT(p) &&
+              (EquivRightT(p) & onBranch((equivLeftLbl, vacuousExistentialQuanT(None)(p) &
+                                                        AxiomCloseT(lastAntePos, p)),
+                                         (equivRightLbl, skolemizeT(lastAntePos) & AxiomCloseT(lastAntePos, p))),
+                NilT)
+
+            (time, introTime, true)
+        }
+
+        val t = constructTactic(p, time, tIsZero = timeZeroInitially)
         t.scheduler = Tactics.MathematicaScheduler
         t.continuation = continuation
-        t.dispatch(this, node)
+        (timeTactic & t).dispatch(this, node)
       }
     }
 
-    private def constructTactic(p: Position) = new ConstructionTactic(this.name) {
+    private def constructTactic(p: Position, time: Variable, tIsZero: Boolean) = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       private def primedSymbols(ode: ContEvolveProgram) = {
@@ -53,12 +108,12 @@ object ODETactics {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         import HybridProgramTacticsImpl.{discreteGhostT, boxAssignT}
-        import TacticLibrary.{debugT,hideT}
-        def createTactic(ode: ContEvolveProgram, solution: Formula, iv: Map[Variable, Variable], diffEqPos: Position) = {
+        def createTactic(ode: ContEvolveProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
+                         diffEqPos: Position) = {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(diffEqPos)))
           val cut = diffCutT(solution)(p) & AndRightT(p)
-          val proveSol = debugT("Show") & NilT /*differentialInduction(diffEqPos)*/
+          val proveSol = NilT //diffInvariantT(diffEqPos)
           val useSol = diffWeakenT(diffEqPos)
           Some(initialGhosts & cut & (proveSol, useSol))
         }
@@ -68,34 +123,26 @@ object ODETactics {
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
-        // HACK assumes presence of variable t
-        // TODO ghost time (needs differential auxiliaries)
-        var actualTime: Variable = null
-        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-          import ExpressionTraversal.stop
-          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-            case v@Variable(n, _, _) if n == "t" => actualTime = v.asInstanceOf[Variable]; Left(Some(stop))
-            case _ => Left(None)
-          }
-        }, node.sequent(p))
-
         val iv = primedSymbols(diffEq).map(v => v -> TacticHelper.freshNamedSymbol(v, node.sequent(p))).toMap
-        // HACK assumes that boxAssignT will increment the index twice (universal quantifier, skolemization)
+        // boxAssignT will increment the index twice (universal quantifier, skolemization) -> tell Mathematica
         val ivm = iv.map(e =>  (e._1, Variable(e._2.name, Some(e._2.index.get + 2), e._2.sort))).toMap
 
         val theSolution = solution match {
           case sol@Some(_) => sol
           case None => tool match {
-            case x: Mathematica => x.diffSolver.diffSol(diffEq, actualTime, ivm)
-            case _ => ???
+            case x: Mathematica => x.diffSolver.diffSol(diffEq, time, ivm)
+            case _ => None
           }
         }
 
         val diffEqPos = SuccPosition(p.index)
         theSolution match {
           // add relation to initial time
-          case Some(s) => createTactic(diffEq, And(s, GreaterEqual(actualTime.sort, actualTime, ivm(actualTime))), iv, diffEqPos)
-          case None => ???
+          case Some(s) =>
+            val sol = And(if (tIsZero) s else replaceFree(s)(time, Subtract(time.sort, time, ivm(time))),
+              GreaterEqual(time.sort, time, ivm(time)))
+            createTactic(diffEq, sol, time, iv, diffEqPos)
+          case None => None
         }
       }
     }

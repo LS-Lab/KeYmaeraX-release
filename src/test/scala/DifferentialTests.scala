@@ -156,14 +156,36 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     import scala.language.postfixOps
     val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1;]x>0".asFormula :: Nil)
 
-    val tactic = locateSucc(diffSolution(Some("x=x_2+2*t_3".asFormula)))
+    val tactic = locateSucc(diffSolution(Some("x=x_2+2*t_5".asFormula)))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sequent("x_2".asNamedSymbol :: "t_2".asNamedSymbol :: "x_3".asNamedSymbol :: "t_4".asNamedSymbol :: Nil,
+      sequent("t_2".asNamedSymbol :: "x_2".asNamedSymbol :: "t_5".asNamedSymbol :: "t_6".asNamedSymbol ::
+        "x_3".asNamedSymbol :: "t_7".asNamedSymbol :: "t_7".asNamedSymbol :: Nil,
         // TODO could simplify all those true &
-        "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula :: "true & x_3=x_2+2*t_3".asFormula :: "true".asFormula :: Nil, "x_3>0".asFormula :: Nil))
+        "x>0".asFormula :: "t=0".asFormula :: "t_2=0".asFormula :: "x_2=x".asFormula :: "t_5=t".asFormula ::
+          "t_6=t_2".asFormula :: "true".asFormula :: "true & x_3=x_2+2*t_5&t_7>=t_5".asFormula ::
+          "true".asFormula :: Nil, "x_3>0".asFormula :: Nil))
   }
 
   it should "use Mathematica to find solution if None is provided" in {
+    val s = sequent(Nil, "x>0".asFormula :: Nil, "[x'=2;]x>0".asFormula :: Nil)
+
+    // solution = None -> Mathematica
+    val tactic = locateSucc(diffSolution(None))
+
+    val t1 = Variable("$t", Some(1), Real)
+    val t4 = Variable("$t", Some(4), Real)
+    val t5 = Variable("$t", Some(5), Real)
+
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sequent(t1 :: "x_2".asNamedSymbol :: t4 :: "x_3".asNamedSymbol :: t5 :: Nil,
+        // TODO could simplify all those true &
+        // TODO not robust if Mathematica reports equivalent formula but differently formatted
+        "x>0".asFormula :: Equals(Real, t1, Number(0)) :: "x_2=x".asFormula :: Equals(Real, t4, t1) ::
+          "true".asFormula :: And(True, And(Equals(Real, "x_3".asTerm, Add(Real, "x_2".asTerm, Multiply(Real, Number(2), t5))), GreaterEqual(Real, t5, t4))) :: Nil,
+        "x_3>0".asFormula :: Nil))
+  }
+
+  it should "not introduce time if already present" in {
     val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1;]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
@@ -173,7 +195,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         // TODO could simplify all those true &
         // TODO not robust if Mathematica reports equivalent formula but differently formatted
         "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula ::
-          "true & x_3=2*t_3+x_2 & t_3>=t_2".asFormula :: "true".asFormula :: Nil,
+          "true & x_3=2*(t_3-t_2)+x_2 & t_3>=t_2".asFormula :: "true".asFormula :: Nil,
         "x_0>0".asFormula :: Nil))
   }
 
