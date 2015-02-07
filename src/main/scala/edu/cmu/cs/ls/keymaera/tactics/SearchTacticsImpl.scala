@@ -13,7 +13,7 @@ object SearchTacticsImpl {
    * @param posT The position tactic.
    * @return A new tactic that applies said tactic at the specified position.
    */
-  protected[tactics] def locateAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
+  def locateAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
@@ -32,7 +32,7 @@ object SearchTacticsImpl {
    * @param posT The position tactic.
    * @return A new tactic that applies said tactic at the specified position.
    */
-  protected[tactics] def locateSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
+  def locateSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
@@ -51,7 +51,7 @@ object SearchTacticsImpl {
    * @param pt The position tactic.
    * @return The new tactic to apply said position tactic at the last position.
    */
-  protected[tactics] def lastSucc(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " succ.length - 1") {
+  def lastSucc(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " succ.length - 1") {
     override def applicable(node: ProofNode): Boolean =
       pt.applies(node.sequent, SuccPosition(node.sequent.succ.length - 1))
 
@@ -64,7 +64,7 @@ object SearchTacticsImpl {
    * @param pt The position tactic.
    * @return The new tactic to apply said position tactic at the last position.
    */
-  protected[tactics] def lastAnte(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " ante.length - 1") {
+  def lastAnte(pt: PositionTactic): Tactic = new ConstructionTactic("Apply " + pt.name + " ante.length - 1") {
     override def applicable(node: ProofNode): Boolean =
       pt.applies(node.sequent, AntePosition(node.sequent.ante.length - 1))
 
@@ -79,7 +79,7 @@ object SearchTacticsImpl {
    * @param t The tactic to apply on said branch.
    * @return The new tactic.
    */
-  protected[tactics] def onBranch(s: String, t: Tactic): Tactic = ifT(_.tacticInfo.infos.get("branchLabel") == Some(s), t)
+  def onBranch(s: String, t: Tactic): Tactic = ifT(_.tacticInfo.infos.get("branchLabel") == Some(s), t)
 
   /**
    * used to say "do equiv-r". On the left branch of that, do my
@@ -98,7 +98,7 @@ object SearchTacticsImpl {
    * Idea: tie together the interface that we had in KeYmaera with tactic writing
    * (I have an idea what my proof will look like
    */
-  protected[tactics] def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic =
+  def onBranch(s1: (String, Tactic), spec: (String, Tactic)*): Tactic =
     if(spec.isEmpty)
       ifT(_.tacticInfo.infos.get("branchLabel") == Some(s1._1), s1._2)
     else
