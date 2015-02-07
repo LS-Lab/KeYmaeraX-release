@@ -281,7 +281,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     import HybridProgramTacticsImpl.v2vBoxAssignT
     val tactic = locateSucc(v2vBoxAssignT)
     the [Exception] thrownBy
-      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) should have message "runTactic was called on tactic Position tactic locateSucc ([:=] assignment)([:=] assignment), but is not applicable on the node."
+      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) should have message "runTactic was called on tactic Position tactic locateSucc ([:=] assign)([:=] assign), but is not applicable on the node."
   }
 
   it should "work in the antecedent" in {

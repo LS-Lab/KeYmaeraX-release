@@ -28,7 +28,7 @@ object FOQuantifierTacticsImpl {
    * @return The tactic.
    */
   def instantiateT(quantified: Variable, instance: Term): PositionTactic = new PositionTactic("Quantifier Instantiation") {
-    val axiomName = "Quantifier Instantiation"
+    val axiomName = "all instantiate"
     val axiom = Axiom.axioms.get(axiomName)
     require(axiom.isDefined)
 
@@ -121,7 +121,7 @@ object FOQuantifierTacticsImpl {
    * @param t The term to generalize.
    * @return The tactic.
    */
-  def existentialGenT(x: Variable, t: Term) = new AxiomTactic("Existential Generalization", "Existential Generalization") {
+  def existentialGenT(x: Variable, t: Term) = new AxiomTactic("exists generalize", "exists generalize") {
     override def applies(f: Formula): Boolean = !Helper.names(f).contains(x)
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
@@ -224,9 +224,9 @@ object FOQuantifierTacticsImpl {
   }
 
   def vacuousUniversalQuanT(x: Option[Variable]) = new VacuousQuantificationTactic(x,
-    "Vacuous Universal Quantification", Forall.apply)
+    "vacuous all quantifier", Forall.apply)
   def vacuousExistentialQuanT(x: Option[Variable]) = new VacuousQuantificationTactic(x,
-    "Vacuous Existential Quantification", Exists.apply)
+    "vacuous exists quantifier", Exists.apply)
 
   /**
    * Creates a tactic to decompose quantifiers.

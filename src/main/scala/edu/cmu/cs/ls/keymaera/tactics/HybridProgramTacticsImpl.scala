@@ -34,7 +34,7 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    *
    */
-  protected[tactics] def boxDerivativeAssignT: PositionTactic = new AxiomTactic("[':=] derivative assignment equal", "[':=] derivative assignment equal") {
+  protected[tactics] def boxDerivativeAssignT: PositionTactic = new AxiomTactic("[':=] differential assign equational", "[':=] differential assign equational") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(Derivative(_,Variable(_)),_),_) => true
       case Modality(Assign(Derivative(Variable(_), _), _),_) => true //@todo Why do we need to match on both so often?
@@ -133,7 +133,7 @@ object HybridProgramTacticsImpl {
 
   }
 
-  def boxAssignT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+  def boxAssignT: PositionTactic = new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _, _), _), _) => true
       case _ => false
@@ -149,7 +149,7 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assignment equal") {
+  def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _,_), _), _) => true
       case _ => false
@@ -192,7 +192,7 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    */
   private def boxAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic =
-      new AxiomTactic("[:=] assignment equal", "[:=] assignment equal") {
+      new AxiomTactic("[:=] assign equational", "[:=] assign equational") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(Variable(_, _,_), _), _) => !checkNewV || !Helper.names(f).contains(newV)
       case _ => false
@@ -246,7 +246,7 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for reversing box assignment [v := t;], i.e., introduces a ghost v for term t
    * @return The axiom tactic.
    */
-  protected[tactics] def discreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] assignment", "[:=] assignment") {
+  protected[tactics] def discreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] assign", "[:=] assign") {
     override def applies(f: Formula): Boolean = true
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
@@ -298,7 +298,7 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for reversing box assignment [v := t;], i.e., introduces a ghost v for term t
    * @return The axiom tactic.
    */
-  def nonAbbrvDiscreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] assignment irrelevant", "[:=] assignment irrelevant") {
+  def nonAbbrvDiscreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] vacuous assign", "[:=] vacuous assign") {
     override def applies(f: Formula): Boolean = true
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
@@ -350,7 +350,7 @@ object HybridProgramTacticsImpl {
    * Alpha renaming in ODEs and loops introduces initial value assignments. This tactic is designed to handle those.
    * @return The tactic.
    */
-  def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assignment") {
+  def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assign") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case BoxModality(Assign(_: Variable, v: Variable), pred) => pred match {
         case BoxModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
@@ -397,7 +397,7 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box assignment [x := t;]
    * @return The axiom tactic.
    */
-  protected[tactics] def v2tBoxAssignT: PositionTactic = new AxiomTactic("[:=] assignment", "[:=] assignment") {
+  protected[tactics] def v2tBoxAssignT: PositionTactic = new AxiomTactic("[:=] assign", "[:=] assign") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(v: Variable, t: Term), pred) => pred match {
         // loop and ODE are probably a little too strict, but we have v2vBoxAssignT to handle those
@@ -480,7 +480,7 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assignment equal") {
+  def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case BoxModality(NDetAssign(v: Variable), _) => true
       case _ => false
@@ -515,7 +515,7 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for non-deterministic assignment [x := *].
    * @return The new tactic.
    */
-  private def boxNDetAssignWithoutAlpha: PositionTactic = new AxiomTactic("[:*] assignment", "[:*] assignment") {
+  private def boxNDetAssignWithoutAlpha: PositionTactic = new AxiomTactic("[:*] assign nondet", "[:*] assign nondet") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(NDetAssign(_), _) => true
       case _ => false

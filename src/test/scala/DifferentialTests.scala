@@ -92,8 +92,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val node = helper.runTactic(diffWeaken, new RootNode(s))
     node.openGoals().foreach(_.sequent should be (sucSequent("[x:=*;][$$y'=1 & y>2&z<0$$;][?x>3;]y>0".asFormula)))
 
-    val secondNode = helper.runTactic(locateSucc(boxNDetAssign) & locateSucc(skolemizeT) & diffWeaken,
-      node.openGoals().head)
+    val secondNode = helper.runTactic(locateSucc(boxNDetAssign) & diffWeaken, node.openGoals().head)
     secondNode.openGoals().foreach(_.sequent should be (
       sequent("x_0".asNamedSymbol :: Nil, Nil, "[y:=*;][$$$$;][?y>2&z<0;][?x_0>3;]y>0".asFormula :: Nil)))
   }

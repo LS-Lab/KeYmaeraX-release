@@ -329,7 +329,7 @@ object ODETactics {
   // Differential Auxiliary Section.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   def diffAuxiliaryT(x: Variable, t: Term, s: Term, psi: Option[Formula] = None): PositionTactic =
-      new AxiomTactic("DA differential auxiliary", "DA differential auxiliary") {
+      new AxiomTactic("DA differential ghost", "DA differential ghost") {
     def applies(f: Formula) = f match {
       case BoxModality(ode: ContEvolveProgram, _) => !Helper.names(ode).contains(x) && !Helper.names(t).contains(x) &&
         !Helper.names(s).contains(x)
