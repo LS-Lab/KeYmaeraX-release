@@ -346,7 +346,8 @@ object HybridProgramTacticsImpl {
   }
 
   /**
-   * Creates a new position tactic for box assignment [x := t;], for the case when followed by ODE or loop
+   * Creates a new position tactic for box assignment [x := t;], for the case when followed by ODE or loop.
+   * Alpha renaming in ODEs and loops introduces initial value assignments. This tactic is designed to handle those.
    * @return The tactic.
    */
   def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assignment") {
@@ -356,7 +357,9 @@ object HybridProgramTacticsImpl {
         case BoxModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
         case DiamondModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
         case DiamondModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
-        case _ => true
+        // prevent application on anything else. otherwise, boxAssignT has the surprising effect of handling multiple
+        // assignments at once
+        case _ => false
       }
       case _ => false
     }
