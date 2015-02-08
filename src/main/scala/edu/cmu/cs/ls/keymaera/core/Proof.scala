@@ -591,6 +591,11 @@ object Axiom {
     val alp = parser.ProofFileParser
     val src = io.Source.fromFile("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp").mkString
     val res = alp.runParser(src)
+
+    //Ensure that there are no doubly named axioms.
+    val distinctAxiomNames = res.map(k => k.name).distinct
+    assert(res.length == distinctAxiomNames)
+
     (for(k <- res)
       yield (k.name -> k.formula)).toMap
   }
