@@ -933,9 +933,10 @@ End.
         case None => false
       }
 
-      termDerivativeTactics.foldLeft(true)((b, tat : TermAxiomTactic) => {
-        tacticApplies(tat) && b
+      termDerivativeTactics.foldLeft(false)((b, tat : TermAxiomTactic) => {
+        tacticApplies(tat) || b
       })
+
     }
 
     /**
@@ -1010,7 +1011,6 @@ End.
    * @todo The applies method needs more thought.
    */
   def SyntacticDerivationT = new PositionTactic("Syntactic Derivation") {
-
     override def applies(s: Sequent, p: Position): Boolean = {
       val traversalFn = new ExpressionTraversalFunction {
         //Set to true if we find a position where there's a possible application.
