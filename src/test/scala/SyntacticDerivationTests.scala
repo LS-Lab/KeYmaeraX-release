@@ -195,9 +195,15 @@ class SyntacticDerivationTests extends TacticTestSuite {
 
   }
 
-  "position tests" should "test123" in {
-    val f = helper.parseFormula("(x+y)' = x' + y'")
+
+  "total syntactic derivation" should "work for |" in {
+    val f = helper.parseFormula("(1=1 | 2=2)'")
     val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    helper.report(node)
 
   }
 
