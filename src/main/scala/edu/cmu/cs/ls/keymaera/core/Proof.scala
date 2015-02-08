@@ -1027,6 +1027,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Or(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
     case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
     case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
+    case FormulaDerivative(f) => freeVariables(u, f)
 
     case Equals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
     case NotEquals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
