@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 //@todo minimize imports
 
 import edu.cmu.cs.ls.keymaera.core
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
@@ -847,6 +848,151 @@ End.
           Some(axiomInstance, subst)
         }
       }
+    }
+  }
+
+
+  //So that when this gets refactored we're not stuck changing a bunch of stuff.
+  def NegativeDerivativeAtomizeT = NegativeDerivativeT
+  def AddDerivativeAtomizeT      = AddDerivativeT
+  def SubtractDerivativeAtomizeT = SubtractDerivativeT
+  def MultiplyDerivativeAtomizeT = MultiplyDerivativeT
+  def DivideDerivativeAtomizeT   = DivideDerivativeT
+
+  val termDerivativeTactics : List[TermAxiomTactic] =
+    NegativeDerivativeAtomizeT ::
+      AddDerivativeAtomizeT ::
+      SubtractDerivativeAtomizeT ::
+      MultiplyDerivativeAtomizeT ::
+      DivideDerivativeAtomizeT ::
+      Nil
+
+  def termSyntacticDerivationTOLD = new PositionTactic("Total Syntactic Derivation of Terms") {
+
+    def applies(s: Sequent, p: Position): Boolean = {
+      def tacticApplies(tactic : TermAxiomTactic) = theTraversal(s(p), tactic) match {
+        case Some(_) => true
+        case None => false
+      }
+
+      termDerivativeTactics.foldLeft(true)((b, tat : TermAxiomTactic) => {
+        tacticApplies(tat) && b
+      })
+    }
+
+    /**
+     * @todo this code is kind of complicated and probably deserves some refactoring.
+     */
+    override def apply(pos: Position): Tactic = new ConstructionTactic(name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        /**
+         * Returns a list of positions, together with the first applicable tactic at each position.
+         */
+        def firstApplicableTacticForEachPosition(seq : IndexedSeq[Formula]) : Seq[Option[(TermAxiomTactic, Int, PosInExpr)]] = {
+          seq.zipWithIndex.map(p => {
+            val formula = p._1
+            val index: Int = p._2
+
+            val tacticAndPos : Option[(TermAxiomTactic, PosInExpr)] = {
+              //Check each of the tactics to determine if any apply.
+              def findApplicablePosInFormula(tactic : TermAxiomTactic) : Option[PosInExpr] = {
+                theTraversal(formula, tactic) match {
+                  case Some((posInExpr, term)) => Some(posInExpr)
+                  case None => None
+                }
+              }
+
+              val applicableTactics = termDerivativeTactics.map(t => findApplicablePosInFormula(t) match {
+                case Some(posInExpr) => Some(t,posInExpr)
+                case None => None
+              }).filter(_.isDefined)
+
+              if(applicableTactics.length == 0) {
+                None
+              }
+              else {
+                applicableTactics.last //just the first applicable tactic.
+              }
+            }
+
+            tacticAndPos match {
+              case Some(tactic:TermAxiomTactic, posInExpr:PosInExpr) => Some(tactic, index, posInExpr)
+              case None => None
+            }
+          }).filter(_.isDefined)
+        }
+
+        val antePositions = firstApplicableTacticForEachPosition(node.sequent.ante)
+        if(antePositions.length > 0) {
+          antePositions.last match {
+            case ((tactic:TermAxiomTactic, anteIndex, posInExpr)) => Some(tactic(AntePosition(anteIndex, posInExpr)))
+            case _ => None
+          }
+        }
+        else {
+          val succPositions = firstApplicableTacticForEachPosition(node.sequent.succ)
+          if(succPositions.length > 0) {
+            succPositions.last match {
+              case ((tactic:TermAxiomTactic, succIndex, posInExpr)) => Some(tactic(SuccPosition(succIndex, posInExpr)))
+              case _ => None
+            }
+          }
+          else {
+            None
+          }
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    }
+
+    def theTraversal(expression : Expr, tactic : TermAxiomTactic) : Option[(PosInExpr, Term)] = {
+      val traversal = new ExpressionTraversalFunction {
+        var mPosition : Option[PosInExpr] = None
+        var mTerm : Option[Term] = None
+
+        override def preT(p:PosInExpr, t:Term) = {
+          if(tactic.applies(t)) {
+            mPosition = Some(p);
+            mTerm = Some(t);
+            Left(Some(ExpressionTraversal.stop)) //stop once we find one applicable location.
+          }
+          else{
+            Left(None)
+          }
+        }
+      }
+
+      ExpressionTraversal.traverse(traversal, expression)
+
+      (traversal.mPosition, traversal.mTerm) match {
+        case (Some(p:PosInExpr), Some(t:Term)) => Some((p,t))
+        case (None,None) => None
+        case _ => ???
+      }
+    }
+
+  }
+
+  /**
+   * The "mater" syntactic derivation tactic.
+   *
+   */
+  def SyntacticDerivationT = new PositionTactic("Syntactic Derivation") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case FormulaDerivative(_) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = {
+      ((AndDerivativeAtomizeT(p) ~
+        OrDerivativeAtomizeT(p) ~
+        EqualsDerivativeAtomizeT(p) ~
+        GreaterEqualDerivativeAtomizeT(p) ~
+        GreaterThanDerivativeAtomizeT(p) ~
+        LessEqualDerivativeAtomizeT(p) ~
+        LessThanDerivativeAtomizeT(p) ~
+        NotEqualsDerivativeAtomizeT(p))*) ~ (termSyntacticDerivationT(p) *)
     }
   }
 }
