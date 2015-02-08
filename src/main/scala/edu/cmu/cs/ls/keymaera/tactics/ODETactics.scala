@@ -412,7 +412,7 @@ object ODETactics {
    * Returns the differential invariant tactic for a single normal form ODE.
    * @return The tactic.
    */
-  def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant", "DI differential invariant") {
+  def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant (system style)", "DI differential invariant (system style)") {
     def applies(f: Formula) = {
       f match {
         case BoxModality(ContEvolveProduct(_: NFContEvolve, e:EmptyContEvolveProgram),_) => true
@@ -428,7 +428,7 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), empty:EmptyContEvolveProgram), p) => {
+      case BoxModality(ContEvolveProduct(NFContEvolve(vars, d: Derivative, t, h), empty:EmptyContEvolveProgram), p) => {
         // construct instance
         val x = d.child match {
           case v: Variable => v
@@ -436,7 +436,7 @@ object ODETactics {
         }
         // [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
         val g = BoxModality(
-          ContEvolveProduct(NFContEvolve(Nil, Derivative(Real,x), t, h),empty:EmptyContEvolveProgram),
+          ContEvolveProduct(NFContEvolve(vars, Derivative(Real,x), t, h),empty:EmptyContEvolveProgram),
           Imply(
             h,
             BoxModality(
@@ -655,7 +655,6 @@ object ODETactics {
           case BoxModality(_: ContEvolveProduct, _) => Some(
             diffInvariantSystemIntroT(p) &
               (AndRightT(p) & (NilT & TacticLibrary.debugT("test seq"), (TacticLibrary.debugT("inv seq") & diffInvariantSystemHeadT(p)) *)) ~
-              // remove empty marker and handle tests
             (diffInvariantSystemTailT(p) & ((TacticLibrary.boxAssignT(p) & ImplyRightT(p)) *))
           )
         }
