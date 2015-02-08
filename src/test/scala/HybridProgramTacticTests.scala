@@ -1,6 +1,8 @@
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxNDetAssign
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
@@ -115,6 +117,13 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall x_1. (x_1=1 -> [x_1:=x_1;][x_1'=1;]x_1>0)".asFormula)))
+  }
+
+  it should "not rename bound x" in {
+    val s = sucSequent("[x:=z;][y:=y_0;{y:=y+1 ++ x:=x-1}]x<=y".asFormula)
+    val assignT = locateSucc(boxAssignEqualT)
+    helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("\\forall x_0. (x_0=z -> [y:=y_0;{y:=y+1 ++ x:=x_0-1}]x<=y)".asFormula)))
   }
 
   "Combined box assign tactics" should "handle assignment in front of an ODE" in {
