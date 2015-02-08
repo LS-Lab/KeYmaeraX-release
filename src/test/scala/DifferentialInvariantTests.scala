@@ -41,8 +41,8 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   // Differential invariants where invariant is already part of the formula? @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  "The axiom-based differential invariant tactic" should "work when there's no test condition" in {
-    val f = helper.parseFormula("[x'=1;]z>=0")
+  "The axiom-based differential invariant tactic" should "work when there IS a test condition (no tests when there is none..." in {
+    val f = helper.parseFormula("[x'=1 & true;]z>=0")
     f match {
       case BoxModality(ContEvolveProduct(_: NFContEvolve,_), _) => ()
       case _ => fail("parsed into wrong form.")
@@ -50,6 +50,10 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
 
+    helper.runTactic(tactic,node)
+    helper.report(node)
+    val expected = helper.parseFormula("[x'=1 & true;](true->[(x'):=1;](z>=0)')")
+    require(containsOpenGoal(node,expected))
   }
 
 

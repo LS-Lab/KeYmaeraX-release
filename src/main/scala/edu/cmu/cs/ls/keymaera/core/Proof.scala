@@ -594,7 +594,7 @@ object Axiom {
 
     //Ensure that there are no doubly named axioms.
     val distinctAxiomNames = res.map(k => k.name).distinct
-    assert(res.length == distinctAxiomNames)
+    assert(res.length == distinctAxiomNames.length)
 
     (for(k <- res)
       yield (k.name -> k.formula)).toMap
