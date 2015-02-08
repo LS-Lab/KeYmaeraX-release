@@ -36,8 +36,7 @@ class SubstitutionTests extends FlatSpec with Matchers {
       case Imply(BoxModality(_, Imply(theH, _)), _) => require(theH == aH)
       case _ => fail("axiom has wrong form.")
     }
-    require(Traversals.freeVariables(axiom).contains(aT))
-
+    require(Substitution.maybeFreeVariables(axiom).contains(aT))
 
     val substitution = Substitution(List(
       new SubstitutionPair(aT, Number(12345)),
@@ -49,6 +48,6 @@ class SubstitutionTests extends FlatSpec with Matchers {
       case Imply(BoxModality(_, Imply(theH, _)), _) => require(theH == And(True, Equals(Real,Number(1),Number(1))))
       case _ => fail("axiom has wrong form.")
     }
-    require(!Traversals.freeVariables(result).contains(aT))
+    require(!Substitution.maybeFreeVariables(result).contains(aT))
   }
 }

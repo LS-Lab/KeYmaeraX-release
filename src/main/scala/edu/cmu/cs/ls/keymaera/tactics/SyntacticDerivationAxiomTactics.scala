@@ -867,7 +867,7 @@ End.
       DivideDerivativeAtomizeT ::
       Nil
 
-  def termSyntacticDerivationTOLD = new PositionTactic("Total Syntactic Derivation of Terms") {
+  def termSyntacticDerivationT = new PositionTactic("Total Syntactic Derivation of Terms") {
 
     def applies(s: Sequent, p: Position): Boolean = {
       def tacticApplies(tactic : TermAxiomTactic) = theTraversal(s(p), tactic) match {
@@ -916,7 +916,7 @@ End.
             }
 
             tacticAndPos match {
-              case Some(tactic:TermAxiomTactic, posInExpr:PosInExpr) => Some(tactic, index, posInExpr)
+              case Some((tactic:TermAxiomTactic, posInExpr:PosInExpr)) => Some(tactic, index, posInExpr)
               case None => None
             }
           }).filter(_.isDefined)
@@ -925,7 +925,7 @@ End.
         val antePositions = firstApplicableTacticForEachPosition(node.sequent.ante)
         if(antePositions.length > 0) {
           antePositions.last match {
-            case ((tactic:TermAxiomTactic, anteIndex, posInExpr)) => Some(tactic(AntePosition(anteIndex, posInExpr)))
+            case Some((tactic:TermAxiomTactic, anteIndex, posInExpr)) => Some(tactic(AntePosition(anteIndex, posInExpr)))
             case _ => None
           }
         }
@@ -933,7 +933,7 @@ End.
           val succPositions = firstApplicableTacticForEachPosition(node.sequent.succ)
           if(succPositions.length > 0) {
             succPositions.last match {
-              case ((tactic:TermAxiomTactic, succIndex, posInExpr)) => Some(tactic(SuccPosition(succIndex, posInExpr)))
+              case Some((tactic:TermAxiomTactic, succIndex, posInExpr)) => Some(tactic(SuccPosition(succIndex, posInExpr)))
               case _ => None
             }
           }
@@ -963,7 +963,12 @@ End.
         }
       }
 
-      ExpressionTraversal.traverse(traversal, expression)
+      expression match {
+        case expression : Formula => ExpressionTraversal.traverse(traversal, expression)
+        case expression : Term => ExpressionTraversal.traverse(traversal, expression)
+        case expression : Program => ExpressionTraversal.traverse(traversal, expression)
+        case _ => ???
+      }
 
       (traversal.mPosition, traversal.mTerm) match {
         case (Some(p:PosInExpr), Some(t:Term)) => Some((p,t))
