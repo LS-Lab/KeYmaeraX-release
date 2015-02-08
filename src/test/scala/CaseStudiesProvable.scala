@@ -68,6 +68,27 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true), new RootNode(s)).isClosed() should be (true)
   }
 
+  "Stuttering" should "be provable" in {
+    import scala.language.postfixOps
+    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
+    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+
+    val tactic = locateSucc(ImplyRightT) &
+      locateSucc(inductionT(Some("x <= y".asFormula))) &
+      onBranch(
+        (indInitLbl, AxiomCloseT(AntePosition(0), SuccPosition(0))),
+        (indStepLbl, debugT("step") & locateSucc(skolemizeT) & locateSucc(ImplyRightT) &
+          locateSucc(boxChoiceT) & locateSucc(AndRightT) &
+          ((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*) & arithmeticT),
+        (indUseCaseLbl, hideT(AntePosition(0)) & locateSucc(skolemizeT) & locateSucc(ImplyRightT) &
+          AxiomCloseT(AntePosition(0), SuccPosition(0)))
+      )
+
+    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering-allwrites.key")))) shouldBe 'closed
+    // TODO the following line is not yet provable, but should be
+//    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
+  }
+
   "ETCS-safety-allwrites" should "be provable with explicit strategy" in {
     import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
     import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
@@ -135,6 +156,12 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 
   it should "be provable with master strategy" in {
     val file = new File("examples/dev/t/tactics/ETCS-safety-allwrites.key")
+    val s = parseToSequent(file)
+    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
+  }
+
+  "ETCS-safety" should "be provable with master strategy" in {
+    val file = new File("examples/dev/t/tactics/ETCS-safety.key")
     val s = parseToSequent(file)
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
   }

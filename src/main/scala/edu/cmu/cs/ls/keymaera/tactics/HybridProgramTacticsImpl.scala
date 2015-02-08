@@ -209,7 +209,8 @@ object HybridProgramTacticsImpl {
         val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(ApplyPredicate(aP, v), p))
 
         // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
-        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), replaceFree(p)(v, newV)))
+        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t),
+          new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(p)))
         val axiomInstance = Equiv(f, g)
 
         // rename to match axiom if necessary
