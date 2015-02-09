@@ -1893,12 +1893,16 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 }
 
 /*********************************************************************************
- * Rules for derivatives that are not expressible as axioms
+ * Rules for derivatives that are not currently expressible as axioms
  *********************************************************************************
  */
 object DeriveConstant {
   def apply(t: Term): Rule = new DeriveConstant(t)
 }
+/**
+ * Derive a numeral / number constant n.
+ * Observe that derivative n'=0 is added to top-level, which is sound, because number constants are constants, so rigid.
+ */
 class DeriveConstant(t: Term) extends Rule("Derive Constant") {
   val Derivative(Real, Number(Real, n)) = t
   override def apply(s: Sequent): List[Sequent] =
@@ -1909,6 +1913,7 @@ object DeriveMonomial {
   def apply(t: Term): Rule = new DeriveMonomial(t)
 }
 
+//@TODO Inaccurate for n=0, because unlike the input, the result would be undefined for base=0.
 class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
   val Derivative(Real, Exp(Real, base, Number(Real, n))) = t
   override def apply(s: Sequent): List[Sequent] =
@@ -1917,6 +1922,7 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 
 // the following rules will turn into axioms
 
+//@TODO Removal suggested since better axiom exists.
 class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
   require(!p.isAnte)
   override def apply(s: Sequent): List[Sequent] = {
@@ -1957,6 +1963,7 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
  * @author Jan
  *         @author nfulton added case where there's no domain constraint.
  * @param p
+ * @TODO Looks unsound. Removal suggested. Missing p. And occurrence constraints do not seem to be enforced.
  */
 class DiffInd(p: Position) extends PositionRule("Differential Induction", p) {
   override def apply(s: Sequent): List[Sequent] = {
