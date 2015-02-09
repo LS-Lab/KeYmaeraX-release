@@ -33,7 +33,7 @@ object SyntacticDerivationAxiomTactics {
   def AndDerivativeT = new AxiomTactic("&' derive and", "&' derive and") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(And(_,_))              => true
-      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
+//      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
       case _ => false
     }
 
@@ -103,7 +103,7 @@ object SyntacticDerivationAxiomTactics {
   def OrDerivativeT = new AxiomTactic("|' derive or","|' derive or") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(Or(_,_)) => true
-      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
+//      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
       case _ => false
     }
 
@@ -172,12 +172,8 @@ object SyntacticDerivationAxiomTactics {
    */
   def EqualsDerivativeT = new AxiomTactic("=' derive =", "=' derive =") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Equals(eqSort, s, t)) => {
-        true
-      }
-      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        true
-      }
+      case FormulaDerivative(Equals(eqSort, s, t)) => true
+//      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -243,12 +239,8 @@ object SyntacticDerivationAxiomTactics {
    */
   def GreaterEqualDerivativeT = new AxiomTactic(">=' derive >=", ">=' derive >=") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(GreaterEqual(eqSort, s, t)) => {
-        true
-      }
-      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        true
-      }
+      case FormulaDerivative(GreaterEqual(eqSort, s, t)) => true
+      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -314,12 +306,8 @@ object SyntacticDerivationAxiomTactics {
    */
   def GreaterThanDerivativeT = new AxiomTactic(">' derive >", ">' derive >") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(GreaterThan(eqSort, s, t)) => {
-        true
-      }
-      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        true
-      }
+      case FormulaDerivative(GreaterThan(eqSort, s, t)) => true
+      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -385,12 +373,8 @@ object SyntacticDerivationAxiomTactics {
    */
   def LessEqualDerivativeT = new AxiomTactic("<=' derive <=", "<=' derive <=") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(LessEqual(eqSort, s, t)) => {
-        true
-      }
-      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        true
-      }
+      case FormulaDerivative(LessEqual(eqSort, s, t)) => true
+      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -458,12 +442,8 @@ object SyntacticDerivationAxiomTactics {
    */
   def LessThanDerivativeT = new AxiomTactic("<' derive <", "<' derive <") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(LessThan(eqSort, s, t)) => {
-        true
-      }
-      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        true
-      }
+      case FormulaDerivative(LessThan(eqSort, s, t)) => true
+      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -529,12 +509,8 @@ object SyntacticDerivationAxiomTactics {
    */
   def NotEqualsDerivativeT = new AxiomTactic("!=' derive !=", "!=' derive !=") {
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(NotEquals(eqSort, s, t)) => {
-        true
-      }
-      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        true
-      }
+      case FormulaDerivative(NotEquals(eqSort, s, t)) => true
+      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -865,7 +841,7 @@ End.
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Section: Wrapper Tactics
+  // Section: Wrapper tactic for term syntactic derivation
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
@@ -882,7 +858,7 @@ End.
   /**
    * This list of *all* the atomizing PositionTactics is used in the implementation of wrapper tactics.
    */
-  val formulaDerivativeTactics : List[PositionTactic] =
+  val formulaDerivativeAtomizedTactics : List[PositionTactic] =
     AndDerivativeAtomizeT ::
       OrDerivativeAtomizeT ::
       EqualsDerivativeAtomizeT ::
@@ -892,6 +868,17 @@ End.
       LessThanDerivativeAtomizeT ::
       NotEqualsDerivativeAtomizeT ::
       Nil
+
+  val formulaDerivativeTactics : List[AxiomTactic] =
+    AndDerivativeT          ::
+    OrDerivativeT           ::
+    EqualsDerivativeT       ::
+    GreaterEqualDerivativeT ::
+    GreaterThanDerivativeT  ::
+    LessEqualDerivativeT    ::
+    LessThanDerivativeT     ::
+    NotEqualsDerivativeT    ::
+    Nil
 
   /**
    * Finds a position in ``expression" where ``tactic" is applicable, or else returns None if ``tactic" is never applicable
@@ -1008,7 +995,8 @@ End.
             val tactic    = elmt._1
             val anteIndex = elmt._2
             val posInExpr = elmt._3
-            Some(tactic(AntePosition(anteIndex, posInExpr)))          }
+            Some(tactic(AntePosition(anteIndex, posInExpr)))
+          }
           else {
             None
           }
@@ -1019,39 +1007,49 @@ End.
     }
   }
 
-  /**
-   * The "mater" syntactic derivation tactic.
-   * @todo The applies method needs more thought and will currently diverge!
-   * @todo Use a similar approach to what we do above in the term tactic, using construction tactics.
-   */
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section: Wrapper tactic for formula syntactic derivation
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   def SyntacticDerivationT = new PositionTactic("Syntactic Derivation") {
     override def applies(s: Sequent, p: Position): Boolean = {
-      val traversalFn = new ExpressionTraversalFunction {
-        //Set to true if we find a position where there's a possible application.
-        var foundCandidate : Boolean = false
-        override def preF(p: PosInExpr, e: Formula) = e match {
-          case FormulaDerivative(_) => {
-            foundCandidate = true
-            Left(Some(ExpressionTraversal.stop))
+      formulaDerivativeTactics.map(t => findApplicablePositionForFormulaDerivativeAxiom(s(p), t) match {
+        case Some(_) => true
+        case None    => false
+      }).reduce(_ | _)
+    }
+
+    override def apply(p:Position) : Tactic = (formulaDerivativeTactics.foldLeft(NilT)(_ ~ _(p)) *) ~ (TermSyntacticDerivationT(p) *)
+
+    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : AxiomTactic) : Option[(PosInExpr, Formula)] = {
+      val traversal = new ExpressionTraversalFunction {
+        var mPosition : Option[PosInExpr] = None
+        var mFormula : Option[Formula]    = None
+
+        override def preF(p:PosInExpr, f:Formula) = {
+          if(tactic.applies(f)) {
+            mPosition = Some(p);
+            mFormula  = Some(f);
+            Left(Some(ExpressionTraversal.stop)) //stop once we find one applicable location.
           }
-          case _ => Left(None)
-        }
-        override def preT(p : PosInExpr, e : Term) = e match {
-          case Derivative(_, n: NamedSymbol) => Left(None)
-          case Derivative(_, n: Number) => Left(None)
-          case Derivative(_, _) => {
-            foundCandidate = true
-            Left(Some(ExpressionTraversal.stop))
+          else{
+            Left(None)
           }
         }
       }
 
-      ExpressionTraversal.traverse(traversalFn, s(p));
-      traversalFn.foundCandidate
+      expression match {
+        case expression : Formula => ExpressionTraversal.traverse(traversal, expression)
+        case expression : Term    => ExpressionTraversal.traverse(traversal, expression)
+        case expression : Program => ExpressionTraversal.traverse(traversal, expression)
+        case _ => ???
+      }
+
+      (traversal.mPosition, traversal.mFormula) match {
+        case (Some(p:PosInExpr), Some(f:Formula)) => Some((p,f))
+        case (None,None) => None
+        case _ => ???
+      }
     }
-
-    override def apply(p : Position) : Tactic =
-      (formulaDerivativeTactics.foldLeft(NilT)(_ ~ _(p)) *) ~ (TermSyntacticDerivationT(p) *)
-
   }
+
 }
