@@ -856,7 +856,7 @@ End.
   // Atomize for Term Tactics @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  //So that when this gets refactored we're not stuck changing a bunch of stuff.
+  //@todo So that when this gets refactored we're not stuck changing a bunch of stuff.
   def NegativeDerivativeAtomizeT = NegativeDerivativeT
   def AddDerivativeAtomizeT      = AddDerivativeT
   def SubtractDerivativeAtomizeT = SubtractDerivativeT
@@ -865,12 +865,12 @@ End.
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Wrapper tactic section.
+  // Section: Wrapper Tactics
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-  // Lists of all tactics for iterating over.
-
+  /**
+   * This list of *all* the atomizing TermAxiomTactics is used in the implementation of wrapper tactics.
+   */
   val termDerivativeTactics : List[TermAxiomTactic] =
     NegativeDerivativeAtomizeT ::
       AddDerivativeAtomizeT ::
@@ -879,6 +879,9 @@ End.
       DivideDerivativeAtomizeT ::
       Nil
 
+  /**
+   * This list of *all* the atomizing PositionTactics is used in the implementation of wrapper tactics.
+   */
   val formulaDerivativeTactics : List[PositionTactic] =
     AndDerivativeAtomizeT ::
       OrDerivativeAtomizeT ::
@@ -890,10 +893,14 @@ End.
       NotEqualsDerivativeAtomizeT ::
       Nil
 
-
-
-  // Traversals used in implementations of aggregate tactics.
-
+  /**
+   * Finds a position in ``expression" where ``tactic" is applicable, or else returns None if ``tactic" is never applicable
+   * in subexpressions of ``expression".
+   *
+   * This is used in the implementation of wrapper tactics.
+   * @param expression
+   * @param tactic
+   */
   def findApplicablePositionForTermAxiom(expression : Expr, tactic : TermAxiomTactic) : Option[(PosInExpr, Term)] = {
     val traversal = new ExpressionTraversalFunction {
       var mPosition : Option[PosInExpr] = None
@@ -925,8 +932,12 @@ End.
     }
   }
 
+  /**
+   * The wrapper tactic for total synactic derivation of *terms*.
+   * In a single step, this tactic finds *one* location where *one* of the atomizing term derivative rewrites applies,
+   * and then applies that tactic.
+   */
   def TermSyntacticDerivationT = new PositionTactic("Total Syntactic Derivation of Terms") {
-
     def applies(s: Sequent, p: Position): Boolean = {
       def tacticApplies(tactic : TermAxiomTactic) = findApplicablePositionForTermAxiom(s(p), tactic) match {
         case Some(_) => true
@@ -936,7 +947,6 @@ End.
       termDerivativeTactics.foldLeft(false)((b, tat : TermAxiomTactic) => {
         tacticApplies(tat) || b
       })
-
     }
 
     /**
@@ -947,7 +957,7 @@ End.
         /**
          * Returns a list of positions, together with the first applicable tactic at each position.
          */
-        def firstApplicableTacticForEachPosition(seq : IndexedSeq[Formula]) : Seq[Option[(TermAxiomTactic, Int, PosInExpr)]] = {
+        def firstApplicableTacticForEachPosition(seq : IndexedSeq[Formula]) : Seq[(TermAxiomTactic, Int, PosInExpr)] = {
           seq.zipWithIndex.map(p => {
             val formula = p._1
             val index: Int = p._2
@@ -978,24 +988,27 @@ End.
               case Some((tactic:TermAxiomTactic, posInExpr:PosInExpr)) => Some(tactic, index, posInExpr)
               case None => None
             }
-          }).filter(_.isDefined)
+          }).filter(_.isDefined).map(_.get)
         }
 
+        //First check the ante for any applicable tactics and positions; if there is one, return that one.
+        //Else move on to the succ and so the same thing.
         val antePositions = firstApplicableTacticForEachPosition(node.sequent.ante)
         if(antePositions.length > 0) {
-          antePositions.last match {
-            case Some((tactic:TermAxiomTactic, anteIndex, posInExpr)) => Some(tactic(AntePosition(anteIndex, posInExpr)))
-            case _ => None
-          }
+          val elmt      = antePositions.last
+          val tactic    = elmt._1
+          val anteIndex = elmt._2
+          val posInExpr = elmt._3
+          Some(tactic(AntePosition(anteIndex, posInExpr)))
         }
         else {
           val succPositions = firstApplicableTacticForEachPosition(node.sequent.succ)
           if(succPositions.length > 0) {
-            succPositions.last match {
-              case Some((tactic:TermAxiomTactic, succIndex, posInExpr)) => Some(tactic(SuccPosition(succIndex, posInExpr)))
-              case _ => None
-            }
-          }
+            val elmt      = succPositions.last
+            val tactic    = elmt._1
+            val anteIndex = elmt._2
+            val posInExpr = elmt._3
+            Some(tactic(AntePosition(anteIndex, posInExpr)))          }
           else {
             None
           }
@@ -1008,7 +1021,8 @@ End.
 
   /**
    * The "mater" syntactic derivation tactic.
-   * @todo The applies method needs more thought.
+   * @todo The applies method needs more thought and will currently diverge!
+   * @todo Use a similar approach to what we do above in the term tactic, using construction tactics.
    */
   def SyntacticDerivationT = new PositionTactic("Syntactic Derivation") {
     override def applies(s: Sequent, p: Position): Boolean = {

@@ -203,7 +203,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node, helper.parseFormula("n*m + (a'+b') + 1 + c^n = a^2 + 2"))) //again, nonsense...
   }
 
-  "TermSyntacticDerivationT" should "work for -y" in {
+  it should "work for -y" in {
     val in = helper.parseFormula("n*m + (-y)' + 1 + c^n = a^2 + 2") //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
@@ -211,7 +211,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node, helper.parseFormula("n*m + -(y') + 1 + c^n = a^2 + 2"))) //again, nonsense...
   }
 
-  "TermSyntacticDerivationT" should "work for -x" in {
+  it should "work for -x" in {
     val in = helper.parseFormula("n*m + (-x)' + 1 + c^n = a^2 + 2") //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
