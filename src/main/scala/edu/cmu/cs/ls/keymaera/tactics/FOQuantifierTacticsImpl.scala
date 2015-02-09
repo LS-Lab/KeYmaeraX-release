@@ -268,10 +268,21 @@ object FOQuantifierTacticsImpl {
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(uniquify(p) ~ new ApplyRule(new Skolemize(p)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        })
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Forall(vars, _) =>
+          val rename =
+            if (Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
+            else NilT
+          Some(rename ~ new ApplyRule(new Skolemize(p)) {
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          })
+        case Exists(vars, _) =>
+          val rename =
+            if (Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
+            else NilT
+          Some(rename ~ new ApplyRule(new Skolemize(p)) {
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          })
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
