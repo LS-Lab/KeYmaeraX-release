@@ -1256,7 +1256,7 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Derivative, val thet
 
 object EmptyContEvolveProgram {
   def apply() = new EmptyContEvolveProgram()
-  def unapply(): Unit = { }
+  def unapply(x:Any): Option[_] = { None }
 }
 final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   def reads = Nil

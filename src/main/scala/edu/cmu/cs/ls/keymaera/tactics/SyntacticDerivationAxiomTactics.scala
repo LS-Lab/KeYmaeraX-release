@@ -5,6 +5,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 /**
@@ -878,11 +879,48 @@ End.
      * @return true iff the position exists in the sequent and is a monomial.
      */
     override def applies(s: Sequent, p: Position): Boolean = {
-      var positionIsApplicable = false
+      println("here...")
+      getApplicableTerm(s,p).isDefined
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val term = getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("MonomialDerivative.applies is incorrect."))
+
+        val newHypothesisCutLocation = AntePosition(node.sequent.ante.length, HereP)
+
+        val buildMonomialEqualityHypothesis : Tactic = new ApplyRule(new DeriveMonomial(term)) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
+
+        val equalityRewrite : Tactic = new ApplyRule(new EqualityRewriting(newHypothesisCutLocation, p)) {
+          override def applicable(node: ProofNode): Boolean = true //@todo?
+        }
+
+        //Build the equality, put it to work, and dispense after use. Also dispense of the current position, because we'll now have a new sequent.
+        val topLevelPosition = if(p.isAnte) {
+          new AntePosition(p.getIndex)
+        }
+        else {
+          new SuccPosition(p.getIndex)
+        }
+
+        Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+
+    def getApplicableTerm(sequent : Sequent, position : Position) : Option[Term] = {
+      var foundTerm : Option[Term] = None
+
       val fn = new ExpressionTraversalFunction {
         override def preT(pos : PosInExpr, t : Term) = {
-          if(pos == p.inExpr && isMonomial(t)) {
-            positionIsApplicable = true
+//          println("Checking " + t.prettyString())
+//          println("\t" + pos)
+//          println("\t" + position)
+          if(pos == position.inExpr && isMonomial(t)) {
+            foundTerm = Some(t)
             Left(Some(ExpressionTraversal.stop))
           }
           else {
@@ -890,21 +928,14 @@ End.
           }
         }
       }
-      ExpressionTraversal.traverse(fn, s(p))
-      positionIsApplicable
+      ExpressionTraversal.traverse(fn, sequent(position))
+      foundTerm
     }
-
-//    override def apply(p: Position): Tactic = new ApplyRule(DeriveMonomial()) {
-//      override def applicable(node: ProofNode): Boolean =
-//
-//    }
 
     def isMonomial(term : Term) = term match {
       case Derivative(Real, Exp(Real, base, Number(Real, n))) => true //copied from the rule itself.
       case _ => false
     }
-
-    override def apply(p: Position): Tactic = ???
   }
 
 

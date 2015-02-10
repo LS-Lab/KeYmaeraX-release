@@ -832,6 +832,11 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
 
 // equality/equivalence rewriting
 //@TODO Review
+/**
+ * Rewrites position ``p" according to ``ass"; for instance, if p="f" and ass="f=g" then this equality-rewrites p to g.
+ * @param ass The position of the equality (should be in the antecedent) @todo rename.
+ * @param p The position of an occurance of the (l?)hs of ``ass"
+ */
 class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equality Rewriting", ass, p) {
   import Helper._
   override def apply(s: Sequent): List[Sequent] = {

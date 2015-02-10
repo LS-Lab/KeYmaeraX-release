@@ -222,6 +222,17 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node, helper.parseFormula("n*m + -(x') + 1 + c^n = a^2 + 2"))) //again, nonsense...
   }
 
+  "DeriveMonomial" should "work" in {
+    val in = helper.parseFormula("1 + (x^2)' = 1 + 2*x")
+    val node = helper.formulaToNode(in)
+    val tactic = MonomialDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+    require(containsOpenGoal(node, helper.parseFormula("1+2*x^1=1+2*x")))
+    require(!containsOpenGoal(node, in))
+
+  }
+
   "FormulaSyntacticDerivationT" should "work for |" in {
     val f = helper.parseFormula("(1'=1 | 2=2)'")
     val node = helper.formulaToNode(f)
