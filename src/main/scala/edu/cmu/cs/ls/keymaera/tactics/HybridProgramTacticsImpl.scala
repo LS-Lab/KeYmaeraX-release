@@ -143,8 +143,9 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import FOQuantifierTacticsImpl.skolemizeT
         // TODO exploit formula structure at position p to execute most appropriate tactic. for now: most general tactic
-        Some(boxAssignEqualT(p) & skolemizeT(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
+        Some(boxAssignEqualT(p) & skolemizeT(forceUniquify = true)(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
       }
     }
   }
@@ -492,6 +493,7 @@ object HybridProgramTacticsImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         import scala.language.postfixOps
+        import FOQuantifierTacticsImpl.skolemizeT
 
         val f = node.sequent(p)
         // construct a new name for renaming in ODE
@@ -633,10 +635,6 @@ object HybridProgramTacticsImpl {
 
   }
 
-  /*********************************************
-   * Rule Tactics
-   *********************************************/
-
   /**
    * Creates a new position tactic to apply the induction rule.
    * @param inv The invariant.
@@ -685,25 +683,99 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new position tactic to apply the induction rule. Wipes the context instead of abstraction.
+   * @param inv The invariant.
+   * @return The new position tactic.
+   */
+  def wipeContextInductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
+    def getBody(g: Formula): Option[Program] = g match {
+      case BoxModality(Loop(a), _) => Some(a)
+      case _ => None
+    }
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      def wipeContext(bvFromPos: Position, except: Position*) = new ConstructionTactic("Wipe Context") {
+        require(!bvFromPos.isAnte)
+        override def applicable(node: ProofNode) = true
+        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(bvFromPos) match {
+          case Forall(vars, _) =>
+            val anteExcepts = except.filter(_.isInstanceOf[AntePosition]).map(_.index).toSet
+            val anteHidePos = node.sequent.ante.zipWithIndex.collect {
+              case (f,i) if Helper.names(f).intersect(vars.toSet).nonEmpty => i }.toSet -- anteExcepts
+            val anteHides = anteHidePos.toList.sorted.reverse.map(i => hideT(AntePosition(i)))
+            val succExcepts = except.filter(_.isInstanceOf[SuccPosition]).map(_.index).toSet
+            val succHidePos = node.sequent.succ.zipWithIndex.collect {
+              case (f,i) if Helper.names(f).intersect(vars.toSet).nonEmpty => i }.toSet -- succExcepts
+            val succHides = succHidePos.toList.sorted.reverse.map(i => hideT(SuccPosition(i)))
+            val bvFromPosCorr = succHidePos.count(_ < bvFromPos.index)
+            Some((anteHides ++ succHides).foldLeft(NilT)((t, i) => t & i) &
+              skolemizeT(SuccPosition(bvFromPos.index - bvFromPosCorr)))
+        }
+      }
+
+      def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) &
+        (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & cont)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
+        case Some(f) =>
+          val cutAPos = AntePosition(node.sequent.ante.length)
+          val cutSPos = SuccPosition(node.sequent.succ.length - 1)
+
+          val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+              case x@BoxModality(a, _) =>
+                val cPos = AntePosition(node.sequent.ante.length)
+                val b1 = ImplyLeftT(cPos) & AxiomCloseT
+                val b2 = hideT(p)
+                Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
+              case _ => None
+            }
+            override def applicable(node: ProofNode): Boolean = true
+          }
+
+          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
+            hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
+          val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
+          val branch2Tactic = hideT(p) &
+            ImplyRightT(cutSPos) &
+            ind(cutSPos, LabelBranch(indStepLbl)) &
+            onBranch(("Close Next", AxiomCloseT))
+          getBody(node.sequent(p)) match {
+            case Some(a) =>
+              Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+            case None => None
+          }
+        case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
+      }
+    }
+  }
+
+  /**
    * Induction tactic that generates an invariant using the specified generator.
    * @param gen The invariant generator.
    * @return The induction tactic.
    */
   protected[tactics] def genInductionT(gen: Generator[Formula]): PositionTactic = new PositionTactic("Generate Invariant") {
     override def applies(s: Sequent, p: Position): Boolean = gen.peek(s, p) match {
-      case Some(inv) => inductionT(Some(inv)).applies(s, p)
+      case Some(inv) => wipeContextInductionT(Some(inv)).applies(s, p)
       case None => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = gen(node.sequent, p) match {
-        case Some(inv) => Some(inductionT(Some(inv))(p))
+        case Some(inv) => Some(wipeContextInductionT(Some(inv))(p))
         case None => None
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
+
+  /*********************************************
+   * Rule Tactics
+   *********************************************/
 
   /**
    * Creates a new position tactic for the derivative assignment rule.
