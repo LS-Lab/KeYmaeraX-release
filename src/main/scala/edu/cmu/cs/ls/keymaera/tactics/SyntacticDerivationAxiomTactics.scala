@@ -873,6 +873,7 @@ End.
   // Proof rule implementations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //
+  def SyntacticDerivationRulesT : Tactic = (SearchTacticsImpl.locateTerm(ConstantDerivativeT) *) ~ (SearchTacticsImpl.locateTerm(MonomialDerivativeT) *)
   def ConstantDerivativeT : PositionTactic = new PositionTactic("Monomial Derivative") {
     /**
      *
@@ -1259,7 +1260,7 @@ End.
   def SyntacticDerivationT = new PositionTactic("Formula Syntactic Derivation") {
     override def applies(s: Sequent, p: Position): Boolean = TermSyntacticDerivationT.applies(s,p) | FormulaSyntacticDerivationT.applies(s,p)
 
-    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (TermSyntacticDerivationT(p) *)
+    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (TermSyntacticDerivationT(p) *) ~ SyntacticDerivationRulesT
   }
 
 }

@@ -334,7 +334,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[a:=b;]((!true)'&x'-(y)'=1')")
+    val expected = helper.parseFormula("[a:=b;]((!true)'&x'-y'=0)")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
