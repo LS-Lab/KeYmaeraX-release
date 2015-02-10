@@ -653,8 +653,9 @@ object ODETactics {
         import scala.language.postfixOps
         node.sequent(p) match {
           case BoxModality(_: ContEvolveProduct, _) => Some(
+//            diffInvariantSystemIntroT(p) & TacticLibrary.locateAnte(SyntacticDerivationAxiomTactics.SyntacticDerivationT) & TacticLibrary.locateSucc(SyntacticDerivationAxiomTactics.SyntacticDerivationT) &
             diffInvariantSystemIntroT(p) & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) &
-              (AndRightT(p) & (NilT & TacticLibrary.debugT("test seq"), (TacticLibrary.debugT("inv seq") & diffInvariantSystemHeadT(p)) *)) ~
+            (AndRightT(p) & (NilT & TacticLibrary.debugT("test seq"), (TacticLibrary.debugT("inv seq") & diffInvariantSystemHeadT(p)) *)) ~
             (diffInvariantSystemTailT(p) & ((TacticLibrary.boxAssignT(p) & ImplyRightT(p)) *))
           )
         }

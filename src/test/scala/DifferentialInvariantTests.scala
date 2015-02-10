@@ -527,10 +527,10 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system general
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  "General diff invariant" should "work when we're on a circle and want to stay on the circle." in {
+  "General diff invariant" should "simple example." in {
     val f = helper.parseFormula("[x'=y, y'=x & x^2 + y^2 = 1;]x^2 + y^2 = 1")
     val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(TacticLibrary.diffInvariantSystem)
+    val tactic = helper.positionTacticToTactic(TacticLibrary.diffInvariantSystemT)
     require(tactic.applicable(node))
 
     helper.runTactic(tactic,node)
