@@ -230,7 +230,16 @@ class SyntacticDerivationTests extends TacticTestSuite {
     helper.report(node)
     require(containsOpenGoal(node, helper.parseFormula("1+2*x^1=1+2*x")))
     require(!containsOpenGoal(node, in))
+  }
 
+  "DeriveConstant" should "work" in {
+    val in = helper.parseFormula("1 + 2' = 1 + 0")
+    val node = helper.formulaToNode(in)
+    val tactic = ConstantDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+    require(containsOpenGoal(node, helper.parseFormula("1+0=1+0")))
+    require(!containsOpenGoal(node, in))
   }
 
   "FormulaSyntacticDerivationT" should "work for |" in {

@@ -872,6 +872,72 @@ End.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof rule implementations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //
+  def ConstantDerivativeT : PositionTactic = new PositionTactic("Monomial Derivative") {
+    /**
+     *
+     * @param p The position of a term.
+     * @return true iff the position exists in the sequent and is a monomial.
+     */
+    override def applies(s: Sequent, p: Position): Boolean = {
+      getApplicableTerm(s,p).isDefined
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val term = getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("MonomialDerivative.applies is incorrect."))
+
+        val newHypothesisCutLocation = AntePosition(node.sequent.ante.length, HereP)
+
+        val buildConstantEqualityHypothesis : Tactic = new ApplyRule(new DeriveConstant(term)) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
+
+        val equalityRewrite : Tactic = new ApplyRule(new EqualityRewriting(newHypothesisCutLocation, p)) {
+          override def applicable(node: ProofNode): Boolean = true //@todo?
+        }
+
+        //Build the equality, put it to work, and dispense after use. Also dispense of the current position, because we'll now have a new sequent.
+        val topLevelPosition = if(p.isAnte) {
+          new AntePosition(p.getIndex)
+        }
+        else {
+          new SuccPosition(p.getIndex)
+        }
+
+        Some(buildConstantEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+
+    def getApplicableTerm(sequent : Sequent, position : Position) : Option[Term] = {
+      var foundTerm : Option[Term] = None
+
+      val fn = new ExpressionTraversalFunction {
+        override def preT(pos : PosInExpr, t : Term) = {
+          //          println("Checking " + t.prettyString())
+          //          println("\t" + pos)
+          //          println("\t" + position)
+          if(pos == position.inExpr && isConstant(t)) {
+            foundTerm = Some(t)
+            Left(Some(ExpressionTraversal.stop))
+          }
+          else {
+            Left(None)
+          }
+        }
+      }
+      ExpressionTraversal.traverse(fn, sequent(position))
+      foundTerm
+    }
+
+    def isConstant(term : Term) = term match {
+      case Derivative(Real, Number(Real, n)) => true //copied from the rule itself.
+      case _ => false
+    }
+  }
+
   def MonomialDerivativeT : PositionTactic = new PositionTactic("Monomial Derivative") {
     /**
      *
@@ -879,7 +945,6 @@ End.
      * @return true iff the position exists in the sequent and is a monomial.
      */
     override def applies(s: Sequent, p: Position): Boolean = {
-      println("here...")
       getApplicableTerm(s,p).isDefined
     }
 
