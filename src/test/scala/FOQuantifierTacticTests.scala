@@ -195,4 +195,11 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     getProofSequent(tactic, new RootNode(sequent(Nil, "x>2".asFormula :: Nil, "\\forall x. x>0".asFormula :: Nil))) should be (
       sequent("x_0".asNamedSymbol :: Nil, "x>2".asFormula :: Nil, "x_0>0".asFormula :: Nil))
   }
+
+  it should "introduce a new name even if the quantified names are unique already, if forced to do so" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeT
+    val tactic = locateSucc(skolemizeT(forceUniquify = true))
+    getProofSequent(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula))) should be (
+      sequent("x_0".asNamedSymbol :: Nil, Nil, "x_0>0".asFormula :: Nil))
+  }
 }
