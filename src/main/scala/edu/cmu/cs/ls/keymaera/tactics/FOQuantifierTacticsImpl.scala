@@ -259,7 +259,8 @@ object FOQuantifierTacticsImpl {
    * Creates a new tactic for skolemization.
    * @return The skolemization tactic.
    */
-  protected[tactics] def skolemizeT = new PositionTactic("Skolemize") {
+  def skolemizeT: PositionTactic = skolemizeT(forceUniquify = false)
+  def skolemizeT(forceUniquify: Boolean): PositionTactic = new PositionTactic("Skolemize") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case Forall(_, _) => !p.isAnte
       case Exists(_, _) => p.isAnte
@@ -268,10 +269,21 @@ object FOQuantifierTacticsImpl {
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(uniquify(p) ~ new ApplyRule(new Skolemize(p)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        })
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Forall(vars, _) =>
+          val rename =
+            if (forceUniquify || Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
+            else NilT
+          Some(rename ~ new ApplyRule(new Skolemize(p)) {
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          })
+        case Exists(vars, _) =>
+          val rename =
+            if (forceUniquify || Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
+            else NilT
+          Some(rename ~ new ApplyRule(new Skolemize(p)) {
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          })
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
