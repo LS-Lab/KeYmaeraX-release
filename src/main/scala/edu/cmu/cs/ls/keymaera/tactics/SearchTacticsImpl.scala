@@ -10,14 +10,14 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 object SearchTacticsImpl {
   def locateTerm(posT : PositionTactic) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
     override def findPosition(s: Sequent): Option[Position] = {
-      for((anteF, idx) <- s.ante) {
+      for((anteF, idx) <- s.ante.zipWithIndex) {
         def appliesInExpr(p : PosInExpr) = posT.applies(s, AntePosition(idx, p))
         findPosInExpr(appliesInExpr, anteF) match {
           case Some(posInExpr) => return Some(AntePosition(idx, posInExpr))
           case None            => //
         }
       }
-      for((succF, idx) <- s.succ) {
+      for((succF, idx) <- s.succ.zipWithIndex) {
         def appliesInExpr(p : PosInExpr) = posT.applies(s, SuccPosition(idx, p))
         findPosInExpr(appliesInExpr, succF) match {
           case Some(posInExpr) => return Some(SuccPosition(idx, posInExpr))
