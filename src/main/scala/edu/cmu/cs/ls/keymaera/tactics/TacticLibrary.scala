@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 
 import BuiltinHigherTactics._
 
+import scala.collection.mutable
+
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
  *
@@ -823,7 +825,7 @@ object TacticLibrary {
    * @param t the tactic to repeat
    * @return * closure of t
    */
-  def ClosureT(t:PositionTactic) = new PositionTactic("closure") {
+  def ClosureT(t : PositionTactic) = new PositionTactic("closure") {
     override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p)
     override def apply(p: Position): Tactic = (t(p) *)
   }

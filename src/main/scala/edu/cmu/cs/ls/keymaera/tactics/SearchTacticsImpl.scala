@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
@@ -7,6 +8,47 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
  * Implementation of search tactics.
  */
 object SearchTacticsImpl {
+  def locateTerm(posT : PositionTactic) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
+    override def findPosition(s: Sequent): Option[Position] = {
+      for((anteF, idx) <- s.ante) {
+        def appliesInExpr(p : PosInExpr) = posT.applies(s, AntePosition(idx, p))
+        findPosInExpr(appliesInExpr, anteF) match {
+          case Some(posInExpr) => return Some(AntePosition(idx, posInExpr))
+          case None            => //
+        }
+      }
+      for((succF, idx) <- s.succ) {
+        def appliesInExpr(p : PosInExpr) = posT.applies(s, SuccPosition(idx, p))
+        findPosInExpr(appliesInExpr, succF) match {
+          case Some(posInExpr) => return Some(SuccPosition(idx, posInExpr))
+          case None            => //
+        }
+      }
+      return None
+    }
+
+    def findPosInExpr(appliesInExpr : PosInExpr => Boolean, f : Formula) : Option[PosInExpr] = {
+      var result : Option[PosInExpr] = None
+      val fn = new ExpressionTraversalFunction {
+        override def preT(pos : PosInExpr, term : Term) = {
+          if(appliesInExpr(pos)) {
+            result = Some(pos);
+            Left(Some(ExpressionTraversal.stop))
+          }
+          else {
+            Left(None)
+          }
+        }
+      }
+      ExpressionTraversal.traverse(fn, f);
+      result
+    }
+
+    override def applicable(node: ProofNode): Boolean = findPosition(node.sequent) match {
+      case Some(_) => true
+      case _ => false
+    }
+  }
 
   /**
    * Locates a position in the antecedent where the specified position tactic is applicable.

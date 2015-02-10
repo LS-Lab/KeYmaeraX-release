@@ -867,6 +867,45 @@ End.
   }
 
 
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Proof rule implementations
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def MonomialDerivativeT : PositionTactic = new PositionTactic("Monomial Derivative") {
+    /**
+     *
+     * @param p The position of a term.
+     * @return true iff the position exists in the sequent and is a monomial.
+     */
+    override def applies(s: Sequent, p: Position): Boolean = {
+      var positionIsApplicable = false
+      val fn = new ExpressionTraversalFunction {
+        override def preT(pos : PosInExpr, t : Term) = {
+          if(pos == p.inExpr && isMonomial(t)) {
+            positionIsApplicable = true
+            Left(Some(ExpressionTraversal.stop))
+          }
+          else {
+            Left(None)
+          }
+        }
+      }
+      ExpressionTraversal.traverse(fn, s(p))
+      positionIsApplicable
+    }
+
+//    override def apply(p: Position): Tactic = new ApplyRule(DeriveMonomial()) {
+//      override def applicable(node: ProofNode): Boolean =
+//
+//    }
+
+    def isMonomial(term : Term) = term match {
+      case Derivative(Real, Exp(Real, base, Number(Real, n))) => true //copied from the rule itself.
+      case _ => false
+    }
+  }
+
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Atomize for Term Tactics @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -964,6 +1003,7 @@ End.
 
     /**
      * @todo this code is kind of complicated and probably deserves some refactoring.
+     *       The formula version is much cleaner .
      */
     override def apply(pos: Position): Tactic = new ConstructionTactic(name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
@@ -1012,7 +1052,9 @@ End.
           val tactic    = elmt._1
           val anteIndex = elmt._2
           val posInExpr = elmt._3
-          Some(tactic(AntePosition(anteIndex, posInExpr)))
+          val position  = AntePosition(anteIndex, posInExpr)
+
+          Some(tactic(position))
         }
         else {
           val succPositions = firstApplicableTacticForEachPosition(node.sequent.succ)
@@ -1031,6 +1073,9 @@ End.
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
     }
+
+
+
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
