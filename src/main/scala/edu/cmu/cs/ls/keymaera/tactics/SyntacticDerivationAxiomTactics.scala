@@ -903,6 +903,8 @@ End.
       case Derivative(Real, Exp(Real, base, Number(Real, n))) => true //copied from the rule itself.
       case _ => false
     }
+
+    override def apply(p: Position): Tactic = ???
   }
 
 
