@@ -1,7 +1,7 @@
 import java.io.File
 
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticLibrary, Tactics, Config}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
@@ -32,6 +32,9 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
   }
+
+  def ls(t: PositionTactic) = locateSucc(t)
+  def la(t: PositionTactic) = locateAnte(t)
 
   "AxiomClose" should "be provable" in {
     val file = new File("examples/dev/t/tactics/AxiomClose.key")
@@ -72,21 +75,20 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     import scala.language.postfixOps
     import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
     import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
 
-    val tactic = locateSucc(ImplyRightT) &
-      locateSucc(inductionT(Some("x <= y".asFormula))) &
+    val tactic = ls(ImplyRightT) &
+      ls(wipeContextInductionT(Some("x <= y".asFormula))) &
       onBranch(
         (indInitLbl, AxiomCloseT(AntePosition(0), SuccPosition(0))),
-        (indStepLbl, debugT("step") & locateSucc(skolemizeT) & locateSucc(ImplyRightT) &
-          locateSucc(boxChoiceT) & locateSucc(AndRightT) &
-          ((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*) & arithmeticT),
-        (indUseCaseLbl, hideT(AntePosition(0)) & locateSucc(skolemizeT) & locateSucc(ImplyRightT) &
-          AxiomCloseT(AntePosition(0), SuccPosition(0)))
+        (indStepLbl, debugT("step") & ls(ImplyRightT) &
+          ls(boxChoiceT) & ls(AndRightT) &
+          ((ls(boxSeqT) ~ ls(boxAssignT))*) & arithmeticT),
+        (indUseCaseLbl, ls(ImplyRightT) & AxiomCloseT(AntePosition(0), SuccPosition(0)))
       )
 
     helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering-allwrites.key")))) shouldBe 'closed
-    // TODO the following line is not yet provable, but should be
-//    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
+    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
   }
 
   "ETCS-safety-allwrites" should "be provable with explicit strategy" in {
@@ -99,35 +101,35 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     val s = parseToSequent(file)
 
     // sub strategies for SB cases
-    def subsubtactic(testTactic: Tactic) = (locateSucc(boxSeqT) ~
-      ((locateSucc(boxTestT) & locateSucc(ImplyRightT)) | locateSucc(boxAssignT) | locateSucc(boxNDetAssign))*) &
-      (locateAnte(AndLeftT)*) & locateSucc(AndRightT) &&
+    def subsubtactic(testTactic: Tactic) = (ls(boxSeqT) ~
+      ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxAssignT) | ls(boxNDetAssign))*) &
+      (la(AndLeftT)*) & ls(AndRightT) &&
       (List(19,18,17,16,15,13,9,8,7,4,3).foldLeft(NilT)((t, i) => t & eqLeft(exhaustive = true)(AntePosition(i)) & hideT(AntePosition(i))) &
         testTactic,
         NilT) & arithmeticT
 
-    val subtactic = ((locateSucc(boxSeqT) ~
-      ((locateSucc(boxTestT) & locateSucc(ImplyRightT)) | locateSucc(boxNDetAssign)))*) &
-      locateAnte(AndLeftT) ~ locateSucc(boxAssignT) & locateSucc(boxSeqT) & locateSucc(boxChoiceT) &
-      locateSucc(AndRightT) && (debugT("choice 2.2.*.1") & subsubtactic(locateAnte(OrLeftT)),
-                                debugT("choice 2.2.*.2") & subsubtactic(locateAnte(NotLeftT) & locateSucc(OrRightT)))
+    val subtactic = ((ls(boxSeqT) ~
+      ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxNDetAssign)))*) &
+      la(AndLeftT) ~ ls(boxAssignT) & ls(boxSeqT) & ls(boxChoiceT) &
+      ls(AndRightT) && (debugT("choice 2.2.*.1") & subsubtactic(la(OrLeftT)),
+                                debugT("choice 2.2.*.2") & subsubtactic(la(NotLeftT) & ls(OrRightT)))
 
     // main strategy
-    val tactic = locateSucc(ImplyRightT) & (locateAnte(AndLeftT)*) &
-      locateSucc(inductionT(Some("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula))) &
+    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
+      ls(inductionT(Some("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula))) &
       onBranch(
-        (indInitLbl, locateSucc(AndRightT) && (AxiomCloseT(AntePosition(4), SuccPosition(0)),
+        (indInitLbl, ls(AndRightT) && (AxiomCloseT(AntePosition(4), SuccPosition(0)),
                                                AxiomCloseT(AntePosition(3), SuccPosition(0)))),
-        (indStepLbl, debugT("step") & List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ locateSucc(skolemizeT) &
-          locateSucc(ImplyRightT) & locateAnte(AndLeftT) & locateSucc(boxChoiceT) & locateSucc(AndRightT) &&
-          (debugT("choice 1") & ((locateSucc(boxSeqT) ~ (locateSucc(boxAssignT) | locateSucc(boxNDetAssign)))*) &
-                                locateSucc(boxTestT) & locateSucc(ImplyRightT) & (locateAnte(AndLeftT)*) &
-                                locateSucc(AndRightT) && (/* v,z not written without self-assignment */ arithmeticT,
+        (indStepLbl, debugT("step") & List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ ls(skolemizeT) &
+          ls(ImplyRightT) & la(AndLeftT) & ls(boxChoiceT) & ls(AndRightT) &&
+          (debugT("choice 1") & ((ls(boxSeqT) ~ (ls(boxAssignT) | ls(boxNDetAssign)))*) &
+                                ls(boxTestT) & ls(ImplyRightT) & (la(AndLeftT)*) &
+                                ls(AndRightT) && (/* v,z not written without self-assignment */ arithmeticT,
                                                           AxiomCloseT(AntePosition(12), SuccPosition(0))),
-            debugT("choice 2") & locateSucc(boxChoiceT) & locateSucc(AndRightT) &&
+            debugT("choice 2") & ls(boxChoiceT) & ls(AndRightT) &&
               /* {state:=brake} */
-              (debugT("choice 2.1") & ((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*) &
-                locateSucc(AndRightT) && /* v,z,d,m, etc. not written without self-assignment */
+              (debugT("choice 2.1") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
+                ls(AndRightT) && /* v,z,d,m, etc. not written without self-assignment */
                   /* explicit equality rewriting, just for demo purposes -> see eqLeft above for alternative */
                   /* numbering in positions: 0 -> lhs, 1 -> rhs
                    * e.g. in v^2-d^2 <= 2*b*(m-z) 0::0 refers to v^2, 0::0::0 to v, 0::0::1 to 2, 0::1::0 to d
@@ -141,15 +143,15 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
                    equalityRewriting(AntePosition(9), SuccPosition(0, PosInExpr(0::Nil))) & hideT(SuccPosition(0)) &
                      AxiomCloseT(AntePosition(6), SuccPosition(0))
                   ),
-                debugT("choice 2.2") & ((locateSucc(boxSeqT) ~ locateSucc(boxAssignT))*) &
-                  locateSucc(boxChoiceT) & locateSucc(AndRightT) &&
+                debugT("choice 2.2") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
+                  ls(boxChoiceT) & ls(AndRightT) &&
                   (debugT("choice 2.2.1") & subtactic,
                     debugT("choice 2.2.2") & subtactic
                   )
               )
             )),
-        (indUseCaseLbl, List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ locateSucc(skolemizeT) &
-          locateSucc(ImplyRightT) & locateAnte(AndLeftT) & arithmeticT))
+        (indUseCaseLbl, List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ ls(skolemizeT) &
+          ls(ImplyRightT) & la(AndLeftT) & arithmeticT))
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
