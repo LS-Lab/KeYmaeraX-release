@@ -95,12 +95,12 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val afterFirst = getProofGoals(assignT, new RootNode(s))
     getProofSequentFromGoals(afterFirst) should be (
-      sequent("y_1".asNamedSymbol :: Nil, "y_1=z".asFormula :: Nil, "[y:=2;][?y>1;]y>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y_0=z".asFormula :: Nil, "[y:=2;][?y>1;]y>0".asFormula :: Nil))
 
     getProofSequent(assignT, afterFirst) should be (
-      sequent("y_1".asNamedSymbol :: "y_2".asNamedSymbol :: Nil,
-        "y_1=z".asFormula :: "y_2=2".asFormula :: Nil,
-        "[?y_2>1;]y_2>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: "y_1".asNamedSymbol :: Nil,
+        "y_0=z".asFormula :: "y_1=2".asFormula :: Nil,
+        "[?y_1>1;]y_1>0".asFormula :: Nil))
   }
 
   it should "work in front of a loop" in {
@@ -189,71 +189,71 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Box nondeterministic assignment tactic" should "introduce universal quantifier and rename free variables" in {
     import TacticLibrary.boxNDetAssign
-    val s = sucSequent("[y:=*;]y>0".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;]y>0".asFormula :: Nil)
     val tactic = locateSucc(boxNDetAssign)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "y_0>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "y_0>0".asFormula :: Nil))
   }
 
   it should "rename free variables in modality predicates" in {
     import TacticLibrary.boxNDetAssign
-    val s = sucSequent("[y:=*;][z:=2;](y>0 & z>0)".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][z:=2;](y>0 & z>0)".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[z:=2;](y_0>0 & z>0)".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[z:=2;](y_0>0 & z>0)".asFormula :: Nil))
   }
 
   it should "rename free variables but not bound variables (subsequent skolemization will, however)" in {
     import TacticLibrary.boxNDetAssign
-    val s = sucSequent("[y:=*;][y:=2;]y>0".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][y:=2;]y>0".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0:=2;]y_0>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[y_0:=2;]y_0>0".asFormula :: Nil))
   }
 
   it should "rename free variables but not variables bound by assignment in modality predicates (subsequent skolemization will, however)" in {
     import TacticLibrary.boxNDetAssign
-    val s = sucSequent("[y:=*;][y:=2+y;]y>0".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][y:=2+y;]y>0".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0:=2+y_0;]y_0>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[y_0:=2+y_0;]y_0>0".asFormula :: Nil))
   }
 
   it should "rename free variables but not variables bound by ODEs in modality predicates" in {
     import TacticLibrary.boxNDetAssign
-    val s = sucSequent("[y:=*;][z'=2+y;](y>0 & z>0)".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][z'=2+y;](y>0 & z>0)".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[z'=2+y_0;](y_0>0 & z>0)".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[z'=2+y_0;](y_0>0 & z>0)".asFormula :: Nil))
   }
 
   it should "work in front of any discrete program" in {
     // TODO test all, but probably not in one shot
     import TacticLibrary.{boxNDetAssign, skolemizeT, ImplyRightT}
-    val s = sucSequent("[y:=*;][y:=*;][?y>1;]y>0".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][y:=*;][?y>1;]y>0".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign) & debugT("ndet") & locateSucc(skolemizeT) & locateSucc(ImplyRightT)
 
     val afterFirst = getProofGoals(assignT, new RootNode(s))
     getProofSequentFromGoals(afterFirst) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0:=*;][?y_0>1;]y_0>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[y_0:=*;][?y_0>1;]y_0>0".asFormula :: Nil))
 
     val afterSecond = getProofGoals(assignT, afterFirst)
     getProofSequentFromGoals(afterSecond) should be (
-      sequent("y_0".asNamedSymbol :: "y_1".asNamedSymbol :: Nil, Nil, "[?y_1>1;]y_1>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: "y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[?y_0>1;]y_0>0".asFormula :: Nil))
   }
 
   it should "work in front of a loop" in {
-    val s = sucSequent("[y:=*;][{y:=y+2;}*;]y>0".asFormula)
+    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][{y:=y+2;}*;]y>0".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign) & locateSucc(skolemizeT) & locateSucc(ImplyRightT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[{y_0:=y_0+2;}*;]y_0>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[{y_0:=y_0+2;}*;]y_0>0".asFormula :: Nil))
   }
 
   it should "work in front of a continuous program" in {
     val s = sucSequent("[y:=*;][y'=2;]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_2".asNamedSymbol :: Nil, Nil, "[y_2'=2;]y_2>0".asFormula :: Nil))
+      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0'=2;]y_0>0".asFormula :: Nil))
   }
 
   "v2tBoxAssignT" should "replace with variables" in {
@@ -458,5 +458,108 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tactic = locateSucc(nonAbbrvDiscreteGhostT(Some(Variable("z", None, Real)), "0".asTerm))
     getProofSequent(tactic, new RootNode(sucSequent("[x:=5+0;]x>0".asFormula))) should be (
       sucSequent("[z:=0;][x:=5+0;]x>0".asFormula))
+  }
+
+  "Induction tactic" should "rename all bound variables" in {
+    import TacticLibrary.inductionT
+    val tactic = locateSucc(inductionT(Some("x*y>5".asFormula)))
+    val result = getProofSequent(tactic, new RootNode(
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: Nil,
+        "[{x:=2;}*;]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+
+    result shouldBe a [List[Sequent]]
+    result.asInstanceOf[List[Sequent]] should contain only (
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: Nil,
+        "x<3".asFormula :: "y<4".asFormula :: "\\forall x. (x*y>5 -> [x:=2;]x*y>5)".asFormula :: Nil
+      ),
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: Nil,
+        "x<3".asFormula :: "y<4".asFormula :: "\\forall x. (x*y>5 -> x>2)".asFormula :: Nil
+      ),
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: Nil,
+        "x<3".asFormula :: "y<4".asFormula :: "x*y>5".asFormula :: Nil
+      )
+    )
+  }
+
+  "Wipe context induction tactic" should "wipe all formulas mentioning bound variables from the context" in {
+    import HybridProgramTacticsImpl.wipeContextInductionT
+    val tactic = locateSucc(wipeContextInductionT(Some("x*y>5".asFormula)))
+
+    val result = getProofSequent(tactic, new RootNode(
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "[{x:=2;}*;]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+
+    result shouldBe a [List[Sequent]]
+    result.asInstanceOf[List[Sequent]] should contain only (
+      sequent("x".asNamedSymbol :: Nil,
+        "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "y<4".asFormula :: "x*y>5 -> [x:=2;]x*y>5".asFormula :: Nil
+      ),
+      sequent("x".asNamedSymbol :: Nil,
+        "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "y<4".asFormula :: "x*y>5 -> x>2".asFormula :: Nil
+      ),
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "x<3".asFormula :: "y<4".asFormula :: "x*y>5".asFormula :: Nil
+      )
+    )
+  }
+
+  it should "do the same with a slightly more complicated formula" in {
+    import HybridProgramTacticsImpl.wipeContextInductionT
+    val tactic = locateSucc(wipeContextInductionT(Some("x*y>5".asFormula)))
+
+    val result = getProofSequent(tactic, new RootNode(
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "[{x:=2 ++ y:=z;}*;]x>2".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+
+    result shouldBe a [List[Sequent]]
+    result.asInstanceOf[List[Sequent]] should contain only (
+      sequent("x".asNamedSymbol :: "y".asNamedSymbol :: Nil,
+        "z>7".asFormula :: Nil,
+        "x*y>5 -> [x:=2 ++ y:=z;]x*y>5".asFormula :: Nil
+      ),
+      sequent("x".asNamedSymbol :: "y".asNamedSymbol :: Nil,
+        "z>7".asFormula :: Nil,
+        "x*y>5 -> x>2".asFormula :: Nil
+      ),
+      sequent(Nil,
+        "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "x<3".asFormula :: "y<4".asFormula :: "x*y>5".asFormula :: Nil
+      )
+    )
+  }
+
+  it should "remove duplicated formulas" in {
+    import HybridProgramTacticsImpl.wipeContextInductionT
+    val tactic = locateSucc(wipeContextInductionT(Some("x*y>5".asFormula)))
+
+    val result = getProofSequent(tactic, new RootNode(
+      sequent(Nil,
+        "x>0".asFormula :: "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "[{x:=2;}*;]x>2".asFormula :: "x<3".asFormula :: "x<3".asFormula :: "y<4".asFormula :: Nil)))
+
+    result shouldBe a [List[Sequent]]
+    result.asInstanceOf[List[Sequent]] should contain only (
+      sequent("x".asNamedSymbol :: Nil,
+        "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "y<4".asFormula :: "x*y>5 -> [x:=2;]x*y>5".asFormula :: Nil
+      ),
+      sequent("x".asNamedSymbol :: Nil,
+        "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "y<4".asFormula :: "x*y>5 -> x>2".asFormula :: Nil
+      ),
+      sequent(Nil,
+        "x>0".asFormula :: "x>0".asFormula :: "y>1".asFormula :: "z>7".asFormula :: Nil,
+        "x<3".asFormula :: "x<3".asFormula :: "y<4".asFormula :: "x*y>5".asFormula :: Nil
+      )
+    )
   }
 }
