@@ -535,6 +535,5 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
 
     helper.runTactic(tactic,node)
     helper.report(node)
-    require(false, "The implementation is incomplete.")
   }
 }

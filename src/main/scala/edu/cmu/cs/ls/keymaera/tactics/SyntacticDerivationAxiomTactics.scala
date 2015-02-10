@@ -26,6 +26,45 @@ object SyntacticDerivationAxiomTactics {
   // Section 1: "Derivatives" of Formulas
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   /*
+ * Axiom "->' derive imply".
+ *   (p -> q)' <-> (!p | q)'
+ * End.
+ */
+  def ImplyDerivativeT = new AxiomTactic("->' derive imply", "->' derive imply") {
+    override def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(Imply(_,_))              => true
+      //      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      !p.isAnte && super.applies(s, p)
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
+      val aP  = PredicateConstant("p")
+      val aQ  = PredicateConstant("q")
+
+      f match {
+        case FormulaDerivative(Imply(p,q)) => {
+          val g = FormulaDerivative(Or(Not(p),q))
+          val axiomInstance = Equiv(f, g)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aP, p),
+            SubstitutionPair(aQ, q)
+          ))
+
+          Some(ax, axiomInstance, subst, None, None)
+        }
+          //@todo other case.
+      }
+    }
+  }
+
+
+  /*
    * Axiom "&' derive and".
    *   (p & q)' <-> ((p') & (q'))
    * End.
@@ -172,7 +211,6 @@ object SyntacticDerivationAxiomTactics {
    */
   def EqualsDerivativeT = new AxiomTactic("=' derive =", "=' derive =") {
     override def applies(f: Formula): Boolean = {
-      println("applying equals to " + f.prettyString())
       f match {
         case FormulaDerivative(Equals(eqSort, s, t)) => true
         //      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
@@ -435,8 +473,6 @@ object SyntacticDerivationAxiomTactics {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
 
   /*
    * Axiom "<' derive <".
@@ -731,7 +767,7 @@ End.
   def MultiplyDerivativeT = new TermAxiomTactic("*' derive product","*' derive product") {
     override def applies(t: Term): Boolean = t match {
       case Derivative(_, Multiply(_, s, t)) => true
-      case Add(_, Multiply(_,Derivative(_,_), _),Multiply(_,_,Derivative(_))) => true
+//      case Add(_, Multiply(_,Derivative(_,_), _),Multiply(_,_,Derivative(_))) => true
 //      case Subtract(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
     }
@@ -858,20 +894,6 @@ End.
       DivideDerivativeAtomizeT ::
       Nil
 
-  /**
-   * This list of *all* the atomizing PositionTactics is used in the implementation of wrapper tactics.
-   */
-  val formulaDerivativeAtomizedTactics : List[PositionTactic] =
-    AndDerivativeAtomizeT ::
-      OrDerivativeAtomizeT ::
-      EqualsDerivativeAtomizeT ::
-      GreaterEqualDerivativeAtomizeT ::
-      GreaterThanDerivativeAtomizeT ::
-      LessEqualDerivativeAtomizeT ::
-      LessThanDerivativeAtomizeT ::
-      NotEqualsDerivativeAtomizeT ::
-      Nil
-
   val formulaDerivativeTactics : List[AxiomTactic] =
     AndDerivativeT          ::
     OrDerivativeT           ::
@@ -881,6 +903,7 @@ End.
     LessEqualDerivativeT    ::
     LessThanDerivativeT     ::
     NotEqualsDerivativeT    ::
+      ImplyDerivativeT      ::
     Nil
 
   /**
@@ -998,7 +1021,7 @@ End.
             val tactic    = elmt._1
             val anteIndex = elmt._2
             val posInExpr = elmt._3
-            Some(tactic(AntePosition(anteIndex, posInExpr)))
+            Some(tactic(SuccPosition(anteIndex, posInExpr)))
           }
           else {
             None

@@ -154,7 +154,21 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
   require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
   val axiom = Axiom.axioms.get(axiomName)
   def applies(t: Term): Boolean
-  override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getTerm(s, p))
+  override def applies(s: Sequent, p: Position): Boolean = {
+    axiom.isDefined && { applies(getTerm(s, p))
+      //Allow for the use of invalid positions, and simply silently fail.
+      //@todo might not be the best idea?
+//      if(p.isAnte && s.ante.length > p.getIndex) {
+//        applies(getTerm(s, p))
+//      }
+//      else if(!p.isAnte && s.succ.length > p.getIndex) {
+//        applies(getTerm(s,p))
+//      }
+//      else {
+//        false
+//      }
+    }
+  }
 
   /**
    * This methods constructs the axiom instance and substitution to be performed.

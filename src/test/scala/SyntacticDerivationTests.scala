@@ -199,7 +199,9 @@ class SyntacticDerivationTests extends TacticTestSuite {
   "TermSyntacticDerivationT" should "work for +" in {
     val in = helper.parseFormula("n*m + (a+b)' + 1 + c^n = a^2 + 2") //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
-    val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val pos = SuccPosition(0, PosInExpr(0 :: Nil))
+//    val tactic = TermSyntacticDerivationT(pos)
+    val tactic = TacticLibrary.ClosureT(TermSyntacticDerivationT)(pos)
     helper.runTactic(tactic,node)
     require(containsOpenGoal(node, helper.parseFormula("n*m + (a'+b') + 1 + c^n = a^2 + 2"))) //again, nonsense...
   }
@@ -265,6 +267,54 @@ class SyntacticDerivationTests extends TacticTestSuite {
     helper.runTactic(tactic, node, true)
 
     val expected = helper.parseFormula("((1')'=1')&(2'=2')")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
+
+  it should "work on imply" in {
+    val f = helper.parseFormula("(true->(x^2+y^2=1))'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("(!true)'&(x^2+y^2)'=1'")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
+
+  it should "work on *" in {
+    val f = helper.parseFormula("(x*y=1)'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("(x'*y+x*y'=1')")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
+
+  it should "work on +" in {
+    val f = helper.parseFormula("(x+y=1)'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("(x'+y'=1')")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
+
+  it should "work on boxes" in {
+    val f = helper.parseFormula("[a:=b;](true -> x-y=1)'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("[a:=b;]((!true)'&x'-(y)'=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
