@@ -38,7 +38,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -108,7 +108,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -171,20 +171,23 @@ object SyntacticDerivationAxiomTactics {
    * End.
    */
   def EqualsDerivativeT = new AxiomTactic("=' derive =", "=' derive =") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Equals(eqSort, s, t)) => true
-//      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => false
+    override def applies(f: Formula): Boolean = {
+      println("applying equals to " + f.prettyString())
+      f match {
+        case FormulaDerivative(Equals(eqSort, s, t)) => true
+        //      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+        case _ => false
+      }
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s",None,Real)      //@todo not sure...
-      val aT = Variable("t",None,Real)
+      val aS = Variable("s", None, Real) //@todo not sure...
+      val aT = Variable("t", None, Real)
 
       f match {
         case FormulaDerivative(Equals(eqSort, s, t)) => {
@@ -198,20 +201,20 @@ object SyntacticDerivationAxiomTactics {
 
           Some(ax, axiomInstance, subst, None, None)
         }
-        case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-          val sort = sSort
-
-          val g = FormulaDerivative(Equals(sSort, s, t))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
+        //        case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+        //          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
+        //          val sort = sSort
+        //
+        //          val g = FormulaDerivative(Equals(sSort, s, t))
+        //          val axiomInstance = Equiv(g,f)
+        //
+        //          val subst = Substitution(List(
+        //            SubstitutionPair(aS, s),
+        //            SubstitutionPair(aT, t)
+        //          ))
+        //
+        //          Some(ax, axiomInstance, subst, None, None)
+        //        }
       }
     }
   }
@@ -245,7 +248,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -312,7 +315,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -379,7 +382,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -448,7 +451,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -510,12 +513,12 @@ object SyntacticDerivationAxiomTactics {
   def NotEqualsDerivativeT = new AxiomTactic("!=' derive !=", "!=' derive !=") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(NotEquals(eqSort, s, t)) => true
-      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+//      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && super.applies(s, p)
+      !p.isAnte && super.applies(s, p)
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
@@ -535,7 +538,7 @@ object SyntacticDerivationAxiomTactics {
 
           Some(ax, axiomInstance, subst, None, None)
         }
-        case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+        case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
           assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
           val sort = sSort
 
@@ -1010,7 +1013,8 @@ End.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section: Wrapper tactic for formula syntactic derivation
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  def SyntacticDerivationT = new PositionTactic("Syntactic Derivation") {
+
+  def FormulaSyntacticDerivationT = new PositionTactic("Formula Syntactic Derivation") {
     override def applies(s: Sequent, p: Position): Boolean = {
       formulaDerivativeTactics.map(t => findApplicablePositionForFormulaDerivativeAxiom(s(p), t) match {
         case Some(_) => true
@@ -1018,7 +1022,36 @@ End.
       }).reduce(_ | _)
     }
 
-    override def apply(p:Position) : Tactic = (formulaDerivativeTactics.foldLeft(NilT)(_ ~ _(p)) *) ~ (TermSyntacticDerivationT(p) *)
+    override def apply(p:Position) : Tactic = new ConstructionTactic("Formula Syntactic Derivation") {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        //I think this will be easier to read than the mapping approach.
+        for((anteF : Formula, idx : Int) <- node.sequent.ante.zipWithIndex) {
+          val applicableTactics : Seq[(PositionTactic, PosInExpr)] =
+            formulaDerivativeTactics.map(t => (t, findApplicablePositionForFormulaDerivativeAxiom(anteF, t))).filter(_._2.isDefined).map(p => (p._1, p._2.get._1))
+          if(applicableTactics.length > 0) {
+            val tactic    = applicableTactics.last._1
+            val posInExpr = applicableTactics.last._2
+            return Some(tactic(AntePosition(idx, posInExpr)));
+          }
+        }
+
+        for((succF, idx : Int) <- node.sequent.succ.zipWithIndex) {
+          val applicableTactics : Seq[(PositionTactic, PosInExpr)] =
+            formulaDerivativeTactics.map(t => (t, findApplicablePositionForFormulaDerivativeAxiom(succF, t))).filter(_._2.isDefined).map(p => (p._1, p._2.get._1))
+          if(applicableTactics.length > 0) {
+            println("Found an applicable tactic!")
+            val tactic    = applicableTactics.last._1
+            val posInExpr = applicableTactics.last._2
+            println(tactic.name + " " + idx + " " + posInExpr.toString())
+            return Some(tactic(SuccPosition(idx, posInExpr)));
+          }
+        }
+
+        return None;
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
 
     def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : AxiomTactic) : Option[(PosInExpr, Formula)] = {
       val traversal = new ExpressionTraversalFunction {
@@ -1027,8 +1060,10 @@ End.
 
         override def preF(p:PosInExpr, f:Formula) = {
           if(tactic.applies(f)) {
+            println("Found an applicable tactic: " + tactic.name + " for formila " + f)
             mPosition = Some(p);
             mFormula  = Some(f);
+
             Left(Some(ExpressionTraversal.stop)) //stop once we find one applicable location.
           }
           else{
@@ -1050,6 +1085,15 @@ End.
         case _ => ???
       }
     }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section: Wrapper tactic for syntactic derivation
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def SyntacticDerivationT = new PositionTactic("Formula Syntactic Derivation") {
+    override def applies(s: Sequent, p: Position): Boolean = TermSyntacticDerivationT.applies(s,p) | FormulaSyntacticDerivationT.applies(s,p)
+
+    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (TermSyntacticDerivationT(p) *)
   }
 
 }

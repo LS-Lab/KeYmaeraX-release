@@ -1,5 +1,6 @@
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.TraverseToPosition
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{TermAxiomTactic, AxiomTactic, SyntacticDerivationAxiomTactics}
+import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TermAxiomTactic, AxiomTactic, SyntacticDerivationAxiomTactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
 /**
@@ -219,18 +220,52 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node, helper.parseFormula("n*m + -(x') + 1 + c^n = a^2 + 2"))) //again, nonsense...
   }
 
+  "FormulaSyntacticDerivationT" should "work for |" in {
+    val f = helper.parseFormula("(1'=1 | 2=2)'")
+    val node = helper.formulaToNode(f)
 
+    val tactic = helper.positionTacticToTactic(FormulaSyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
 
+    val expected = helper.parseFormula("(1'=1)'&(2=2)'")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
 
-  "total syntactic derivation" should "work for |" in {
-    val f = helper.parseFormula("(1=1 | 2=2)'")
+  it should "work for =" in {
+    val f = helper.parseFormula("(1 = 2)'")
+    val node = helper.formulaToNode(f)
+    val ptactic = TacticLibrary.ClosureT(FormulaSyntacticDerivationT)
+
+    val tactic = helper.positionTacticToTactic(ptactic)
+    helper.runTactic(tactic, node, true)
+    val expected = helper.parseFormula("1' = 2'")
+    require(containsOpenGoal(node, expected))
+  }
+
+  "SyntacticDerivationT" should "intermediate step for next test" in {
+    val f = helper.parseFormula("(1=1)' & true")
+    val node = helper.formulaToNode(f)
+
+    val position = SuccPosition(0, PosInExpr(List(0)))
+    val tactic = EqualsDerivativeT(position)
+
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("(1'=1') & true")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
+
+  it should "work for | with an internal term that needs rewriting" in {
+    val f = helper.parseFormula("(1'=1 | 2=2)'")
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
+    val expected = helper.parseFormula("((1')'=1')&(2'=2')")
     helper.report(node)
-
+    require(containsOpenGoal(node, expected))
   }
-
 }

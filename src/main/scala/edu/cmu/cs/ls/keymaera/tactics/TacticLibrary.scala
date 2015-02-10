@@ -814,4 +814,14 @@ object TacticLibrary {
       t
     }
   }
+
+  /**
+   * @todo not sure if this isn't already defined.
+   * @param t the tactic to repeat
+   * @return * closure of t
+   */
+  def ClosureT(t:PositionTactic) = new PositionTactic("closure") {
+    override def applies(s: Sequent, p: Position): Boolean = t.applies(s,p)
+    override def apply(p: Position): Tactic = (t(p) *)
+  }
 }
