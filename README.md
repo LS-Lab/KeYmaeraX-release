@@ -11,6 +11,15 @@ intended to include possibilities for parallel proof search.
 The prover front-end, middleware, and back-end are separated by
 design.
 
+Installation
+============
+
+The easiest way to run KeYmaera4 from source is to install its dependencies and run HyDRA via SBT:
+
+    * Install MongoDB. Be sure that that your machine is behind a firewall and/or edit the MongoDB configuration file so that the server binds to the loopback address.
+    * Install Scala (and the JRE).
+    * Install SBT and following the instructions in the Building section.
+
 Building
 ========
 
