@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.TraverseToPosition
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TermAxiomTactic, AxiomTactic, SyntacticDerivationAxiomTactics}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 
 /**
@@ -328,14 +328,26 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   it should "work on boxes" in {
-    val f = helper.parseFormula("[a:=b;](true -> x-y=1)'")
+    val f = helper.parseFormula("[x'=b;](x-x<1)'")
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[a:=b;]((!true)'&x'-y'=0)")
+    val expected = helper.parseFormula("[a'=b;](x'-y'<0)")
     helper.report(node)
     require(containsOpenGoal(node, expected))
+  }
+
+  it should "work on a previous counter-example" in {
+    val f = helper.parseFormula("x=1&[$$x'=y & true,y'=x & (x^2+y^2=1)$$;](x=1)'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+//    val expected = helper.parseFormula("[a:=b;]((!true)'&x'-y'=0)")
+    helper.report(node)
+//    require(containsOpenGoal(node, expected))
   }
 }

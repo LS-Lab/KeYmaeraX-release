@@ -9,6 +9,7 @@
  */
 package edu.cmu.cs.ls.keymaera.tactics
 
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.Tool
 import Config._
@@ -696,6 +697,21 @@ object Tactics {
 
       //@TODO Unfortunately, this crucially relies on stable positions
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) & pt.apply(p)
+    }
+
+    def formulaAtPosition(sequent : Sequent, position : Position) : Option[Formula] = {
+      var formula : Option[Formula] = None
+      val fn = new ExpressionTraversalFunction {
+        override def preF(posInExpr : PosInExpr, f : Formula) = {
+          if(posInExpr.equals(position.inExpr)) {
+            formula = Some(f)
+            Left(Some(ExpressionTraversal.stop))
+          }
+          else { Left(None) }
+        }
+      }
+      ExpressionTraversal.traverse(fn, sequent(position))
+      formula
     }
   }
 

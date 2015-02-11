@@ -183,7 +183,7 @@ class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool :
    */
   def runTactic(tactic : Tactic, rootNode : ProofNode, mustApply:Boolean=false):ProofNode = {
     if(!tactic.applicable(rootNode)) {
-      throw new Exception("runTactic was called on tactic " + tactic.name + ", but is not applicable on the node.")
+      throw new Exception("runTactic was called on tactic " + tactic.name + ", but is not applicable on the node")
     }
 
     //Dispatching the tactic.

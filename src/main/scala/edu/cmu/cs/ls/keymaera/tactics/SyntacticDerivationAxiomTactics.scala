@@ -282,7 +282,7 @@ object SyntacticDerivationAxiomTactics {
   def GreaterEqualDerivativeT = new AxiomTactic(">=' derive >=", ">=' derive >=") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(GreaterEqual(eqSort, s, t)) => true
-      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+//      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -349,7 +349,7 @@ object SyntacticDerivationAxiomTactics {
   def GreaterThanDerivativeT = new AxiomTactic(">' derive >", ">' derive >") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(GreaterThan(eqSort, s, t)) => true
-      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+//      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -416,7 +416,7 @@ object SyntacticDerivationAxiomTactics {
   def LessEqualDerivativeT = new AxiomTactic("<=' derive <=", "<=' derive <=") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(LessEqual(eqSort, s, t)) => true
-      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+//      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -483,7 +483,7 @@ object SyntacticDerivationAxiomTactics {
   def LessThanDerivativeT = new AxiomTactic("<' derive <", "<' derive <") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(LessThan(eqSort, s, t)) => true
-      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+//      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
       case _ => false
     }
 
@@ -905,6 +905,7 @@ End.
         else {
           new SuccPosition(p.getIndex)
         }
+        println("here!")
 
         Some(buildConstantEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
       }
@@ -970,6 +971,7 @@ End.
         else {
           new SuccPosition(p.getIndex)
         }
+        println("here2!")
 
         Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
       }
