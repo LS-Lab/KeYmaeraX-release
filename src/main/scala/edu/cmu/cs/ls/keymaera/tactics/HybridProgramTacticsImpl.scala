@@ -34,7 +34,7 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    *
    */
-  protected[tactics] def boxDerivativeAssignT: PositionTactic = new AxiomTactic("[':=] differential assign equational", "[':=] differential assign equational") {
+  def boxDerivativeAssignT: PositionTactic = new AxiomTactic("[':=] differential assign equational", "[':=] differential assign equational") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(Derivative(_,Variable(_)),_),_) => true
       case Modality(Assign(Derivative(Variable(_), _), _),_) => true //@todo Why do we need to match on both so often?
@@ -73,64 +73,57 @@ object HybridProgramTacticsImpl {
      */
     override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution,
         Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(Assign(Derivative(Real, v: Variable), t), p) => {
+      case BoxModality(Assign(dv@Derivative(sort, v: Variable), t), p) => {
         // Construct the axiom substitution.
-        val axiomV = Variable("v", None, Real)
-        val axiomDV = Derivative(Real, axiomV)
-        val axiomT = Variable("t", None, Real)
-        val axiomP = Function("p", None, Real, Bool)
+        val axiomV = Variable("v", None, sort)
+        val axiomDV = Derivative(sort, axiomV)
+        val axiomT = Variable("t", None, sort)
+        val axiomP = Function("p", None, sort, Bool)
         // substitution in axiom = [v' := t;]p(v') <-> \forall v . (v'=t -> p(v'))
         val substitution = Substitution(
           List(
-            new SubstitutionPair(axiomDV, Derivative(Real, v)), //@todo why is this not included in the other assignment axiom?
-            new SubstitutionPair(axiomV, v), //@todo why is this not included in the other assignment axiom?
+            new SubstitutionPair(axiomDV, dv),
             new SubstitutionPair(axiomT, t),
-            // TODO replace with new CDot notation, probably: new SubstitutionPair(ApplyPredicate(axiomP, CDot), replace(p)(axiomDV, CDot))
-            new SubstitutionPair(ApplyPredicate(axiomP, axiomDV), p) //used to be just apply(..,axiomDV) and p.
+            new SubstitutionPair(ApplyPredicate(axiomP, CDot), replaceFree(p)(dv, CDot))
           )
         )
 
         //construct the RHS of the axiom instance: \forall v . (v'=t -> p(v'))
-        val fv = TacticHelper.freshNamedSymbol(v, f) //fresh variable.
+        val fv = TacticHelper.freshNamedSymbol(v, f)
         val dfv = Derivative(Real, fv)
-        val g = Forall(Seq(fv), Imply(Equals(Real, dfv, t), termReplace(p)(Derivative(Real, v), dfv)))
+        val g = Forall(Seq(fv), Imply(Equals(Real, dfv, t), replaceFree(p)(dv, dfv)))
 
         val axiomInstance = Equiv(f, g)
 
         // Construct the axiom, but ensure the naming is correct.
-//        val Equiv(left, right) = axiom
-//        val (alphaAxiom, cont) = {
-//          if (v.name == "v" && v.index == None) {
-//            (Equiv(left, replace(right)(axiomV, xx)), Some(alpha(left = false)))
-//          }
-//          else {
-//            (Equiv(replace(lef)(aX, x), replace(right)(aX, xx)), Some(alpha(left = true)))
-//          }
-//        }
+        def alpha(left: Boolean) = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(BoxModality(Assign(Derivative(_, _), _), _), Forall(_, _)) => true
+            case _ => false
+          }
 
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              if(left)
+                Some(alphaRenamingT(v.name, v.index, axiomV.name, axiomV.index)(p.first)
+                  & alphaRenamingT(fv.name, fv.index, axiomV.name, axiomV.index)(p.second))
+              else
+                Some(alphaRenamingT(fv.name, fv.index, axiomV.name, axiomV.index)(p.second))
 
-        Some(axiom, axiomInstance, substitution, None, None) //?
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
 
+        val Equiv(left, right) = axiom
+        val (alphaAxiom, cont) = {
+          if (v.name == axiomV.name && v.index == axiomV.index)
+            (Equiv(left, replaceFree(right)(axiomV, fv)), Some(alpha(left = false)))
+          else (Equiv(replaceFree(left)(axiomV, v, None), replaceFree(right)(axiomV, fv)), Some(alpha(left = true)))
+        }
 
-
-//        val g = Forall(Seq(Derivative(v)),)
-//        val axiomInstance =
-
-
+        Some(alphaAxiom, axiomInstance, substitution, None, cont)
       }
     }
-
-    /**
-     * Replaces old with new in target, where old and new can be terms.
-     * @param target
-     * @param oldTerm
-     * @param newTerm
-     * @return [new / old] target
-     */
-    private def termReplace(target: Formula)(oldTerm: Term, newTerm: Term) = {
-      ???
-    }
-
   }
 
   def boxAssignT: PositionTactic = new PositionTactic("[:=] assign equational") {

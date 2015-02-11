@@ -562,4 +562,37 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       )
     )
   }
+
+  "Derivative assignment" should "introduce universal quantifier and rename appropriately" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    val tactic = locateSucc(boxDerivativeAssignT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;]x'>0".asFormula))) should be (
+      sucSequent("\\forall x_0. (x_0'=y -> x_0'>0)".asFormula)
+    )
+  }
+
+  it should "not rename when there is nothing to rename" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    val tactic = locateSucc(boxDerivativeAssignT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;]y>0".asFormula))) should be (
+      sucSequent("\\forall x_0. (x_0'=y -> y>0)".asFormula)
+    )
+  }
+
+  it should "rename free occurrences in subsequent modalities" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    val tactic = locateSucc(boxDerivativeAssignT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=z;]x'+y'>0".asFormula))) should be (
+      sucSequent("\\forall x_0. (x_0'=y -> [y':=z;]x_0'+y'>0)".asFormula)
+    )
+  }
+
+  // TODO
+  ignore should "work on mutual assignments" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    val tactic = locateSucc(boxDerivativeAssignT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=x;]x'+y'>0".asFormula))) should be (
+      sucSequent("\\forall x_0. (x_0'=y -> [y':=x;]x_0'+y'>0)".asFormula)
+    )
+  }
 }
