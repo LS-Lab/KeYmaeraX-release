@@ -1,5 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{PropositionalInContextTactic, DerivativeAxiomInContextTactic, TermAxiomTactic, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
@@ -48,28 +49,17 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
   }
 
-  "Derivative axiom in context tactic" should "use axiom instance and substitution constructed by subclasses" in {
+  "Derivative axiom in context tactic" should "use information provided by subclasses" in {
     def dacT: PositionTactic = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
       override def applies(f: Formula) = f match {
         case FormulaDerivative(GreaterThan(_, _, _)) => true
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula, pos: Position): Option[(Formula,
-          Substitution, Option[PositionTactic])] = f match {
+      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
         case FormulaDerivative(GreaterThan(sort, s, t)) =>
           // expected axiom instance
-          val desiredResult = GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))
-
-          // prepare substitution
-          val aS = Variable("s", None, Real)
-          val aT = Variable("t", None, Real)
-          val subsDefs = List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))
-
-          // alpha rename desired result
-
-          // bundle result
-          Some(desiredResult, Substitution(subsDefs), None)
+          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)), None)
         case _ => None
       }
     }
@@ -80,25 +70,62 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
   }
 
-  "Propositional context axiom tactic" should "use desired result and substitution constructed by subclasses" in {
+  it should "use provided renaming tactic" in {
+    def dacT: PositionTactic = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
+      override def applies(f: Formula) = f match {
+        case FormulaDerivative(GreaterThan(_, _, _)) => true
+        case _ => false
+      }
+
+      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])]= f match {
+        case FormulaDerivative(GreaterThan(sort, s, t)) =>
+          // expected axiom instance
+          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)),
+            Some(discreteGhostT(Some(Variable("s", None, Real)), s) &
+              discreteGhostT(Some(Variable("t", None, Real)), t)))
+        case _ => None
+      }
+    }
+
+    val tactic = dacT(SuccPosition(0, PosInExpr(1 :: Nil)))
+    getProofSequent(tactic, new RootNode(sucSequent("[z':=2;](x>y)'".asFormula))) should be (
+      sucSequent("[z':=2;]x'>=y'".asFormula)
+    )
+  }
+
+  it should "replace arbitrary terms to axiom names" in {
+    def dacT: PositionTactic = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
+      override def applies(f: Formula) = f match {
+        case FormulaDerivative(GreaterThan(_, _, _)) => true
+        case _ => false
+      }
+
+      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+        case FormulaDerivative(GreaterThan(sort, s, t)) =>
+          // expected axiom instance
+          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)),
+            Some(discreteGhostT(Some(Variable("s", None, Real)), s) &
+              discreteGhostT(Some(Variable("t", None, Real)), t))
+            )
+        case _ => None
+      }
+    }
+
+    val tactic = dacT(SuccPosition(0, PosInExpr(1 :: Nil)))
+    getProofSequent(tactic, new RootNode(sucSequent("[z':=2;](x+5>y^2)'".asFormula))) should be (
+      sucSequent("[z':=2;](x+5)'>=(y^2)'".asFormula)
+    )
+  }
+
+  "Propositional context axiom tactic" should "use desired result and renaming tactic constructed by subclasses" in {
     def propT: PositionTactic = new PropositionalInContextTactic("NNF") {
       override def applies(f: Formula) = f match {
         case Not(Not(_)) => true
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula, pos: Position): Option[(Formula,
-          Substitution, Option[PositionTactic])] = f match {
-        case Not(Not(phi)) =>
-          // expected axiom instance
-          val desiredResult = phi
-
-          // prepare substitution
-          val aF = PredicateConstant("f")
-          val subsDefs = List(SubstitutionPair(aF, f))
-
-          // bundle result
-          Some(desiredResult, Substitution(subsDefs), None)
+      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+        case Not(Not(phi)) => Some(phi, None)
         case _ => None
       }
     }

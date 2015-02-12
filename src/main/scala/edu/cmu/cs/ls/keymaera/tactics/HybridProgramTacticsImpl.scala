@@ -304,7 +304,7 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for reversing box assignment [v := t;], i.e., introduces a ghost v for term t
    * @return The axiom tactic.
    */
-  protected[tactics] def discreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] assign", "[:=] assign") {
+  def discreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] assign", "[:=] assign") {
     override def applies(f: Formula): Boolean = true
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):

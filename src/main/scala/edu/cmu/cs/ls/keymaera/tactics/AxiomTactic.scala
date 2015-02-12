@@ -155,24 +155,12 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
   override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
 
   /**
-   * This methods constructs the desired result before the renaming, substitution to be performed and a tactic
-   * that performs the renaming.
-   *
-   * An contextualize knowledge tactic performs the following steps:
-   * 1. Guess desired result
-   * 2. Rename bound variables to match the instance we want
-   * 3. Perform Uniform substitution
+   * This method constructs the desired result before the renaming.
    *
    * @param f the formula that should be rewritten
-   * @param pos the position to which this rule is applied to
-   * @return (Desired result before executing the given position tactic;
-   *         the uniform substitution that transforms the desired result into the second axiom (Hilbert style);
-   *         an optional position tactic that transforms the actual axiom or propositional truth
-   *         into the desired result (usually substitution)).
-   * @see #constructInstanceAndSubst(Formula)
+   * @return Desired result before executing the renaming
    */
-  def constructInstanceAndSubst(f: Formula, pos: Position): Option[(Formula,
-    Substitution, Option[PositionTactic])]
+  def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])]
 
   //@TODO Add contract that applies()=>\result fine
   override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
@@ -180,8 +168,9 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       import TacticLibrary.{abstractionT,skolemizeT,cutT}
-      constructInstanceAndSubst(getFormula(node.sequent, pos), pos) match {
-        case Some((desiredResult, subst, succTac)) =>
+      import scala.language.postfixOps
+      constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
+        case Some((desiredResult, renameTactic)) =>
           val f = getFormula(node.sequent, pos)
           def fToPhi(phi: Formula) = new ExpressionTraversalFunction {
             override def preF(pos: PosInExpr, frm: Formula): Either[Option[StopTraversal], Formula] =
@@ -204,11 +193,8 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
               AxiomCloseT
             )
 
-          //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
-          //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
-          val succCont = succTac match {
-            // SuccPosition(0) is the only position remaining in axiom proof
-            case Some(tactic) => assertT(0, 1) & tactic(SuccPosition(0))
+          val cont = renameTactic match {
+            case Some(t) => assertT(0, 1) & t(SuccPosition(0))
             case None => NilT
           }
 
@@ -217,7 +203,9 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
           val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
             assertT(axiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
             abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
-            assertT(0, 1) & succCont & LabelBranch("knowledge subclass continue"))
+            assertT(0, 1) & cont &
+            (((abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)))*) | NilT)
+            & LabelBranch("knowledge subclass continue"))
           Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
         case None => None
       }
@@ -236,17 +224,21 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
   require(Axiom.axioms != null, "the list of axioms should be defined.")
   require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
   val axiom = Axiom.axioms.get(axiomName)
-  def applies(f: Formula): Boolean
-  override def applies(s: Sequent, p: Position): Boolean = axiom.isDefined && applies(getFormula(s, p))
+  override def applies(s: Sequent, p: Position) = axiom.isDefined && super.applies(s, p)
 
-  import TacticLibrary.AxiomCloseT
-  import AxiomTactic.axiomT
-  import scala.language.postfixOps
-  override def apply(pos: Position): Tactic = super.apply(pos) &
-    onBranch("knowledge subclass continue", axiomT(axiomName) & assertT(1,1) & ImplyRightT(SuccPosition(0)) &
-      EquivLeftT(AntePosition(0)) & AndLeftT(AntePosition(0)) & onBranch(
-        (equivRightLbl, locateAnte(NotLeftT)*)
-      ) & AxiomCloseT)
+  override def apply(pos: Position): Tactic = super.apply(pos) & new ConstructionTactic(this.name) {
+    import TacticLibrary.AxiomCloseT
+    import AxiomTactic.axiomT
+    import scala.language.postfixOps
+
+    override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      Some(onBranch("knowledge subclass continue", axiomT(axiomName) & assertT(1,1) &
+        ImplyRightT(SuccPosition(0)) & EquivLeftT(AntePosition(0)) & AndLeftT(AntePosition(0)) &
+        onBranch((equivRightLbl, locateAnte(NotLeftT)*)) & AxiomCloseT))
+    }
+  }
 }
 
 /**
