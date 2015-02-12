@@ -1,5 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
+import edu.cmu.cs.ls.keymaera.core
+import edu.cmu.cs.ls.keymaera.core.Substitution._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
@@ -17,7 +19,7 @@ import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
 
 import scala.collection.immutable.{List, Seq}
 
-import AlphaConversionHelper._
+import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 
 /**
  * Implementation of tactics for handling hybrid programs.
@@ -30,15 +32,76 @@ object HybridProgramTacticsImpl {
 
   /**
    * Creates a new axiom tactic for differential box assignment [x := t;]
+   *  [v':=t;]p(v') <-> p(t)
    * @author Nathan Fulton
    * @return The axiom tactic.
    *
    */
-  def boxDerivativeAssignT: PositionTactic = new AxiomTactic("[':=] differential assign equational", "[':=] differential assign equational") {
+  def boxDerivativeAssignT : AxiomTactic = new AxiomTactic("[':=] differential assign", "[':=] differential assign") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(Assign(Derivative(vSort,v:Variable), _), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+      case BoxModality(Assign(Derivative(vSort, v:Variable), t), p) => {
+        val g  = replaceFree(p)(Derivative(vSort, v), t)
+        val axiomInstance = Equiv(f, g)
+        println("Axiom instance is: " + axiomInstance.prettyString())
+
+        val aV = Variable("v", None, vSort)
+        val aT = Variable("t", None, vSort)
+        val aP = Function("p", None, vSort, Bool)
+        val aP_of_cdot = ApplyPredicate(aP, CDot) //(p(t)
+
+
+        val p_of_t = replace(p)(Derivative(vSort, v), t)
+
+        val subst = Substitution(List(
+          SubstitutionPair(aT, t),
+          SubstitutionPair(aP_of_cdot, replaceFree(p)(Derivative(vSort, v), CDot))
+        ))
+
+        def alpha(left: Boolean) = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              if(left)
+                Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first)
+                  & alphaRenamingT(v.name, v.index, aV.name, None)(p.second))
+              else
+                Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.second))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
+        val (alphaAxiom, cont) = {
+          if(v.name == aV.name && v.index == aV.index) {
+            (axiom, None)
+          }
+          else {
+            (
+              Equiv(replaceFree(f)(aV, v), replaceFree(g)(aV,v)),
+              Some(alpha(left = false))
+            )
+          }
+        }
+
+        Some(alphaAxiom, axiomInstance, subst, None, cont)
+      }
+      case _ => throw new Exception("Tactic was not applicable")
+    }
+  }
+
+
+  def boxDerivativeAssignTold: PositionTactic = new AxiomTactic("[':=] differential assign equational", "[':=] differential assign equational") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Assign(Derivative(_,Variable(_)),_),_) => true
-      case Modality(Assign(Derivative(Variable(_), _), _),_) => true //@todo Why do we need to match on both so often?
-      case _ => throw new Exception("wtf?")
     }
 
     /**

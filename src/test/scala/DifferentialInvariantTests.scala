@@ -37,6 +37,30 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   private def containsOpenGoal(node:ProofNode, f:Formula) =
     !node.openGoals().find(_.sequent.succ.contains(f)).isEmpty
 
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Differential Assignment
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  "Differential Assignment" should "work" in {
+    val f = helper.parseFormula("[x' := 2;]x' > 1")
+    val expected = helper.parseFormula("2 > 1")
+
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(HybridProgramTacticsImpl.boxDerivativeAssignT)
+    helper.runTactic(tactic, node, true)
+    containsOpenGoal(node, expected)
+  }
+
+  it should "work in a more comlicated example" in {
+    val f = helper.parseFormula("[x' := a+2+2;](x' = x' & x' > y)")
+    val expected = helper.parseFormula("a+2+2 = a+2+2 & a+2+2 > y")
+
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(HybridProgramTacticsImpl.boxDerivativeAssignT)
+    helper.runTactic(tactic, node, true)
+    containsOpenGoal(node, expected)
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential invariants where invariant is already part of the formula? @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -536,4 +560,6 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     helper.runTactic(tactic,node)
     helper.report(node)
   }
+
+
 }
