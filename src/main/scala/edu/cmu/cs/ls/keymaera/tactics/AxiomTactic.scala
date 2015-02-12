@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
@@ -145,45 +146,32 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
 }
 
 /**
- * Base class for tactics that want to use some knowledge in context. Derived classes have to close the cutShowLbl
- * branch (e.g., by axiom lookup or propositional tactics).
+ * Base class for tactics that want to use some knowledge in context. Derived classes have to close the
+ * "knowledge subclass continue" branch (e.g., by axiom lookup or propositional tactics).
  * @param name The name of the tactic.
- * @param knowledge The knowledge (often an axiom).
  */
-abstract class ContextualizeKnowledgeTactic(name: String, knowledge: Formula) extends PositionTactic(name) {
+abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic(name) {
   def applies(f: Formula): Boolean
   override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
 
   /**
-   * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
+   * This methods constructs the desired result before the renaming, substitution to be performed and a tactic
    * that performs the renaming.
    *
-   * An axiom tactic performs the following steps (Hilbert style):
-   * 1. Guess axiom
+   * An contextualize knowledge tactic performs the following steps:
+   * 1. Guess desired result
    * 2. Rename bound variables to match the instance we want
-   * 3. Perform Uniform substitution to instantiate the axiom
+   * 3. Perform Uniform substitution
    *
-   * Axioms usually have the form ax = OP(a, b). The constructed instance either has the form OP(f, g) or OP(g, f).
-   * Here, f is an input to this function and g is derived from the axiom to be used. The output of this function
-   * should be 4 things:
-   * 1. The form of the axiom before apply the tactic provided in 4
-   * 2. The instance of the axiom eventually to be used in the proof
-   * 3. The substitution to turn 2 into 1
-   * 4. A tactic to turn the result of 3 into the actual axiom
-   *
-   * In the long run all this should be computed by unification.
-   *
-   * @param f the formula that should be rewritten using the axiom
-   * @param ax the axiom to be used
+   * @param f the formula that should be rewritten
    * @param pos the position to which this rule is applied to
-   * @return (Axiom before executing the given position tactic;
-   *         the instance of the axiom,
-   *         the uniform substitution that transforms the first into the second axiom (Hilbert style);
-   *         an optional position tactic that transforms the first
-   *         argument into the actual axiom (usually alpha renaming)).
+   * @return (Desired result before executing the given position tactic;
+   *         the uniform substitution that transforms the desired result into the second axiom (Hilbert style);
+   *         an optional position tactic that transforms the actual axiom or propositional truth
+   *         into the desired result (usually substitution)).
    * @see #constructInstanceAndSubst(Formula)
    */
-  def constructInstanceAndSubst(f: Formula, top: Formula, ax: Formula, pos: Position): Option[(Formula,
+  def constructInstanceAndSubst(f: Formula, pos: Position): Option[(Formula,
     Substitution, Option[PositionTactic])]
 
   //@TODO Add contract that applies()=>\result fine
@@ -192,40 +180,30 @@ abstract class ContextualizeKnowledgeTactic(name: String, knowledge: Formula) ex
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       import TacticLibrary.{abstractionT,skolemizeT,cutT}
-      constructInstanceAndSubst(getFormula(node.sequent, pos), getFormula(node.sequent, pos.topLevel), knowledge, pos) match {
+      constructInstanceAndSubst(getFormula(node.sequent, pos), pos) match {
         case Some((desiredResult, subst, succTac)) =>
-
           val f = getFormula(node.sequent, pos)
-          val knows = knowledge match {
-            case Equiv(_, _) => Equiv(f, desiredResult)
-            case _ => ???
-          }
-
-          val fToAxiom = new ExpressionTraversalFunction {
+          def fToPhi(phi: Formula) = new ExpressionTraversalFunction {
             override def preF(pos: PosInExpr, frm: Formula): Either[Option[StopTraversal], Formula] =
-              if (frm == f) Right(knows) else Left(None)
+              if (frm == f) Right(phi) else Left(None)
           }
-          val axiomInContext = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fToAxiom),
-              getFormula(node.sequent, pos.topLevel)) match {
+          def traverse(phi: Formula) = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fToPhi(phi)),
+            getFormula(node.sequent, pos.topLevel)) match {
             case Some(frm) => frm
             case None => throw new IllegalArgumentException("Unable to replace formula")
           }
-
-          val fToDesiredResult = new ExpressionTraversalFunction {
-            override def preF(pos: PosInExpr, frm: Formula): Either[Option[StopTraversal], Formula] =
-              if (frm == f) Right(desiredResult) else Left(None)
-          }
-          val inContextDesiredResult = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fToDesiredResult),
-              getFormula(node.sequent, pos.topLevel)) match {
-            case Some(frm) => frm
-            case None => throw new IllegalArgumentException("Unable to replace formula")
-          }
-
-          val axiomInstance = Imply(inContextDesiredResult, axiomInContext)
+          val desiredResultInContext = traverse(desiredResult)
+          val fInContext = getFormula(node.sequent, pos.topLevel)
+          val axiomInstance = Imply(desiredResultInContext, fInContext)
 
           val axiomInstPos = AntePosition(node.sequent.ante.length)
-          val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & ImplyLeftT(axiomInstPos) &&
-            (hideT(pos.topLevel) /* desired result */, /* TODO monotonicity etc. */ NilT)
+
+          val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) &
+            ImplyLeftT(axiomInstPos) && (
+              hideT(SuccPosition(0)) /* desired result remains */,
+              AxiomCloseT
+            )
+
           //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
           //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
           val succCont = succTac match {
@@ -237,9 +215,9 @@ abstract class ContextualizeKnowledgeTactic(name: String, knowledge: Formula) ex
           println("Axiom instance " + axiomInstance)
           val axiomPos = SuccPosition(node.sequent.succ.length)
           val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
-            assertT(axiomInstance, SuccPosition(0)) & ImplyRightT(SuccPosition(0)) & hideT(AntePosition(0)) &
-            abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) &
-            skolemizeT(SuccPosition(0)) & uniformSubstT(subst, Map()) & assertT(0, 1) & succCont)
+            assertT(axiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
+            abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
+            assertT(0, 1) & succCont & LabelBranch("knowledge subclass continue"))
           Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
         case None => None
       }
@@ -254,9 +232,7 @@ abstract class ContextualizeKnowledgeTactic(name: String, knowledge: Formula) ex
  * @param axiomName The name of the axiom.
  */
 abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
-    extends ContextualizeKnowledgeTactic(name, Axiom.axioms.get(axiomName) match {
-      case Some(ax) => ax
-      case None => throw new IllegalArgumentException("Unknown axiom name") }) {
+    extends ContextualizeKnowledgeTactic(name) {
   require(Axiom.axioms != null, "the list of axioms should be defined.")
   require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
   val axiom = Axiom.axioms.get(axiomName)
@@ -265,22 +241,25 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
 
   import TacticLibrary.AxiomCloseT
   import AxiomTactic.axiomT
+  import scala.language.postfixOps
   override def apply(pos: Position): Tactic = super.apply(pos) &
-    onBranch(cutShowLbl, axiomT(axiomName) & assertT(1,1) & AxiomCloseT)
+    onBranch("knowledge subclass continue", axiomT(axiomName) & assertT(1,1) & ImplyRightT(SuccPosition(0)) &
+      EquivLeftT(AntePosition(0)) & AndLeftT(AntePosition(0)) & onBranch(
+        (equivRightLbl, locateAnte(NotLeftT)*)
+      ) & AxiomCloseT)
 }
 
 /**
  * Base class for propositional equivalences in context tactics.
  * @param name The name of the tactic.
- * @param f The formula (propositional equivalence).
  */
-abstract class PropositionalInContextTactic(name: String, f: Formula)
-    extends ContextualizeKnowledgeTactic(name, f) {
+abstract class PropositionalInContextTactic(name: String)
+    extends ContextualizeKnowledgeTactic(name) {
   def applies(f: Formula): Boolean
   override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
 
   override def apply(pos: Position): Tactic = super.apply(pos) &
-    onBranch(cutShowLbl, TacticLibrary.propositional)
+    onBranch("knowledge subclass continue", TacticLibrary.propositional)
 }
 
 /**

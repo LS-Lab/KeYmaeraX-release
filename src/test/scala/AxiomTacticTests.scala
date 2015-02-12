@@ -1,4 +1,3 @@
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{PropositionalInContextTactic, DerivativeAxiomInContextTactic, TermAxiomTactic, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
@@ -56,7 +55,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula, top: Formula, ax: Formula, pos: Position): Option[(Formula,
+      override def constructInstanceAndSubst(f: Formula, pos: Position): Option[(Formula,
           Substitution, Option[PositionTactic])] = f match {
         case FormulaDerivative(GreaterThan(sort, s, t)) =>
           // expected axiom instance
@@ -67,7 +66,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           val aT = Variable("t", None, Real)
           val subsDefs = List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))
 
-          // alpha rename axiom instance
+          // alpha rename desired result
 
           // bundle result
           Some(desiredResult, Substitution(subsDefs), None)
@@ -82,13 +81,13 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Propositional context axiom tactic" should "use desired result and substitution constructed by subclasses" in {
-    def propT: PositionTactic = new PropositionalInContextTactic("NNF", Equiv(PredicateConstant("f"), Not(Not(PredicateConstant("f"))))) {
+    def propT: PositionTactic = new PropositionalInContextTactic("NNF") {
       override def applies(f: Formula) = f match {
         case Not(Not(_)) => true
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula, top: Formula, ax: Formula, pos: Position): Option[(Formula,
+      override def constructInstanceAndSubst(f: Formula, pos: Position): Option[(Formula,
           Substitution, Option[PositionTactic])] = f match {
         case Not(Not(phi)) =>
           // expected axiom instance
