@@ -181,4 +181,37 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 
     helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
   }
+
+  "Local lane control" should "be provable" in {
+    import scala.language.postfixOps
+    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
+    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
+    import Tactics.NilT
+
+    val file = new File("examples/dev/t/casestudies/car/dccs/llc.key")
+    val s = parseToSequent(file)
+
+    val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) & NilT
+
+    val tactic = ls(ImplyRightT) &
+      ls(wipeContextInductionT(Some("vf>=0 & vl>=0 & xf<xl & xl > xf + vf^2/(2*b) - vl^2/(2*B)".asFormula))) &
+      onBranch(
+        (indInitLbl, debugT("init") & defaultNoArith),
+        (indStepLbl, debugT("step") & ls(ImplyRightT) &
+          ls(boxSeqT) & ls(boxNDetAssign) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) &
+          ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
+            debugT("choice 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxNDetAssign) &
+              ls(boxTestT) & ls(ImplyRightT) & plantTactic,
+            debugT("choice 2") & ls(boxChoiceT) & ls(AndRightT) && (
+              debugT("choice 2.1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) & plantTactic,
+              debugT("choice 2.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(boxTestT) & ls(ImplyRightT) & plantTactic
+            )
+          )
+        ),
+        (indUseCaseLbl, debugT("use") & default)
+      )
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
 }
