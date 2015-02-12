@@ -6,9 +6,9 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 
 /**
- * Rewrites formulas into negation normal form using DeMorgan's laws and double negation elimination.
- * Created by nfulton on 2/11/15.
- */
+* Rewrites formulas into negation normal form using DeMorgan's laws and double negation elimination.
+* Created by nfulton on 2/11/15.
+*/
 object NNFRewrite {
   def apply(p : Position) = NegationNormalFormT(p)
 
@@ -18,6 +18,21 @@ object NNFRewrite {
     override def apply(p: Position): Tactic = ???
   }
 
+  /*
+   * Obligation: Show [pi;](f <-> g) |- [pi;]f
+   * Have: Transformation from |- f to |- g
+   * Strategy: Apply monotonicity and then break up the implication, creating two obligations:
+   *    f |- g, g
+   *      Run the tactic at the final position and then do an axiom close on the antecedent and the final position.
+   *    g |- g, f
+   *      Axiom close on the antecedent and the original succedent position.
+   */
+  def useDerivationInContext(proofOfValidity : Tactic) : Position = ???
+
+  /*
+   * Have: !(!f)
+   * Wnat: f
+   */
   def DoubleNegationEliminationT : PositionTactic = new PositionTactic("Double Negation Elimination") {
     override def applies(s: Sequent, p: Position): Boolean = formulaAtPosition(s,p) match {
       case Some(Not(Not(f))) => true
@@ -97,7 +112,6 @@ object NNFRewrite {
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, initialEquivPosition)
-
     }
   }
 }
