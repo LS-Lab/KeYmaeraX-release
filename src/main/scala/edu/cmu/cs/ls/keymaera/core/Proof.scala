@@ -1656,7 +1656,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       case BoxModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, BoxModality.apply)
       case DiamondModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, DiamondModality.apply)
       case _ if bound.contains(oldVar) => Right(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(e))
-      case _ => Left(None)
+      case _ if !(bound.contains(oldVar)) => Left(None)
     }
   }
 
