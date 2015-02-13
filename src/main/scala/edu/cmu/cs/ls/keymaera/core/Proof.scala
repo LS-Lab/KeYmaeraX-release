@@ -1085,7 +1085,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Test(f) => BindingAssessment(u, u, freeVariables(u, f))
     case Assign(x: Variable, e) => BindingAssessment(u+x, u+x, freeVariables(u, e))
     case Assign(CDot, e) => BindingAssessment(u+CDot, u+CDot, freeVariables(u, e))
-    case Assign(Derivative(_,x:Variable), e) => BindingAssessment(u+x, u+x, freeVariables(u,e)) //@todo check beforeCommit nrf
+    case Assign(Derivative(_, CDot), e) => BindingAssessment(u+CDot, u+CDot, freeVariables(u, e)) //@todo soundness check nrf
+    case Assign(Derivative(_,x:Variable), e) => BindingAssessment(u+x, u+x, freeVariables(u,e)) //@todo soundness check nrf
     case NDetAssign(x:Variable) => BindingAssessment(u+x, u+x, Set.empty)
     // x maybe read because ODE reads its initial value, as well as bound and maybe bound because ODE writes it
     case NFContEvolve(v, Derivative(_, x: Variable), e, h) => BindingAssessment(u+x, u+x,
@@ -1290,8 +1291,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
     case Assign(CDot, e) => (u+CDot, Assign(CDot, usubst(u, e)))
-    case Assign(d@Derivative(_, x: Variable), e) => (u+x, Assign(d, usubst(u,e))) //@todo check NRFbeforeCommit
-    case CheckedContEvolveFragment(child) => { //@todo woah eisegesis I have no idea what I'm doing here...
+    case Assign(d@Derivative(_, CDot), e) => (u+CDot, Assign(CDot, usubst(u, e))) //@todo eisegesis This might actually be wrong?
+    case Assign(d@Derivative(_, x: Variable), e) => (u+x, Assign(d, usubst(u,e))) //@todo eisegesis
+    case CheckedContEvolveFragment(child) => { //@todo eisegesis
       val rec = usubst(u, child)
       val result = rec._2
       val rec_u = rec._1

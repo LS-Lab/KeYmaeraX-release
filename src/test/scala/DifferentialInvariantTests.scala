@@ -534,15 +534,16 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   // Diff invariant system tail
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "Diff invariant system tail" should "apply to an appropriate system" in {
-    val expected = helper.parseFormula("[$$a'=`y & (2=2),y'=`a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;]1=1)")
-    val node = helper.formulaToNode(expected)
+    val f = helper.parseFormula("[$$a'≚y & (2=2),y'≚a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;]1=1)")
+    val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemTailT)
     require(tactic.applicable(node))
+    helper.runTactic(tactic, node)
 
   }
 
   it should "not apply to an inappropriate system" in {
-    val expected = helper.parseFormula("[$$a'=y & (2=2),y'=`a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;]1=1)") //just removed the ` from the first equality.
+    val expected = helper.parseFormula("[$$a'=y & (2=2),y'≚a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;]1=1)") //just removed the ` from the first equality.
     val node = helper.formulaToNode(expected)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemTailT)
     require(!tactic.applicable(node))
@@ -552,9 +553,9 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   // Diff invariant system general
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "General diff invariant" should "simple example." in {
-    val f = helper.parseFormula("[x'=y, y'=x & x^2 + y^2 = 1;]x^2 + y^2 = 1")
+    val f = helper.parseFormula("[x'=y, y'=x & x^2 + y^2 = 1;]x + y = 1")
     val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(TacticLibrary.diffInvariantSystemT)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantT)
     require(tactic.applicable(node))
 
     helper.runTactic(tactic,node)

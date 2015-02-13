@@ -522,7 +522,11 @@ object ODETactics {
       f match {
         //      case BoxModality(IncompleteSystem(ContEvolveProduct(ContEvolve(Equals(_,Derivative(Real, x:Variable), t:Term)), _))) => true
         case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(_,Derivative(Real, x:Variable),_,h), _)), _) => true
-        case _ => false
+        case BoxModality(IncompleteSystem(cp:ContEvolveProduct),_) => cp.normalize() match {
+          case ContEvolveProduct(NFContEvolve(_,Derivative(Real, x:Variable),_,h), _) => true
+          case _ => false
+        }
+        case _ => {println("Does not apply to: " + f.prettyString()); false}
       }
     }
 
@@ -532,52 +536,65 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(vars, Derivative(Real, x:Variable), t:Term, h), c:ContEvolveProgram)), p:Formula) => {
-
-        val g = BoxModality(
-          IncompleteSystem(
-            ContEvolveProduct(
-              c,
-              ContEvolveProduct(
-                CheckedContEvolveFragment(NFContEvolve(vars, Derivative(Real,x), t, h)),
-                EmptyContEvolveProgram()
+      case BoxModality(boxProgram : Program, p:Formula) => {
+        val (nfce : NFContEvolve, c:ContEvolveProgram) = boxProgram match {
+          case IncompleteSystem(ContEvolveProduct(nfce:NFContEvolve, c:ContEvolveProgram)) => {
+            (nfce, c)
+          }
+          case IncompleteSystem(cp : ContEvolveProduct) => cp.normalize() match {
+            case ContEvolveProduct(nfce:NFContEvolve, c:ContEvolveProgram) =>
+              (nfce, c)
+          }
+          case _ => throw new Exception("Should never get here.")
+        }
+        nfce match {
+          case NFContEvolve(vars, Derivative(Real, x:Variable), t:Term, h) => {
+            val g = BoxModality(
+              IncompleteSystem(
+                ContEvolveProduct(
+                  c,
+                  ContEvolveProduct(
+                    CheckedContEvolveFragment(NFContEvolve(vars, Derivative(Real,x), t, h)),
+                    EmptyContEvolveProgram()
+                  )
+                )
+              ),
+              BoxModality(
+                Assign(Derivative(Real, x), t),
+                Imply(h, p)
               )
             )
-          ),
-          BoxModality(
-            Assign(Derivative(Real, x), t),
-            Imply(h, p)
-          )
-        )
-        val instance = Imply(g,f)
+            val instance = Imply(g,f)
 
-        //construct substitution
-        import Substitution.maybeFreeVariables
-        val aX = Variable("x", None, Real)
+            //construct substitution
+            import Substitution.maybeFreeVariables
+            val aX = Variable("x", None, Real)
 
-        val aT = Apply(Function("f", None, Real, Real), CDot)
-        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t))) //@todo confused about when we want to use cdot and when not...
+            val aT = Apply(Function("f", None, Real, Real), CDot)
+            val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t))) //@todo confused about when we want to use cdot and when not...
 
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-        val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
+            val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+            val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
 
-        val aC = ContEvolveProgramConstant("c")
+            val aC = ContEvolveProgramConstant("c")
 
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
+            val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+            val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
 
-        val subst = Substitution(List(
-          new SubstitutionPair(aT, t_cdot),
-          new SubstitutionPair(aC,c),
-          new SubstitutionPair(aP, p_cdot),
-          new SubstitutionPair(aH, h_cdot)
-        ))
+            val subst = Substitution(List(
+              new SubstitutionPair(aT, t_cdot),
+              new SubstitutionPair(aC,c),
+              new SubstitutionPair(aP, p_cdot),
+              new SubstitutionPair(aH, h_cdot)
+            ))
 
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
-          else (ax, None)
+            val (axiom, cont) =
+              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+              else (ax, None)
 
-        Some(axiom, instance, subst, None, cont)
+            Some(axiom, instance, subst, None, cont)
+          }
+        }
       }
       case _ => None
     }
@@ -590,7 +607,10 @@ object ODETactics {
   */
   def diffInvariantSystemTailT = new AxiomTactic("DI System Complete", "DI System Complete") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(CheckedContEvolveFragment(_),_)), _) => true
+      case BoxModality(IncompleteSystem(cp : ContEvolveProduct), _) => cp.normalize() match {
+        case ContEvolveProduct(CheckedContEvolveFragment(_), _) => true
+        case _ => false
+      }
       case _ => false
     }
 
@@ -600,37 +620,44 @@ object ODETactics {
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(IncompleteSystem(ContEvolveProduct(CheckedContEvolveFragment(NFContEvolve(bvs,Derivative(Real,x:Variable),t,h)), c)), p) => {
-        //construct instance
-        val instance = Imply(f, p)
+      case BoxModality(IncompleteSystem(cp : ContEvolveProduct), p:Formula) => {
+        cp.normalize() match {
+          case ContEvolveProduct(CheckedContEvolveFragment(NFContEvolve(bvs,Derivative(Real,x:Variable),t,h)), c) => {
+            //construct instance
+            val instance = Imply(f, p)
 
-        //construct substitution.
-        import Substitution.maybeFreeVariables
-        val aX = Variable("x", None, Real)
+            //construct substitution.
+            import Substitution.maybeFreeVariables
+            val aX = Variable("x", None, Real)
 
-        val aT = Apply(Function("f", None, Real, Real), CDot)
-        val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))
+            val aT = Apply(Function("f", None, Real, Real), CDot)
+            val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))
 
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-        val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
+            val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+            val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
 
-        val aC = ContEvolveProgramConstant("c")
+            val aC = ContEvolveProgramConstant("c")
 
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
+            val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
 
-        val subst = Substitution(List(
-          new SubstitutionPair(aT, t_cdot),
-          new SubstitutionPair(aC,c),
-          new SubstitutionPair(aP, p_cdot),
-          new SubstitutionPair(aH, h_cdot)
-        ))
+            val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
 
-        val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
-          else (ax, None)
+            val subst = Substitution(List(
+              new SubstitutionPair(aT, t_cdot),
+              new SubstitutionPair(aC,c),
+              new SubstitutionPair(aP, p_cdot),
+//              SubstitutionPair(aP, replaceFree(p)(x, CDot)),
+              new SubstitutionPair(aH, h_cdot)
+            ))
 
-        Some(axiom, instance, subst, None, cont)
+            val (axiom, cont) =
+              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+              else (ax, None)
+
+            Some(axiom, instance, subst, None, cont)
+          }
+          case _ => None
+        }
       }
       case _ => None
     }
@@ -652,12 +679,20 @@ object ODETactics {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         import scala.language.postfixOps
         node.sequent(p) match {
-          case BoxModality(_: ContEvolveProduct, _) => Some(
-//            diffInvariantSystemIntroT(p) & TacticLibrary.locateAnte(SyntacticDerivationAxiomTactics.SyntacticDerivationT) & TacticLibrary.locateSucc(SyntacticDerivationAxiomTactics.SyntacticDerivationT) &
-            diffInvariantSystemIntroT(p) & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) &
-            (AndRightT(p) & (NilT & TacticLibrary.debugT("test seq"), (TacticLibrary.debugT("inv seq") & diffInvariantSystemHeadT(p)) *)) ~
-            (diffInvariantSystemTailT(p) & ((TacticLibrary.boxAssignT(p) & ImplyRightT(p)) *))
-          )
+          case BoxModality(_: ContEvolveProduct, _) => {
+
+//             & debugT("About to split the 'diff inv holds initial' and 'handle system' branches") &
+//              AndRightT(p) &
+//              (NilT & TacticLibrary.debugT("On the right hand side.")) ,
+//              (
+//                (debugT("Peeling off a head.") & diffInvariantSystemHeadT(p) *) ~ debugT("Head is now done.") ~ (diffInvariantSystemTailT(p) ~ debugT("Just before syntactic derivation") & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) & ((TacticLibrary.boxAssignT(p) & ImplyRightT(p)) *))
+//                ))
+
+            Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
+              debugT("left branch"),
+              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p)
+            ))
+          }
         }
       }
     }
