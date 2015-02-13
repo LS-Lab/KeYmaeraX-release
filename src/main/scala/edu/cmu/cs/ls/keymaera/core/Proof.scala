@@ -1291,7 +1291,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Test(f) => (u, Test(usubst(u,f)))
     case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
     case Assign(CDot, e) => (u+CDot, Assign(CDot, usubst(u, e)))
-    case Assign(d@Derivative(_, CDot), e) => (u+CDot, Assign(CDot, usubst(u, e))) //@todo eisegesis This might actually be wrong?
+    case Assign(d@Derivative(_, CDot), e) => {
+      (u+CDot, Assign(d, usubst(u, e)))
+    } //@todo eisegesis This might actually be wrong? -- well, it was the first time...
     case Assign(d@Derivative(_, x: Variable), e) => (u+x, Assign(d, usubst(u,e))) //@todo eisegesis
     case CheckedContEvolveFragment(child) => { //@todo eisegesis
       val rec = usubst(u, child)
