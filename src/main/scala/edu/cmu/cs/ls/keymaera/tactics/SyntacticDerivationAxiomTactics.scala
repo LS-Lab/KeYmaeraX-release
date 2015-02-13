@@ -14,6 +14,8 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 /**
+ * @todo The tactics do not actually do this -- the AxiomNameT only got the "correct" direction in the new implementation.
+ *       The atomize and aggregate tactics are out-of-date.
  * Contains the axiom tactics and wrapper tactics for syntactic derivation of formulas and terms.
  * The axiom tactics go both directions; for this reason, there are three tactics per axiom:
  *    - The AxiomNameT tactic is the actual axiom.
@@ -70,7 +72,7 @@ object SyntacticDerivationAxiomTactics {
    *   (p & q)' <-> ((p') & (q'))
    * End.
    */
-  def AndDerivativeT = new AxiomTactic("&' derive and", "&' derive and") {
+  def AndDerivativeT = new DerivativeAxiomInContextTactic("&' derive and", "&' derive and") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(And(_,_))              => true
 //      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
@@ -81,35 +83,11 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aP  = PredicateConstant("p") //@todo not sure if this is correct.
-      val aQ  = PredicateConstant("q")
-
-      f match {
-        case FormulaDerivative(And(p,q)) => {
-          val g = And(FormulaDerivative(p), FormulaDerivative(q))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aP, p),
-            SubstitutionPair(aQ, q)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case And(FormulaDerivative(p), FormulaDerivative(q)) => {
-          val g = FormulaDerivative(And(p,q))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aP, p),
-            SubstitutionPair(aQ, q)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      case FormulaDerivative(And(p,q)) => {
+        Some(And(FormulaDerivative(p), FormulaDerivative(q)), None)
       }
+      case _ => None
     }
   }
 
@@ -140,7 +118,7 @@ object SyntacticDerivationAxiomTactics {
    *   (p | q)' <-> ((p') & (q'))
    * End.
    */
-  def OrDerivativeT = new AxiomTactic("|' derive or","|' derive or") {
+  def OrDerivativeT = new DerivativeAxiomInContextTactic("|' derive or","|' derive or") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(Or(_,_)) => true
 //      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
@@ -151,35 +129,15 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aP = PredicateConstant("p") //@todo not sure if this is correct.
-      val aQ = PredicateConstant("q")
-
-      f match {
-        case FormulaDerivative(Or(p,q)) => {
-          val g = And(FormulaDerivative(p), FormulaDerivative(q))
-          val axiomInstance = Equiv(f,g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aP, p),
-            SubstitutionPair(aQ, q)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case And(FormulaDerivative(p), FormulaDerivative(q)) => {
-          val g = FormulaDerivative(Or(p,q))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aP, p),
-            SubstitutionPair(aQ, q)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-      }
+    /**
+     * This method constructs the desired result before the renaming.
+     *
+     * @param f the formula that should be rewritten
+     * @return Desired result before executing the renaming
+     */
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      case FormulaDerivative(Or(p,q)) => Some(And(FormulaDerivative(p), FormulaDerivative(q)), None)
+      case _ => None
     }
   }
 
@@ -210,7 +168,7 @@ object SyntacticDerivationAxiomTactics {
    *   (s = t)' <-> ((s') = (t'))
    * End.
    */
-  def EqualsDerivativeT = new AxiomTactic("=' derive =", "=' derive =") {
+  def EqualsDerivativeT = new DerivativeAxiomInContextTactic("=' derive =", "=' derive =") {
     override def applies(f: Formula): Boolean = {
       f match {
         case FormulaDerivative(Equals(eqSort, s, t)) => true
@@ -223,38 +181,15 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s", None, Real) //@todo not sure...
-      val aT = Variable("t", None, Real)
-
-      f match {
-        case FormulaDerivative(Equals(eqSort, s, t)) => {
-          val g = Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        //        case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-        //          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-        //          val sort = sSort
-        //
-        //          val g = FormulaDerivative(Equals(sSort, s, t))
-        //          val axiomInstance = Equiv(g,f)
-        //
-        //          val subst = Substitution(List(
-        //            SubstitutionPair(aS, s),
-        //            SubstitutionPair(aT, t)
-        //          ))
-        //
-        //          Some(ax, axiomInstance, subst, None, None)
-        //        }
-      }
+    /**
+     * This method constructs the desired result before the renaming.
+     *
+     * @param f the formula that should be rewritten
+     * @return Desired result before executing the renaming
+     */
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      case FormulaDerivative(Equals(eqSort, s, t)) => Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case _ => None
     }
   }
 
@@ -279,7 +214,7 @@ object SyntacticDerivationAxiomTactics {
    *   (s >= t)' <-> ((s') >= (t'))
    * End.
    */
-  def GreaterEqualDerivativeT = new AxiomTactic(">=' derive >=", ">=' derive >=") {
+  def GreaterEqualDerivativeT = new DerivativeAxiomInContextTactic(">=' derive >=", ">=' derive >=") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(GreaterEqual(eqSort, s, t)) => true
 //      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
@@ -290,38 +225,10 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s",None,Real)      //@todo not sure...
-      val aT = Variable("t", None, Real)
 
-      f match {
-        case FormulaDerivative(GreaterEqual(eqSort, s, t)) => {
-          val g = GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-          val sort = sSort
-
-          val g = FormulaDerivative(GreaterEqual(sSort, s, t))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-      }
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      case FormulaDerivative(GreaterEqual(eqSort, s, t)) => Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case _ => None
     }
   }
 
@@ -346,7 +253,7 @@ object SyntacticDerivationAxiomTactics {
    *   (s > t)' <-> ((s') >= (t'))
    * End.
    */
-  def GreaterThanDerivativeT = new AxiomTactic(">' derive >", ">' derive >") {
+  def GreaterThanDerivativeT = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(GreaterThan(eqSort, s, t)) => true
 //      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
@@ -357,38 +264,9 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s",None,Real)      //@todo not sure...
-      val aT = Variable("t", None, Real)
-
-      f match {
-        case FormulaDerivative(GreaterThan(eqSort, s, t)) => {
-          val g = GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-          val sort = sSort
-
-          val g = FormulaDerivative(GreaterThan(sSort, s, t))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-      }
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      case FormulaDerivative(GreaterThan(eqSort, s, t)) => Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case _ => None
     }
   }
 
@@ -413,7 +291,7 @@ object SyntacticDerivationAxiomTactics {
    *   (s <= t)' <-> ((s') <= (t'))
    * End.
    */
-  def LessEqualDerivativeT = new AxiomTactic("<=' derive <=", "<=' derive <=") {
+  def LessEqualDerivativeT = new DerivativeAxiomInContextTactic("<=' derive <=", "<=' derive <=") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(LessEqual(eqSort, s, t)) => true
 //      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
@@ -424,38 +302,8 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s",None,Real)      //@todo not sure...
-      val aT = Variable("t", None, Real)
-
-      f match {
-        case FormulaDerivative(LessEqual(eqSort, s, t)) => {
-          val g = LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-          val sort = sSort
-
-          val g = FormulaDerivative(LessEqual(sSort, s, t))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-      }
+    override def constructInstanceAndSubst(f : Formula) = f match {
+      case FormulaDerivative(LessEqual(eqSort, s, t)) => Some(LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
     }
   }
 
@@ -480,49 +328,20 @@ object SyntacticDerivationAxiomTactics {
    *   (s < t)' <-> ((s') <= (t'))
    * End.
    */
-  def LessThanDerivativeT = new AxiomTactic("<' derive <", "<' derive <") {
+  def LessThanDerivativeT = new DerivativeAxiomInContextTactic("<' derive <", "<' derive <") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(LessThan(eqSort, s, t)) => true
 //      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => false
+      case _ => {println(this.getClass() + " is not applicable to: " + f); false}
     }
 
     override def applies(s: Sequent, p: Position): Boolean = {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s",None,Real)      //@todo not sure...
-      val aT = Variable("t", None, Real)
-
-      f match {
-        case FormulaDerivative(LessThan(eqSort, s, t)) => {
-          val g = LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-          val sort = sSort
-
-          val g = FormulaDerivative(LessThan(sSort, s, t))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-      }
+    override def constructInstanceAndSubst(f: Formula) = f match {
+      case FormulaDerivative(LessThan(eqSort, s, t)) => Some( LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case _ => None
     }
   }
 
@@ -547,7 +366,7 @@ object SyntacticDerivationAxiomTactics {
    *   (s != t)' <-> ((s') = (t'))
    * End.
    */
-  def NotEqualsDerivativeT = new AxiomTactic("!=' derive !=", "!=' derive !=") {
+  def NotEqualsDerivativeT = new DerivativeAxiomInContextTactic("!=' derive !=", "!=' derive !=") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(NotEquals(eqSort, s, t)) => true
 //      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
@@ -558,38 +377,8 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aS = Variable("s",None,Real)      //@todo not sure...
-      val aT = Variable("t", None, Real)
-
-      f match {
-        case FormulaDerivative(NotEquals(eqSort, s, t)) => {
-          val g = Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-        case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          assert(sSort == tSort, "There should be a non-ambiguous way of deciding what the sort of the outer term will be")
-          val sort = sSort
-
-          val g = FormulaDerivative(NotEquals(sSort, s, t))
-          val axiomInstance = Equiv(g,f)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-      }
+    override def constructInstanceAndSubst(f: Formula) = f match {
+      case FormulaDerivative(NotEquals(eqSort, s, t)) => Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
     }
   }
 
@@ -1034,7 +823,7 @@ End.
       DivideDerivativeAtomizeT ::
       Nil
 
-  val formulaDerivativeTactics : List[AxiomTactic] =
+  val formulaDerivativeTactics : List[DerivativeAxiomInContextTactic] =
     AndDerivativeT          ::
     OrDerivativeT           ::
     EqualsDerivativeT       ::
@@ -1043,7 +832,7 @@ End.
     LessEqualDerivativeT    ::
     LessThanDerivativeT     ::
     NotEqualsDerivativeT    ::
-//      ImplyDerivativeT      ::
+    ImplyDerivativeT      ::
     Nil
 
   /**
@@ -1222,7 +1011,7 @@ End.
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
 
-    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : AxiomTactic) : Option[(PosInExpr, Formula)] = {
+    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : DerivativeAxiomInContextTactic) : Option[(PosInExpr, Formula)] = {
       val traversal = new ExpressionTraversalFunction {
         var mPosition : Option[PosInExpr] = None
         var mFormula : Option[Formula]    = None

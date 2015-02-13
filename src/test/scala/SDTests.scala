@@ -102,4 +102,14 @@ class SDTests extends TacticTestSuite {
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
+
+  "LessThanDerivativeT" should "work in a nested context" in {
+    val f = helper.parseFormula("[x':=1;][y':=1;](x < y)'") //non-sense.
+    val expected = helper.parseFormula("[x':=1;][y':=1;](x' <= y')")
+    val node = helper.formulaToNode(f)
+    val tactic = LessThanDerivativeT(SuccPosition(0, PosInExpr(1::1::Nil)))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
 }

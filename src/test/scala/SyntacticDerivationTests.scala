@@ -83,7 +83,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node2, helper.parseFormula("(1=1 | 2=2)'")))
   }
 
-  def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : AxiomTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
+  def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : DerivativeAxiomInContextTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
     val s = "(" + sNoParen + ")"
     val t = "(" + tNoParen + ")"
     val tactic = helper.positionTacticToTactic(axTactic)
