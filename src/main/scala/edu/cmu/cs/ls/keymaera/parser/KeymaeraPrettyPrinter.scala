@@ -33,6 +33,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Test(_) => !needsParens(e,parent)
     case NDetAssign(_) => !needsParens(e,parent)
     case ContEvolve(_) => !needsParens(e,parent)
+    case _: ContEvolveProgram => !needsParens(e,parent)
     case _ => false
   }
 

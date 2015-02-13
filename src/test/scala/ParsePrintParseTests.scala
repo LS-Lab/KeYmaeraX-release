@@ -29,4 +29,18 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       parser.runParser(makeInput(printer.stringify(expected))) should be(expected)
     }
   }
+
+  it should "parse, print, and parse ODEs in sequential compositions" in {
+    val exprs =
+      "[x'=y;x:=2;]x>0" ::
+      "[x:=2;x'=y;]x>0" ::
+      "[{x'=y;}*;]x>0" ::
+      "[{x'=y;x:=2;}*;]x>0" ::
+      "[{x:=2;x'=y;}*;]x>0" :: Nil
+
+    for (e <- exprs) {
+      val expected = parser.runParser(makeInput(e))
+      parser.runParser(makeInput(printer.stringify(expected))) should be(expected)
+    }
+  }
 }
