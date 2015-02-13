@@ -27,7 +27,7 @@ class SDTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[$$a'=b$$;](x'-y'<=0)")
+    val expected = helper.parseFormula("[$$a'=b$$;](x'-y'<=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
@@ -39,7 +39,7 @@ class SDTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[x:=b;](x'-y'<=0)")
+    val expected = helper.parseFormula("[x:=b;](x'-y'<=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }

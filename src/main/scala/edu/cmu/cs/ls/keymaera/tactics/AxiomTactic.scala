@@ -255,11 +255,11 @@ abstract class PropositionalInContextTactic(name: String)
 }
 
 /**
- * Base class for term axiom tactics.
+ * Base class for term axiom tactics. @todo get rid of this thing...
  * @param name The name of the tactic.
  * @param axiomName The name of the axiom.
  */
-abstract class TermAxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
+abstract class TermAxiomTactic(name: String, axiomName: String) extends PositionTactic(name) with SyntacticDerivationAxiomTactics.ApplicableAtTerm {
   //@todo a java.lang.ExceptionInInitializerError is thrown
   require(Axiom.axioms != null, "the list of axioms should be defined.")
   require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")

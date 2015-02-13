@@ -499,6 +499,10 @@ object SyntacticDerivationAxiomTactics {
     }
   }
 
+  trait ApplicableAtTerm {
+    def applies(t : Term) : Boolean
+  }
+
   /*
    * Axiom "-' derive minus".
    *   (s - t)' = (s') - (t')
@@ -529,22 +533,22 @@ object SyntacticDerivationAxiomTactics {
 
           Some(axiomInstance, subst)
         }
-        case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          val sort = aSort; assert(aSort == sSort && sSort == tSort)
-
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
-
-          val left = Derivative(sort, Subtract(sort, s, t))
-          val axiomInstance = Equals(sort, left, term)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
-          ))
-
-          Some(axiomInstance, subst)
-        }
+//        case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+//          val sort = aSort; assert(aSort == sSort && sSort == tSort)
+//
+//          val aS = Variable("s", None, sort)
+//          val aT = Variable("t", None, sort)
+//
+//          val left = Derivative(sort, Subtract(sort, s, t))
+//          val axiomInstance = Equals(sort, left, term)
+//
+//          val subst = Substitution(List(
+//            SubstitutionPair(aS, s),
+//            SubstitutionPair(aT, t)
+//          ))
+//
+//          Some(axiomInstance, subst)
+//        }
       }
     }
   }
