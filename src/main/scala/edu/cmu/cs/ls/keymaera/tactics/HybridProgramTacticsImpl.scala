@@ -44,56 +44,40 @@ object HybridProgramTacticsImpl {
     }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(Assign(Derivative(vSort, v:Variable), t), p) => {
-        val g  = replaceFree(p)(Derivative(vSort, v), t)
+      case BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p) =>
+        val g  = replaceFree(p)(d, t)
         val axiomInstance = Equiv(f, g)
-        println("Axiom instance is: " + axiomInstance.prettyString())
 
         val aV = Variable("v", None, vSort)
         val aT = Variable("t", None, vSort)
-        val aP = Function("p", None, vSort, Bool)
-        val aP_of_cdot = ApplyPredicate(aP, CDot) //(p(t)
-
-
-        val p_of_t = replace(p)(Derivative(vSort, v), t)
+        val aP = ApplyPredicate(Function("p", None, vSort, Bool), CDot) //(p(t)
 
         val subst = Substitution(List(
           SubstitutionPair(aT, t),
-          SubstitutionPair(aP_of_cdot, replaceFree(p)(Derivative(vSort, v), CDot))
+          SubstitutionPair(aP, replaceFree(p)(d, CDot))
         ))
 
-        def alpha(left: Boolean) = new PositionTactic("Alpha") {
+        val alpha = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
+            case Equiv(BoxModality(Assign(Derivative(_), _), _), _) => true
             case _ => false
           }
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              if(left)
-                Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.first)
-                  & alphaRenamingT(v.name, v.index, aV.name, None)(p.second))
-              else
-                Some(alphaRenamingT(v.name, v.index, aV.name, None)(p.second))
+                Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.first)
+                  & alphaRenamingT(v.name, v.index, aV.name, aV.index)(p.second))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
 
         val (alphaAxiom, cont) = {
-          if(v.name == aV.name && v.index == aV.index) {
-            (axiom, None)
-          }
-          else {
-            (
-              Equiv(replaceFree(f)(aV, v), replaceFree(g)(aV,v)),
-              Some(alpha(left = false))
-            )
-          }
+          if (v.name == aV.name && v.index == aV.index) (axiom, None)
+          else (replaceFree(axiom)(aV, v, None), Some(alpha))
         }
 
         Some(alphaAxiom, axiomInstance, subst, None, cont)
-      }
       case _ => throw new Exception("Tactic was not applicable")
     }
   }

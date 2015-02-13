@@ -290,7 +290,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     import HybridProgramTacticsImpl.v2vBoxAssignT
     val tactic = locateSucc(v2vBoxAssignT)
     the [Exception] thrownBy
-      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) should have message "runTactic was called on tactic Position tactic locateSucc ([:=] assign)([:=] assign), but is not applicable on the node."
+      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) should have message "Called a tactic an an inapplicable node! Details: runTactic was called on tactic Position tactic locateSucc ([:=] assign)([:=] assign), but is not applicable on the node"
   }
 
   it should "work in the antecedent" in {
@@ -567,7 +567,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     import HybridProgramTacticsImpl.boxDerivativeAssignT
     val tactic = locateSucc(boxDerivativeAssignT)
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;]x'>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> x_0'>0)".asFormula)
+      sucSequent("y>0".asFormula)
     )
   }
 
@@ -575,19 +575,19 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     import HybridProgramTacticsImpl.boxDerivativeAssignT
     val tactic = locateSucc(boxDerivativeAssignT)
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;]y>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> y>0)".asFormula)
+      sucSequent("y>0".asFormula)
     )
   }
 
-  it should "rename free occurrences in subsequent modalities" in {
+  // TODO apply box derivative assignment inside out
+  ignore should "rename free occurrences in subsequent modalities" in {
     import HybridProgramTacticsImpl.boxDerivativeAssignT
     val tactic = locateSucc(boxDerivativeAssignT)
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=z;]x'+y'>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> [y':=z;]x_0'+y'>0)".asFormula)
+      sucSequent("[y':=z;]y+y'>0".asFormula)
     )
   }
 
-  // TODO
   ignore should "work on mutual assignments" in {
     import HybridProgramTacticsImpl.boxDerivativeAssignT
     val tactic = locateSucc(boxDerivativeAssignT)
