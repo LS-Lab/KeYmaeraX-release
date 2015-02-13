@@ -539,7 +539,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemTailT)
     require(tactic.applicable(node))
     helper.runTactic(tactic, node)
-
+    require(containsOpenGoal(node, helper.parseFormula("[(y'):=a;](3=3->[(a'):=y;]1=1)")))
   }
 
   it should "not apply to an inappropriate system" in {

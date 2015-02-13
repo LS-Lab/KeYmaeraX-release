@@ -638,15 +638,12 @@ object ODETactics {
 
             val aC = ContEvolveProgramConstant("c")
 
-            val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-
-            val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
+            val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
 
             val subst = Substitution(List(
               new SubstitutionPair(aT, t_cdot),
               new SubstitutionPair(aC,c),
-              new SubstitutionPair(aP, p_cdot),
-//              SubstitutionPair(aP, replaceFree(p)(x, CDot)),
+              new SubstitutionPair(aP, p),
               new SubstitutionPair(aH, h_cdot)
             ))
 
