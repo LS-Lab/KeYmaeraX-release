@@ -1,7 +1,5 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core
-import edu.cmu.cs.ls.keymaera.core.Substitution._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
@@ -12,6 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.cutT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.kModalModusPonensT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
@@ -33,13 +32,49 @@ object HybridProgramTacticsImpl {
   /**
    * Creates a new axiom tactic for differential box assignment [x := t;]
    *  [v':=t;]p(v') <-> p(t)
+   * @return The axiom tactic.
+   * @author Stefan Mitsch
+   */
+  def boxDerivativeAssignT = new PositionTactic("[':=] differential assign") {
+    def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case BoxModality(Assign(Derivative(_, _: Variable), _), _) => true
+      case _ => false
+    }
+
+    def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val innerMost = innerMostPos(node.sequent(p))
+        val pos = if (p.isAnte) AntePosition(p.index, innerMost) else SuccPosition(p.index, innerMost)
+        if (pos.isTopLevel) Some(boxDerivativeAssignTopLevelT(pos))
+        else Some(boxDerivativeAssignInContextT(pos))
+      }
+    }
+
+    private def innerMostPos(f: Formula): PosInExpr = f match {
+      case BoxModality(Assign(Derivative(_, _: Variable), _),
+        b@BoxModality(Assign(Derivative(_, _: Variable), _), _)) => innerMostPos(b).second
+      case _ => PosInExpr()
+    }
+  }
+
+  /**
+   * Creates a new axiom tactic for differential box assignment [x := t;], applicable only on top level positions and
+   * without nested derivative assignments
+   *  [v':=t;]p(v') <-> p(t)
    * @author Nathan Fulton
+   * @author Stefan Mitsch
    * @return The axiom tactic.
    *
    */
-  def boxDerivativeAssignT : AxiomTactic = new AxiomTactic("[':=] differential assign", "[':=] differential assign") {
+  def boxDerivativeAssignTopLevelT = new AxiomTactic("[':=] differential assign", "[':=] differential assign") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && super.applies(s, p)
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Derivative(vSort,v:Variable), _), _) => true
+      case BoxModality(Assign(Derivative(vSort,v:Variable), _), phi) => phi match {
+        case BoxModality(Assign(_: Derivative, _), _) => false
+        case _ => true
+      }
       case _ => false
     }
 
@@ -79,6 +114,38 @@ object HybridProgramTacticsImpl {
 
         Some(alphaAxiom, axiomInstance, subst, None, cont)
       case _ => throw new Exception("Tactic was not applicable")
+    }
+  }
+
+  /**
+   * Creates a new axiom tactic for differential box assignment [v':=t;]p(v') <-> p(t), in some context
+   * @return The new tactic
+   * @author Stefan Mitsch
+   */
+  def boxDerivativeAssignInContextT = new DerivativeAxiomInContextTactic("[':=] differential assign", "[':=] differential assign") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isTopLevel && super.applies(s, p)
+    override def applies(f: Formula) = f match {
+      case BoxModality(Assign(Derivative(_, _), _), _) => true
+      case _ => false
+    }
+
+    import PropositionalTacticsImpl.uniformSubstT
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula) = f match {
+      case b@BoxModality(Assign(dv@Derivative(sort, v: Variable), t), phi) =>
+        val aV = Variable("v", None, Real)
+        val aT = Variable("t", None, Real)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+
+        val desiredResult = replaceFree(phi)(dv, t)
+
+        val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aT, t),
+          SubstitutionPair(aP, replaceFree(phi)(dv, CDot)))),
+          Map(Equiv(b, desiredResult) -> replaceFree(axiom)(aV, v, None)))
+
+        val alpha = assertT(0, 1) & alphaRenamingT(v.name, v.index, aV.name, aV.index)(SuccPosition(0))
+
+        Some(desiredResult, Some(usubst & alpha))
+      case _ => None
     }
   }
 

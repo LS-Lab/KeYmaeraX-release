@@ -202,7 +202,7 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
             assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
             abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
             assertT(0, 1) & cutT(Some(axiomInstance)) &
-            onBranch((cutUseLbl, TacticLibrary.debugT("use") & equalityRewriting(axiomInstPos, pos) &
+            onBranch((cutUseLbl, equalityRewriting(axiomInstPos, pos) &
               ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) &
               ImplyRightT(pos.topLevel) & AxiomCloseT),
               (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch("knowledge subclass continue"))))
@@ -225,13 +225,15 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
   require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
   override def applies(s: Sequent, p: Position) = Axiom.axioms.get(axiomName).isDefined && super.applies(s, p)
 
+  override def constructInstanceAndSubst(f: Formula) = constructInstanceAndSubst(f, Axiom.axioms.get(axiomName).get)
 
+  def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Option[Tactic])] = None
 
   override def apply(pos: Position): Tactic = super.apply(pos) & new ConstructionTactic(this.name) {
     import scala.language.postfixOps
 
     override def applicable(node: ProofNode): Boolean = node.sequent(pos) match {
-      case Equiv(FormulaDerivative(GreaterThan(_, _, _)), GreaterEqual(_, Derivative(_), Derivative(_))) => true
+      case Equiv(_, _) => true
       case _ => false
     }
 
