@@ -243,7 +243,7 @@ object PropositionalTacticsImpl {
    *              in order to construct the origin of the uniform substitution.
    * @return an instance of a tactic that performs the given uniform substitution
    */
-  protected[tactics] def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
+  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
     def applicable(pn: ProofNode) = true
 
     def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
