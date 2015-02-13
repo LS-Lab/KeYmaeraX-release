@@ -624,7 +624,7 @@ object ODETactics {
         cp.normalize() match {
           case ContEvolveProduct(CheckedContEvolveFragment(NFContEvolve(bvs,Derivative(Real,x:Variable),t,h)), c) => {
             //construct instance
-            val instance = Imply(f, p)
+            val instance = Imply(p, f)
 
             //construct substitution.
             import Substitution.maybeFreeVariables
