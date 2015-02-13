@@ -5,7 +5,12 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 /**
@@ -31,7 +36,7 @@ object SyntacticDerivationAxiomTactics {
  *   (p -> q)' <-> (!p | q)'
  * End.
  */
-  def ImplyDerivativeT = new AxiomTactic("->' derive imply", "->' derive imply") {
+  def ImplyDerivativeT = new DerivativeAxiomInContextTactic("->' derive imply", "->' derive imply") {
     override def applies(f: Formula): Boolean = f match {
       case FormulaDerivative(Imply(_,_))              => true
       //      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
@@ -42,25 +47,20 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
-      val aP  = PredicateConstant("p")
-      val aQ  = PredicateConstant("q")
+    /**
+     * This method constructs the desired result before the renaming.
+     *
+     * @param f the formula that should be rewritten
+     * @return Desired result before executing the renaming
+     */
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      case FormulaDerivative(Imply(p, q)) => {
+        val g = FormulaDerivative(Or(Not(p), q))
+        val axiomInstance = Equiv(f,g)
 
-      f match {
-        case FormulaDerivative(Imply(p,q)) => {
-          val g = FormulaDerivative(Or(Not(p),q))
-          val axiomInstance = Equiv(f, g)
-
-          val subst = Substitution(List(
-            SubstitutionPair(aP, p),
-            SubstitutionPair(aQ, q)
-          ))
-
-          Some(ax, axiomInstance, subst, None, None)
-        }
-          //@todo other case.
+        Some(g, None)
       }
+      case _ => None
     }
   }
 
@@ -1043,7 +1043,7 @@ End.
     LessEqualDerivativeT    ::
     LessThanDerivativeT     ::
     NotEqualsDerivativeT    ::
-      ImplyDerivativeT      ::
+//      ImplyDerivativeT      ::
     Nil
 
   /**
@@ -1262,7 +1262,19 @@ End.
   def SyntacticDerivationT = new PositionTactic("Formula Syntactic Derivation") {
     override def applies(s: Sequent, p: Position): Boolean = TermSyntacticDerivationT.applies(s,p) | FormulaSyntacticDerivationT.applies(s,p)
 
-    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (TermSyntacticDerivationT(p) *) ~ SyntacticDerivationRulesT
+    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (TermSyntacticDerivationT(p) *)
   }
 
+
+//  def SyntacticDerivationInContextT(position : Position) : Tactic = ((new TacticInContextT(SyntacticDerivationT(position)) {
+//    override def applies(f: Formula) = f match {
+//      case FormulaDerivative(_) => true
+//      case _ => false
+//    }
+//
+//    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+//      case Derivative(f) => Some(phi, None)
+//      case _ => None
+//    }
+//  })(position) ~ SearchTacticsImpl.locateSucc(ImplyRightT) ~ AxiomCloseT)
 }
