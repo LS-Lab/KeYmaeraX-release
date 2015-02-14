@@ -155,9 +155,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Exp(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP)
     
     //BinaryProgram
-    case Choice(l,r) => {
+    case c@Choice(l,r) => {
       val leftString = l match {
-        case Choice(ll,lr) => prettyPrinter(l)
+        // left choice in a choice needs parens, because ++ is right-associative
+        case Choice(ll,lr) => "{" + prettyPrinter(l) + "}"
         case _ => recurse(l)
       }
       val rightString = r match {
