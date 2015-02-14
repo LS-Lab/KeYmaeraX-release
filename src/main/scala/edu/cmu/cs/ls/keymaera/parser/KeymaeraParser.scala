@@ -161,14 +161,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     try{
       val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
         case parser.Success(result,next) => result
-        case parser.Failure(_,_) => throw new Exception("parse failed.")
-        case parser.Error(_,_) => throw new Exception("parse error.")
+        case f@parser.Failure(msg,_) => throw new Exception("parse failed: " + f.toString())
+        case e@parser.Error(msg,_) => throw new Exception("parse error: " + e.toString())
       }
       require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_))): " + parse + " != " + printofparseParse )
     }
     catch {
-      case e : Exception => require(false, "Parse of print did not succeed on: " + printOfParse + "\nExpected: " +
-        KeYmaeraPrettyPrinter.stringify(parse) +
+      case e : Exception => require(requirement = false,
+        "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + KeYmaeraPrettyPrinter.stringify(parse) +
         "\n Exception was: " + e)
     }
 
