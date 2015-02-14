@@ -57,4 +57,15 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       parser.runParser(makeInput(printer.stringify(expected))) should be(expected)
     }
   }
+
+  it should "print and parse sequences with superfluous parentheses" in {
+    val exprs =
+      "[{x:=1;x:=2;};x:=3;]x>0" ::
+      "[{{x:=1;x:=2;};x:=3;};{{x:=4;};x:=5;};]x>0" :: Nil
+
+    for (e <- exprs) {
+      val expected = parser.runParser(makeInput(e))
+      parser.runParser(makeInput(printer.stringify(expected))) should be(expected)
+    }
+  }
 }

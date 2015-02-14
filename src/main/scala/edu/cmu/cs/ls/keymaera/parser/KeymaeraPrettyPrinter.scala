@@ -180,16 +180,16 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       leftString + symbolTable.PARALLEL + rightString
     } 
     
-    case Sequence(l,r) => {
-      val leftString = parensIfNeeded(l, Sequence(l,r))
-      val rightString = parensIfNeeded(r, Sequence(l,r))
-      if(!endsWithColon(l,Sequence(l,r))) {
-        leftString + symbolTable.SCOLON + rightString
+    case s@Sequence(l,r) => {
+      val leftString = l match {
+        // left sequence in a sequence needs parens, because ; is right-associative
+        case Sequence(_, _) => "{" + parensIfNeeded(l, s) + "}"
+        case _ => parensIfNeeded(l, s)
       }
-      else {
-        leftString + rightString
-      }
-    } 
+      val rightString = parensIfNeeded(r, s)
+      if(endsWithColon(l, s)) leftString + rightString
+      else leftString + symbolTable.SCOLON + rightString
+    }
     
     //BinaryRelation
     //TODO is this OK?
