@@ -130,11 +130,17 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
-    case Apply(function,child) => 
-      parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
+    case Apply(function,child) => child match {
+      // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
+      case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
+      case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
+    }
     
-    case ApplyPredicate(function,child) => 
-      parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
+    case ApplyPredicate(function,child) => child match {
+      // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
+      case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
+      case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
+    }
 
     case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN) + symbolTable.SCOLON
     case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
@@ -335,7 +341,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
    * @todo this is incredible hacky and needs to be replaced!
    */
   private def needsParens(child : Expr, parent : Expr) = {
-    val precedenceDS =    
+    val precedenceDS =
       //Terms.
       //TODO expP?
       Add.getClass.getCanonicalName ::
@@ -347,6 +353,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Derivative.getClass.getCanonicalName ::
       Apply.getClass.getCanonicalName ::
       Function.getClass.getCanonicalName ::
+      Pair.getClass.getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName :: //real-valued.
       Number.getClass.getCanonicalName   ::
       //Formulas

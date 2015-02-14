@@ -117,7 +117,12 @@ class ParserParenTests extends FlatSpec with Matchers {
 
     }
   }
-  
+
+  it should "parse predicates using functions" in {
+    val src = io.Source.fromFile(new File("examples/dev/t/parsing/positive/functions.key")).mkString
+    parser.runParser(src)
+  }
+
   it should "not parse any examples/t/negative files" in {
     val negativeTestsDir = new File("examples/dev/t/parsing/negative")
     negativeTestsDir.isDirectory() should be (true)

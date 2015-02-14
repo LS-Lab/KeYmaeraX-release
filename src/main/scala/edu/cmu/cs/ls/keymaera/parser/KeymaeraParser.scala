@@ -415,14 +415,16 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     //Function application
     
-    lazy val applyP:SubtermParser = {      
-      lazy val pattern = ident ~ ("(" ~> rep1sep(tighterParsers(precedence,applyP).reduce(_|_), ",") <~ ")")
+    lazy val applyP:SubtermParser = {
+      // TODO disallow functions of functions?
+      lazy val pattern = ident ~ ("(" ~> rep1sep(precedence.reduce(_|_), ",") <~ ")")
       
-      log(pattern)("Function Application") ^^ {
-        case name ~ args => 
-          Apply(functionFromName(name, functions), 
-              args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
-      }
+      log(pattern)("Function Application") ^? (
+        {case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Real =>
+          Apply(functionFromName(name.toString, functions),
+            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )},
+        { case name ~ args => "Can only use identifier of sort Real in predicate application, but " + name + " has sort " +
+                                functionFromName(name.toString, functions).sort})
     }
 
     //Groupings
@@ -571,11 +573,12 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val applyPredicateP:SubformulaParser = {
       lazy val pattern = ident ~ ("(" ~> rep1sep(termParser, ",") <~ ")")
 
-      log(pattern)("Predicate Application") ^^ {
-        case name ~ args =>
-          ApplyPredicate(functionFromName(name, functions),
-            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
-      }
+      log(pattern)("Predicate Application") ^? (
+        { case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Bool =>
+          ApplyPredicate(functionFromName(name.toString, functions),
+            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )},
+        { case name ~ args => "Can only use identifier of sort Bool in predicate application, but " + name + " has sort " +
+            functionFromName(name.toString, functions).sort})
     }
 
     //Predicates
