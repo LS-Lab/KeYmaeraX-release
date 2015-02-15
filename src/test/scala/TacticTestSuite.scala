@@ -14,19 +14,14 @@ trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper(x=>println(x))
 
-  var tool: Mathematica = null
   val mathematicaConfig = helper.mathematicaConfig
 
   override def beforeEach() = {
-    tool = new Mathematica
-    tool.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
 
   override def afterEach() = {
-    tool.shutdown()
-    tool = null
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
   }
