@@ -712,4 +712,52 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
       "\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)))
     s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
   }
+
+  /*
+   * Andre's tests
+   */
+  def sToT(s: String, t: String) = Substitution(List(SubstitutionPair(s.asNamedSymbol, t.asTerm)))
+
+  "Substitution clash" should "be reported on substitution of (maybe) bound variables" in {
+    // TODO does clash mean something different now?
+    val cases =
+      (sToT("x", "5"), "[{x:=0 ++ z:=z}; a:=x;]1>0".asFormula) ::         // TODO why clash? FV(5) is empty. so far, we just didn't substitute in these cases
+      (sToT("x", "5"), "[x:=0 ++ z:=z]x>0".asFormula) ::                  // TODO same as previous
+      (sToT("y", "1"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>z".asFormula) ::       // TODO similar question as previous
+      (sToT("z", "2*x"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula) ::     // TODO why not x:=x+2*x?
+      (sToT("z", "2*x"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>z".asFormula) ::     // x free in 2*x but mustbe (and thus maybe) bound in {x:=x+1 ++ x:=x+z;...}
+      (sToT("a", "2*x"), "[{x:=x+1 ++ y:=5}; z:=x-a]x>0".asFormula) ::    // x free in 2*x but (maybe) bound in {x:=x+1 ++ ...}
+      (sToT("x", "2"), "[{x:=x+1;}*; z:=x+z]1>0".asFormula) ::            // TODO why clash? FV(2) is empty
+      (sToT("a", "x"), "[{x:=x+1;}*; z:=a]1>0".asFormula) ::              // x free in x but maybe bound in {x:=x+1}*
+      (sToT("a", "x"), "[x:=x+1; z:=a]1>0".asFormula) ::                  // x free in x but mustbe (and thus maybe) bound in x:=x+1
+      (sToT("x", "a"), "[{x:=x+1;}*; x:=x+1]1>0".asFormula) ::            // TODO why clash? FV(a) does not intersect with u={x}
+        Nil
+
+    cases.foreach(c => withClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+  }
+
+  "Uniform substitution of mustbe bound" should "be same as input" in {
+    val cases =
+      (sToT("x", "5"), "[{x:=0 ++ z:=z}]1>0".asFormula) ::                // x no free occurrence
+      (sToT("x", "5"), "[x:=0 ++ x:=1]x>0".asFormula) ::                  // x mustbe bound
+      (sToT("z", "-z"), "[{x:=x+1 ++ x:=x+z}; z:=x-1]x>z".asFormula) ::   // TODO why not x:=x-z?
+      (sToT("z", "2"), "[{x:=x+1 ++ y:=5}; z:=x-1]x>0".asFormula) ::      // z mustbe bound
+      (sToT("z", "2"), "[{x:=x+1 ++ y:=5}; z:=x-1]x>z".asFormula) ::      // z mustbe bound
+        Nil
+
+    cases.foreach(c => c._1(c._2) should be (c._2))
+  }
+
+  "Uniform substitution of free" should "be as expected" in {
+    val cases =
+      (sToT("y", "1"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula, "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula) :: // y no free occurrence
+      (sToT("x", "2"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula, "[x:=2+1 ++ x:=2+z;z:=z-1]x>0".asFormula) ::
+      (sToT("x", "2"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>z".asFormula, "[x:=2+1 ++ x:=2+z;z:=z-1]x>z".asFormula) ::
+      (sToT("z", "2"), "[{x:=x+1;}*; z:=x+z]x>z".asFormula, "[{x:=x+1;}*; z:=x+2]x>z".asFormula) ::
+      (sToT("x", "a"), "[x:=x+1; z:=a]1>0".asFormula, "[x:=a+1; z:=a]1>0".asFormula) ::
+      (sToT("x", "a"), "[x:=x+1; {x:=x+1;}*]1>0".asFormula, "[x:=a+1; {x:=x+1;}*]1>0".asFormula) ::
+        Nil
+
+    cases.foreach(c => c._1(c._2) should be (c._3))
+  }
 }
