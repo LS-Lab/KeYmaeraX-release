@@ -66,3 +66,11 @@ watchSources <++= baseDirectory map {
 watchSources <++= baseDirectory map { 
   path => ((path / "src/main/resources") ** "*.html").get 
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Unit testing
+////////////////////////////////////////////////////////////////////////////////
+
+parallelExecution in Test := false
+
+fork in Test := true
