@@ -214,4 +214,66 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
+
+  "Simple car" should "be provable" in {
+    import scala.language.postfixOps
+    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
+    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
+    import Tactics.NilT
+
+    val file = new File("examples/dev/t/casestudies/car/tutorial/simplecar.key")
+    val s = parseToSequent(file)
+
+    val plantTactic = debugT("plant") & NilT
+
+    val tactic = ls(ImplyRightT) &
+      ls(wipeContextInductionT(Some("v>=0".asFormula))) &
+      onBranch(
+        (indInitLbl, debugT("init") & la(AndLeftT) & AxiomCloseT),
+        (indStepLbl, debugT("step") & ls(ImplyRightT) &
+          ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
+            ls(boxAssignT) & plantTactic,
+            ls(boxAssignT) & plantTactic
+          )
+          ),
+        (indUseCaseLbl, debugT("use") & ls(ImplyRightT) & AxiomCloseT)
+      )
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  "Passive safety" should "be provable" in {
+    import scala.language.postfixOps
+    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
+    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
+    import edu.cmu.cs.ls.keymaera.tactics.ArithmeticTacticsImpl.NegateEqualsT
+    import Tactics.NilT
+
+    val file = new File("examples/dev/t/casestudies/robix/passivesafety.key")
+    val s = parseToSequent(file)
+
+    // TODO .asFormula for strings with functions
+    //v>=0 & dx^2+dy^2=1 & r != 0 & (v = 0 | Abs(x - xo) > v^2/(2*B) + V*v/B | Abs(y - yo) > v^2/(2*B) + V*v/B)
+    val inv = Some(
+      And("v>=0 & dx^2+dy^2=1 & r != 0".asFormula, Or("v=0".asFormula,
+        Or(GreaterThan(Real, Apply(Function("Abs", None, Real, Real), "x-xo".asTerm), "v^2/(2*B) + V*v/B".asTerm),
+          GreaterThan(Real, Apply(Function("Abs", None, Real, Real), "y-yo".asTerm), "v^2/(2*B) + V*v/B".asTerm))))
+    )
+
+    val plantTactic = debugT("plant") & NilT
+
+    val tactic = ls(ImplyRightT) & ls(wipeContextInductionT(inv)) &
+      onBranch(
+        (indInitLbl, (la(AndLeftT)*) & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & AxiomCloseT),
+        (indStepLbl, debugT("step")
+          ),
+        (indUseCaseLbl, (ls(ImplyRightT)*) & (la(AndLeftT)*) & la(OrLeftT) &&
+          (NegateEqualsT(AntePosition(1)) & la(NotLeftT) & AxiomCloseT, debugT("use")))
+      )
+
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
 }
