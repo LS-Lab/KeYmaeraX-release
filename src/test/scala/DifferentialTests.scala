@@ -39,37 +39,37 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x_0".asNamedSymbol :: Nil, "x_0>2".asFormula :: Nil, "x_0>0".asFormula :: Nil))
+      sequent("x".asNamedSymbol :: Nil, "x>2".asFormula :: Nil, "x>0".asFormula :: Nil))
   }
 
   it should "perform alpha renaming if necessary" in {
     val s = sucSequent("[y'=y & y>2 & z<0;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, "y_0>2 & z<0".asFormula :: Nil, "y_0>0".asFormula :: Nil))
+      sequent("y".asNamedSymbol :: Nil, "y>2 & z<0".asFormula :: Nil, "y>0".asFormula :: Nil))
   }
 
   it should "introduce true if there is no evolution domain constraint" in {
     val s = sucSequent("[x'=1;]x>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x_0".asNamedSymbol :: Nil, "true".asFormula :: Nil, "x_0>0".asFormula :: Nil))
+      sequent("x".asNamedSymbol :: Nil, "true".asFormula :: Nil, "x>0".asFormula :: Nil))
   }
 
   "differential weaken of system of ODEs" should "replace system of ODEs with nondeterministic assignments and tests" in {
     val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x_0".asNamedSymbol :: "y_0".asNamedSymbol :: Nil,
-        "y_0>2 & z<0".asFormula :: "x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
+      sequent("x".asNamedSymbol :: "y".asNamedSymbol :: Nil,
+        "y>2 & z<0".asFormula :: "x>3".asFormula :: Nil, "y>0".asFormula :: Nil))
   }
 
   it should "replace system of ODEs with nondeterministic assignments and tests and skolemize correctly" in {
     val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0, z'=2;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x_0".asNamedSymbol :: "y_0".asNamedSymbol :: "z_0".asNamedSymbol :: Nil,
-        "true".asFormula :: "y_0>2 & z_0<0".asFormula :: "x_0>3".asFormula :: Nil, "y_0>0".asFormula :: Nil))
+      sequent("x".asNamedSymbol :: "y".asNamedSymbol :: "z".asNamedSymbol :: Nil,
+        "true".asFormula :: "y>2 & z<0".asFormula :: "x>3".asFormula :: Nil, "y>0".asFormula :: Nil))
   }
 
   it should "introduce marker when started" in {
@@ -94,7 +94,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     val secondNode = helper.runTactic(locateSucc(boxNDetAssign) & diffWeaken, node.openGoals().head)
     secondNode.openGoals().foreach(_.sequent should be (
-      sequent("x_0".asNamedSymbol :: Nil, Nil, "[y:=*;][$$$$;][?y>2&z<0;][?x_0>3;]y>0".asFormula :: Nil)))
+      sequent("x".asNamedSymbol :: Nil, Nil, "[y:=*;][$$$$;][?y>2&z<0;][?x>3;]y>0".asFormula :: Nil)))
   }
 
   it should "pull out first ODE from marked system and sort in correctly" in {
