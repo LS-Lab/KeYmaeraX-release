@@ -122,6 +122,11 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               // val hideAllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
               //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
               //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
+              val anteCont = anteTac match {
+                // SuccPosition(0) is the only position remaining in axiom proof
+                case Some(tactic) => assertT(1, 1) & tactic(AntePosition(0))
+                case None => NilT
+              }
               val succCont = succTac match {
                 // SuccPosition(0) is the only position remaining in axiom proof
                 case Some(tactic) => assertT(0, 1) & tactic(SuccPosition(0))
@@ -131,7 +136,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               println("Axiom instance " + axiomInstance)
               val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
                 assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) &
-                assertT(0, 1) & succCont & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT)
+                assertT(0, 1) & succCont & axiomT(axiomName) & assertT(1, 1) & anteCont & AxiomCloseT)
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }
