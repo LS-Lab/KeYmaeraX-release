@@ -123,7 +123,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               //@TODO Insert contract tactic after hiding all which checks that exactly the intended axiom formula remains and nothing else.
               //@TODO Introduce a reusable tactic that hides all formulas except the ones given as argument and is followed up by a contract ensuring that exactly those formuals remain.
               val anteCont = anteTac match {
-                // AntePosition(0) is the only antecedent position remaining in axiom proof
+                // SuccPosition(0) is the only position remaining in axiom proof
                 case Some(tactic) => assertT(1, 1) & tactic(AntePosition(0))
                 case None => NilT
               }
@@ -134,7 +134,9 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               }
               val axiomPos = SuccPosition(node.sequent.succ.length)
               println("Axiom instance " + axiomInstance)
-              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) & assertT(0, 1) & (succCont & axiomT(axiomName) & assertT(1,1) & anteCont & AxiomCloseT))
+              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
+                assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) &
+                assertT(0, 1) & succCont & axiomT(axiomName) & assertT(1, 1) & anteCont & AxiomCloseT)
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }
@@ -160,14 +162,14 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
    * @param f the formula that should be rewritten
    * @return Desired result before executing the renaming
    */
-  def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])]
+  def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])]
 
   //@TODO Add contract that applies()=>\result fine
   override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
     override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      import TacticLibrary.{abstractionT,skolemizeT,cutT}
+      import TacticLibrary.{abstractionT,skolemizeT,cutT,equalityRewriting}
       import scala.language.postfixOps
       constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
         case Some((desiredResult, renameTactic)) =>
@@ -183,30 +185,33 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
           }
           val desiredResultInContext = traverse(desiredResult)
           val fInContext = getFormula(node.sequent, pos.topLevel)
-          val axiomInstance = Imply(desiredResultInContext, fInContext)
+          val forKAxiomInstance = Imply(desiredResultInContext, fInContext)
+          val axiomInstance = Equiv(f, desiredResult)
 
           val axiomInstPos = AntePosition(node.sequent.ante.length)
 
-          val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) &
+          val axiomApplyTactic = assertPT(forKAxiomInstance)(axiomInstPos) &
             ImplyLeftT(axiomInstPos) && (
               hideT(SuccPosition(0)) /* desired result remains */,
               AxiomCloseT
             )
 
           val cont = renameTactic match {
-            case Some(t) => assertT(0, 1) & t(SuccPosition(0))
+            case Some(t) => assertT(0, 1) & t
             case None => NilT
           }
 
           println("Axiom instance " + axiomInstance)
           val axiomPos = SuccPosition(node.sequent.succ.length)
-          val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
-            assertT(axiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
+          val axiomInstanceTactic = (assertPT(forKAxiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
+            assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
             abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
-            assertT(0, 1) & cont &
-            (((abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)))*) | NilT)
-            & LabelBranch("knowledge subclass continue"))
-          Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+            assertT(0, 1) & cutT(Some(axiomInstance)) &
+            onBranch((cutUseLbl, equalityRewriting(axiomInstPos, pos) &
+              ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) &
+              ImplyRightT(pos.topLevel) & AxiomCloseT),
+              (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch("knowledge subclass continue"))))
+          Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
         case None => None
       }
     }
@@ -223,20 +228,23 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
     extends ContextualizeKnowledgeTactic(name) {
   require(Axiom.axioms != null, "the list of axioms should be defined.")
   require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
-  val axiom = Axiom.axioms.get(axiomName)
-  override def applies(s: Sequent, p: Position) = axiom.isDefined && super.applies(s, p)
+  override def applies(s: Sequent, p: Position) = Axiom.axioms.get(axiomName).isDefined && super.applies(s, p)
+
+  override def constructInstanceAndSubst(f: Formula) = constructInstanceAndSubst(f, Axiom.axioms.get(axiomName).get)
+
+  def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Option[Tactic])] = None
 
   override def apply(pos: Position): Tactic = super.apply(pos) & new ConstructionTactic(this.name) {
-    import TacticLibrary.AxiomCloseT
-    import AxiomTactic.axiomT
     import scala.language.postfixOps
 
-    override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+    override def applicable(node: ProofNode): Boolean = node.sequent(pos) match {
+      case Equiv(_, _) => true
+      case _ => false
+    }
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      Some(onBranch("knowledge subclass continue", axiomT(axiomName) & assertT(1,1) &
-        ImplyRightT(SuccPosition(0)) & EquivLeftT(AntePosition(0)) & AndLeftT(AntePosition(0)) &
-        onBranch((equivRightLbl, locateAnte(NotLeftT)*)) & AxiomCloseT))
+      import AxiomTactic.axiomT
+      Some(onBranch("knowledge subclass continue", assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT))
     }
   }
 }
@@ -251,7 +259,7 @@ abstract class PropositionalInContextTactic(name: String)
   override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
 
   override def apply(pos: Position): Tactic = super.apply(pos) &
-    onBranch("knowledge subclass continue", TacticLibrary.propositional)
+    onBranch("knowledge subclass continue", TacticLibrary.debugT("foo") & TacticLibrary.propositional)
 }
 
 /**
@@ -324,7 +332,7 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
               })
               val axiomPos = SuccPosition(node.sequent.succ.length)
               println("Axiom instance " + axiomInstance)
-              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & (axiomT(axiomName) & assertT(1,1) & AxiomCloseT))
+              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT)
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }

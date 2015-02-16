@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -56,7 +56,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      override def constructInstanceAndSubst(f: Formula) = f match {
         case FormulaDerivative(GreaterThan(sort, s, t)) =>
           // expected axiom instance
           Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)), None)
@@ -77,12 +77,21 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])]= f match {
-        case FormulaDerivative(GreaterThan(sort, s, t)) =>
+      import PropositionalTacticsImpl.uniformSubstT
+      override def constructInstanceAndSubst(f: Formula) = f match {
+        case fd@FormulaDerivative(GreaterThan(sort, s, t)) =>
+          // substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+
+          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))),
+            Map(Equiv(fd, GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))) ->
+              Equiv(FormulaDerivative(GreaterThan(sort, aS, aT)),
+                GreaterEqual(sort, Derivative(sort, aS), Derivative(sort, aT)))
+            ))
+
           // expected axiom instance
-          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)),
-            Some(discreteGhostT(Some(Variable("s", None, Real)), s) &
-              discreteGhostT(Some(Variable("t", None, Real)), t)))
+          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)), Some(usubst))
         case _ => None
       }
     }
@@ -100,13 +109,20 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
-        case FormulaDerivative(GreaterThan(sort, s, t)) =>
+      override def constructInstanceAndSubst(f: Formula) = f match {
+        case fd@FormulaDerivative(GreaterThan(sort, s, t)) =>
+          // substitution
+          val aS = Variable("s", None, Real)
+          val aT = Variable("t", None, Real)
+
+          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))),
+            Map(Equiv(fd, GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))) ->
+              Equiv(FormulaDerivative(GreaterThan(sort, aS, aT)),
+                GreaterEqual(sort, Derivative(sort, aS), Derivative(sort, aT)))
+            ))
+
           // expected axiom instance
-          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)),
-            Some(discreteGhostT(Some(Variable("s", None, Real)), s) &
-              discreteGhostT(Some(Variable("t", None, Real)), t))
-            )
+          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)), Some(usubst))
         case _ => None
       }
     }
@@ -124,7 +140,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => false
       }
 
-      override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+      override def constructInstanceAndSubst(f: Formula) = f match {
         case Not(Not(phi)) => Some(phi, None)
         case _ => None
       }

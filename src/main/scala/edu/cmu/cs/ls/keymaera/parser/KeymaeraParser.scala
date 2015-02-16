@@ -161,14 +161,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     try{
       val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
         case parser.Success(result,next) => result
-        case parser.Failure(_,_) => throw new Exception("parse failed.")
-        case parser.Error(_,_) => throw new Exception("parse error.")
+        case f@parser.Failure(msg,_) => throw new Exception("parse failed: " + f.toString())
+        case e@parser.Error(msg,_) => throw new Exception("parse error: " + e.toString())
       }
       require(parse.equals(printofparseParse), "Parse not equals parse(pp(parse(_))): " + parse + " != " + printofparseParse )
     }
     catch {
-      case e : Exception => require(false, "Parse of print did not succeed on: " + printOfParse + "\nExpected: " +
-        KeYmaeraPrettyPrinter.stringify(parse) +
+      case e : Exception => require(requirement = false,
+        "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + KeYmaeraPrettyPrinter.stringify(parse) +
         "\n Exception was: " + e)
     }
 
@@ -415,14 +415,16 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     //Function application
     
-    lazy val applyP:SubtermParser = {      
-      lazy val pattern = ident ~ ("(" ~> rep1sep(tighterParsers(precedence,applyP).reduce(_|_), ",") <~ ")")
+    lazy val applyP:SubtermParser = {
+      // TODO disallow functions of functions?
+      lazy val pattern = ident ~ ("(" ~> rep1sep(precedence.reduce(_|_), ",") <~ ")")
       
-      log(pattern)("Function Application") ^^ {
-        case name ~ args => 
-          Apply(functionFromName(name, functions), 
-              args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
-      }
+      log(pattern)("Function Application") ^? (
+        {case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Real =>
+          Apply(functionFromName(name.toString, functions),
+            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )},
+        { case name ~ args => "Can only use identifier of sort Real in predicate application, but " + name + " has sort " +
+                                functionFromName(name.toString, functions).sort})
     }
 
     //Groupings
@@ -571,11 +573,12 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val applyPredicateP:SubformulaParser = {
       lazy val pattern = ident ~ ("(" ~> rep1sep(termParser, ",") <~ ")")
 
-      log(pattern)("Predicate Application") ^^ {
-        case name ~ args =>
-          ApplyPredicate(functionFromName(name, functions),
-            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
-      }
+      log(pattern)("Predicate Application") ^? (
+        { case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Bool =>
+          ApplyPredicate(functionFromName(name.toString, functions),
+            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )},
+        { case name ~ args => "Can only use identifier of sort Bool in predicate application, but " + name + " has sort " +
+            functionFromName(name.toString, functions).sort})
     }
 
     //Predicates

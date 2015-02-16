@@ -290,7 +290,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     import HybridProgramTacticsImpl.v2vBoxAssignT
     val tactic = locateSucc(v2vBoxAssignT)
     the [Exception] thrownBy
-      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) should have message "runTactic was called on tactic Position tactic locateSucc ([:=] assign)([:=] assign), but is not applicable on the node."
+      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) should have message "Called a tactic an an inapplicable node! Details: runTactic was called on tactic Position tactic locateSucc ([:=] assign)([:=] assign), but is not applicable on the node"
   }
 
   it should "work in the antecedent" in {
@@ -564,35 +564,81 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Derivative assignment" should "introduce universal quantifier and rename appropriately" in {
-    import HybridProgramTacticsImpl.boxDerivativeAssignT
-    val tactic = locateSucc(boxDerivativeAssignT)
+    import HybridProgramTacticsImpl.boxDerivativeAssignTopLevelT
+    val tactic = locateSucc(boxDerivativeAssignTopLevelT)
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;]x'>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> x_0'>0)".asFormula)
+      sucSequent("y>0".asFormula)
     )
   }
 
   it should "not rename when there is nothing to rename" in {
-    import HybridProgramTacticsImpl.boxDerivativeAssignT
-    val tactic = locateSucc(boxDerivativeAssignT)
+    import HybridProgramTacticsImpl.boxDerivativeAssignTopLevelT
+    val tactic = locateSucc(boxDerivativeAssignTopLevelT)
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;]y>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> y>0)".asFormula)
+      sucSequent("y>0".asFormula)
     )
   }
 
-  it should "rename free occurrences in subsequent modalities" in {
-    import HybridProgramTacticsImpl.boxDerivativeAssignT
-    val tactic = locateSucc(boxDerivativeAssignT)
+  it should "only be applicable on top level" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignTopLevelT
+    val tactic = boxDerivativeAssignTopLevelT(SuccPosition(0, PosInExpr(1::Nil)))
+    tactic.applicable(new RootNode(sucSequent("[x':=y;]y>0".asFormula))) shouldBe false
+  }
+
+  it should "only be applicable without nested derivative assignments" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignTopLevelT
+    val tactic = boxDerivativeAssignTopLevelT(SuccPosition(0))
+    tactic.applicable(new RootNode(sucSequent("[x':=y;][y':=z;]y'>0".asFormula))) shouldBe false
+  }
+
+  it should "work with subsequent ODEs" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignTopLevelT
+    val tactic = boxDerivativeAssignTopLevelT(SuccPosition(0))
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y'=z;]y>0".asFormula))) should be (
+      sucSequent("[y'=z;]y>0".asFormula)
+    )
+  }
+
+  "Box derivative assign in context" should "rename free occurrences in subsequent modalities" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignInContextT
+    val tactic = boxDerivativeAssignInContextT(SuccPosition(0, PosInExpr(1::Nil)))
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=z;]x'+y'>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> [y':=z;]x_0'+y'>0)".asFormula)
+      sucSequent("[x':=y;]x'+z>0".asFormula)
     )
   }
 
-  // TODO
-  ignore should "work on mutual assignments" in {
-    import HybridProgramTacticsImpl.boxDerivativeAssignT
-    val tactic = locateSucc(boxDerivativeAssignT)
+  it should "work on mutual assignments" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignInContextT
+    val tactic = boxDerivativeAssignInContextT(SuccPosition(0, PosInExpr(1::Nil)))
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=x;]x'+y'>0".asFormula))) should be (
-      sucSequent("\\forall x_0. (x_0'=y -> [y':=x;]x_0'+y'>0)".asFormula)
+      sucSequent("[x':=y;]x'+x>0".asFormula)
+    )
+  }
+
+  "Box derivative assign" should "work inside out" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    val tactic = boxDerivativeAssignT(SuccPosition(0))
+    getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=x;]x'+y'>0".asFormula))) should be (
+      sucSequent("[x':=y;]x'+x>0".asFormula)
+    )
+  }
+
+  // TODO uniform substitution of derivatives
+  ignore should "work inside out when applied repeatedly" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    import scala.language.postfixOps
+    val tactic = locateSucc(boxDerivativeAssignT)
+    getProofSequent(tactic*, new RootNode(sucSequent("[x':=y;][y':=x;]x'+y'>0".asFormula))) should be (
+      sucSequent("y+x>0".asFormula)
+    )
+  }
+
+  ignore should "work on non-trivial derivatives" in {
+    import HybridProgramTacticsImpl.boxDerivativeAssignT
+    import scala.language.postfixOps
+    val tactic = locateSucc(boxDerivativeAssignT)
+    getProofSequent(tactic*, new RootNode(sucSequent("[x':=x;]2*x*x'>0".asFormula))) should be (
+      sucSequent("2*x*x>0".asFormula)
     )
   }
 }

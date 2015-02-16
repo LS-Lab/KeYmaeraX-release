@@ -55,7 +55,7 @@ object SyntacticDerivationAxiomTactics {
      * @param f the formula that should be rewritten
      * @return Desired result before executing the renaming
      */
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(Imply(p, q)) => {
         val g = FormulaDerivative(Or(Not(p), q))
         val axiomInstance = Equiv(f,g)
@@ -83,7 +83,7 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(And(p,q)) => {
         Some(And(FormulaDerivative(p), FormulaDerivative(q)), None)
       }
@@ -135,7 +135,7 @@ object SyntacticDerivationAxiomTactics {
      * @param f the formula that should be rewritten
      * @return Desired result before executing the renaming
      */
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(Or(p,q)) => Some(And(FormulaDerivative(p), FormulaDerivative(q)), None)
       case _ => None
     }
@@ -187,7 +187,7 @@ object SyntacticDerivationAxiomTactics {
      * @param f the formula that should be rewritten
      * @return Desired result before executing the renaming
      */
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(Equals(eqSort, s, t)) => Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
       case _ => None
     }
@@ -226,7 +226,7 @@ object SyntacticDerivationAxiomTactics {
     }
 
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(GreaterEqual(eqSort, s, t)) => Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
       case _ => None
     }
@@ -264,7 +264,7 @@ object SyntacticDerivationAxiomTactics {
       !p.isAnte && super.applies(s, p)
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
+    override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(GreaterThan(eqSort, s, t)) => Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
       case _ => None
     }

@@ -10,7 +10,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  * @author Stefan Mitsch
  */
 class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodTester {
-  val helper = new ProvabilityTestHelper((x:String) => (), new ToolBase("") { override def init(cfg: Map[String, String]) = {}})
+  val helper = new ProvabilityTestHelper((x:String) => ())
 
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)

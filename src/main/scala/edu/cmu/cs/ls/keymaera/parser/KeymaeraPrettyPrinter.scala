@@ -33,6 +33,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Test(_) => !needsParens(e,parent)
     case NDetAssign(_) => !needsParens(e,parent)
     case ContEvolve(_) => !needsParens(e,parent)
+    case _: ContEvolveProgram => !needsParens(e,parent)
     case _ => false
   }
 
@@ -129,11 +130,17 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
-    case Apply(function,child) => 
-      parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
+    case Apply(function,child) => child match {
+      // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
+      case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
+      case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
+    }
     
-    case ApplyPredicate(function,child) => 
-      parensIfNeeded(function,expressionToPrint) + "(" + prettyPrinter(child) + ")"
+    case ApplyPredicate(function,child) => child match {
+      // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
+      case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
+      case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
+    }
 
     case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN) + symbolTable.SCOLON
     case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
@@ -148,9 +155,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Exp(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP)
     
     //BinaryProgram
-    case Choice(l,r) => {
+    case c@Choice(l,r) => {
       val leftString = l match {
-        case Choice(ll,lr) => prettyPrinter(l)
+        // left choice in a choice needs parens, because ++ is right-associative
+        case Choice(ll,lr) => "{" + prettyPrinter(l) + "}"
         case _ => recurse(l)
       }
       val rightString = r match {
@@ -172,16 +180,16 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       leftString + symbolTable.PARALLEL + rightString
     } 
     
-    case Sequence(l,r) => {
-      val leftString = parensIfNeeded(l, Sequence(l,r))
-      val rightString = parensIfNeeded(r, Sequence(l,r))
-      if(!endsWithColon(l,Sequence(l,r))) {
-        leftString + symbolTable.SCOLON + rightString
+    case s@Sequence(l,r) => {
+      val leftString = l match {
+        // left sequence in a sequence needs parens, because ; is right-associative
+        case Sequence(_, _) => "{" + parensIfNeeded(l, s) + "}"
+        case _ => parensIfNeeded(l, s)
       }
-      else {
-        leftString + rightString
-      }
-    } 
+      val rightString = parensIfNeeded(r, s)
+      if(endsWithColon(l, s)) leftString + rightString
+      else leftString + symbolTable.SCOLON + rightString
+    }
     
     //BinaryRelation
     //TODO is this OK?
@@ -334,7 +342,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
    * @todo this is incredible hacky and needs to be replaced!
    */
   private def needsParens(child : Expr, parent : Expr) = {
-    val precedenceDS =    
+    val precedenceDS =
       //Terms.
       //TODO expP?
       Add.getClass.getCanonicalName ::
@@ -346,6 +354,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Derivative.getClass.getCanonicalName ::
       Apply.getClass.getCanonicalName ::
       Function.getClass.getCanonicalName ::
+      Pair.getClass.getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName :: //real-valued.
       Number.getClass.getCanonicalName   ::
       //Formulas

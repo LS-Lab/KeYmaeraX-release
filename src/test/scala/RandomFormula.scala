@@ -1,5 +1,4 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser._
 import scala.util.Random
 import scala.collection.immutable._
 
@@ -13,18 +12,18 @@ class RandomFormula(val rand : Random = new Random()) {
     case None => Nil
   }
   
-  private def nextNames(n : Int) : IndexedSeq[Variable] = unfoldRight(n) { n =>
+  def nextNames(name: String, n : Int) : IndexedSeq[Variable] = unfoldRight(n) { n =>
     if (n==0)
       None
     else
-      Some((Variable("z" + n, None, Real), n-1))
+      Some((Variable(name + n, None, Real), n-1))
       //Some(("x" + (rand.alphanumeric take 5).fold("")((s:String,t:String)=>s+t), n-1))
   }.to[IndexedSeq]
   
-  def nextFormula(size : Int) = nextF(nextNames(size / 3 + 1), size)
+  def nextFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size)
 
   def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = {
-	  require(n>=0);
+	  require(n>=0)
 	  if (n == 0 || rand.nextInt(10)<1) return True
       val r = rand.nextInt(110)
       r match {
@@ -50,12 +49,12 @@ class RandomFormula(val rand : Random = new Random()) {
   }
 
   def nextT(vars : IndexedSeq[Variable], n : Int) : Term = {
-      require(n>=0);
+      require(n>=0)
       if (n == 0 || rand.nextInt(10)<1) return Number(BigDecimal(0))
       val r = rand.nextInt(20+1)
 	  r match {
         case 0 => Number(BigDecimal(0))
-		case it if 1 until 10 contains it => if (rand.nextBoolean) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
+		case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
         case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
         case it if 20 until 30 contains it => Add(Real, nextT(vars, n-1), nextT(vars, n-1))
         case it if 30 until 40 contains it => Subtract(Real, nextT(vars, n-1), nextT(vars, n-1))

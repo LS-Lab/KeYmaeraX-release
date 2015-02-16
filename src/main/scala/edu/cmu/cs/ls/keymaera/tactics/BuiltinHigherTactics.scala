@@ -45,7 +45,7 @@ object BuiltinHigherTactics {
         }
         //@TODO case DiamondModality(prog, f)
         case Forall(_, _) if quantifiers && !p.isAnte => Some(skolemizeT(p))
-        case Exists(_, _) if quantifiers && p.isAnte => Some(skolemizeT(p)) //@TODO Make sure skolemizeT works
+        case Exists(_, _) if quantifiers && p.isAnte => Some(skolemizeT(p))
         case _ => None
       }
       res

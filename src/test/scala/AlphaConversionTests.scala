@@ -13,8 +13,7 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 * @author Ran Ji
 */
 class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  val helper = new ProvabilityTestHelper((x) => println(x),
-    new ToolBase("") { override def init(cfg: Map[String, String]) {} })
+  val helper = new ProvabilityTestHelper((x) => println(x))
 
   def alpha(from: String, to: String): PositionTactic = TacticLibrary.alphaRenamingT(from, None, to, None)
 

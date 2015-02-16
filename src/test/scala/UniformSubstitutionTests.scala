@@ -4,6 +4,8 @@ import testHelper.StringConverter
 import scala.collection.immutable.{List, Set, Seq}
 import StringConverter._
 
+import scala.util.Random
+
 /**
  * Created by rjcn on 01/09/15.
  * @author Ran Ji
@@ -711,5 +713,70 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)))
     s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
+  }
+
+  /*
+   * Andre's tests
+   */
+  def sToT(s: String, t: String) = Substitution(List(SubstitutionPair(s.asNamedSymbol, t.asTerm)))
+
+  "Substitution clash" should "be reported on substitution of (maybe) bound variables" in {
+    def rndSubstDefs(max: Int) = {
+      val rnd = new Random()
+      val numSubsts = rnd.nextInt(max)
+      val names = new RandomFormula(rnd).nextNames("lhs", numSubsts)
+      names.map(SubstitutionPair(_, rndTerm(rnd.nextInt(10), rnd)))
+    }
+    def rndTerm(size: Int, rnd: Random = new Random()) = {
+      val rndF = new RandomFormula(rnd)
+      rndF.nextT(rndF.nextNames("rhs", size/3+1), size)
+    }
+
+    def rndExtensionOf(s: Substitution) = Substitution(new Random().shuffle(s.subsDefs ++ rndSubstDefs(5)))
+
+    val cases =
+      (sToT("x", "5"), "[{x:=0 ++ z:=z}; a:=x;]1>0".asFormula) ::         // subst(a:=x): x (maybe) bound by {x:=0 ++ ...}
+      (sToT("b", "z+1"), "[{x:=0 ++ z:=z}; a:=b;]1>0".asFormula) ::       // subst(a:=b): z free in z+1 but (maybe) bound by {... ++ z:=z}
+      (sToT("x", "5"), "[x:=0 ++ z:=z]x>0".asFormula) ::                  // subst(x>0): x (maybe) bound by {x:=0 ++ ...}
+      (sToT("z", "1"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>z".asFormula) ::       // subst(x>z): z (maybe) bound by {... ++ z:=z+1}
+      (sToT("z", "2*x"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula) ::     // subst(z:=z-1): x free in 2*x but bound by x:=x+z
+      (sToT("z", "2*x"), "[x:=x+1 ++ x:=x+z]x>z".asFormula) ::            // subst(x>z): x free in 2*x but mustbe (and thus maybe) bound by {x:=x+1 ++ x:=x+z;...}
+      (sToT("a", "2*x"), "[{x:=x+1 ++ y:=5}; z:=x-a]x>0".asFormula) ::    // subst(z:=x-a): x free in 2*x but (maybe) bound by {x:=x+1 ++ ...}
+      (sToT("a", "2*x"), "[{x:=x+1 ++ ?1>0}; z:=x-a]x>0".asFormula) ::    // subst(z:=x-a): x free in 2*x but (maybe) bound by {x:=x+1 ++ ...}
+      (sToT("x", "2"), "[{x:=x+1;}*; z:=x+z]1>0".asFormula) ::            // subst(z:=x+z): x (maybe) bound by {x:=x+1}*
+      (sToT("a", "x"), "[{x:=x+1;}*; z:=a]1>0".asFormula) ::              // subst(z:=a): x free in x but maybe bound by {x:=x+1}*
+      (sToT("a", "x"), "[x:=x+1; z:=a]1>0".asFormula) ::                  // subst(z:=a): x free in x but mustbe (and thus maybe) bound by x:=x+1
+      (sToT("x", "a"), "[{x:=x+1;}*; x:=x+1]1>0".asFormula) ::            // subst(x:=x+1): x (maybe) bound by {x:=x+1}*
+        Nil
+
+    cases.foreach(c => withClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+
+    cases.map(c => (rndExtensionOf(c._1), c._2)).
+      foreach(c => withClue(c._1 + " on " + c._2) { a [SubstitutionClashException] should be thrownBy c._1(c._2) })
+  }
+
+  "Uniform substitution of mustbe bound" should "be same as input" in {
+    val cases =
+      (sToT("x", "5"), "[{x:=0 ++ z:=z}]1>0".asFormula) ::                // x no free occurrence
+      (sToT("x", "5"), "[x:=0 ++ x:=1]x>0".asFormula) ::                  // x mustbe bound
+      (sToT("z", "2"), "[{x:=x+1 ++ y:=5}; z:=x-1]x>0".asFormula) ::      // z mustbe bound
+      (sToT("z", "2"), "[{x:=x+1 ++ y:=5}; z:=x-1]x>z".asFormula) ::      // z mustbe bound
+        Nil
+
+    cases.foreach(c => c._1(c._2) should be (c._2))
+  }
+
+  "Uniform substitution of free" should "be as expected" in {
+    val cases =
+      (sToT("z", "1"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula, "[x:=x+1 ++ x:=x+1;z:=1-1]x>0".asFormula) ::
+      (sToT("x", "2"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>0".asFormula, "[x:=2+1 ++ x:=2+z;z:=z-1]x>0".asFormula) ::
+      (sToT("x", "2"), "[x:=x+1 ++ x:=x+z;z:=z-1]x>z".asFormula, "[x:=2+1 ++ x:=2+z;z:=z-1]x>z".asFormula) ::
+      (sToT("z", "2"), "[{x:=x+1;}*; z:=x+z]x>z".asFormula, "[{x:=x+1;}*; z:=x+2]x>z".asFormula) ::
+      (sToT("x", "a"), "[x:=x+1; z:=a]1>0".asFormula, "[x:=a+1; z:=a]1>0".asFormula) ::
+      (sToT("x", "a"), "[x:=x+1; {x:=x+1;}*]1>0".asFormula, "[x:=a+1; {x:=x+1;}*]1>0".asFormula) ::
+      (sToT("z", "-z"), "[{x:=x+1 ++ x:=x+z}; z:=x-1]x>z".asFormula, "[{x:=x+1 ++ x:=x+-z}; z:=x-1]x>z".asFormula) ::
+        Nil
+
+    cases.foreach(c => c._1(c._2) should be (c._3))
   }
 }

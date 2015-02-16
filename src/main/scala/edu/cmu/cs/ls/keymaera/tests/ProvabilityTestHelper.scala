@@ -17,21 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
  *    import edu.cmu.cs.ls.keymaera.ProvabilityTestHelper.scala
  * Created by nfulton on 12/6/14.
  */
-class ProvabilityTestHelper(logger : String => Unit = ((x:String) => ()), tool : Tool = new Mathematica()) {
-
-  // @todo this definitely needs to change...
-  val linkName = {
-    def exists(path: String) = new java.io.File(path).exists()
-
-    val macPath = "/Applications/Mathematica.app/Contents/MacOS/MathKernel"
-    val linuxPath = "/usr/local/Wolfram/Mathematica/9.0/Executables/MathKernel"
-
-    if(exists(macPath)) macPath
-    else if(exists(linuxPath)) linuxPath
-    else throw new Exception("Could not find a correct path to mathKernel.")
-
-  }
-  tool.init(Map("linkName" -> linkName))
+class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Utility Functions
