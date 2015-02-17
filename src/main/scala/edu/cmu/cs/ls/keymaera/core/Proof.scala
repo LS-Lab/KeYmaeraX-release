@@ -1043,10 +1043,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case BoxModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
     case DiamondModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
 
-    // base cases (remove u)
+    // base cases
     // TODO true, false, predicate constant and apply predicate are not mentioned in Definition 7 and 8
-//    case p: PredicateConstant =>
-//    case ApplyPredicate(p, arg) =>
+    case p: PredicateConstant => VC2(fv = Set(p), bv = Set.empty) //@todo eisegesis
+    case ApplyPredicate(p, arg) => VC2(fv = Set(p) ++ freeVariables(arg), bv = Set.empty) //@todo eisegesis
     case True | False => VC2(fv = Set.empty[NamedSymbol], bv = Set.empty[NamedSymbol]) //@todo eisegesis
     case _ => throw new UnknownOperatorException("Not implemented", f)
   }
@@ -1227,9 +1227,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-      require(catVars(subs.t.asInstanceOf[Formula]).fv.intersect(u).isEmpty,
-        s"Substitution clash: ${catVars(subs.t.asInstanceOf[Formula]).fv} ∩ $u is not empty")
       val (rArg, rFormula) = (subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Formula])
+      val restrictedU = rArg match { case CDot => u case _ => u-rArg }
+      require(catVars(subs.t.asInstanceOf[Formula]).fv.intersect(restrictedU).isEmpty,
+        s"Substitution clash: ${catVars(subs.t.asInstanceOf[Formula]).fv} ∩ $restrictedU is not empty")
       instantiate(rArg, usubst(o, u, theta)).usubst(Set.empty, Set.empty, rFormula)
     case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
     // TODO not mentioned in uniform substitution

@@ -619,24 +619,24 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     an [IllegalArgumentException] should be thrownBy s.apply("[{x:=x+1;}*;]true".asFormula)
   }
 
-  "Uniform substitution of [y:=t;]p(y) <-> p(t)" should "not be permitted"/*"[y:=t;]y>0 <-> z>0"*/ in {
+  "Uniform substitution of [y:=t;]p(y) <-> p(t)" should "[y:=t;]y>0 <-> z>0" in {
     def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
     s = Substitution(List(new SubstitutionPair("t".asTerm, "z".asTerm),
       new SubstitutionPair(p("y".asTerm), "y>0".asFormula)))
 
     // [x:=t;]p(x) <-> p(t)
     val o = Equiv(BoxModality("y:=t;".asProgram, p("y".asTerm)), p("t".asTerm))
-    an [IllegalArgumentException] should be thrownBy s(o)// should be ("[y:=z;]y>0 <-> z>0".asFormula)
+    s(o) should be ("[y:=z;]y>0 <-> z>0".asFormula)
   }
 
-  "Uniform substitution (p(.) |-> .>0),z |-> 2) of [x:=2y+1;]p(3x+z)" should "not be permitted" /*"[x:=2y+1;]3x+2>0"*/ in {
+  "Uniform substitution (p(.) |-> .>0),z |-> 2) of [x:=2y+1;]p(3x+z)" should "[x:=2y+1;]3x+2>0" in {
     def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
     s = Substitution(Seq(new SubstitutionPair("z".asTerm, "2".asTerm),
       new SubstitutionPair(p("x".asTerm), "x>0".asFormula)))
 
     // [x:=2y+1;]p(3x+z)
     val o = BoxModality(Assign("x".asTerm, "2*y+1".asTerm), p("3*x+z".asTerm))
-    an [IllegalArgumentException] should be thrownBy s(o)// should be ("[x:=2*y+1;]3*x+2>0".asFormula)
+    s(o) should be ("[x:=2*y+1;]3*x+2>0".asFormula)
   }
 
   "Uniform substitution (p(.) |-> .>0),z |-> x+2) of [x:=2y+1;]p(3x+z)" should "throw a clash exception" in {
