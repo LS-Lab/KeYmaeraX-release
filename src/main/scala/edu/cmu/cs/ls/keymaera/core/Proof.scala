@@ -1284,9 +1284,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     //@TODO check implementation
     case a: ProgramConstant if  subsDefs.exists(_.n == p) =>
       val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
-      val vc = catVars(sigmaP)
-      require(vc.fv.intersect(u).isEmpty, s"Substitution clash: ${vc.fv} ∩ $u is not empty")
-      USR(o++vc.mbv, u++vc.bv, sigmaP)
+      // todo is side condition correct?
+      require(catVars(sigmaP).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(sigmaP).fv} ∩ $u is not empty")
+      USR(o, u, sigmaP) //@todo are new o and u correct?
     case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (
