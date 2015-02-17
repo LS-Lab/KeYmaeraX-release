@@ -5,7 +5,6 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
