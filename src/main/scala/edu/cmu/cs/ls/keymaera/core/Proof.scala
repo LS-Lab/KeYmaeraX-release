@@ -1275,11 +1275,17 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       require(q == v && r == w, "Programs where not all branches write the same variables are not yet supported")
       USR(q.intersect(r), v++w, Choice(as, bs))
     case Loop(a) =>
-      val USR(_, v, _) = usubst(o, u, a)
+      val USR(q, v, _) = usubst(o, u, a)
       val USR(r, w, as) = usubst(o, v, a)
       // TODO remove when proof of uniform substitution is done
       require(r == w, "Programs where loop does not write all variables on all branches are not yet supported")
-      USR(o, w, Loop(as)) ensuring (usubst(r, w, a).o == r, "Unstable O") ensuring(usubst(r, w, a).u == w, "Unstable U")
+      USR(o, w, Loop(as)) ensuring (
+        o.subsetOf(q), s"Non-monotonic o: $o not subset of $q") ensuring(
+        q == r, s"Unstable O: $q not equal to $r") ensuring(
+        u.subsetOf(v), s"Non-monotonic u: $u not subset of $v") ensuring(
+        v == w, s"Unstable U: $v not equal to $w") ensuring (
+        usubst(r, w, a).o == r, s"Unstable O: ${usubst(r, w, a).o} not equal to $r") ensuring(
+        usubst(r, w, a).u == w, s"Unstable U: ${usubst(r, w, a).u} not equal to $w")
 
     //@TODO check implementation
     case a: ProgramConstant if  subsDefs.exists(_.n == p) =>
