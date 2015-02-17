@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 
 /**
- * This file contains the contextual term  context tactics.
+ * Breaking stuff up.
  * Created by nfulton on 2/14/15.
  */
 object SyntacticDerivativeTermAxiomsInContext {
@@ -23,9 +23,126 @@ object SyntacticDerivativeTermAxiomsInContext {
 
   import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // The top-level tactic implementations.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  def NegativeDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+    val theTactic = NegativeDerivativeT
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      getTermAtPosition(s(p), p.inExpr) match {
+        case Some(term) => theTactic.applies(term)
+        case None => false
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
+        case Some(term) => term match {
+          case Derivative(dSort, Neg(sSort, s)) => {
+            val ds = Derivative(sSort, s)
+            val replacement = Neg(sSort, ds)
+            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+
+            Some(contextTactic(p))
+          }
+          case _ => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def DivideDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+    val theTactic = DivideDerivativeT
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      getTermAtPosition(s(p), p.inExpr) match {
+        case Some(term) => theTactic.applies(term)
+        case None => false
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
+        case Some(term) => term match {
+          case Derivative(dSort, Divide(stSort, s, t)) => {
+            val ds = Derivative(stSort, s)
+            val dt = Derivative(stSort, t)
+            val replacement = Divide(dSort,  Subtract(stSort, Multiply(stSort, ds, t), Multiply(stSort, s, dt)), Exp(stSort, t, Number(2)))
+            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+
+            Some(contextTactic(p))
+          }
+          case _ => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def MultiplyDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+    val theTactic = MultiplyDerivativeT
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      getTermAtPosition(s(p), p.inExpr) match {
+        case Some(term) => theTactic.applies(term)
+        case None => false
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
+        case Some(term) => term match {
+          case Derivative(dSort, Multiply(stSort, s, t)) => {
+            val ds = Derivative(stSort, s)
+            val dt = Derivative(stSort, t)
+            val replacement = Add(dSort,  Multiply(stSort, ds, t), Multiply(stSort, s, dt))
+            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+
+            Some(contextTactic(p))
+          }
+          case _ => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def AddDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+    val theTactic = AddDerivativeT
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      getTermAtPosition(s(p), p.inExpr) match {
+        case Some(term) => theTactic.applies(term)
+        case None => false
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
+        case Some(term) => term match {
+          case Derivative(dSort, Add(stSort, s, t)) => {
+            val replacement = Add(dSort, Derivative(stSort, s), Derivative(stSort, t))
+            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+
+            Some(contextTactic(p))
+          }
+          case _ => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
 
   def SubtractDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
     val theTactic = SubtractDerivativeT
+
     override def applies(s: Sequent, p: Position): Boolean = {
       getTermAtPosition(s(p), p.inExpr) match {
         case Some(term) => theTactic.applies(term)
@@ -38,17 +155,9 @@ object SyntacticDerivativeTermAxiomsInContext {
         case Some(term) => term match {
           case Derivative(dSort, Subtract(stSort, s, t)) => {
             val replacement = Subtract(dSort, Derivative(stSort, s), Derivative(stSort, t))
-            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, SubtractDerivativeT)
-            val positionOfFormula = if(p.isAnte) {
-              AntePosition(p.index)
-            }
-            else {
-              SuccPosition(p.index)
-            }
+            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
-            Some(
-              contextTactic(positionOfFormula)
-            )
+            Some(contextTactic(p))
           }
           case _ => None
         }
@@ -58,77 +167,117 @@ object SyntacticDerivativeTermAxiomsInContext {
     }
   }
 
-  private def getTermAtPosition(f : Formula, pos : PosInExpr) : Option[Term] = {
-    var retVal : Option[Term] = None
-    val fn = new ExpressionTraversalFunction() {
-      override def preT(p : PosInExpr, t : Term) = {
-        if(pos.equals(p)) {
-          retVal = Some(t)
-          Left(Some(ExpressionTraversal.stop))
-        }
-        else {
-          Left(None)
-        }
-      }
-    }
-    ExpressionTraversal.traverse(fn, f)
-    retVal
-  }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Implementation of term-level rewrites.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  class TermAxiomInContextTactic(name : String, termToFind : Term, replacementTerm : Term, termTactic : TermAxiomTactic)
-    extends ContextualizeKnowledgeTactic(name) //replaced with PropositionalInContextTactic.
+  /**
+   *
+   * @param name The name of the tactic.
+   * @param termToFind The term that will be replaced
+   * @param replacementTerm The term which will replace termToFind
+   * @param termTactic A tactic stating that termToFind <-> replacementTerm
+   */
+  private class TermAxiomInContextTactic(name : String, termToFind : Term, replacementTerm : Term, termTactic : TermAxiomTactic)
+    extends ContextualizeKnowledgeForTermTactic(name) //replaced with PropositionalInContextTactic.
   {
-    override def applies(f: Formula): Boolean = findApplicablePositionForTermAxiom(f, termTactic) match {
-      case Some(_) => true
-      case None => false
-    }
-
     override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])] = {
       val replacementPositionOption = findApplicablePositionForTermAxiom(f, termTactic)
 
       replacementPositionOption match {
-        case Some((replacementPosition, _)) => Some(replaceTerm(f, replacementTerm, replacementPosition), None)
+        case Some((replacementPosition, _)) => {
+          val smallest = smallestFormulaContainingTerm(f, replacementPosition)
+          val desiredResult = replaceTerm(replacementTerm, termToFind, smallest)
+          Some(desiredResult, None)
+        }
         case None => None
       }
     }
 
     override def apply(pos : Position) = {
-      def theBranchTactic : Tactic = sequentToImplication &
-        kModalModusPonensT(pos) &
-        boxDerivativeAssignT(pos) & //will it always be a box assign?
-        implyToEquiv(pos) &
-        locateTerm(termTactic) &
-        EquivRightT(pos) & onBranch(
-          (BranchLabels.equivLeftLbl, closeT),
-          (BranchLabels.equivRightLbl, closeT)
-        )
-
       def knowledgeContinuationTactic : Tactic = SearchTacticsImpl.onBranch(
         (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl, theBranchTactic),
-          (BranchLabels.equivRightLbl, theBranchTactic)
+          (BranchLabels.equivLeftLbl, locateTerm(termTactic) & AxiomCloseT),
+          (BranchLabels.equivRightLbl, locateTerm(termTactic) & AxiomCloseT)
         )),
         ("additional obligation", locateSucc(ImplyRightT) & locateTerm(termTactic) & AxiomCloseT)
       )
 
       super.apply(pos) & knowledgeContinuationTactic
+    }
+  }
 
+  /**
+   * Be very careful re-using this for other purposes...
+   */
+  abstract class ContextualizeKnowledgeForTermTactic(name: String) extends PositionTactic(name) {
+    override def applies(s: Sequent, p: Position): Boolean = getTerm(s(p), p.inExpr) match {
+      case Some(_) => true
+      case _ => false
     }
 
     /**
-     * @todo check this implementation.
-     * @param original The original expression
-     * @param replacement The term to insert at position p
-     * @param p The position in the expression to replace.
-     * @return A new expression identical to original except at position p.
+     * This method constructs the desired result before the renaming.
+     *
+     * @param f the formula that should be rewritten
+     * @return Desired result before executing the renaming
      */
-    private def replaceTerm(original : Formula, replacement : Term, p : PosInExpr) : Formula = {
-      val fn = new ExpressionTraversalFunction {
-        override def preT(posInExpr : PosInExpr, term : Term) = if(posInExpr.equals(p)) Right(replacement) else Right(term)
+    def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])]
+
+    //@TODO Add contract that applies()=>\result fine
+    override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import TacticLibrary.{abstractionT,skolemizeT,cutT,equalityRewriting}
+
+        constructInstanceAndSubst(node.sequent(pos)) match {
+          case Some((desiredResult, renameTactic)) =>
+            val f = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
+
+            val fInContext = TacticHelper.getFormula(node.sequent, pos.topLevel)
+            val desiredResultInContext = replaceFormula(desiredResult, f, fInContext)
+
+            val forKAxiomInstance = Imply(desiredResultInContext, fInContext)
+            val axiomInstance = Equiv(f, desiredResult)
+
+            val axiomInstPos = AntePosition(node.sequent.ante.length)
+
+            val axiomApplyTactic = assertPT(forKAxiomInstance)(axiomInstPos) &
+              ImplyLeftT(axiomInstPos) && (
+              hideT(SuccPosition(0)) /* desired result remains */,
+              AxiomCloseT ~ TacticLibrary.debugT("axiomclose failed here.")&assertT(0,0)
+              )
+
+            val cont = renameTactic match {
+              case Some(t) => assertT(0, 1) & t
+              case None => NilT
+            }
+
+            val axiomPos = SuccPosition(node.sequent.succ.length)
+
+            val axiomInstanceTactic = (assertPT(forKAxiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
+              assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
+              abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
+              assertT(0, 1) & cutT(Some(axiomInstance)) &
+              onBranch((cutUseLbl,
+                (equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
+                  (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
+                (cutShowLbl,
+                  hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
+
+            Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+          case None => None
+        }
       }
-      ExpressionTraversal.traverse(fn, original).get
     }
+
   }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Some tactics which could be generally useful, and it might make sense to move into the TacticsLibrary.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   /**
    * Converts the last two formulas in a sequent into an implication. So to show f |- g, you can now just show |- f -> g.
@@ -188,6 +337,85 @@ object SyntacticDerivativeTermAxiomsInContext {
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
+  }
+
+
+  /**
+   * @todo check this implementation.
+   * @param original The original expression
+   * @param termToReplace The position to replace.
+   * @param replacement The term to insert at position p
+   * @return [replacement / termToReplace] original
+   */
+  private def replaceTerm(replacement : Term, termToReplace : Term, original : Formula) : Formula = {
+    val fn = new ExpressionTraversalFunction {
+      override def preT(posInExpr : PosInExpr, term : Term) = if(term.equals(termToReplace)) Right(replacement) else Left(None)
+    }
+    ExpressionTraversal.traverse(fn, original).get
+  }
+
+  private def replaceFormula(replacement : Formula, f : Formula, original : Formula) : Formula = {
+    val fn = new ExpressionTraversalFunction {
+      override def preF(posInExpr : PosInExpr, formula : Formula) = {
+        if(f.equals(formula)) {
+          Right(replacement)
+        } else {
+          Left(None)
+        }
+      }
+    }
+    ExpressionTraversal.traverse(fn, original).get
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Term positional helpers.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  private def getFormula(f : Formula, pos : PosInExpr) : Option[Formula] = {
+    var formula : Option[Formula] = None;
+    val fn = new ExpressionTraversalFunction {
+      override def preF(p : PosInExpr, f:Formula) = {if(p == pos) {
+        formula = Some(f)
+        Left(Some(ExpressionTraversal.stop))
+      } else {
+        Left(None)
+      }}
+    }
+    ExpressionTraversal.traverse(fn, f)
+    formula
+  }
+
+  private def getTerm(f : Formula, pos : PosInExpr) : Option[Term] = {
+    var term : Option[Term] = None;
+    val fn = new ExpressionTraversalFunction {
+      override def preT(pos : PosInExpr, t:Term) = {term = Some(t); Left(Some(ExpressionTraversal.stop))}
+    }
+    ExpressionTraversal.traverse(fn, f)
+    term
+  }
+
+  private def smallestFormulaContainingTerm(f : Formula, pos : PosInExpr) : Formula = {
+    getFormula(f, pos) match {
+      case Some(formula) => formula //base case.
+      case None => smallestFormulaContainingTerm(f, PosInExpr(pos.pos.init))
+    }
+  }
+
+  private def getTermAtPosition(f : Formula, pos : PosInExpr) : Option[Term] = {
+    var retVal : Option[Term] = None
+    val fn = new ExpressionTraversalFunction() {
+      override def preT(p : PosInExpr, t : Term) = {
+        if(pos.equals(p)) {
+          retVal = Some(t)
+          Left(Some(ExpressionTraversal.stop))
+        }
+        else {
+          Left(None)
+        }
+      }
+    }
+    ExpressionTraversal.traverse(fn, f)
+    retVal
   }
 
 }

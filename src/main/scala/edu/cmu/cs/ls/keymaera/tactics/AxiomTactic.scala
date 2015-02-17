@@ -209,7 +209,8 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
             onBranch((cutUseLbl,
               (equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
                 (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
-              (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
+              (cutShowLbl, TacticLibrary.debugT("Inside cut show") &
+                hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
 
           Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
         case None => None
@@ -244,7 +245,7 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       import AxiomTactic.axiomT
-      Some(onBranch("knowledge subclass continue", assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT))
+      Some(onBranch("knowledge subclass continue", assertT(0, 1) & TacticLibrary.debugT("foo") & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT))
     }
   }
 }
