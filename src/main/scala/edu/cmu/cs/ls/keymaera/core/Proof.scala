@@ -1071,7 +1071,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case True | False | _: NumberObj => Set.empty //@todo eisegesis
   }
 
-  def catVars(p: Program): VC3 = p match {
+  def catVars(p: Program): VC3 = { p match {
     case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = Set(x), mbv = Set(x))
     // TODO CDot and derivative not mentioned in Definition 9
     case Assign(CDot, e) => VC3(fv = freeVariables(e), bv = Set(CDot), mbv = Set(CDot)) //@todo eisegesis
@@ -1097,7 +1097,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: ProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
     case _: ContEvolveProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
     case _ => throw new UnknownOperatorException("Not implemented", p)
-  } // ensuring MBV <= BV
+  }} ensuring(r => { val VC3(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) not a subset of BV($p)")
 
   private def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case ContEvolveProduct(a, b) => primedVariables(a) ++ primedVariables(b)
@@ -1289,7 +1289,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       USR(o++vc.mbv, u++vc.bv, sigmaP)
     case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
-  }} ensuring (r => {val USR(q, v, _) = r; val vc = catVars(p); q.subsetOf(v) && q == o++vc.mbv && v == u++vc.bv })
+  }} ensuring (
+        r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U") ensuring (
+        r => { val USR(q, _, p) = r; val vc = catVars(p); q == o++vc.mbv }, s"Result O not $o u MBV($p)") ensuring (
+        r => { val USR(_, v, p) = r; val vc = catVars(p); v == u++vc.bv }, s"Result U not $u u BV($p)")
 
   /**
    * Substitution in (systems of) differential equations.
