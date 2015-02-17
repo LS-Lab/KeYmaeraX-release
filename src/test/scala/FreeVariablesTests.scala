@@ -21,10 +21,6 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   }
 
   private def V(s: String) = Variable(s, None, Real)
-  private def freeVariables(p: Program) : Any = {
-    val freeVariables = PrivateMethod[Any]('freeVariables)
-    s invokePrivate freeVariables(p)
-  }
 
   // test cases for terms
 
@@ -87,194 +83,194 @@ class FreeVariablesTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   // test cases for formulas
 
   "Free variables of true" should "be {}" in {
-    s.freeVariables("true".asFormula) should be (Set())
+    s.catVars("true".asFormula).fv should be (Set())
   }
 
   "Free variables of false" should "be {}" in {
-    s.freeVariables("false".asFormula) should be (Set())
+    s.catVars("false".asFormula).fv should be (Set())
   }
 
   "Free variables of x=1" should "be {x,y}" in {
-    s.freeVariables("x=1".asFormula) should be (Set(V("x")))
+    s.catVars("x=1".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x=y" should "be {x,y}" in {
-    s.freeVariables("x=y".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("x=y".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of x!=1" should "be {x,y}" in {
-    s.freeVariables("x!=1".asFormula) should be (Set(V("x")))
+    s.catVars("x!=1".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x!=y" should "be {x,y}" in {
-    s.freeVariables("x!=y".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("x!=y".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of x>1" should "be {x}" in {
-    s.freeVariables("x>1".asFormula) should be (Set(V("x")))
+    s.catVars("x>1".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x>y" should "be {x}" in {
-    s.freeVariables("x>y".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("x>y".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of x>=1" should "be {x}" in {
-    s.freeVariables("x>=1".asFormula) should be (Set(V("x")))
+    s.catVars("x>=1".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x>=y" should "be {x}" in {
-    s.freeVariables("x>=y".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("x>=y".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of x<1" should "be {x}" in {
-    s.freeVariables("x<1".asFormula) should be (Set(V("x")))
+    s.catVars("x<1".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x<y" should "be {x}" in {
-    s.freeVariables("x<y".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("x<y".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of x<=1" should "be {x}" in {
-    s.freeVariables("x<=1".asFormula) should be (Set(V("x")))
+    s.catVars("x<=1".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x<=y" should "be {x}" in {
-    s.freeVariables("x<=y".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("x<=y".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of !(x>x+1)" should "be {x}" in {
-    s.freeVariables("!(x>x+1)".asFormula) should be (Set(V("x")))
+    s.catVars("!(x>x+1)".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x>0 & y<z" should "be {x,y,z}" in {
-    s.freeVariables("x>0 & y<z".asFormula) should be (Set(V("x"),V("y"),V("z")))
+    s.catVars("x>0 & y<z".asFormula).fv should be (Set(V("x"),V("y"),V("z")))
   }
 
   "Free variables of x>0 | y<z" should "be {x,y,z}" in {
-    s.freeVariables("x>0 | y<z".asFormula) should be (Set(V("x"),V("y"),V("z")))
+    s.catVars("x>0 | y<z".asFormula).fv should be (Set(V("x"),V("y"),V("z")))
   }
 
   "Free variables of x>y -> y>=z" should "be {x,y,z}" in {
-    s.freeVariables("x>y -> y>=z".asFormula) should be (Set(V("x"),V("y"),V("z")))
+    s.catVars("x>y -> y>=z".asFormula).fv should be (Set(V("x"),V("y"),V("z")))
   }
 
   "Free variables of x>y <-> y<z" should "be {x,y,z}" in {
-    s.freeVariables("x>y <-> y<z".asFormula) should be (Set(V("x"),V("y"),V("z")))
+    s.catVars("x>y <-> y<z".asFormula).fv should be (Set(V("x"),V("y"),V("z")))
   }
 
   "Free variables of Exists x. x=t" should "be {t}" in {
-    s.freeVariables("\\exists x. x=t".asFormula) should be (Set(V("t")))
+    s.catVars("\\exists x. x=t".asFormula).fv should be (Set(V("t")))
   }
 
   "Free variables of Exists x. (x=t & y=x)" should "be {t,y}" in {
-    s.freeVariables("\\exists x. (x=t & y=x)".asFormula) should be (Set(V("t"),V("y")))
+    s.catVars("\\exists x. (x=t & y=x)".asFormula).fv should be (Set(V("t"),V("y")))
   }
 
   "Free variables of Exists x. x=t & y=x" should "be {t,x,y}" in {
-    s.freeVariables("\\exists x. x=t & y=x".asFormula) should be (Set(V("t"),V("x"),V("y")))
+    s.catVars("\\exists x. x=t & y=x".asFormula).fv should be (Set(V("t"),V("x"),V("y")))
   }
 
   "Free variables of Exists x. x=t | y=x" should "be {t,x,y}" in {
-    s.freeVariables("\\exists x. x=t | y=x".asFormula) should be (Set(V("t"),V("x"),V("y")))
+    s.catVars("\\exists x. x=t | y=x".asFormula).fv should be (Set(V("t"),V("x"),V("y")))
   }
 
   "Free variables of Exists x. x=t & y=x | x=z" should "be {t,x,y,z}" in {
-    s.freeVariables("\\exists x. x=t & y=x | x=z ".asFormula) should be (Set(V("t"),V("x"),V("y"),V("z")))
+    s.catVars("\\exists x. x=t & y=x | x=z ".asFormula).fv should be (Set(V("t"),V("x"),V("y"),V("z")))
   }
 
   "Free variables of Forall x. x=t" should "be {t}" in {
-    s.freeVariables("\\forall x. x=t".asFormula) should be (Set(V("t")))
+    s.catVars("\\forall x. x=t".asFormula).fv should be (Set(V("t")))
   }
 
   "Free variables of Forall x. (x=t & y=x)" should "be {t,y}" in {
-    s.freeVariables("\\forall x. (x=t & y=x)".asFormula) should be (Set(V("t"),V("y")))
+    s.catVars("\\forall x. (x=t & y=x)".asFormula).fv should be (Set(V("t"),V("y")))
   }
 
   "Free variables of Forall x. x=t & y=x" should "be {t,x,y}" in {
-    s.freeVariables("\\forall x. x=t & y=x".asFormula) should be (Set(V("t"),V("x"),V("y")))
+    s.catVars("\\forall x. x=t & y=x".asFormula).fv should be (Set(V("t"),V("x"),V("y")))
   }
 
   "Free variables of Forall x. x=t | y=x" should "be {t,x,y}" in {
-    s.freeVariables("\\forall x. x=t | y=x".asFormula) should be (Set(V("t"),V("x"),V("y")))
+    s.catVars("\\forall x. x=t | y=x".asFormula).fv should be (Set(V("t"),V("x"),V("y")))
   }
 
   "Free variables of Forall x. x=t & y=x | x=z" should "be {t,x,y,z}" in {
-    s.freeVariables("\\forall x. x=t & y=x | x=z ".asFormula) should be (Set(V("t"),V("x"),V("y"),V("z")))
+    s.catVars("\\forall x. x=t & y=x | x=z ".asFormula).fv should be (Set(V("t"),V("x"),V("y"),V("z")))
   }
 
   "Free variables of Forall x. Exists y. x=y" should "be {}" in {
-    s.freeVariables("\\forall x. \\exists y. x=y".asFormula) should be (Set())
+    s.catVars("\\forall x. \\exists y. x=y".asFormula).fv should be (Set())
   }
 
   // test cases for programs
 
   "Free variables of x:=*;" should "be {}" in {
-    freeVariables("x:=*;".asProgram) should be (Set())
+    s.catVars("x:=*;".asProgram).fv should be (Set())
   }
 
   "Free variables of [x:=*;]x>0" should "be {}" in {
-    s.freeVariables("[x:=*;]x>0".asFormula) should be (Set())
+    s.catVars("[x:=*;]x>0".asFormula).fv should be (Set())
   }
 
   "Free variables of y:=x;" should "be {x}" in {
-    freeVariables("y:=x;".asProgram) should be (Set(V("x")))
+    s.catVars("y:=x;".asProgram).fv should be (Set(V("x")))
   }
 
   "Free variables of [y:=x;]y>0" should "be {x}" in {
-    s.freeVariables("[y:=x;]y>0".asFormula) should be (Set(V("x")))
+    s.catVars("[y:=x;]y>0".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of x:=*;y:=x;" should "be {}" in {
-    freeVariables("x:=*;y:=x;".asProgram) should be (Set())
+    s.catVars("x:=*;y:=x;".asProgram).fv should be (Set())
   }
 
   "Free variables of [x:=*;y:=x]y>0" should "be {}" in {
-    s.freeVariables("[x:=*;y:=x]y>0".asFormula) should be (Set())
+    s.catVars("[x:=*;y:=x]y>0".asFormula).fv should be (Set())
   }
 
   "Free variables of x:=* ++ y:=x;" should "be {x}" in {
-    freeVariables("x:=* ++ y:=x;".asProgram) should be (Set(V("x")))
+    s.catVars("x:=* ++ y:=x;".asProgram).fv should be (Set(V("x")))
   }
 
   "Free variables of [x:=* ++ y:=x;]y>0" should "be {x,y}" in {
-    s.freeVariables("[x:=* ++ y:=x;]y>0".asFormula) should be (Set(V("x"),V("y")))
+    s.catVars("[x:=* ++ y:=x;]y>0".asFormula).fv should be (Set(V("x"),V("y")))
   }
 
   "Free variables of [x:=* ++ ?z>0;]x>0" should "be {x,z}" in {
-    s.freeVariables("[x:=* ++ ?z>0;]x>0".asFormula) should be (Set(V("x"), V("z")))
+    s.catVars("[x:=* ++ ?z>0;]x>0".asFormula).fv should be (Set(V("x"), V("z")))
   }
 
   "Free variables of x:=1; x:=x+1; z:=x;" should "be {}" in {
-    freeVariables("x:=1; x:=x+1; z:=x;".asProgram) should be (Set())
+    s.catVars("x:=1; x:=x+1; z:=x;".asProgram).fv should be (Set())
   }
 
   "Free variables of x:=1 ++ x:=x+1 ++ z:=x;" should "be {x}" in {
-    freeVariables("x:=1 ++ x:=x+1 ++ z:=x;".asProgram) should be (Set(V("x")))
+    s.catVars("x:=1 ++ x:=x+1 ++ z:=x;".asProgram).fv should be (Set(V("x")))
   }
 
   "Free variables of {x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};" should "be {x}" in {
-    freeVariables("{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram) should be (Set(V("x")))
+    s.catVars("{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram).fv should be (Set(V("x")))
   }
 
   "Free variables of {x:=1 ++ x:=x+1 ++ z:=x}*;" should "be {x}" in {
-    freeVariables("{x:=1 ++ x:=x+1 ++ z:=x}*;".asProgram) should be (Set(V("x")))
+    s.catVars("{x:=1 ++ x:=x+1 ++ z:=x}*;".asProgram).fv should be (Set(V("x")))
   }
 
 
   "Free variables of [x'=1;]true" should "be {x}" in {
-    s.freeVariables("[x'=1;]true".asFormula) should be (Set(V("x")))
+    s.catVars("[x'=1;]true".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of [{x:=x+1;}*;]true" should "be {x}" in {
-    s.freeVariables("[{x:=x+1;}*;]true".asFormula) should be (Set(V("x")))
+    s.catVars("[{x:=x+1;}*;]true".asFormula).fv should be (Set(V("x")))
   }
 
   "Free variables of [x:=1;][{x:=x+1;}*;]true" should "be {}" in {
-    s.freeVariables("[x:=1;][{x:=x+1;}*;]true".asFormula) should be (Set())
+    s.catVars("[x:=1;][{x:=x+1;}*;]true".asFormula).fv should be (Set())
   }
 
   "Free variables of [x:=1;][x'=1;]true" should "be {}" in {
-    s.freeVariables("[x:=1;][x'=1;]true".asFormula) should be (Set())
+    s.catVars("[x:=1;][x'=1;]true".asFormula).fv should be (Set())
   }
 
 //not implemented yet

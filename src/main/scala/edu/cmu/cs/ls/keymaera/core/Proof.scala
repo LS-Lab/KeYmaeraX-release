@@ -935,19 +935,18 @@ object SubstitutionPair {
  */
 object Substitution {
   /** Returns the set of names maybe free in term t (same as certainly free). */
-  def maybeFreeVariables(t: Term) : Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
+  def maybeFreeVariables(t: Term): Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
   /** Returns the set of names maybe free in formula f. */
-  def maybeFreeVariables(f: Formula) : Set[NamedSymbol] = Substitution(Nil).freeVariables(f)
+  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = Substitution(Nil).catVars(f).fv
   /** Returns the set of names maybe free in program p. */
-  def maybeFreeVariables(p: Program) : Set[NamedSymbol] = Substitution(Nil).freeVariables(p)
+  def maybeFreeVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).fv
   /** Returns the set of names certainly free in program p. */
-  def freeVariables(p: Program) : Set[NamedSymbol] = {
-    val ba = Substitution(Nil).freeVariables(Set.empty[NamedSymbol], p)
-    ba.maybeRead -- (ba.bound ++ ba.maybeBound)
+  def freeVariables(p: Program): Set[NamedSymbol] = {
+    val ba = Substitution(Nil).catVars(p)
+    ba.fv -- (ba.mbv ++ ba.bv)
   }
   /** Returns the set of names maybe bound in program p. */
-  def maybeBoundVariables(p: Program) : Set[NamedSymbol] =
-    Substitution(Nil).freeVariables(Set.empty[NamedSymbol], p).maybeBound
+  def maybeBoundVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).bv
 }
 /**
  * A Uniform Substitution.
@@ -960,16 +959,33 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   applicable
 
   /**
-   * Records which variables are bound, maybe bound, and maybe free when traversing expressions.
-   * @param bound Variables that are certainly bound (definitely written).
-   * @param maybeBound Variables that may or may not be bound (possibly written).
-   * @param maybeRead Variables that may or may not be read (possibly read).
+   * Records which names are free or bound.
+   * @param fv Free names (maybe read)
+   * @param bv Bound names (maybe written)
    */
-  // TODO In principle we could also compute must free, but that doesn't seem useful.
-  private sealed case class BindingAssessment(bound: Set[NamedSymbol],
-                                              maybeBound: Set[NamedSymbol],
-                                              maybeRead: Set[NamedSymbol])
-  
+  sealed case class VC2(fv: Set[NamedSymbol],
+                        bv: Set[NamedSymbol])
+
+  /**
+   * Records which names are free, bound, or must-bound.
+   * @param fv Free names (maybe read)
+   * @param bv Bound names (maybe written)
+   * @param mbv Must-bound names (certainly written).
+   */
+  sealed case class VC3(fv: Set[NamedSymbol],
+                        bv: Set[NamedSymbol],
+                        mbv: Set[NamedSymbol])
+
+  /**
+   * Records the result of uniform substitution in a program.
+   * @param o The ignore set.
+   * @param u The taboo set.
+   * @param p The program.
+   */
+  private sealed case class USR(o: Set[NamedSymbol],
+                        u: Set[NamedSymbol],
+                        p: Program)
+
   /**
    * @param rarg the argument in the substitution.
    * @param instArg the argument to instantiate rarg with in the occurrence.
@@ -999,9 +1015,46 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   // helper
 
   /**
+   * Categorizes the names of formula f into free variables FV and bound variables BV.
+   * @param f The formula to categorize.
+   * @return The names in f categorized into free and bound names.
+   */
+  def catVars(f: Formula): VC2 = f match {
+    // homomorphic cases
+    case Equals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+    case NotEquals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+    case GreaterEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+    case GreaterThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+    case LessEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+    case LessThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+
+    case Not(g) => VC2(fv = catVars(g).fv, bv = catVars(g).bv)
+    case And(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
+    case Or(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
+    case Imply(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
+    case Equiv(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
+    // TODO formuladerivative not mentioned in Definition 7 and 8
+    case FormulaDerivative(df) => VC2(fv = catVars(df).fv, bv = catVars(df).bv) //@todo eisegesis
+
+    // binding cases add bound variables to u
+    case Forall(vars, g) => VC2(fv = catVars(g).fv -- vars, bv = catVars(g).bv ++ vars)
+    case Exists(vars, g) => VC2(fv = catVars(g).fv -- vars, bv = catVars(g).bv ++ vars)
+
+    case BoxModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
+    case DiamondModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
+
+    // base cases (remove u)
+    // TODO true, false, predicate constant and apply predicate are not mentioned in Definition 7 and 8
+//    case p: PredicateConstant =>
+//    case ApplyPredicate(p, arg) =>
+    case True | False => VC2(fv = Set.empty[NamedSymbol], bv = Set.empty[NamedSymbol]) //@todo eisegesis
+    case _ => throw new UnknownOperatorException("Not implemented", f)
+  }
+
+  /**
    * The set of all (may) free variables whose value t depends on (syntactically).
    */
-  def freeVariables(t: Term) : Set[NamedSymbol] = t match {
+  def freeVariables(t: Term): Set[NamedSymbol] = t match {
     // homomorphic cases
     case Neg(s, l) => freeVariables(l)
     case Add(s, l, r) => freeVariables(l) ++ freeVariables(r)
@@ -1013,116 +1066,57 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     // base cases
     case x: Variable => Set(x)
     case CDot => Set(CDot)
-    case Derivative(s, e) => freeVariables(e)
-    case Apply(f, arg) => Set(f) ++ freeVariables(arg)
-    case True | False | _: NumberObj => Set.empty
+    // TODO x' and f(x) are not in Definition 8
+    case Derivative(s, e) => freeVariables(e) //@todo eisegesis
+    case Apply(f, arg) => Set(f) ++ freeVariables(arg) //@todo eisegesis
+    case True | False | _: NumberObj => Set.empty //@todo eisegesis
   }
 
-  private def freeVariables(u: Set[NamedSymbol], t: Term) : Set[NamedSymbol] = freeVariables(t)--u
-
-  /**
-   * The set of all (may) free variables whose value f depends on (syntactically).
-   */
-  def freeVariables(f: Formula) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], f)
-
-  private def freeVariables(u: Set[NamedSymbol], f: Formula) : Set[NamedSymbol] = f match {
-    // homomorphic cases
-    case Not(g) => freeVariables(u, g)
-    case And(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case Or(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case Imply(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case Equiv(l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case FormulaDerivative(f) => freeVariables(u, f)
-
-    case Equals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case NotEquals(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case GreaterEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case GreaterThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case LessEqual(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-    case LessThan(d, l, r) => freeVariables(u, l) ++ freeVariables(u, r)
-
-    // binding cases add bound variables to u
-    case Forall(vars, g) => freeVariables(u ++ vars, g)
-    case Exists(vars, g) => freeVariables(u ++ vars, g)
-
-    case BoxModality(p, g) => val bp = freeVariables(u, p); bp.maybeRead ++ freeVariables(u ++ bp.bound, g)
-    case DiamondModality(p, g) => val bp = freeVariables(u, p); bp.maybeRead ++ freeVariables(u ++ bp.bound, g)
-
-    // base cases (remove u)
-    case p: PredicateConstant => Set[NamedSymbol](p) -- u
-    case ApplyPredicate(p, arg) => Set(p) ++ freeVariables(arg) -- u
-    case True | False => Set.empty
-    case _ => throw new UnknownOperatorException("Not implemented", f)
-  }
-
-  /**
-   * Return the set of (may) free variables in the program p
-   * Used for unit tests only, may need a better solution
-   */
-  private def freeVariables(p: Program) : Set[NamedSymbol] = freeVariables(Set.empty[NamedSymbol], p: Program).maybeRead
-
-  /**
-   * Returns sets of symbols bound by the program p, categorized into definitely written, possibly written, and possibly
-   * read symbols.
-   * @param u The set of symbols bound outside p so far.
-   * @param p The program.
-   * @return The binding assessment.
-   */
-  private def freeVariables(u: Set[NamedSymbol], p: Program): BindingAssessment = p match {
-    case Choice(a, b) =>
-      val ba = freeVariables(u, a)
-      val bb = freeVariables(u, b)
-      BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
-    case Sequence(a, b) =>
-      val ba = freeVariables(u, a)
-      val bbOfMust = freeVariables(ba.bound, b)
-      val bbOfMay = freeVariables(ba.maybeBound, b)
-      assert(bbOfMust.bound.subsetOf(bbOfMay.bound), "must bound monotonicity")
-      assert(bbOfMay.maybeRead.subsetOf(bbOfMust.maybeRead), "free variable antitonicity")
-      assert(bbOfMust.maybeBound.subsetOf(bbOfMay.maybeBound), "may bound monotonicity")
-      BindingAssessment(bbOfMust.bound, bbOfMay.maybeBound, ba.maybeRead ++ bbOfMust.maybeRead)
-    case Loop(a) => val ba = freeVariables(u, a); BindingAssessment(u, ba.maybeBound, ba.maybeRead)
-    case Test(f) => BindingAssessment(u, u, freeVariables(u, f))
-    case Assign(x: Variable, e) => BindingAssessment(u+x, u+x, freeVariables(u, e))
-    case Assign(CDot, e) => BindingAssessment(u+CDot, u+CDot, freeVariables(u, e))
-    case Assign(Derivative(_, CDot), e) => BindingAssessment(u+CDot, u+CDot, freeVariables(u, e)) //@todo soundness check nrf
-    case Assign(Derivative(_,x:Variable), e) => BindingAssessment(u+x, u+x, freeVariables(u,e)) //@todo soundness check nrf
-    case NDetAssign(x:Variable) => BindingAssessment(u+x, u+x, Set.empty)
-    // x maybe read because ODE reads its initial value, as well as bound and maybe bound because ODE writes it
-    case NFContEvolve(v, Derivative(_, x: Variable), e, h) => BindingAssessment(u+x, u+x,
-        (if (u.contains(x)) Set() else Set(x)) ++ freeVariables(u+x++v, e) ++ freeVariables(u+x++v, h))
-
-    
-    //@TODO check implementation
-    case a: ProgramConstant => BindingAssessment(u, u, Set.empty)
-    case cpc:ContEvolveProgramConstant => BindingAssessment(u,u,Set.empty) //@todo not adding to u because programconstants aren't either. nrf
-    case ContEvolveProduct(a, b) =>
-      val ba = freeVariables(u, a)
-      val bb = freeVariables(u, b)
-      BindingAssessment(ba.bound.intersect(bb.bound), ba.maybeBound ++ bb.maybeBound, ba.maybeRead ++ bb.maybeRead)
-    case IncompleteSystem(s) => freeVariables(u, s) //@todo eisegesis
-    case CheckedContEvolveFragment(fragment) => freeVariables(u, fragment) //@todo eisegesis.
-    case s: EmptyContEvolveProgram => BindingAssessment(u, u, Set.empty)
+  def catVars(p: Program): VC3 = p match {
+    case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = Set(x), mbv = Set(x))
+    // TODO CDot and derivative not mentioned in Definition 9
+    case Assign(CDot, e) => VC3(fv = freeVariables(e), bv = Set(CDot), mbv = Set(CDot)) //@todo eisegesis
+    case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = Set(x), mbv = Set(x)) //@todo eisegesis
+    case Assign(Derivative(_, CDot), e) => VC3(fv = freeVariables(e), bv = Set(CDot), mbv = Set(CDot)) //@todo eisegesis
+    // TODO x:=* not mentioned in Definition 9
+    case NDetAssign(x: Variable) => VC3(fv = Set.empty, bv = Set(x), mbv = Set(x)) //@todo eisegesis
+    case Test(f) => VC3(fv = catVars(f).fv, bv = Set.empty, mbv = Set.empty)
+    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) =>
+      VC3(fv = Set(x) ++ freeVariables(e) ++ catVars(h).fv, bv = Set(x), mbv = Set(x))
+    // TODO system of ODE cases not mentioned in Definition 9
+    case ContEvolveProduct(a, b) => VC3(fv = catVars(a).fv ++ catVars(b).fv, bv = catVars(a).bv ++ catVars(b).bv,
+      mbv = catVars(a).mbv ++ catVars(b).mbv) //@todo eisegesis
+    case IncompleteSystem(a) => catVars(a) //@todo eisegesis
+    case CheckedContEvolveFragment(a) => catVars(a) //@todo eisegesis
+    case _: EmptyContEvolveProgram => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
+    case Sequence(a, b) => VC3(fv = catVars(a).fv ++ (catVars(b).fv -- catVars(a).mbv),
+      bv = catVars(a).bv ++ catVars(b).bv, mbv = catVars(a).mbv ++ catVars(b).mbv)
+    case Choice(a, b) => VC3(fv = catVars(a).fv ++ catVars(b).fv, bv = catVars(a).bv ++ catVars(b).bv,
+      mbv = catVars(a).mbv.intersect(catVars(b).mbv))
+    case Loop(a) => VC3(fv = catVars(a).fv, bv = catVars(a).bv, mbv = Set.empty)
+    //@TODO check implementation, not mentioned in Definition 9
+    case _: ProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
+    case _: ContEvolveProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
     case _ => throw new UnknownOperatorException("Not implemented", p)
-  } //@TODO ensuring (r=>{val (mv,v,fv)=r; u.subsetOf(mv) && mv.subsetOf(v)})
+  } // ensuring MBV <= BV
 
   // uniform substitution on terms
   def apply(t: Term): Term = {
     try {
-      usubst(Set.empty, t)
+      usubst(Set.empty, Set.empty, t)
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(t.prettyString)
+      case ex: SubstitutionClashException => throw ex.inContext(t.prettyString())
     }
   }
 
   def apply(f: Formula): Formula = {
     log("\tSubstituting " + f.prettyString + " using " + this)
     try {
-      val res = usubst(Set.empty[NamedSymbol], f)
+      val res = usubst(Set.empty[NamedSymbol], Set.empty[NamedSymbol], f)
       log("\tSubstituted  " + res.prettyString)
       res
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString)
+      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString())
     }
   }
 
@@ -1137,29 +1131,14 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   // uniform substitution on programs
   def apply(p: Program): Program = {
     try {
-      usubst(Set.empty[NamedSymbol], p)._2
+      usubst(Set.empty[NamedSymbol], Set.empty[NamedSymbol], p).p
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString)
+      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString())
     }
   }
-  
-  /**
-   * Return replacement t after checking for clashes with names in u.
-   */
-  private def clashChecked(u: Set[NamedSymbol], original: Term, t: Term) : Term = {
-    if (freeVariables(t).intersect(u).isEmpty) t
-    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(t).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + t.prettyString, this, original)
-  }
-  /**
-   * Return replacement f after checking for clashes with names in u.
-   */
-  private def clashChecked(u: Set[NamedSymbol], original:Formula, f: Formula) : Formula = {
-    if (freeVariables(f).intersect(u).isEmpty) f
-    else throw new SubstitutionClashException("Clash in uniform substitution because free variables " + freeVariables(f).intersect(u).map(_.prettyString) + " have been bound when applying replacement " + f.prettyString, this, original)
-  }
 
-  private def substDiff(s: Seq[SubstitutionPair], u: Set[NamedSymbol]) =
-    new Substitution(s.filter(_.n match { case en: NamedSymbol => !u.contains(en) case _ => true }))
+  private def substDiff(s: Seq[SubstitutionPair], names: Set[NamedSymbol]) =
+    new Substitution(s.filter(_.n match { case en: NamedSymbol => !names.contains(en) case _ => true }))
 
   /**
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
@@ -1182,159 +1161,150 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   /**
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
    */
-  private def usubst(u: Set[NamedSymbol], t: Term) : Term = t match {
+  private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], t: Term): Term = {
+    def subst(t: Term) = subsDefs.find(_.n == t).get.t.asInstanceOf[Term]
+    t match {
       // homomorphic cases
-    case Neg(s, e) => Neg(s, usubst(u, e))
-    case Add(s, l, r) => Add(s, usubst(u, l), usubst(u, r))
-    case Subtract(s, l, r) => Subtract(s, usubst(u, l), usubst(u, r))
-    case Multiply(s, l, r) => Multiply(s, usubst(u, l), usubst(u, r))
-    case Divide(s, l, r) => Divide(s, usubst(u, l), usubst(u, r))
-    case Exp(s, l, r) => Exp(s, usubst(u, l), usubst(u, r))
-    case Pair(dom, l, r) => Pair(dom, usubst(u, l), usubst(u, r))
-    // uniform substitution base cases
-    case CDot => if (u.contains(CDot)) return CDot else for (p <- subsDefs) { if (CDot == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term]) }; CDot
-    case x: Variable if !u.contains(x) &&  subsDefs.exists(_.n == x) => clashChecked(u, t, subsDefs.find(_.n == x).get.t.asInstanceOf[Term])
-    case x: Variable if  u.contains(x) || !subsDefs.exists(_.n == x) => x
-    // implementation in one case: case x: Variable => if (u.contains(x)) return x else for(p <- subsDefs) { if(x == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return x
-    case Derivative(s, e) if  subsDefs.exists(_.n == t) => clashChecked(u, t, subsDefs.find(_.n == t).get.t.asInstanceOf[Term])
-    case Derivative(s, e) if !subsDefs.exists(_.n == t) => Derivative(s, usubst(u, e))
-    // implementation in one case: case Derivative(s, e) => for(p <- subsDefs) { if(t == p.n) return clashChecked(u, t, p.t.asInstanceOf[Term])}; return Derivative(s, usubst(u, e))
-    case app@Apply(_, arg) if subsDefs.exists(sameHead(_, app)) =>
-      val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-      val (rArg, rTerm) = (subs.n match { case Apply(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Term])
-      val restrictedU = rArg match { case CDot => u case _ => u-rArg }
-      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(restrictedU, t, rTerm))
-    case app@Apply(f, arg) if !subsDefs.exists(sameHead(_, app)) => Apply(f, usubst(u, arg))
-    // implementation in one case
-//    case Apply(f, arg) => for(rp <- subsDefs) {
-//      rp.n match {
-//        // clashChecked(u, t, rp.t.asInstanceOf[Term]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,t, rp.t.asInstanceOf[Term]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-//        case Apply(rf, rarg:Variable) if f == rf => return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u-rarg, t, rp.t.asInstanceOf[Term]))
-//        case Apply(rf, CDot) if f == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, t, rp.t.asInstanceOf[Term]))
-//        case _ => // skip to next
-//      }
-//    }; return Apply(f, usubst(u, arg))
-    case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
-    case _ => throw new UnknownOperatorException("Not implemented yet", t)
+      case Neg(s, e) => Neg(s, usubst(o, u, e))
+      case Add(s, l, r) => Add(s, usubst(o, u, l), usubst(o, u, r))
+      case Subtract(s, l, r) => Subtract(s, usubst(o, u, l), usubst(o, u, r))
+      case Multiply(s, l, r) => Multiply(s, usubst(o, u, l), usubst(o, u, r))
+      case Divide(s, l, r) => Divide(s, usubst(o, u, l), usubst(o, u, r))
+      case Exp(s, l, r) => Exp(s, usubst(o, u, l), usubst(o, u, r))
+      // TODO not mentioned in substitution
+      case Pair(dom, l, r) => Pair(dom, usubst(o, u, l), usubst(o, u, r)) // @todo eisegesis
+      // uniform substitution base cases
+      case x: Variable if !subsDefs.exists(_.n == x) || o.contains(x) => x
+      case x: Variable if substDiff(subsDefs, o).subsDefs.exists(_.n == x) =>
+        require((Set(x) ++ freeVariables(subst(x))).intersect(u).isEmpty,
+          s"Substitution clash: ({$x} ∪ ${freeVariables(subst(x))}) ∩ $u is not empty")
+        subst(x)
+      // TODO not mentioned in substitution
+      case CDot if !subsDefs.exists(_.n == CDot) || o.contains(CDot) => CDot //@todo eisegesis
+      case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.n == CDot) => //@todo eisegesis
+        require((Set(CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
+          s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
+        subst(CDot)
+      case Derivative(s, e) if subsDefs.exists(_.n == t) => ???
+      case Derivative(s, e) if !subsDefs.exists(_.n == t) => ???
+      case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
+        val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
+        require(freeVariables(subs.t.asInstanceOf[Term]).intersect(u).isEmpty,
+          s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
+        val (rArg, rTerm) = (subs.n match { case Apply(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Term])
+        instantiate(rArg, usubst(o, u, theta)).usubst(Set.empty, Set.empty, rTerm)
+      case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
+      case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
+      case _ => throw new UnknownOperatorException("Not implemented yet", t)
+    }
   }
 
-  private def usubst(u:Set[NamedSymbol], f: Formula): Formula = f match {
+  private def usubst(o: Set[NamedSymbol], u:Set[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
-    case Not(g) => Not(usubst(u, g))
-    case And(l, r) => And(usubst(u, l), usubst(u, r))
-    case Or(l, r) => Or(usubst(u, l), usubst(u, r))
-    case Imply(l, r) => Imply(usubst(u, l), usubst(u, r))
-    case Equiv(l, r) => Equiv(usubst(u, l), usubst(u, r))
+    case Not(g) => Not(usubst(o, u, g))
+    case And(l, r) => And(usubst(o, u, l), usubst(o, u, r))
+    case Or(l, r) => Or(usubst(o, u, l), usubst(o, u, r))
+    case Imply(l, r) => Imply(usubst(o, u, l), usubst(o, u, r))
+    case Equiv(l, r) => Equiv(usubst(o, u, l), usubst(o, u, r))
 
-    case Equals(d, l, r) => Equals(d, usubst(u, l), usubst(u, r))
-    case NotEquals(d, l, r) => NotEquals(d, usubst(u, l), usubst(u, r))
-    case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(u, l), usubst(u, r))
-    case GreaterThan(d, l, r) => GreaterThan(d, usubst(u, l), usubst(u, r))
-    case LessEqual(d, l, r) => LessEqual(d, usubst(u, l), usubst(u, r))
-    case LessThan(d, l, r) => LessThan(d, usubst(u, l), usubst(u, r))
+    case Equals(d, l, r) => Equals(d, usubst(o, u, l), usubst(o, u, r))
+    case NotEquals(d, l, r) => NotEquals(d, usubst(o, u, l), usubst(o, u, r))
+    case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(o, u, l), usubst(o, u, r))
+    case GreaterThan(d, l, r) => GreaterThan(d, usubst(o, u, l), usubst(o, u, r))
+    case LessEqual(d, l, r) => LessEqual(d, usubst(o, u, l), usubst(o, u, r))
+    case LessThan(d, l, r) => LessThan(d, usubst(o, u, l), usubst(o, u, r))
 
     // binding cases add bound variables to u
-    case Forall(vars, g) => Forall(vars, usubst(u ++ vars, g))
-    case Exists(vars, g) => Exists(vars, usubst(u ++ vars, g))
+    case Forall(vars, g) => Forall(vars, usubst(o ++ vars, u ++ vars, g))
+    case Exists(vars, g) => Exists(vars, usubst(o ++ vars, u ++ vars, g))
 
-    case BoxModality(p, g) => val (v,q) = usubst(u, p); BoxModality(q, usubst(v, g))
-    case DiamondModality(p, g) => val (v,q) = usubst(u, p); DiamondModality(q, usubst(v, g))
+    case BoxModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); BoxModality(sp, usubst(q, v, g))
+    case DiamondModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); DiamondModality(sp, usubst(q, v, g))
 
     // uniform substitution base cases
-    case _: PredicateConstant if  subsDefs.exists(_.n == f) => clashChecked(u, f, subsDefs.find(_.n == f).get.t.asInstanceOf[Formula])
+    // TODO not mentioned in uniform substitution
+    case _: PredicateConstant if  subsDefs.exists(_.n == f) => ???
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
-    // implementation in one case: case _: PredicateConstant => for(p <- subsDefs) { if (f == p.n) return clashChecked(u, f, p.t.asInstanceOf[Formula])}; return f
-    case app@ApplyPredicate(_, arg) if subsDefs.exists(sameHead(_, app)) =>
+    case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
+      require(catVars(subs.t.asInstanceOf[Formula]).fv.intersect(u).isEmpty,
+        s"Substitution clash: ${catVars(subs.t.asInstanceOf[Formula]).fv} ∩ $u is not empty")
       val (rArg, rFormula) = (subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Formula])
-      val restrictedU = rArg match { case CDot => u case _ => u-rArg }
-      instantiate(rArg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(restrictedU, f, rFormula))
-    case app@ApplyPredicate(p, arg) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(u, arg))
-      // implementation in one case
-//    case ApplyPredicate(p, arg) => for(rp <- subsDefs) {
-//      rp.n match {
-//        // clashChecked(u, f, rp.t.asInstanceOf[Formula]) is unnecessarily conservative, because it would not matter if rarg appeared in rp.t or not. clashChecked(u-rarg,f, rp.t.asInstanceOf[Formula]) achieves this. But a better fix might be to use special variable names for denoting uniform substitution lambda abstraction terms right away so that this never happens.
-//        case ApplyPredicate(rf, rarg: Variable) if p == rf =>
-//          return instantiate(rarg, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty[NamedSymbol], clashChecked(u-rarg, f, rp.t.asInstanceOf[Formula]))
-//        case ApplyPredicate(rf, CDot) if p == rf => return instantiate(CDot, substDiff(subsDefs, u).usubst(u, arg)).usubst(Set.empty, clashChecked(u, f, rp.t.asInstanceOf[Formula]))
-//        case _ => // skip to next
-//      }
-//    }; return ApplyPredicate(p, usubst(u, arg))
-    
-    // 
-    case FormulaDerivative(g) => FormulaDerivative(usubst(u, g))
+      instantiate(rArg, usubst(o, u, theta)).usubst(Set.empty, Set.empty, rFormula)
+    case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
+    // TODO not mentioned in uniform substitution
+    case FormulaDerivative(g) => ???
     case x: Atom => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
 
   /**
    *  uniform substitution on a program p with the set of bound variables u
-   *  return only the result set of bound variables
+   *  return only the result components of the private case class USR
    *  used for testing only, may need a better solution
    */
-  private def usubstU(u: Set[NamedSymbol], p:Program) : Set[NamedSymbol] = usubst(u: Set[NamedSymbol], p : Program)._1
-
-  /**
-   *  uniform substitution on a program p with the set of bound variables u
-   *  return only the result program
-   *  used for testing only, may need a better solution
-   */
-  private def usubstP(u: Set[NamedSymbol], p:Program) : Program = usubst(u: Set[NamedSymbol], p : Program)._2
+  private def usubstComps(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program) = {
+    val r = usubst(o, u, p); (r.o, r.u, r.p)
+  }
 
   /**
    *
    */
-  private def usubst(u: Set[NamedSymbol], p:Program) : (Set[NamedSymbol], Program) = { p match {
-    case Choice(a, b) => val (v,as)=usubst(u,a); val (w,bs)=usubst(u,b); (v++w, Choice(as, bs))
-    case Sequence(a, b) => val (v,as)=usubst(u,a); val (w,bs)=usubst(v,b); (w, Sequence(as, bs))
-    case Loop(a) => val (v,_)=usubst(u,a); val (w,as)=usubst(v,a); (w,Loop(as)) ensuring usubst(w,a)._1==w
-    case Test(f) => (u, Test(usubst(u,f)))
-    case Assign(x:Variable, e) => (u+x, Assign(x, usubst(u,e)))
-    case Assign(CDot, e) => (u+CDot, Assign(CDot, usubst(u, e)))
-    case Assign(d@Derivative(_, CDot), e) => {
-      (u+CDot, Assign(d, usubst(u, e)))
-    } //@todo eisegesis This might actually be wrong? -- well, it was the first time...
-    case Assign(d@Derivative(_, x: Variable), e) => (u+x, Assign(d, usubst(u,e))) //@todo eisegesis
-    case CheckedContEvolveFragment(child) => { //@todo eisegesis
-      val rec = usubst(u, child)
-      val result = rec._2
-      val rec_u = rec._1
-      assert(result.isInstanceOf[ContEvolveProgram])
-//      assert(result.isInstanceOf[child.type], "Expected equal types for (original,result) but found: (" + child.getClass() + ", " + result.getClass() + ") with values: (" + child.prettyString() + ", " + result.toString()) //anything else wouldn't really make much sense.
-//      assert(child.isInstanceOf[ContEvolveProgram])
-      assert(result.isInstanceOf[ContEvolveProgram]) //obvious at this point by MP, but let's make sure.
-      val retVal : (Set[NamedSymbol], Program) =
-        ( u ++ rec_u, CheckedContEvolveFragment(result.asInstanceOf[ContEvolveProgram]) )
-      retVal
-    }
-    case NDetAssign(x:Variable) => (u+x, p)
+  private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program): USR = { p match {
+    case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
+    case Assign(CDot, e) => USR(o+CDot, u+CDot, Assign(CDot, usubst(o, u, e)))
+    case Assign(d@Derivative(_, CDot), e) => ???
+    case Assign(d@Derivative(_, x: Variable), e) => ???
+    case NDetAssign(x: Variable) => USR(o+x, u+x, p)
+    case Test(f) => USR(o, u, Test(usubst(o, u, f)))
     case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-      if (!u.contains(x) && subsDefs.exists(_.n == x)) throw new SubstitutionClashException("Variable " + x
-        + " will be replaced but occurs as differential equation", this, p)
-      (u+x, NFContEvolve(v, d, usubst(u++v+x, e), usubst(u++v+x,h)))
+      require(!subsDefs.exists(_.n == x) || o.contains(x),
+        s"Substitution clash: variable $x will be replaced but occurs in a differential equation. \n" +
+          s"Substitution $this applied to ${p.prettyString()}")
+      USR(o+x, u+x, NFContEvolve(v, d, usubst(o+x, u+x, e), usubst(o+x, u+x, h)))
     } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
-    
+    case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
+    case Choice(a, b) =>
+      val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
+      // TODO remove when proof of uniform substitution is done
+      require(q == v && r == w, "Programs where not all branches write the same variables are not yet supported")
+      USR(q.intersect(r), v++w, Choice(as, bs))
+    case Loop(a) =>
+      val USR(_, v, _) = usubst(o, u, a)
+      val USR(r, w, as) = usubst(o, v, a)
+      // TODO remove when proof of uniform substitution is done
+      require(r == w, "Programs where loop does not write all variables on all branches are not yet supported")
+      USR(o, w, Loop(as)) ensuring (usubst(r, w, a).o == r, "Unstable O") ensuring(usubst(r, w, a).u == w, "Unstable U")
+
     //@TODO check implementation
-    case a: ProgramConstant if  subsDefs.exists(_.n == p) => (u, subsDefs.find(_.n == p).get.t.asInstanceOf[Program])
-    case a: ProgramConstant if !subsDefs.exists(_.n == p) => (u, p)
-    // implementation in one case: case a: ProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u,pair.t.asInstanceOf[Program])}; return (u,p)
-    case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) => (u, subsDefs.find(_.n == p).get.t.asInstanceOf[ContEvolveProgram])
-    case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => (u, p)
-    // implementation in one case: case a: ContEvolveProgramConstant => for(pair <- subsDefs) { if(p == pair.n) return (u, pair.t.asInstanceOf[ContEvolveProgram])}; return (u, p)
-    case ContEvolveProduct(a, b) =>
-      val (v, as: ContEvolveProgram) = usubst(u, a)
-      val (w, bs: ContEvolveProgram) = usubst(u, b)
-      (v++w, ContEvolveProduct(as, bs))
+    case CheckedContEvolveFragment(child) => //@todo eisegesis
+      val USR(q, v, cs: ContEvolveProgram) = usubst(o, u, child) match {
+        case r@USR(_, _, _: ContEvolveProgram) => r
+        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in checked ODE fragments")
+      }
+      USR(q, v, CheckedContEvolveFragment(cs))
+    case a: ProgramConstant if  subsDefs.exists(_.n == p) =>
+      val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
+      val vc = catVars(sigmaP)
+      require(vc.fv.intersect(u).isEmpty, s"Substitution clash: ${vc.fv} ∩ $u is not empty")
+      USR(o++vc.mbv, u++vc.bv, sigmaP)
+    case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
+    case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) => USR(o, u, subsDefs.find(_.n == p).get.t.asInstanceOf[ContEvolveProgram])
+    case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
+    case ContEvolveProduct(a, b) => //@todo eisegesis
+      val USR(q, v, as: ContEvolveProgram) = usubst(o, u, a)
+      val USR(r, w, bs: ContEvolveProgram) = usubst(o, u, b)
+      USR(q++r, v++w, ContEvolveProduct(as, bs))
     // $$s$$
     case IncompleteSystem(s) =>
-      val (v, as) = usubst(u, s) match {
-        case (symbols, prg: ContEvolveProgram) => (symbols, prg)
+      val USR(q, v, as: ContEvolveProgram) = usubst(o, u, s) match {
+        case r@USR(_, _, _: ContEvolveProgram) => r
         case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in incomplete ODE systems")
       }
-      (v, IncompleteSystem(as))
-    case _: EmptyContEvolveProgram => (u, p)
+      USR(q, v, IncompleteSystem(as))
+    case _: EmptyContEvolveProgram => USR(o, u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
-  }} ensuring (r=>{val (v,as)=r; u.subsetOf(v)})
+  }} ensuring (r => {val USR(q, v, _) = r; val vc = catVars(p); q.subsetOf(v) && q == o++vc.mbv && v == u++vc.bv })
 
 
 }
