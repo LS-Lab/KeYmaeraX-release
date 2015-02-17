@@ -710,7 +710,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
   }
 
-  it should "substitute predicate constants" in {
+  "Uniform substitution of (p,x>5) on p & y!=1" should "substitute predicate constants" in {
     s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
 
     s(And(PredicateConstant("p"), "y!=1".asFormula)) should be ("x>5 & y!=1".asFormula)
@@ -721,6 +721,42 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     an [IllegalArgumentException] should be thrownBy s("\\forall x. p".asFormula)
     an [IllegalArgumentException] should be thrownBy s("[x:=1 ++ y:=3]p".asFormula)
+  }
+
+  "Uniform substitution of predicates in \\forall x. (p(x) | q) <-> (\\forall x. p(x)) | q" should "be allowed" in {
+    val s = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "x>0".asFormula),
+      SubstitutionPair(PredicateConstant("q"), "y>5".asFormula)))
+    // \forall x. (p(x) | q) <-> (\forall x. p(x)) | q
+    val f = Equiv(
+      Forall("x".asNamedSymbol::Nil, Or(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), PredicateConstant("q"))),
+      Or(Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)), PredicateConstant("q")))
+    s(f) should be ("\\forall x. (x>0 | y>5) <-> (\\forall x. x>0) | y>5".asFormula)
+
+    val t = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "z>0".asFormula),
+      SubstitutionPair(PredicateConstant("q"), "y>5".asFormula)))
+    t(f) should be ("\\forall x. (z>0 | y>5) <-> (\\forall x. z>0) | y>5".asFormula)
+  }
+
+  it should "not be permitted" in {
+    val s = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "x>0".asFormula),
+      SubstitutionPair(PredicateConstant("q"), "x>5".asFormula)))
+    // \forall x. (p(x) | q)
+    val f = Forall("x".asNamedSymbol::Nil, Or(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), PredicateConstant("q")))
+    an [IllegalArgumentException] should be thrownBy s(f)
+    // \forall x. (p(x) | q) <-> (\forall x. p(x)) | q
+    val h = Equiv(
+      Forall("x".asNamedSymbol::Nil, Or(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), PredicateConstant("q"))),
+      Or(Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)), PredicateConstant("q")))
+    an [IllegalArgumentException] should be thrownBy s(h)
+
+    val t = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "z>0".asFormula),
+      SubstitutionPair(PredicateConstant("q"), "x>5".asFormula)))
+    an [IllegalArgumentException] should be thrownBy t(f)
+    an [IllegalArgumentException] should be thrownBy t(h)
   }
 
   /*
