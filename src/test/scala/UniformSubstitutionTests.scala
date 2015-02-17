@@ -698,6 +698,19 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
   }
 
+  it should "substitute predicate constants" in {
+    s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
+
+    s(And(PredicateConstant("p"), "y!=1".asFormula)) should be ("x>5 & y!=1".asFormula)
+  }
+
+  it should "not be permitted to substitute predicate constants with bound names" in {
+    s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
+
+    an [IllegalArgumentException] should be thrownBy s("\\forall x. p".asFormula)
+    an [IllegalArgumentException] should be thrownBy s("[x:=1 ++ y:=3]p".asFormula)
+  }
+
   /*
    * Andre's tests
    */
