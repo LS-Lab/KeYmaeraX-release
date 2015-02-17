@@ -192,7 +192,7 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
           val axiomApplyTactic = assertPT(forKAxiomInstance)(axiomInstPos) &
             ImplyLeftT(axiomInstPos) && (
               hideT(SuccPosition(0)) /* desired result remains */,
-              AxiomCloseT
+              AxiomCloseT ~ TacticLibrary.debugT("axiomclose failed here.")&assertT(0,0)
             )
 
           val cont = renameTactic match {
@@ -200,16 +200,17 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
             case None => NilT
           }
 
-          println("Axiom instance " + axiomInstance)
           val axiomPos = SuccPosition(node.sequent.succ.length)
+
           val axiomInstanceTactic = (assertPT(forKAxiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
             assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
             abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
             assertT(0, 1) & cutT(Some(axiomInstance)) &
-            onBranch((cutUseLbl, equalityRewriting(axiomInstPos, pos) &
-              ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) &
-              ImplyRightT(pos.topLevel) & AxiomCloseT),
-              (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch("knowledge subclass continue"))))
+            onBranch((cutUseLbl,
+              (equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
+                (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
+              (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
+
           Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
         case None => None
       }
@@ -254,12 +255,47 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
  */
 abstract class PropositionalInContextTactic(name: String)
     extends ContextualizeKnowledgeTactic(name) {
-  def applies(f: Formula): Boolean
-  override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
+  override def applies(s: Sequent, p: Position): Boolean = {
+    try {
+      applies(getFormula(s, p))
+    }
+    catch {
+      case _ => ???
+    }
+  }
 
   override def apply(pos: Position): Tactic = super.apply(pos) &
-    onBranch("knowledge subclass continue", TacticLibrary.debugT("foo") & TacticLibrary.propositional)
+    onBranch("knowledge subclass continue", TacticLibrary.debugT("Running propositional.") & TacticLibrary.propositional)
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Section: Term axiom tactics.
+// This section contains a base class for tactics which apply at a term and within a context.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////@todo this is just a copy/paste of the derivativeaxiomincontextactic... let's see if it works?
+//abstract class TermAxiomInContextTactic(name: String, axiomName: String)
+//  extends ContextualizeKnowledgeTactic(name) {
+//  require(Axiom.axioms != null, "the list of axioms should be defined.")
+//  require(Axiom.axioms.keySet.contains(axiomName), "The requested axiom should be in the set of axioms.")
+//  val axiom = Axiom.axioms.get(axiomName)
+//  override def applies(s: Sequent, p: Position) = axiom.isDefined && super.applies(s, p)
+//
+//  override def apply(pos: Position): Tactic = super.apply(pos) & new ConstructionTactic(this.name) {
+//    import TacticLibrary.AxiomCloseT
+//    import AxiomTactic.axiomT
+//    import scala.language.postfixOps
+//
+//    override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+//
+//    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+//      Some(onBranch("knowledge subclass continue", axiomT(axiomName) & assertT(1,1) &
+//        ImplyRightT(SuccPosition(0)) & EquivLeftT(AntePosition(0)) & AndLeftT(AntePosition(0)) &
+//        onBranch((equivRightLbl, locateAnte(NotLeftT)*)) & AxiomCloseT))
+//    }
+//  }
+//}
 
 /**
  * Base class for term axiom tactics. @todo get rid of this thing...
@@ -330,7 +366,6 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
                 case _ => ???
               })
               val axiomPos = SuccPosition(node.sequent.succ.length)
-              println("Axiom instance " + axiomInstance)
               val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT)
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
@@ -341,3 +376,7 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
   }
 
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// End term axiom tactics.
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

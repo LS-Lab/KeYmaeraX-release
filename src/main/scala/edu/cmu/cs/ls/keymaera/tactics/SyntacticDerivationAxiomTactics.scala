@@ -533,22 +533,22 @@ object SyntacticDerivationAxiomTactics {
 
           Some(axiomInstance, subst)
         }
-//        case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-//          val sort = aSort; assert(aSort == sSort && sSort == tSort)
-//
-//          val aS = Variable("s", None, sort)
-//          val aT = Variable("t", None, sort)
-//
-//          val left = Derivative(sort, Subtract(sort, s, t))
-//          val axiomInstance = Equals(sort, left, term)
-//
-//          val subst = Substitution(List(
-//            SubstitutionPair(aS, s),
-//            SubstitutionPair(aT, t)
-//          ))
-//
-//          Some(axiomInstance, subst)
-//        }
+        case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
+          val sort = aSort; assert(aSort == sSort && sSort == tSort)
+
+          val aS = Variable("s", None, sort)
+          val aT = Variable("t", None, sort)
+
+          val left = Derivative(sort, Subtract(sort, s, t))
+          val axiomInstance = Equals(sort, left, term)
+
+          val subst = Substitution(List(
+            SubstitutionPair(aS, s),
+            SubstitutionPair(aT, t)
+          ))
+
+          Some(axiomInstance, subst)
+        }
       }
     }
   }
@@ -660,8 +660,6 @@ End.
     }
   }
 
-
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof rule implementations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -698,7 +696,6 @@ End.
         else {
           new SuccPosition(p.getIndex)
         }
-        println("here!")
 
         Some(buildConstantEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
       }
@@ -711,9 +708,6 @@ End.
 
       val fn = new ExpressionTraversalFunction {
         override def preT(pos : PosInExpr, t : Term) = {
-          //          println("Checking " + t.prettyString())
-          //          println("\t" + pos)
-          //          println("\t" + position)
           if(pos == position.inExpr && isConstant(t)) {
             foundTerm = Some(t)
             Left(Some(ExpressionTraversal.stop))
@@ -764,7 +758,6 @@ End.
         else {
           new SuccPosition(p.getIndex)
         }
-        println("here2!")
 
         Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
       }
@@ -777,9 +770,6 @@ End.
 
       val fn = new ExpressionTraversalFunction {
         override def preT(pos : PosInExpr, t : Term) = {
-//          println("Checking " + t.prettyString())
-//          println("\t" + pos)
-//          println("\t" + position)
           if(pos == position.inExpr && isMonomial(t)) {
             foundTerm = Some(t)
             Left(Some(ExpressionTraversal.stop))

@@ -44,7 +44,7 @@ object TacticLibrary {
     }
 
     def getTerm(s: Sequent, p: Position): Term = try {
-        require(p.inExpr != HereP)
+        require(p.inExpr != HereP) //should not be at a formula.
         var t: Term = null
         ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
