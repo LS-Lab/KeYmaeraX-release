@@ -1291,8 +1291,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (
         r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U") ensuring (
-        r => { val USR(q, _, p) = r; val vc = catVars(p); q == o++vc.mbv }, s"Result O not $o u MBV($p)") ensuring (
-        r => { val USR(_, v, p) = r; val vc = catVars(p); v == u++vc.bv }, s"Result U not $u u BV($p)")
+        r => { val USR(q, _, _) = r; val vc = catVars(p); q == o++vc.mbv }, s"Result O not $o u MBV($p)") ensuring (
+        r => { val USR(_, v, _) = r; val vc = catVars(p); v == u++vc.bv }, s"Result U not $u u BV($p)")
 
   /**
    * Substitution in (systems of) differential equations.
