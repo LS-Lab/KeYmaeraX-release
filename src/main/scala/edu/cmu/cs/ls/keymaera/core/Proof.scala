@@ -1044,10 +1044,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case DiamondModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
 
     // base cases
-    // TODO true, false, predicate constant and apply predicate are not mentioned in Definition 7 and 8
-    case p: PredicateConstant => VC2(fv = Set(p), bv = Set.empty) //@todo eisegesis
-    case ApplyPredicate(p, arg) => VC2(fv = Set(p) ++ freeVariables(arg), bv = Set.empty) //@todo eisegesis
-    case True | False => VC2(fv = Set.empty[NamedSymbol], bv = Set.empty[NamedSymbol]) //@todo eisegesis
+    case p: PredicateConstant => VC2(fv = Set.empty, bv = Set.empty)
+    case ApplyPredicate(p, arg) => VC2(fv = freeVariables(arg), bv = Set.empty)
+    case True | False => VC2(fv = Set.empty[NamedSymbol], bv = Set.empty[NamedSymbol])
     case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
@@ -1099,6 +1098,14 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: ContEvolveProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
     case _ => throw new UnknownOperatorException("Not implemented", p)
   } // ensuring MBV <= BV
+
+  private def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+    case ContEvolveProduct(a, b) => primedVariables(a) ++ primedVariables(b)
+    case IncompleteSystem(a) => primedVariables(a)
+    case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x)
+    case _: EmptyContEvolveProgram => Set.empty
+    case _: ContEvolveProgramConstant => Set.empty
+  }
 
   // uniform substitution on terms
   def apply(t: Term): Term = {
@@ -1260,12 +1267,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Assign(d@Derivative(_, x: Variable), e) => ???
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-      require(!subsDefs.exists(_.n == x) || o.contains(x),
-        s"Substitution clash: variable $x will be replaced but occurs in a differential equation. \n" +
-          s"Substitution $this applied to ${p.prettyString()}")
-      USR(o+x, u+x, NFContEvolve(v, d, usubst(o+x, u+x, e), usubst(o+x, u+x, h)))
-    } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++x, u++x, sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
@@ -1280,36 +1282,39 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       USR(o, w, Loop(as)) ensuring (usubst(r, w, a).o == r, "Unstable O") ensuring(usubst(r, w, a).u == w, "Unstable U")
 
     //@TODO check implementation
-    case CheckedContEvolveFragment(child) => //@todo eisegesis
-      val USR(q, v, cs: ContEvolveProgram) = usubst(o, u, child) match {
-        case r@USR(_, _, _: ContEvolveProgram) => r
-        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in checked ODE fragments")
-      }
-      USR(q, v, CheckedContEvolveFragment(cs))
     case a: ProgramConstant if  subsDefs.exists(_.n == p) =>
       val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
       val vc = catVars(sigmaP)
       require(vc.fv.intersect(u).isEmpty, s"Substitution clash: ${vc.fv} ∩ $u is not empty")
       USR(o++vc.mbv, u++vc.bv, sigmaP)
     case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
-    case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) => USR(o, u, subsDefs.find(_.n == p).get.t.asInstanceOf[ContEvolveProgram])
-    case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
-    case ContEvolveProduct(a, b) => //@todo eisegesis
-      val USR(q, v, as: ContEvolveProgram) = usubst(o, u, a)
-      val USR(r, w, bs: ContEvolveProgram) = usubst(o, u, b)
-      USR(q++r, v++w, ContEvolveProduct(as, bs))
-    // $$s$$
-    case IncompleteSystem(s) =>
-      val USR(q, v, as: ContEvolveProgram) = usubst(o, u, s) match {
-        case r@USR(_, _, _: ContEvolveProgram) => r
-        case _ => throw new IllegalArgumentException("Only ContEvolvePrograms allowed for substitution in incomplete ODE systems")
-      }
-      USR(q, v, IncompleteSystem(as))
-    case _: EmptyContEvolveProgram => USR(o, u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r => {val USR(q, v, _) = r; val vc = catVars(p); q.subsetOf(v) && q == o++vc.mbv && v == u++vc.bv })
 
-
+  /**
+   * Substitution in (systems of) differential equations.
+   * @param o The ignore list.
+   * @param u The taboo list.
+   * @param primed The primed names (all primed names in the ODE system).
+   * @param p The ODE.
+   * @return The substitution result.
+   */
+  private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
+    ContEvolveProgram = p match {
+      case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
+      case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
+        require(!subsDefs.exists(_.n == x) || o.contains(x),
+          s"Substitution clash: variable $x will be replaced but occurs in a differential equation. \n" +
+            s"Substitution $this applied to ${p.prettyString()}")
+        NFContEvolve(v, d, usubst(o++primed, u++primed, e), usubst(o++primed, u++primed, h))
+      } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+      case _: EmptyContEvolveProgram => p
+      case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
+      case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
+      case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) =>
+        subsDefs.find(_.n == p).get.t.asInstanceOf[ContEvolveProgram]
+      case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => p
+    }
 }
 
 
