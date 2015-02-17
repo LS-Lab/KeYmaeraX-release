@@ -1222,8 +1222,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case DiamondModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); DiamondModality(sp, usubst(q, v, g))
 
     // uniform substitution base cases
-    // TODO not mentioned in uniform substitution
-    case _: PredicateConstant if  subsDefs.exists(_.n == f) => ???
+    case _: PredicateConstant if  subsDefs.exists(_.n == f) =>
+      val ps = subsDefs.find(_.n == f).get.t.asInstanceOf[Formula]
+      require(catVars(ps).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(ps).fv} ∩ $u is not empty")
+      ps
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
