@@ -1192,8 +1192,11 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         require((Set(CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
           s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
         subst(CDot)
-      case Derivative(s, e) if subsDefs.exists(_.n == t) => ???
-      case Derivative(s, e) if !subsDefs.exists(_.n == t) => ???
+      case dx@Derivative(s, x: Variable) if subsDefs.exists(_.n == t) => //@todo eisegesis
+        require((Set(x) ++ freeVariables(subst(dx))).intersect(u).isEmpty,
+          s"Substitution clash: ({$x} ∪ ${freeVariables(subst(dx))}) ∩ $u is not empty")
+        subst(dx)
+      case Derivative(s, e) if !subsDefs.exists(_.n == t) => t //@todo eisegesis
       case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
         require(freeVariables(subs.t.asInstanceOf[Term]).intersect(u).isEmpty,
@@ -1263,8 +1266,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program): USR = { p match {
     case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
     case Assign(CDot, e) => USR(o+CDot, u+CDot, Assign(CDot, usubst(o, u, e)))
-    case Assign(d@Derivative(_, CDot), e) => ???
-    case Assign(d@Derivative(_, x: Variable), e) => ???
+    case Assign(d@Derivative(_, CDot), e) => USR(o+CDot, u+CDot, Assign(d, usubst(o, u, e))) //@todo eisegesis
+    case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
     case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++x, u++x, sode)
@@ -1646,8 +1649,8 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       case DiamondModality(a: Loop, phi) => renameLoop(bound, a, phi, DiamondModality.apply)
       case BoxModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, BoxModality.apply)
       case DiamondModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, DiamondModality.apply)
-      case _ if bound.contains(oldVar) => Right(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(e))
-      case _ if !(bound.contains(oldVar)) => Left(None)
+      case _ if  bound.contains(oldVar) => Right(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(e))
+      case _ if !bound.contains(oldVar) => Left(None)
     }
   }
 
@@ -1725,17 +1728,17 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
 
   private def renameAssignment[T <: Modality](bound: Set[NamedSymbol], e: Formula, a: Term, b: Term,
                                               phi: Formula, factory: (Program, Formula) => T) = {
-    val (newA, newBoundA: NamedSymbol, boundSymbol: NamedSymbol, repl) = a match {
-      case aV@Variable(n, i, d) if n == name && i == idx => val v = Variable(target, tIdx, d); (v, v, aV, v)
+    val (newA, boundSymbol: NamedSymbol, repl) = a match {
+      case aV@Variable(n, i, d) if n == name && i == idx => val v = Variable(target, tIdx, d); (v, aV, v)
       case Apply(aF@Function(n, i, d, s), x) if n == name && i == idx =>
-        val f = Function(target, tIdx, d, s); (Apply(f, x), Apply(f, x), aF, Apply(f, x))
+        val f = Function(target, tIdx, d, s); (Apply(f, x), aF, Apply(f, x))
       case Derivative(sort, aV@Variable(n, i, d)) if n == name && i == idx =>
-        val v = Variable(target, tIdx, d); val dv = Derivative(sort, v); (dv, v, aV, v)
+        val v = Variable(target, tIdx, d); val dv = Derivative(sort, v); (dv, aV, dv)
       case _ => bound.find(v => v.name == name && v.index == idx) match {
-        case Some(Variable(n, i, d)) => (a, a, Variable(name, idx, d), Variable(target, tIdx, d))
+        case Some(Variable(n, i, d)) => (a, Variable(name, idx, d), Variable(target, tIdx, d))
         case Some(Apply(Function(n, i, d, s), x)) =>
-          (a, a, Function(name, idx, d, s), Apply(Function(target, tIdx, d, s), x))
-        case Some(Derivative(sort, Variable(n, i, d))) => (a, a, Derivative(sort, Variable(name, idx, d)), Derivative(sort, Variable(target, tIdx, d)))
+          (a, Function(name, idx, d, s), Apply(Function(target, tIdx, d, s), x))
+        case Some(Derivative(sort, Variable(n, i, d))) => (a, Derivative(sort, Variable(name, idx, d)), Derivative(sort, Variable(target, tIdx, d)))
         case _ => throw new CoreException("Cannot alpha rename in " + e + " since " + name + "_" + idx + " is not bound")
       }
     }
@@ -1747,7 +1750,7 @@ class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: St
       else b
     val newPhi =
       if (bound.contains(boundSymbol)) new Substitution(new SubstitutionPair(boundSymbol, repl) :: Nil).apply(phi)
-      else new Substitution(new SubstitutionPair(boundSymbol, newBoundA) :: Nil).apply(phi)
+      else new Substitution(new SubstitutionPair(a, newA) :: Nil).apply(phi)
     Right(factory(Assign(newA, newB), newPhi))
   }
 
