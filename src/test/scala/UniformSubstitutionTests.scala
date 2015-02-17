@@ -759,6 +759,99 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     an [IllegalArgumentException] should be thrownBy t(h)
   }
 
+  "Uniform substitution in converse-Barcan " should "be allowed" in {
+    val s = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "x>0".asFormula),
+      SubstitutionPair(ProgramConstant("a"), "y:=5;".asProgram)))
+
+    //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
+    val f = Imply(
+      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm))),
+      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)))
+    )
+    s(f) should be ("[y:=5;]\\forall x. x>0 -> \\forall x. [y:=5;]x>0".asFormula)
+  }
+
+  // TODO not yet implemented correctly -> substitution will succeed
+  ignore should "not be permitted" in {
+    //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
+    val f = Imply(
+      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm))),
+      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)))
+    )
+
+    val s = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "x>0".asFormula),
+      SubstitutionPair(ProgramConstant("a"), "x:=5;".asProgram)))
+
+    an [IllegalArgumentException] should be thrownBy s(f)
+  }
+
+  it should "not be permitted to replace [a;] with a program that contains free x" in {
+    //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
+    val h = Imply(
+      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm))),
+      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)))
+    )
+
+    val s = Substitution(List(
+      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "x>0".asFormula),
+      SubstitutionPair(ProgramConstant("a"), "y:=x;".asProgram)))
+    an [IllegalArgumentException] should be thrownBy s(h)
+  }
+
+  "Uniform substitution in vacuous quantification" should "work when FV(p) is disjoint from newly quantified variable x" in {
+    val f = Equiv(PredicateConstant("p"), Forall("x".asNamedSymbol::Nil, PredicateConstant("p")))
+
+    val s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "y>0".asFormula)))
+    s(f) should be ("y>0 <-> \\forall x. y>0".asFormula)
+
+    val h = Equiv(PredicateConstant("p"), Exists("x".asNamedSymbol::Nil, PredicateConstant("p")))
+    s(h) should be ("y>0 <-> \\exists x. y>0".asFormula)
+
+    val t = Substitution(List(SubstitutionPair(PredicateConstant("p"), "[x:=5;]x>0".asFormula)))
+    t(f) should be ("[x:=5;]x>0 <-> \\forall x. [x:=5;]x>0".asFormula)
+    t(h) should be ("[x:=5;]x>0 <-> \\exists x. [x:=5;]x>0".asFormula)
+  }
+
+  it should "not be permitted on p->[a]p with FV(p) not being disjoint from newly quantified variable x" in {
+    val f = Equiv(PredicateConstant("p"), Forall("x".asNamedSymbol::Nil, PredicateConstant("p")))
+
+    val s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "[y:=x;]y>0".asFormula)))
+    an [IllegalArgumentException] should be thrownBy s(f)
+
+    val h = Equiv(PredicateConstant("p"), Exists("x".asNamedSymbol::Nil, PredicateConstant("p")))
+    an [IllegalArgumentException] should be thrownBy s(h)
+
+    val t = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>0".asFormula)))
+    an [IllegalArgumentException] should be thrownBy t(f)
+    an [IllegalArgumentException] should be thrownBy t(h)
+  }
+
+  "Uniform substitution in vacuous assignment [v:=t]p <-> p" should "work with FV(p) being disjoint from newly assigned variable v" in {
+    val f = Equiv(BoxModality(Assign("v".asTerm, "t".asTerm), PredicateConstant("p")), PredicateConstant("p"))
+
+    val s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "y>0".asFormula)))
+    s(f) should be ("[v:=t;]y>0 <-> y>0".asFormula)
+
+    val t = Substitution(List(SubstitutionPair(PredicateConstant("p"), "[x:=y;]x>0".asFormula)))
+    t(f) should be ("[v:=t;][x:=y;]x>0 <-> [x:=y;]x>0".asFormula)
+
+    val h = Equiv(DiamondModality(Assign("v".asTerm, "t".asTerm), PredicateConstant("p")), PredicateConstant("p"))
+    s(h) should be ("<v:=t;>y>0 <-> y>0".asFormula)
+    t(h) should be ("<v:=t;>[x:=y;]x>0 <-> [x:=y;]x>0".asFormula)
+  }
+
+  it should "not be permitted with FV(p) not being disjoint from newly assigned variable v" in {
+    val f = Equiv(BoxModality(Assign("v".asTerm, "t".asTerm), PredicateConstant("p")), PredicateConstant("p"))
+
+    val s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "v>0".asFormula)))
+    an [IllegalArgumentException] should be thrownBy s(f)
+
+    val h = Equiv(DiamondModality(Assign("v".asTerm, "t".asTerm), PredicateConstant("p")), PredicateConstant("p"))
+    an [IllegalArgumentException] should be thrownBy s(h)
+  }
+
   /*
    * Andre's tests
    */
