@@ -381,6 +381,18 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     an [IllegalArgumentException] should be thrownBy applySubstitution(Set.empty, Set.empty, "t'=x & x*y+t+1>0;".asProgram)
   }
 
+  "Uniform substitution of (x,t) |-> [x:=5;x'=y,y'=x & x*y>0;]1>0" should "be [x:=5;x'=y,y'=x & x*y>0;]1>0" in {
+    s = Substitution(List(SubstitutionPair("x".asTerm, "t".asTerm)))
+    s("[x:=5;x'=y,y'=x & x*y>0;]1>0".asFormula) should be ("[x:=5;x'=y,y'=x & x*y>0;]1>0".asFormula)
+  }
+
+  "Uniform substitution of (x,t) |-> [x'=y,y'=x & x*y>0;]1>0" should "not be permitted" in {
+    s = Substitution(List(SubstitutionPair("x".asTerm, "t".asTerm)))
+    // x not must-bound when substituting
+    an [IllegalArgumentException] should be thrownBy s("[x'=y,y'=x & x*y>0;]1>0".asFormula)
+    an [IllegalArgumentException] should be thrownBy s("[{x:=1 ++ y:=2};x'=y,y'=x & x*y>0;]1>0".asFormula)
+  }
+
   /**
    * ==================================================
    * tests for formulas
