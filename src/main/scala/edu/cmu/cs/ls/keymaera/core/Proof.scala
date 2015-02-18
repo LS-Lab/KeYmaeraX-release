@@ -995,7 +995,7 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => this /* top -- _ == top */
     case Right(ts) => SetLattice(ts -- other)
   }
-  override def toString() = s match {
+  override def toString = s match {
     case Left(_) => "top"
     case Right(ts) => ts.toString()
   }
@@ -1111,7 +1111,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   
 
   override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
-  
+
   // helper
 
   /**
