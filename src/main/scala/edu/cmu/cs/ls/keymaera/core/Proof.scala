@@ -906,14 +906,14 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
     if (!(n != t)) println("INFO: Unnecessary identity substitution " + n + " by equal " + t + "\n(non-critical, just indicates a possible tactics inefficiency)")
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
-      case _:Variable => true
       case CDot => true
       case _:PredicateConstant => true
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, CDot | _:Variable) => true
-      case Apply(_:Function, CDot | _:Variable) => true
+      case ApplyPredicate(_:Function, CDot | Nothing) => true
+      case Apply(_:Function, CDot | Nothing) => true
+      case Nothing => t == Nothing
       case _ => false
       }, "Substitutable expression required, found " + n)
   }
@@ -1164,11 +1164,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
     // base cases
     case x: Variable => SetLattice(x)
+    case Apply(f, Nothing) => SetLattice(f)
     case CDot => SetLattice(CDot)
     // TODO x' and f(x) are not in Definition 8
     case Derivative(s, e) => freeVariables(e) //@todo eisegesis
     case Apply(f, arg) => freeVariables(arg) //@todo eisegesis
-    case True | False | _: NumberObj => SetLattice.bottom
+    case True | False | _: NumberObj | Nothing => SetLattice.bottom
   }
 
   def catVars(p: Program): VC3 = { p match {
@@ -1250,8 +1251,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    */
   def sameHead(left: SubstitutionPair, right: Expr) = left.n match {
-    case Apply(lf, _: Variable | CDot) => right match { case Apply(rf, _) => lf == rf case _ => false }
-    case ApplyPredicate(lf, _: Variable | CDot) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
+    case Apply(lf, CDot | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
+    case ApplyPredicate(lf, CDot | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
@@ -1280,30 +1281,30 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       // TODO not mentioned in substitution
       case Pair(dom, l, r) => Pair(dom, usubst(o, u, l), usubst(o, u, r)) // @todo eisegesis
       // uniform substitution base cases
-      case x: Variable if !subsDefs.exists(_.n == x) || o.contains(x) => x
-      case x: Variable if substDiff(subsDefs, o).subsDefs.exists(_.n == x) =>
-        require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(x))).intersect(u).isEmpty,
-          s"Substitution clash: ({$x} ∪ ${freeVariables(subst(x))}) ∩ $u is not empty")
-        subst(x)
+      case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
       // TODO not mentioned in substitution
       case CDot if !subsDefs.exists(_.n == CDot) || o.contains(CDot) => CDot //@todo eisegesis
       case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.n == CDot) => //@todo eisegesis
         require((SetLattice[NamedSymbol](CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
           s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
         subst(CDot)
-      case dx@Derivative(s, x: Variable) if subsDefs.exists(_.n == t) => //@todo eisegesis
+      case dx@Derivative(s, Apply(x, Nothing)) if subsDefs.exists(_.n == t) => //@todo eisegesis
         require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(dx))).intersect(u).isEmpty,
           s"Substitution clash: ({$x} ∪ ${freeVariables(subst(dx))}) ∩ $u is not empty")
         subst(dx)
       case Derivative(s, e) if !subsDefs.exists(_.n == t) => t //@todo eisegesis
       case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-        require(freeVariables(subs.t.asInstanceOf[Term]).intersect(u).isEmpty,
+        val (rArg, rTerm) =
+          (subs.n match { case Apply(_, v: NamedSymbol) => v
+                          case _ => throw new IllegalArgumentException(s"Substitution of f(theta) for arbitrary theta not supported: $t") },
+           subs.t.asInstanceOf[Term])
+        require(freeVariables(rTerm).intersect(u).isEmpty,
           s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
-        val (rArg, rTerm) = (subs.n match { case Apply(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Term])
         instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
       case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
-      case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
+      case Nothing => Nothing
+      case x: Atom => x
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
     }
   }
@@ -1338,10 +1339,13 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-      val (rArg, rFormula) = (subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Formula])
+      val (rArg, rFormula) = (
+        subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v
+                       case _ => throw new IllegalArgumentException(s"Substitution of p(theta) for arbitrary theta not supported: $f")},
+        subs.t.asInstanceOf[Formula])
       val restrictedU = rArg match { case CDot => u case _ => u-rArg }
-      require(catVars(subs.t.asInstanceOf[Formula]).fv.intersect(restrictedU).isEmpty,
-        s"Substitution clash: ${catVars(subs.t.asInstanceOf[Formula]).fv} ∩ $restrictedU is not empty")
+      require(catVars(rFormula).fv.intersect(restrictedU).isEmpty,
+        s"Substitution clash: ${catVars(rFormula).fv} ∩ $restrictedU is not empty")
       instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
     case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
     // TODO not mentioned in uniform substitution
@@ -1414,9 +1418,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     ContEvolveProgram = p match {
       case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
       case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-        require(!subsDefs.exists(_.n == x) || o.contains(x),
-          s"Substitution clash: variable $x will be replaced but occurs in a differential equation. \n" +
-            s"Substitution $this applied to ${p.prettyString()}")
         NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
       } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
       case _: EmptyContEvolveProgram => p
