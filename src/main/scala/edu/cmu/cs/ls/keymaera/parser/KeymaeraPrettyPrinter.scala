@@ -133,6 +133,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Apply(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
       case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
+      case Nothing => prettyPrinter(function) + "()"
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
     }
     
@@ -227,6 +228,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case None => ""
     })
     case CDot => "•"
+    case Nothing => ""
 
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
