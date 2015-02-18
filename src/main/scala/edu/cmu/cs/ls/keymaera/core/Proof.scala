@@ -23,7 +23,7 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition
 import edu.cmu.cs.ls.keymaera.parser._
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
 
-import scala.collection.mutable
+import scala.collection.GenTraversableOnce
 
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
@@ -928,6 +928,91 @@ object SubstitutionPair {
   }
 }
 
+object SetLattice {
+  def apply[A](e: A): SetLattice[A] = new SetLattice(Right(Set(e)))
+  def apply[A](s: Set[A]): SetLattice[A] = new SetLattice(Right(s))
+  def apply[A](s: Seq[A]): SetLattice[A] = new SetLattice(Right(s.toSet))
+  def bottom[A] = new SetLattice(Right(Set.empty[A]))
+  def top[A]: SetLattice[A] = new SetLattice[A](Left(null))
+}
+class SetLattice[A](val s: Either[Null, Set[A]]) {
+  def intersect(other: SetLattice[A]): SetLattice[A] = s match {
+    case Left(_) => other
+    case Right(ts) => other.s match {
+      case Left(_) => this
+      case Right(os) => SetLattice(ts.intersect(os))
+    }
+  }
+  def intersect(other: Set[A]): SetLattice[A] = s match {
+    case Left(_) => SetLattice(other)
+    case Right(ts) => SetLattice(ts.intersect(other))
+  }
+  def subsetOf(other: SetLattice[A]): Boolean = s match {
+    case Left(_) => other.s.isLeft  /* top is subset of top */
+    case Right(ts) => other.s match {
+      case Left(_) => true         /* everything else is subset of top */
+      case Right(os) => ts.subsetOf(os)
+    }
+  }
+  def contains(elem: A): Boolean = s match {
+    case Left(_) => true /* top contains everything */
+    case Right(ts) => ts.contains(elem)
+  }
+  def isEmpty: Boolean = s match {
+    case Left(_) => false /* top is not empty */
+    case Right(ts) => ts.isEmpty
+  }
+  def +(elem: A): SetLattice[A] = s match {
+    case Left(_) => this /* top remains top */
+    case Right(ts) => SetLattice(ts+elem)
+  }
+  def -(elem: A): SetLattice[A] = s match {
+    case Left(_) => this /* top remains top */
+    case Right(ts) => SetLattice(ts-elem)
+  }
+  def ++(other: SetLattice[A]): SetLattice[A] = s match {
+    case Left(_) => this
+    case Right(ts) => other.s match {
+      case Left(_) => other
+      case Right(os) => SetLattice(ts ++ os)
+    }
+  }
+  def ++(other: GenTraversableOnce[A]): SetLattice[A] = s match {
+    case Left(_) => this
+    case Right(ts) => SetLattice(ts ++ other)
+  }
+  def --(other: SetLattice[A]): SetLattice[A] = s match {
+    case Left(_) => other.s match {
+      case Left(_) => SetLattice.bottom /* top -- top == bottom */
+      case _ => this /* top -- _ == top */
+    }
+    case Right(ts) => other.s match {
+      case Left(_) => SetLattice.bottom /* _ -- top == bottom */
+      case Right(os) => SetLattice(ts -- os)
+    }
+  }
+  def --(other: GenTraversableOnce[A]): SetLattice[A] = s match {
+    case Left(_) => this /* top -- _ == top */
+    case Right(ts) => SetLattice(ts -- other)
+  }
+  override def toString() = s match {
+    case Left(_) => "top"
+    case Right(ts) => ts.toString()
+  }
+  override def equals(other: Any): Boolean = other match {
+    case ls: SetLattice[A] => s match {
+      case Left(_) => ls.s.isLeft
+      case Right(ts) => ls.s match {
+        case Left(_) => false
+        case Right(os) => ts == os
+      }
+    }
+    case os: Set[A] => s match {
+      case Left(_) => false
+      case Right(ts) => ts == os
+    }
+  }
+}
 
 /**
  * Static access to functions of Substitution.
@@ -935,18 +1020,33 @@ object SubstitutionPair {
  */
 object Substitution {
   /** Returns the set of names maybe free in term t (same as certainly free). */
-  def maybeFreeVariables(t: Term): Set[NamedSymbol] = Substitution(Nil).freeVariables(t)
+  def maybeFreeVariables(t: Term): Set[NamedSymbol] = Substitution(Nil).freeVariables(t).s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
   /** Returns the set of names maybe free in formula f. */
-  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = Substitution(Nil).catVars(f).fv
+  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = Substitution(Nil).catVars(f).fv.s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
   /** Returns the set of names maybe free in program p. */
-  def maybeFreeVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).fv
+  def maybeFreeVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).fv.s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
   /** Returns the set of names certainly free in program p. */
   def freeVariables(p: Program): Set[NamedSymbol] = {
     val ba = Substitution(Nil).catVars(p)
-    ba.fv -- (ba.mbv ++ ba.bv)
+    (ba.fv -- (ba.mbv ++ ba.bv)).s match {
+      case Right(ts) => ts
+      case Left(_) => ???
+    }
   }
   /** Returns the set of names maybe bound in program p. */
-  def maybeBoundVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).bv
+  def maybeBoundVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).bv.s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
 }
 /**
  * A Uniform Substitution.
@@ -963,8 +1063,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written)
    */
-  sealed case class VC2(fv: Set[NamedSymbol],
-                        bv: Set[NamedSymbol])
+  sealed case class VC2(fv: SetLattice[NamedSymbol],
+                        bv: SetLattice[NamedSymbol])
 
   /**
    * Records which names are free, bound, or must-bound.
@@ -972,9 +1072,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param bv Bound names (maybe written)
    * @param mbv Must-bound names (certainly written).
    */
-  sealed case class VC3(fv: Set[NamedSymbol],
-                        bv: Set[NamedSymbol],
-                        mbv: Set[NamedSymbol])
+  sealed case class VC3(fv: SetLattice[NamedSymbol],
+                        bv: SetLattice[NamedSymbol],
+                        mbv: SetLattice[NamedSymbol])
 
   /**
    * Records the result of uniform substitution in a program.
@@ -982,8 +1082,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param u The taboo set.
    * @param p The program.
    */
-  private sealed case class USR(o: Set[NamedSymbol],
-                        u: Set[NamedSymbol],
+  private sealed case class USR(o: SetLattice[NamedSymbol],
+                        u: SetLattice[NamedSymbol],
                         p: Program)
 
   /**
@@ -1011,7 +1111,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   
 
   override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
-
+  
   // helper
 
   /**
@@ -1021,12 +1121,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    */
   def catVars(f: Formula): VC2 = f match {
     // homomorphic cases
-    case Equals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
-    case NotEquals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
-    case GreaterEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
-    case GreaterThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
-    case LessEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
-    case LessThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = Set.empty[NamedSymbol])
+    case Equals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
+    case NotEquals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
+    case GreaterEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
+    case GreaterThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
+    case LessEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
+    case LessThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
 
     case Not(g) => VC2(fv = catVars(g).fv, bv = catVars(g).bv)
     case And(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
@@ -1044,16 +1144,16 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case DiamondModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
 
     // base cases
-    case p: PredicateConstant => VC2(fv = Set.empty, bv = Set.empty)
-    case ApplyPredicate(p, arg) => VC2(fv = freeVariables(arg), bv = Set.empty)
-    case True | False => VC2(fv = Set.empty[NamedSymbol], bv = Set.empty[NamedSymbol])
+    case p: PredicateConstant => VC2(fv = SetLattice.bottom, bv = SetLattice.bottom)
+    case ApplyPredicate(p, arg) => VC2(fv = freeVariables(arg), bv = SetLattice.bottom)
+    case True | False => VC2(fv = SetLattice.bottom, bv = SetLattice.bottom)
     case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
   /**
    * The set of all (may) free variables whose value t depends on (syntactically).
    */
-  def freeVariables(t: Term): Set[NamedSymbol] = t match {
+  def freeVariables(t: Term): SetLattice[NamedSymbol] = t match {
     // homomorphic cases
     case Neg(s, l) => freeVariables(l)
     case Add(s, l, r) => freeVariables(l) ++ freeVariables(r)
@@ -1063,39 +1163,38 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Exp(s, l, r) => freeVariables(l) ++ freeVariables(r)
     case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
     // base cases
-    case x: Variable => Set(x)
-    case CDot => Set(CDot)
+    case x: Variable => SetLattice(x)
+    case CDot => SetLattice(CDot)
     // TODO x' and f(x) are not in Definition 8
     case Derivative(s, e) => freeVariables(e) //@todo eisegesis
-    case Apply(f, arg) => Set(f) ++ freeVariables(arg) //@todo eisegesis
-    case True | False | _: NumberObj => Set.empty //@todo eisegesis
+    case Apply(f, arg) => freeVariables(arg) //@todo eisegesis
+    case True | False | _: NumberObj => SetLattice.bottom
   }
 
   def catVars(p: Program): VC3 = { p match {
-    case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = Set(x), mbv = Set(x))
+    case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x))
     // TODO CDot and derivative not mentioned in Definition 9
-    case Assign(CDot, e) => VC3(fv = freeVariables(e), bv = Set(CDot), mbv = Set(CDot)) //@todo eisegesis
-    case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = Set(x), mbv = Set(x)) //@todo eisegesis
-    case Assign(Derivative(_, CDot), e) => VC3(fv = freeVariables(e), bv = Set(CDot), mbv = Set(CDot)) //@todo eisegesis
+    case Assign(CDot, e) => VC3(fv = freeVariables(e), bv = SetLattice(CDot), mbv = SetLattice(CDot)) //@todo eisegesis
+    case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
+    case Assign(Derivative(_, CDot), e) => VC3(fv = freeVariables(e), bv = SetLattice(CDot), mbv = SetLattice(CDot)) //@todo eisegesis
     // TODO x:=* not mentioned in Definition 9
-    case NDetAssign(x: Variable) => VC3(fv = Set.empty, bv = Set(x), mbv = Set(x)) //@todo eisegesis
-    case Test(f) => VC3(fv = catVars(f).fv, bv = Set.empty, mbv = Set.empty)
+    case NDetAssign(x: Variable) => VC3(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
+    case Test(f) => VC3(fv = catVars(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     case NFContEvolve(vars, Derivative(_, x: Variable), e, h) =>
-      VC3(fv = Set(x) ++ freeVariables(e) ++ catVars(h).fv, bv = Set(x), mbv = Set(x))
+      VC3(fv = SetLattice[NamedSymbol](x) ++ freeVariables(e) ++ catVars(h).fv, bv = SetLattice(x), mbv = SetLattice(x))
     // TODO system of ODE cases not mentioned in Definition 9
     case ContEvolveProduct(a, b) => VC3(fv = catVars(a).fv ++ catVars(b).fv, bv = catVars(a).bv ++ catVars(b).bv,
       mbv = catVars(a).mbv ++ catVars(b).mbv) //@todo eisegesis
     case IncompleteSystem(a) => catVars(a) //@todo eisegesis
     case CheckedContEvolveFragment(a) => catVars(a) //@todo eisegesis
-    case _: EmptyContEvolveProgram => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
+    case _: EmptyContEvolveProgram => VC3(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom) //@todo eisegesis
     case Sequence(a, b) => VC3(fv = catVars(a).fv ++ (catVars(b).fv -- catVars(a).mbv),
       bv = catVars(a).bv ++ catVars(b).bv, mbv = catVars(a).mbv ++ catVars(b).mbv)
     case Choice(a, b) => VC3(fv = catVars(a).fv ++ catVars(b).fv, bv = catVars(a).bv ++ catVars(b).bv,
       mbv = catVars(a).mbv.intersect(catVars(b).mbv))
-    case Loop(a) => VC3(fv = catVars(a).fv, bv = catVars(a).bv, mbv = Set.empty)
-    //@TODO check implementation, not mentioned in Definition 9
-    case _: ProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
-    case _: ContEvolveProgramConstant => VC3(fv = Set.empty, bv = Set.empty, mbv = Set.empty) //@todo eisegesis
+    case Loop(a) => VC3(fv = catVars(a).fv, bv = catVars(a).bv, mbv = SetLattice.bottom)
+    case _: ProgramConstant => VC3(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
+    case _: ContEvolveProgramConstant => VC3(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   }} ensuring(r => { val VC3(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) not a subset of BV($p)")
 
@@ -1110,7 +1209,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   // uniform substitution on terms
   def apply(t: Term): Term = {
     try {
-      usubst(Set.empty, Set.empty, t)
+      usubst(SetLattice.bottom, SetLattice.bottom, t)
     } catch {
       case ex: SubstitutionClashException => throw ex.inContext(t.prettyString())
     }
@@ -1119,7 +1218,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   def apply(f: Formula): Formula = {
     log("\tSubstituting " + f.prettyString + " using " + this)
     try {
-      val res = usubst(Set.empty[NamedSymbol], Set.empty[NamedSymbol], f)
+      val res = usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)
       log("\tSubstituted  " + res.prettyString)
       res
     } catch {
@@ -1138,13 +1237,13 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   // uniform substitution on programs
   def apply(p: Program): Program = {
     try {
-      usubst(Set.empty[NamedSymbol], Set.empty[NamedSymbol], p).p
+      usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p
     } catch {
       case ex: SubstitutionClashException => throw ex.inContext(p.prettyString())
     }
   }
 
-  private def substDiff(s: Seq[SubstitutionPair], names: Set[NamedSymbol]) =
+  private def substDiff(s: Seq[SubstitutionPair], names: SetLattice[NamedSymbol]) =
     new Substitution(s.filter(_.n match { case en: NamedSymbol => !names.contains(en) case _ => true }))
 
   /**
@@ -1168,7 +1267,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   /**
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
    */
-  private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], t: Term): Term = {
+  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
     def subst(t: Term) = subsDefs.find(_.n == t).get.t.asInstanceOf[Term]
     t match {
       // homomorphic cases
@@ -1183,17 +1282,17 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       // uniform substitution base cases
       case x: Variable if !subsDefs.exists(_.n == x) || o.contains(x) => x
       case x: Variable if substDiff(subsDefs, o).subsDefs.exists(_.n == x) =>
-        require((Set(x) ++ freeVariables(subst(x))).intersect(u).isEmpty,
+        require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(x))).intersect(u).isEmpty,
           s"Substitution clash: ({$x} ∪ ${freeVariables(subst(x))}) ∩ $u is not empty")
         subst(x)
       // TODO not mentioned in substitution
       case CDot if !subsDefs.exists(_.n == CDot) || o.contains(CDot) => CDot //@todo eisegesis
       case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.n == CDot) => //@todo eisegesis
-        require((Set(CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
+        require((SetLattice[NamedSymbol](CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
           s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
         subst(CDot)
       case dx@Derivative(s, x: Variable) if subsDefs.exists(_.n == t) => //@todo eisegesis
-        require((Set(x) ++ freeVariables(subst(dx))).intersect(u).isEmpty,
+        require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(dx))).intersect(u).isEmpty,
           s"Substitution clash: ({$x} ∪ ${freeVariables(subst(dx))}) ∩ $u is not empty")
         subst(dx)
       case Derivative(s, e) if !subsDefs.exists(_.n == t) => t //@todo eisegesis
@@ -1202,14 +1301,14 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         require(freeVariables(subs.t.asInstanceOf[Term]).intersect(u).isEmpty,
           s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
         val (rArg, rTerm) = (subs.n match { case Apply(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Term])
-        instantiate(rArg, usubst(o, u, theta)).usubst(Set.empty, Set.empty, rTerm)
+        instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
       case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
       case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
     }
   }
 
-  private def usubst(o: Set[NamedSymbol], u:Set[NamedSymbol], f: Formula): Formula = f match {
+  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
     case Not(g) => Not(usubst(o, u, g))
     case And(l, r) => And(usubst(o, u, l), usubst(o, u, r))
@@ -1243,7 +1342,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val restrictedU = rArg match { case CDot => u case _ => u-rArg }
       require(catVars(subs.t.asInstanceOf[Formula]).fv.intersect(restrictedU).isEmpty,
         s"Substitution clash: ${catVars(subs.t.asInstanceOf[Formula]).fv} ∩ $restrictedU is not empty")
-      instantiate(rArg, usubst(o, u, theta)).usubst(Set.empty, Set.empty, rFormula)
+      instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
     case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
     // TODO not mentioned in uniform substitution
     case FormulaDerivative(g) => ???
@@ -1257,20 +1356,20 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    *  used for testing only, may need a better solution
    */
   private def usubstComps(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program) = {
-    val r = usubst(o, u, p); (r.o, r.u, r.p)
+    val r = usubst(SetLattice(o), SetLattice(u), p); (r.o, r.u, r.p)
   }
 
   /**
    *
    */
-  private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program): USR = { p match {
+  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
     case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
     case Assign(CDot, e) => USR(o+CDot, u+CDot, Assign(CDot, usubst(o, u, e)))
     case Assign(d@Derivative(_, CDot), e) => USR(o+CDot, u+CDot, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++x, u++x, sode)
+    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
@@ -1301,7 +1400,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   }} ensuring (
         r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U") ensuring (
         r => { val USR(q, _, _) = r; val vc = catVars(p); q == o++vc.mbv }, s"Result O not $o u MBV($p)") ensuring (
-        r => { val USR(_, v, _) = r; val vc = catVars(p); v == u++vc.bv }, s"Result U not $u u BV($p)")
+        r => { val USR(_, v, _) = r; val vc = catVars(p); if (vc.bv == SetLattice.top) u.subsetOf(v) else v == u++vc.bv }, s"Result U not $u u BV($p)")
 
   /**
    * Substitution in (systems of) differential equations.
@@ -1311,14 +1410,14 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param p The ODE.
    * @return The substitution result.
    */
-  private def usubst(o: Set[NamedSymbol], u: Set[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
+  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
     ContEvolveProgram = p match {
       case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
       case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
         require(!subsDefs.exists(_.n == x) || o.contains(x),
           s"Substitution clash: variable $x will be replaced but occurs in a differential equation. \n" +
             s"Substitution $this applied to ${p.prettyString()}")
-        NFContEvolve(v, d, usubst(o++primed, u++primed, e), usubst(o++primed, u++primed, h))
+        NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
       } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
       case _: EmptyContEvolveProgram => p
       case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
