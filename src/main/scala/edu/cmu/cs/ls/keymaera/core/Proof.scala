@@ -1111,7 +1111,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   
 
   override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
-
+  
   // helper
 
   /**
