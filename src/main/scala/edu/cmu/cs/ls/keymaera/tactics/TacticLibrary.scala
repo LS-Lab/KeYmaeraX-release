@@ -44,7 +44,7 @@ object TacticLibrary {
     }
 
     def getTerm(s: Sequent, p: Position): Term = try {
-        require(p.inExpr != HereP)
+        require(p.inExpr != HereP) //should not be at a formula.
         var t: Term = null
         ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
@@ -267,38 +267,70 @@ object TacticLibrary {
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
       new PositionTactic("Alpha Renaming") {
     import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = true // @TODO: really check applicability
+    override def applies(s: Sequent, p: Position): Boolean = /*s(p) match*/ {
+      var applicable = false
+      ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
+          f match {
+            case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
+            case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
+            case BoxModality(ode: ContEvolveProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
+            case BoxModality(Loop(a), _) => applicable = BindingAssessment.catVars(a).bv.exists(v => v.name == from && v.index == fromIdx)
+            case _ => applicable = false
+          }
+          Left(Some(ExpressionTraversal.stop))
+        }
+      }), s(p))
+      applicable
+    }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        def varBoundInPrg(x: Variable, prg: Program) =
-          x.name == from && x.index == fromIdx &&
-            Substitution.maybeBoundVariables(prg).exists(v => v.name == from && v.index == fromIdx)
-        def rename() = {
-          val nextToIdx = toIdx match { case Some(i) => Some(i+1) case None => Some(0) }
-          new ApplyRule(new AlphaConversion(p.second, from, fromIdx, to, nextToIdx)) {
-            override def applicable(node: ProofNode): Boolean = true
-          } & hideT(p.topLevel)
-        }
-
-        val prepareRenaming = node.sequent(p) match {
-          // TODO find first program that binds x, if it is an ODE or a loop, then rename that one first
-          case BoxModality(NDetAssign(x: Variable), BoxModality(prg: ContEvolveProgram, _))
-            if varBoundInPrg(x, prg) => rename()
-          case BoxModality(Assign(x: Variable, _), BoxModality(prg: ContEvolveProgram, _))
-            if varBoundInPrg(x, prg) => rename()
-          case BoxModality(Assign(x: Variable, _), BoxModality(prg: Loop, _))
-            if varBoundInPrg(x, prg) => rename()
-          case _ => NilT
-        }
-        Some(prepareRenaming & new ApplyRule(new AlphaConversion(p, from, fromIdx, to, toIdx)) {
-          override def applicable(node: ProofNode): Boolean = true
+        Some(new ApplyRule(new AlphaConversion(from, fromIdx, to, toIdx, Some(p))) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         } & hideT(p.topLevel))
       }
     }
   }
+
+  def globalAlphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): Tactic =
+    new ConstructionTactic("Alpha Renaming") {
+      import scala.language.postfixOps
+      override def applicable(node: ProofNode): Boolean = true
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(new ApplyRule(new AlphaConversion(from, fromIdx, to, toIdx, None)) {
+          override def applicable(node: ProofNode): Boolean = true
+        } & initialValueTactic(node.sequent.ante, AntePosition.apply)
+          & initialValueTactic(node.sequent.succ, SuccPosition.apply))
+      }
+
+      private def initialValueTactic(formulas: IndexedSeq[Formula], factory: (Int, PosInExpr) => Position) = {
+        (0 to formulas.length-1).map(i => {
+          val pos = factory(i, HereP); abstractionT(pos) & hideT(pos) & skolemizeT(pos)
+        }).foldLeft(Tactics.NilT)((a, b) => a & b)
+      }
+    }
+
+//  def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): Tactic =
+//    new ConstructionTactic("Alpha Renaming") {
+//      import scala.language.postfixOps
+//
+//      override def applicable(node: ProofNode): Boolean = /* TODO check that to is fresh */ true
+//
+//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+//        val anteLength = node.sequent.ante.length
+//        val succLength = node.sequent.succ.length
+//
+//        Some(new ApplyRule(new AlphaConversion2(from, fromIdx, to, toIdx)) {
+//          override def applicable(node: ProofNode): Boolean = true
+//        }) //& (0 to anteLength-1).map(i => hideT(AntePosition(i))).fold
+//          //& (0 to succLength-1).map(i => hideT(SuccPosition(i))))
+//      }
+//    }
+
 
   /*********************************************
    * Differential Tactics

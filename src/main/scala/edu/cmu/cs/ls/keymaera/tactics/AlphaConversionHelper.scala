@@ -21,6 +21,7 @@ object AlphaConversionHelper {
    * @param free The optional set of free names. If None, all names are considered free. Defaults to the names
    *             that may be read in f.
    */
+  @deprecated("Prefer SubstitutionHelper for replacing free occurrences")
   def replaceFree(f: Formula)(o: Term, n: Term,
                               free: Option[Set[NamedSymbol]] = Some(maybeFreeVariables(f))): Formula = {
     // TODO might no longer be necessary to have free an option

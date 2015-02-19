@@ -239,20 +239,35 @@ object ODETactics {
           val axiomInstance = Imply(lhs, f)
 
           // construct substitution
-          val aX = Variable("x", None, Real)
-          val aH = ApplyPredicate(Function("H", None, Real, Bool), x)
-          val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
-          val aT = Apply(Function("f", None, Real, Real), x)
+          val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+          val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+          val aT = Apply(Function("f", None, Real, Real), CDot)
           val aC = ContEvolveProgramConstant("c")
-          val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
-            new SubstitutionPair(aT, t), new SubstitutionPair(aC, c))
+          val l = List(SubstitutionPair(aH, SubstitutionHelper.replaceFree(h)(x, CDot)),
+            SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, CDot)),
+            SubstitutionPair(aT, SubstitutionHelper.replaceFree(t)(x, CDot)), SubstitutionPair(aC, c))
 
           // alpha renaming of x on axiom if necessary
-          val (axiom, anteCont) =
-            if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+          val aX = Variable("x", None, Real)
+          val alpha = new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Imply(BoxModality(NDetAssign(_), _), BoxModality(IncompleteSystem(_), _)) => true
+              case _ => false
+            }
+
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+          }
+
+          val (axiom, cont) =
+            if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
             else (ax, None)
 
-          Some(axiom, axiomInstance, Substitution(l), anteCont, None)
+          Some(axiom, axiomInstance, Substitution(l), None, cont)
         case _ => None
       }
       case _ => None
@@ -290,41 +305,6 @@ object ODETactics {
     }
   }
 
-  /**
-   * Creates an alpha renaming tactic that fits the structure of weakening systems. The tactic renames the old symbol
-   * to the new symbol.
-   * @param oldSymbol The old symbol.
-   * @param newSymbol The new symbol.
-   * @return The alpha renaming tactic.
-   */
-  private def alphaInWeakenSystems(oldSymbol: Variable, newSymbol: Variable) = new PositionTactic("Alpha") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Imply(BoxModality(_: NDetAssign, _), BoxModality(_: ContEvolveProgram, _)) => true
-      case Imply(BoxModality(_: NDetAssign, _), BoxModality(_: IncompleteSystem, _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      import TacticLibrary.{abstractionT,ImplyLeftT,ImplyRightT,hideT,instantiateQuanT}
-      import PropositionalTacticsImpl.AxiomCloseT
-      import HybridProgramTacticsImpl.v2vBoxAssignT
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-        Some(alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.first)
-          & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(p.second)
-          & (if (p.isAnte) ImplyLeftT(p) else ImplyRightT(p))
-          & (ImplyRightT(SuccPosition(0)) & AxiomCloseT(AntePosition(0), SuccPosition(0)),
-            // HACK need temporary name and not sure if newSymbol.index is max
-            abstractionT(p) & hideT(p) &
-              alphaRenamingT(newSymbol.name, newSymbol.index, "_$" + newSymbol.name, newSymbol.index)(p.first) &
-              instantiateQuanT(newSymbol, newSymbol)(p) &
-              v2vBoxAssignT(p) & ImplyRightT(SuccPosition(0))
-          )
-        )
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Auxiliary Section.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -350,56 +330,34 @@ object ODETactics {
         // construct substitution
         val aP = PredicateConstant("p")
         val aX = Variable("x", None, Real)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), x)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), CDot)
         val aC = ContEvolveProgramConstant("c")
-        val aS = Variable("s", None, Real)
-        val aT = Variable("t", None, Real)
-        val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q), new SubstitutionPair(aC, ode),
-          new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val aS = Apply(Function("s", None, Unit, Real), Nothing)
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val l = List(SubstitutionPair(aP, p), SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, CDot)),
+          SubstitutionPair(aC, ode), SubstitutionPair(aS, s), SubstitutionPair(aT, t))
 
         // rename to match axiom if necessary
-        val (axiom, succCont) =
-          if (x.name != aX.name || x.index != aX.index) (replaceFree(ax)(aX, x, None), Some(alphaInDiffAuxiliary(x, aX)))
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Imply(And(Equiv(_, Exists(_, _)), _), _) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != aX.index) (replaceFree(ax)(aX, x, None), Some(alpha))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), succCont, None)
+        Some(axiom, axiomInstance, Substitution(l), None, cont)
       case _ => None
-    }
-  }
-
-  /**
-   * Creates an alpha renaming tactic that fits the structure of differential auxiliaries. The tactic renames the old
-   * symbol to the new symbol.
-   * @param oldSymbol The old symbol.
-   * @param newSymbol The new symbol.
-   * @return The alpha renaming tactic.
-   */
-  private def alphaInDiffAuxiliary(oldSymbol: Variable, newSymbol: Variable) = new PositionTactic("Alpha") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Imply(And(Equiv(_, Exists(_, _)), BoxModality(_: ContEvolveProgram, _)), BoxModality(_: ContEvolveProgram, _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      import TacticLibrary.{abstractionT,ImplyLeftT,ImplyRightT,hideT,instantiateQuanT}
-      import PropositionalTacticsImpl.AxiomCloseT
-      import HybridProgramTacticsImpl.v2vBoxAssignT
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-        Some(ImplyRightT(SuccPosition(0))
-          & ImplyLeftT(p)
-          & (hideT(SuccPosition(0))
-                & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(AntePosition(p.index, PosInExpr(0 :: 1 :: Nil)))
-                & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(AntePosition(p.index, PosInExpr(1 :: Nil)))
-                & AndLeftT(p) & abstractionT(AntePosition(1)) & hideT(AntePosition(1))
-                & alphaRenamingT(newSymbol.name, newSymbol.index, "_$" + newSymbol.name, newSymbol.index)(AntePosition(1).first)
-                & instantiateQuanT(newSymbol, newSymbol)(AntePosition(1)) & v2vBoxAssignT(AntePosition(1))
-                & AndRightT(SuccPosition(0))
-                & (hideT(AntePosition(1)), hideT(AntePosition(0))) & AxiomCloseT(AntePosition(0), SuccPosition(0)),
-             /* axiom tactic takes care of it */ NilT
-          )
-        )
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
 
@@ -456,8 +414,22 @@ object ODETactics {
         val aT = Variable("t", None, Real)
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
 
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Imply(BoxModality(NDetAssign(_), _), BoxModality(IncompleteSystem(_), _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alphaInWeakenSystems(x, aX)))
+          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alpha))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), None, cont)
@@ -588,8 +560,22 @@ object ODETactics {
               new SubstitutionPair(aH, h_cdot)
             ))
 
+            val alpha = new PositionTactic("Alpha") {
+              override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+                case Imply(BoxModality(NDetAssign(_), _), BoxModality(IncompleteSystem(_), _)) => true
+                case _ => false
+              }
+
+              override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+                override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                  Some(globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+
+                override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+              }
+            }
+
             val (axiom, cont) =
-              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alpha))
               else (ax, None)
 
             Some(axiom, instance, subst, None, cont)
@@ -647,8 +633,22 @@ object ODETactics {
               new SubstitutionPair(aH, h_cdot)
             ))
 
+            val alpha = new PositionTactic("Alpha") {
+              override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+                case Imply(BoxModality(NDetAssign(_), _), BoxModality(IncompleteSystem(_), _)) => true
+                case _ => false
+              }
+
+              override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+                override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                  Some(globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+
+                override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+              }
+            }
+
             val (axiom, cont) =
-              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alphaInWeakenSystems(aX, x)))
+              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alpha))
               else (ax, None)
 
             Some(axiom, instance, subst, None, cont)

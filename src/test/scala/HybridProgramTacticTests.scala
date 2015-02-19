@@ -108,7 +108,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[x:=1;][{x:=x+1;}*;]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sucSequent("\\forall x_1. (x_1 = 1 -> [x_1:=x_1;][{x_1:=x_1+1;}*;]x_1>0)".asFormula))
+      sucSequent("\\forall x_1. (x_1 = 1 -> [x_0:=x_1;][{x_0:=x_0+1;}*;]x_0>0)".asFormula))
   }
 
   it should "work in front of an ODE" in {
@@ -116,7 +116,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sucSequent("[x:=1;][x'=1;]x>0".asFormula)
     val assignT = locateSucc(boxAssignEqualT)
     helper.runTactic(assignT, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("\\forall x_1. (x_1=1 -> [x_1:=x_1;][x_1'=1;]x_1>0)".asFormula)))
+      sucSequent("\\forall x_1. (x_1=1 -> [x_0:=x_1;][x_0'=1;]x_0>0)".asFormula)))
   }
 
   // TODO not yet supported (partial variable writing)
@@ -170,7 +170,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
     getProofSequent(assignT, new RootNode(sucSequent("[y:=y;]y>0".asFormula))) should be (sucSequent("y>0".asFormula))
     getProofSequent(assignT, new RootNode(sucSequent("[y:=y;][y:=2;]y>0".asFormula))) should be (sucSequent("[y:=2;]y>0".asFormula))
-    getProofSequent(assignT, new RootNode(sucSequent("[y:=y;][{y:=y+1;}*;]y>0".asFormula))) should be (sucSequent("[{y:=y+1;}*;]y>0".asFormula))
+//    getProofSequent(assignT, new RootNode(sucSequent("[y:=y;][{y:=y+1;}*;]y>0".asFormula))) should be (sucSequent("[{y:=y+1;}*;]y>0".asFormula))
   }
 
   it should "update self assignments" in {
@@ -254,14 +254,14 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][{y:=y+2;}*;]y>0".asFormula :: Nil)
     val assignT = locateSucc(boxNDetAssign) & locateSucc(skolemizeT) & locateSucc(ImplyRightT)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[{y_0:=y_0+2;}*;]y_0>0".asFormula :: Nil))
+      sequent("y_1".asNamedSymbol :: Nil, "y>0".asFormula :: Nil, "[{y_1:=y_1+2;}*;]y_1>0".asFormula :: Nil))
   }
 
   it should "work in front of a continuous program" in {
     val s = sucSequent("[y:=*;][y'=2;]y>0".asFormula)
     val assignT = locateSucc(boxNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
-      sequent("y_0".asNamedSymbol :: Nil, Nil, "[y_0'=2;]y_0>0".asFormula :: Nil))
+      sequent("y".asNamedSymbol :: Nil, Nil, "[y'=2;]y>0".asFormula :: Nil))
   }
 
   "v2tBoxAssignT" should "replace with variables" in {

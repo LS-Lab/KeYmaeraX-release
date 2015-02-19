@@ -906,14 +906,14 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
     if (!(n != t)) println("INFO: Unnecessary identity substitution " + n + " by equal " + t + "\n(non-critical, just indicates a possible tactics inefficiency)")
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
-      case _:Variable => true
       case CDot => true
       case _:PredicateConstant => true
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, CDot | _:Variable) => true
-      case Apply(_:Function, CDot | _:Variable) => true
+      case ApplyPredicate(_:Function, CDot | Nothing) => true
+      case Apply(_:Function, CDot | Nothing) => true
+      case Nothing => t == Nothing
       case _ => false
       }, "Substitutable expression required, found " + n)
   }
@@ -962,6 +962,10 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => false /* top is not empty */
     case Right(ts) => ts.isEmpty
   }
+  def exists(pred: A => Boolean): Boolean = s match {
+    case Left(_) => true /* top contains everything that's imaginable */
+    case Right(ts) => ts.exists(pred)
+  }
   def +(elem: A): SetLattice[A] = s match {
     case Left(_) => this /* top remains top */
     case Right(ts) => SetLattice(ts+elem)
@@ -995,7 +999,7 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => this /* top -- _ == top */
     case Right(ts) => SetLattice(ts -- other)
   }
-  override def toString() = s match {
+  override def toString = s match {
     case Left(_) => "top"
     case Right(ts) => ts.toString()
   }
@@ -1014,50 +1018,7 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
   }
 }
 
-/**
- * Static access to functions of Substitution.
- * @author Stefan Mitsch
- */
-object Substitution {
-  /** Returns the set of names maybe free in term t (same as certainly free). */
-  def maybeFreeVariables(t: Term): Set[NamedSymbol] = Substitution(Nil).freeVariables(t).s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-  /** Returns the set of names maybe free in formula f. */
-  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = Substitution(Nil).catVars(f).fv.s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-  /** Returns the set of names maybe free in program p. */
-  def maybeFreeVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).fv.s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-  /** Returns the set of names certainly free in program p. */
-  def freeVariables(p: Program): Set[NamedSymbol] = {
-    val ba = Substitution(Nil).catVars(p)
-    (ba.fv -- (ba.mbv ++ ba.bv)).s match {
-      case Right(ts) => ts
-      case Left(_) => ???
-    }
-  }
-  /** Returns the set of names maybe bound in program p. */
-  def maybeBoundVariables(p: Program): Set[NamedSymbol] = Substitution(Nil).catVars(p).bv.s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-}
-/**
- * A Uniform Substitution.
- * Implementation of applying uniform substitutions to terms, formulas, programs.
- * Explicit construction computing bound variables on the fly.
- * Used for UniformSubstitution rule.
- * @author aplatzer
- */
-sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
-  applicable
-
+object BindingAssessment {
   /**
    * Records which names are free or bound.
    * @param fv Free names (maybe read)
@@ -1075,44 +1036,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   sealed case class VC3(fv: SetLattice[NamedSymbol],
                         bv: SetLattice[NamedSymbol],
                         mbv: SetLattice[NamedSymbol])
-
-  /**
-   * Records the result of uniform substitution in a program.
-   * @param o The ignore set.
-   * @param u The taboo set.
-   * @param p The program.
-   */
-  private sealed case class USR(o: SetLattice[NamedSymbol],
-                        u: SetLattice[NamedSymbol],
-                        p: Program)
-
-  /**
-   * @param rarg the argument in the substitution.
-   * @param instArg the argument to instantiate rarg with in the occurrence.
-   */
-  private def instantiate(rarg: Term, instArg: Term) = new Substitution(List(new SubstitutionPair(rarg, instArg)))
-
-  // unique left hand sides in l
-  @elidable(ASSERTION) def applicable = {
-    // check that we never replace n by something and then again replacing the same n by something
-    val lefts = subsDefs.map(sp=>sp.n).toList
-    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
-    // check that we never replace p(x) by something and also p(t) by something
-    val lambdaNames = subsDefs.map(sp=>sp.n match {
-      case ApplyPredicate(p:Function, _:Variable) => List(p)
-      case Apply(f:Function, _:Variable) => List(f)
-      case _ => Nil
-      }).fold(Nil)((a,b)=>a++b)
-      //@TODO check that we never replace p(x) by something and also p(t) by something
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
-  }
-  
-  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
-  
-
-  override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
-  
-  // helper
 
   /**
    * Categorizes the names of formula f into free variables FV and bound variables BV.
@@ -1164,11 +1087,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
     // base cases
     case x: Variable => SetLattice(x)
+    case Apply(f, Nothing) => SetLattice(f)
     case CDot => SetLattice(CDot)
     // TODO x' and f(x) are not in Definition 8
     case Derivative(s, e) => freeVariables(e) //@todo eisegesis
     case Apply(f, arg) => freeVariables(arg) //@todo eisegesis
-    case True | False | _: NumberObj => SetLattice.bottom
+    case True | False | _: NumberObj | Nothing => SetLattice.bottom
   }
 
   def catVars(p: Program): VC3 = { p match {
@@ -1198,13 +1122,96 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _ => throw new UnknownOperatorException("Not implemented", p)
   }} ensuring(r => { val VC3(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) not a subset of BV($p)")
 
-  private def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+  def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case ContEvolveProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case IncompleteSystem(a) => primedVariables(a)
     case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x)
     case _: EmptyContEvolveProgram => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
   }
+}
+
+/**
+ * Static access to functions of Substitution.
+ * @author Stefan Mitsch
+ */
+object Substitution {
+  /** Returns the set of names maybe free in term t (same as certainly free). */
+  def maybeFreeVariables(t: Term): Set[NamedSymbol] = BindingAssessment.freeVariables(t).s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
+  /** Returns the set of names maybe free in formula f. */
+  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = BindingAssessment.catVars(f).fv.s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
+  /** Returns the set of names maybe free in program p. */
+  def maybeFreeVariables(p: Program): Set[NamedSymbol] = BindingAssessment.catVars(p).fv.s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
+  /** Returns the set of names certainly free in program p. */
+  def freeVariables(p: Program): Set[NamedSymbol] = {
+    val ba = BindingAssessment.catVars(p)
+    (ba.fv -- (ba.mbv ++ ba.bv)).s match {
+      case Right(ts) => ts
+      case Left(_) => ???
+    }
+  }
+  /** Returns the set of names maybe bound in program p. */
+  def maybeBoundVariables(p: Program): Set[NamedSymbol] = BindingAssessment.catVars(p).bv.s match {
+    case Right(ts) => ts
+    case Left(_) => ???
+  }
+}
+/**
+ * A Uniform Substitution.
+ * Implementation of applying uniform substitutions to terms, formulas, programs.
+ * Explicit construction computing bound variables on the fly.
+ * Used for UniformSubstitution rule.
+ * @author aplatzer
+ */
+sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
+  applicable
+
+  import BindingAssessment._
+
+  /**
+   * Records the result of uniform substitution in a program.
+   * @param o The ignore set.
+   * @param u The taboo set.
+   * @param p The program.
+   */
+  private sealed case class USR(o: SetLattice[NamedSymbol],
+                        u: SetLattice[NamedSymbol],
+                        p: Program)
+
+  /**
+   * @param rarg the argument in the substitution.
+   * @param instArg the argument to instantiate rarg with in the occurrence.
+   */
+  private def instantiate(rarg: Term, instArg: Term) = new Substitution(List(new SubstitutionPair(rarg, instArg)))
+
+  // unique left hand sides in l
+  @elidable(ASSERTION) def applicable = {
+    // check that we never replace n by something and then again replacing the same n by something
+    val lefts = subsDefs.map(sp=>sp.n).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
+    // check that we never replace p(x) by something and also p(t) by something
+    val lambdaNames = subsDefs.map(sp=>sp.n match {
+      case ApplyPredicate(p:Function, _:Variable) => List(p)
+      case Apply(f:Function, _:Variable) => List(f)
+      case _ => Nil
+      }).fold(Nil)((a,b)=>a++b)
+      //@TODO check that we never replace p(x) by something and also p(t) by something
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
+  }
+  
+  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
+  
+
+  override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
 
   // uniform substitution on terms
   def apply(t: Term): Term = {
@@ -1250,8 +1257,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    */
   def sameHead(left: SubstitutionPair, right: Expr) = left.n match {
-    case Apply(lf, _: Variable | CDot) => right match { case Apply(rf, _) => lf == rf case _ => false }
-    case ApplyPredicate(lf, _: Variable | CDot) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
+    case Apply(lf, CDot | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
+    case ApplyPredicate(lf, CDot | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
@@ -1280,30 +1287,30 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       // TODO not mentioned in substitution
       case Pair(dom, l, r) => Pair(dom, usubst(o, u, l), usubst(o, u, r)) // @todo eisegesis
       // uniform substitution base cases
-      case x: Variable if !subsDefs.exists(_.n == x) || o.contains(x) => x
-      case x: Variable if substDiff(subsDefs, o).subsDefs.exists(_.n == x) =>
-        require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(x))).intersect(u).isEmpty,
-          s"Substitution clash: ({$x} ∪ ${freeVariables(subst(x))}) ∩ $u is not empty")
-        subst(x)
+      case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
       // TODO not mentioned in substitution
       case CDot if !subsDefs.exists(_.n == CDot) || o.contains(CDot) => CDot //@todo eisegesis
       case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.n == CDot) => //@todo eisegesis
         require((SetLattice[NamedSymbol](CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
           s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
         subst(CDot)
-      case dx@Derivative(s, x: Variable) if subsDefs.exists(_.n == t) => //@todo eisegesis
+      case dx@Derivative(s, Apply(x, Nothing)) if subsDefs.exists(_.n == t) => //@todo eisegesis
         require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(dx))).intersect(u).isEmpty,
           s"Substitution clash: ({$x} ∪ ${freeVariables(subst(dx))}) ∩ $u is not empty")
         subst(dx)
       case Derivative(s, e) if !subsDefs.exists(_.n == t) => t //@todo eisegesis
       case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-        require(freeVariables(subs.t.asInstanceOf[Term]).intersect(u).isEmpty,
+        val (rArg, rTerm) =
+          (subs.n match { case Apply(_, v: NamedSymbol) => v
+                          case _ => throw new IllegalArgumentException(s"Substitution of f(theta) for arbitrary theta not supported: $t") },
+           subs.t.asInstanceOf[Term])
+        require(freeVariables(rTerm).intersect(u).isEmpty,
           s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
-        val (rArg, rTerm) = (subs.n match { case Apply(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Term])
         instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
       case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
-      case x: Atom => require(!x.isInstanceOf[Variable], "variables have been substituted already"); x
+      case Nothing => Nothing
+      case x: Atom => x
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
     }
   }
@@ -1338,10 +1345,13 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-      val (rArg, rFormula) = (subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v }, subs.t.asInstanceOf[Formula])
+      val (rArg, rFormula) = (
+        subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v
+                       case _ => throw new IllegalArgumentException(s"Substitution of p(theta) for arbitrary theta not supported: $f")},
+        subs.t.asInstanceOf[Formula])
       val restrictedU = rArg match { case CDot => u case _ => u-rArg }
-      require(catVars(subs.t.asInstanceOf[Formula]).fv.intersect(restrictedU).isEmpty,
-        s"Substitution clash: ${catVars(subs.t.asInstanceOf[Formula]).fv} ∩ $restrictedU is not empty")
+      require(catVars(rFormula).fv.intersect(restrictedU).isEmpty,
+        s"Substitution clash: ${catVars(rFormula).fv} ∩ $restrictedU is not empty")
       instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
     case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
     // TODO not mentioned in uniform substitution
@@ -1414,9 +1424,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     ContEvolveProgram = p match {
       case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
       case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-        require(!subsDefs.exists(_.n == x) || o.contains(x),
-          s"Substitution clash: variable $x will be replaced but occurs in a differential equation. \n" +
-            s"Substitution $this applied to ${p.prettyString()}")
         NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
       } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
       case _: EmptyContEvolveProgram => p
@@ -1680,194 +1687,128 @@ object UniformSubstitution {
 
 // alpha conversion
 
-class AlphaConversion(tPos: Position, name: String, idx: Option[Int], target: String, tIdx: Option[Int]) extends Rule("Alpha Conversion") {
-  {
-    if (!(name != target || idx != tIdx)) println("INFO: Unexpected identity renaming " + name + " to " + target + " with same index " + idx)
-  }
+class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
+  extends Rule("Alpha Conversion") {
 
-  def apply(s: Sequent): List[Sequent] = {
-    ExpressionTraversal.traverse(TraverseToPosition(tPos.inExpr, fn()), s(tPos)) match {
-      case Some(x: Formula) =>
-        if (tPos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case _ => throw new CoreException("No alpha renaming possible in " + s(tPos))
-    }
-  }
+  import BindingAssessment._
 
-  def apply(f: Formula): Formula = traverse(f)
-
-  private def traverse[T : FTPG](e: T, tfn: ExpressionTraversalFunction = fn()) =
-      ExpressionTraversal.traverse(tfn, e) match {
-    case Some(f) => f
-    case _ => throw new CoreException("No alpha renaming possible in" + e)
-  }
-
-  // TODO which sort?
-  private val oldVar = Variable(name, idx, Real)
-  private val newVar = Variable(target, tIdx, Real)
-
-  private def programFn(v: Variable) = new ExpressionTraversalFunction {
-    override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = prg match {
-      case NFContEvolve(vars, Derivative(s, dv: Variable), t, f) if dv == v =>
-        val newV = renameVar(v)
-        require(!Helper.names(t).contains(newV) && !Helper.names(f).contains(newV))
-        Right(NFContEvolve(vars, Derivative(s, newV),
-          new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(t),
-          new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(f)))
-      case NFContEvolve(vars, d@Derivative(s, dv: Variable), t, f) if dv != v =>
-        val newV = renameVar(v)
-        require(!Helper.names(t).contains(newV) && !Helper.names(f).contains(newV))
-        Right(NFContEvolve(vars, d,
-          new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(t),
-          new Substitution(new SubstitutionPair(v, newV) :: Nil).apply(f)))
-      case _ => Left(None)
-    }
-  }
-
-  private def replaceInLoopFn(v: Variable) = new ExpressionTraversalFunction {
-    override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-      case tv: Variable if tv.name == v.name && tv.index == v.index => Right(renameVar(v))
-      case _ => Left(None)
-    }
-  }
-
-  private def fn(bound: Set[NamedSymbol] = Set.empty): ExpressionTraversalFunction = new ExpressionTraversalFunction {
-    override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = e match {
-      case Forall(vars, phi) => renameQuantifier(bound, e, vars, phi, Forall.apply)
-      case Exists(vars, phi) => renameQuantifier(bound, e, vars, phi, Exists.apply)
-      case BoxModality(Assign(a, b), phi) => renameAssignment(bound, e, a, b, phi, BoxModality.apply)
-      case DiamondModality(Assign(a, b), phi) => renameAssignment(bound, e, a, b, phi, DiamondModality.apply)
-      case BoxModality(NDetAssign(a), c) => renameNDetAssignment(e, a, c, BoxModality.apply)
-      case DiamondModality(NDetAssign(a), phi) => renameNDetAssignment(e, a, phi, DiamondModality.apply)
-      case BoxModality(t: Test, phi) => renameTest(bound, t, phi, BoxModality.apply)
-      case DiamondModality(t: Test, phi) => renameTest(bound, t, phi, DiamondModality.apply)
-      case BoxModality(ode@(_: ContEvolveProgram | _: IncompleteSystem), phi) =>
-        renameODE(bound, ode, phi, BoxModality.apply)
-      case DiamondModality(ode@(_: ContEvolveProgram | _: IncompleteSystem), phi) =>
-        renameODE(bound, ode, phi, DiamondModality.apply)
-      case BoxModality(a: Loop, phi) => renameLoop(bound, a, phi, BoxModality.apply)
-      case DiamondModality(a: Loop, phi) => renameLoop(bound, a, phi, DiamondModality.apply)
-      case BoxModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, BoxModality.apply)
-      case DiamondModality(Choice(a, b), phi) => renameChoice(bound, e, a, b, phi, DiamondModality.apply)
-      case _ if  bound.contains(oldVar) => Right(new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(e))
-      case _ if !bound.contains(oldVar) => Left(None)
-    }
-  }
-
-  private def renameQuantifier[T <: Quantifier](bound: Set[NamedSymbol], e: Formula, vars: Seq[NamedSymbol],
-                                                phi: Formula, factory: (Seq[NamedSymbol], Formula) => T) = {
-    require(vars.exists(v => v.name == name && v.index == idx), "Symbol to be renamed must be bound in " + e)
-    val oldVar = vars.find(v => v.name == name && v.index == idx).get
-    val newVar = rename(oldVar)
-    require(!Helper.names(phi).contains(newVar))
-    Right(factory(vars.map(rename), traverse(phi, fn(bound + oldVar))))
-  }
-
-  private def renameTest[T <: Modality](bound: Set[NamedSymbol], prg: Test, phi: Formula,
-                                        factory: (Program, Formula) => T) = {
-    val subst = new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil)
-    val newPrg = if (bound.intersect(Helper.names(prg)).nonEmpty) subst(prg) else prg
-    val newPhi = if (bound.intersect(Helper.names(phi)).nonEmpty) subst(phi) else phi
-    Right(factory(newPrg, newPhi))
-  }
-
-  private def renameODE[T <: Modality](bound: Set[NamedSymbol], ode: Program, phi: Formula,
-                                       factory: (Program, Formula) => T) = {
-    require(!Helper.names(phi).contains(newVar))
-    val newOde = traverse(ode, programFn(oldVar))
-    if (bound.isEmpty ) {
-      if (Helper.names(ode).intersect(Set(oldVar)).isEmpty) Right(factory(ode, phi))
-      else Right(factory(Assign(newVar, oldVar), factory(newOde,
-        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi))))
-    } else {
-      Right(factory(newOde,
-        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi)))
-    }
-  }
-
-  private def renameChoice[T <: Modality](bound: Set[NamedSymbol], e: Formula, a: Program, b: Program, phi: Formula,
-                                          factory: (Program, Formula) => T) = {
-    val (newA, newAPhi) = traverse(factory(a, phi), fn(bound)) match {
-      case BoxModality(aPrg, aPhi) => (aPrg, aPhi)
-      case DiamondModality(aPrg, aPhi) => (aPrg, aPhi)
-      case _ => throw new UnknownOperatorException("Unknown choice structure", e)
-    }
-    val (newB, newBPhi) = traverse(factory(b, phi), fn(bound)) match {
-      case BoxModality(bPrg, bPhi) => (bPrg, bPhi)
-      case DiamondModality(bPrg, bPhi) => (bPrg, bPhi)
-      case _ => throw new UnknownOperatorException("Unknown choice structure", e)
-    }
-    require(newAPhi == newBPhi)
-    Right(factory(Choice(newA, newB), newAPhi))
-  }
-
-  private def renameLoop[T <: Modality](bound: Set[NamedSymbol], a: Loop, phi: Formula,
-                                        factory: (Program, Formula) => T) = {
-    require(!Helper.names(phi).contains(newVar))
-    val boundInLoop = Substitution.maybeBoundVariables(a)
-    if (bound.isEmpty) {
-      if (boundInLoop.intersect(Set(oldVar)).isEmpty) Right(factory(a, phi))
-      else Right(factory(Assign(newVar, oldVar), factory(traverse(a, replaceInLoopFn(oldVar)),
-        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi))))
-    } else {
-      Right(factory(traverse(a, replaceInLoopFn(oldVar)),
-        new Substitution(new SubstitutionPair(oldVar, newVar) :: Nil).apply(phi)))
-    }
-  }
-
-  private def renameNDetAssignment[T <: Modality](e: Formula, a: Term, phi: Formula, factory: (Program, Formula) => T) = {
-    val (newName, newT) = a match {
-      case Variable(n, i, d) if n == name && i == idx => val v = Variable(target, tIdx, d); (v, v)
-      case Apply(Function(n, i, d, s), f) if n == name && i == idx =>
-        val fn = Function(target, tIdx, d, s); (fn, Apply(fn, f))
-      case _ => throw new UnknownOperatorException("Unknown Assignment structure", e)
-    }
-    require(!Helper.names(phi).contains(newName))
-    Right(factory(NDetAssign(newT), new Substitution(new SubstitutionPair(a, newT) :: Nil).apply(phi)))
-  }
-
-  private def renameAssignment[T <: Modality](bound: Set[NamedSymbol], e: Formula, a: Term, b: Term,
-                                              phi: Formula, factory: (Program, Formula) => T) = {
-    val (newA, boundSymbol: NamedSymbol, repl) = a match {
-      case aV@Variable(n, i, d) if n == name && i == idx => val v = Variable(target, tIdx, d); (v, aV, v)
-      case Apply(aF@Function(n, i, d, s), x) if n == name && i == idx =>
-        val f = Function(target, tIdx, d, s); (Apply(f, x), aF, Apply(f, x))
-      case Derivative(sort, aV@Variable(n, i, d)) if n == name && i == idx =>
-        val v = Variable(target, tIdx, d); val dv = Derivative(sort, v); (dv, aV, dv)
-      case _ => bound.find(v => v.name == name && v.index == idx) match {
-        case Some(Variable(n, i, d)) => (a, Variable(name, idx, d), Variable(target, tIdx, d))
-        case Some(Apply(Function(n, i, d, s), x)) =>
-          (a, Function(name, idx, d, s), Apply(Function(target, tIdx, d, s), x))
-        case Some(Derivative(sort, Variable(n, i, d))) => (a, Derivative(sort, Variable(name, idx, d)), Derivative(sort, Variable(target, tIdx, d)))
-        case _ => throw new CoreException("Cannot alpha rename in " + e + " since " + name + "_" + idx + " is not bound")
+  def apply(s: Sequent): List[Sequent] = pos match {
+    case Some(p) =>
+      // only allow renaming at a specific position if the name to be replaced is bound there
+      // (needed for skolemization and renaming of quantified parts inside a formula)
+      val formula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+          case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
+          case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
+          // if ODE binds var, then rename with stored initial value
+          case BoxModality(ode: ContEvolveProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+            Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
+          // if loop binds var, then rename with stored initial value
+          case BoxModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
+            Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
+          case _ => Left(Some(ExpressionTraversal.stop))
+        }
+      }), s(p)) match {
+        case Some(f) => f
+        case None => throw new IllegalArgumentException("Alpha renaming at position only applicable on quantifiers")
       }
-    }
-    require(bound.exists(v => v.name == target && v.index == tIdx)
-      || !Helper.names(phi).exists(v => v.name == target && v.index == tIdx))
-    // if already bound outside also rename in b
-    val newB =
-      if (bound.contains(boundSymbol)) new Substitution(new SubstitutionPair(boundSymbol, repl) :: Nil).apply(b)
-      else b
-    val newPhi =
-      if (bound.contains(boundSymbol)) new Substitution(new SubstitutionPair(boundSymbol, repl) :: Nil).apply(phi)
-      else new Substitution(new SubstitutionPair(a, newA) :: Nil).apply(phi)
-    Right(factory(Assign(newA, newB), newPhi))
+      if (p.isAnte) List(Sequent(s.pref, s.ante :+ formula, s.succ))
+      else List(Sequent(s.pref, s.ante, s.succ :+ formula))
+    case None =>
+      val ante = for (f <- s.ante) yield BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f))
+      val succ = for (f <- s.succ) yield BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f))
+      List(Sequent(s.pref, ante, succ))
   }
 
-  private def renameVar(e: Variable): Variable = if (e.name == name && e.index == idx) Variable(target, tIdx, e.sort) else e
+  def apply(f: Formula): Formula = {
+    require(!Helper.names(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
+    rename(f)
+  }
 
-  private def renamePred(e: PredicateConstant): PredicateConstant = if(e.name == name && e.index == idx) PredicateConstant(target, tIdx) else e
+  def rename(f: Formula): Formula = f match {
+    case Not(g) => Not(rename(g))
+    case And(l, r) => And(rename(l), rename(r))
+    case Or(l, r) => Or(rename(l), rename(r))
+    case Imply(l, r) => Imply(rename(l), rename(r))
+    case Equiv(l, r) => Equiv(rename(l), rename(r))
 
-  private def renameProg(e: ProgramConstant): ProgramConstant = if(e.name == name && e.index == idx) ProgramConstant(target, tIdx) else e
+    case Equals(d, l, r) => Equals(d, rename(l), rename(r))
+    case NotEquals(d, l, r) => NotEquals(d, rename(l), rename(r))
+    case GreaterEqual(d, l, r) => GreaterEqual(d, rename(l), rename(r))
+    case GreaterThan(d, l, r) => GreaterThan(d, rename(l), rename(r))
+    case LessEqual(d, l, r) => LessEqual(d, rename(l), rename(r))
+    case LessThan(d, l, r) => LessThan(d, rename(l), rename(r))
 
-  private def renameFunc(e: Function): Function = if(e.name == name && e.index == idx) Function(target, tIdx, e.domain, e.sort) else e
+    case ApplyPredicate(fn, theta) => ApplyPredicate(fn, rename(theta))
+
+    case Forall(vars, phi) => renameQuantifier(vars, phi, Forall.apply)
+    case Exists(vars, phi) => renameQuantifier(vars, phi, Exists.apply)
+
+    case BoxModality(p, phi) => BoxModality(rename(p), rename(phi))
+    case DiamondModality(p, phi) => DiamondModality(rename(p), rename(phi))
+
+    case _: PredicateConstant => f
+    case True | False => f
+  }
+
+  def rename(t: Term): Term = t match {
+    case Neg(s, l) => Neg(s, rename(l))
+    case Add(s, l, r) => Add(s, rename(l), rename(r))
+    case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
+    case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
+    case Divide(s, l, r) => Divide(s, rename(l), rename(r))
+    case Exp(s, l, r) => Exp(s, rename(l), rename(r))
+    case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
+    case Derivative(s, e) => Derivative(s, rename(e))
+    case Apply(f, theta) => Apply(f, rename(theta))
+    case x: Variable => renameVar(x)
+    case CDot => CDot
+    case Nothing => Nothing
+    case x@Number(_, _) => x
+  }
+
+  def rename(p: Program): Program = p match {
+    case Assign(v: Variable, t) => Assign(renameVar(v), rename(t))
+    case Assign(Derivative(s, v: Variable), t) => Assign(Derivative(s, renameVar(v)), rename(t))
+    case NDetAssign(v: Variable) => NDetAssign(renameVar(v))
+    case Test(phi) => Test(rename(phi))
+    case ode: ContEvolveProgram => renameODE(ode)
+    case Sequence(a, b) => Sequence(rename(a), rename(b))
+    case Choice(a, b) => Choice(rename(a), rename(b))
+    case Loop(a) => Loop(rename(a))
+  }
+
+  private def renameODE(p: ContEvolveProgram): ContEvolveProgram = p match {
+      case NFContEvolve(v, Derivative(dd, Variable(n, i, d)), t, h) if n == name && i == idx =>
+        NFContEvolve(v, Derivative(dd, Variable(target, tIdx, d)), rename(t), rename(h))
+      case NFContEvolve(v, dv@Derivative(_, Variable(n, i, _)), t, h) if n != name || i != idx =>
+        NFContEvolve(v, dv, rename(t), rename(h))
+      case ContEvolveProduct(a, b) => ContEvolveProduct(renameODE(a), renameODE(b))
+      case _: EmptyContEvolveProgram => p
+      case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
+      case _: ContEvolveProgramConstant => p
+  }
+
+  private def renameVar(e: Variable): Variable =
+    if (e.name == name && e.index == idx) Variable(target, tIdx, e.sort)
+    else e
+
+  private def renameFn(fn: Function): Function =
+    if (fn.name == name && fn.index == idx) Function(target, tIdx, fn.domain, fn.sort)
+    else fn
 
   private def rename(e: NamedSymbol): NamedSymbol = e match {
     case v: Variable => renameVar(v)
-    case p: PredicateConstant => renamePred(p)
-    case p: ProgramConstant => renameProg(p)
-    case f: Function => renameFunc(f)
+    case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
   }
 
+  private def renameQuantifier[T <: Quantifier](vars: Seq[NamedSymbol], phi: Formula,
+                                                factory: (Seq[NamedSymbol], Formula) => T) = {
+    vars.find(v => v.name == name && v.index == idx) match {
+      case Some(oldVar) => factory(vars.map(rename), rename(phi))
+      case None => factory(vars, rename(phi))
+    }
+  }
 }
 
 // skolemize
@@ -1980,9 +1921,10 @@ class DerivativeAssignmentRule(p: Position) extends PositionRule("AssignmentRule
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
+      val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case BoxModality(p, f) => Right(Forall(p.writes, f))
-          case DiamondModality(p, f) => Right(Forall(p.writes, f))
+          case BoxModality(prg, f) => Right(factory(prg.writes, f))
+          case DiamondModality(prg, f) => Right(factory(prg.writes, f))
           case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
       }
     }
@@ -1990,7 +1932,6 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
       case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
       case _ => throw new InapplicableRuleException("No abstraction possible for " + s(pos), this, s)
     }
-
   }
 }
 

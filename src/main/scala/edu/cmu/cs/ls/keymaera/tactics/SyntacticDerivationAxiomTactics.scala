@@ -499,6 +499,10 @@ object SyntacticDerivationAxiomTactics {
     }
   }
 
+  trait ApplicableAtTerm {
+    def applies(t : Term) : Boolean
+  }
+
   /*
    * Axiom "-' derive minus".
    *   (s - t)' = (s') - (t')
@@ -656,8 +660,6 @@ End.
     }
   }
 
-
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof rule implementations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -694,7 +696,6 @@ End.
         else {
           new SuccPosition(p.getIndex)
         }
-        println("here!")
 
         Some(buildConstantEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
       }
@@ -707,9 +708,6 @@ End.
 
       val fn = new ExpressionTraversalFunction {
         override def preT(pos : PosInExpr, t : Term) = {
-          //          println("Checking " + t.prettyString())
-          //          println("\t" + pos)
-          //          println("\t" + position)
           if(pos == position.inExpr && isConstant(t)) {
             foundTerm = Some(t)
             Left(Some(ExpressionTraversal.stop))
@@ -760,7 +758,6 @@ End.
         else {
           new SuccPosition(p.getIndex)
         }
-        println("here2!")
 
         Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
       }
@@ -773,9 +770,6 @@ End.
 
       val fn = new ExpressionTraversalFunction {
         override def preT(pos : PosInExpr, t : Term) = {
-//          println("Checking " + t.prettyString())
-//          println("\t" + pos)
-//          println("\t" + position)
           if(pos == position.inExpr && isMonomial(t)) {
             foundTerm = Some(t)
             Left(Some(ExpressionTraversal.stop))

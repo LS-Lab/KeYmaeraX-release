@@ -52,10 +52,12 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   def parseBareExpression(s:String) : Option[Expr] = {
     val variables = allVariableOccurances(s)
+    // HACK: allow parameterless functions for everything that could be a variable
+    val functions = variables.map(v => Function(v.name, v.index, Unit, Real))
     val parser = new KeYmaeraParser(false, env)
 
-    val formulaParser = new FormulaParser(variables,Nil,Nil,Nil,Nil).parser
-    val exprParser = parser.makeExprParser(variables, Nil, Nil, Nil, Nil)
+    val formulaParser = new FormulaParser(variables, functions, Nil, Nil, Nil).parser
+    val exprParser = parser.makeExprParser(variables, functions, Nil, Nil, Nil)
     parser.parseAll(exprParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[Expr])
       case f: parser.Failure => throw new IllegalArgumentException(f.toString())
@@ -71,9 +73,11 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   def parseBareTerm(s:String) : Option[Term] = {
     val variables = allVariableOccurances(s)
+    // HACK: allow parameterless functions for everything that could be a variable
+    val functions = variables.map(v => Function(v.name, v.index, Unit, Real))
     val parser = new KeYmaeraParser(false, env)
 
-    val exprParser = parser.makeTermParser(variables, Nil)
+    val exprParser = parser.makeTermParser(variables, functions)
     parser.parseAll(exprParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[Term])
       case _ => None //todo actually, pass back an error
@@ -417,12 +421,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     lazy val applyP:SubtermParser = {
       // TODO disallow functions of functions?
-      lazy val pattern = ident ~ ("(" ~> rep1sep(precedence.reduce(_|_), ",") <~ ")")
+      lazy val pattern = ident ~ ("(" ~> repsep(precedence.reduce(_|_), ",") <~ ")")
       
       log(pattern)("Function Application") ^? (
         {case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Real =>
-          Apply(functionFromName(name.toString, functions),
-            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )},
+          if (args.isEmpty) Apply(functionFromName (name.toString, functions), Nothing)
+          else Apply (functionFromName (name.toString, functions),
+            args.reduce ((l, r) => Pair (TupleT (l.sort, r.sort), l, r) ) )
+          },
         { case name ~ args => "Can only use identifier of sort Real in predicate application, but " + name + " has sort " +
                                 functionFromName(name.toString, functions).sort})
     }
@@ -1215,11 +1221,15 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     private def makeFunction(ty : String, name : String, argT: String) : VType = {
-      require(argT == "T", "can only handle unary functions")
+      require(argT == "T" | argT == "", "can only handle parameterless and unary functions")
       val (n, idx) = nameAndIndex(name)
+      val domainSort = argT match {
+        case "T" => Real
+        case "" => Unit
+      }
       ty match {
-        case "F" => VFunction(Function(n, idx, Real, Bool))
-        case "T" => VFunction(Function(n, idx, Real, Real))
+        case "F" => VFunction(Function(n, idx, domainSort, Bool))
+        case "T" => VFunction(Function(n, idx, domainSort, Real))
         case _ => throw new Exception("Type " + ty + " is unknown! Expected F (formula) or T (term)")
       }
     }
@@ -1230,21 +1240,24 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val variablesP = {
       //e.g., T x or T f(x:T) or T f(x). In the latter case, x:T implicitly.
       // @todo But currently, T f(x:T  y:T) isn't supported. Use product sorts to implement.
-      lazy val variablesP = ident ~ ident ~ ("(" ~> rep1sep(ident ~ (":" ~> ident).?, ",") <~ ")").? ^^ {
+      lazy val variablesP = ident ~ ident ~ ("(" ~> repsep(ident ~ (":" ~> ident).?, ",") <~ ")").? ^^ {
         //if tail is defined then this is a function; else it's a variable.
         case codomainSort ~ name ~ parameters => parameters match {
-          case Some(arguments:List[(String, Option[String])]) => {
+          case Some(arguments) => {
             //@todo support product domains sorts. Also requires modifying makeFunction
-            require(arguments.length == 1, "don't support functions w/ artiy > 1")
-            val domainType = arguments.last._2 match {
-              case Some(sort) => sort
-              case None => codomainSort
+            require(arguments.length <= 1, "don't support functions w/ arity > 1")
+            if (arguments.length == 0) {
+              makeFunction(codomainSort, name, "")
+            } else {
+              val domainType = arguments.last._2 match {
+                case Some(sort) => sort
+                case None => codomainSort
+              }
+              //@todo NRFb4c but then ultimately just ignore that and use "T" like it wants us to...
+              //            makeFunction(codomainSort,name,domainType)
+              makeFunction(codomainSort, name, "T")
             }
-            //@todo NRFb4c but then ultimately just ignore that and use "T" like it wants us to...
-//            makeFunction(codomainSort,name,domainType)
-            makeFunction(codomainSort, name, "T")
           }
-          case Some(_) => throw new Exception("value didn't match expected type.")
           case None => makeVariable(codomainSort.toString, name.toString)
         }
       }

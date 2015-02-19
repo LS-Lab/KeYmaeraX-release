@@ -1,7 +1,8 @@
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, AlphaConversionHelper, Tactics}
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, ApplyRule, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
@@ -16,13 +17,46 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   val helper = new ProvabilityTestHelper((x) => println(x))
 
   def alpha(from: String, to: String): PositionTactic = TacticLibrary.alphaRenamingT(from, None, to, None)
+  def globalAlpha(from: String, to: String) = TacticLibrary.globalAlphaRenamingT(from, None, to, None)
 
   def alphaRule(from: String, to: String): PositionTactic = new PositionTactic("Alpha Renaming") {
+
     import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = true
-    override def apply(p: Position): Tactic = new ApplyRule(new AlphaConversion(p, from, None, to, None)) {
-      override def applicable(node: ProofNode): Boolean = true
-    } & hideT(p.topLevel)
+
+    override def applies(s: Sequent, p: Position): Boolean = /*s(p) match*/ {
+      var applicable = false
+      ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
+          f match {
+            case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == None)
+            case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == None)
+            case _ => applicable = false
+          }
+          Left(Some(ExpressionTraversal.stop))
+        }
+      }), s(p))
+      applicable
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(new ApplyRule(new AlphaConversion(from, None, to, None, Some(p))) {
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        } & hideT(p.topLevel))
+      }
+    }
+  }
+
+  def globalAlphaRule(from: String, to: String): Tactic = new ConstructionTactic("Alpha Renaming") {
+    import scala.language.postfixOps
+    override def applicable(node: ProofNode): Boolean = true
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      Some(new ApplyRule(new AlphaConversion(from, None, to, None, None)) {
+        override def applicable(node: ProofNode): Boolean = true
+      })
+    }
   }
 
   override def beforeEach() = {
@@ -38,11 +72,11 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
    * test cases for \alpha-conversion rule
    */
 
-  "Alpha-conversion rule" should "not rename free variables" in {
+  "Alpha-conversion rule" should "rename free variables" in {
     val s = sucSequent("x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
+    val tactic = globalAlphaRule("x", "t")
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("x>0".asFormula)
+      sucSequent("[t:=x;]t>0".asFormula)
     ))
   }
 
@@ -50,56 +84,79 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Alpha-conversion rule on universal quantifier" should "be forall t. t>0 with (x,t) on forall x. x>0" in {
     val s = sucSequent("\\forall x. x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. t>0".asFormula)
     ))
   }
 
   it should "be forall t. [t:=t+1;]t>0 with (x,t) on forall x. [x:=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [x:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [t:=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [t:=t+1;]t>0".asFormula)
+    ))
+  }
+
+  it should "be y=5 <-> forall t. [t:=t+1;]t>0 with (x,t) on y=5 <-> forall x. [x:=x+1;]x>0" in {
+    val s = sucSequent("y=5 <-> \\forall x. [x:=x+1;]x>0".asFormula)
+    helper.runTactic(alphaRule("x", "t")(SuccPosition(0, PosInExpr(1::Nil))), new RootNode(s)).openGoals().
+      foreach(_.sequent should be (sucSequent("y=5 <-> \\forall t. [t:=t+1;]t>0".asFormula)
+    ))
+    alphaRule("y", "t")(SuccPosition(0, PosInExpr(1::Nil))).applicable(new RootNode(s)) shouldBe false
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;](y=5 <-> \\forall t. [t:=t+1;]t>0)".asFormula)
     ))
   }
 
   it should "be forall x. [t:=x+1;]x>0 with (y,t) on forall x. [y:=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [y:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("y", "t"))
-//    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    locateSucc(alphaRule("y", "t")).applicable(new RootNode(s)) shouldBe false
+    helper.runTactic(globalAlphaRule("y", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=y;]\\forall x. [t:=x+1;]x>0".asFormula)))
   }
 
   it should "be forall t. [y:=t+1;]t>0 with (x,t) on forall x. [y:=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [y:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y:=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [y:=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be forall t. [t:=t+1;][y:=t+1;]t>0 with (x,t) on forall x. [x:=x+1;][y:=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [x:=x+1;][y:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [t:=t+1;][y:=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [t:=t+1;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be forall t. [y'=t+1;]t>0 with (x,t) on forall x. [y'=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [y'=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y'=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [y'=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be forall t. [t'=t+1;]t>0 with (x,t) on forall x. [x'=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [x'=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [t'=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [t'=t+1;]t>0".asFormula)
     ))
   }
 
@@ -107,134 +164,125 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Alpha-conversion rule on existential quantifier" should "be exists t. t>0 with (x,t) on exists x. x>0" in {
     val s = sucSequent("\\exists x. x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\exists t. t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\exists t. t>0".asFormula)
     ))
   }
 
   it should "be exists t. [t:=t+1;]t>0 with (x,t) on exists x. [x:=x+1;]x>0" in {
     val s = sucSequent("\\exists x. [x:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\exists t. [t:=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\exists t. [t:=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be exists t. [t:=t+1;][y:=t+1;]t>0 with (x,t) on exists x. [x:=x+1;][y:=x+1;]x>0" in {
     val s = sucSequent("\\exists x. [x:=x+1;][y:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\exists t. [t:=t+1;][y:=t+1;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\exists t. [t:=t+1;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   // (3) Modality(BoxModality(Assign(x, e)), phi)
 
-  "Alpha-conversion on assignment" should "be [t:=x+1;]t>0 with (x,t) on [x:=x+1;]x>0" in {
+  "Alpha-conversion on assignment" should "be [t:=t+1;]t>0 with (x,t) on [x:=x+1;]x>0" in {
     val s = sucSequent("[x:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x+1;]t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=t+1;]t>0".asFormula)
     ))
   }
 
-  it should "be [y:=x+1;]x>0 with (x,t) on [y:=x+1;]x>0" in {
+  it should "be [y:=t+1;]x>0 with (x,t) on [y:=x+1;]x>0" in {
     val s = sucSequent("[y:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[y:=x+1;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x+1;][y:=t+1;]t>0 with (x,t) on [x:=x+1;][y:=x+1;]x>0" in {
     val s = sucSequent("[x:=x+1;][y:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x+1;][y:=t+1;]t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=t+1;][y:=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x+1;][x:=t+1;]x>0 with (x,t) on [x:=x+1;][x:=x+1;]x>0" in {
     val s = sucSequent("[x:=x+1;][x:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x+1;][x:=t+1;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=t+1;][t:=t+1;]t>0".asFormula)
     ))
   }
 
   "Alpha conversion rule on nondeterministic choice" should "be [{t:=1 ++ t:=x+1};][{x:=1 ++ x:=t+1};]x>0 with (x,t) on [{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};]x>0" in {
     val s = sucSequent("[{x:=1 ++ x:=x+1};][{x:=1 ++ x:=x+1};]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[{t:=1 ++ t:=x+1}][{x:=1 ++ x:=t+1};]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][{t:=1 ++ t:=t+1}][{t:=1 ++ t:=t+1};]t>0".asFormula)
     ))
   }
 
   it should "be [t:=1 ++ t:=x+1 ++ z:=x;]t>0 with (x,t) on [x:=1 ++ x:=x+1 ++ z:=x;]x>0" in {
     val s = sucSequent("[x:=1 ++ x:=x+1 ++ z:=x;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-//  would want to test: an [CoreException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[x:=1 ++ x:=x+1 ++ z:=x;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=1 ++ t:=t+1 ++ z:=t;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=1 ++ t:=x+1;]t>0 with (x,t) on [x:=1 ++ x:=x+1;]x>0" in {
     val s = sucSequent("[x:=1 ++ x:=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=1 ++ t:=x+1;]t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=1 ++ t:=t+1;]t>0".asFormula)
     ))
   }
 
-  it should "throw an exception with (x,t) on [x:=1 ++ {x:=2;x:=3;};]x>0" in {
-    // ambiguous safety condition: first branch renamed to [t:=1]t>0 while second branch renamed to [t:=2;x:=3]x>0
+  it should "be [t:=1 ++ {t:=2;t:=3;};]t>0 with (x,t) on [x:=1 ++ {x:=2;x:=3;};]x>0" in {
     val s = sucSequent("[x:=1 ++ {x:=2;x:=3;};]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-//    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=1 ++ {t:=2;t:=3;};]t>0".asFormula)))
   }
 
   // (4) Modality(DiamondModality(Assign(x, e)), phi)
 
   "Alpha-conversion rule on diamond assignment" should "be <t:=x+1;>t>0 with (x,t) on <x:=x+1;>x>0" in {
     val s = sucSequent("<x:=x+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x+1;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<t:=t+1;>t>0".asFormula)
     ))
   }
 
   it should "be <y:=x+1;>x>0 with (x,t) on <y:=x+1;>x>0" in {
     val s = sucSequent("<y:=x+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<y:=x+1;>x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<y:=t+1;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x+1;><y:=x+1;>x>0 with (x,t) on <x:=x+1;><y:=x+1;>x>0" in {
     val s = sucSequent("<x:=x+1;><y:=x+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x+1;><y:=t+1;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<t:=t+1;><y:=t+1;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x+1;><x:=x+1;>x>0 with (x,t) on <x:=x+1;><x:=x+1;>x>0" in {
     val s = sucSequent("<x:=x+1;><x:=x+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be(
-      sucSequent("<t:=x+1;><x:=t+1;>x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be(
+      sucSequent("[t:=x;]<t:=t+1;><t:=t+1;>t>0".asFormula)
     ))
   }
 
   it should "throw an IllegalArgumentException with (x,t) on <x:=x+1;><x:=t+1;>x>0" in {
     val s = sucSequent("<x:=x+1;><x:=t+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
 //    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (s))
   }
 
   // (5) Modality(BoxModality(NDetAssign(x)), phi)
@@ -245,53 +293,47 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   // should work with new alpha conversion rule
   "Alpha-conversion rule on diamond nondeterministic choice" should "be <t:=1 ++ t:=x+1;>t>0 with (x,t) on <x:=1 ++ x:=x+1;>x>0" in {
     val s = sucSequent("<x:=1 ++ x:=x+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=1 ++ t:=x+1;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<t:=1 ++ t:=t+1;>t>0".asFormula)
     ))
   }
 
   it should "be <{t:=1 ++ t:=x+1};><{x:=1 ++ x:=t+1};>x>0 with (x,t) on <{x:=1 ++ x:=x+1};{x:=1 ++ x:=x+1};>x>0" in {
     val s = sucSequent("<{x:=1 ++ x:=x+1};><{x:=1 ++ x:=x+1};>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<{t:=1 ++ t:=x+1};><{x:=1 ++ x:=t+1};>x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<{t:=1 ++ t:=t+1};><{t:=1 ++ t:=t+1};>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x;><{x:=1 ++ x:=t+1}*;>x>0 with (x,t) on <{x:=1 ++ x:=x+1}*;>x>0" in {
     val s = sucSequent("<{x:=1 ++ x:=x+1}*;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x;><{t:=1 ++ t:=t+1}*;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<{t:=1 ++ t:=t+1}*;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=1 ++ t:=x+1 ++ z:=x;>t>0 with (x,t) on <x:=1 ++ x:=x+1 ++ z:=x;>x>0" in {
     val s = sucSequent("<x:=1 ++ x:=x+1 ++ z:=x;>x>0".asFormula)
-    val tactic = locateSucc(alpha("x", "t"))
-//    an [CoreException] should be thrownBy helper.runTactic(tactic, new RootNode(s))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<t:=1 ++ t:=t+1 ++ z:=t;>t>0".asFormula)))
   }
 
   // (7) Modality(BoxModality(ContEvolveProgram | IncompleteSystem, _), phi)
 
   "Alpha-conversion rule on ODEs" should "be [y:=1;][t:=x;][t'=1;]x>0 with (x,t) on [y:=1;][x'=1;]x>0" in {
     val s = sucSequent("[y:=1;][x'=1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[y:=1;][x'=1;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][y:=1;][t'=1;]t>0".asFormula)
     ))
   }
 
   it should "rename in ODEs and store initial value" in {
     val s = sucSequent("[y'=1;]true".asFormula)
-    val tactic = locateSucc(alphaRule("y", "x"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("y", "x"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[x:=y;][x'=1;]true".asFormula)))
   }
 
-  it should "rename and store not only at top level" in {
+  ignore should "rename and store not only at top level" in {
     val s = sucSequent("[x:=x+1;][x'=1;]x>0".asFormula)
     val tactic = alphaRule("x", "t")(new SuccPosition(0, new PosInExpr(1 :: Nil)))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
@@ -299,71 +341,69 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  it should "not store initial value if variable to rename does not occur in ODE" in {
+  it should "also store initial value if variable to rename does not occur in ODE" in {
     val s = sucSequent("[y'=1;]true".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][y'=1;]true".asFormula)
+    ))
   }
 
   it should "not store initial value if variable to rename is bound outside and does not occur in ODE" in {
     val s = sucSequent("\\forall x. [y'=1;]true".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y'=1;]true".asFormula)))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [y'=1;]true".asFormula)))
   }
 
   it should "not store initial value if variable to rename is constant in ODE" in {
     val s = sucSequent("\\forall x. [y'=x+1;]true".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y'=t+1;]true".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [y'=t+1;]true".asFormula)
     ))
   }
 
   it should "be [y:=z;][y'=y+1;]y>0 with (z,y) on [z'=z+1;]z>0" in {
     val s = sucSequent("[z'=z+1;]z>0".asFormula)
-    val tactic = locateSucc(alphaRule("z", "y"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("z", "y"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[y:=z;][y'=y+1;]y>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][t'=1;]t>0 with (x,t) on [x'=1;]x>0" in {
     val s = sucSequent("[x'=1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][t'=1;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][t'=t+1;]t>0 with (x,t) on [x'=x+1;]x>0" in {
     val s = sucSequent("[x'=x+1;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][t'=t+1;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][$$t'=t+1$$;]t>0 with (x,t) on [$$x'=x+1$$;]x>0" in {
     val s = sucSequent("[$$x'=x+1$$;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][$$t'=t+1$$;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][$$t'=t+1,y'=t$$;]t>0 with (x,t) on [$$x'=x+1, y'=x$$;]x>0" in {
     val s = sucSequent("[$$x'=x+1,y'=x$$;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][$$t'=t+1,y'=t$$;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0 with (x,t) on [$$x'=x+1 & x>0, y'=x & y<x$$;]x>0" in {
     val s = sucSequent("[$$x'=x+1 & x>0, y'=x & y<x$$;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0".asFormula)
     ))
   }
@@ -372,134 +412,144 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Alpha-conversion rule on diamond ODE" should "be <t:=x;><t'=1;>t>0 with (x,t) on <x'=1;>x>0" in {
     val s = sucSequent("<x'=1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x;><t'=1;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<t'=1;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x;><t'=t+1;>t>0 with (x,t) on <x'=x+1;>x>0" in {
     val s = sucSequent("<x'=x+1;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x;><t'=t+1;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<t'=t+1;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x;><$$t'=t+1$$;>t>0 with (x,t) on <$$x'=x+1$$;>x>0" in {
     val s = sucSequent("<$$x'=x+1$$;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x;><$$t'=t+1$$;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<$$t'=t+1$$;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x;><$$t'=t+1,y'=t$$;>t>0 with (x,t) on <$$x'=x+1, y'=x$$;>x>0" in {
     val s = sucSequent("<$$x'=x+1,y'=x$$;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x;><$$t'=t+1,y'=t$$;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<$$t'=t+1,y'=t$$;>t>0".asFormula)
     ))
   }
 
   it should "be <t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0 with (x,t) on <$$x'=x+1 & x>0, y'=x & y<x$$;>x>0" in {
     val s = sucSequent("<$$x'=x+1 & x>0, y'=x & y<x$$;>x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("<t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]<$$t'=t+1 & t>0,y'=t & y<t$$;>t>0".asFormula)
     ))
   }
 
   "Alpha-conversion rule on loops" should "be [t:=x;][{x:=1;}*;]x>0 with (x,t) on [{x:=1;}*;]x>0" in {
     val s = sucSequent("[{x:=1;}*;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][{t:=1;}*;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][{x:=t+1;}*;]x>0 with (x,t) on [{x:=x+1;}*;]x>0" in {
     val s = sucSequent("[{x:=x+1;}*;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][{t:=t+1;}*;]t>0".asFormula)
     ))
   }
 
   it should "be [{y:=t+1;}*;]t>0 with (x,t) on [{y:=x+1;}*;]x>0" in {
     val s = sucSequent("[{y:=x+1;}*;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[{y:=x+1;}*;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][{y:=t+1;}*;]t>0".asFormula)
     ))
   }
 
   it should "be [t:=x;][{x:=1 ++ x:=t+1}*;]x>0 with (x,t) on [{x:=1 ++ x:=x+1}*;]x>0" in {
     val s = sucSequent("[{x:=1 ++ x:=x+1}*;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][{t:=1 ++ t:=t+1}*;]t>0".asFormula)
     ))
   }
 
   it should "not store initial value if variable to rename does not occur in loop" in {
     val s = sucSequent("[{y:=1;}*]true".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (s))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][{y:=1;}*]true".asFormula)
+    ))
   }
 
   it should "not store initial value if variable to rename is bound outside and does not occur in loop" in {
     val s = sucSequent("\\forall x. [{y:=1;}*]true".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [{y:=1;}*]true".asFormula)))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [{y:=1;}*]true".asFormula)))
   }
 
   it should "not store initial value if variable to rename is free in loop" in {
     val s = sucSequent("\\forall x. [{y:=x+1;}*]true".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [{y:=t+1;}*]true".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [{y:=t+1;}*]true".asFormula)
     ))
   }
 
   "Alpha-conversion rule on tests" should "be [?x>0;]x>0 with (x,t) on [?x>0;]x>0" in {
     val s = sucSequent("[?x>0;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[?x>0;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][?t>0;]t>0".asFormula)
     ))
   }
 
   it should "be forall t. [?t>0;]t>0 with (x,t) on forall x. [?x>0;]x>0" in {
     val s = sucSequent("\\forall x. [?x>0;]x>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [?t>0;]t>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. [?t>0;]t>0".asFormula)
     ))
   }
 
   "Alpha conversion of derivatives" should "be x'>0 with (x,t) on x'>0" in {
     val s = sucSequent("x'>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("x'>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]t'>0".asFormula)
     ))
   }
 
   it should "be forall t. t'>0 with (x,t) on forall x. x'>0" in {
     val s = sucSequent("\\forall x. x'>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+    helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. t'>0".asFormula)
+    ))
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;]\\forall t. t'>0".asFormula)
     ))
   }
 
   it should "be [t':=0;]t>0 with (x,t) on [x':=0;]x'>0" in {
     val s = sucSequent("[x':=0;]x'>0".asFormula)
-    val tactic = locateSucc(alphaRule("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t':=0;]t'>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t':=0;]t'>0".asFormula)
+    ))
+  }
+
+  "Foo" should "bar" in {
+    val s = sucSequent("[x:=0;]\\forall x. x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=0;]\\forall t. t>0".asFormula)
+    ))
+  }
+
+  it should "zee" in {
+    val s = sucSequent("[x:=x+1;x:=x+2]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][t:=t+1;t:=t+2]t>0".asFormula)
     ))
   }
 
@@ -510,17 +560,15 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Alpha-conversion tactic" should "be [t:=x+1;][t_0:=t;][t_0'=1;]t_0>0 with (x,t) on [x:=x+1;][x'=1;]x>0" in {
     val s = sucSequent("[x:=x+1;][x'=1;]x>0".asFormula)
-    val tactic = locateSucc(alpha("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x+1;][t_0:=t;][t_0'=1;]t_0>0".asFormula)
+    helper.runTactic(globalAlpha("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent("t".asNamedSymbol :: Nil, Nil, "[t:=t+1;][t'=1;]t>0".asFormula :: Nil)
     ))
   }
 
   it should "be [t:=x+1;][t_0:=t;][{t_0:=t_0+1;}*]t_0>0 with (x,t) on [x:=x+1;][{x:=x+1;}*]x>0" in {
     val s = sucSequent("[x:=x+1;][{x:=x+1;}*]x>0".asFormula)
-    val tactic = locateSucc(alpha("x", "t"))
-    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x+1;][t_0:=t;][{t_0:=t_0+1;}*]t_0>0".asFormula)
+    helper.runTactic(globalAlpha("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent("t".asNamedSymbol :: Nil, Nil, "[t:=t+1;][{t:=t+1;}*]t>0".asFormula :: Nil)
     ))
   }
 

@@ -27,7 +27,7 @@ class SDTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[$$a'=b$$;](x'-y'<=0)")
+    val expected = helper.parseFormula("[$$a'=b$$;](x'-y'<=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
@@ -39,7 +39,7 @@ class SDTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[x:=b;](x'-y'<=0)")
+    val expected = helper.parseFormula("[x:=b;](x'-y'<=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
@@ -111,5 +111,35 @@ class SDTests extends TacticTestSuite {
     helper.runTactic(tactic, node)
     helper.report(node)
     require(containsOpenGoal(node, expected))
+  }
+
+
+  // Diagnosing diverging SubtractDerivativeT tactic.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  "SubtractDerivativeT" should "see how we're doing w/ subtraction" in {
+    val f = helper.parseFormula("(1-1)' = 0")
+    val expected = helper.parseFormula("1' - 1' = 0")
+    val node = helper.formulaToNode(f)
+    val tactic = SubtractDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+  }
+
+  it should "converge when there is no binding context" in {
+    val f = helper.parseFormula("[x':=0;] (a-1)' = 0")
+    val node = helper.formulaToNode(f)
+    val tactic = SubtractDerivativeT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+  }
+
+  it should "work when there is binding context" in { //@todo this test is currently diverging because term tactics do not work in context.
+    val f = helper.parseFormula("[a':=0;] (a-1)' = 0")
+    val expected = helper.parseFormula("1' - 1' = 0")
+    val node = helper.formulaToNode(f)
+    val tactic = (SubtractDerivativeT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil))) *) //Will diverge if the tactic doesn't work.
+    helper.runTactic(tactic, node)
+    helper.report(node)
   }
 }
