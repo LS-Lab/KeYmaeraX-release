@@ -282,12 +282,12 @@ object HybridProgramTacticsImpl {
         node.sequent(p) match {
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: Loop, _))
             if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) & debugT("foo") &
+            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: ContEvolveProgram, _))
             if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) & debugT("foo") &
+            alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
           case _ => Some(boxAssignWithoutAlphaT(newV1)(p))
@@ -442,7 +442,7 @@ object HybridProgramTacticsImpl {
 
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(debugT("foo " + v.name) & globalAlphaRenamingT(v.name, v.index, aV.name, aV.index) & debugT("bar"))
+            Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
