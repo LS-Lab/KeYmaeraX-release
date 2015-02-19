@@ -1218,7 +1218,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     try {
       usubst(SetLattice.bottom, SetLattice.bottom, t)
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(t.prettyString())
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
     }
   }
 
@@ -1229,7 +1230,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       log("\tSubstituted  " + res.prettyString)
       res
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(f.prettyString())
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
     }
   }
 
@@ -1237,7 +1239,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     try {
       Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
     }
   }
 
@@ -1246,7 +1249,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     try {
       usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(p.prettyString())
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
     }
   }
 
