@@ -1793,10 +1793,6 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     if (e.name == name && e.index == idx) Variable(target, tIdx, e.sort)
     else e
 
-  private def renameFn(fn: Function): Function =
-    if (fn.name == name && fn.index == idx) Function(target, tIdx, fn.domain, fn.sort)
-    else fn
-
   private def rename(e: NamedSymbol): NamedSymbol = e match {
     case v: Variable => renameVar(v)
     case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
