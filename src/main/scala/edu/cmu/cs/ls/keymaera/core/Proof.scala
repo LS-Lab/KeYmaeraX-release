@@ -1920,9 +1920,10 @@ class DerivativeAssignmentRule(p: Position) extends PositionRule("AssignmentRule
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
+      val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case BoxModality(p, f) => Right(Forall(p.writes, f))
-          case DiamondModality(p, f) => Right(Forall(p.writes, f))
+          case BoxModality(prg, f) => Right(factory(prg.writes, f))
+          case DiamondModality(prg, f) => Right(factory(prg.writes, f))
           case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
       }
     }
@@ -1930,7 +1931,6 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
       case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
       case _ => throw new InapplicableRuleException("No abstraction possible for " + s(pos), this, s)
     }
-
   }
 }
 
