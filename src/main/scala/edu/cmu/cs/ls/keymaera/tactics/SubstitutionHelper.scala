@@ -14,6 +14,8 @@ import scala.collection.immutable.{Set, Seq, List}
 object SubstitutionHelper {
   def replaceFree(f: Formula)(what: Term, repl:Term) =
     new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)
+  def replaceFree(t: Term)(what: Term, repl:Term) =
+    new SubstitutionHelper(what, repl).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)
 }
 class SubstitutionHelper(what: Term, repl: Term) {
   import BindingAssessment._
