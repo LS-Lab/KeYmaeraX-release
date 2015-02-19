@@ -330,56 +330,34 @@ object ODETactics {
         // construct substitution
         val aP = PredicateConstant("p")
         val aX = Variable("x", None, Real)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), x)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), CDot)
         val aC = ContEvolveProgramConstant("c")
-        val aS = Variable("s", None, Real)
-        val aT = Variable("t", None, Real)
-        val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q), new SubstitutionPair(aC, ode),
-          new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
+        val aS = Apply(Function("s", None, Unit, Real), Nothing)
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val l = List(SubstitutionPair(aP, p), SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, CDot)),
+          SubstitutionPair(aC, ode), SubstitutionPair(aS, s), SubstitutionPair(aT, t))
 
         // rename to match axiom if necessary
-        val (axiom, succCont) =
-          if (x.name != aX.name || x.index != aX.index) (replaceFree(ax)(aX, x, None), Some(alphaInDiffAuxiliary(x, aX)))
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Imply(And(Equiv(_, Exists(_, _)), _), _) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != aX.index) (replaceFree(ax)(aX, x, None), Some(alpha))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), succCont, None)
+        Some(axiom, axiomInstance, Substitution(l), None, cont)
       case _ => None
-    }
-  }
-
-  /**
-   * Creates an alpha renaming tactic that fits the structure of differential auxiliaries. The tactic renames the old
-   * symbol to the new symbol.
-   * @param oldSymbol The old symbol.
-   * @param newSymbol The new symbol.
-   * @return The alpha renaming tactic.
-   */
-  private def alphaInDiffAuxiliary(oldSymbol: Variable, newSymbol: Variable) = new PositionTactic("Alpha") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Imply(And(Equiv(_, Exists(_, _)), BoxModality(_: ContEvolveProgram, _)), BoxModality(_: ContEvolveProgram, _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      import TacticLibrary.{abstractionT,ImplyLeftT,ImplyRightT,hideT,instantiateQuanT}
-      import PropositionalTacticsImpl.AxiomCloseT
-      import HybridProgramTacticsImpl.v2vBoxAssignT
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-        Some(ImplyRightT(SuccPosition(0))
-          & ImplyLeftT(p)
-          & (hideT(SuccPosition(0))
-                & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(AntePosition(p.index, PosInExpr(0 :: 1 :: Nil)))
-                & alphaRenamingT(oldSymbol.name, oldSymbol.index, newSymbol.name, newSymbol.index)(AntePosition(p.index, PosInExpr(1 :: Nil)))
-                & AndLeftT(p) & abstractionT(AntePosition(1)) & hideT(AntePosition(1))
-                & alphaRenamingT(newSymbol.name, newSymbol.index, "_$" + newSymbol.name, newSymbol.index)(AntePosition(1).first)
-                & instantiateQuanT(newSymbol, newSymbol)(AntePosition(1)) & v2vBoxAssignT(AntePosition(1))
-                & AndRightT(SuccPosition(0))
-                & (hideT(AntePosition(1)), hideT(AntePosition(0))) & AxiomCloseT(AntePosition(0), SuccPosition(0)),
-             /* axiom tactic takes care of it */ NilT
-          )
-        )
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
 
