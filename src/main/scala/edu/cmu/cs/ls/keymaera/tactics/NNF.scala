@@ -1,9 +1,12 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.ContextualizeKnowledgeTactic
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
 
 /**
 * Rewrites formulas into negation normal form using DeMorgan's laws and double negation elimination.
@@ -18,22 +21,146 @@ object NNFRewrite {
     override def apply(p: Position): Tactic = ???
   }
 
-  /*
-   * Obligation: Show [pi;](f <-> g) |- [pi;]f
-   * Have: Transformation from |- f to |- g
-   * Strategy: Apply monotonicity and then break up the implication, creating two obligations:
-   *    f |- g, g
-   *      Run the tactic at the final position and then do an axiom close on the antecedent and the final position.
-   *    g |- g, f
-   *      Axiom close on the antecedent and the original succedent position.
-   */
-  def useDerivationInContext(proofOfValidity : Tactic) : Position = ???
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // !(f ^ g) <-> !f | !g
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def proofOfDeMorganConjunction = new PositionTactic("DeMorgan - Conjunction") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Equiv(Not(And(l,r)), Or(Not(l2), Not(r2))) => {
+        l.equals(l2) && r.equals(r2) && !p.isAnte
+      }
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Equiv(Not(And(l1, r1)), Or(Not(l2), Not(r2))) => {
+          assert(p.isAnte == false) //The proof starts with an equivright.
+          assert(l1.equals(l2) && r1.equals(r2)) //justifies:
+          val f = l1
+          val g = r1
+
+          val newAntePos = AntePosition(node.sequent.ante.length)
+          def newerAntePos = AntePosition(node.sequent.ante.length + 1)
+          val newSuccPos = SuccPosition(node.sequent.succ.length)
+
+          Some(
+            EquivRightT(p) && onBranch(
+              (BranchLabels.equivLeftLbl, NotLeftT(newAntePos) & AndRightT(newSuccPos) & OrRightT(p) & ((locate(NotRightT) *) & AxiomCloseT )),
+              (BranchLabels.equivRightLbl, NotRightT(p) & AndLeftT(newerAntePos) & OrLeftT(newAntePos) & (NotLeftT(newAntePos) & AxiomCloseT))
+            )
+          )
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def rewriteNegConjunct = new PositionTactic("Rewrite conjunction") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Not(And(_,_)) => true
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val original = getFormula(node.sequent, p)
+
+        val replacement = original match {
+          case Not(And(l,r)) => Or(Not(l), Not(r))
+          case _ => ???
+        }
+
+        Some(
+          rewriteEquiv(original, replacement, proofOfDeMorganConjunction)(p)
+        )
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // !(f | g) <-> !f & !g
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def proofOfDeMorganDisjunction = new PositionTactic("DeMorgan - Disjunction") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Equiv(Not(Or(l,r)), And(Not(l2), Not(r2))) => {
+        l.equals(l2) && r.equals(r2) && !p.isAnte
+      }
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Equiv(Not(Or(l1, r1)), And(Not(l2), Not(r2))) => {
+          assert(p.isAnte == false) //The proof starts with an equivright.
+          assert(l1.equals(l2) && r1.equals(r2)) //justifies:
+          val f = l1
+          val g = r1
+
+          val newAntePos = AntePosition(node.sequent.ante.length)
+          val orAntePos = AntePosition(node.sequent.ante.length + 2)
+          val newSuccPos = SuccPosition(node.sequent.succ.length)
+
+
+          Some(
+            EquivRightT(p) && onBranch(
+              (BranchLabels.equivLeftLbl, NotLeftT(newAntePos) & AndRightT(p) & ( NotRightT(p) & OrRightT(p) & AxiomCloseT)),
+              (BranchLabels.equivRightLbl, AndLeftT(newAntePos) & NotRightT(p) & OrLeftT(orAntePos) & (NotLeftT(newAntePos) & NotLeftT(newAntePos) & AxiomCloseT))
+            )
+          )
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def rewriteNegDisjunct = new PositionTactic("Rewrite disjunction") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Not(Or(_,_)) => true
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val original = getFormula(node.sequent, p)
+
+        val replacement = original match {
+          case Not(Or(l,r)) => And(Not(l), Not(r))
+          case _ => ???
+        }
+
+        Some(
+          rewriteEquiv(original, replacement, proofOfDeMorganDisjunction)(p)
+        )
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Double negation elimination
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  def DoubleNegationElimination(position : Position) : Tactic = ((new TacticInContextT(ValidityOfDoubleNegationEliminationT(position)) {
+    override def applies(f: Formula) = f match {
+      case Not(Not(_)) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])] = f match {
+      case Not(Not(phi)) => Some(phi, None)
+      case _ => None
+    }
+  })(position) ~ SearchTacticsImpl.locateSucc(ImplyRightT) ~ AxiomCloseT)
 
   /*
    * Have: !(!f)
-   * Wnat: f
+   * Want: f
    */
-  def DoubleNegationEliminationT : PositionTactic = new PositionTactic("Double Negation Elimination") {
+  def ValidityOfDoubleNegationEliminationT : PositionTactic = new PositionTactic("Double Negation Elimination") {
     override def applies(s: Sequent, p: Position): Boolean = formulaAtPosition(s,p) match {
       case Some(Not(Not(f))) => true
       case _ => false
@@ -100,18 +227,68 @@ object NNFRewrite {
           val succDoubleNegPos = SuccPosition(node.sequent.succ.length -1)
           val anteSingleNegPos = AntePosition(node.sequent.ante.length + 1)
           val succNoNegPos = succDoubleNegPos
-          NotRightT(succDoubleNegPos) & NotLeftT(anteSingleNegPos) & AxiomCloseT(anteNoNegPos, succNoNegPos)
+          NotRightT(succDoubleNegPos) & NotLeftT(anteSingleNegPos) &  AxiomCloseT(anteNoNegPos, succNoNegPos)
         }
 
         Some(
-          debugT("DNEV begin") ~ EquivRightT(initialEquivPosition) & onBranch(
-            (BranchLabels.equivLeftLbl, debugT("DNEV left") & leftTactic & debugT("DNEV left complete")),
-            (BranchLabels.equivRightLbl, debugT("DNEV right") & rightTactic & debugT("DNEV right Complete"))
-          )
+          debugT("DNEV begin") ~ EquivRightT(initialEquivPosition) ~ (onBranch(
+            (BranchLabels.equivLeftLbl, debugT("DNEV left") ~ leftTactic ~ debugT("DNEV left complete")),
+            (BranchLabels.equivRightLbl, debugT("DNEV right") ~ rightTactic ~ debugT("DNEV right Complete"))
+          ))
         )
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, initialEquivPosition)
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Context helper.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  abstract class TacticInContextT(tactic : Tactic)
+    extends ContextualizeKnowledgeTactic("In Context: " + tactic.name) {
+    def applies(f: Formula): Boolean
+    override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
+
+    override def apply(pos: Position): Tactic = super.apply(pos) &
+      onBranch("knowledge subclass continue", tactic)
+  }
+
+  def rewriteEquiv(original : Formula, replacement : Formula, proofOfEquiv : PositionTactic) : PositionTactic = new PositionTactic("Rewrite for " + proofOfEquiv.name) {
+    override def applies(s: Sequent, p: Position): Boolean = formulaAtPosition(s,p) match {
+      case Some(formula) => formula.equals(original)
+      case _ => false
+    }
+
+    override def apply(targetPosition: Position): Tactic = new ConstructionTactic(this.name) {
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        //First construct an equality.
+        val equiv = Equiv(original, replacement)
+
+        //The succedent position of the cut-in formula
+        val cutAsObligationPos = SuccPosition(node.sequent.succ.length)
+        val cutAsAssumptionPos = AntePosition(node.sequent.ante.length)
+
+        def equalityRewrite = {
+          new ApplyRule(new EqualityRewriting(cutAsAssumptionPos, targetPosition)) {
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, targetPosition)
+          }
+        }
+
+        val topLevelPositionContainingOriginalFormula = targetPosition.topLevel
+
+        Some(
+          PropositionalTacticsImpl.cutT(Some(equiv)) & onBranch(
+            (BranchLabels.cutShowLbl, proofOfEquiv(cutAsObligationPos)),
+            (BranchLabels.cutUseLbl, equalityRewrite & hideT(topLevelPositionContainingOriginalFormula) & hideT(cutAsAssumptionPos)) //@todo I think I have to run the continuation here or something.
+          )
+        //@todo
+        )
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, targetPosition)
     }
   }
 }
