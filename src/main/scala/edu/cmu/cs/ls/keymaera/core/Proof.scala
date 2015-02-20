@@ -911,7 +911,7 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, CDot | Nothing) => true
+      case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
       case Apply(_:Function, CDot | Nothing) => true
       case Nothing => t == Nothing
       case _ => false
@@ -1262,8 +1262,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    */
   def sameHead(left: SubstitutionPair, right: Expr) = left.n match {
-    case Apply(lf, CDot | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
-    case ApplyPredicate(lf, CDot | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
+    case Apply(lf, CDot | Anything | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
+    case ApplyPredicate(lf, CDot | Anything | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
@@ -1314,6 +1314,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
           s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
         instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
       case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
+      case Anything => Anything
       case Nothing => Nothing
       case x: Atom => x
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
@@ -1348,6 +1349,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       require(catVars(ps).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(ps).fv} ∩ $u is not empty")
       ps
     case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
+    case app@ApplyPredicate(_, Anything) if subsDefs.exists(sameHead(_, app)) =>
+      val rFormula = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app)).t.asInstanceOf[Formula]
+      Substitution(List()).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
+    case app@ApplyPredicate(_, Anything) if !subsDefs.exists(sameHead(_, app)) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
       val (rArg, rFormula) = (
@@ -1389,7 +1394,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
       // TODO remove when proof of uniform substitution is done
-      require(q == v && r == w, "Programs where not all branches write the same variables are not yet supported")
+      require(((q == SetLattice.bottom && v == SetLattice.top) || q == v)
+        && ((r == SetLattice.bottom && w == SetLattice.top) || r == w),
+        s"Programs where not all branches write the same variables are not yet supported: q=$q ==? v=$v, r=$r ==? w=$w")
       USR(q.intersect(r), v++w, Choice(as, bs))
     case Loop(a) =>
       val USR(q, v, _) = usubst(o, u, a)
@@ -1410,7 +1417,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       // todo is side condition correct?
       require(catVars(sigmaP).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(sigmaP).fv} ∩ $u is not empty")
       USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP)
-    case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p) //@todo o/o++mbv(a) u/u++BV(a)
+    case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o++catVars(a).mbv, u++catVars(a).bv, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U")
 
