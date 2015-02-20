@@ -1,7 +1,9 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxNDetAssign
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{locateSucc, locateAnte}
+import edu.cmu.cs.ls.keymaera.tactics.ODETactics.diffWeakenT
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.boxNDetAssign
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{debugT, skolemizeT, ImplyRightT}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
@@ -648,5 +650,18 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     getProofSequent(tactic*, new RootNode(sucSequent("[x':=x;]2*x*x'>0".asFormula))) should be (
       sucSequent("2*x*x>0".asFormula)
     )
+  }
+
+  "Box choice" should "transform choice into a conjunction" in {
+    val tactic = locateSucc(boxChoiceT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=2 ++ x:=3]x>0".asFormula))) should be (
+      sucSequent("[x:=2;]x>0 & [x:=3;]x>0".asFormula))
+  }
+
+  "Box sequence" should "transform sequence into two boxes" in {
+    import TacticLibrary.boxSeqT
+    val tactic = locateSucc(boxSeqT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=2; x:=3]x>0".asFormula))) should be (
+      sucSequent("[x:=2;][x:=3;]x>0".asFormula))
   }
 }

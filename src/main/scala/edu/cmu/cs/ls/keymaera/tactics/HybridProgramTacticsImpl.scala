@@ -698,23 +698,35 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for sequential composition [;]
    * @return The new tactic.
    */
-  protected[tactics] def boxSeqT: PositionTactic = new AxiomTactic("[;] compose", "[;] compose") {
+  protected[tactics] def boxSeqT: PositionTactic = new CascadedAxiomTactic("[;] compose", "[;] compose") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Sequence(_, _), _) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
+        f match {
       case BoxModality(Sequence(a, b), p) =>
+        // construct axiom instance: [ a; b ]p <-> [a][b]p.
+        val g = BoxModality(a, BoxModality(b, p))
+        val axiomInstance = Equiv(f, g)
+
         // construct substitution
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
         val aP = PredicateConstant("p")
         val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
-        // construct axiom instance: [ a; b ]p <-> [a][b]p.
-        val g = BoxModality(a, BoxModality(b, p))
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, Substitution(l))
+
+        val intermediate = Equiv(BoxModality(Sequence(aA, aB), p), BoxModality(aA, BoxModality(aB, p)))
+
+        val s1 = Substitution(List(SubstitutionPair(aA, a), SubstitutionPair(aB, b)))
+        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
+
+        val s2 = Substitution(List(SubstitutionPair(aP, p)))
+        val m2 = Map[Formula, Formula](intermediate -> Equiv(BoxModality(Sequence(aA, aB), aP),
+          BoxModality(aA, BoxModality(aB, aP))))
+
+        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
       case _ => None
     }
 
@@ -749,26 +761,36 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box choice [++].
    * @return The new tactic.
    */
-  protected[tactics] def boxChoiceT: PositionTactic = new AxiomTactic("[++] choice", "[++] choice") {
+  def boxChoiceT: PositionTactic = new CascadedAxiomTactic("[++] choice", "[++] choice") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Choice(_, _), _) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
+        f match {
       case BoxModality(Choice(a, b), p) =>
+        // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
+        val g = And(BoxModality(a, p), BoxModality(b, p))
+        val axiomInstance = Equiv(f, g)
+
         // construct substitution
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
         val aP = PredicateConstant("p")
-        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
-        // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
-        val g = And(BoxModality(a, p), BoxModality(b, p))
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, Substitution(l))
+
+        val intermediate = Equiv(BoxModality(Choice(aA, aB), p), And(BoxModality(aA, p), BoxModality(aB, p)))
+
+        val s1 = Substitution(List(SubstitutionPair(aA, a), SubstitutionPair(aB, b)))
+        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
+
+        val s2 = Substitution(List(SubstitutionPair(aP, p)))
+        val m2 = Map[Formula, Formula](intermediate -> Equiv(BoxModality(Choice(aA, aB), aP), And(BoxModality(aA, aP),
+          BoxModality(aB, aP))))
+
+        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
       case _ => None
     }
-
   }
 
   /**
@@ -871,7 +893,7 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = true
           }
 
-          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
+          val useCase = prepareKMP & hideT(cutAPos) & debugT("b4") & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
             hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
