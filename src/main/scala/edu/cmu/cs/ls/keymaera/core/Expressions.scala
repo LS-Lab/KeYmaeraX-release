@@ -200,9 +200,10 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
   //  flatEquals(x) && this.id == x.id
 }
 
+object Anything extends NamedSymbol("\\anything", None, Unit, Real) with Atom with Term
 object Nothing extends NamedSymbol("\\nothing", None, Unit, Unit) with Atom with Term
-
 object CDot extends NamedSymbol("\\cdot", None, Unit, Real) with Atom with Term
+
 object Variable {
   def apply(name : String, index: Option[Int] = None, sort : Sort): Variable = new Variable(name, index, sort)
   def unapply(e: Any): Option[(String, Option[Int], Sort)] = e match {
