@@ -1171,6 +1171,7 @@ object Substitution {
  * Explicit construction computing bound variables on the fly.
  * Used for UniformSubstitution rule.
  * @author aplatzer
+ * @author Stefan Mitsch
  */
 sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
@@ -1436,6 +1437,132 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     }
 }
 
+/**
+ * A Uniform Substitution.
+ * Implementation of applying uniform substitutions to terms, formulas, programs.
+ * Explicit construction computing bound variables on the fly.
+ * Used for UniformSubstitution rule.
+ * @author aplatzer
+ */
+sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
+  applicable()
+
+  // unique left hand sides in l
+  @elidable(ASSERTION) def applicable() = {
+    // check that we never replace n by something and then again replacing the same n by something
+    val lefts = subsDefs.map(_.n).toList
+    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
+    // check that we never replace p(x) by something and also p(t) by something
+    val lambdaNames = subsDefs.map(_.n match {
+      case ApplyPredicate(p: Function, _: Variable) => List(p)
+      case Apply(f: Function, _: Variable) => List(f)
+      case _ => Nil
+    }).fold(Nil)((a,b) => a++b)
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
+  }
+
+  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
+
+  override def toString: String = "GlobSubst(" + subsDefs.mkString(", ") + ")"
+
+  // uniform substitution on terms
+  def apply(t: Term): Term = {
+    try {
+      null // TODO
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
+    }
+  }
+
+  def apply(f: Formula): Formula = {
+    log("\tSubstituting " + f.prettyString + " using " + this)
+    try {
+      val res: Formula = null // TODO
+      log("\tSubstituted  " + res.prettyString)
+      res
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
+    }
+  }
+
+  def apply(s: Sequent): Sequent = {
+    try {
+      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
+    }
+  }
+
+  // uniform substitution on programs
+  def apply(p: Program): Program = {
+    try {
+      null // TODO
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
+    }
+  }
+
+  private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
+    case Not(g) => fnPredPrgSymbolsOf(g)
+    case And(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Or(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Imply(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Equiv(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+
+    case Equals(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case NotEquals(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case GreaterEqual(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case GreaterThan(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case LessEqual(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case LessThan(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+
+    case ApplyPredicate(fn, theta) => Set(fn) ++ fnPredPrgSymbolsOf(theta)
+
+    case Forall(vars, phi) => fnPredPrgSymbolsOf(phi)
+    case Exists(vars, phi) => fnPredPrgSymbolsOf(phi)
+
+    case BoxModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
+    case DiamondModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
+
+    case p: PredicateConstant => Set(p)
+    case True | False => Set()
+  }
+
+  private def fnPredPrgSymbolsOf(t: Term): Set[NamedSymbol] = t match {
+    case Neg(s, l) => fnPredPrgSymbolsOf(l)
+    case Add(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Subtract(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Multiply(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Divide(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Exp(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Pair(dom, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
+    case Derivative(s, e) => fnPredPrgSymbolsOf(e)
+    case Apply(f, theta) => Set(f) ++ fnPredPrgSymbolsOf(theta)
+    case _: Variable => Set()
+    case CDot => Set(CDot)
+    case Nothing => Set()
+    case Number(_, _) => Set()
+  }
+
+  private def fnPredPrgSymbolsOf(p: Program): Set[NamedSymbol] = p match {
+    case Assign(_, t) => fnPredPrgSymbolsOf(t)
+    case Test(phi) => fnPredPrgSymbolsOf(phi)
+    case NFContEvolve(_, _, t, h) => fnPredPrgSymbolsOf(t) ++ fnPredPrgSymbolsOf(h)
+    case ContEvolveProduct(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
+    case IncompleteSystem(a) => fnPredPrgSymbolsOf(a)
+    case Sequence(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
+    case Choice(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
+    case Loop(a) => fnPredPrgSymbolsOf(a)
+    case c: ContEvolveProgramConstant => Set(c)
+    case c: ProgramConstant => Set(c)
+    case NDetAssign(_) => Set()
+    case _: EmptyContEvolveProgram => Set()
+  }
+}
 
 /******************************************************************/
 
@@ -1674,6 +1801,51 @@ object UniformSubstitution {
       }
     } 
     
+    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
+      //val subst = new OSubstitution(this.subst.l)
+      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
+      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
+      (conclusion.pref == origin.pref // universal prefix is identical
+        && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
+        && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
+        && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
+    }
+  }
+}
+
+/**
+ * Global Uniform Substitution Rule.
+ * Applies a given uniform substitution to the given original premise (origin).
+ * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
+ * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
+ * @param substitution the uniform substitution to be applied to origin.
+ * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ */
+// uniform substitution
+// this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
+object GlobalUniformSubstitution {
+  def apply(subst: GlobalSubstitution, origin: Sequent) : Rule = new GlobalUniformSubstitution(subst, origin)
+
+  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
+
+  private class GlobalUniformSubstitution(subst: GlobalSubstitution, origin: Sequent) extends Rule("Uniform Substitution") {
+    /**
+     * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+     * require explicit rule applications)
+     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+     */
+    def apply(conclusion: Sequent): List[Sequent] = {
+      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
+      val substAtOrigin = subst(origin) //just for debugging.
+      if (subst(origin) == conclusion) {
+        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+        List(origin)
+      } else {
+        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+      }
+    }
+
     private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
       //val subst = new OSubstitution(this.subst.l)
       //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
