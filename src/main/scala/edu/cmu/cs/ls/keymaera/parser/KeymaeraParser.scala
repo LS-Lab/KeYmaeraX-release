@@ -429,7 +429,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           else Apply (functionFromName (name.toString, functions),
             args.reduce ((l, r) => Pair (TupleT (l.sort, r.sort), l, r) ) )
           },
-        { case name ~ args => "Can only use identifier of sort Real in predicate application, but " + name + " has sort " +
+        { case name ~ args => "Can only use identifier of sort Real in function application, but " + name + " has sort " +
                                 functionFromName(name.toString, functions).sort})
     }
 
@@ -577,14 +577,18 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //Predicate application
 
     lazy val applyPredicateP:SubformulaParser = {
-      lazy val pattern = ident ~ ("(" ~> rep1sep(termParser, ",") <~ ")")
+      lazy val pattern = ident ~ ("(" ~> ("?" | rep1sep(termParser, ",")) <~ ")")
 
       log(pattern)("Predicate Application") ^? (
         { case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Bool =>
-          ApplyPredicate(functionFromName(name.toString, functions),
-            args.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )},
+          args match {
+            case termArgs: List[Term] => ApplyPredicate(functionFromName(name.toString, functions),
+                termArgs.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
+            case _: String => ApplyPredicate(functionFromName(name.toString, functions), Anything)
+          }},
         { case name ~ args => "Can only use identifier of sort Bool in predicate application, but " + name + " has sort " +
-            functionFromName(name.toString, functions).sort})
+            functionFromName(name.toString, functions).sort}
+      )
     }
 
     //Predicates
@@ -597,7 +601,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
         else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
       }
-      
+
       log(pattern)("Predicate") ^^ {
         case name => {
           val (n, i) = nameAndIndex(name)
@@ -1221,11 +1225,12 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     private def makeFunction(ty : String, name : String, argT: String) : VType = {
-      require(argT == "T" | argT == "", "can only handle parameterless and unary functions")
+      require(argT == "T" | argT == "" | argT == "?", "can only handle parameterless and unary functions")
       val (n, idx) = nameAndIndex(name)
       val domainSort = argT match {
         case "T" => Real
         case "" => Unit
+        case "?" => Real
       }
       ty match {
         case "F" => VFunction(Function(n, idx, domainSort, Bool))
@@ -1240,10 +1245,10 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val variablesP = {
       //e.g., T x or T f(x:T) or T f(x). In the latter case, x:T implicitly.
       // @todo But currently, T f(x:T  y:T) isn't supported. Use product sorts to implement.
-      lazy val variablesP = ident ~ ident ~ ("(" ~> repsep(ident ~ (":" ~> ident).?, ",") <~ ")").? ^^ {
+      lazy val variablesP = ident ~ ident ~ ("(" ~> ("?" | repsep(ident ~ (":" ~> ident).?, ",")) <~ ")").? ^^ {
         //if tail is defined then this is a function; else it's a variable.
         case codomainSort ~ name ~ parameters => parameters match {
-          case Some(arguments) => {
+          case Some(arguments: List[~[String, Option[String]]]) => {
             //@todo support product domains sorts. Also requires modifying makeFunction
             require(arguments.length <= 1, "don't support functions w/ arity > 1")
             if (arguments.length == 0) {
@@ -1258,6 +1263,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
               makeFunction(codomainSort, name, "T")
             }
           }
+          case Some(wildcard: String) => makeFunction(codomainSort, name, wildcard)
           case None => makeVariable(codomainSort.toString, name.toString)
         }
       }
