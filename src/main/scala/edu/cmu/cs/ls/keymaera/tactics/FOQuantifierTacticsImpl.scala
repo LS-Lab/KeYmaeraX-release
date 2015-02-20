@@ -21,6 +21,25 @@ import scala.collection.immutable.Seq
  */
 object FOQuantifierTacticsImpl {
 
+  def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
+      case Forall(_, _) => true
+      case _ => false
+    })
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos) match {
+        case Forall(vars, phi) =>
+          Some(vars.filter(_.isInstanceOf[Variable]).
+            map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
+            fold(NilT)((a, b) => a & b))
+        case _ => None
+      }
+    }
+  }
+
   /**
    * Creates a tactic which does quantifier instantiation.
    * @param quantified The quantified variable.
@@ -33,14 +52,14 @@ object FOQuantifierTacticsImpl {
     require(axiom.isDefined)
 
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
-      case Forall(_, _) => true
+      case Forall(vars, _) => vars.contains(quantified)
       case _ => false
     })
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      def replace(f: Formula)(o: Variable, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      def replace(f: Formula)(o: NamedSymbol, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
           case Forall(v, fa) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), fa))
           case Exists(v, fa) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), fa))
@@ -52,29 +71,21 @@ object FOQuantifierTacticsImpl {
         case None => throw new IllegalStateException("Replacing one variable by another should not fail")
       }
 
-      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution, (Variable, Variable), (Term, Variable))] = f match {
+      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution, (Variable, Variable), (Term, Term))] = f match {
         case Forall(x, qf) if x.contains(quantified) =>
           def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
           // construct substitution
           val aX = Variable("x", None, Real)
-          val aXDD = Variable("$$x", None, Real)
-          val aT = Variable("t", None, Real)
+          val aT = Apply(Function("t", None, Unit, Real), Nothing)
           val aP = Function("p", None, Real, Bool)
-          val l = List(new SubstitutionPair(ApplyPredicate(aP, aXDD), forall(replace(qf)(quantified, aXDD))))
+          val l = List(SubstitutionPair(aT, instance), SubstitutionPair(ApplyPredicate(aP, CDot),
+            forall(replace(qf)(quantified, CDot))))
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
           Some(axiomInstance, Substitution(l), (quantified, aX), (instance, aT))
-        case Forall(x, qf) if !x.contains(quantified) =>
-          println(x + " does not contain " + quantified)
-          x.map({
-            case x: NamedSymbol => println("Symbol " + x.name + " " + x.index)
-            case _ =>
-          })
-          None
-        case _ =>
-          println("Cannot instantiate quantifier for " + quantified.prettyString() + " in " + f.prettyString())
-          None
+        case Forall(x, qf) if !x.contains(quantified) => None
+        case _ => None
       }
 
       def decompose(d: Formula): Formula = d match {
@@ -97,14 +108,17 @@ object FOQuantifierTacticsImpl {
                 // val hideSllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
                 def alpha(p: Position, q: Variable) = alphaRenamingT(q.name, q.index, "$" + aX.name, aX.index)(p)
                 def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
-                  case Imply (aa, b) => Imply(decompose(replace (aa)(v, Variable ("$" + aX.name, aX.index, aX.sort) )), if(atTrans) replace(b)(aT, inst) else b)
+                  case Imply (aa, b) =>
+                    val aTName = aT match { case x: Variable => x case Apply(fn, _) => fn }
+                    Imply(decompose(replace (aa)(v, Variable ("$" + aX.name, aX.index, aX.sort) )),
+                    if(atTrans) replace(b)(aTName, inst) else b)
                   case _ => throw new IllegalArgumentException("...")
                 }
                 val replMap = Map(repl(axiomInstance, quant, atTrans = false) -> repl(a, aX))
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
                   alpha(SuccPosition(0, HereP.first), quant) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
-                  (uniformSubstT(subst, replMap) & uniformSubstT(Substitution(Seq(new SubstitutionPair(aT, inst))), Map(repl(a, aX) -> repl(a, aX, atTrans = false))) &
+                  (uniformSubstT(subst, replMap) &
                     (axiomT(axiomName) & alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None

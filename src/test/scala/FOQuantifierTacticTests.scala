@@ -202,4 +202,25 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     getProofSequent(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula))) should be (
       sequent("x_0".asNamedSymbol :: Nil, Nil, "x_0>0".asFormula :: Nil))
   }
+
+  "Quantifier instantiation" should "instantiate quantifier with given term" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "y+1".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "y+1>0".asFormula :: Nil, Nil))
+  }
+
+  it should "guess names from quantified names" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val tactic = locateAnte(instantiateT)
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "guess all names from quantified names" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val tactic = locateAnte(instantiateT)
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x,y,z. x>y+z".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "x>y+z".asFormula :: Nil, Nil))
+  }
 }
