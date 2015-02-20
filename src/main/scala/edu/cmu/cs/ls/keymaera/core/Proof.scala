@@ -1408,8 +1408,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
       // todo is side condition correct?
       require(catVars(sigmaP).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(sigmaP).fv} ∩ $u is not empty")
-      USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP) //@todo are new o and u correct?
-    case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
+      USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP)
+    case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p) //@todo o/o++mbv(a) u/u++BV(a)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U")
 
