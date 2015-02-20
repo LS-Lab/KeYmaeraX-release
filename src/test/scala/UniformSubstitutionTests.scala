@@ -219,6 +219,24 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 //      Set.empty, Set(V("x"),V("z")),"x:=1 ++ x:=t+1 ++ z:=t;".asProgram)
   }
 
+  "Uniform substitution of [a ++ b]p" should "throw a clash exception when a, b, and p are substituted simultaneously" in {
+    val s = Substitution(List(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
+      SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram),
+      SubstitutionPair(PredicateConstant("p"), "x*y>5".asFormula)))
+    a [SubstitutionClashException] should be thrownBy
+      s(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")), PredicateConstant("p")))
+  }
+
+  it should "work when cascaded" in {
+    val s = Substitution(List(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
+      SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram)))
+    val t = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x*y>5".asFormula)))
+
+    s(t(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")), PredicateConstant("p")))) should be (
+      "[x:=2 ++ y:=3]x*y>5".asFormula
+    )
+  }
+
   // \alpha ; \beta
 
   "Uniform substitution of (y,x+y) |-> x:=y;z:=x+y;" should "not be permitted" in {

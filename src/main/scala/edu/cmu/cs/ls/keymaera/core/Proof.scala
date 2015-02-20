@@ -1408,13 +1408,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
       // todo is side condition correct?
       require(catVars(sigmaP).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(sigmaP).fv} ∩ $u is not empty")
-      USR(o, u, sigmaP) //@todo are new o and u correct?
+      USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP) //@todo are new o and u correct?
     case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o, u, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
-  }} ensuring (
-        r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U") ensuring (
-        r => { val USR(q, _, _) = r; val vc = catVars(p); q == o++vc.mbv }, s"Result O not $o u MBV($p)") ensuring (
-        r => { val USR(_, v, _) = r; val vc = catVars(p); if (vc.bv == SetLattice.top) u.subsetOf(v) else v == u++vc.bv }, s"Result U not $u u BV($p)")
+  }} ensuring (r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U")
 
   /**
    * Substitution in (systems of) differential equations.
