@@ -736,22 +736,33 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box induction [*] I induction
    * @return The new tactic.
    */
-  protected[tactics] def boxInductionT: PositionTactic = new AxiomTactic("I induction", "I induction") {
+  protected[tactics] def boxInductionT: PositionTactic = new CascadedAxiomTactic("I induction", "I induction") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Loop(_), _) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
+        f match {
       case BoxModality(Loop(a), p) =>
-        // construct substitution
-        val aA = ProgramConstant("a")
-        val aP = PredicateConstant("p")
-        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aP, p))
         // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
         val g = And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p))))
         val axiomInstance = Imply(g, f)
-        Some(axiomInstance, Substitution(l))
+
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aP = PredicateConstant("p")
+
+        val intermediate = Imply(And(p, BoxModality(Loop(aA), Imply(p, BoxModality(aA, p)))), BoxModality(Loop(aA), p))
+
+        val s1 = Substitution(List(SubstitutionPair(aA, a)))
+        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
+
+        val s2 = Substitution(List(SubstitutionPair(aP, p)))
+        val m2 = Map[Formula, Formula](intermediate ->
+          Imply(And(aP, BoxModality(Loop(aA), Imply(aP, BoxModality(aA, aP)))), BoxModality(Loop(aA), aP)))
+
+        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
       case _ => None
     }
 
@@ -808,7 +819,9 @@ object HybridProgramTacticsImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) & (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
+      def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) &
+        (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
         case Some(f) =>
           val cutAPos = AntePosition(node.sequent.ante.length, HereP)
@@ -824,7 +837,8 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = true
           }
           val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
-          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) & hideT(cutSPos) & LabelBranch(indUseCaseLbl)
+          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
+            hideT(cutSPos) & LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
@@ -832,7 +846,8 @@ object HybridProgramTacticsImpl {
             onBranch(("Close Next", AxiomCloseT))
           getBody(node.sequent(p)) match {
             case Some(a) =>
-              Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+              Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) &
+                onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
             case None => None
           }
         case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
@@ -893,7 +908,7 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = true
           }
 
-          val useCase = prepareKMP & hideT(cutAPos) & debugT("b4") & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
+          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
             hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
