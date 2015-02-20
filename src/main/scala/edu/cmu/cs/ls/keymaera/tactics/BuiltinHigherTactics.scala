@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import SearchTacticsImpl.locateSucc
 import EqualityRewritingImpl.eqLeft
-import HybridProgramTacticsImpl.{assignment,genInductionT}
+import HybridProgramTacticsImpl.genInductionT
 
 /**
  * Implementation of builtin higher tactics composed of base tactics.
@@ -37,8 +37,7 @@ object BuiltinHigherTactics {
         case BoxModality(prog, _) if simplifyProg => prog match {
           case Sequence(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
-          case Assign(_, _) => Some(assignment(p))
-          // case Assign(_, _) => Some(assignT(p))
+          case Assign(_, _) => Some(boxAssignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
           case _ => None

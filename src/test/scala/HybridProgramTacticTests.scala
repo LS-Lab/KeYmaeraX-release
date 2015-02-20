@@ -167,6 +167,24 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sequent("x_2".asNamedSymbol :: Nil, "x_2=1".asFormula :: Nil, "[{x_2:=x_2+1;}*;]x_2>0".asFormula :: Nil))
   }
 
+  it should "be applicable in the antecedent" in {
+    import TacticLibrary.boxAssignT
+    val s = sequent(Nil, "[x:=x+1;]x>0".asFormula :: Nil, Nil)
+    val assignT = locateAnte(boxAssignT)
+    getProofSequent(assignT, new RootNode(s)) should be (sequent(Nil, "\\forall x_0. (x_0=x+1 -> x_0>0)".asFormula :: Nil, Nil))
+  }
+
+  it should "use the appropriate axiom variant" in {
+    import TacticLibrary.boxAssignT
+    val s = sequent(Nil, "[x:=1;]x>0".asFormula :: Nil, Nil)
+    getProofSequent(locateAnte(boxAssignT), new RootNode(s)) should be (sequent(Nil, "1>0".asFormula :: Nil, Nil))
+    val t = sucSequent("[x:=1;]x>0".asFormula)
+    getProofSequent(locateSucc(boxAssignT), new RootNode(t)) should be (sucSequent("1>0".asFormula))
+    val u = sucSequent("[x:=x+1;]x>0".asFormula)
+    getProofSequent(locateSucc(boxAssignT), new RootNode(u)) should be (
+      sequent("x_1".asNamedSymbol::Nil, "x_1=x+1".asFormula::Nil, "x_1>0".asFormula::Nil))
+  }
+
   "v2tBoxAssignT" should "work on self assignment" in {
     val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
     val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())

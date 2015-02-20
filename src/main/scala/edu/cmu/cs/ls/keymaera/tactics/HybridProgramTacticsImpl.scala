@@ -242,7 +242,7 @@ object HybridProgramTacticsImpl {
   }
 
   def boxAssignT: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _, _), _), _) => true
       case _ => false
     })
@@ -250,16 +250,24 @@ object HybridProgramTacticsImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import FOQuantifierTacticsImpl.skolemizeT
-        // TODO exploit formula structure at position p to execute most appropriate tactic. for now: most general tactic
-        Some(boxAssignEqualT(p) & skolemizeT(forceUniquify = true)(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
+      def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = Helper.names(t).contains(v) || (rest match {
+        case BoxModality(_: ContEvolveProgram, _) => true
+        case BoxModality(_: Loop, _) => true
+        case _ => false
+      })
+
+      import FOQuantifierTacticsImpl.skolemizeT
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
+          if (p.isAnte) Some(boxAssignEqualT(p))
+          else Some(boxAssignEqualT(p) & skolemizeT(forceUniquify = true)(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
+        case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) => Some(v2tBoxAssignT(p))
+        }
       }
-    }
   }
 
   def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assign equational") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _,_), _), _) => true
       case _ => false
     })
@@ -969,29 +977,5 @@ object HybridProgramTacticsImpl {
       override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
     })
   }
-
-  /**
-   * Creates a new position tactic for the assignment rule.
-   * @return The assignment rule tactic.
-   */
-  protected[tactics] def assignment = new PositionTactic("Assignment") {
-    import FOQuantifierTacticsImpl.uniquify
-    // for now only on top level
-    override def applies(s: Sequent, p: Position): Boolean = {
-      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Assign(Variable(_, _, _), _), _) => true
-        case DiamondModality(Assign(Variable(_, _, _), _), _) => true
-        case _ => false
-      })
-    }
-
-    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new AssignmentRule(p)) {
-      override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
-    })
-  }
-
-  // it would be great if we could access the same position to apply the imply right rule
-  // FIXME: this only works for toplevel positions since there the positions are stable
-  private def assignmentFindImpl = locateSucc(assignment & ImplyRightT) | locateAnte(assignment & ImplyLeftT)
 
 }

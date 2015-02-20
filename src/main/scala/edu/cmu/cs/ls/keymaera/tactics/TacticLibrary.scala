@@ -243,9 +243,6 @@ object TacticLibrary {
    * Hybrid Program Tactics
    *********************************************/
 
-  // TODO replace this with the assignment axiom tactic
-  def assignment = HybridProgramTacticsImpl.assignment
-
   def derivativeAssignment = HybridProgramTacticsImpl.derivativeAssignment
 
   // axiom wrappers
