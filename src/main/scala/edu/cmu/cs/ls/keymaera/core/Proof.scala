@@ -1397,7 +1397,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
+    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
@@ -1438,15 +1438,15 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param p The ODE.
    * @return The substitution result.
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
+  private def usubstODE(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
     ContEvolveProgram = p match {
-      case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
+      case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
       case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
         NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
       } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
       case _: EmptyContEvolveProgram => p
-      case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
-      case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
+      case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
+      case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
       case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) =>
         val repl = subsDefs.find(_.n == p).get.t
         repl match {
@@ -1590,7 +1590,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
           // redundant with the checks on NFContEvolve in usubst(ode, primed)
           require(admissible(scala.collection.immutable.Seq(primedVariables(ode).toSeq: _*), ode),
             s"Substitution clash in ODE: {x}=${primedVariables(ode)} when substituting ${ode.prettyString()}")
-          usubst(ode, primedVariables(ode))
+          usubstODE(ode, primedVariables(ode))
         case Choice(a, b) => Choice(usubst(a), usubst(b))
         case Sequence(a, b) => require(admissible(catVars(usubst(a)).bv, b),
           s"Substitution clash: BV(sigma a)=${catVars(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
@@ -1605,8 +1605,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     }
   }
 
-  private def usubst(ode: ContEvolveProgram, primed: Set[NamedSymbol]): ContEvolveProgram = ode match {
-    case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(a, primed), usubst(b, primed))
+  private def usubstODE(ode: ContEvolveProgram, primed: Set[NamedSymbol]): ContEvolveProgram = ode match {
+    case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(a, primed), usubstODE(b, primed))
     case NFContEvolve(v, dv: Derivative, t, h) =>
       require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), t),
         s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
@@ -1614,8 +1614,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
       if (v.isEmpty) NFContEvolve(v, dv, usubst(t), usubst(h))
       else throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
-    case IncompleteSystem(s) => usubst(s, primed)
-    case CheckedContEvolveFragment(s) => usubst(s, primed)
+    case IncompleteSystem(s) => usubstODE(s, primed)
+    case CheckedContEvolveFragment(s) => usubstODE(s, primed)
     case c: ContEvolveProgramConstant if  subsDefs.exists(_.n == c) =>
       val repl = subsDefs.find(_.n == c).get.t
       repl match {
