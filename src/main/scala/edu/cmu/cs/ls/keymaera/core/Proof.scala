@@ -1402,7 +1402,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val USR(q, v, _) = usubst(o, u, a)
       val USR(r, w, as) = usubst(o, v, a)
       // TODO remove when proof of uniform substitution is done
-      require(r == w, "Programs where loop does not write all variables on all branches are not yet supported")
+      require((r == SetLattice.bottom && w == SetLattice.top) || r == w,
+        s"Programs where loop does not write all variables on all branches are not yet supported: r=$r ==? w=$w")
       USR(o, w, Loop(as)) ensuring (
         o.subsetOf(q), s"Non-monotonic o: $o not subset of $q") ensuring(
         q == r, s"Unstable O: $q not equal to $r") ensuring(
