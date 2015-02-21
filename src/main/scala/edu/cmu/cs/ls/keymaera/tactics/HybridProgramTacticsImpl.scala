@@ -732,33 +732,22 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box induction [*] I induction
    * @return The new tactic.
    */
-  protected[tactics] def boxInductionT: PositionTactic = new CascadedAxiomTactic("I induction", "I induction") {
+  protected[tactics] def boxInductionT: PositionTactic = new AxiomTactic("I induction", "I induction") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Loop(_), _) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
-        f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
       case BoxModality(Loop(a), p) =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aP, p))
         // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
         val g = And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p))))
         val axiomInstance = Imply(g, f)
-
-        // construct substitution
-        val aA = ProgramConstant("a")
-        val aP = PredicateConstant("p")
-
-        val intermediate = Imply(And(p, BoxModality(Loop(aA), Imply(p, BoxModality(aA, p)))), BoxModality(Loop(aA), p))
-
-        val s1 = Substitution(List(SubstitutionPair(aA, a)))
-        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
-
-        val s2 = Substitution(List(SubstitutionPair(aP, p)))
-        val m2 = Map[Formula, Formula](intermediate ->
-          Imply(And(aP, BoxModality(Loop(aA), Imply(aP, BoxModality(aA, aP)))), BoxModality(Loop(aA), aP)))
-
-        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
 
