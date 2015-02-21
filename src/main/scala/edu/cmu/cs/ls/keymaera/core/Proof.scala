@@ -1392,8 +1392,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    */
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
     case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
-    case Assign(CDot, e) => USR(o+CDot, u+CDot, Assign(CDot, usubst(o, u, e)))
-    case Assign(d@Derivative(_, CDot), e) => USR(o+CDot, u+CDot, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
