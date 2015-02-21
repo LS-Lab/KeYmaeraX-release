@@ -966,6 +966,7 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
  */
 
 sealed trait Program extends Expr {
+  //@TODO reads+writes have redundancy with bound and free variable definitions.
   def reads: Seq[NamedSymbol]
   def writes: Seq[NamedSymbol]
 }
