@@ -1184,7 +1184,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param u The taboo set.
    * @param p The program.
    */
-  private sealed case class USR(o: SetLattice[NamedSymbol],
+  private[core] sealed case class USR(o: SetLattice[NamedSymbol],
                         u: SetLattice[NamedSymbol],
                         p: Program)
 
@@ -1217,12 +1217,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   // uniform substitution on terms
   def apply(t: Term): Term = {
     try {
-      usubst(SetLattice.bottom, SetLattice.bottom, t)
+      usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)
     } catch {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
     }
-  }
+  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(t))
 
   def apply(f: Formula): Formula = {
     log("\tSubstituting " + f.prettyString + " using " + this)
@@ -1234,7 +1234,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
     }
-  }
+  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(f))
 
   def apply(s: Sequent): Sequent = {
     try {
@@ -1253,7 +1253,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
     }
-  }
+  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(p))
 
   private def substDiff(s: Seq[SubstitutionPair], names: SetLattice[NamedSymbol]) =
     new Substitution(s.filter(_.n match { case en: NamedSymbol => !names.contains(en) case _ => true }))
@@ -1279,7 +1279,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   /**
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
+  private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
     def subst(t: Term) = subsDefs.find(_.n == t).get.t.asInstanceOf[Term]
     t match {
       // homomorphic cases
@@ -1325,7 +1325,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     }
   }
 
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], f: Formula): Formula = f match {
+  private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], f: Formula): Formula = f match {
       // homomorphic cases
     case Not(g) => Not(usubst(o, u, g))
     case And(l, r) => And(usubst(o, u, l), usubst(o, u, r))
@@ -1390,7 +1390,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   /**
    *
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
+  private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
     case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
@@ -1486,12 +1486,18 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
 
   override def toString: String = "GlobSubst(" + subsDefs.mkString(", ") + ")"
 
-  def apply(t: Term): Term = usubst(t)
-  def apply(f: Formula): Formula = usubst(f)
-  def apply(p: Program): Program = usubst(p)
+  def apply(t: Term): Term = {
+    usubst(t)
+  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t))
+  def apply(f: Formula): Formula = {
+    usubst(f)
+  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f))
+  def apply(p: Program): Program = {
+    usubst(p)
+  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p)
 
   // uniform substitution on terms
-  private def usubst(t: Term): Term = {
+  private[core] def usubst(t: Term): Term = {
     try {
       t match {
         // uniform substitution base cases
@@ -1530,7 +1536,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     }
   }
 
-  private def usubst(f: Formula): Formula = {
+  private[core] def usubst(f: Formula): Formula = {
     log(s"Substituting ${f.prettyString()} using $this")
     try {
       f match {
@@ -1590,7 +1596,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   }
 
   // uniform substitution on programs
-  private def usubst(p: Program): Program = {
+  private[core] def usubst(p: Program): Program = {
     try {
       p match {
         case a: ProgramConstant if subsDefs.exists(_.n == a) =>
