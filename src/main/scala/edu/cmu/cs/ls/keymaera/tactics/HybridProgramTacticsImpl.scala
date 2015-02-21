@@ -780,34 +780,23 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box choice [++].
    * @return The new tactic.
    */
-  def boxChoiceT: PositionTactic = new CascadedAxiomTactic("[++] choice", "[++] choice") {
+  def boxChoiceT: PositionTactic = new AxiomTactic("[++] choice", "[++] choice") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Choice(_, _), _) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
-        f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
       case BoxModality(Choice(a, b), p) =>
-        // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
-        val g = And(BoxModality(a, p), BoxModality(b, p))
-        val axiomInstance = Equiv(f, g)
-
         // construct substitution
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
-        val aP = PredicateConstant("p")
-
-        val intermediate = Equiv(BoxModality(Choice(aA, aB), p), And(BoxModality(aA, p), BoxModality(aB, p)))
-
-        val s1 = Substitution(List(SubstitutionPair(aA, a), SubstitutionPair(aB, b)))
-        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
-
-        val s2 = Substitution(List(SubstitutionPair(aP, p)))
-        val m2 = Map[Formula, Formula](intermediate -> Equiv(BoxModality(Choice(aA, aB), aP), And(BoxModality(aA, aP),
-          BoxModality(aB, aP))))
-
-        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
+        // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
+        val g = And(BoxModality(a, p), BoxModality(b, p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
   }
