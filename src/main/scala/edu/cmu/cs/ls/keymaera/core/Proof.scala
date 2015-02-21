@@ -1637,17 +1637,27 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   }
 
   // check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates/program constants
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = ???
-  //@TODO implement properly
-  // occurrences.forall(
-//     fnPredPrg =>
-//       subDefs.forall(hasHead(_, fnPredPrg), 
-//         subPair => {
-//           val (n, repl) = subPair
-//           catVars(repl).fv.intersect.U.isEmpty
-//         }
-//        )
-//   )
+  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
+    // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
+    // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
+    // occurs in theta (or phi or alpha)
+    // TODO Def. 19 (admissible uniform substitution) does not talk about program constants
+    def intersectsU(symbol: Expr): Boolean = (symbol match {
+        case t: Term => freeVariables(t)
+        case f: Formula => catVars(f).fv
+        case p: Program => catVars(p).fv
+      }).intersect(SetLattice(U.toSet)) != SetLattice.bottom
+
+    def nameOf(symbol: Expr): NamedSymbol = symbol match {
+      case Derivative(_, v: Variable) => v // TODO check
+      case ApplyPredicate(fn, _) => fn
+      case Apply(fn, _) => fn
+      case s: NamedSymbol => s
+      case _ => throw new IllegalArgumentException(s"Unexpected ${symbol.prettyString()} in substitution pair")
+    }
+
+    subsDefs.filter(sigma => intersectsU(sigma.t)).map(sigma => nameOf(sigma.n)).forall(fn => !occurrences.contains(fn))
+  }
   
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
