@@ -1510,6 +1510,15 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
             )
           GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
         case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(theta))
+        case Anything => Anything // TODO check
+        case Nothing => Nothing // TODO check
+        case CDot if !subsDefs.exists(_.n == CDot) => CDot // TODO check (should be case x = sigma x for variable x)
+        case CDot if  subsDefs.exists(_.n == CDot) => // TODO check (should be case x = sigma x for variable x)
+          subsDefs.find(_.n == CDot).get.t match {
+            case t: Term => t
+            case _ => throw new IllegalArgumentException("Can only substitute terms for .")
+          }
+        case n@Number(_, _) => n
         //@TODO any way of ensuring for the following that top-level(t)==top-level(\result)
          // homomorphic cases
         case Neg(s, e) => Neg(s, usubst(e))
