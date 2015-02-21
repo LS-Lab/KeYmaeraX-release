@@ -1308,8 +1308,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
         val (rArg, rTerm) =
           (subs.n match { case Apply(_, v: NamedSymbol) => v
-                          case _ => throw new IllegalArgumentException(s"Substitution of f(theta) for arbitrary theta not supported: $t") },
-           subs.t.asInstanceOf[Term])
+                          case _ => throw new IllegalArgumentException(
+                            s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
+           subs.t match { case t: Term => t
+                          case _ => throw new IllegalArgumentException(
+                            s"Can only substitute terms for ${app.prettyString()}")}
+          )
         require(freeVariables(rTerm).intersect(u).isEmpty,
           s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
         instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
@@ -1357,8 +1361,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
       val (rArg, rFormula) = (
         subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v
-                       case _ => throw new IllegalArgumentException(s"Substitution of p(theta) for arbitrary theta not supported: $f")},
-        subs.t.asInstanceOf[Formula])
+                       case _ => throw new IllegalArgumentException(
+                         s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=$theta not supported")},
+        subs.t match { case f: Formula => f
+                       case _ => throw new IllegalArgumentException(
+                         s"Can only substitute formulas for ${app.prettyString()}")}
+        )
       val restrictedU = rArg match { case CDot => u case _ => u-rArg }
       require(catVars(rFormula).fv.intersect(restrictedU).isEmpty,
         s"Substitution clash: ${catVars(rFormula).fv} ∩ $restrictedU is not empty")
@@ -1389,7 +1397,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    //@TODO Looks like infinitely recursive implementation
     case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
@@ -1441,7 +1448,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
       case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
       case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) =>
-        subsDefs.find(_.n == p).get.t.asInstanceOf[ContEvolveProgram]
+        val repl = subsDefs.find(_.n == p).get.t
+        repl match {
+          case replODE: ContEvolveProgram => replODE
+          case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
+            s"continuous program constants: $repl not allowed for $a")
+        }
       case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => p
     }
 }
@@ -1487,13 +1499,16 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         // uniform substitution base cases
         case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
         case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
-        //@TODO check implementation
-                val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-                val (rArg, rTerm) =
-                  (subs.n match { case Apply(_, v: NamedSymbol) => v
-                                  case _ => throw new IllegalArgumentException(s"Substitution of f(theta) for arbitrary theta not supported: $t") },
-                   subs.t.asInstanceOf[Term])
-                instantiate(rArg, usubst(theta)).usubst(rTerm)
+          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
+          val (rArg, rTerm) =
+            (subs.n match { case Apply(_, v: NamedSymbol) => v
+                            case _ => throw new IllegalArgumentException(
+                              s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
+             subs.t match { case t: Term => t
+                            case _ => throw new IllegalArgumentException(
+                              s"Can only substitute terms for ${app.prettyString()}")}
+            )
+          GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
         case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(theta))
         //@TODO any way of ensuring for the following that top-level(t)==top-level(\result)
          // homomorphic cases
@@ -1509,16 +1524,20 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   }
 
   private def usubst(f: Formula): Formula = {
-    log("\tSubstituting " + f.prettyString + " using " + this)
+    log(s"Substituting ${f.prettyString()} using $this")
     try {
       f match {
         case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rFormula) = (
             subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v
-              case _ => throw new IllegalArgumentException(s"Substitution of p(theta) for arbitrary theta not supported: $f")},
-              subs.t.asInstanceOf[Formula])
-            instantiate(rArg, usubst(theta)).usubst(rFormula)
+                           case _ => throw new IllegalArgumentException(
+                            s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=${theta.prettyString()} not supported")},
+            subs.t match { case f: Formula => f
+                           case _ => throw new IllegalArgumentException(
+                             s"Can only substitute formulas for ${app.prettyString()}")
+            })
+          GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
 
         //@TODO any way of ensuring for the following that  top-level(f)==top-level(\result)
@@ -1537,14 +1556,18 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
         // binding cases add bound variables to u
-        case Forall(vars, g) => require(admissible(vars, g), "Substitution clash");
+        case Forall(vars, g) => require(admissible(vars, g),
+          s"Substitution clash: {x}=$vars when substituting forall ${g.prettyString()}")
             Forall(vars, usubst(g))
-        case Exists(vars, g) => require(admissible(vars, g), "Substitution clash");
+        case Exists(vars, g) => require(admissible(vars, g),
+          s"Substitution clash: {x}=$vars when substituting exists ${g.prettyString()}")
             Exists(vars, usubst(g))
 
-        case BoxModality(p, g) => require(admissible(catVars(usubst(p)).bv, g), "Substitution clash");
+        case BoxModality(p, g) => require(admissible(catVars(usubst(p)).bv, g),
+          s"Substitution clash: BV(sigma a)=${catVars(usubst(p)).bv} when substituting [${p.prettyString()}]${g.prettyString()}")
             BoxModality(usubst(p), usubst(g))
-        case DiamondModality(p, g) => require(admissible(catVars(usubst(p)).bv, g), "Substitution clash");
+        case DiamondModality(p, g) => require(admissible(catVars(usubst(p)).bv, g),
+          s"Substitution clash: BV(sigma a)=${catVars(usubst(p)).bv} when substituting <${p.prettyString()}>${g.prettyString()}")
             DiamondModality(usubst(p), usubst(g))
       }
     } catch {
@@ -1563,19 +1586,45 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Assign(x: Variable, e) => Assign(x, usubst(e))
         case NDetAssign(x: Variable) => NDetAssign(x)
         case Test(f) => Test(usubst(f))
-        case ode: ContEvolveProgram => require(admissible(primedVariables(ode), ode), "Substitution clash");
-        //@TODO Review that clash check will work as specified and change infinitely recursive implementation
-            usubst(ode)
+        case ode: ContEvolveProgram =>
+          // redundant with the checks on NFContEvolve in usubst(ode, primed)
+          require(admissible(scala.collection.immutable.Seq(primedVariables(ode).toSeq: _*), ode),
+            s"Substitution clash in ODE: {x}=${primedVariables(ode)} when substituting ${ode.prettyString()}")
+          usubst(ode, primedVariables(ode))
         case Choice(a, b) => Choice(usubst(a), usubst(b))
-        case Sequence(a, b) => require(admissible(catVars(usubst(a)).bv, b), "Substitution clash");
-            Sequence(usubst(a), usubst(b))
-        case Loop(a) => require(admissible(catVars(usubst(a)).bv, a), "Substitution clash");
-            Loop(usubst(a))
+        case Sequence(a, b) => require(admissible(catVars(usubst(a)).bv, b),
+          s"Substitution clash: BV(sigma a)=${catVars(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
+          Sequence(usubst(a), usubst(b))
+        case Loop(a) => require(admissible(catVars(usubst(a)).bv, a),
+          s"Substitution clash: BV(sigma a)=${catVars(usubst(a)).bv} when substituting ${a.prettyString()} *")
+          Loop(usubst(a))
       }
     } catch {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
     }
+  }
+
+  private def usubst(ode: ContEvolveProgram, primed: Set[NamedSymbol]): ContEvolveProgram = ode match {
+    case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(a, primed), usubst(b, primed))
+    case NFContEvolve(v, dv: Derivative, t, h) =>
+      require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), t),
+        s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
+      require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), h),
+        s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
+      if (v.isEmpty) NFContEvolve(v, dv, usubst(t), usubst(h))
+      else throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
+    case IncompleteSystem(s) => usubst(s, primed)
+    case CheckedContEvolveFragment(s) => usubst(s, primed)
+    case c: ContEvolveProgramConstant if  subsDefs.exists(_.n == c) =>
+      val repl = subsDefs.find(_.n == c).get.t
+      repl match {
+        case replODE: ContEvolveProgram => replODE
+        case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
+          s"continuous program constants: $repl not allowed for $c")
+      }
+    case c: ContEvolveProgramConstant if !subsDefs.exists(_.n == c) => c
+    case _: EmptyContEvolveProgram => ode
   }
   
   def apply(s: Sequent): Sequent = {
@@ -1603,6 +1652,14 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
+  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = U.s match {
+    case Left(_) => /* top */ false // TODO check
+    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), fnPredPrgSymbolsOf(f))
+  }
+  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = U.s match {
+    case Left(_) => /* top */ false // TODO check
+    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), fnPredPrgSymbolsOf(p))
+  }
 
   private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
     case Not(g) => fnPredPrgSymbolsOf(g)
