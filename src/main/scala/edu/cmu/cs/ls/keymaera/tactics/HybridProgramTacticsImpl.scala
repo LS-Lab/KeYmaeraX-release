@@ -706,35 +706,23 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for sequential composition [;]
    * @return The new tactic.
    */
-  protected[tactics] def boxSeqT: PositionTactic = new CascadedAxiomTactic("[;] compose", "[;] compose") {
+  protected[tactics] def boxSeqT: PositionTactic = new AxiomTactic("[;] compose", "[;] compose") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Sequence(_, _), _) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
-        f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
       case BoxModality(Sequence(a, b), p) =>
-        // construct axiom instance: [ a; b ]p <-> [a][b]p.
-        val g = BoxModality(a, BoxModality(b, p))
-        val axiomInstance = Equiv(f, g)
-
         // construct substitution
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
-        val aP = PredicateConstant("p")
-        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
-
-        val intermediate = Equiv(BoxModality(Sequence(aA, aB), p), BoxModality(aA, BoxModality(aB, p)))
-
-        val s1 = Substitution(List(SubstitutionPair(aA, a), SubstitutionPair(aB, b)))
-        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
-
-        val s2 = Substitution(List(SubstitutionPair(aP, p)))
-        val m2 = Map[Formula, Formula](intermediate -> Equiv(BoxModality(Sequence(aA, aB), aP),
-          BoxModality(aA, BoxModality(aB, aP))))
-
-        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aB, b), SubstitutionPair(aP, p))
+        // construct axiom instance: [ a; b ]p <-> [a][b]p.
+        val g = BoxModality(a, BoxModality(b, p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
 
