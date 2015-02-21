@@ -12,15 +12,10 @@ import scala.util.Random
  */
 
 class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
-  private var s: Substitution = null
-
-  override def beforeEach() = {
-    s = new Substitution(List())
-  }
 
   private def V(s: String) = Variable(s, None, Real)
 
-  private def applySubstitutionT(o: Set[NamedSymbol], u: Set[NamedSymbol], t: Term) : Term = {
+  private def applySubstitutionT(s: Substitution, o: Set[NamedSymbol], u: Set[NamedSymbol], t: Term) : Term = {
     val applySubstitution = PrivateMethod[Term]('usubst)
     try {
       s invokePrivate applySubstitution(SetLattice(o), SetLattice(u), t)
@@ -31,7 +26,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     }
   }
 
-  private def applySubstitutionF(o: Set[NamedSymbol], u: Set[NamedSymbol], f: Formula) : Formula = {
+  private def applySubstitutionF(s: Substitution, o: Set[NamedSymbol], u: Set[NamedSymbol], f: Formula) : Formula = {
     val applySubstitution = PrivateMethod[Formula]('usubst)
     try {
       s invokePrivate applySubstitution(SetLattice(o), SetLattice(u), f)
@@ -42,7 +37,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     }
   }
 
-  private def applySubstitution(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program) : Any = {
+  private def applySubstitution(s: Substitution, o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program) : Any = {
     val applySubstitution = PrivateMethod[Any]('usubstComps)
     try {
       s invokePrivate applySubstitution(o, u, p)
@@ -61,73 +56,73 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // \theta +/- \eta
 
   "Uniform substitution of (x,y) |-> x+y" should "be y+y" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "y".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "y".asTerm)))
     s.apply("x()+y".asTerm) should be ("y+y".asTerm)
   }
 
   "Uniform substitution of (x,y)(y,x) |-> x-y" should "be y-x" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "y".asTerm),new SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "y".asTerm),new SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply("x()-y()".asTerm) should be ("y-x".asTerm)
   }
 
   "Uniform substitution of (x,y)(y,t) |-> x*y where {y} is bound" should "throw a SubstitutionClashException" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "t".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitutionT(Set.empty, Set(V("y")),"x()*y".asTerm)
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "t".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitutionT(s, Set.empty, Set(V("y")),"x()*y".asTerm)
   }
 
   "Uniform substitution of (x,y)(y,x) |-> x/y where {y} is bound" should "not be permitted" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitutionT(Set.empty, Set(V("y")),"x()/y".asTerm)
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitutionT(s, Set.empty, Set(V("y")),"x()/y".asTerm)
   }
 
   // f(\theta) apply on f
 
   "Uniform substitution of (x,y)(f(.),.+1) |-> f(x)" should "be y+1" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(Apply(f, CDot), Add(Real, CDot, Number(1)))))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(Apply(f, CDot), Add(Real, CDot, Number(1)))))
     s.apply(Apply(f, "x()".asTerm)) should be ("y+1".asTerm)
   }
 
   ignore /*"Uniform substitution f(x)"*/ should "be y+1 with (x,y)(f(x),x+1)" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair(Apply(f, "x".asTerm), "x+1".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair(Apply(f, "x".asTerm), "x+1".asTerm)))
     s.apply(Apply(f, "x".asTerm)) should be ("y+1".asTerm)
   }
 
   ignore /*"Uniform substitution of f(x)"*/ should "be y+z+1 with (x,y+z)(f(x),x+1)" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x".asTerm, "y+z".asTerm), SubstitutionPair(Apply(f, "x".asTerm), "x+1".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x".asTerm, "y+z".asTerm), SubstitutionPair(Apply(f, "x".asTerm), "x+1".asTerm)))
     s.apply(Apply(f, "x".asTerm)) should be ("y+z+1".asTerm)
   }
   "Uniform substitution of f(x)" should "be y+z+1 with (x,y+z)(f(.),.+1)" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y+z".asTerm), SubstitutionPair(Apply(f, CDot), Add(Real, CDot, "1".asTerm))))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y+z".asTerm), SubstitutionPair(Apply(f, CDot), Add(Real, CDot, "1".asTerm))))
     s.apply(Apply(f, "x()".asTerm)) should be ("y+z+1".asTerm)
   }
 
   "Uniform substitution of (x,y)(f(.),.+x+1) |-> f(x)" should "be y+x+1" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
       SubstitutionPair(Apply(f, CDot), Add(Real, Add(Real, CDot, "x".asTerm), Number(1)))))
     s.apply(Apply(f, "x()".asTerm)) should be ("y+x+1".asTerm)
   }
 
   ignore /*"Uniform substitution of f(x)"*/ should "be y+y+1 with (x,y)(f(x),x+x+1)" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
       SubstitutionPair(Apply(f, "x()".asTerm), Add(Real, Add(Real, "x".asTerm, "x".asTerm), Number(1)))))
     s.apply(Apply(f, "x()".asTerm)) should be ("y+y+1".asTerm)
   }
   "Uniform substitution of f(x)" should "be y+y+1 with (x,y)(f(.),.+.+1)" in {
     val f = Function("f", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
       SubstitutionPair(Apply(f, CDot), Add(Real, Add(Real, CDot, CDot), Number(1)))))
     s.apply(Apply(f, "x()".asTerm)) should be ("y+y+1".asTerm)
   }
 
   "Uniform substitution of  p(x)" should "be [x:=y+1;]x>0 with (x,y)(p(.),[x:=.+1;]x>0)" in {
     val p = Function("p", None, Real, Bool)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
       SubstitutionPair(ApplyPredicate(p, CDot), BoxModality(Assign("x".asTerm,
         Add(Real, CDot, Number(1))), GreaterThan(Real, "x".asTerm, Number(0))))))
     s.apply(ApplyPredicate(p, "x()".asTerm)) should be ("[x:=y+1;]x>0".asFormula)
@@ -135,7 +130,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   ignore should "be [x:=y+1;]x>0 with (x,y)(p(x),[x:=x+1;]x>0)" in {
     val p = Function("p", None, Real, Bool)
-    s = Substitution(List(SubstitutionPair("x".asTerm, "y".asTerm),
+    val s = Substitution(List(SubstitutionPair("x".asTerm, "y".asTerm),
       SubstitutionPair(ApplyPredicate(p, "x".asTerm), BoxModality(Assign("x".asTerm,
         Add(Real, "x".asTerm, Number(1))), GreaterThan(Real, "x".asTerm, Number(0))))))
     s.apply(ApplyPredicate(p, "x".asTerm)) should be ("[x:=y+1;]x>0".asFormula)
@@ -143,7 +138,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,y)(p(•),[•:=•+1;]•>0) |-> p(x)" should "be [•:=y+1;]•>0" in {
     val p = Function("p", None, Real, Bool)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm),
       SubstitutionPair(ApplyPredicate(p, CDot), BoxModality(Assign(CDot,
         Add(Real, CDot, Number(1))), GreaterThan(Real, CDot, Number(0))))))
     s.apply(ApplyPredicate(p, "x()".asTerm)) should be (
@@ -154,26 +149,26 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,1)(y,x) |-> g(x)" should "be g(1)" in {
     val g = Function("g", None, Real, Real)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply(Apply(g, "x()".asTerm)) should be (Apply(g, Number(1)))
   }
 
   "Uniform substitution of (x,1)(y,x) |-> g(x) where {x} is bound" should "not be permitted" in {
     val g = Function("g", None, Real, Bool)
-    s = Substitution(List(SubstitutionPair("y()".asTerm, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitutionT(Set.empty, Set(V("x")), Apply(g, "y()".asTerm))
+    val s = Substitution(List(SubstitutionPair("y()".asTerm, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitutionT(s, Set.empty, Set(V("x")), Apply(g, "y()".asTerm))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> g(x)" should "be g(y)" in {
     val g = Function("g", None, Real, Bool)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply(Apply(g, "x()".asTerm)) should be (Apply(g, "y".asTerm))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> f(x)=g(y)" should "be f(y)=g(x)" in {
     val f = Function("f", None, Real, Bool)
     val g = Function("g", None, Real, Bool)
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply(Equals(Bool, Apply(f, "x()".asTerm), Apply(g, "y()".asTerm))) should be (
       Equals(Bool, Apply(f, "y".asTerm), Apply(g, "x".asTerm)))
   }
@@ -181,17 +176,17 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // x substituable
 
   "Uniform substitution of (x,y) |-> x" should "be y" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm)))
     s.apply("x()".asTerm) should be ("y".asTerm)
   }
 
   "Uniform substitution of (x,y) |-> x where {y} is bound" should "not be permitted" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitutionT(Set.empty, Set(V("y")),"x()".asTerm)
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitutionT(s, Set.empty, Set(V("y")),"x()".asTerm)
   }
 
   "Uniform substitution of (x,y) |-> y" should "be y" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "y".asTerm)))
     s.apply("y".asTerm) should be ("y".asTerm)
   }
 
@@ -203,7 +198,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // \alpha U \beta
 
   "Uniform substitution of (x,1) |-> x:=1 ++ x:=x+1 ++ z:=x;" should "be x:=1 ++ x:=1+1 ++ z:=1;" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "1".asTerm)))
     // TODO not yet supported, hence exception
     a [SubstitutionClashException] should be thrownBy s.apply("x:=1 ++ x:=x()+1 ++ z:=x()".asProgram) //should be ("x:=1 ++ x:=1+1 ++ z:=1;".asProgram)
 //    applySubstitution(Set.empty, Set.empty,"x:=1 ++ x:=x+1 ++ z:=x".asProgram) should be (
@@ -212,7 +207,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // TODO not yet supported
   "Uniform substitution of (x,t) |-> x:=1 ++ x:=x+1 ++ z:=x;" should "be x:=1 ++ x:=t+1 ++ z:=t;" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "t".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "t".asTerm)))
     // TODO not yet supported, hence exception
     a [SubstitutionClashException] should be thrownBy s.apply("x:=1 ++ x:=x()+1 ++ z:=x()".asProgram) //should be ("x:=1 ++ x:=t+1 ++ z:=t;".asProgram)
 //    applySubstitution(Set.empty, Set.empty, "x:=1 ++ x:=x+1 ++ z:=x".asProgram) should be (
@@ -230,9 +225,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "work when cascaded" in {
     val s = Substitution(List(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
       SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram)))
-    val t = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x*y>5".asFormula)))
+    val t = Substitution(List(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), Anything), "x*y>5".asFormula)))
 
-    s(t(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")), PredicateConstant("p")))) should be (
+    s(t(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")),
+        ApplyPredicate(Function("p", None, Real, Bool), Anything)))) should be (
       "[x:=2 ++ y:=3]x*y>5".asFormula
     )
   }
@@ -240,19 +236,19 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // \alpha ; \beta
 
   "Uniform substitution of (y,x+y) |-> x:=y;z:=x+y;" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("x:=y(); z:=x+y();".asProgram)
   }
 
   "Uniform substitution of (x,1) |-> x:=x+1;z:=x;" should "be x:=1+1;z:=x;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("x:=x()+1;z:=x;".asProgram) should be ("x:=1+1; z:=x;".asProgram)
-    applySubstitution(Set.empty, Set.empty, "x:=x()+1;z:=x;".asProgram) should be (
+    applySubstitution(s, Set.empty, Set.empty, "x:=x()+1;z:=x;".asProgram) should be (
       Set(V("x"), V("z")), Set(V("x"), V("z")), "x:=1+1; z:=x;".asProgram)
   }
 
   "Uniform substitution of (x,1) |-> {x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};" should "be {x:=1 ++ x:=1+1 ++ z:=1};{x:=1 ++ x:=x+1 ++ z:=x};" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm)))
     // TODO not yet supported, hence exception
     a [SubstitutionClashException] should be thrownBy s.apply("{x:=1 ++ x:=x()+1 ++ z:=x()};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram)// should be ("{x:=1 ++ x:=1+1 ++ z:=1};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram)
 //    applySubstitution(Set.empty, Set.empty, "{x:=1 ++ x:=x+1 ++ z:=x};{x:=1 ++ x:=x+1 ++ z:=x};".asProgram) should be (
@@ -262,29 +258,29 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // (\alpha)*
 
   "Uniform substitution of (x(),1)(y(),t) |-> {x:=x+y}*;" should "be {x:=x+y;}*" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm),new SubstitutionPair("y()".asTerm, "t".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm),new SubstitutionPair("y()".asTerm, "t".asTerm)))
     s.apply("{x:=x+y;}*".asProgram) should be ("{x:=x+y;}*".asProgram)
     s.apply("{x:=x()+y();}*".asProgram) should be ("{x:=1+t;}*".asProgram)
   }
 
   // TODO test case for variable substitution
   ignore should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "1".asTerm), SubstitutionPair("y".asTerm, "t".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "1".asTerm), SubstitutionPair("y".asTerm, "t".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("{x:=x+y;}*".asProgram)
   }
 
   "Uniform substitution of {x:=x+y}*;" should "not be permitted with (x(),1)(y(),x)" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm),new SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm),new SubstitutionPair("y()".asTerm, "x".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("{x:=x()+y();}*".asProgram)
   }
 
   ignore should "not be permitted" in {
-    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm),new SubstitutionPair("y".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x".asTerm, "1".asTerm),new SubstitutionPair("y".asTerm, "x".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("{x:=x+y;}*".asProgram)
   }
 
   "Uniform substitution of (x,1) |-> {x:=1 ++ x:=x+1 ++ z:=x}*;" should "be {x:=1 ++ x:=x+1 ++ z:=x}*" in {
-    s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x()".asTerm, "1".asTerm)))
     // TODO not yet supported
     a [SubstitutionClashException] should be thrownBy s.apply("{x:=1 ++ x:=x()+1 ++ z:=x()}*".asProgram) //should be ("{x:=1 ++ x:=x+1 ++ z:=x}*".asProgram)
   }
@@ -292,141 +288,141 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // ?\psi
 
   "Uniform substitution of (x,1)(y,x) |-> ?x+y>0;" should "be ?1+x>0;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply("?x()+y()>0;".asProgram) should be ("?1+x>0;".asProgram)
   }
 
   "Uniform substitution of (x,1)(y,x) |-> ?[x:=*;]x>0 -> y>0;" should "be ?[x:=*;]x>0 -> x>0;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply("?[x:=*;]x>0 -> y()>0;".asProgram) should be ("?[x:=*;]x>0 -> x>0;".asProgram)
-    applySubstitution(Set.empty, Set.empty, "?[x:=*;]x>0 -> y()>0;".asProgram) should be (
+    applySubstitution(s, Set.empty, Set.empty, "?[x:=*;]x>0 -> y()>0;".asProgram) should be (
       Set.empty, Set.empty,"?[x:=*;]x>0 -> x>0;".asProgram)
   }
 
   // x := \theta
 
   "Uniform substitution of (x,y) |-> t:=0;" should "be t:=0;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set.empty, "t:=0;".asProgram) should be (Set(V("t")), Set(V("t")), "t:=0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set.empty, "t:=0;".asProgram) should be (Set(V("t")), Set(V("t")), "t:=0;".asProgram)
   }
 
   "Uniform substitution of (x,1) |-> x:=x+y" should "be x:=1+y;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("x:=x()+y;".asProgram) should be ("x:=1+y;".asProgram)
-    applySubstitution(Set.empty, Set.empty, "x:=x()+y;".asProgram) should be (Set(V("x")), Set(V("x")),"x:=1+y;".asProgram)
+    applySubstitution(s, Set.empty, Set.empty, "x:=x()+y;".asProgram) should be (Set(V("x")), Set(V("x")),"x:=1+y;".asProgram)
   }
 
   "Uniform substitution of (x,1) |-> x:=x+y where x is bound" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set(V("x")),"x:=x()+y;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set(V("x")),"x:=x()+y;".asProgram)
   }
 
   "Uniform substitution of (y,x+y) |-> x:=y" should "be x:=x+y;" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     s.apply("x:=y();".asProgram) should be ("x:=x+y;".asProgram)
-    applySubstitution(Set.empty, Set.empty, "x:=y();".asProgram) should be (Set(V("x")), Set(V("x")),"x:=x+y;".asProgram)
+    applySubstitution(s, Set.empty, Set.empty, "x:=y();".asProgram) should be (Set(V("x")), Set(V("x")),"x:=x+y;".asProgram)
   }
 
   "Uniform substitution of (y,x+y) |-> x:=y where {x} is bound" should "be not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set(V("x")), "x:=y();".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set(V("x")), "x:=y();".asProgram)
   }
 
   "Uniform substitution of (y,x+y) |-> z:=x+y;" should "be z:=x+x+y;" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     s.apply("z:=x+y();".asProgram) should be ("z:=x+(x+y);".asProgram)
   }
 
   "Uniform substitution of (x,y)(y,x+y) |-> x:=y" should "be x:=x+y" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     s.apply("x:=y();".asProgram) should be ("x:=x+y;".asProgram)
   }
 
   // x' = \theta & \psi
 
   "Uniform substitution of (x,y) |-> t'=x; where {t} is bound" should "be t'=y;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set(V("t")), "t'=x();".asProgram) should be (Set(V("t")), Set(V("t")),"t'=y;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set(V("t")), "t'=x();".asProgram) should be (Set(V("t")), Set(V("t")),"t'=y;".asProgram)
   }
 
   // TODO substitution of variables not yet supported
   ignore /*"Uniform substitution of (t,1)(x,y) |-> t'=x; where {t} is bound"*/ should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x".asTerm, "y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set(V("t")), "t'=x;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x".asTerm, "y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set(V("t")), "t'=x;".asProgram)
   }
 
   "Uniform substitution of (t,1)(x,t) |-> t'=x; where {t} is bound" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("t()".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "t".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set(V("t")), "t'=x();".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t()".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "t".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set(V("t")), "t'=x();".asProgram)
   }
 
   // TODO substitution of variables not yet supported
   ignore /*"Uniform substitution of t'=x;"*/ should "not be permitted with (t,1)(x,y)" in {
-    s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x".asTerm, "y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set.empty, "t'=x;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x".asTerm, "y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set.empty, "t'=x;".asProgram)
   }
 
   "Uniform substitution of (x,y) |-> t'=x;" should "be t'=y;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set.empty, "t'=x();".asProgram) should be  (Set(V("t")), Set(V("t")), "t'=y;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set.empty, "t'=x();".asProgram) should be  (Set(V("t")), Set(V("t")), "t'=y;".asProgram)
   }
 
   "Uniform substitution of (x,t) |-> t'=x;" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set.empty, "t'=x();".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set.empty, "t'=x();".asProgram)
   }
 
   "Uniform substitution of (x,y) |-> t'=x & x*y+t+1>0; where {t} is bound" should "be t'=y & y*y+t+1>0;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram) should be (
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram) should be (
       Set(V("t")), Set(V("t")),"t'=y & y*y+t+1>0;".asProgram)
   }
 
   // TODO substitution of variables not yet supported
   ignore /*"Uniform substitution of (t,1)(x,y) |-> t'=x & x*y+t+1>0; where {t} is bound"*/ should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram)
   }
 
   ignore /*"Uniform substitution of (t,1)(x,y) |-> t'=x & x*y+t+1>0;"*/ should "be t'=y & y*y+t+1>0 when {t} is must-bound" in {
-    s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set(V("t")), Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram) should be (Set(V("t")), Set(V("t")),"t'=y & y*y+t+1>0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set(V("t")), Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram) should be (Set(V("t")), Set(V("t")),"t'=y & y*y+t+1>0;".asProgram)
   }
 
   "Uniform substitution of (x,t) |-> t'=x & x*y+t+1>0; where {t} is bound" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set(V("t")), "t'=x() & x()*y+t+1>0;".asProgram)
   }
 
   // TODO substitution of variables not yet supported
   ignore /*"Uniform substitution of (t,1)(x,y) |-> t'=x & x*y+t+1>0;"*/ should "not be permitted 2" in {
-    s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set.empty, "t'=x() & x()*y+t+1>0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t".asTerm, "1".asTerm), SubstitutionPair("x()".asTerm, "y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set.empty, "t'=x() & x()*y+t+1>0;".asProgram)
   }
 
   "Uniform substitution of (x,y) |-> t'=x & x*y+t+1>0;" should "be t'=y & y*y+t+1>0;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set.empty, "t'=x() & x()*y+t+1>0;".asProgram) should be (Set(V("t")), Set(V("t")), "t'=y & y*y+t+1>0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set.empty, "t'=x() & x()*y+t+1>0;".asProgram) should be (Set(V("t")), Set(V("t")), "t'=y & y*y+t+1>0;".asProgram)
   }
 
   "Uniform substitution of (x,t) |-> t'=x & x*y+t+1>0;" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitution(Set.empty, Set.empty, "t'=x() & x()*y+t+1>0;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitution(s, Set.empty, Set.empty, "t'=x() & x()*y+t+1>0;".asProgram)
   }
 
   "Uniform substitution of (x,t) |-> [x:=5;x'=y,y'=x & x*y>0;]1>0" should "be [x:=5;x'=y,y'=x & x*y>0;]1>0" in {
-    s = Substitution(List(SubstitutionPair("x()".asTerm, "t".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x()".asTerm, "t".asTerm)))
     s("[x:=5;x'=y,y'=x & x*y>0;]1>0".asFormula) should be ("[x:=5;x'=y,y'=x & x*y>0;]1>0".asFormula)
   }
 
   // TODO substitution of variables not yet supported
   ignore should "be [x:=5;x'=y,y'=x & x*y>0;]1>0 (the same)" in {
-    s = Substitution(List(SubstitutionPair("x".asTerm, "t".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x".asTerm, "t".asTerm)))
     s("[x:=5;x'=y,y'=x & x*y>0;]1>0".asFormula) should be ("[x:=5;x'=y,y'=x & x*y>0;]1>0".asFormula)
   }
 
   ignore /*"Uniform substitution of (x,t) |-> [x'=y,y'=x & x*y>0;]1>0"*/ should "not be permitted" in {
-    s = Substitution(List(SubstitutionPair("x".asTerm, "t".asTerm)))
+    val s = Substitution(List(SubstitutionPair("x".asTerm, "t".asTerm)))
     // x not must-bound when substituting
     a [SubstitutionClashException] should be thrownBy s("[x'=y,y'=x & x*y>0;]1>0".asFormula)
     a [SubstitutionClashException] should be thrownBy s("[{x:=1 ++ y:=2};x'=y,y'=x & x*y>0;]1>0".asFormula)
@@ -440,66 +436,66 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // \phi and/or \psi
 
   "Uniform substitution of (x,y)(y,x+y) |-> x>y & x<=y+1 " should "be y>x+y & y<=x+y+1" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     s.apply("x()>y() & x()<=y()+1".asFormula) should be ("y>x+y & y<=x+y+1".asFormula)
   }
 
   // \forall x. \phi
 
   "Uniform substitution of (x,y)(y,y+1) |-> \\forall x. x>y" should "be forall x. x>y+1" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
     s.apply("\\forall x. x>y()".asFormula) should be ("\\forall x. x>y+1".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore should "be forall x. x>y+1 (the same)" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
     s.apply("\\forall x. x>y".asFormula) should be ("\\forall x. x>y+1".asFormula)
   }
 
   "Uniform substitution of (x(),y)(y(),y+1) |-> \\forall x. x()>y() | x()<=y()+1" should "be forall x. y>y+1 | y<=y+1+1" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
     s.apply("\\forall x. x()>y() | x()<=y()+1".asFormula) should be ("\\forall x. y>y+1 | y<=y+1+1".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore should "be forall x. x>y+1 | y<=y+1+1" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
     s.apply("\\forall x. x>y | x<=y+1".asFormula) should be ("\\forall x. y>y+1 | y<=y+1+1".asFormula)
   }
 
   "Uniform substitution of (x,y)(y,x+y) |-> \\forall x. x>y | x<=y+1" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("\\forall x. x>y() | x<=y()+1".asFormula)
   }
 
   // \exists x. \phi
 
   "Uniform substitution of (x,y)(y,y+1) |-> \\exists x. x>y" should "be exists x. y>y+1" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
     s.apply("\\exists x. x()>y()".asFormula) should be ("\\exists x. y>y+1".asFormula)
     s.apply("\\exists x. x>y()".asFormula) should be ("\\exists x. x>y+1".asFormula)
   }
 
   ignore /*"Uniform substitution of (x,y)(y,y+1) |-> \\exists x. x>y"*/ should "be exists x. x>y+1" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
     s.apply("\\exists x. x>y".asFormula) should be ("\\exists x. x>y+1".asFormula)
   }
 
   "Uniform substitution of (x,y)(y,y+1) |-> \\exists x. x>y -> x<=y+1" should "be exists x. y>y+1 -> y<=y+1+1" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "y+1".asTerm)))
     s.apply("\\exists x. x()>y() -> x()<=y()+1".asFormula) should be ("\\exists x. y>y+1 -> y<=y+1+1".asFormula)
     s.apply("\\exists x. x>y() -> x()<=y()+1".asFormula) should be ("\\exists x. x>y+1 -> y<=y+1+1".asFormula)
     s.apply("\\exists x. x>y() -> x<=y()+1".asFormula) should be ("\\exists x. x>y+1 -> x<=y+1+1".asFormula)
   }
 
   ignore /*"Uniform substitution of (x,y)(y,y+1) |-> \\exists x. x>y -> x<=y+1"*/ should "be exists x. x>y+1 -> y<=y+1+1" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair("y".asTerm, "y+1".asTerm)))
     s.apply("\\exists x. x>y -> x<=y+1".asFormula) should be ("\\exists x. x>y+1 -> y<=y+1+1".asFormula)
   }
 
   "Uniform substitution of (y,x+y) |-> \\exists x. x>y -> x<=y+1" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("\\exists x. x>y() -> x<=y()+1".asFormula)
   }
 
@@ -507,13 +503,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,y)(p(t),t<1) |-> p(x)" should "be y<1" in {
     val p = Function("p", None, Real, Bool)
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), LessThan(Real, CDot, Number(1)))))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), LessThan(Real, CDot, Number(1)))))
     s.apply(ApplyPredicate(p, "x()".asTerm)) should be ("y<1".asFormula)
   }
 
   "Uniform substitution of (x,y)(p(t),t>x) |-> p(x)" should "be y>x" in {
     val p = Function("p", None, Real, Bool)
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, "x".asTerm))))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, "x".asTerm))))
     s.apply(ApplyPredicate(p, "x()".asTerm)) should be ("y>x".asFormula)
   }
 
@@ -521,90 +517,90 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,1)(y,x) |-> q(x)" should "be q(1)" in {
     val q = Function("q", None, Real, Bool)
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply(ApplyPredicate(q, "x()".asTerm)) should be (ApplyPredicate(q, Number(1)))
   }
 
   "Uniform substitution of (x,1)(y,x) |-> q(x) where {y} is bound" should "not be permitted" in {
     val q = Function("q", None, Real, Bool)
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitutionF(Set.empty, Set(V("x")), ApplyPredicate(q, "y()".asTerm))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitutionF(s, Set.empty, Set(V("x")), ApplyPredicate(q, "y()".asTerm))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> q(x)" should "be q(y)" in {
     val q = Function("q", None, Real, Bool)
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply(ApplyPredicate(q, "x()".asTerm)) should be (ApplyPredicate(q, "y".asTerm))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> p(x)=q(y)" should "be p(y)=q(x)" in {
     val p = Function("p", None, Real, Bool)
     val q = Function("q", None, Real, Bool)
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm)))
     s.apply(Equals(Bool,Apply(p, "x()".asTerm), Apply(q, "y()".asTerm))) should be (Equals(Bool,Apply(p,"y".asTerm), Apply(q,"x".asTerm)))
   }
 
   // \theta =/>/< \eta
 
   "Uniform substitution of (x,1) |-> x=y" should "be 1=y" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("x()=y".asFormula) should be ("1=y".asFormula)
   }
 
   "Uniform substitution of (x,y) |-> x=y" should "be y=y" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
     s.apply("x()=y".asFormula) should be ("y=y".asFormula)
   }
 
   "Uniform substitution of (x,y) |-> x=y where {y} is bound" should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    a [SubstitutionClashException] should be thrownBy applySubstitutionF(Set.empty, Set(V("y")), "x()=y".asFormula)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    a [SubstitutionClashException] should be thrownBy applySubstitutionF(s, Set.empty, Set(V("y")), "x()=y".asFormula)
   }
 
   "Uniform substitution of (y,x+y) |-> z=x+y" should "be z=x+x+y" in {
-    s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     s.apply("z=x+y()".asFormula) should be ("z=x+(x+y)".asFormula)
   }
 
   "Uniform substitution of (x,y)(y,x+y) |-> x=y" should "be y=x+y" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x+y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x+y".asTerm)))
     s.apply("x()=y()".asFormula) should be ("y=x+y".asFormula)
   }
 
   // [\alpha]\phi
 
   "Uniform substitution of (x,1) |-> [y:=x;]x>0" should "be [y:=1;]1>0" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("[y:=x();]x()>0".asFormula) should be ("[y:=1;]1>0".asFormula)
     s.apply("[y:=x();]x>0".asFormula) should be ("[y:=1;]x>0".asFormula)
   }
 
   "Uniform substitution of (x,1) |-> [x:=y;]x>0" should "be [x:=y;]x>0" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("[x:=y;]x()>0".asFormula) should be ("[x:=y;]1>0".asFormula)
     s.apply("[x:=y;]x>0".asFormula) should be ("[x:=y;]x>0".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of (x,t) |-> [{x:=x+y;}*]x>0"*/ should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "t".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "t".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("[{x:=x+y;}*]x>0".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of (x,t) |-> [{x'=x+y;}*]x>0"*/ should "not be permitted either" in {
-    s = Substitution(Seq(new SubstitutionPair("x".asTerm, "t".asTerm)))
+    val s = Substitution(Seq(new SubstitutionPair("x".asTerm, "t".asTerm)))
     a [SubstitutionClashException] should be thrownBy s("[{x'=x+y;}*]x>0".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of (x,1) |-> [x'=y;]x>0"*/ should "not be permitted 3" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "1".asTerm)))
     a [SubstitutionClashException] should be thrownBy s("[x'=y;]x>0".asFormula)
   }
 
   "Uniform substitution of (x,t) |-> [x:=1 ++ x:=x+1 ++ z:=x;]x>0" should "be [x:=1 ++ x:=t+1 ++ z:=t;]x>0" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "t".asTerm)))
     // TODO not yet supported, hence exception
     a [SubstitutionClashException] should be thrownBy s.apply("[x:=1 ++ x:=x()+1 ++ z:=x()]x()>0".asFormula)// should be ("[x:=1 ++ x:=t+1 ++ z:=t;]x>0".asFormula)
   }
@@ -612,19 +608,19 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // <\alpha>\phi
 
   "Uniform substitution of (x,1) |-> <y:=x;>x>0" should "be <y:=1;>1>0" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("<y:=x();>x()>0".asFormula) should be ("<y:=1;>1>0".asFormula)
   }
 
   "Uniform substitution of (x,1) |-> <x:=y;>x>0" should "be <x:=y;>x>0" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "1".asTerm)))
     s.apply("<x:=y;>x>0".asFormula) should be ("<x:=y;>x>0".asFormula)
     s.apply("<x:=y;>x()>0".asFormula) should be ("<x:=y;>1>0".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of (x,1) |-> <x'=y;>x>0"*/ should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "1".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "1".asTerm)))
     a [SubstitutionClashException] should be thrownBy s("<x'=y;>x>0".asFormula)
   }
 
@@ -634,28 +630,28 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
    */
 
   "Uniform substitution of (x,y) |-> t:=0;t'=x;" should "be t:=0;t'=y;" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set.empty, "t:=0;t'=x();".asProgram) should be (Set(V("t")), Set(V("t")), "t:=0;t'=y;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set.empty, "t:=0;t'=x();".asProgram) should be (Set(V("t")), Set(V("t")), "t:=0;t'=y;".asProgram)
     s.apply("[t:=0;t'=x();]true".asFormula) should be ("[t:=0;t'=y;]true".asFormula)
     s.apply("[t:=0;][t'=x();]true".asFormula) should be ("[t:=0;][t'=y;]true".asFormula)
   }
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of (t,y) |-> t:=0;t'=x;"*/ should "be t:=0;t'=x;" in {
-    s = Substitution(Seq(SubstitutionPair("t".asTerm, "y".asTerm)))
-    applySubstitution(Set.empty, Set.empty, "t:=0;t'=x;".asProgram) should be (Set(V("t")), Set(V("t")), "t:=0;t'=x;".asProgram)
+    val s = Substitution(Seq(SubstitutionPair("t".asTerm, "y".asTerm)))
+    applySubstitution(s, Set.empty, Set.empty, "t:=0;t'=x;".asProgram) should be (Set(V("t")), Set(V("t")), "t:=0;t'=x;".asProgram)
     s.apply("[t:=0;t'=x;]true".asFormula) should be ("[t:=0;t'=x;]true".asFormula)
     s.apply("[t:=0;][t'=x;]true".asFormula) should be ("[t:=0;][t'=x;]true".asFormula)
   }
 
   "Uniform substitution of (x,y) |-> (y,x+y) |-> x=y" should "be y=y+y" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
     val s1 = Substitution(Seq(SubstitutionPair("y()".asTerm, "x()+y".asTerm)))
     s.apply(s1.apply("x()=y()".asFormula)) should be ("y=y+y".asFormula)
   }
 
   "Uniform substitution of (x,y) |-> (y,x+y) |-> x:=y" should "be x:=y+y" in {
-    s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
     val s1 = Substitution(Seq(SubstitutionPair("y()".asTerm, "x()+y".asTerm)))
     s.apply(s1.apply("x:=y();".asProgram)) should be ("x:=y+y;".asProgram)
   }
@@ -667,13 +663,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of [y:=1][y:=2+y;]true"*/ should "not perform \\alpha renaming" in {
-    s = Substitution(Seq(SubstitutionPair("y".asTerm, "y0".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("y".asTerm, "y0".asTerm)))
     s.apply("\\forall y. (y=1 -> [y:=2+y;]true)".asFormula) should not be "\\forall y0. (y0=1 -> [y0:=2+y0;]true)".asFormula
     s.apply("\\forall y. (y=1 -> [y:=2+y;]true)".asFormula) should be ("\\forall y. (y=1 -> [y:=2+y;]true)".asFormula)
   }
 
   "Uniform substitution of [{•:=•+1;}*;]true" should "not substitute be permitted" in {
-    s = Substitution(Seq(SubstitutionPair(CDot, "x".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair(CDot, "x".asTerm)))
 
     val o = BoxModality(Loop(Assign(CDot, Add(Real, CDot, Number(1)))), True)
     a [SubstitutionClashException] should be thrownBy s.apply(o)
@@ -681,13 +677,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution of [{x:=x+1;}*;]true"*/ should "not be permitted" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "y".asTerm)))
     a [SubstitutionClashException] should be thrownBy s.apply("[{x:=x+1;}*;]true".asFormula)
   }
 
   "Uniform substitution of [y:=t;]p(y) <-> p(t)" should "[y:=t;]y>0 <-> z>0" in {
     def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
-    s = Substitution(List(SubstitutionPair("t()".asTerm, "z".asTerm),
+    val s = Substitution(List(SubstitutionPair("t()".asTerm, "z".asTerm),
       SubstitutionPair(p(CDot), GreaterThan(Real, CDot, Number(0)))))
 
     // [x:=t;]p(x) <-> p(t)
@@ -697,7 +693,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution (p(.) |-> .>0),z |-> 2) of [x:=2y+1;]p(3x+z)" should "[x:=2y+1;]3x+2>0" in {
     def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
-    s = Substitution(Seq(SubstitutionPair("z()".asTerm, "2".asTerm),
+    val s = Substitution(Seq(SubstitutionPair("z()".asTerm, "2".asTerm),
       new SubstitutionPair(p(CDot), GreaterThan(Real, CDot, Number(0)))))
 
     // [x:=2y+1;]p(3x+z)
@@ -707,7 +703,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution (p(.) |-> .>0),z |-> x+2) of [x:=2y+1;]p(3x+z)" should "throw a clash exception" in {
     def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
-    s = Substitution(Seq(SubstitutionPair("z()".asTerm, "2+x".asTerm),
+    val s = Substitution(Seq(SubstitutionPair("z()".asTerm, "2+x".asTerm),
       SubstitutionPair(p(CDot), GreaterThan(Real, CDot, Number(0)))))
 
     // [x:=2y+1;]p(3x+z)
@@ -717,30 +713,30 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // TODO variable substitution not yet supported
   ignore /*"Uniform substitution (x |-> 9) of x=9 -> [x'=x;]x>=0"*/ should "throw a clash exception too" in {
-    s = Substitution(Seq(SubstitutionPair("x".asTerm, "9".asTerm)))
+    val s = Substitution(Seq(SubstitutionPair("x".asTerm, "9".asTerm)))
     val o = "x=9 -> [x'=x;]x>=0".asFormula
     a [SubstitutionClashException] should be thrownBy  s(o)
   }
 
 //  "Uniform substitution of p(x)"
   ignore should "alpha rename x to any other variable in modalities" in {
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=2;]x>5".asFormula)))
     s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=2;]y>5".asFormula)
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val t = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=y;][x:=z;]x>5".asFormula)))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;]y>5".asFormula)
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    t(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;]y>5".asFormula)
+    val u = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=y;][x:=z;][{x:=x+1;}*;]x>5".asFormula)))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;][{y:=y+1;}*;]y>5".asFormula)
+    u(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;][{y:=y+1;}*;]y>5".asFormula)
 
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val v = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "<x:=2;>x>5".asFormula)))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("<y:=2;>y>5".asFormula)
+    v(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("<y:=2;>y>5".asFormula)
   }
 
   ignore should "not alpha rename to arbitrary terms in modalities" in {
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=2;]true".asFormula)))
 
     val o = ApplyPredicate(Function("p", None, Real, Bool), "a+1".asTerm)
@@ -749,30 +745,30 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   ignore should "substitute to arbitrary terms in simple formulas" in {
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "x>5".asFormula)))
 
     s(ApplyPredicate(Function("p", None, Real, Bool), "a+1".asTerm)) should be ("a+1>5".asFormula)
   }
 
   ignore should "not rename bound variables before substitution except in modalities" in {
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula)))
     s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
 
-    s = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val t = Substitution(Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
       "\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
+    t(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
   }
 
   "Uniform substitution of (p,x>5) on p & y!=1" should "substitute predicate constants" in {
-    s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
+    val s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
 
     s(And(PredicateConstant("p"), "y!=1".asFormula)) should be ("x>5 & y!=1".asFormula)
   }
 
   it should "not be permitted to substitute predicate constants with bound names" in {
-    s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
+    val s = Substitution(List(SubstitutionPair(PredicateConstant("p"), "x>5".asFormula)))
 
     a [SubstitutionClashException] should be thrownBy s(Forall("x".asNamedSymbol::Nil, PredicateConstant("p")))
     a [SubstitutionClashException] should be thrownBy s(BoxModality("x:=1 ++ y:=3".asProgram, PredicateConstant("p")))
