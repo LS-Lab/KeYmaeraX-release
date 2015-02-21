@@ -1546,6 +1546,12 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
             })
           GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
+        case _: PredicateConstant if  subsDefs.exists(_.n == f) => subsDefs.find(_.n == f).get.t match {
+          case pred: Formula => pred
+          case _ => throw new IllegalArgumentException(s"Can only substitute formulas for ${f.prettyString()}")
+        }
+        case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
+        case True | False => f
 
         //@TODO any way of ensuring for the following that  top-level(f)==top-level(\result)
         case Equals(d, l, r) => Equals(d, usubst(l), usubst(r))
