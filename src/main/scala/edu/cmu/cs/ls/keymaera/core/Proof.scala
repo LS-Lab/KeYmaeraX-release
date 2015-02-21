@@ -907,7 +907,6 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case CDot => true
-      case _:PredicateConstant => true
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
@@ -1067,7 +1066,6 @@ object BindingAssessment {
     case DiamondModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
 
     // base cases
-    case p: PredicateConstant => VC2(fv = SetLattice.bottom, bv = SetLattice.bottom)
     case ApplyPredicate(p, arg) => VC2(fv = freeVariables(arg), bv = SetLattice.bottom)
     case True | False => VC2(fv = SetLattice.bottom, bv = SetLattice.bottom)
     case _ => throw new UnknownOperatorException("Not implemented", f)
@@ -1348,11 +1346,6 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     case DiamondModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); DiamondModality(sp, usubst(q, v, g))
 
     // uniform substitution base cases
-    case _: PredicateConstant if  subsDefs.exists(_.n == f) =>
-      val ps = subsDefs.find(_.n == f).get.t.asInstanceOf[Formula]
-      require(catVars(ps).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(ps).fv} ∩ $u is not empty")
-      ps
-    case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
     case app@ApplyPredicate(_, Anything) if subsDefs.exists(sameHead(_, app)) =>
       val rFormula = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app)).t.asInstanceOf[Formula]
       Substitution(List()).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
@@ -1552,11 +1545,6 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
             })
           GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
-        case _: PredicateConstant if  subsDefs.exists(_.n == f) => subsDefs.find(_.n == f).get.t match {
-          case pred: Formula => pred
-          case _ => throw new IllegalArgumentException(s"Can only substitute formulas for ${f.prettyString()}")
-        }
-        case _: PredicateConstant if !subsDefs.exists(_.n == f) => f
         case True | False => f
 
         //@TODO any way of ensuring for the following that  top-level(f)==top-level(\result)
@@ -1712,7 +1700,6 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     case BoxModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
     case DiamondModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
 
-    case p: PredicateConstant => Set(p)
     case True | False => Set()
   }
 
@@ -2123,7 +2110,6 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case BoxModality(p, phi) => BoxModality(rename(p), rename(phi))
     case DiamondModality(p, phi) => DiamondModality(rename(p), rename(phi))
 
-    case _: PredicateConstant => f
     case True | False => f
   }
 
