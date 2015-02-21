@@ -30,7 +30,7 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     Tactics.KeYmaeraScheduler.shutdown()
   }
 
-  "K Modal Modus Ponens" should "foo" in {
+  "K Modal Modus Ponens" should "be [x:=2;](x>1 -> x>0) on [x:=2;]x>1 -> [x:=2;]x>0" in {
     import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.kModalModusPonensT
     val tactic = locateSucc(kModalModusPonensT)
     getProofSequent(tactic, new RootNode(sucSequent("[x:=2;]x>1 -> [x:=2;]x>0".asFormula))) should be (

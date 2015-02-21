@@ -212,34 +212,23 @@ object PropositionalTacticsImpl {
       })
   }
 
-  def kModalModusPonensT = new CascadedAxiomTactic("K modal modus ponens", "K modal modus ponens") {
+  def kModalModusPonensT = new AxiomTactic("K modal modus ponens", "K modal modus ponens") {
     override def applies(f: Formula): Boolean = f match {
       case Imply(BoxModality(a, _), BoxModality(b, _)) => a == b
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] =
-        f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
       case Imply(BoxModality(a, p), BoxModality(b, q)) if a == b =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aP, p), SubstitutionPair(aQ, q))
         // construct axiom instance: [a](p->q) -> (([a]p) -> ([a]q))
         val g = BoxModality(a, Imply(p, q))
         val axiomInstance = Imply(g, f)
-
-        // construct substitution
-        val aA = ProgramConstant("a")
-        val aP = PredicateConstant("p")
-        val aQ = PredicateConstant("q")
-
-        val intermediate = Imply(BoxModality(aA, Imply(p, q)), Imply(BoxModality(aA, p), BoxModality(aA, q)))
-
-        val s1 = Substitution(List(SubstitutionPair(aA, a)))
-        val m1 = Map[Formula, Formula](axiomInstance -> intermediate)
-
-        val s2 = Substitution(List(SubstitutionPair(aP, p), SubstitutionPair(aQ, q)))
-        val m2 = Map[Formula, Formula](intermediate ->
-          Imply(BoxModality(aA, Imply(aP, aQ)), Imply(BoxModality(aA, aP), BoxModality(aA, aQ))))
-
-        Some(axiomInstance, (s1, m1) :: (s2, m2) :: Nil)
+        Some(axiomInstance, Substitution(l))
       case _ => None
     }
   }
