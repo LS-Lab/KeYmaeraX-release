@@ -253,7 +253,7 @@ object HybridProgramTacticsImpl {
       def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = Helper.names(t).contains(v) || (rest match {
         case BoxModality(_: ContEvolveProgram, _) => true
         case BoxModality(_: Loop, _) => true
-        case _ => false
+        case _ => /* false requires substitution of variables */ true
       })
 
       import FOQuantifierTacticsImpl.skolemizeT
@@ -563,7 +563,7 @@ object HybridProgramTacticsImpl {
           SubstitutionHelper.replaceFree(p)(v, CDot)))
 
         // construct axiom instance: [v:=t]p(v) <-> p(t)
-        val g = replaceFree(p)(v, t)
+        val g = SubstitutionHelper.replaceFree(p)(v, t)
         val axiomInstance = Equiv(f, g)
 
         // rename to match axiom if necessary
