@@ -1410,6 +1410,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
  * Global version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
  * Used for UniformSubstitution rule.
  * @author aplatzer
+ * @see GlobalUniformSubstitution
  */
 sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable()
