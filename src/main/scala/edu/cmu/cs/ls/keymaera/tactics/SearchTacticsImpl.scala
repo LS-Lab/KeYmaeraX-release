@@ -8,6 +8,28 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
  * Implementation of search tactics.
  */
 object SearchTacticsImpl {
+  def locateSubposition(p : Position)(pT : PositionTactic) : Tactic = new ApplyPositionTactic("LocateSubposition(" + pT.name + ")", pT) {
+    override def findPosition(s: Sequent): Option[Position] = {
+      val fn = new ExpressionTraversalFunction {
+        var result : Option[Position] = None
+        override def preF(p : PosInExpr, f : Formula) = {
+          val position = makePos(p)
+          if(isSubpos(position) && pT.applies(s, position)) { result = Some(position); Left(Some(ExpressionTraversal.stop)) }
+          else Left(None)
+        }
+      }
+      ExpressionTraversal.traverse(fn, s(p))
+      fn.result
+    }
+    def makePos(pInExpr : PosInExpr) = if(p.isAnte) AntePosition(p.index, pInExpr) else SuccPosition(p.index, pInExpr)
+    def isSubpos(pos : Position) = pos.isAnte == p.isAnte && pos.index == p.index && p.inExpr.isPrefixOf(pos.inExpr)
+
+    override def applicable(node: ProofNode): Boolean = findPosition(node.sequent) match {
+      case Some(_) => true
+      case _ => false
+    }
+  }
+
   def locateTerm(posT : PositionTactic) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
     override def findPosition(s: Sequent): Option[Position] = {
       for((anteF, idx) <- s.ante.zipWithIndex) {

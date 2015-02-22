@@ -30,21 +30,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node2, helper.parseFormula("(1=1)' & (2=2)'")))
   }
 
-  it should "also aggregation correctly and agreeably" in {
-    val node1 = helper.formulaToNode(helper.parseFormula( " (1=1)' & (2=2)' "))
-    val node2 = helper.formulaToNode(helper.parseFormula( " (1=1)' & (2=2)' "))
-
-    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.AndDerivativeT)
-    helper.runTactic(tactic1, node1, true)
-
-    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.AndDerivativeAggregateT)
-    helper.runTactic(tactic2, node2, true)
-
-    require(node1.openGoals().length == node2.openGoals().length)
-    require(containsOpenGoal(node1, helper.parseFormula(" (1=1 & 2=2)' ")))
-    require(containsOpenGoal(node2, helper.parseFormula("(1=1 & 2=2)' ")))
-  }
-
   "OrDerivativeT tactics" should "atomize" in {
     val node = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
     val tactic = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeT)
@@ -68,27 +53,11 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node2, helper.parseFormula("(1=1)' & (2=2)'")))
   }
 
-  it should "aggregate agreeably" in {
-    val node1 = helper.formulaToNode(helper.parseFormula( " (1=1)' & (2=2)' "))
-    val node2 = helper.formulaToNode(helper.parseFormula( " (1=1)' & (2=2)' "))
-
-    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeT)
-    helper.runTactic(tactic1, node1, true)
-
-    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeAggregateT)
-    helper.runTactic(tactic2, node2, true)
-
-    require(node1.openGoals().length == node2.openGoals().length)
-    require(containsOpenGoal(node1, helper.parseFormula("(1=1 | 2=2)'")))
-    require(containsOpenGoal(node2, helper.parseFormula("(1=1 | 2=2)'")))
-  }
-
   def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : DerivativeAxiomInContextTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
     val s = "(" + sNoParen + ")"
     val t = "(" + tNoParen + ")"
     val tactic = helper.positionTacticToTactic(axTactic)
     val atomizeTactic = helper.positionTacticToTactic(atomizePosTactic)
-    val aggregateTactic = helper.positionTacticToTactic(aggregatePosTactic)
 
     def primer(x:String) = "("+x+")'"
 
@@ -99,18 +68,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
       primer(s + " " + innerOp + " " + t)
     ))
     helper.runTactic(tactic, node, true)
-    helper.runTactic(atomizeTactic, node2, true)
     require(containsOpenGoal(node, helper.parseFormula(primer(s) + outerOp + primer(t))))
-    require(containsOpenGoal(node2, helper.parseFormula(primer(s) + outerOp + primer(t))))
-
-
-    //aggregation
-    val node3 = helper.formulaToNode(helper.parseFormula(primer(s) + outerOp + primer(t)))
-    val node4 = helper.formulaToNode(helper.parseFormula(primer(s) + outerOp + primer(t)))
-    helper.runTactic(tactic, node3, true)
-    helper.runTactic(aggregateTactic, node4, true)
-    require(containsOpenGoal(node3, helper.parseFormula(primer(s + " " + innerOp + " " + t))))
-    require(containsOpenGoal(node4, helper.parseFormula(primer(s + " " + innerOp + " " + t))))
   }
 
   import SyntacticDerivationAxiomTactics._
@@ -150,12 +108,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val tactic = NegativeDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
     helper.runTactic(tactic,node, true)
     require(containsOpenGoal(node, innerFormula))
-
-    //@todo not currently testing the other direction because we'll need more infrastructure to support equality being applied in the "other" direction.
-    //@todo uncommenting one line of the applies method in the NegaativeDerivativeT implementation is enough to make these commented-out lines pass.
-//    val node2 = helper.formulaToNode(innerFormula)
-//    helper.runTactic(tactic,node2)
-//    require(containsOpenGoal(node2, outerFormula))
   }
 
   def innerOuterTest(innerFormula:Formula, outerFormula:Formula, axTactic:TermAxiomTactic) = {
@@ -164,11 +116,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val tactic = axTactic(SuccPosition(0, PosInExpr(0 :: Nil)))
     helper.runTactic(tactic,node, true)
     require(containsOpenGoal(node, innerFormula))
-
-    //Then the other direction as well. @todo We need term position tactics before this can be enabled again.
-//    val node2 = helper.formulaToNode(innerFormula)
-//    helper.runTactic(tactic, node, true)
-//    require(containsOpenGoal(node, innerFormula))
   }
 
   "syntactic derivation of addition" should "work on x,y" in {
