@@ -2101,6 +2101,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case x: Variable => renameVar(x)
     case CDot => CDot
     case Nothing => Nothing
+    case Anything => Anything
     case x@Number(_, _) => x
   }
 
