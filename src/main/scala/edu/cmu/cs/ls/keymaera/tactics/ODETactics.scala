@@ -203,7 +203,7 @@ object ODETactics {
         val axiomInstance = Imply(g, f)
 
         // construct substitution
-        val aP = PredicateConstant("p")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val aC = ContEvolveProgramConstant("c")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aC, c))
 
@@ -296,8 +296,8 @@ object ODETactics {
         val axiomInstance = Imply(lhs, f)
 
         // construct substitution
-        val aP = PredicateConstant("p")
-        val aH = PredicateConstant("H")
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aH, h))
 
         Some(ax, axiomInstance, Substitution(l), None, None)
