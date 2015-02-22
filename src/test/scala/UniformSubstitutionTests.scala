@@ -347,7 +347,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // x' = \theta & \psi
 
-  "Uniform substitution of (x,y) |-> t'=x; where {t} is bound" should "be t'=y;" in {
+  "Uniform substitution of (x,y) |-> t'=x where {t} is bound" should "be t'=y" in {
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm))
     s("t'=x();".asProgram) should be ("t'=y;".asProgram)
   }
@@ -964,10 +964,84 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   // Tests from uniform substitution writeup
 
+  "Substitution of [x:=f]p(x) <-> p(f) with p(.) |-> .!=x and f |-> x+1" should "result in a substitution clash" in {
+    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val p = Function("p", None, Unit, Real)
+    val x = Variable("x", None, Real)
+    val s = create(SubstitutionPair(f, "x+1".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), NotEquals(Real, CDot, x)))
+
+    val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
+    a [SubstitutionClashException] should be thrownBy s(h)
+  }
+
   "Substitution of p -> \\forall x. p with p |-> x>=0" should "result in a substitution clash" in {
     val s = create(SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), "x>=0".asFormula))
     val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
     a [SubstitutionClashException] should be thrownBy s(Imply(p, Forall(Variable("x", None, Real)::Nil, p)))
+  }
+
+  "Substitution of p -> [a]p with a |-> x:=x-1 and p |-> x>=0" should "result in a substitution clash" in {
+    val ca = ProgramConstant("a")
+    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val s = create(SubstitutionPair(ca, "x:=x-1;".asProgram), SubstitutionPair(p, "x>=0".asFormula))
+    a [SubstitutionClashException] should be thrownBy s(Imply(p, BoxModality(ca, p)))
+  }
+
+  "Substitution in Barcan" should "result in a substitution clash" in {
+    val ca = ProgramConstant("a")
+    val x = Variable("x", None, Real)
+    val p = Function("p", None, Real, Bool)
+
+    val f = Imply(Forall(x::Nil, BoxModality(ca, ApplyPredicate(p, x))),
+      BoxModality(ca, Forall(x::Nil, ApplyPredicate(p, x))))
+
+    val s = create(SubstitutionPair(ca, "x:=0;".asProgram),
+      SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, CDot, Number(0))))
+    a [SubstitutionClashException] should be thrownBy s(f)
+
+    val t = create(SubstitutionPair(ca, "y:=x^2;".asProgram),
+      SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, Variable("y", None, Real), CDot)))
+    a [SubstitutionClashException] should be thrownBy t(f)
+
+    val u = create(SubstitutionPair(ca, "?y=x^2;".asProgram),
+      SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, Variable("y", None, Real), CDot)))
+    a [SubstitutionClashException] should be thrownBy u(f)
+  }
+
+  "Substitution of choice axiom" should "work" in {
+    val ca = ProgramConstant("a")
+    val cb = ProgramConstant("b")
+    val p = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val f = Equiv(BoxModality(Choice(ca, cb), p), And(BoxModality(ca, p), BoxModality(cb, p)))
+
+    val s = create(SubstitutionPair(ca, "x:=0;".asProgram), SubstitutionPair(cb, "y:=1;".asProgram),
+      SubstitutionPair(p, "x>=0".asFormula))
+    s(f) should be ("[x:=0 ++ y:=1]x>=0 <-> [x:=0;]x>=0 & [y:=1;]x>=0".asFormula)
+
+    val t = create(SubstitutionPair(ca, "x:=x+1;".asProgram), SubstitutionPair(cb, "x:=0;y:=0;".asProgram),
+      SubstitutionPair(p, "x>=y".asFormula))
+    t(f) should be ("[x:=x+1 ++ x:=0;y:=0;]x>=y <-> [x:=x+1;]x>=y & [x:=0;y:=0;]x>=y".asFormula)
+  }
+
+  "Substitution of sequence axiom" should "work" in {
+    val ca = ProgramConstant("a")
+    val cb = ProgramConstant("b")
+    val p = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val f = Equiv(BoxModality(Sequence(ca, cb), p), BoxModality(ca, BoxModality(cb, p)))
+
+    val u = create(SubstitutionPair(ca, "x:=x+1 ++ y:=0".asProgram), SubstitutionPair(cb, "y:=y+1;".asProgram),
+      SubstitutionPair(p, "x>=y".asFormula))
+    u(f) should be ("[{x:=x+1 ++ y:=0};y:=y+1]x>=y <-> [x:=x+1 ++ y:=0][y:=y+1;]x>=y".asFormula)
+  }
+
+  "Substitution of primes" should "work" in {
+    val f = Apply(Function("f", None, Real, Real), Anything)
+    val g = Apply(Function("g", None, Real, Real), Anything)
+    val h = Equals(Real, Derivative(Real, Multiply(Real, f, g)),
+      Add(Real, Multiply(Real, Derivative(Real, f), g), Multiply(Real, f, Derivative(Real, g))))
+
+    val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
+    s(h) should be ("(x*x)' = x'*x + x*x'".asFormula)
   }
 
   // Tests of internal behavior (O and U sets) of local uniform substitution
