@@ -424,7 +424,7 @@ object HybridProgramTacticsImpl {
       // TODO check that axiom is of the expected form [v:=t]p <-> p
       // construct substitution
       val aT = Apply(Function("t", None, Unit, Real), Nothing)
-      val aP = PredicateConstant("p")
+      val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
       val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(aP, f))
 
       // check specified name, or construct a new name for the ghost variable if None
@@ -609,8 +609,8 @@ object HybridProgramTacticsImpl {
     override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
       case BoxModality(Test(h), p) =>
         // construct substitution
-        val aH = PredicateConstant("H")
-        val aP = PredicateConstant("p")
+        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
         // construct axiom instance: [?H]p <-> (H -> p).
         val g = Imply(h, p)

@@ -207,7 +207,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("\\forall y. y>0".asFormula))
   }
 
-  "Box test tactic" should "use axiom [?H;]p <-> (H->p)" in {
+  "Box test tactic" should "use axiom [?H]p <-> (H->p)" in {
     import TacticLibrary.boxTestT
     val s = sucSequent("[?y>2;]y>0".asFormula)
     val tactic = locateSucc(boxTestT)
