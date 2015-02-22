@@ -1038,7 +1038,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     u(f) should be ("[{x:=x+1 ++ y:=0};y:=y+1]x>=y <-> [x:=x+1 ++ y:=0][y:=y+1;]x>=y".asFormula)
   }
 
-  "Substitution of primes" should "work" in {
+  "Substitution of primed terms" should "work" in {
     val f = Apply(Function("f", None, Real, Real), Anything)
     val g = Apply(Function("g", None, Real, Real), Anything)
     val h = Equals(Real, Derivative(Real, Multiply(Real, f, g)),
@@ -1046,6 +1046,16 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
     s(h) should be ("(x*x)' = x'*x + x*x'".asFormula)
+  }
+
+  "Substitution of primed formulas" should "work" in {
+    val f = Apply(Function("p", None, Real, Real), Anything)
+    val g = Apply(Function("q", None, Real, Real), Anything)
+    val h = Equiv(FormulaDerivative(Equals(Real, f, g)),
+      Equals(Real, Derivative(Real, f), Derivative(Real, g)))
+
+    val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
+    s(h) should be ("(x=x)' <-> x'=x'".asFormula)
   }
 
   // Tests of internal behavior (O and U sets) of local uniform substitution

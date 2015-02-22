@@ -203,7 +203,7 @@ object ODETactics {
         val axiomInstance = Imply(g, f)
 
         // construct substitution
-        val aP = PredicateConstant("p")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val aC = ContEvolveProgramConstant("c")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aC, c))
 
@@ -296,8 +296,8 @@ object ODETactics {
         val axiomInstance = Imply(lhs, f)
 
         // construct substitution
-        val aP = PredicateConstant("p")
-        val aH = PredicateConstant("H")
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aH, h))
 
         Some(ax, axiomInstance, Substitution(l), None, None)
@@ -662,6 +662,7 @@ object ODETactics {
 
   /**
    * The "master" DI tactic.
+   * @todo no testing yet.
    */
   def diffInvariantT: PositionTactic = new PositionTactic("DI differential invariant system") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
@@ -686,8 +687,8 @@ object ODETactics {
 //                ))
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
-              debugT("left branch"),
-              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p)
+              debugT("left branch") & default,
+              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & NNFRewrite(p) & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) & ((TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) *)
             ))
           }
         }
