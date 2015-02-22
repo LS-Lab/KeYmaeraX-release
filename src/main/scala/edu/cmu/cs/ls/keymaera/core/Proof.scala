@@ -864,7 +864,7 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
       case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
-      case Apply(_:Function, CDot | Nothing) => true
+      case Apply(_:Function, CDot | Nothing | Anything) => true
       case Nothing => t == Nothing
       case _ => false
       }, "Substitutable expression required, found " + n)
@@ -1253,11 +1253,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         require((SetLattice[NamedSymbol](CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
           s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
         subst(CDot)
-      case dx@Derivative(s, Apply(x, Nothing)) if subsDefs.exists(_.n == t) => //@todo eisegesis
-        require((SetLattice[NamedSymbol](x) ++ freeVariables(subst(dx))).intersect(u).isEmpty,
-          s"Substitution clash: ({$x} ∪ ${freeVariables(subst(dx))}) ∩ $u is not empty")
-        subst(dx)
-      case Derivative(s, e) if !subsDefs.exists(_.n == t) => t //@todo eisegesis
+      case dx@Derivative(s, e) => //@todo eisegesis
+        // TODO what is our requirement here?
+        Derivative(s, usubst(o, u, e))
       case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
         val (rArg, rTerm) =
@@ -1487,11 +1485,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
         case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
-          // require(admissible(TOP, e)), where TOP means all variables. alias: occurring replacements introduce no free
-          // variables at all.
-          // TODO will only succeed (same for TOP), when e does not have any variables at all. What is LHS?
-          require(subsDefs.forall(sigma => freeVariables(sigma.t.asInstanceOf[Term]).isEmpty),
-            s"Substitution clash: when substituting derivative ${der.prettyString()}")
+          require(admissible(SetLattice.top[NamedSymbol], e),
+            s"Substitution clash when substituting derivative ${der.prettyString()}")
           Derivative(Real, usubst(e))
       }
     } catch {
@@ -1616,19 +1611,23 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   }
 
   // check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates/program constants
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
+  private def admissible(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
     // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
     // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
     // occurs in theta (or phi or alpha)
     def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.t match {
-        case t: Term => freeVariables(t)
+        case t: Term => sigma.n match {
+          case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
+          // if ever extended with f(x,y,z): freeVariables(t) -- {x,y,z}
+          case _ => freeVariables(t)
+        }
         case f: Formula => sigma.n match {
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with p(x,y,z): freeVariables(f) -- {x,y,z}
           case _ => catVars(f).fv
         }
         case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
-      }).intersect(SetLattice(U.toSet)) != SetLattice.bottom
+      }).intersect(U) != SetLattice.bottom
 
     def nameOf(symbol: Expr): NamedSymbol = symbol match {
       case Derivative(_, v: Variable) => v // TODO check
@@ -1640,18 +1639,13 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
 
     subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.n)).forall(fn => !occurrences.contains(fn))
   }
-  
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
-  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = U.s match {
-    case Left(_) => /* top */ false // TODO check
-    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), f)
-  }
-  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = U.s match {
-    case Left(_) => /* top */ false // TODO check
-    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), p)
-  }
+
+  private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
+  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
+  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
+  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], t: Term) : Boolean = admissible(SetLattice(U.toSet), t)
+  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], f: Formula) : Boolean = admissible(SetLattice(U.toSet), f)
+  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], p: Program) : Boolean = admissible(SetLattice(U), p)
 
   private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
     case Not(g) => fnPredPrgSymbolsOf(g)
