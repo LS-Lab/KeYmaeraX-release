@@ -1038,11 +1038,10 @@ object BindingAssessment {
     case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
     // base cases
     case x: Variable => SetLattice(x)
-    case Apply(f, Nothing) => SetLattice(f)
     case CDot => SetLattice(CDot)
     // TODO x' and f(x) are not in Definition 8
     case Derivative(s, e) => freeVariables(e) //@todo eisegesis
-    case Apply(f, arg) => freeVariables(arg) //@todo eisegesis
+    case Apply(f, arg) => SetLattice[NamedSymbol](f) ++ freeVariables(arg) //@todo eisegesis
     case True | False | _: NumberObj | Nothing => SetLattice.bottom
   }
 
