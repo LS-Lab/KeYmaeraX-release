@@ -1322,8 +1322,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         s"Substitution clash: ${catVars(rFormula).fv} ∩ $restrictedU is not empty")
       instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
     case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
-    // TODO not mentioned in uniform substitution
-    case FormulaDerivative(g) => ???
+    case FormulaDerivative(g) => FormulaDerivative(usubst(o, u, g))
     case x: Atom => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
@@ -1531,6 +1530,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Or(l, r) => Or(usubst(l), usubst(r))
         case Imply(l, r) => Imply(usubst(l), usubst(r))
         case Equiv(l, r) => Equiv(usubst(l), usubst(r))
+
+        case FormulaDerivative(g) => FormulaDerivative(usubst(g))
 
         // binding cases add bound variables to u
         case Forall(vars, g) => require(admissible(vars, g),
