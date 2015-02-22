@@ -662,6 +662,7 @@ object ODETactics {
 
   /**
    * The "master" DI tactic.
+   * @todo no testing yet.
    */
   def diffInvariantT: PositionTactic = new PositionTactic("DI differential invariant system") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
@@ -686,8 +687,8 @@ object ODETactics {
 //                ))
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
-              debugT("left branch"),
-              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p)
+              debugT("left branch") & default,
+              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & NNFRewrite(p) & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) & ((TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) *)
             ))
           }
         }
