@@ -8,6 +8,16 @@ import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
  */
 class SDTests extends TacticTestSuite {
 
+  "Subtraction derivation" should "work" in {
+    val in = helper.parseFormula(" (x'+y') = 0")
+    val out = helper.parseFormula(" (x+y)' = 0")
+
+    val node = helper.formulaToNode(out)
+    val tactic = AddDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    helper.runTactic(tactic,node, true)
+    containsOpenGoal(node, in) shouldBe(true)
+  }
+
   "Syntactic Derivation" should "work when there's no binding" in {
     val f = helper.parseFormula("[a'=b;](x-y<1)'")
     val node = helper.formulaToNode(f)
