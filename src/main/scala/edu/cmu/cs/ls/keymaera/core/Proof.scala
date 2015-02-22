@@ -538,15 +538,6 @@ object Axiom {
 
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
-  private def loadAxioms: Map[String, Formula] = {
-    var m = new HashMap[String, Formula]
-    // [?H]p <-> (H -> p)
-    val aH = PredicateConstant("H")
-    val pair3 = ("[?] test", Equiv(BoxModality(Test(aH), aP), Imply(aH, aP)))
-    m = m + pair3
-    m
-  }
-
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
@@ -868,6 +859,7 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
     require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
     require(n match {
       case CDot => true
+      case Anything => true
       case _:ProgramConstant => true
       case _:ContEvolveProgramConstant => true
       case Derivative(_, _:Variable) => true
@@ -1181,7 +1173,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
     }
-  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(t))
+  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(t),
+    s"Local substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)} " +
+      s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(t)}")
 
   def apply(f: Formula): Formula = {
     log("\tSubstituting " + f.prettyString + " using " + this)
@@ -1193,7 +1187,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
     }
-  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(f))
+  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(f),
+      s"Local substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)} " +
+        s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(f)}")
 
   def apply(s: Sequent): Sequent = {
     try {
@@ -1212,7 +1208,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
     }
-  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(p))
+  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(p),
+    s"Local substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)} " +
+      s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(p)}")
 
   private def substDiff(s: Seq[SubstitutionPair], names: SetLattice[NamedSymbol]) =
     new Substitution(s.filter(_.n match { case en: NamedSymbol => !names.contains(en) case _ => true }))
@@ -1375,8 +1373,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
     //@TODO check implementation
     case a: ProgramConstant if  subsDefs.exists(_.n == p) =>
       val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
-      // todo is side condition correct?
-      require(catVars(sigmaP).fv.intersect(u).isEmpty, s"Substitution clash: ${catVars(sigmaP).fv} ∩ $u is not empty")
+      // programs don't have a side condition, since their meaning does not depend on state
       USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP)
     case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o++catVars(a).mbv, u++catVars(a).bv, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
@@ -1442,13 +1439,19 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
 
   def apply(t: Term): Term = {
     usubst(t)
-  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t))
+  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t),
+    s"Global substitution result ${usubst(t)} does not agree with local result " +
+      s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)}")
   def apply(f: Formula): Formula = {
     usubst(f)
-  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f))
+  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f),
+    s"Global substitution result ${usubst(f)} does not agree with local result " +
+      s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)}")
   def apply(p: Program): Program = {
     usubst(p)
-  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p)
+  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p,
+    s"Global substitution result ${usubst(p)} does not agree with local result " +
+      s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)}")
 
   // uniform substitution on terms
   private[core] def usubst(t: Term): Term = {
@@ -1456,8 +1459,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
       t match {
         // uniform substitution base cases
         case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
-        //@TODO Check if this matches on reals or whether Real is considered a variable in the pattern ....
-        case xp: Derivative(Real, x:Variable) => require(!subsDefs.exists(_.n == xp), s"Substitution of differential symbols not supported: $xp"); xp
+        case xp@Derivative(Real, x: Variable) => require(!subsDefs.exists(_.n == xp),
+          s"Substitution of differential symbols not supported: $xp"); xp
         case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rTerm) =
@@ -1485,11 +1488,14 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Add(s, l, r) => Add(s, usubst(l), usubst(r))
         case Subtract(s, l, r) => Subtract(s, usubst(l), usubst(r))
         case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
-        //@TODO Check if this matches on reals or whether Real is considered a variable in the pattern ....
-        //@TODO TOP means all variables. Alias: occurring replacements introduce no free variables at all.
-        case der: Derivative(Real, e) => require(admissible(TOP, e),
-            s"Substitution clash: when substituting derivative ${der.prettyString()}"));
-            Derivative(Real, usubst(e))
+        case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
+        case der@Derivative(Real, e) =>
+          // require(admissible(TOP, e)), where TOP means all variables. alias: occurring replacements introduce no free
+          // variables at all.
+          // TODO will only succeed (same for TOP), when e does not have any variables at all. What is LHS?
+          require(subsDefs.forall(sigma => freeVariables(sigma.t.asInstanceOf[Term]).isEmpty),
+            s"Substitution clash: when substituting derivative ${der.prettyString()}")
+          Derivative(Real, usubst(e))
       }
     } catch {
       case ex: IllegalArgumentException =>
@@ -1559,7 +1565,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
           subsDefs.find(_.n == a).get.t.asInstanceOf[Program]
         case a: ProgramConstant if !subsDefs.exists(_.n == a) => a
         case Assign(x: Variable, e) => Assign(x, usubst(e))
-        case Assign(xp: Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
+        case Assign(xp@Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
         case NDetAssign(x: Variable) => NDetAssign(x)
         case Test(f) => Test(usubst(f))
         case ode: ContEvolveProgram =>
@@ -1617,11 +1623,13 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
     // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
     // occurs in theta (or phi or alpha)
-    // TODO Def. 19 (admissible uniform substitution) does not talk about program constants
-    def intersectsU(symbol: Expr): Boolean = (symbol match {
+    def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.t match {
         case t: Term => freeVariables(t)
-        case f: Formula => catVars(f).fv
-        case p: Program => catVars(p).fv
+        case f: Formula => sigma.n match {
+          case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol] // TODO check that this is correct: bottom because p(?) has license to mention anything
+          case _ => catVars(f).fv
+        }
+        case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
       }).intersect(SetLattice(U.toSet)) != SetLattice.bottom
 
     def nameOf(symbol: Expr): NamedSymbol = symbol match {
@@ -1632,7 +1640,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
       case _ => throw new IllegalArgumentException(s"Unexpected ${symbol.prettyString()} in substitution pair")
     }
 
-    subsDefs.filter(sigma => intersectsU(sigma.t)).map(sigma => nameOf(sigma.n)).forall(fn => !occurrences.contains(fn))
+    subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.n)).forall(fn => !occurrences.contains(fn))
   }
   
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
@@ -1640,11 +1648,11 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
   private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = U.s match {
     case Left(_) => /* top */ false // TODO check
-    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), fnPredPrgSymbolsOf(f))
+    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), f)
   }
   private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = U.s match {
     case Left(_) => /* top */ false // TODO check
-    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), fnPredPrgSymbolsOf(p))
+    case Right(ts) => admissible(scala.collection.immutable.Seq(ts.toSeq: _*), p)
   }
 
   private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
@@ -1685,6 +1693,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     case _: Variable => Set()
     case CDot => Set(CDot)
     case Nothing => Set()
+    case Anything => Set()
     case Number(_, _) => Set()
   }
 

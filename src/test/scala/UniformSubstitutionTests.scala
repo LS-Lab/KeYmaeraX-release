@@ -816,17 +816,19 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     a [SubstitutionClashException] should be thrownBy s(f)
   }
 
-  it should "not be permitted to replace [a;] with a program that contains free x" in {
+  it should "illustrate why converse Barcan is unsound" in {
     //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
+    val p = Function("p", None, Real, Bool)
     val h = Imply(
-      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm))),
-      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)))
+      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(p, "x".asTerm))),
+      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(p, "x".asTerm)))
     )
 
     val s = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), GreaterThan(Real, CDot, Number(0))),
-      SubstitutionPair(ProgramConstant("a"), "y:=x;".asProgram))
-    a [SubstitutionClashException] should be thrownBy s(h)
+      SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, Number(0))),
+      SubstitutionPair(ProgramConstant("a"), "x:=0;".asProgram))
+    // no clash, but derived conclusion is wrong
+    s(h) should be ("[x:=0;]\\forall x. x>0 -> \\forall x. [x:=0;]x>0".asFormula)
   }
 
   "Uniform substitution in vacuous quantification" should "work when FV(p) is disjoint from newly quantified variable x" in {
@@ -966,7 +968,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Substitution of [x:=f]p(x) <-> p(f) with p(.) |-> .!=x and f |-> x+1" should "result in a substitution clash" in {
     val f = Apply(Function("f", None, Unit, Real), Nothing)
-    val p = Function("p", None, Unit, Real)
+    val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
     val s = create(SubstitutionPair(f, "x+1".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), NotEquals(Real, CDot, x)))
 
@@ -987,7 +989,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     a [SubstitutionClashException] should be thrownBy s(Imply(p, BoxModality(ca, p)))
   }
 
-  "Substitution in Barcan" should "result in a substitution clash" in {
+  "Substitution in Barcan" should "should illustrate why axiom Barcan is unsound" in {
     val ca = ProgramConstant("a")
     val x = Variable("x", None, Real)
     val p = Function("p", None, Real, Bool)
@@ -997,15 +999,17 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val s = create(SubstitutionPair(ca, "x:=0;".asProgram),
       SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, CDot, Number(0))))
-    a [SubstitutionClashException] should be thrownBy s(f)
+    // no clash, but derived conclusion is wrong
+    s(f) should be ("\\forall x. [x:=0;]x>=0 -> [x:=0;]\\forall x. x>=0".asFormula)
 
     val t = create(SubstitutionPair(ca, "y:=x^2;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, Variable("y", None, Real), CDot)))
+      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Exp(Real, CDot, Number(2)))))
     a [SubstitutionClashException] should be thrownBy t(f)
 
     val u = create(SubstitutionPair(ca, "?y=x^2;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, Variable("y", None, Real), CDot)))
-    a [SubstitutionClashException] should be thrownBy u(f)
+      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Exp(Real, CDot, Number(2)))))
+    // no clash, but derived conclusion is wrong
+    u(f) should be ("\\forall x. [?y=x^2;]y=x^2 -> [?y=x^2;]\\forall x. y=x^2".asFormula)
   }
 
   "Substitution of choice axiom" should "work" in {
