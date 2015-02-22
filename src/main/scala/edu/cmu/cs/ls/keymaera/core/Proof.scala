@@ -1003,20 +1003,22 @@ object BindingAssessment {
     case LessEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
     case LessThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
 
-    case Not(g) => VC2(fv = catVars(g).fv, bv = catVars(g).bv)
-    case And(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
-    case Or(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
-    case Imply(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
-    case Equiv(l, r) => VC2(fv = catVars(l).fv ++ catVars(r).fv, bv = catVars(l).bv ++ catVars(r).bv)
+    case Not(g) => val vg = catVars(g); VC2(fv = vg.fv, bv = vg.bv)
+    case And(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
+    case Or(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
+    case Imply(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
+    case Equiv(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
     // TODO formuladerivative not mentioned in Definition 7 and 8
-    case FormulaDerivative(df) => VC2(fv = catVars(df).fv, bv = catVars(df).bv) //@todo eisegesis
+    case FormulaDerivative(df) => val vdf = catVars(df); VC2(fv = vdf.fv, bv = vdf.bv) //@todo eisegesis
 
     // binding cases add bound variables to u
-    case Forall(vars, g) => VC2(fv = catVars(g).fv -- vars, bv = catVars(g).bv ++ vars)
-    case Exists(vars, g) => VC2(fv = catVars(g).fv -- vars, bv = catVars(g).bv ++ vars)
+    case Forall(vars, g) => val vg = catVars(g); VC2(fv = vg.fv -- vars, bv = vg.bv ++ vars)
+    case Exists(vars, g) => val vg = catVars(g); VC2(fv = vg.fv -- vars, bv = vg.bv ++ vars)
 
-    case BoxModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
-    case DiamondModality(p, g) => VC2(fv = catVars(p).fv ++ (catVars(g).fv -- catVars(p).mbv), bv = catVars(p).bv ++ catVars(g).bv)
+    case BoxModality(p, g) => val vp = catVars(p); val vg = catVars(g)
+      VC2(fv = vp.fv ++ (vg.fv -- vp.mbv), bv = vp.bv ++ vg.bv)
+    case DiamondModality(p, g) => val vp = catVars(p); val vg = catVars(g)
+      VC2(fv = vp.fv ++ (vg.fv -- vp.mbv), bv = vp.bv ++ vg.bv)
 
     // base cases
     case ApplyPredicate(p, arg) => VC2(fv = freeVariables(arg), bv = SetLattice.bottom)
@@ -1055,16 +1057,16 @@ object BindingAssessment {
     case NFContEvolve(vars, Derivative(_, x: Variable), e, h) =>
       VC3(fv = SetLattice[NamedSymbol](x) ++ freeVariables(e) ++ catVars(h).fv, bv = SetLattice(x), mbv = SetLattice(x))
     // TODO system of ODE cases not mentioned in Definition 9
-    case ContEvolveProduct(a, b) => VC3(fv = catVars(a).fv ++ catVars(b).fv, bv = catVars(a).bv ++ catVars(b).bv,
-      mbv = catVars(a).mbv ++ catVars(b).mbv) //@todo eisegesis
+    case ContEvolveProduct(a, b) => val va = catVars(a); val vb = catVars(b)
+      VC3(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv) //@todo eisegesis
     case IncompleteSystem(a) => catVars(a) //@todo eisegesis
     case CheckedContEvolveFragment(a) => catVars(a) //@todo eisegesis
     case _: EmptyContEvolveProgram => VC3(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom) //@todo eisegesis
-    case Sequence(a, b) => VC3(fv = catVars(a).fv ++ (catVars(b).fv -- catVars(a).mbv),
-      bv = catVars(a).bv ++ catVars(b).bv, mbv = catVars(a).mbv ++ catVars(b).mbv)
-    case Choice(a, b) => VC3(fv = catVars(a).fv ++ catVars(b).fv, bv = catVars(a).bv ++ catVars(b).bv,
-      mbv = catVars(a).mbv.intersect(catVars(b).mbv))
-    case Loop(a) => VC3(fv = catVars(a).fv, bv = catVars(a).bv, mbv = SetLattice.bottom)
+    case Sequence(a, b) => val va = catVars(a); val vb = catVars(b)
+      VC3(fv = va.fv ++ (vb.fv -- va.mbv), bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
+    case Choice(a, b) => val va = catVars(a); val vb = catVars(b)
+      VC3(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
+    case Loop(a) => val va = catVars(a); VC3(fv = va.fv, bv = va.bv, mbv = SetLattice.bottom)
     case _: ProgramConstant => VC3(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
     case _: ContEvolveProgramConstant => VC3(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
     case _ => throw new UnknownOperatorException("Not implemented", p)
