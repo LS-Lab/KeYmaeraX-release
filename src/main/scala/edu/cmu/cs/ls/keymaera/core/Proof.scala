@@ -1623,7 +1623,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.t match {
         case t: Term => freeVariables(t)
         case f: Formula => sigma.n match {
-          case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol] // TODO check that this is correct: bottom because p(?) has license to mention anything
+          case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
+          // if ever extended with p(x,y,z): freeVariables(f) -- {x,y,z}
           case _ => catVars(f).fv
         }
         case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
