@@ -1059,7 +1059,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s(h) should be ("(x=x)' <-> x'=x'".asFormula)
   }
 
-  ignore /* "Substitution of programs where not all branches write the same variables " */ should "work too" in {
+  ignore /*"Substitution of programs where not all branches write the same variables"*/ should "work too" in {
     val f = Apply(Function("f", None, Unit, Real), Nothing)
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
@@ -1071,7 +1071,22 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
 
-    s(h) should be ("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x <-> [{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x^2".asFormula)
+    s(h) should be ("[x:=x^2;][{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x <-> [{y:=y+1 ++ {z:=z+y;}*}; z:=x^2+y*z;]y>x^2".asFormula)
+  }
+
+  ignore should "work with a simpler predicate" in {
+    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+
+    val s = create(
+      SubstitutionPair(f, "x^2".asTerm),
+      SubstitutionPair(ApplyPredicate(p, CDot),
+        SubstitutionHelper.replaceFree("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]x>0".asFormula)(x, CDot)))
+
+    val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
+
+    s(h) should be ("[x:=x^2;][{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]x>0 <-> [{y:=y+1 ++ {z:=z+y;}*}; z:=x^2+y*z;]x^2>0".asFormula)
   }
 
   // Tests of internal behavior (O and U sets) of local uniform substitution
