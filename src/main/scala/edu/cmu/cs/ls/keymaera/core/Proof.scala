@@ -1255,6 +1255,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         subst(CDot)
       case dx@Derivative(s, e) => //@todo eisegesis
         // TODO what is our requirement here?
+        freeVariables(usubst(o, u, e)).intersect(u).isEmpty
         Derivative(s, usubst(o, u, e))
       case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
