@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.SubstitutionHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter
 import scala.collection.immutable.{List, Set, Seq}
@@ -1056,6 +1057,21 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
     s(h) should be ("(x=x)' <-> x'=x'".asFormula)
+  }
+
+  ignore /* "Substitution of programs where not all branches write the same variables " */ should "work too" in {
+    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+
+    val s = create(
+      SubstitutionPair(f, "x^2".asTerm),
+      SubstitutionPair(ApplyPredicate(p, CDot),
+        SubstitutionHelper.replaceFree("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x".asFormula)(x, CDot)))
+
+    val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
+
+    s(h) should be ("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x <-> [{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x^2".asFormula)
   }
 
   // Tests of internal behavior (O and U sets) of local uniform substitution
