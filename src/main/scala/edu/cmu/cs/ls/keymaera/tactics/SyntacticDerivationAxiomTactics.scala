@@ -466,8 +466,8 @@ object SyntacticDerivationAxiomTactics {
         case Derivative(dSort, Add(aSort, s, t)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val right = Add(sort, Derivative(sort, s), Derivative(sort, t))
           val axiomInstance = Equals(sort, term, right)
@@ -482,8 +482,8 @@ object SyntacticDerivationAxiomTactics {
         case Add(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
           val sort = aSort; assert(aSort == sSort && sSort == tSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val left = Derivative(sort, Add(sort, s, t))
           val axiomInstance = Equals(sort, left, term)
@@ -511,7 +511,6 @@ object SyntacticDerivationAxiomTactics {
   def SubtractDerivativeT = new TermAxiomTactic("-' derive minus","-' derive minus") {
     override def applies(t: Term): Boolean = t match {
       case Derivative(_, Subtract(_, s, t)) => true
-//      case Subtract(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
     }
 
