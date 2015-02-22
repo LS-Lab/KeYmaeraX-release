@@ -1,12 +1,13 @@
-import edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaera.tests.TermTests
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tools._
 import java.math.BigDecimal
-import java.io.File
+import testHelper.ProofFactory._
+import testHelper.SequentFactory._
+import testHelper.StringConverter._
+
 import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
@@ -59,7 +60,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.KeYmaeraScheduler.shutdown()
   }
 
-  def num(n : Integer) = Number(new BigDecimal(n.toString()))
+  def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
 
   sealed abstract class ProvabilityStatus {override def toString = getClass.getName}
@@ -69,47 +70,37 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /**
    * Run KeYmaera till completion using given tactic for proving given conjecture f.
-   *@todo Improve implementation, e.g., by giving an upper time bound
+   * TODO Improve implementation, e.g., by giving an upper time bound
    */
-  def prove(f:Formula, tactic:Tactic = TacticLibrary.default, printOnFail: Boolean = true) : ProvabilityStatus = {
-    val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
-    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-    //For all schedulers, no one is working anymore.
-    tactic.synchronized {
-      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll))
-      tactic.wait
-    }
-
-    if(checkClosed(r))
-      Provable
-    else {
-      if (printOnFail) {
-        println("Open goals\n" + openGoals(r))
-        println("Open proof\n" + TermTests.print(r))
-      }
-      UnknownProvability
+  def prove(f: Formula, tactic: Tactic = TacticLibrary.default): ProvabilityStatus = {
+    getProofGoals(tactic, new RootNode(sucSequent(f))) match {
+      case _: ProofNode | _: List[ProofNode] => UnknownProvability
+      case _ => Provable
     }
   }
 
-  def prove(f:Formula, printOnFail: Boolean) : ProvabilityStatus = prove(f, TacticLibrary.default, printOnFail)
-
-  def checkClosed(n: ProofNode): Boolean =
-    n.children.map((f: ProofStep) =>  f.subgoals.foldLeft(true)(_ && checkClosed(_))).contains(true)
-
-  def openGoals(n: ProofNode): List[Sequent] = {
-    if (checkClosed(n)) Nil
-    else if (n.children.isEmpty) {
-      if (checkClosed(n)) Nil else List(n.sequent)
-    } else
-      n.children.map((step:ProofStep)=>step.subgoals).flatten.map(openGoals).flatten.foldLeft(List[Sequent]())((l,r)=>l++List(r))
-  }
+  def prove(f:Formula) : ProvabilityStatus = prove(f, TacticLibrary.default)
 
   /**
    * Tactic that applies propositional proof rules exhaustively but only closes by axiom lazyly, i.e. if no other rule applies.
-   * @TODO Implement for real. This strategy uses more than propositional steps.
+   * TODO Implement for real. This strategy uses more than propositional steps.
    */
   def lazyPropositional = ((locate(indecisive(true, false, false, true)) | closeT)*)
 
+  def unsoundUniformSubstitution(assume : Formula, nonconclude : Formula, subst: Substitution,
+                                 checkAssumption: Boolean = true): ProvabilityStatus = {
+    println(s"Premise    ${assume.prettyString()}")
+    println(s"Nonclusion ${nonconclude.prettyString()}")
+    println(s"Usubst     $subst")
+    //@TODO prove(nonconclude) should be (Counterexample) OR: prove(Not(nonconclude)) should be (Satisfiable)
+    a [SubstitutionClashException] should be thrownBy UniformSubstitution(subst,
+      Sequent(Nil, IndexedSeq(), IndexedSeq(assume))).apply(Sequent(Nil, IndexedSeq(), IndexedSeq(nonconclude)))
+    //prove(nonconclude, TacticLibrary.uniformSubstT(subst, Map(assume -> nonconclude))) // would not get us the exceptions
+    val nonconcstat = prove(nonconclude, TacticLibrary.default)
+    nonconcstat should not be Provable
+    if (checkAssumption) prove(assume) should be (Provable)
+    nonconcstat
+  }
 
   "Tactics (propositional)" should "prove A->A for any A" in {
     val tactic = lazyPropositional
@@ -172,26 +163,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     }
   }
 
-
-  def unsoundUniformSubstitution(assume : Formula, nonconclude : Formula, subst: Substitution) : ProvabilityStatus = {
-    println("Premise\t" + assume.prettyString)
-    println("Nonclusion\t" + nonconclude.prettyString)
-    println("Usubst\t" + subst)
-    val nonconcstat = prove(nonconclude, TacticLibrary.default, false)
-    nonconcstat should not be (Provable)
-    val assumestat = prove(assume)
-    assumestat should be (Provable)
-    //@TODO prove(nonconclude) should be (Counterexample) OR: prove(Not(nonconclude)) should be (Satisfiable)
-    val exc = evaluating {
-      UniformSubstitution(subst, Sequent(Nil, IndexedSeq(), IndexedSeq(assume))).apply(Sequent(Nil, IndexedSeq(), IndexedSeq(nonconclude)))
-      //prove(nonconclude, TacticLibrary.uniformSubstT(subst, Map(assume -> nonconclude))) // would not get us the exceptions
-      } should produce [SubstitutionClashException]
-    println("Expected exception reported: " + exc)
-    nonconcstat
-  }
-
-  //@TODO Move the subsequent tests to UniformSubstitutionTest.scala
-  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]p(x)<->p(2) with .>y for p(.)" taggedAs(USTest) in {
+  "Uniform substitution" should "not apply unsoundly to [y:=5 x:=2]p(x)<->p(2) with .>y for p(.)" taggedAs USTest in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
@@ -199,21 +171,12 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ApplyPredicate(p1, Number(2)))
     val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Number(2))), GreaterThan(Real,x,y)),
       GreaterThan(Real, Number(2), y))
-    val l = Variable("l", None, Real)
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,l), GreaterThan(Real,l,y))))) should not be (Provable)
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,x), GreaterThan(Real,x,y))))) should not be (Provable)
-
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,y), GreaterThan(Real,y,y))))) should not be (Provable)
+      Substitution(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterThan(Real,CDot,y)))), checkAssumption = false) should not be Provable
   }
 
-  it should "not apply unsoundly to [y:=5;x:=x^2]p(x+y)<->p(x^2+5) with y>=. for p(.)" taggedAs(USTest) in {
+  it should "not apply unsoundly to [y:=5 x:=x^2]p(x+y)<->p(x^2+5) with y>=. for p(.)" taggedAs USTest in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
@@ -221,21 +184,14 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ApplyPredicate(p1, Add(Real,Exp(Real,x,Number(2)),Number(5))))
     val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), GreaterEqual(Real,y, Add(Real,x,y))),
         GreaterEqual(Real,y, Add(Real,Exp(Real,x,Number(2)),Number(5))))
-    val l = Variable("l", None, Real)
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,l), GreaterEqual(Real,y,l))))) should not be (Provable)
 
+    // cannot yet prove assumption automatically
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,x), GreaterEqual(Real,y,x))))) should not be (Provable)
-
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,y), GreaterEqual(Real,y,y))))) should not be (Provable)
+      Substitution(List(SubstitutionPair(ApplyPredicate(p1,CDot),
+        GreaterEqual(Real,y,CDot)))), checkAssumption = false) should not be Provable
   }
 
-  ignore should "not apply unsoundly to [x:=x+1]p(x)<->p(x+1) with .>0&\\exists x. x<. for p(.)" taggedAs(USTest) in {
+  ignore should "not apply unsoundly to [x:=x+1]p(x)<->p(x+1) with .>0&\\exists x. x<. for p(.)" taggedAs USTest in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
@@ -243,21 +199,13 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ApplyPredicate(p1, Add(Real,x, Number(1))))
     val conclude = Equiv(BoxModality(Assign(x, Add(Real,x,Number(1))), And(GreaterThan(Real,x,Number(0)),Exists(Seq(x),LessThan(Real,x,x)))),
       And(GreaterThan(Real,Add(Real,x,Number(1)),Number(0)),Exists(Seq(x),LessThan(Real,x,Add(Real,x,Number(1))))))
-    val l = Variable("l", None, Real)
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,l), And(GreaterThan(Real,l,Number(0)),Exists(Seq(x),LessThan(Real,x,l))))))) should not be (Provable)
 
     unsoundUniformSubstitution(assume, conclude,
       Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,x), And(GreaterThan(Real,x,Number(0)),Exists(Seq(x),LessThan(Real,x,x))))))) should not be (Provable)
-
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,y), And(GreaterThan(Real,y,Number(0)),Exists(Seq(x),LessThan(Real,x,y))))))) should not be (Provable)
+      SubstitutionPair(ApplyPredicate(p1,CDot), And(GreaterThan(Real,CDot,Number(0)),Exists(Seq(x),LessThan(Real,x,CDot))))))) should not be Provable
   }
 
-  "Uniform Substitution" should "not apply unsoundly to [y:=5;x:=2]q(x)<->q(2) with .>y for q(.)" taggedAs(USTest) in {
+  it should "not apply unsoundly to [y:=5 x:=2]q(x)<->q(2) with .>y for q(.)" taggedAs USTest in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
@@ -265,21 +213,13 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ApplyPredicate(p1, Number(2)))
     val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Number(2))), GreaterThan(Real,x,y)),
       GreaterThan(Real, Number(2), y))
-    val l = Variable("l", None, Real)
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,l), GreaterThan(Real,l,y))))) should not be (Provable)
 
     unsoundUniformSubstitution(assume, conclude,
       Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,x), GreaterThan(Real,x,y))))) should not be (Provable)
-
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,y), GreaterThan(Real,y,y))))) should not be (Provable)
+      SubstitutionPair(ApplyPredicate(p1,CDot), GreaterThan(Real,CDot,y)))), checkAssumption = false) should not be Provable
   }
 
-  it should "not apply unsoundly to [y:=5;x:=x^2]q(x+y)<->q(x^2+5) with y>=. for q(.)" taggedAs(USTest) in {
+  it should "not apply unsoundly to [y:=5 x:=x^2]q(x+y)<->q(x^2+5) with y>=. for q(.)" taggedAs USTest in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
@@ -287,21 +227,13 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ApplyPredicate(p1, Add(Real,Exp(Real,x,Number(2)),Number(5))))
     val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), GreaterEqual(Real,y, Add(Real,x,y))),
         GreaterEqual(Real,y, Add(Real,Exp(Real,x,Number(2)),Number(5))))
-    val l = Variable("l", None, Real)
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,l), GreaterEqual(Real,y,l))))) should not be (Provable)
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,x), GreaterEqual(Real,y,x))))) should not be (Provable)
-
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,y), GreaterEqual(Real,y,y))))) should not be (Provable)
+      Substitution(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterEqual(Real,y,CDot)))),
+      checkAssumption = false) should not be Provable
   }
 
-  ignore should "not apply unsoundly to [x:=x+1]q(x)<->q(x+1) with .>0&\\exists x. x<. for q(.)" taggedAs(USTest) in {
+  ignore should "not apply unsoundly to [x:=x+1]q(x)<->q(x+1) with .>0&\\exists x. x<. for q(.)" taggedAs USTest in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
@@ -309,18 +241,10 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       ApplyPredicate(p1, Add(Real,x, Number(1))))
     val conclude = Equiv(BoxModality(Assign(x, Add(Real,x,Number(1))), And(GreaterThan(Real,x,Number(0)),Exists(Seq(x),LessThan(Real,x,x)))),
       And(GreaterThan(Real,Add(Real,x,Number(1)),Number(0)),Exists(Seq(x),LessThan(Real,x,Add(Real,x,Number(1))))))
-    val l = Variable("l", None, Real)
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,l), And(GreaterThan(Real,l,Number(0)),Exists(Seq(x),LessThan(Real,x,l))))))) should not be (Provable)
 
     unsoundUniformSubstitution(assume, conclude,
       Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,x), And(GreaterThan(Real,x,Number(0)),Exists(Seq(x),LessThan(Real,x,x))))))) should not be (Provable)
-
-    unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
-      new SubstitutionPair(ApplyPredicate(p1,y), And(GreaterThan(Real,y,Number(0)),Exists(Seq(x),LessThan(Real,x,y))))))) should not be (Provable)
+      new SubstitutionPair(ApplyPredicate(p1,CDot), And(GreaterThan(Real,CDot,Number(0)),Exists(Seq(x),LessThan(Real,x,CDot))))))) should not be (Provable)
   }
 
   "Tactics (default)" should "prove the following properties" in {}
@@ -379,15 +303,11 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     prove(formula) should be (Provable)
   }
 
-  it should "prove x>0 -> [y:=x; x:=y+1; ](x>y & y>0)" in {
-    val x = Variable("x", None, Real)
-    val y = Variable("y", None, Real)
-    val formula = Imply(GreaterThan(Real, x,Number(0)),
-      BoxModality(Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1)))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
-    prove(formula) should be (Provable)
+  it should "prove x>0 -> [y:=x x:=y+1 ](x>y & y>0)" in {
+    prove("x>0 -> [y:=x; x:=y+1;](x>y & y>0)".asFormula) should be (Provable)
   }
 
-  it should "prove x>0 -> [x:=x+1;y:=x-1 ++ y:=x; x:=y+1; ](x>y & y>0)" in {
+  it should "prove x>0 -> [x:=x+1 y:=x-1 ++ y:=x x:=y+1 ](x>y & y>0)" in {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val formula = Imply(GreaterThan(Real, x,Number(0)),
@@ -402,14 +322,13 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val formula = Imply(GreaterThan(Real, x,Number(0)),
       BoxModality(Choice(Sequence(Assign(x,Add(Real,x,Number(1))),Assign(y,x)),
         Sequence(Assign(y, x), Assign(x, Add(Real, y,Number(1))))), And(GreaterThan(Real, x,y), GreaterThan(Real, y, Number(0)))))
-    prove(formula, false) should not be (Provable)
+    prove(formula) should not be Provable
   }
 
 
 
   "Tactics (predicate)" should "prove p(2)->[x:=2]p(x)" in {
     val x = Variable("x", None, Real)
-    val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
     val assume = Imply(ApplyPredicate(p1, Number(2)),
       BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
@@ -418,36 +337,24 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   it should "prove q(2)->[x:=2]q(x)" in {
       val x = Variable("x", None, Real)
-      val y = Variable("y", None, Real)
       val p1 = Function("q", None, Real, Bool)
       val assume = Imply(ApplyPredicate(p1, Number(2)),
         BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
       prove(assume) should be (Provable)
   }
 
-  it should "prove q(2)->[x:=2]q(x) by assignment rule" in {
-      val x = Variable("x", None, Real)
-      val y = Variable("y", None, Real)
-      val p1 = Function("q", None, Real, Bool)
-      val assume = Imply(ApplyPredicate(p1, Number(2)),
-        BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
-    fail("uncomment:")
-//      prove(assume, step(SuccPosition(0)) & assignment(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
-  }
-
   it should "prove q(2)->[x:=2]q(x) by assign axiom" in {
-      val x = Variable("x", None, Real)
-      val y = Variable("y", None, Real)
-      val p1 = Function("q", None, Real, Bool)
-      val assume = Imply(ApplyPredicate(p1, Number(2)),
-        BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
-    fail("uncomment:")
-//      prove(assume, step(SuccPosition(0)) & assignT(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
+    import Tactics.repeatT
+    val x = Variable("x", None, Real)
+    val p1 = Function("q", None, Real, Bool)
+    val assume = Imply(ApplyPredicate(p1, Number(2)),
+      BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
+    prove(assume, step(SuccPosition(0)) & assignT(SuccPosition(0)) &
+      repeatT(closeT | locateAnte(eqLeft(exhaustive = false)) | arithmeticT)) should be (Provable)
   }
 
   it should "prove [x:=2]p(x)<->p(2)" in {
     val x = Variable("x", None, Real)
-    val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
     val assume = Equiv(BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)),
       ApplyPredicate(p1, Number(2)))
