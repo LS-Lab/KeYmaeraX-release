@@ -1484,6 +1484,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Add(s, l, r) => Add(s, usubst(l), usubst(r))
         case Subtract(s, l, r) => Subtract(s, usubst(l), usubst(r))
         case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
+        case Divide(s, l, r) => Divide(s, usubst(l), usubst(r))
         case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
