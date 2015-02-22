@@ -314,8 +314,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       divP ::
       expP ::
       negativeP ::
-      applyP ::
       termDerivativeP ::
+      applyP ::
       variableP :: //real-valued.
       numberP   ::
       identP :: //variableP should match first.
@@ -421,14 +421,17 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     lazy val applyP:SubtermParser = {
       // TODO disallow functions of functions?
-      lazy val pattern = ident ~ ("(" ~> repsep(precedence.reduce(_|_), ",") <~ ")")
+      lazy val pattern = ident ~ ("(" ~> ("?" | repsep(precedence.reduce(_|_), ",")) <~ ")")
       
       log(pattern)("Function Application") ^? (
         {case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Real =>
-          if (args.isEmpty) Apply(functionFromName (name.toString, functions), Nothing)
-          else Apply (functionFromName (name.toString, functions),
-            args.reduce ((l, r) => Pair (TupleT (l.sort, r.sort), l, r) ) )
-          },
+          args match {
+            case termArgs: List[Term] =>
+              if (termArgs.isEmpty) Apply(functionFromName(name.toString, functions), Nothing)
+              else Apply(functionFromName(name.toString, functions),
+                termArgs.reduce( (l,r) => Pair( TupleT(l.sort,r.sort), l, r) ) )
+            case _: String => Apply(functionFromName(name.toString, functions), Anything)
+          }},
         { case name ~ args => "Can only use identifier of sort Real in function application, but " + name + " has sort " +
                                 functionFromName(name.toString, functions).sort})
     }
