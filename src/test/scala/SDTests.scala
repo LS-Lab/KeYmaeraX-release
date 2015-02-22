@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.core.{SuccPosition, PosInExpr}
+import edu.cmu.cs.ls.keymaera.core.{Sequent, SuccPosition, PosInExpr}
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationAxiomTactics._
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.StringConverter._
 
 /**
  * These are post-development "integration" tests for syntactic derivation
@@ -9,13 +9,15 @@ import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 class SDTests extends TacticTestSuite {
 
   "Subtraction derivation" should "work" in {
-    val in = helper.parseFormula(" (x'+y') = 0")
-    val out = helper.parseFormula(" (x+y)' = 0")
+    val in = "(x'+y') = 0".asFormula
+    val out = "(x+y)' = 0".asFormula
 
     val node = helper.formulaToNode(out)
     val tactic = AddDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic,node, true)
-    containsOpenGoal(node, in) shouldBe(true)
+    helper.runTactic(tactic, node, mustApply = true)
+
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only in
   }
 
   "Syntactic Derivation" should "work when there's no binding" in {

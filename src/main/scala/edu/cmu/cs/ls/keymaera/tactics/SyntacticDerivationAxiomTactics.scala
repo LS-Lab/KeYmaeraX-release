@@ -456,41 +456,41 @@ object SyntacticDerivationAxiomTactics {
    */
   def AddDerivativeT = new TermAxiomTactic("+' derive sum","+' derive sum") {
     override def applies(t: Term): Boolean = t match {
-      case Derivative(_, Add(_, s, t)) => true
+      case Derivative(sort, Add(sort2, _, _)) => sort == sort2
 //      case Add(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
     }
 
     override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
       term match {
-        case Derivative(dSort, Add(aSort, s, t)) => {
+        case Derivative(dSort, Add(aSort, f, g)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val right = Add(sort, Derivative(sort, s), Derivative(sort, t))
+          val right = Add(sort, Derivative(sort, f), Derivative(sort, g))
           val axiomInstance = Equals(sort, term, right)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
         }
-        case Add(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          val sort = aSort; assert(aSort == sSort && sSort == tSort)
+        case Add(aSort, Derivative(fSort, f), Derivative(gSort, g)) => {
+          val sort = aSort; assert(aSort == fSort && aSort == gSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val left = Derivative(sort, Add(sort, s, t))
+          val left = Derivative(sort, Add(sort, f, g))
           val axiomInstance = Equals(sort, left, term)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
@@ -510,40 +510,40 @@ object SyntacticDerivationAxiomTactics {
  */
   def SubtractDerivativeT = new TermAxiomTactic("-' derive minus","-' derive minus") {
     override def applies(t: Term): Boolean = t match {
-      case Derivative(_, Subtract(_, s, t)) => true
+      case Derivative(sort, Subtract(sort2, _, _)) => sort == sort2
       case _ => false
     }
 
     override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
       term match {
-        case Derivative(dSort, Subtract(aSort, s, t)) => {
+        case Derivative(dSort, Subtract(aSort, f, g)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val right = Subtract(sort, Derivative(sort, s), Derivative(sort, t))
+          val right = Subtract(sort, Derivative(sort, f), Derivative(sort, g))
           val axiomInstance = Equals(sort, term, right)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
         }
-        case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
-          val sort = aSort; assert(aSort == sSort && sSort == tSort)
+        case Subtract(aSort, Derivative(fSort, f), Derivative(gSort, g)) => {
+          val sort = aSort; assert(aSort == fSort && aSort == gSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val left = Derivative(sort, Subtract(sort, s, t))
+          val left = Derivative(sort, Subtract(sort, f, g))
           val axiomInstance = Equals(sort, left, term)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
@@ -559,7 +559,7 @@ End.
    */
   def MultiplyDerivativeT = new TermAxiomTactic("*' derive product","*' derive product") {
     override def applies(t: Term): Boolean = t match {
-      case Derivative(_, Multiply(_, s, t)) => true
+      case Derivative(sort, Multiply(sort2, _, _)) => sort == sort2
 //      case Add(_, Multiply(_,Derivative(_,_), _),Multiply(_,_,Derivative(_))) => true
 //      case Subtract(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
@@ -567,34 +567,34 @@ End.
 
     override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
       term match {
-        case Derivative(dSort, Multiply(aSort, s, t)) => {
+        case Derivative(dSort, Multiply(aSort, f, g)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val right = Add(sort, Multiply(sort, Derivative(sort, s), t), Multiply(sort, s, Derivative(sort, t)))
+          val right = Add(sort, Multiply(sort, Derivative(sort, f), g), Multiply(sort, f, Derivative(sort, g)))
           val axiomInstance = Equals(sort, term, right)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
         }
-        case Add(aSort, Multiply(mSort,Derivative(_,s),t), Multiply(_,_,_)) => {
+        case Add(aSort, Multiply(mSort, Derivative(_, f), g), Multiply(_, _, _)) => {
           val sort = aSort; assert(aSort == mSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val left = Derivative(sort, Multiply(sort, s, t))
+          val left = Derivative(sort, Multiply(sort, f, g))
           val axiomInstance = Equals(sort, left, term)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
@@ -610,47 +610,49 @@ End.
    */
   def DivideDerivativeT = new TermAxiomTactic("/' derive quotient","/' derive quotient") {
     override def applies(term: Term): Boolean = term match {
-      case Derivative(_, Divide(_, s, t)) => true
+      case Derivative(sort, Divide(sort2, _, _)) => sort == sort2
 //      case Divide(dSort, Subtract(_, Multiply(_,Derivative(_,s), _),Multiply(_,_,Derivative(_))), Exp(_, t, Number(_))) => true
       case _ => false
     }
 
     override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
       term match {
-        case Derivative(dSort, Divide(aSort, s, t)) => {
+        case Derivative(dSort, Divide(aSort, f, g)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
           val right = Divide(dSort,
             Subtract(sort,
-              Multiply(sort,Derivative(sort,s), t),
-              Multiply(sort,s,Derivative(sort,t))
+              Multiply(sort, Derivative(sort, f), g),
+              Multiply(sort, f, Derivative(sort, g))
             ),
-            Exp(sort, t, Number(2))
+            Exp(sort, g, Number(2))
           )
           val axiomInstance = Equals(sort, term, right)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
         }
-        case Divide(dSort, Exp(_, t, Number(_)), Subtract(_, Multiply(_,Derivative(_,s), _),Multiply(_,_,Derivative(_)))) => {
+        case Divide(dSort,
+                Exp(_, g, Number(_)),
+                Subtract(_, Multiply(_,Derivative(_, f), _), Multiply(_, _, Derivative(_)))) => {
           val sort = dSort
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
-          val aT = Apply(Function("t", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val left = Derivative(Real, Divide(Real, s, t))
+          val left = Derivative(Real, Divide(Real, f, g))
           val axiomInstance = Equals(sort, left, term)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s),
-            SubstitutionPair(aT, t)
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aG, g)
           ))
 
           Some(axiomInstance, subst)
