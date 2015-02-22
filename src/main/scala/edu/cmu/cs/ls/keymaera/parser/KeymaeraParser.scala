@@ -111,7 +111,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     val parser = new KeYmaeraParser(enabledLogging, env)
 
     //Parse file.
-    val (functions : List[Function],predicateConstants : List[PredicateConstant], variables : List[Variable],problemText : String) =
+    val (functions : List[Function],predicateConstants : List[Function], variables : List[Variable],problemText : String) =
       parser.parseAll(parser.fileParser, s) match {
         case parser.Success(result,next) => result
         case f: parser.Failure => throw new IllegalArgumentException(f.toString())
@@ -152,7 +152,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   @elidable(ASSERTION) 
   def checkParser(functions:List[Function],
-    predicateConstants:List[PredicateConstant],
+    predicateConstants:List[Function],
     variables:List[Variable],
     programVariables:List[ProgramConstant],
     contEvolveProgramVariables: List[ContEvolveProgramConstant],
@@ -237,7 +237,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         }
         case None => {
           val (n, idx) = nameAndIndex(name)
-          PredicateConstant(n, idx)
+          Function(n, idx, Unit, Bool)
         }
       }
   }
@@ -277,13 +277,13 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
   lazy val fileParser = functionsP.? ~ programVariablesP.? ~ problemP ^^ {
     case functionSection ~ programVarsSection ~ problemText => {
       val functions:List[Function] = functionSection match {
-        case Some(l) => l.filter(_.isInstanceOf[Function]).map(_.asInstanceOf[Function])
+        case Some(l) => l.filter({ case Function(_, _, Unit, Bool) => false case _ => true }).map(_.asInstanceOf[Function])
         case None    => List[Function]()
       }
       
-      val predicateConstants:List[PredicateConstant] = functionSection match {
-        case Some(l) => l.filter(_.isInstanceOf[PredicateConstant]).map(_.asInstanceOf[PredicateConstant])
-        case None    => List[PredicateConstant]()
+      val predicateConstants:List[Function] = functionSection match {
+        case Some(l) => l.filter({ case Function(_, _, Unit, Bool) => true case _ => false }).map(_.asInstanceOf[Function])
+        case None    => List[Function]()
       }
       val variables:List[Variable] = programVarsSection match {
         case Some(l) => l
@@ -457,7 +457,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
   //////////////////////////////////////////////////////////////////////////////
   class FormulaParser(variables:List[Variable],
       functions:List[Function],
-      predicates:List[PredicateConstant],
+      predicates:List[Function],
       programVariables:List[ProgramConstant],
       contEvolveProgramVariables: List[ContEvolveProgramConstant])
   {
@@ -594,8 +594,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //Predicates
     lazy val predicateP:SubformulaParser = {
       lazy val pattern = {
-        val stringList =  predicates.map(PredicateConstant.unapply(_) match {
-          case Some((n, i)) => n + (i match { case Some(idx) => "_" + idx case None => ""})
+        val stringList =  predicates.map(Function.unapply(_) match {
+          case Some((n, i, _, _)) => n + (i match { case Some(idx) => "_" + idx case None => ""})
           case None => ???
         })
         if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
@@ -605,8 +605,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       log(pattern)("Predicate") ^^ {
         case name => {
           val (n, i) = nameAndIndex(name)
-          val p = PredicateConstant(n, i)
-          require(predicates.contains(p), "All predicates have to be declared, but the predicate named ``" + p.prettyString() + "\" was not found in the list of predicates: " + predicates)
+          val fn = Function(n, i, Unit, Bool)
+          val p = ApplyPredicate(fn, Nothing)
+          require(predicates.contains(fn), "All predicates have to be declared, but the predicate named ``" + p.prettyString() + "\" was not found in the list of predicates: " + predicates)
           p
         }
       } 
@@ -754,7 +755,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
   //////////////////////////////////////////////////////////////////////////////
   class ProgramParser(variables:List[Variable],
       functions:List[Function],
-      predicates:List[PredicateConstant],
+      predicates:List[Function],
       programVariables:List[ProgramConstant],
       contEvolveProgramVariables: List[ContEvolveProgramConstant])
   {
@@ -1020,7 +1021,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    * Gets an expression parser based upon the function and programVariable sections.
    */
   def makeExprParser(variables:List[Variable], functions:List[Function],
-      predicates:List[PredicateConstant],programs:List[ProgramConstant],contEvolvePrograms:List[ContEvolveProgramConstant]):PackratParser[Expr] =
+      predicates:List[Function],programs:List[ProgramConstant],contEvolvePrograms:List[ContEvolveProgramConstant]):PackratParser[Expr] =
   {
     
     lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs,contEvolvePrograms).parser
@@ -1142,7 +1143,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     sealed trait VType
       case class VProgram(variable: ProgramConstant) extends VType
       case class VContEvolveProgram(variable: ContEvolveProgramConstant) extends VType
-      case class VFormula(variable: PredicateConstant) extends VType
+      case class VFormula(variable: Function) extends VType
       case class VTerm(variable: Variable) extends VType
       case class VFunction(fn: Function) extends VType
     /**
@@ -1185,7 +1186,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      * This is the parser for the first pass
      */
     lazy val firstPassParser 
-    : PackratParser[(List[ProgramConstant], List[ContEvolveProgramConstant], List[PredicateConstant], List[Variable], List[Function])] =
+    : PackratParser[(List[ProgramConstant], List[ContEvolveProgramConstant], List[Function], List[Variable], List[Function])] =
     {
       lazy val pattern = variablesP
       log(pattern)("Parsing variable declarations in proof file.") ^^ {
@@ -1218,7 +1219,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       ty match {
         case "P" => VProgram(ProgramConstant(n, idx))
         case "CP" => VContEvolveProgram(ContEvolveProgramConstant(n, idx))
-        case "F" => VFormula(PredicateConstant(n, idx))
+        case "F" => VFormula(Function(n, idx, Unit, Bool))
         case "T" => VTerm(Variable(n, idx, Real))
         case _ => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula) or T (term)")
       }
@@ -1280,7 +1281,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     def makeAxiomLemmaParser(
           programs : List[ProgramConstant],
           contEvolvePrograms: List[ContEvolveProgramConstant],
-          formulas : List[PredicateConstant],
+          formulas : List[Function],
           terms : List[Variable],
           funs: List[Function]) : ALPType  =
     {
