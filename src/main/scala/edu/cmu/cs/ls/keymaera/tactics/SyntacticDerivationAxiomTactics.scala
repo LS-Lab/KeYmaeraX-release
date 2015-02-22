@@ -520,8 +520,8 @@ object SyntacticDerivationAxiomTactics {
         case Derivative(dSort, Subtract(aSort, s, t)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val right = Subtract(sort, Derivative(sort, s), Derivative(sort, t))
           val axiomInstance = Equals(sort, term, right)
@@ -536,8 +536,8 @@ object SyntacticDerivationAxiomTactics {
         case Subtract(aSort, Derivative(sSort, s), Derivative(tSort, t)) => {
           val sort = aSort; assert(aSort == sSort && sSort == tSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val left = Derivative(sort, Subtract(sort, s, t))
           val axiomInstance = Equals(sort, left, term)
@@ -571,8 +571,8 @@ End.
         case Derivative(dSort, Multiply(aSort, s, t)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val right = Add(sort, Multiply(sort, Derivative(sort, s), t), Multiply(sort, s, Derivative(sort, t)))
           val axiomInstance = Equals(sort, term, right)
@@ -587,8 +587,8 @@ End.
         case Add(aSort, Multiply(mSort,Derivative(_,s),t), Multiply(_,_,_)) => {
           val sort = aSort; assert(aSort == mSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val left = Derivative(sort, Multiply(sort, s, t))
           val axiomInstance = Equals(sort, left, term)
@@ -621,8 +621,8 @@ End.
         case Derivative(dSort, Divide(aSort, s, t)) => {
           val sort = aSort; assert(dSort == aSort)
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val right = Divide(dSort,
             Subtract(sort,
@@ -643,8 +643,8 @@ End.
         case Divide(dSort, Exp(_, t, Number(_)), Subtract(_, Multiply(_,Derivative(_,s), _),Multiply(_,_,Derivative(_)))) => {
           val sort = dSort
 
-          val aS = Variable("s", None, sort)
-          val aT = Variable("t", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aT = Apply(Function("t", None, Unit, sort), Nothing)
 
           val left = Derivative(Real, Divide(Real, s, t))
           val axiomInstance = Equals(sort, left, term)
