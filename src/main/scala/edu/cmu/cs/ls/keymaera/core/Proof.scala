@@ -1048,9 +1048,7 @@ object BindingAssessment {
   def catVars(p: Program): VC3 = { p match {
     case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x))
     // TODO CDot and derivative not mentioned in Definition 9
-    case Assign(CDot, e) => VC3(fv = freeVariables(e), bv = SetLattice(CDot), mbv = SetLattice(CDot)) //@todo eisegesis
     case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
-    case Assign(Derivative(_, CDot), e) => VC3(fv = freeVariables(e), bv = SetLattice(CDot), mbv = SetLattice(CDot)) //@todo eisegesis
     // TODO x:=* not mentioned in Definition 9
     case NDetAssign(x: Variable) => VC3(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
     case Test(f) => VC3(fv = catVars(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
