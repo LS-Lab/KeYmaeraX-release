@@ -1592,8 +1592,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
       if (v.isEmpty) NFContEvolve(v, dv, usubst(t), usubst(h))
       else throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
-    case IncompleteSystem(s) => usubstODE(s, primed)
-    case CheckedContEvolveFragment(s) => usubstODE(s, primed)
+    case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
+    case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
     case c: ContEvolveProgramConstant if  subsDefs.exists(_.n == c) =>
       val repl = subsDefs.find(_.n == c).get.t
       repl match {
