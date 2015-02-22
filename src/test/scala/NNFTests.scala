@@ -102,7 +102,7 @@ class NNFTests extends TacticTestSuite {
 
     helper.report(node)
     val expected = helper.parseFormula("( !(1=1) & !(2=2) ) | !(2=2)") //OK.
-    containsOpenGoal(node, expected)
+    containsOpenGoal(node, expected) shouldBe (true)
   }
 
   it should "work 2" in {
@@ -111,8 +111,7 @@ class NNFTests extends TacticTestSuite {
 
     helper.runTactic(tactic, node)
 
-    helper.report(node)
-//    val expected = helper.parseFormula("( !(1=1) & !(2=2) ) | !(2=2)") //OK.
-//    containsOpenGoal(node, expected)
+    val expected = helper.parseFormula("(1=1|2=2)&!(2=2)") //OK.
+    containsOpenGoal(node, expected) shouldBe(true)
   }
 }

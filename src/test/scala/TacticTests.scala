@@ -69,7 +69,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /**
    * Run KeYmaera till completion using given tactic for proving given conjecture f.
-   *@TODO Improve implementation, e.g., by giving an upper time bound
+   *@todo Improve implementation, e.g., by giving an upper time bound
    */
   def prove(f:Formula, tactic:Tactic = TacticLibrary.default, printOnFail: Boolean = true) : ProvabilityStatus = {
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(f)))
@@ -106,7 +106,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   /**
    * Tactic that applies propositional proof rules exhaustively but only closes by axiom lazyly, i.e. if no other rule applies.
-   *@TODO Implement for real. This strategy uses more than propositional steps.
+   * @TODO Implement for real. This strategy uses more than propositional steps.
    */
   def lazyPropositional = ((locate(indecisive(true, false, false, true)) | closeT)*)
 
@@ -431,7 +431,8 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       val p1 = Function("q", None, Real, Bool)
       val assume = Imply(ApplyPredicate(p1, Number(2)),
         BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
-      prove(assume, step(SuccPosition(0)) & assignment(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
+    fail("uncomment:")
+//      prove(assume, step(SuccPosition(0)) & assignment(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
   }
 
   it should "prove q(2)->[x:=2]q(x) by assign axiom" in {
@@ -440,7 +441,8 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       val p1 = Function("q", None, Real, Bool)
       val assume = Imply(ApplyPredicate(p1, Number(2)),
         BoxModality(Assign(x, Number(2)), ApplyPredicate(p1, x)))
-      prove(assume, step(SuccPosition(0)) & assignT(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
+    fail("uncomment:")
+//      prove(assume, step(SuccPosition(0)) & assignT(SuccPosition(0)) & (closeT | locateAnte(eqLeft(false)) | arithmeticT)*) should be (Provable)
   }
 
   it should "prove [x:=2]p(x)<->p(2)" in {
