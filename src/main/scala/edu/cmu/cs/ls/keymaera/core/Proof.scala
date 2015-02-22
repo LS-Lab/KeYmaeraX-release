@@ -540,49 +540,10 @@ object Axiom {
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
   private def loadAxioms: Map[String, Formula] = {
     var m = new HashMap[String, Formula]
-    val a = ProgramConstant("a")
-    val b = ProgramConstant("b")
-    val p = PredicateConstant("p")
-    val pair = ("[++] choice", Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p))))
-    m = m + pair
-    
-    val aA = ProgramConstant("a")
-    val aB = ProgramConstant("b")
-    val aP = PredicateConstant("p")
-    val pair2 = ("[;] compose", Equiv(BoxModality(Sequence(aA, aB), aP), BoxModality(aA, BoxModality(aB, aP))))
-    m = m + pair2
-    
     // [?H]p <-> (H -> p)
     val aH = PredicateConstant("H")
     val pair3 = ("[?] test", Equiv(BoxModality(Test(aH), aP), Imply(aH, aP)))
     m = m + pair3
-
-    val x = Variable("x", None, Real)
-    val t = Variable("t", None, Real)
-    val p1 = Function("p", None, Real, Bool)
-    val pair4 = ("Quantifier Instantiation", Imply(Forall(Seq(x), ApplyPredicate(p1, x)), ApplyPredicate(p1, t)))
-    m = m + pair4
-    
-    val pair5 = ("I induction", Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), BoxModality(Loop(a), p)))
-    m = m + pair5
-
-    val aQ = PredicateConstant("q")
-    //[a](p->q) -> (([a]p) -> ([a]q))
-    val pair6 = ("K modal modus ponens", Imply(BoxModality(aA, Imply(aP, aQ)), Imply(BoxModality(aA, aP), BoxModality(aA, aQ))))
-    m = m + pair6
-    
-    val pair7 = ("[:*] assignment", Equiv(BoxModality(NDetAssign(x), ApplyPredicate(p1, x)), Forall(Seq(x), ApplyPredicate(p1, x))))
-    m = m + pair7
-    
-    //[x:=t]p(x) <-> \forall x . (x=t -> p(x))
-    val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(x), Imply(Equals(Real, x,t), ApplyPredicate(p1, x)))))
-    m = m + pair8
-
-    // val y = Variable("y", None, Real)
-    // //[x:=t]p(x) <-> \forall y . (y=t -> p(y))
-    // val pair8 = ("[:=] assignment equal", Equiv(BoxModality(Assign(x, t), ApplyPredicate(p1, x)), Forall(Seq(y), Imply(Equals(Real, y,t), ApplyPredicate(p1, y)))))
-    // m = m + pair8
-    
     m
   }
 
@@ -1452,7 +1413,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
- * Explicit construction computing bound variables on the fly.
+ * Global version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
  * Used for UniformSubstitution rule.
  * @author aplatzer
  */
@@ -1495,6 +1456,8 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
       t match {
         // uniform substitution base cases
         case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
+        //@TODO Check if this matches on reals or whether Real is considered a variable in the pattern ....
+        case xp: Derivative(Real, x:Variable) => require(!subsDefs.exists(_.n == xp), s"Substitution of differential symbols not supported: $xp"); xp
         case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rTerm) =
@@ -1522,6 +1485,11 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Add(s, l, r) => Add(s, usubst(l), usubst(r))
         case Subtract(s, l, r) => Subtract(s, usubst(l), usubst(r))
         case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
+        //@TODO Check if this matches on reals or whether Real is considered a variable in the pattern ....
+        //@TODO TOP means all variables. Alias: occurring replacements introduce no free variables at all.
+        case der: Derivative(Real, e) => require(admissible(TOP, e),
+            s"Substitution clash: when substituting derivative ${der.prettyString()}"));
+            Derivative(Real, usubst(e))
       }
     } catch {
       case ex: IllegalArgumentException =>
@@ -1591,6 +1559,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
           subsDefs.find(_.n == a).get.t.asInstanceOf[Program]
         case a: ProgramConstant if !subsDefs.exists(_.n == a) => a
         case Assign(x: Variable, e) => Assign(x, usubst(e))
+        case Assign(xp: Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
         case NDetAssign(x: Variable) => NDetAssign(x)
         case Test(f) => Test(usubst(f))
         case ode: ContEvolveProgram =>
