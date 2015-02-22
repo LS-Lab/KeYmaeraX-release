@@ -1042,7 +1042,7 @@ object BindingAssessment {
     // TODO x' and f(x) are not in Definition 8
     case Derivative(s, e) => freeVariables(e) //@todo eisegesis
     case Apply(f, arg) => SetLattice[NamedSymbol](f) ++ freeVariables(arg) //@todo eisegesis
-    case True | False | _: NumberObj | Nothing => SetLattice.bottom
+    case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
   }
 
   def catVars(p: Program): VC3 = { p match {
