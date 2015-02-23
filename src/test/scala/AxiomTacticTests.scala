@@ -7,6 +7,8 @@ import testHelper.StringConverter._
 import testHelper.SequentFactory._
 import testHelper.ProofFactory._
 
+import scala.collection.immutable.List
+
 /**
  * Created by smitsch on 2/5/15.
  * @author Stefan Mitsch
@@ -34,8 +36,8 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           val expected = Add(sort, Derivative(sort, s), Derivative(sort, t))
           val axiomInstance = Equals(sort, e, expected)
           // prepare substitution
-          val aS = Variable("s", None, Real)
-          val aT = Variable("t", None, Real)
+          val aS = Apply(Function("f", None, Real, Real), Anything)
+          val aT = Apply(Function("g", None, Real, Real), Anything)
           val subsDefs = List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))
           // bundle result
           Some(axiomInstance, Substitution(subsDefs))
@@ -49,28 +51,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
   }
 
-  "Derivative axiom in context tactic" should "use information provided by subclasses" in {
-    def dacT: PositionTactic = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
-      override def applies(f: Formula) = f match {
-        case FormulaDerivative(GreaterThan(_, _, _)) => true
-        case _ => false
-      }
-
-      override def constructInstanceAndSubst(f: Formula) = f match {
-        case FormulaDerivative(GreaterThan(sort, s, t)) =>
-          // expected axiom instance
-          Some(GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t)), None)
-        case _ => None
-      }
-    }
-
-    val tactic = dacT(SuccPosition(0, PosInExpr(1 :: Nil)))
-    getProofSequent(tactic, new RootNode(sucSequent("[z':=2;](s>t)'".asFormula))) should be (
-      sucSequent("[z':=2;]s'>=t'".asFormula)
-    )
-  }
-
-  it should "use provided renaming tactic" in {
+  "Derivative axiom in context tactic"  should "use provided renaming tactic" in {
     def dacT: PositionTactic = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
       override def applies(f: Formula) = f match {
         case FormulaDerivative(GreaterThan(_, _, _)) => true
@@ -81,13 +62,13 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       override def constructInstanceAndSubst(f: Formula) = f match {
         case fd@FormulaDerivative(GreaterThan(sort, s, t)) =>
           // substitution
-          val aS = Variable("s", None, Real)
-          val aT = Variable("t", None, Real)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))),
+          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aF, s), SubstitutionPair(aG, t))),
             Map(Equiv(fd, GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))) ->
-              Equiv(FormulaDerivative(GreaterThan(sort, aS, aT)),
-                GreaterEqual(sort, Derivative(sort, aS), Derivative(sort, aT)))
+              Equiv(FormulaDerivative(GreaterThan(sort, aF, aG)),
+                GreaterEqual(sort, Derivative(sort, aF), Derivative(sort, aG)))
             ))
 
           // expected axiom instance
@@ -112,13 +93,13 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       override def constructInstanceAndSubst(f: Formula) = f match {
         case fd@FormulaDerivative(GreaterThan(sort, s, t)) =>
           // substitution
-          val aS = Variable("s", None, Real)
-          val aT = Variable("t", None, Real)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
+          val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))),
+          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aF, s), SubstitutionPair(aG, t))),
             Map(Equiv(fd, GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))) ->
-              Equiv(FormulaDerivative(GreaterThan(sort, aS, aT)),
-                GreaterEqual(sort, Derivative(sort, aS), Derivative(sort, aT)))
+              Equiv(FormulaDerivative(GreaterThan(sort, aF, aG)),
+                GreaterEqual(sort, Derivative(sort, aF), Derivative(sort, aG)))
             ))
 
           // expected axiom instance

@@ -324,8 +324,9 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
             abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
             assertT(0, 1) & cutT(Some(axiomInstance)) &
             onBranch((cutUseLbl,
-              (equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) &
-                hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
+              (assertPT(axiomInstance)(AntePosition(0)) & equalityRewriting(AntePosition(0), pos) &
+                ((assertPT(axiomInstance)&hideT)(AntePosition(0)) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) &
+                AxiomCloseT) ~
                 (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
               (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
 
