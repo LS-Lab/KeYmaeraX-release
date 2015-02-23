@@ -47,17 +47,43 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     node.openGoals().flatMap(_.sequent.succ) should contain only "(a>b -> [b':=1;](true -> 1=b))'".asFormula
   }
 
-  def runDiffInv(f : Formula) = {
-    val node = helper.formulaToNode(f)
-    helper.runTactic(helper.positionTacticToTactic(ODETactics.diffInvariantT), node)
-    helper.report(node)
-    node
+  "diff inv tactic" should "work" in {
+    val s = sequent(Nil, "x>=0".asFormula::Nil, "[x' = 2;]x>=0".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0".asFormula
+    n.openGoals().flatMap(_.sequent.succ) should contain only "!true | 2>=0".asFormula
+
   }
 
+  it should "work with conjunction in inv" in {
+    val s = sequent(Nil, "x>=0 & x>=x".asFormula::Nil, "[x' = 2;](x>=0 & x>=x)".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0 & x>=x".asFormula
+    n.openGoals().flatMap(_.sequent.succ) should contain only "!true | (2>=0 & 2>=2)".asFormula
+  }
 
-  "diff inv tactic" should "work" in {
-    val f = "[x' = y, y' = x & x^2 + y^2 = 4;]1=1".asFormula
-    val n = runDiffInv(f)
+  it should "work with disjunction in inv" in {
+    val s = sequent(Nil, "x>=0 & x>=x".asFormula::Nil, "[x' = 2;](x>=0 | x>=x)".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0 & x>=x".asFormula
+    n.openGoals().flatMap(_.sequent.succ) should contain only "!true | (2>=0 & 2>=2)".asFormula
+  }
+
+  it should "work with implication in inv" in {
+    val s = sequent(Nil, "x>=0 -> x>=x".asFormula::Nil, "[x' = 2;](x>=0 -> x>=x)".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0 -> x>=x".asFormula
+    n.openGoals().flatMap(_.sequent.succ) should contain only "!true | ((!x>=0)' & 2>=2)".asFormula
+  }
+
+  it should "work with a complicated example" in {
+    val s = sequent(Nil, "x>=0".asFormula::Nil, "[x' = y, y' = x & x^2 + y^2 = 4;]1=1".asFormula::Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
     fail()
     // TODO check expected result
   }

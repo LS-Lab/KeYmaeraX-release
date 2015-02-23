@@ -2,16 +2,15 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 //@todo minimize imports
 
-import edu.cmu.cs.ls.keymaera.core
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+
+import scala.collection.immutable.List
 
 /**
  * @todo The tactics do not actually do this -- the AxiomNameT only got the "correct" direction in the new implementation.
@@ -33,6 +32,19 @@ object SyntacticDerivationInContext {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section 1: "Derivatives" of Formulas
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  private def createSubstitution(frm: Formula, f: Formula, g: Formula,
+                                 lhsFactory: (Formula, Formula) => Formula,
+                                 rhsFactory: (Formula, Formula) => Formula) = {
+    val aF = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val aG = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+
+    uniformSubstT(Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))),
+      Map(Equiv(frm, rhsFactory(FormulaDerivative(f), FormulaDerivative(g))) ->
+        Equiv(FormulaDerivative(lhsFactory(aF, aG)),
+          rhsFactory(FormulaDerivative(aF), FormulaDerivative(aG)))))
+  }
+
   /*
  * Axiom "->' derive imply".
  *   (p -> q)' <-> (!p | q)'
@@ -58,9 +70,17 @@ object SyntacticDerivationInContext {
     override def constructInstanceAndSubst(f: Formula) = f match {
       case FormulaDerivative(Imply(p, q)) => {
         val g = FormulaDerivative(Or(Not(p), q))
-        val axiomInstance = Equiv(f,g)
 
-        Some(g, None)
+        val aF = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aG = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+
+        val usubst = uniformSubstT(Substitution(List(SubstitutionPair(aF, f),
+          SubstitutionPair(aG, g))),
+          Map(Equiv(f, FormulaDerivative(Or(Not(p), q))) ->
+            Equiv(FormulaDerivative(Imply(aF, aG)),
+              FormulaDerivative(Or(Not(aF), aG)))))
+
+        Some(g, Some(usubst))
       }
       case _ => None
     }
@@ -84,9 +104,9 @@ object SyntacticDerivationInContext {
     }
 
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(And(p,q)) => {
-        Some(And(FormulaDerivative(p), FormulaDerivative(q)), None)
-      }
+      case FormulaDerivative(And(p,q)) =>
+        val usubst = createSubstitution(f, p, q, And.apply, And.apply)
+        Some(And(FormulaDerivative(p), FormulaDerivative(q)), Some(usubst))
       case _ => None
     }
   }
@@ -136,7 +156,9 @@ object SyntacticDerivationInContext {
      * @return Desired result before executing the renaming
      */
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(Or(p,q)) => Some(And(FormulaDerivative(p), FormulaDerivative(q)), None)
+      case FormulaDerivative(Or(p,q)) =>
+        val usubst = createSubstitution(f, p, q, Or.apply, And.apply)
+        Some(And(FormulaDerivative(p), FormulaDerivative(q)), Some(usubst))
       case _ => None
     }
   }
@@ -163,6 +185,19 @@ object SyntacticDerivationInContext {
 
   // @TODO A lot of things are missing from the axiom file...
 
+  private def createSubstitution(frm: Formula, f: Term, g: Term, sort: Sort,
+                                 lhsFactory: (Sort, Term, Term) => BinaryRelation,
+                                 rhsFactory: (Sort, Term, Term) => BinaryRelation) = {
+    val aF = Apply(Function("f", None, sort, sort), Anything)
+    val aG = Apply(Function("g", None, sort, sort), Anything)
+
+    uniformSubstT(new Substitution(List(SubstitutionPair(aF, f),
+      SubstitutionPair(aG, g))),
+      Map(Equiv(frm, rhsFactory(sort, Derivative(sort, f), Derivative(sort, g))) ->
+        Equiv(FormulaDerivative(lhsFactory(sort, aF, aG)),
+          rhsFactory(sort, Derivative(sort, aF), Derivative(sort, aG)))))
+  }
+
   /*
    * Axiom "=' derive =".
    *   (s = t)' <-> ((s') = (t'))
@@ -188,7 +223,9 @@ object SyntacticDerivationInContext {
      * @return Desired result before executing the renaming
      */
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(Equals(eqSort, s, t)) => Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case FormulaDerivative(Equals(eqSort, s, t)) =>
+        val usubst = createSubstitution(f, s, t, eqSort, Equals.apply, Equals.apply)
+        Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
       case _ => None
     }
   }
@@ -227,7 +264,9 @@ object SyntacticDerivationInContext {
 
 
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(GreaterEqual(eqSort, s, t)) => Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case FormulaDerivative(GreaterEqual(eqSort, s, t)) =>
+        val usubst = createSubstitution(f, s, t, eqSort, GreaterEqual.apply, GreaterEqual.apply)
+        Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
       case _ => None
     }
   }
@@ -265,7 +304,9 @@ object SyntacticDerivationInContext {
     }
 
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(GreaterThan(eqSort, s, t)) => Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case FormulaDerivative(GreaterThan(eqSort, s, t)) =>
+        val usubst = createSubstitution(f, s, t, eqSort, GreaterThan.apply, GreaterEqual.apply)
+        Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
       case _ => None
     }
   }
@@ -303,7 +344,9 @@ object SyntacticDerivationInContext {
     }
 
     override def constructInstanceAndSubst(f : Formula) = f match {
-      case FormulaDerivative(LessEqual(eqSort, s, t)) => Some(LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case FormulaDerivative(LessEqual(eqSort, s, t)) =>
+        val usubst = createSubstitution(f, s, t, eqSort, LessEqual.apply, LessEqual.apply)
+        Some(LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
     }
   }
 
@@ -340,7 +383,9 @@ object SyntacticDerivationInContext {
     }
 
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(LessThan(eqSort, s, t)) => Some( LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case FormulaDerivative(LessThan(eqSort, s, t)) =>
+        val usubst = createSubstitution(f, s, t, eqSort, LessThan.apply, LessEqual.apply)
+        Some( LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
       case _ => None
     }
   }
@@ -378,7 +423,9 @@ object SyntacticDerivationInContext {
     }
 
     override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(NotEquals(eqSort, s, t)) => Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+      case FormulaDerivative(NotEquals(eqSort, s, t)) =>
+        val usubst = createSubstitution(f, s, t, eqSort, NotEquals.apply, Equals.apply)
+        Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
     }
   }
 
@@ -1063,9 +1110,11 @@ End.
 
 
   def SyntacticDerivationT = new PositionTactic("Single Step of Total Syntactic Derivation") {
+    import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.applies(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
 
-    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT) *) ~ (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT) *)
+    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~
+      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*)
 
   }
 }
