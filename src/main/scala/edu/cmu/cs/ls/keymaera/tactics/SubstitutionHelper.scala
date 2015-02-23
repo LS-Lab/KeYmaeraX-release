@@ -46,6 +46,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
+      case d: Derivative if d == what => repl
       case Derivative(s, e) if e == what => Derivative(s, repl)
       case Derivative(_, e) if e != what => t
       case Apply(fn, theta) => Apply(fn, usubst(o, u, theta))
@@ -79,7 +80,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
 
     // uniform substitution base cases
     case ApplyPredicate(fn, theta) => ApplyPredicate(fn, usubst(o, u, theta))
-    case FormulaDerivative(g) => ???
+    case FormulaDerivative(g) => FormulaDerivative(usubst(o, u, g))
     case x: Atom => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
