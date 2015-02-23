@@ -1138,7 +1138,10 @@ object Assign {
 }
 final class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram {
   def reads = ???
-  def writes = VSearch.modified(left)
+  def writes = BindingAssessment.catVars(this).bv.s match {
+    case Left(_) => /* top */ ???
+    case Right(ts) => scala.collection.immutable.Seq(ts.toSeq: _*)
+  }
 
   override def equals(e: Any): Boolean = e match {
     case x: Assign => x.left == left && x.right == right
@@ -1160,7 +1163,10 @@ object NDetAssign {
 }
 final class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram {
   def reads = Nil
-  def writes = VSearch.modified(child)
+  def writes = BindingAssessment.catVars(this).bv.s match {
+    case Left(_) => /* top */ ???
+    case Right(ts) => scala.collection.immutable.Seq(ts.toSeq: _*)
+  }
 
   override def equals(e: Any): Boolean = e match {
     case x: NDetAssign => x.child == child
@@ -1203,7 +1209,7 @@ object ContEvolve {
 }
 final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with ContEvolveProgram {
   def reads = ???
-  def writes = (VSearch.primed(child)).distinct
+  def writes = ??? // not implemented in BindingAssessment (ContEvolve should be deprecated and removed)
 
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
@@ -1259,7 +1265,10 @@ final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Derivative, val thet
     extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   require(!vars.contains(x), "Quantified disturbance should not have differential equations")
   def reads = ???
-  def writes = VSearch.primed(x).distinct
+  def writes = BindingAssessment.catVars(this).bv.s match {
+    case Left(_) => /* top */ ???
+    case Right(ts) => scala.collection.immutable.Seq(ts.toSeq: _*)
+  }
 
   override def equals(e: Any): Boolean = e match {
     case o: NFContEvolve => o.vars == vars && o.x == x && o.theta == theta && o.f == f
@@ -1434,59 +1443,5 @@ final class Exists(variables : immutable.Seq[NamedSymbol], child : Formula) exte
     case _ => false
   }
   override def hashCode: Int = hash(233, variables, child)
-}
-
-/**
- *==================================================================================
- * Helpers
- *==================================================================================
- */
-
-private object VSearch {
-  //@TODO See Proof.scala:Substitution and double check with that
-  def modified(e: Term): Seq[NamedSymbol] = e match {
-    case Pair(dom, a, b) => modified(a) ++ modified(b)
-    case Apply(f, args) => Seq(f)
-    case x:Variable => Seq(x)
-    case Derivative(_, x: Variable) => Seq(x)
-    case Neg(_, a) => modified(a)
-    case Add(_, a, b) => modified(a) ++ modified(b)
-    case Subtract(_, a, b) => modified(a) ++ modified(b)
-    case Multiply(_, a, b) => modified(a) ++ modified(b)
-    case Divide(_, a, b) => modified(a) ++ modified(b)
-    case Exp(_, a, b) => modified(a) ++ modified(b)
-    case _ => throw new UnknownOperatorException("Unexpected form", e)
-  }
-
-  def primed(f: Formula): Seq[NamedSymbol] = f match {
-    case Not(a) => primed(a)
-    case And(a, b) => primed(a) ++ primed(b)
-    case Or(a, b) => primed(a) ++ primed(b)
-    case Imply(a, b) => primed(a) ++ primed(b)
-    case Equiv(a, b) => primed(a) ++ primed(b)
-    case ApplyPredicate(_, arg) => primed(arg)
-    case Equals(_, a, b) => primed(a) ++ primed(b)
-    case NotEquals(_, a, b) => primed(a) ++ primed(b)
-    case GreaterThan(_, a, b) => primed(a) ++ primed(b)
-    case GreaterEqual(_, a, b) => primed(a) ++ primed(b)
-    case LessEqual(_, a, b) => primed(a) ++ primed(b)
-    case LessThan(_, a, b) => primed(a) ++ primed(b)
-    case a => throw new UnsupportedOperationException("Not implemented for " + a)
-  }
-
-  def primed(t: Term): Seq[NamedSymbol] = t match {
-    case Number(_, _) => Nil
-    case Variable(_, _, _) => Nil
-    case Pair(_, a, b) => primed(a) ++ primed(b)
-    case Derivative(_, x) => modified(x)
-    case Neg(_, a) => primed(a)
-    case Add(_, a, b) => primed(a) ++ primed(b)
-    case Subtract(_, a, b) => primed(a) ++ primed(b)
-    case Multiply(_, a, b) => primed(a) ++ primed(b)
-    case Divide(_, a, b) => primed(a) ++ primed(b)
-    case Exp(_, a, b) => primed(a) ++ primed(b)
-    case Apply(f, args) => primed(args)
-    case a => throw new UnsupportedOperationException("Not implemented for " + a)
-  }
 }
 
