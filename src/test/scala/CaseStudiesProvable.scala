@@ -105,28 +105,27 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     def subsubtactic(testTactic: Tactic) = (ls(boxSeqT) ~
       ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxAssignT) | ls(boxNDetAssign))*) &
       (la(AndLeftT)*) & ls(AndRightT) &&
-      (List(19,18,17,16,15,13,9,8,7,4,3).foldLeft(NilT)((t, i) => t & eqLeft(exhaustive = true)(AntePosition(i)) & hideT(AntePosition(i))) &
-        testTactic,
-        NilT) & arithmeticT
+      ((List(3,4,23) ++ (7 to 19) ++ (25 to 29)).sortWith(_ > _).foldLeft(NilT)((t, i) => t & eqLeft(exhaustive = true)(AntePosition(i)) & hideT(AntePosition(i))) & testTactic & arithmeticT & debugT("result 1"),
+       (List(3,4,23) ++ (7 to 19) ++ (25 to 29)).sortWith(_ > _).foldLeft(NilT)((t, i) => t & eqLeft(exhaustive = true)(AntePosition(i)) & hideT(AntePosition(i))) & AxiomCloseT & debugT("result 2"))
 
     val subtactic = ((ls(boxSeqT) ~
       ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxNDetAssign)))*) &
       la(AndLeftT) ~ ls(boxAssignT) & ls(boxSeqT) & ls(boxChoiceT) &
       ls(AndRightT) && (debugT("choice 2.2.*.1") & subsubtactic(la(OrLeftT)),
-                                debugT("choice 2.2.*.2") & subsubtactic(la(NotLeftT) & ls(OrRightT)))
+                                debugT("choice 2.2.*.2") & subsubtactic(la(NotLeftT) & ls(OrRightT) & arithmeticT))
 
     // main strategy
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(inductionT(Some("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula))) &
       onBranch(
         (indInitLbl, ls(AndRightT) && (AxiomCloseT(AntePosition(4), SuccPosition(0)),
-                                               AxiomCloseT(AntePosition(3), SuccPosition(0)))),
+                                       AxiomCloseT(AntePosition(3), SuccPosition(0)))),
         (indStepLbl, debugT("step") & List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ ls(skolemizeT) &
           ls(ImplyRightT) & la(AndLeftT) & ls(boxChoiceT) & ls(AndRightT) &&
           (debugT("choice 1") & ((ls(boxSeqT) ~ (ls(boxAssignT) | ls(boxNDetAssign)))*) &
                                 ls(boxTestT) & ls(ImplyRightT) & (la(AndLeftT)*) &
                                 ls(AndRightT) && (/* v,z not written without self-assignment */ arithmeticT,
-                                                          AxiomCloseT(AntePosition(12), SuccPosition(0))),
+                                                  AxiomCloseT),
             debugT("choice 2") & ls(boxChoiceT) & ls(AndRightT) &&
               /* {state:=brake} */
               (debugT("choice 2.1") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
@@ -136,12 +135,12 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
                    * e.g. in v^2-d^2 <= 2*b*(m-z) 0::0 refers to v^2, 0::0::0 to v, 0::0::1 to 2, 0::1::0 to d
                    *                              1::1::0 to m, 1::1::1 to z, 1::0 to 2*b
                    */
-                  (equalityRewriting(AntePosition(7), SuccPosition(0, PosInExpr(0::0::0::Nil))) & hideT(SuccPosition(0)) &
-                    equalityRewriting(AntePosition(9), SuccPosition(0, PosInExpr(0::1::0::Nil))) & hideT(SuccPosition(0)) &
-                    equalityRewriting(AntePosition(11), SuccPosition(0, PosInExpr(1::1::0::Nil))) & hideT(SuccPosition(0)) &
-                    equalityRewriting(AntePosition(8), SuccPosition(0, PosInExpr(1::1::1::Nil))) & hideT(SuccPosition(0)) &
+                  (/* v_2 */equalityRewriting(AntePosition(9), SuccPosition(0, PosInExpr(0::0::0::Nil))) & hideT(SuccPosition(0)) &
+                    /* d_1 */equalityRewriting(AntePosition(16), SuccPosition(0, PosInExpr(0::1::0::Nil))) & hideT(SuccPosition(0)) &
+                    /* m_1 */equalityRewriting(AntePosition(14), SuccPosition(0, PosInExpr(1::1::0::Nil))) & hideT(SuccPosition(0)) &
+                    /* z_2 */ equalityRewriting(AntePosition(10), SuccPosition(0, PosInExpr(1::1::1::Nil))) & hideT(SuccPosition(0)) &
                     AxiomCloseT(AntePosition(5), SuccPosition(0)),
-                   equalityRewriting(AntePosition(9), SuccPosition(0, PosInExpr(0::Nil))) & hideT(SuccPosition(0)) &
+                   equalityRewriting(AntePosition(16), SuccPosition(0, PosInExpr(0::Nil))) & hideT(SuccPosition(0)) &
                      AxiomCloseT(AntePosition(6), SuccPosition(0))
                   ),
                 debugT("choice 2.2") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
