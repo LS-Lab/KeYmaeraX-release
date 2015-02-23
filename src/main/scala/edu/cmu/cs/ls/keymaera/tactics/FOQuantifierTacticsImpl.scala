@@ -144,16 +144,16 @@ object FOQuantifierTacticsImpl {
       require(!Helper.names(f).contains(x))
 
       // construct substitution
-      val aX = Variable("x", None, Real)
-      val aT = Variable("t", None, Real)
-      val aP = ApplyPredicate(Function("p", None, Real, Bool), t)
-      val l = List(SubstitutionPair(aT, t), SubstitutionPair(aP, f))
+      val aT = Apply(Function("t", None, Unit, Real), Nothing)
+      val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+      val l = List(SubstitutionPair(aT, t), SubstitutionPair(aP, SubstitutionHelper.replaceFree(f)(t, CDot)))
 
       // construct axiom instance: p(t) -> \exists x. p(x)
-      val g = Exists(x :: Nil, replaceFree(f)(t, x))
+      val g = Exists(x :: Nil, SubstitutionHelper.replaceFree(f)(t, x))
       val axiomInstance = Imply(f, g)
 
       // rename to match axiom if necessary
+      val aX = Variable("x", None, Real)
       val alpha = new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Imply(_, Exists(_, _)) => true
@@ -194,11 +194,11 @@ object FOQuantifierTacticsImpl {
 
     private def constructSubstAndAlphaRename(axiom: Formula, f: Formula, axiomInstance: Formula, v: Variable) = {
       // construct substitution
-      val aX = Variable("x", None, Real)
-      val aP = PredicateConstant("p")
+      val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
       val l = List(SubstitutionPair(aP, f))
 
       // rename to match axiom if necessary
+      val aX = Variable("x", None, Real)
       val alpha = new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Equiv(_, _: Quantifier) => true
