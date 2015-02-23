@@ -539,14 +539,21 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  "Foo" should "bar" in {
+  it should "rename in checked ODE fragments" in {
+    val s = sucSequent("[$$x' ≚ x$$;]x>0".asFormula)
+    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[t:=x;][$$t' ≚ t$$;]t>0".asFormula)
+    ))
+  }
+
+  "Global alpha conversion" should "store initial value and rename quantified variables" in {
     val s = sucSequent("[x:=0;]\\forall x. x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][t:=0;]\\forall t. t>0".asFormula)
     ))
   }
 
-  it should "zee" in {
+  it should "store initial value" in {
     val s = sucSequent("[x:=x+1;x:=x+2]x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][t:=t+1;t:=t+2]t>0".asFormula)
