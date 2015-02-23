@@ -113,7 +113,7 @@ object ODETactics {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(diffEqPos)))
           val cut = diffCutT(solution)(p) & AndRightT(p)
-          val proveSol = NilT //diffInvariantT(diffEqPos)
+          val proveSol = diffInvariantT(diffEqPos)
           val useSol = diffWeakenT(diffEqPos)
           Some(initialGhosts & cut & (proveSol, useSol))
         }
@@ -472,7 +472,7 @@ object ODETactics {
 
         //construct substitution.
         val aC = ContEvolveProgramConstant("c")
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val subst = Substitution(List(
           new SubstitutionPair(aC, c),
           new SubstitutionPair(aP, p)
@@ -539,32 +539,30 @@ object ODETactics {
             val instance = Imply(g,f)
 
             //construct substitution
-            val aX = Variable("x", None, Real)
-
             val aT = Apply(Function("f", None, Real, Real), Anything) //@todo wow that's a bad name...
-
             val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-
             val aC = ContEvolveProgramConstant("c")
-
             val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 
             val subst = Substitution(List(
-              new SubstitutionPair(aT, t),
-              new SubstitutionPair(aC,c),
-              new SubstitutionPair(aP, p),
-              new SubstitutionPair(aH, h)
+              SubstitutionPair(aT, t),
+              SubstitutionPair(aC, c),
+              SubstitutionPair(aP, p),
+              SubstitutionPair(aH, h)
             ))
 
+            // alpha rename if necessary
+            val aX = Variable("x", None, Real)
             val alpha = new PositionTactic("Alpha") {
               override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-                case Imply(BoxModality(NDetAssign(_), _), BoxModality(IncompleteSystem(_), _)) => true
+                case Imply(BoxModality(_: IncompleteSystem, BoxModality(Assign(_: Derivative, _), _)),
+                  BoxModality(_: IncompleteSystem, _)) => true
                 case _ => false
               }
 
               override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
                 override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                  Some(globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+                  Some(debugT(s"foo $aX -> $x") & globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
 
                 override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
               }
@@ -686,7 +684,10 @@ object ODETactics {
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
-              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") & SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") & (finishingTouch)
+              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
+                diffInvariantSystemTailT(p) &
+                debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") &
+                SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") & finishingTouch
             ))
           }
         }

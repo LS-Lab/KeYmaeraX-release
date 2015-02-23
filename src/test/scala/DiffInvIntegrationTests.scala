@@ -1,5 +1,9 @@
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.ODETactics._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.{HybridProgramTacticsImpl, ODETactics}
+import testHelper.ProofFactory._
+import testHelper.SequentFactory._
 import testHelper.StringConverter._
 
 /**
@@ -56,5 +60,33 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     val n = runDiffInv(f)
     fail()
     // TODO check expected result
+  }
+
+  "Diff inv system intro" should "introduce marker and prime postcondition" in {
+    val s = sucSequent("[x'=x & x>3, y'=x & y>2 & z<0;]y>0".asFormula)
+    val tactic = locateSucc(diffInvariantSystemIntroT)
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("y>0 & [$$x'=x & x>3, y'=x & y>2&z<0$$;](y>0)'".asFormula))
+  }
+
+  "Diff inv system head" should "pull out first ODE from marked system" in {
+    val s = sucSequent("[$$x'=x & x>3, y'=x & y>2 & z<0$$;](y>0)'".asFormula)
+    val tactic = locateSucc(diffInvariantSystemHeadT)
+    getProofSequent(tactic, new RootNode(s)) should be (
+      // [$$c, x' ≚ f(?) & H(?)$$;][x' := f(?);](H(?) -> p(?))
+      sucSequent("[$$y'=x & y>2&z<0, x' ≚ x & x>3$$;][x':=x;](x>3 -> (y>0)')".asFormula))
+  }
+
+  it should "pull out first ODE from marked system repeatedly" in {
+    val s = sucSequent("[$$x'=x & x>3, y'=x & y>2 & z<0$$;](y>0)'".asFormula)
+    val tactic = locateSucc(diffInvariantSystemHeadT)
+    val node = helper.runTactic(tactic, new RootNode(s))
+    node.openGoals().foreach(_.sequent should be (
+      // [$$c, x' ≚ f(?) & H(?)$$;][x' := f(?);](H(?) -> p(?))
+      sucSequent("[$$y'=x & y>2&z<0, x' ≚ x & x>3$$;][x':=x;](x>3 -> (y>0)')".asFormula)))
+
+    val secondNode = helper.runTactic(tactic, node.openGoals().head)
+    secondNode.openGoals().foreach(_.sequent should be (
+      sucSequent("[$$x' ≚ x & x>3, y' ≚ x & y>2&z<0$$;][y':=x;](y>2&z<0 -> [x':=x;](x>3 -> (y>0)'))".asFormula)))
   }
 }
