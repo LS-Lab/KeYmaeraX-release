@@ -37,8 +37,11 @@ object NNFRewrite {
 
     //@todo example of pt 5 desirability...
     override def apply(p: Position): Tactic = {
+      import scala.language.postfixOps
       def l : PositionTactic => Tactic = SearchTacticsImpl.locateSubposition(p)
-      ( (debugT("Before an iteration of the NNF rewrite:") & l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) | l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT)) *)
+      (debugT("Before an iteration of the NNF rewrite:") &
+        (l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) |
+         l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT) | NilT))*
     }
   }
 
