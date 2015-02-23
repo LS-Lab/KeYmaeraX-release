@@ -1073,6 +1073,7 @@ object BindingAssessment {
   }} ensuring(r => { val VC3(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) not a subset of BV($p)")
 
   def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+    case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
     case ContEvolveProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case IncompleteSystem(a) => primedVariables(a)
     case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x)
@@ -1677,6 +1678,9 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     case DiamondModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
 
     case True | False => Set()
+
+    //@todo eisegesis
+    case FormulaDerivative(x) => fnPredPrgSymbolsOf(x)
   }
 
   private def fnPredPrgSymbolsOf(t: Term): Set[NamedSymbol] = t match {
@@ -1697,6 +1701,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   }
 
   private def fnPredPrgSymbolsOf(p: Program): Set[NamedSymbol] = p match {
+    case CheckedContEvolveFragment(c) => fnPredPrgSymbolsOf(c) //@todo eisegesis
     case Assign(_, t) => fnPredPrgSymbolsOf(t)
     case Test(phi) => fnPredPrgSymbolsOf(phi)
     case NFContEvolve(_, _, t, h) => fnPredPrgSymbolsOf(t) ++ fnPredPrgSymbolsOf(h)
