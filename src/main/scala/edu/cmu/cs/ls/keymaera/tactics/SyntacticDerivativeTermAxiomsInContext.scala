@@ -210,7 +210,7 @@ object SyntacticDerivativeTermAxiomsInContext {
 
       replacementPositionOption match {
         case Some((replacementPosition, _)) => {
-          val smallest = smallestFormulaContainingTerm(f, replacementPosition)
+          val (smallest, _) = smallestFormulaContainingTerm(f, replacementPosition)
           val desiredResult = replaceTerm(replacementTerm, termToFind, smallest)
           Some(desiredResult, None)
         }
@@ -257,7 +257,7 @@ object SyntacticDerivativeTermAxiomsInContext {
 
         constructInstanceAndSubst(node.sequent(pos)) match {
           case Some((desiredResult, renameTactic)) =>
-            val f = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
+            val (f, fPos) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
 
             val fInContext = TacticHelper.getFormula(node.sequent, pos.topLevel)
             val desiredResultInContext = replaceFormula(desiredResult, f, fInContext)
@@ -283,9 +283,9 @@ object SyntacticDerivativeTermAxiomsInContext {
             val axiomInstanceTactic = (assertPT(forKAxiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
               assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
               abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
-              assertT(0, 1) & cutT(Some(axiomInstance)) &
+              assertT(0, 1) & cutT(Some(axiomInstance)) & debugT(s"ready for term rewriting at $fPos") &
               onBranch((cutUseLbl,
-                (equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
+                (equalityRewriting(AntePosition(0), SuccPosition(0, fPos)) & debugT("term rewriting result") & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
                   (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
                 (cutShowLbl,
                   hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
@@ -418,9 +418,9 @@ object SyntacticDerivativeTermAxiomsInContext {
     term
   }
 
-  def smallestFormulaContainingTerm(f : Formula, pos : PosInExpr) : Formula = {
+  def smallestFormulaContainingTerm(f : Formula, pos : PosInExpr) : (Formula, PosInExpr) = {
     getFormula(f, pos) match {
-      case Some(formula) => formula //base case.
+      case Some(formula) => (formula, pos) //base case.
       case None => smallestFormulaContainingTerm(f, PosInExpr(pos.pos.init))
     }
   }

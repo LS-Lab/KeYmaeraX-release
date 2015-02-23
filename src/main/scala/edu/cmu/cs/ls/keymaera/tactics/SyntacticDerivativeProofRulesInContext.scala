@@ -101,7 +101,7 @@ object SyntacticDerivativeProofRulesInContext {
 
       replacementPositionOption match {
         case Some((replacementPosition, _)) => {
-          val smallest = smallestFormulaContainingTerm(f, replacementPosition)
+          val (smallest, _) = smallestFormulaContainingTerm(f, replacementPosition)
           val desiredResult = replaceTerm(replacementTerm, termToFind, smallest)
           Some(desiredResult, None)
         }
@@ -148,7 +148,7 @@ object SyntacticDerivativeProofRulesInContext {
 
         constructInstanceAndSubst(node.sequent(pos)) match {
           case Some((desiredResult, renameTactic)) =>
-            val f = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
+            val (f, fPos) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
 
             val fInContext = TacticHelper.getFormula(node.sequent, pos.topLevel)
             val desiredResultInContext = replaceFormula(desiredResult, f, fInContext)
@@ -175,9 +175,10 @@ object SyntacticDerivativeProofRulesInContext {
               assertT(forKAxiomInstance, SuccPosition(0))  & kModalModusPonensT(SuccPosition(0)) &
               abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
               assertT(0, 1) & cutT(Some(axiomInstance)) & debugT("Did the equiv I just cut in make sense??") &
-              onBranch((cutUseLbl, debugT("Ready for equality rewriting.") &
-                (equalityRewriting(axiomInstPos, pos) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
-                  (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
+              onBranch((cutUseLbl, debugT(s"Ready for equality rewriting at $fPos") &
+                (equalityRewriting(AntePosition(0), SuccPosition(0, fPos)) & hideT(AntePosition(0)) &
+                  hideT(pos.topLevel) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
+                  (hideT(AntePosition(0)) & LabelBranch("additional obligation"))), //for term stuff.
                 (cutShowLbl,
                   hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
 
