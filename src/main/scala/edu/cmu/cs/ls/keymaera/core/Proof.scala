@@ -1269,7 +1269,8 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
                           case _ => throw new IllegalArgumentException(
                             s"Can only substitute terms for ${app.prettyString()}")}
           )
-        require(freeVariables(rTerm).intersect(u).isEmpty,
+        val restrictedU = theta match { case CDot => u case Anything => SetLattice.bottom[NamedSymbol] case _ => u-rArg }
+        require(freeVariables(rTerm).intersect(restrictedU).isEmpty,
           s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
         instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
       case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
@@ -1317,7 +1318,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
                        case _ => throw new IllegalArgumentException(
                          s"Can only substitute formulas for ${app.prettyString()}")}
         )
-      val restrictedU = rArg match { case CDot => u case _ => u-rArg }
+      val restrictedU = theta match { case CDot => u case Anything => SetLattice.bottom[NamedSymbol] case _ => u-rArg }
       require(catVars(rFormula).fv.intersect(restrictedU).isEmpty,
         s"Substitution clash: ${catVars(rFormula).fv} ∩ $restrictedU is not empty")
       instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)

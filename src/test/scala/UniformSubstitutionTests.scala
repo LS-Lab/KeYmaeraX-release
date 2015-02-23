@@ -888,6 +888,80 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     a [SubstitutionClashException] should be thrownBy s(h)
   }
 
+  // p(), p(.), and p(?) tests
+  "Substitution of predicate constant p()" should "work" in {
+    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+
+    val s = create(SubstitutionPair(p, "v>0".asFormula))
+
+    val f = BoxModality(Assign("x".asTerm, "0".asTerm), p)
+    s(f) should be ("[x:=0;]v>0".asFormula)
+
+    val g = BoxModality(Assign("v".asTerm, "0".asTerm), p)
+    a [SubstitutionClashException] should be thrownBy s(g)
+  }
+
+  "Substitution of single-argument predicate p(.)" should "work" in {
+    val p = Function("p", None, Real, Bool)
+
+    val s = create(SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, Number(0))))
+
+    val f = BoxModality(Assign("x".asTerm, "0".asTerm), ApplyPredicate(p, "x".asTerm))
+    s(f) should be ("[x:=0;]x>0".asFormula)
+
+    val g = BoxModality(ProgramConstant("a"), ApplyPredicate(p, "x".asTerm))
+    a [SubstitutionClashException] should be thrownBy s(g)
+  }
+
+  "Substitution of wildcard predicate p(?)" should "work" in {
+    val p = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+
+    val s = create(SubstitutionPair(p, "x>0".asFormula))
+
+    val f = BoxModality(Assign("x".asTerm, "0".asTerm), p)
+    s(f) should be ("[x:=0;]x>0".asFormula)
+
+    val g = BoxModality(ProgramConstant("a"), p)
+    s(g) should be (BoxModality(ProgramConstant("a"), "x>0".asFormula))
+  }
+
+  // f(), f(.), and f(?) tests
+  "Substitution of function constant f()" should "work" in {
+    val f = Apply(Function("f", None, Unit, Real), Nothing)
+
+    val s = create(SubstitutionPair(f, "v+2".asTerm))
+
+    val h = BoxModality(Assign("x".asTerm, "0".asTerm), GreaterThan(Real, "x".asTerm, f))
+    s(h) should be ("[x:=0;]x>v+2".asFormula)
+
+    val g = BoxModality(Assign("v".asTerm, "0".asTerm), GreaterThan(Real, "x".asTerm, f))
+    a [SubstitutionClashException] should be thrownBy s(g)
+  }
+
+  "Substitution of single-argument function f(.)" should "work" in {
+    val f = Function("f", None, Real, Real)
+
+    val s = create(SubstitutionPair(Apply(f, CDot), Add(Real, CDot, Number(2))))
+
+    val h = BoxModality(Assign("x".asTerm, "0".asTerm), GreaterThan(Real, "v".asTerm, Apply(f, "x".asTerm)))
+    s(h) should be ("[x:=0;]v>x+2".asFormula)
+
+    val g = BoxModality(ProgramConstant("a"), GreaterThan(Real, "v".asTerm, Apply(f, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy s(g)
+  }
+
+  "Substitution of wildcard function f(?)" should "work" in {
+    val f = Apply(Function("f", None, Real, Real), Anything)
+
+    val s = create(SubstitutionPair(f, "x+2".asTerm))
+
+    val h = BoxModality(Assign("x".asTerm, "0".asTerm), GreaterThan(Real, "x".asTerm, f))
+    s(h) should be ("[x:=0;]x>x+2".asFormula)
+
+    val g = BoxModality(ProgramConstant("a"), GreaterThan(Real, "x".asTerm, f))
+    s(g) should be (BoxModality(ProgramConstant("a"), "x>x+2".asFormula))
+  }
+
   /*
    * Andre's tests
    */
