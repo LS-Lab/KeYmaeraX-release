@@ -2142,6 +2142,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
       case ContEvolveProduct(a, b) => ContEvolveProduct(renameODE(a), renameODE(b))
       case _: EmptyContEvolveProgram => p
       case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
+      case CheckedContEvolveFragment(a) => CheckedContEvolveFragment(renameODE(a))
       case _: ContEvolveProgramConstant => p
   }
 
