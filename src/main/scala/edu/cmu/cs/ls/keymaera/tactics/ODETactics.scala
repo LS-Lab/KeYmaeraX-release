@@ -369,7 +369,7 @@ object ODETactics {
    * Returns the differential invariant tactic for a single normal form ODE.
    * @return The tactic.
    */
-  def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant (system style)", "DI differential invariant (system style)") {
+  def diffInvariantNormalFormT: PositionTactic = new AxiomTactic("DI differential invariant", "DI differential invariant") {
     def applies(f: Formula) = {
       f match {
         case BoxModality(ContEvolveProduct(_: NFContEvolve, e:EmptyContEvolveProgram),_) => true
@@ -407,10 +407,10 @@ object ODETactics {
 
         // construct substitution
         // [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
-        val aX = Variable("x", None, Real)
-        val aH = PredicateConstant("H", None)
-        val aP = PredicateConstant("p", None)
-        val aT = Variable("t", None, Real)
+        val aX = Apply(Function("x", None, Unit, Real), Nothing)
+        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
         val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p), new SubstitutionPair(aT, t))
 
         val alpha = new PositionTactic("Alpha") {
@@ -419,16 +419,17 @@ object ODETactics {
             case _ => false
           }
 
+          //@todo does thi make sense anymore???
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+              Some(globalAlphaRenamingT(x.name, x.index, "x", None))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
 
         val (axiom, cont) =
-          if (x.name != aX.name || x.index != None) (replaceFree(ax)(aX, x), Some(alpha))
+          if (x.name != "x" || x.index != None) (replaceFree(ax)(aX, x), Some(alpha))
           else (ax, None)
 
         Some(axiom, axiomInstance, Substitution(l), None, cont)
@@ -471,7 +472,7 @@ object ODETactics {
 
         //construct substitution.
         val aC = ContEvolveProgramConstant("c")
-        val aP = PredicateConstant("p")
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
         val subst = Substitution(List(
           new SubstitutionPair(aC, c),
           new SubstitutionPair(aP, p)
@@ -538,25 +539,21 @@ object ODETactics {
             val instance = Imply(g,f)
 
             //construct substitution
-            import Substitution.maybeFreeVariables
             val aX = Variable("x", None, Real)
 
-            val aT = Apply(Function("f", None, Real, Real), CDot)
-            val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t))) //@todo confused about when we want to use cdot and when not...
+            val aT = Apply(Function("f", None, Real, Real), Anything) //@todo wow that's a bad name...
 
-            val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-            val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
+            val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
 
             val aC = ContEvolveProgramConstant("c")
 
-            val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-            val p_cdot = replaceFree(p)(x, CDot, Some(maybeFreeVariables(p)))
+            val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 
             val subst = Substitution(List(
-              new SubstitutionPair(aT, t_cdot),
+              new SubstitutionPair(aT, t),
               new SubstitutionPair(aC,c),
-              new SubstitutionPair(aP, p_cdot),
-              new SubstitutionPair(aH, h_cdot)
+              new SubstitutionPair(aP, p),
+              new SubstitutionPair(aH, h)
             ))
 
             val alpha = new PositionTactic("Alpha") {
@@ -574,7 +571,7 @@ object ODETactics {
             }
 
             val (axiom, cont) =
-              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alpha))
+              if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
               else (ax, None)
 
             Some(axiom, instance, subst, None, cont)
@@ -615,21 +612,19 @@ object ODETactics {
             import Substitution.maybeFreeVariables
             val aX = Variable("x", None, Real)
 
-            val aT = Apply(Function("f", None, Real, Real), CDot)
-            val t_cdot = replaceFree(t)(x, CDot, Some(maybeFreeVariables(t)))
+            val aT = Apply(Function("f", None, Real, Real), Anything)
 
-            val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-            val h_cdot = replaceFree(h)(x, CDot, Some(maybeFreeVariables(h)))
+            val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
 
             val aC = ContEvolveProgramConstant("c")
 
-            val aP = ApplyPredicate(Function("p", None, Real, Bool), x)
+            val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 
             val subst = Substitution(List(
-              new SubstitutionPair(aT, t_cdot),
+              new SubstitutionPair(aT, t),
               new SubstitutionPair(aC,c),
               new SubstitutionPair(aP, p),
-              new SubstitutionPair(aH, h_cdot)
+              new SubstitutionPair(aH, h)
             ))
 
             val alpha = new PositionTactic("Alpha") {
