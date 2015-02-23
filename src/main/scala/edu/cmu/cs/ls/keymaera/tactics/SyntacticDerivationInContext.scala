@@ -666,7 +666,9 @@ End.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //
   def SyntacticDerivationRulesT : Tactic = (SearchTacticsImpl.locateTerm(ConstantDerivativeT) *) ~ (SearchTacticsImpl.locateTerm(MonomialDerivativeT) *)
-  def ConstantDerivativeT : PositionTactic = new PositionTactic("Monomial Derivative") {
+  def ConstantDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
+    override def applies(t : Term) = isConstant(t)
+
     /**
      *
      * @param p The position of a term.
@@ -728,7 +730,9 @@ End.
     }
   }
 
-  def MonomialDerivativeT : PositionTactic = new PositionTactic("Monomial Derivative") {
+  def MonomialDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
+    override def applies(t:Term) = isMonomial(t)
+
     /**
      *
      * @param p The position of a term.
@@ -838,7 +842,7 @@ End.
    * @param expression
    * @param tactic
    */
-  def findApplicablePositionForTermAxiom(expression : Expr, tactic : TermAxiomTactic) : Option[(PosInExpr, Term)] = {
+  def findApplicablePositionForTermAxiom(expression : Expr, tactic : ApplicableAtTerm) : Option[(PosInExpr, Term)] = {
     val traversal = new ExpressionTraversalFunction {
       var mPosition : Option[PosInExpr] = None
       var mTerm : Option[Term] = None
@@ -847,7 +851,7 @@ End.
         if(tactic.applies(t)) {
           mPosition = Some(p);
           mTerm = Some(t);
-          println("Found applicable tactic: " + tactic.name + " which applies to: " + expression) //@todo added because this tactic diverged when wrapped in a star for - examples.
+          println("Found applicable tactic: " + tactic + " which applies to: " + expression) //@todo added because this tactic diverged when wrapped in a star for - examples.
           Left(Some(ExpressionTraversal.stop)) //stop once we find one applicable location.
         }
         else{
@@ -884,7 +888,7 @@ End.
 
       termDerivativeTactics.foldLeft(false)((b, tat : TermAxiomTactic) => {
         tacticApplies(tat) || b
-      })
+      }) || findApplicablePositionForTermAxiom(s(p), MonomialDerivativeT).isDefined || findApplicablePositionForTermAxiom(s(p), ConstantDerivativeT).isDefined
     }
 
     /**
@@ -1038,6 +1042,12 @@ End.
       }
     }
   }
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Section: Syntactic derivation of constants and monomials.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section: Wrapper tactic for syntactic derivation

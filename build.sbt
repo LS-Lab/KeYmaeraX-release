@@ -74,3 +74,11 @@ watchSources <++= baseDirectory map {
 parallelExecution in Test := false
 
 fork in Test := true
+
+////////////////////////////////////////////////////////////////////////////////
+// Builds -- make sure you are using SBT 13.6+
+////////////////////////////////////////////////////////////////////////////////
+
+mainClass in assembly := Some("edu.cmu.cs.ls.keymaera.hydra.Boot")
+
+test in assembly := {}

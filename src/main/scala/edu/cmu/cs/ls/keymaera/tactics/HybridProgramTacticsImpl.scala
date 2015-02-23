@@ -85,6 +85,7 @@ object HybridProgramTacticsImpl {
 
         // substitution
         val aT = Apply(Function("t", None, Unit, vSort), Nothing)
+//        val aP = ApplyPredicate(Function("p", None, vSort, Bool), Anything)
         val aP = ApplyPredicate(Function("p", None, vSort, Bool), CDot) //(p(t)
 
         val subst = Substitution(List(

@@ -680,9 +680,13 @@ object ODETactics {
 //                (debugT("Peeling off a head.") & diffInvariantSystemHeadT(p) *) ~ debugT("Head is now done.") ~ (diffInvariantSystemTailT(p) ~ debugT("Just before syntactic derivation") & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) & ((TacticLibrary.boxAssignT(p) & ImplyRightT(p)) *))
 //                ))
 
+            //NNFRewrite(p)
+
+            val finishingTouch = (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p) /*not sure about that, seems right though?*/) *
+
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
-              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & NNFRewrite(p) & SyntacticDerivationInContext.SyntacticDerivationT(p) & ((TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) *)
+              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") & SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") & (finishingTouch)
             ))
           }
         }

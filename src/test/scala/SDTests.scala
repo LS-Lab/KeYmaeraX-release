@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{Sequent, SuccPosition, PosInExpr}
-import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivativeTermAxiomsInContext, SearchTacticsImpl}
+import edu.cmu.cs.ls.keymaera.core.{DeriveMonomial, Sequent, SuccPosition, PosInExpr}
+import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivativeProofRulesInContext, SyntacticDerivativeTermAxiomsInContext, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._
 
@@ -159,5 +159,44 @@ class SDTests extends TacticTestSuite {
     helper.runTactic(tactic, node)
     helper.report(node)
     require(containsOpenGoal(node, expected))
+  }
+
+  "monomial derivation" should "work outside of context" in {
+    val f = helper.parseFormula("(x^2)'=0")
+    val node = helper.formulaToNode(f)
+    val tactic = SearchTacticsImpl.locateTerm(MonomialDerivativeT)
+    helper.runTactic(tactic, node)
+    helper.report(node)
+    containsOpenGoal(node, helper.parseFormula("2*x^1=0")) shouldBe true
+    node.openGoals().length shouldBe 1
+  }
+
+  it should "work inside of a non-binding context" in {
+    val f = helper.parseFormula("[a := 0;](x^2)'=0")
+    val node = helper.formulaToNode(f)
+    val tactic = SearchTacticsImpl.locateTerm(MonomialDerivativeT)
+    helper.runTactic(tactic, node)
+    containsOpenGoal(node, helper.parseFormula("[a := 0;]2*x^1=0")) shouldBe true
+    node.openGoals().length shouldBe 1
+  }
+
+  it should "work inside of a binding context" in {
+    val f = helper.parseFormula("[x := 0;](x^2)'=0")
+    val node = helper.formulaToNode(f)
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext)
+    helper.runTactic(tactic, node)
+    containsOpenGoal(node, helper.parseFormula("[x := 0;]2*x^1=0")) shouldBe true
+    node.openGoals().length shouldBe 1
+
+
+  }
+
+  "constant derivation" should "work" in {
+    val f = helper.parseFormula("[x := 0;] (2)'=0")
+    val node = helper.formulaToNode(f)
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext)
+    helper.runTactic(tactic, node)
+    containsOpenGoal(node, helper.parseFormula("[x := 0;]0=0")) shouldBe true
+    node.openGoals().length shouldBe 1
   }
 }

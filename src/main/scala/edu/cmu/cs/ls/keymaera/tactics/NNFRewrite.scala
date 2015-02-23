@@ -25,7 +25,7 @@ object NNFRewrite {
         var foundNegatedFormula = false
         override def preF(p : PosInExpr, f : Formula) = {
           f match {
-            case Not(x) => if(!x.isInstanceOf[NamedSymbol]) { foundNegatedFormula = true; Left(Some(ExpressionTraversal.stop)) } else Left(None)
+            case Not(x) => if(!x.isInstanceOf[NamedSymbol]) { println("Found a negatated formula: " + f); foundNegatedFormula = true; Left(Some(ExpressionTraversal.stop)) } else Left(None)
             case _ => Left(None)
           }
         }
@@ -38,7 +38,7 @@ object NNFRewrite {
     //@todo example of pt 5 desirability...
     override def apply(p: Position): Tactic = {
       def l : PositionTactic => Tactic = SearchTacticsImpl.locateSubposition(p)
-      ( (debugT("After an iteration of the NNF rewrite:") & l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) | l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT)) *)
+      ( (debugT("Before an iteration of the NNF rewrite:") & l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) | l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT)) *)
     }
   }
 

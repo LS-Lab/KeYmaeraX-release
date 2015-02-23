@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
@@ -43,7 +44,7 @@ object SyntacticDerivativeTermAxiomsInContext {
           case Derivative(dSort, Neg(sSort, s)) => {
             val ds = Derivative(sSort, s)
             val replacement = Neg(sSort, ds)
-            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
             Some(contextTactic(p))
           }
@@ -72,7 +73,7 @@ object SyntacticDerivativeTermAxiomsInContext {
             val ds = Derivative(stSort, s)
             val dt = Derivative(stSort, t)
             val replacement = Divide(dSort,  Subtract(stSort, Multiply(stSort, ds, t), Multiply(stSort, s, dt)), Exp(stSort, t, Number(2)))
-            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
             Some(contextTactic(p))
           }
@@ -101,7 +102,7 @@ object SyntacticDerivativeTermAxiomsInContext {
             val ds = Derivative(stSort, s)
             val dt = Derivative(stSort, t)
             val replacement = Add(dSort,  Multiply(stSort, ds, t), Multiply(stSort, s, dt))
-            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
             Some(contextTactic(p))
           }
@@ -128,7 +129,7 @@ object SyntacticDerivativeTermAxiomsInContext {
         case Some(term) => term match {
           case Derivative(dSort, Add(stSort, s, t)) => {
             val replacement = Add(dSort, Derivative(stSort, s), Derivative(stSort, t))
-            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
             Some(contextTactic(p))
           }
@@ -155,7 +156,7 @@ object SyntacticDerivativeTermAxiomsInContext {
         case Some(term) => term match {
           case Derivative(dSort, Subtract(stSort, s, t)) => {
             val replacement = Subtract(dSort, Derivative(stSort, s), Derivative(stSort, t))
-            val contextTactic = new TermAxiomInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
             Some(contextTactic(p))
           }
@@ -169,7 +170,7 @@ object SyntacticDerivativeTermAxiomsInContext {
 
 
   def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
-    def tactics : List[PositionTactic] = SubtractDerivativeInContextT :: AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT :: DivideDerivativeInContextT :: Nil
+    def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext :: SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext :: SubtractDerivativeInContextT :: AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT :: DivideDerivativeInContextT :: Nil
 
     def applicableTactic(s : Sequent, p : Position) = {
       val l = tactics.filter(_.applies(s,p))
@@ -201,7 +202,7 @@ object SyntacticDerivativeTermAxiomsInContext {
    * @param replacementTerm The term which will replace termToFind
    * @param termTactic A tactic stating that termToFind <-> replacementTerm
    */
-  private class TermAxiomInContextTactic(name : String, termToFind : Term, replacementTerm : Term, termTactic : TermAxiomTactic)
+  class TermTacticInContextTactic(name : String, termToFind : Term, replacementTerm : Term, termTactic : TermAxiomTactic)
     extends ContextualizeKnowledgeForTermTactic(name) //replaced with PropositionalInContextTactic.
   {
     override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])] = {
@@ -370,14 +371,14 @@ object SyntacticDerivativeTermAxiomsInContext {
    * @param replacement The term to insert at position p
    * @return [replacement / termToReplace] original
    */
-  private def replaceTerm(replacement : Term, termToReplace : Term, original : Formula) : Formula = {
+  def replaceTerm(replacement : Term, termToReplace : Term, original : Formula) : Formula = {
     val fn = new ExpressionTraversalFunction {
       override def preT(posInExpr : PosInExpr, term : Term) = if(term.equals(termToReplace)) Right(replacement) else Left(None)
     }
     ExpressionTraversal.traverse(fn, original).get
   }
 
-  private def replaceFormula(replacement : Formula, f : Formula, original : Formula) : Formula = {
+  def replaceFormula(replacement : Formula, f : Formula, original : Formula) : Formula = {
     val fn = new ExpressionTraversalFunction {
       override def preF(posInExpr : PosInExpr, formula : Formula) = {
         if(f.equals(formula)) {
@@ -394,7 +395,7 @@ object SyntacticDerivativeTermAxiomsInContext {
   // Term positional helpers.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  private def getFormula(f : Formula, pos : PosInExpr) : Option[Formula] = {
+  def getFormula(f : Formula, pos : PosInExpr) : Option[Formula] = {
     var formula : Option[Formula] = None;
     val fn = new ExpressionTraversalFunction {
       override def preF(p : PosInExpr, f:Formula) = {if(p == pos) {
@@ -408,7 +409,7 @@ object SyntacticDerivativeTermAxiomsInContext {
     formula
   }
 
-  private def getTerm(f : Formula, pos : PosInExpr) : Option[Term] = {
+  def getTerm(f : Formula, pos : PosInExpr) : Option[Term] = {
     var term : Option[Term] = None;
     val fn = new ExpressionTraversalFunction {
       override def preT(pos : PosInExpr, t:Term) = {term = Some(t); Left(Some(ExpressionTraversal.stop))}
@@ -417,14 +418,14 @@ object SyntacticDerivativeTermAxiomsInContext {
     term
   }
 
-  private def smallestFormulaContainingTerm(f : Formula, pos : PosInExpr) : Formula = {
+  def smallestFormulaContainingTerm(f : Formula, pos : PosInExpr) : Formula = {
     getFormula(f, pos) match {
       case Some(formula) => formula //base case.
       case None => smallestFormulaContainingTerm(f, PosInExpr(pos.pos.init))
     }
   }
 
-  private def getTermAtPosition(f : Formula, pos : PosInExpr) : Option[Term] = {
+  def getTermAtPosition(f : Formula, pos : PosInExpr) : Option[Term] = {
     var retVal : Option[Term] = None
     val fn = new ExpressionTraversalFunction() {
       override def preT(p : PosInExpr, t : Term) = {
