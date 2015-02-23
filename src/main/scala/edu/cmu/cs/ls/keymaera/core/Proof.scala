@@ -1043,21 +1043,25 @@ object BindingAssessment {
     // base cases
     case x: Variable => SetLattice(x)
     case CDot => SetLattice(CDot)
-    // TODO x' and f(x) are not in Definition 8
-    case Derivative(s, e) => freeVariables(e) //@todo eisegesis
-    case Apply(f, arg) => SetLattice[NamedSymbol](f) ++ freeVariables(arg) //@todo eisegesis
+    case NamedDerivative(x : NamedSymbol) => SetLattice(NamedDerivative(x))
+    case Derivative(s, x:NamedSymbol) => SetLattice(NamedDerivative(x))
+    case Derivative(s, e) => freeVariables(e)
+    case Apply(f, arg) => freeVariables(arg)
     case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
   }
 
   def catVars(p: Program): VC3 = { p match {
     case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x))
     // TODO CDot and derivative not mentioned in Definition 9
-    case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
+      //@todo wrong eisegesis:?
+//    case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
+    case Assign(Derivative(_, x : NamedSymbol), e) => VC3(fv = freeVariables(e), bv = SetLattice(NamedDerivative(x)), mbv = SetLattice(NamedDerivative(x)))
+    case Assign(x : NamedDerivative, e) => {throw new Exception("wasn't expecting to get here."); VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x))}
     // TODO x:=* not mentioned in Definition 9
     case NDetAssign(x: Variable) => VC3(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
     case Test(f) => VC3(fv = catVars(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     case NFContEvolve(vars, Derivative(_, x: Variable), e, h) =>
-      VC3(fv = SetLattice[NamedSymbol](x) ++ freeVariables(e) ++ catVars(h).fv, bv = SetLattice(x), mbv = SetLattice(x))
+      VC3(fv = SetLattice[NamedSymbol](x) ++ freeVariables(e) ++ catVars(h).fv, bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)))
     // TODO system of ODE cases not mentioned in Definition 9
     case ContEvolveProduct(a, b) => val va = catVars(a); val vb = catVars(b)
       VC3(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv) //@todo eisegesis
@@ -1345,7 +1349,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    */
   private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
     case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
-    case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e))) //@todo eisegesis
+    case Assign(d@Derivative(_, x: Variable), e) => USR(o+NamedDerivative(x), u+NamedDerivative(x), Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
     case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
@@ -1389,15 +1393,19 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @return The substitution result.
    */
   private def usubstODE(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
-    ContEvolveProgram = p match {
+    ContEvolveProgram = {
+    val primedPrimed : Set[NamedSymbol] = primed.map(NamedDerivative(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
+    p match {
       case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
       case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-        NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
+        NFContEvolve(v, d, usubst(o ++ SetLattice(primed) ++ SetLattice(primedPrimed),
+          u ++ SetLattice(primed) ++ SetLattice(primedPrimed), e),
+          usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h)) //@todo for something like x' := y' +1 we'll need to add primedPrimed to the back lists as well.
       } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
       case _: EmptyContEvolveProgram => p
       case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
       case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
-      case a: ContEvolveProgramConstant if  subsDefs.exists(_.n == p) =>
+      case a: ContEvolveProgramConstant if subsDefs.exists(_.n == p) =>
         val repl = subsDefs.find(_.n == p).get.t
         repl match {
           case replODE: ContEvolveProgram => replODE
@@ -1406,6 +1414,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         }
       case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => p
     }
+  }
 }
 
 /**
