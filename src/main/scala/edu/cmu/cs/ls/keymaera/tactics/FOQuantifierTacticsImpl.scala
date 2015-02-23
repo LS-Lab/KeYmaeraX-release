@@ -194,11 +194,11 @@ object FOQuantifierTacticsImpl {
 
     private def constructSubstAndAlphaRename(axiom: Formula, f: Formula, axiomInstance: Formula, v: Variable) = {
       // construct substitution
-      val aX = Variable("x", None, Real)
-      val aP = PredicateConstant("p")
+      val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
       val l = List(SubstitutionPair(aP, f))
 
       // rename to match axiom if necessary
+      val aX = Variable("x", None, Real)
       val alpha = new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Equiv(_, _: Quantifier) => true
