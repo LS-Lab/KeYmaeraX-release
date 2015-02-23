@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
  * Created by nfulton on 2/14/15.
  */
 object SyntacticDerivativeTermAxiomsInContext {
-  import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationAxiomTactics._
+  import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 
   ///////////////1///////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section 3: Term axioms in context. This should be used for the master rewrites.
@@ -27,8 +27,8 @@ object SyntacticDerivativeTermAxiomsInContext {
   // The top-level tactic implementations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def NegativeDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
-    val theTactic = NegativeDerivativeT
+  def NegativeDerivativeInContextT = new PositionTactic("Negative Derivative in context") {
+    val theTactic = NegativeDerivativeT 
 
     override def applies(s: Sequent, p: Position): Boolean = {
       getTermAtPosition(s(p), p.inExpr) match {
@@ -55,7 +55,7 @@ object SyntacticDerivativeTermAxiomsInContext {
     }
   }
 
-  def DivideDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+  def DivideDerivativeInContextT = new PositionTactic("Divide Derivative in context") {
     val theTactic = DivideDerivativeT
 
     override def applies(s: Sequent, p: Position): Boolean = {
@@ -84,7 +84,7 @@ object SyntacticDerivativeTermAxiomsInContext {
     }
   }
 
-  def MultiplyDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+  def MultiplyDerivativeInContextT = new PositionTactic("Multiply Derivative in context") {
     val theTactic = MultiplyDerivativeT
 
     override def applies(s: Sequent, p: Position): Boolean = {
@@ -113,7 +113,7 @@ object SyntacticDerivativeTermAxiomsInContext {
     }
   }
 
-  def AddDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
+  def AddDerivativeInContextT = new PositionTactic("Add Derivative in context") {
     val theTactic = AddDerivativeT
 
     override def applies(s: Sequent, p: Position): Boolean = {
@@ -163,6 +163,29 @@ object SyntacticDerivativeTermAxiomsInContext {
         }
       }
 
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+
+  def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
+    def tactics : List[PositionTactic] = SubtractDerivativeInContextT :: AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT :: DivideDerivativeInContextT :: Nil
+
+    def applicableTactic(s : Sequent, p : Position) = {
+      val l = tactics.filter(_.applies(s,p))
+      if(l.length > 0) Some(l.last) else None
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = applicableTactic(s,p) match {
+      case Some(_) => true
+      case None => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = applicableTactic(node.sequent, p) match {
+        case Some(pt) => Some(pt(p))
+        case None => None
+      }
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }

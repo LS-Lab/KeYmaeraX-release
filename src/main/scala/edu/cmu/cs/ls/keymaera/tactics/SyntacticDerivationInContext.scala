@@ -28,7 +28,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
  *
  * Created by nfulton on 2/4/15.
  */
-object SyntacticDerivationAxiomTactics {
+object SyntacticDerivationInContext {
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section 1: "Derivatives" of Formulas
@@ -847,6 +847,7 @@ End.
         if(tactic.applies(t)) {
           mPosition = Some(p);
           mTerm = Some(t);
+          println("Found applicable tactic: " + tactic.name + " which applies to: " + expression) //@todo added because this tactic diverged when wrapped in a star for - examples.
           Left(Some(ExpressionTraversal.stop)) //stop once we find one applicable location.
         }
         else{
@@ -992,7 +993,6 @@ End.
           val applicableTactics : Seq[(PositionTactic, PosInExpr)] =
             formulaDerivativeTactics.map(t => (t, findApplicablePositionForFormulaDerivativeAxiom(succF, t))).filter(_._2.isDefined).map(p => (p._1, p._2.get._1))
           if(applicableTactics.length > 0) {
-            println("Found an applicable tactic!")
             val tactic    = applicableTactics.last._1
             val posInExpr = applicableTactics.last._2
             println(tactic.name + " " + idx + " " + posInExpr.toString())
@@ -1013,7 +1013,6 @@ End.
 
         override def preF(p:PosInExpr, f:Formula) = {
           if(tactic.applies(f)) {
-            println("Found an applicable tactic: " + tactic.name + " for formila " + f)
             mPosition = Some(p);
             mFormula  = Some(f);
 
@@ -1043,22 +1042,20 @@ End.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section: Wrapper tactic for syntactic derivation
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  def SyntacticDerivationT = new PositionTactic("Formula Syntactic Derivation") {
-    override def applies(s: Sequent, p: Position): Boolean = TermSyntacticDerivationT.applies(s,p) | FormulaSyntacticDerivationT.applies(s,p)
-
-    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (TermSyntacticDerivationT(p) *)
-  }
-
-
-//  def SyntacticDerivationInContextT(position : Position) : Tactic = ((new TacticInContextT(SyntacticDerivationT(position)) {
-//    override def applies(f: Formula) = f match {
-//      case FormulaDerivative(_) => true
-//      case _ => false
-//    }
+//  def SyntacticDerivationT = new PositionTactic("Formula Syntactic Derivation") {
+//    //Formula derivatives are treated using the in context base class, but the term derivative rules require the K construction.
+//    //Hence, SyntacticDerivativeTermAxiomsInContext.
+//    //@todo FormulaSyntacticDerivationT does something mean -- it looks around for a place to apply itself internally. This should be done in locate tactics, not in the main tactic.
+//    override def applies(s: Sequent, p: Position): Boolean = SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT.applies(s,p) | FormulaSyntacticDerivationT.applies(s,p)
 //
-//    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[PositionTactic])] = f match {
-//      case Derivative(f) => Some(phi, None)
-//      case _ => None
-//    }
-//  })(position) ~ SearchTacticsImpl.locateSucc(ImplyRightT) ~ AxiomCloseT)
+//    override def apply(p: Position): Tactic = (FormulaSyntacticDerivationT(p) *) ~ (SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT(p) *)
+//  }
+
+
+  def SyntacticDerivationT = new PositionTactic("Single Step of Total Syntactic Derivation") {
+    override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.applies(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
+
+    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT) *) ~ (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT) *)
+
+  }
 }

@@ -682,7 +682,7 @@ object ODETactics {
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
-              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & NNFRewrite(p) & SyntacticDerivationAxiomTactics.SyntacticDerivationT(p) & ((TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) *)
+              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") & diffInvariantSystemTailT(p) & NNFRewrite(p) & SyntacticDerivationInContext.SyntacticDerivationT(p) & ((TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) *)
             ))
           }
         }

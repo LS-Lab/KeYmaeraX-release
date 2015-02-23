@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 class SyntacticDerivationTests extends TacticTestSuite {
   "AndDerivativeT tactics" should "atomize" in {
     val node = helper.formulaToNode(helper.parseFormula( " (1=1 & 2=2)' "))
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.AndDerivativeT)
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationInContext.AndDerivativeT)
 
     helper.runTactic(tactic, node, true)
     require(containsOpenGoal(node, helper.parseFormula("(1=1)' & (2=2)'")))
@@ -19,10 +19,10 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val node1 = helper.formulaToNode(helper.parseFormula( " (1=1 & 2=2)' "))
     val node2 = helper.formulaToNode(helper.parseFormula( " (1=1 & 2=2)' "))
 
-    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.AndDerivativeT)
+    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationInContext.AndDerivativeT)
     helper.runTactic(tactic1, node1, true)
 
-    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.AndDerivativeAtomizeT)
+    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationInContext.AndDerivativeAtomizeT)
     helper.runTactic(tactic2, node2, true)
 
     require(node1.openGoals().length == node2.openGoals().length)
@@ -32,7 +32,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
 
   "OrDerivativeT tactics" should "atomize" in {
     val node = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeT)
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationInContext.OrDerivativeT)
 
     helper.runTactic(tactic, node, true)
     require(containsOpenGoal(node, helper.parseFormula("(1=1)' & (2=2)'")))
@@ -42,10 +42,10 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val node1 = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
     val node2 = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
 
-    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeT)
+    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationInContext.OrDerivativeT)
     helper.runTactic(tactic1, node1, true)
 
-    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationAxiomTactics.OrDerivativeAtomizeT)
+    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationInContext.OrDerivativeAtomizeT)
     helper.runTactic(tactic2, node2, true)
 
     require(node1.openGoals().length == node2.openGoals().length)
@@ -71,7 +71,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     require(containsOpenGoal(node, helper.parseFormula(primer(s) + outerOp + primer(t))))
   }
 
-  import SyntacticDerivationAxiomTactics._
+  import SyntacticDerivationInContext._
 
   "=" should "work on x,y" in {
     testTermOperation("x", "y", "=", "=", EqualsDerivativeT, EqualsDerivativeAtomizeT, EqualsDerivativeAggregateT)

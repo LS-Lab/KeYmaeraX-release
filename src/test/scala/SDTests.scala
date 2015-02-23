@@ -1,5 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core.{Sequent, SuccPosition, PosInExpr}
-import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationAxiomTactics._
+import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivativeTermAxiomsInContext, SearchTacticsImpl}
+import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._
 
 /**
@@ -7,13 +8,24 @@ import testHelper.StringConverter._
  * Created by nfulton on 2/10/15.
  */
 class SDTests extends TacticTestSuite {
-
-  "Subtraction derivation" should "work" in {
+  "Subtraction derivation" should "work without context" in {
     val in = "(x'+y') = 0".asFormula
     val out = "(x+y)' = 0".asFormula
 
     val node = helper.formulaToNode(out)
     val tactic = AddDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
+    helper.runTactic(tactic, node, mustApply = true)
+
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only in
+  }
+
+  it should "work after non-binding assignment" in {
+    val in = "[a':=0;](x'+y') = 0".asFormula
+    val out = "[a':=0;](x+y)' = 0".asFormula
+
+    val node = helper.formulaToNode(out)
+    val tactic = SearchTacticsImpl.locateTerm(AddDerivativeT)
     helper.runTactic(tactic, node, mustApply = true)
 
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
@@ -27,13 +39,13 @@ class SDTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[a'=b;](x'-y'<=0)")
+    val expected = helper.parseFormula("[a'=b & true;](x'-y'<=1')")
     helper.report(node)
-    require(containsOpenGoal(node, expected))
+    containsOpenGoal(node, expected) shouldBe true
   }
 
   it should "work on marked boxes when there's no binding" in {
-    val f = helper.parseFormula("[$$a'=b$$;](x-y<1)'")
+    val f = helper.parseFormula("[$$a'=b$$;](x-y<1)'")  //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
@@ -41,31 +53,43 @@ class SDTests extends TacticTestSuite {
 
     val expected = helper.parseFormula("[$$a'=b$$;](x'-y'<=1')")
     helper.report(node)
-    require(containsOpenGoal(node, expected))
+    containsOpenGoal(node, expected) shouldBe true
   }
 
-  it should "work on an identical example when there is binding assignment" in {
-    val f = helper.parseFormula("[x:=b;](x-y<1)'")
+  it should "work on an identical example with assignment" in {
+    val f = helper.parseFormula("[a:=b;](x-y<1)'") //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping (findApplicablePositionForTermAxiom)
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[x:=b;](x'-y'<=1')")
+    val expected = helper.parseFormula("[a:=b;](x'-y'<=1')")
     helper.report(node)
-    require(containsOpenGoal(node, expected))
+    containsOpenGoal(node, expected) shouldBe true
   }
 
-  it should "work on an identical example when there is binding" in {
-    val f = helper.parseFormula("[x'=b;](x-y<1)'")
+  it should "work when the next step is syntactic term derivation context" in {
+    val f = helper.parseFormula("[x':=b;](x-y)'<=1'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("[x':=b;](x'-y'<=1')")
+    helper.report(node)
+    containsOpenGoal(node, expected) shouldBe true
+  }
+
+  it should "work on formulas containing bound variables." in {
+    val f = helper.parseFormula("[x'=b;](x+y<1)'")
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[x'=b;](x'-y'<=0)")
+    val expected = helper.parseFormula("[x'=b;](x'+y'<=1')")
     helper.report(node)
-    require(containsOpenGoal(node, expected))
+    containsOpenGoal(node, expected) shouldBe true
   }
 
   it should "work on an identical example when there is binding inside of a marked box" in {
@@ -75,14 +99,26 @@ class SDTests extends TacticTestSuite {
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
     helper.runTactic(tactic, node, true)
 
-    val expected = helper.parseFormula("[$$x'=b$$;](x'-y'<=0)")
+    val expected = helper.parseFormula("[x'=b;](x'-y'<=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
   }
 
+  it should "identical to prev test but alpha-varied" in {
+    val f = helper.parseFormula("[a'=b;](a-y<1)'")
+    val node = helper.formulaToNode(f)
+
+    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
+    helper.runTactic(tactic, node, true)
+
+    val expected = helper.parseFormula("[a'=b;](a'-y'<=1')")
+    helper.report(node)
+    require(containsOpenGoal(node, expected))
+  }
+
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // These are all tests which apply to the new approach which allows the use of these axioms in context. I'm not sure
-  // if the old tests will still pass, or if they should.
+  // Non-integration tests of the K-modal approach to in-context term derivations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   "ImplyDerivative" should "work in no context" in {
@@ -123,35 +159,5 @@ class SDTests extends TacticTestSuite {
     helper.runTactic(tactic, node)
     helper.report(node)
     require(containsOpenGoal(node, expected))
-  }
-
-
-  // Diagnosing diverging SubtractDerivativeT tactic.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  "SubtractDerivativeT" should "see how we're doing w/ subtraction" in {
-    val f = helper.parseFormula("(1-1)' = 0")
-    val expected = helper.parseFormula("1' - 1' = 0")
-    val node = helper.formulaToNode(f)
-    val tactic = SubtractDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-  }
-
-  it should "converge when there is no binding context" in {
-    val f = helper.parseFormula("[x':=0;] (a-1)' = 0")
-    val node = helper.formulaToNode(f)
-    val tactic = SubtractDerivativeT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-  }
-
-  it should "work when there is binding context" in { //@todo this test is currently diverging because term tactics do not work in context.
-    val f = helper.parseFormula("[a':=0;] (a-1)' = 0")
-    val expected = helper.parseFormula("1' - 1' = 0")
-    val node = helper.formulaToNode(f)
-    val tactic = (SubtractDerivativeT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil))) *) //Will diverge if the tactic doesn't work.
-    helper.runTactic(tactic, node)
-    helper.report(node)
   }
 }

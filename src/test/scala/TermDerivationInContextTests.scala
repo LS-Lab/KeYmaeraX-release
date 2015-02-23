@@ -1,12 +1,12 @@
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationAxiomTactics._
+import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import SyntacticDerivationAxiomTactics._
+import SyntacticDerivationInContext._
 import edu.cmu.cs.ls.keymaera.core._
 import scala.Equals
 
