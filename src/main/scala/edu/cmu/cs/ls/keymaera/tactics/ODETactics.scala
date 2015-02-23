@@ -327,16 +327,16 @@ object ODETactics {
         val axiomInstance = Imply(lhs, f)
 
         // construct substitution
-        val aP = PredicateConstant("p")
-        val aX = Variable("x", None, Real)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), CDot)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
         val aC = ContEvolveProgramConstant("c")
         val aS = Apply(Function("s", None, Unit, Real), Nothing)
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
-        val l = List(SubstitutionPair(aP, p), SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, CDot)),
+        val l = List(SubstitutionPair(aP, p), SubstitutionPair(aQ, q),
           SubstitutionPair(aC, ode), SubstitutionPair(aS, s), SubstitutionPair(aT, t))
 
         // rename to match axiom if necessary
+        val aX = Variable("x", None, Real)
         val alpha = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Imply(And(Equiv(_, Exists(_, _)), _), _) => true
