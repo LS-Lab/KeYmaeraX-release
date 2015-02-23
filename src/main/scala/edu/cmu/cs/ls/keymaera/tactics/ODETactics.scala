@@ -239,13 +239,12 @@ object ODETactics {
           val axiomInstance = Imply(lhs, f)
 
           // construct substitution
-          val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
-          val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-          val aT = Apply(Function("f", None, Real, Real), CDot)
+          val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+          val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+          val aT = Apply(Function("f", None, Real, Real), Anything)
           val aC = ContEvolveProgramConstant("c")
-          val l = List(SubstitutionPair(aH, SubstitutionHelper.replaceFree(h)(x, CDot)),
-            SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, CDot)),
-            SubstitutionPair(aT, SubstitutionHelper.replaceFree(t)(x, CDot)), SubstitutionPair(aC, c))
+          val l = List(SubstitutionPair(aH, h), SubstitutionPair(aP, p),
+            SubstitutionPair(aT, t), SubstitutionPair(aC, c))
 
           // alpha renaming of x on axiom if necessary
           val aX = Variable("x", None, Real)

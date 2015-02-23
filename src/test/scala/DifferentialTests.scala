@@ -65,7 +65,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "replace system of ODEs with nondeterministic assignments and tests and skolemize correctly" in {
-    val s = sucSequent("[x'=x & x>3, y'=1 & y>2 & z<0, z'=2;]y>0".asFormula)
+    val s = sucSequent("[x'=x+y & x>3, y'=1 & y>2 & z<0, z'=2;]y>0".asFormula)
     val diffWeaken = locateSucc(diffWeakenT)
     getProofSequent(diffWeaken, new RootNode(s)) should be (
       sequent("x".asNamedSymbol :: "y".asNamedSymbol :: "z".asNamedSymbol :: Nil,
