@@ -562,7 +562,7 @@ object ODETactics {
 
               override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
                 override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                  Some(debugT(s"foo $aX -> $x") & globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+                  Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
 
                 override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
               }
