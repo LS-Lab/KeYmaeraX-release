@@ -80,17 +80,16 @@ object HybridProgramTacticsImpl {
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p) =>
-        val g  = replaceFree(p)(d, t)
+        val g  = SubstitutionHelper.replaceFree(p)(d, t)
         val axiomInstance = Equiv(f, g)
 
         // substitution
         val aT = Apply(Function("t", None, Unit, vSort), Nothing)
-//        val aP = ApplyPredicate(Function("p", None, vSort, Bool), Anything)
         val aP = ApplyPredicate(Function("p", None, vSort, Bool), CDot) //(p(t)
 
         val subst = Substitution(List(
           SubstitutionPair(aT, t),
-          SubstitutionPair(aP, replaceFree(p)(d, CDot))
+          SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(d, CDot))
         ))
 
         // alpha renaming
@@ -111,7 +110,7 @@ object HybridProgramTacticsImpl {
 
         val (alphaAxiom, cont) = {
           if (v.name == aV.name && v.index == aV.index) (axiom, None)
-          else (replaceFree(axiom)(aV, v, None), Some(alpha))
+          else (replace(axiom)(aV, v), Some(alpha))
         }
 
         Some(alphaAxiom, axiomInstance, subst, None, cont)
