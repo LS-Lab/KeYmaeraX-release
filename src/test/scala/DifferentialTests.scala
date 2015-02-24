@@ -157,17 +157,26 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
 
-    val t1 = Variable("$t", Some(1), Real)
-    val t4 = Variable("$t", Some(4), Real)
-    val t5 = Variable("$t", Some(5), Real)
-
     getProofSequent(tactic, new RootNode(s)) should be (
-      sequent(t1 :: "x_2".asNamedSymbol :: t4 :: "x_3".asNamedSymbol :: t5 :: Nil,
+      sequent("k4_t_1".asNamedSymbol :: "x_2".asNamedSymbol :: "k4_t_4".asNamedSymbol :: "x_3".asNamedSymbol ::
+              "k4_t_5".asNamedSymbol :: "x_4".asNamedSymbol :: /*"k4_t_6".asNamedSymbol ::*/ Nil,
         // TODO could simplify all those true &
         // TODO not robust if Mathematica reports equivalent formula but differently formatted
-        "x>0".asFormula :: Equals(Real, t1, Number(0)) :: "x_2=x".asFormula :: Equals(Real, t4, t1) ::
-          "true".asFormula :: And(True, And(Equals(Real, "x_3".asTerm, Add(Real, "x_2".asTerm, Multiply(Real, Number(2), t5))), GreaterEqual(Real, t5, t4))) :: Nil,
-        "x_3>0".asFormula :: Nil))
+        "b=0".asFormula :: "x>b".asFormula :: "k4_t_1=0".asFormula :: "x_2=x".asFormula :: "k4_t_4=k4_t_1".asFormula ::
+          "true".asFormula :: "true".asFormula :: "true".asFormula ::
+          "true&(x_3=2*k4_t_5 + x_4 & k4_t_5 >= k4_t_4)".asFormula :: Nil,
+        "x_3>b".asFormula :: Nil))
+  }
+
+  it should "find solutions for x'=v, v'=a if None is provided" in {
+    val s = sequent(Nil, "x>0".asFormula :: Nil, "[x'=v, v'=a;]x>0".asFormula :: Nil)
+
+    // solution = None -> Mathematica
+    val tactic = locateSucc(diffSolution(None))
+
+    val node = getProofSequent(tactic, new RootNode(s))
+    fail()
+    // TODO check expected result
   }
 
   it should "not introduce time if already present" in {
