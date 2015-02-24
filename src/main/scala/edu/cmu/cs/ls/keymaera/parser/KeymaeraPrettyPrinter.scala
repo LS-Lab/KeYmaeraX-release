@@ -418,7 +418,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       val classes = precedence.reduce(_ + "\n" + _)
       throw new Exception("parent not found in precedence list: " + parent.getClass.getCanonicalName + " in: " + "\n" + classes)
     }
-    childPrecedence < parentPrecedence
+    childPrecedence <= parentPrecedence
   }
   /**
    * Returns true if this expression does NOT need to be placed in parens.
