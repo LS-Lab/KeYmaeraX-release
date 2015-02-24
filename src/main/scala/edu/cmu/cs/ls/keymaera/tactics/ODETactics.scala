@@ -68,7 +68,8 @@ object ODETactics {
         val (time, timeTactic, timeZeroInitially) = findTimeInOdes(node.sequent(p)) match {
           case Some(existingTime) => (existingTime, NilT, false)
           case None =>
-            val initialTime: Variable = TacticHelper.freshNamedSymbol(Variable("$t", None, Real), node.sequent)
+            // HACK need some convention for internal names
+            val initialTime: Variable = TacticHelper.freshNamedSymbol(Variable("k4_t", None, Real), node.sequent)
             // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
             val time = Variable(initialTime.name,
               initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
@@ -110,12 +111,22 @@ object ODETactics {
         import HybridProgramTacticsImpl.{discreteGhostT, boxAssignT}
         def createTactic(ode: ContEvolveProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                          diffEqPos: Position) = {
+          val anteAfterGhostsLength = node.sequent.ante.length + primedSymbols(ode).size
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(diffEqPos)))
+          val diffAuxConsts = (Helper.names(solution) -- primedSymbols(ode)).foldLeft(NilT)((a, b) =>
+            // HACK type cast to variable
+            a & diffAuxiliaryT(b.asInstanceOf[Variable], Number(0), Number(0))(diffEqPos) &
+              AndRightT(diffEqPos) && (EquivRightT(diffEqPos) &
+              // not sure if vacuous is the right thing for all cases, but it works for the examples so far
+              onBranch((equivLeftLbl, vacuousExistentialQuanT(None)(diffEqPos) & AxiomCloseT),
+                       (equivRightLbl, vacuousExistentialQuanT(None)(AntePosition(anteAfterGhostsLength)) & AxiomCloseT)),
+              /* desired result */ NilT)
+          )
           val cut = diffCutT(solution)(p) & AndRightT(p)
           val proveSol = diffInvariantT(diffEqPos)
           val useSol = diffWeakenT(diffEqPos)
-          Some(initialGhosts & cut & (proveSol, useSol))
+          Some(initialGhosts & diffAuxConsts & cut & (proveSol, useSol))
         }
 
         val diffEq = node.sequent(p) match {
@@ -680,14 +691,15 @@ object ODETactics {
 
             //NNFRewrite(p)
 
-            val finishingTouch = (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p) /*not sure about that, seems right though?*/) *
+            val finishingTouch = ((propositional | (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) | NilT)*) & arithmeticT
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
               debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
                 diffInvariantSystemTailT(p) &
                 debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") &
-                SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") & finishingTouch
+                SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") &
+                finishingTouch
             ))
           }
         }
