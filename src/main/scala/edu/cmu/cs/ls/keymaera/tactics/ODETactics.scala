@@ -150,7 +150,7 @@ object ODETactics {
         theSolution match {
           // add relation to initial time
           case Some(s) =>
-            val sol = And(if (tIsZero) s else replaceFree(s)(time, Subtract(time.sort, time, ivm(time))),
+            val sol = And(if (tIsZero) s else SubstitutionHelper.replaceFree(s)(time, Subtract(time.sort, time, ivm(time))),
               GreaterEqual(time.sort, time, ivm(time)))
             createTactic(diffEq, sol, time, iv, diffEqPos)
           case None => None
@@ -321,8 +321,8 @@ object ODETactics {
   def diffAuxiliaryT(x: Variable, t: Term, s: Term, psi: Option[Formula] = None): PositionTactic =
       new AxiomTactic("DA differential ghost", "DA differential ghost") {
     def applies(f: Formula) = f match {
-      case BoxModality(ode: ContEvolveProgram, _) => !Helper.names(ode).contains(x) && !Helper.names(t).contains(x) &&
-        !Helper.names(s).contains(x)
+      case BoxModality(ode: ContEvolveProgram, _) => !BindingAssessment.catVars(ode).bv.contains(x) &&
+        !Helper.names(t).contains(x) && !Helper.names(s).contains(x)
       case _ => false
     }
 
@@ -691,7 +691,7 @@ object ODETactics {
 
             //NNFRewrite(p)
 
-            val finishingTouch = ((propositional | (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) | NilT)*) & arithmeticT
+            val finishingTouch = ((propositional | (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)))*) ~ arithmeticT
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
