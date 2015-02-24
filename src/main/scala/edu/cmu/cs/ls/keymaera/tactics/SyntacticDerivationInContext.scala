@@ -927,7 +927,19 @@ End.
    * and then applies that tactic.
    */
   def TermSyntacticDerivationT = new PositionTactic("Total Syntactic Derivation of Terms") {
-    def applies(s: Sequent, p: Position): Boolean = {
+    //@todo this is wrong b/c what if we're applying in ^A -> [pi;](^^x > 0)' where ^^ is the term pos and ^ the formula pos?
+
+    def applies(s : Sequent, p : Position) : Boolean = {
+      appliesRegardlessOfContext(s,p) && {val theF : Formula = s(p); theF match {
+        case Modality(_,_)        => false
+        case BoxModality(_,_)     => false
+        case DiamondModality(_,_) => false
+        case _                    => true
+      }}
+    }
+
+    //@todo move this into SyntacticDerivationT I guess...
+    def appliesRegardlessOfContext(s: Sequent, p: Position): Boolean = {
       def tacticApplies(tactic : TermAxiomTactic) = findApplicablePositionForTermAxiom(s(p), tactic) match {
         case Some(_) => true
         case None => false
@@ -1111,10 +1123,10 @@ End.
 
   def SyntacticDerivationT = new PositionTactic("Single Step of Total Syntactic Derivation") {
     import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.applies(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
+    override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.appliesRegardlessOfContext(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
 
     override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~
-      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*)
+      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*) ~ (locateTerm(TermSyntacticDerivationT) *)
 
   }
 }

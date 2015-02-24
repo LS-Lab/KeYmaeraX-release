@@ -177,8 +177,18 @@ object SyntacticDerivativeTermAxiomsInContext {
       if(l.length > 0) Some(l.last) else None
     }
 
+    //@todo this is wrong b/c what if we're applying in ^A -> [pi;](^^x > 0)' where ^^ is the term pos and ^ the formula pos?
     override def applies(s: Sequent, p: Position): Boolean = applicableTactic(s,p) match {
-      case Some(_) => true
+      case Some(_) => {
+        //make sure that we're actually within a box context!
+        val theF = s(p)
+        theF match {
+          case Modality(_,_)        => true
+          case BoxModality(_,_)     => true
+          case DiamondModality(_,_) => true
+          case _                    => false
+        }
+      }
       case None => false
     }
 
