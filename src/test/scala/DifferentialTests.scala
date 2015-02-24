@@ -151,22 +151,8 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       sucSequent("[x'=2,y'=3;]x>1 & [x'=2,y'=3 & (true&x>1);]x>0".asFormula))
   }
 
-  "differential solution tactic" should "use provided solution correctly" in {
-    import scala.language.postfixOps
-    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1;]x>0".asFormula :: Nil)
-
-    val tactic = locateSucc(diffSolution(Some("x=x_2+2*t_5".asFormula)))
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sequent("t_2".asNamedSymbol :: "x_2".asNamedSymbol :: "t_5".asNamedSymbol :: "t_6".asNamedSymbol ::
-        "x_3".asNamedSymbol :: "t_7".asNamedSymbol :: "t_7".asNamedSymbol :: Nil,
-        // TODO could simplify all those true &
-        "x>0".asFormula :: "t=0".asFormula :: "t_2=0".asFormula :: "x_2=x".asFormula :: "t_5=t".asFormula ::
-          "t_6=t_2".asFormula :: "true".asFormula :: "true & x_3=x_2+2*t_5&t_7>=t_5".asFormula ::
-          "true".asFormula :: Nil, "x_3>0".asFormula :: Nil))
-  }
-
-  it should "use Mathematica to find solution if None is provided" in {
-    val s = sequent(Nil, "x>0".asFormula :: Nil, "[x'=2;]x>0".asFormula :: Nil)
+  "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
+    val s = sequent(Nil, "b=0".asFormula :: "x>b".asFormula :: Nil, "[x'=2;]x>b".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
