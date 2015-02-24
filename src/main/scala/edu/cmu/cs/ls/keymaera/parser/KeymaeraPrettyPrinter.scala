@@ -29,11 +29,11 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   }
 
   private def endsWithColon(e:Expr, parent:Expr)  = e match {
-    case Assign(_) => !needsParens(e,parent)
-    case Test(_) => !needsParens(e,parent)
-    case NDetAssign(_) => !needsParens(e,parent)
-    case ContEvolve(_) => !needsParens(e,parent)
-    case _: ContEvolveProgram => !needsParens(e,parent)
+    case Assign(_) => !needsParens(e,parent, false )
+    case Test(_) => !needsParens(e,parent, false )
+    case NDetAssign(_) => !needsParens(e,parent, false)
+    case ContEvolve(_) => !needsParens(e,parent,false)
+    case _: ContEvolveProgram => !needsParens(e,parent, false)
     case _ => false
   }
 
@@ -64,13 +64,13 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 
   private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
     //arith
-  	case Add(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS)
-    case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY)
+  	case Add(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS, Some(LeftAssoc()))
+    case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY, Some(LeftAssoc()))
     case Divide(s,l,r) => {
       //This is a recursive infix.
-      symbolTable.divide(parensIfNeeded(l,expressionToPrint), parensIfNeeded(r,expressionToPrint))
+      symbolTable.divide(parensIfNeeded(l,expressionToPrint, false), parensIfNeeded(r,expressionToPrint, true))
     }
-    case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MINUS)
+    case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MINUS, Some(LeftAssoc()))
     
     //quantifiers
     case Forall(variables, child) => {
@@ -78,7 +78,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       symbolTable.FORALL + " " +
       variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
-      parensIfNeeded(child, expressionToPrint)
+      parensIfNeeded(child, expressionToPrint, false)
     }
     
     case Exists(variables, child) => {
@@ -86,7 +86,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       symbolTable.EXISTS + " " +
       variables.map(prettyPrinter(_)).mkString(",") +
       "." + 
-      parensIfNeeded(child, expressionToPrint)
+      parensIfNeeded(child, expressionToPrint, false)
     }
     
     //boolean ops
@@ -123,8 +123,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Not(e) => recPrefix(e,symbolTable.NEGATE)
     
     case Imply(l,r) =>  {
-      parensIfNeeded(l,expressionToPrint) + symbolTable.ARROW +
-      parensIfNeeded(r,expressionToPrint)
+      parensIfNeeded(l,expressionToPrint, false) + symbolTable.ARROW +
+      parensIfNeeded(r,expressionToPrint, true)
     }
     
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
@@ -146,17 +146,17 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
     }
 
-    case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN) + symbolTable.SCOLON
+    case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN, None) + symbolTable.SCOLON
     case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     
-    case BoxModality(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint)
+    case BoxModality(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint, false)
     case ContEvolve(child) => prettyPrinter(child) + symbolTable.SCOLON
     case Derivative(s, child) => recPostfix(child, symbolTable.PRIME)
-    case DiamondModality(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint)
-    case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV)
+    case DiamondModality(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint, false)
+    case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV, Some(RightAssoc()))
     
 
-    case Exp(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP)
+    case Exp(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP, None)
     
     //BinaryProgram
     case c@Choice(l,r) => {
@@ -187,10 +187,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case s@Sequence(l,r) => {
       val leftString = l match {
         // left sequence in a sequence needs parens, because ; is right-associative
-        case Sequence(_, _) => "{" + parensIfNeeded(l, s) + "}"
-        case _ => parensIfNeeded(l, s)
+        case Sequence(_, _) => "{" + parensIfNeeded(l, s, false) + "}"
+        case _ => parensIfNeeded(l, s, false)
       }
-      val rightString = parensIfNeeded(r, s)
+      val rightString = parensIfNeeded(r, s, false)
       if(endsWithColon(l, s)) leftString + rightString
       else leftString + symbolTable.SCOLON + rightString
     }
@@ -209,7 +209,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       "if " + "(" + prettyPrinter(test) + ") then " + 
       prettyPrinter(l) + " else " + prettyPrinter(r) + " fi"
       
-    case Pair(s,l,r) => symbolTable.PAIR_OPEN + recInfix(l,r,expressionToPrint,symbolTable.COMMA) + symbolTable.PAIR_CLOSE
+    case Pair(s,l,r) => symbolTable.PAIR_OPEN + recInfix(l,r,expressionToPrint,symbolTable.COMMA, None) + symbolTable.PAIR_CLOSE
     
     case False() => symbolTable.FALSE
     case True() => symbolTable.TRUE
@@ -244,18 +244,18 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     }
 
     case p@ContEvolveProduct(l, r) => {
-      val leftString = parensIfNeeded(l, p,
+      val leftString = parensIfNeeded(l, p, false,
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
       r match {
         case prg: EmptyContEvolveProgram => leftString + symbolTable.SCOLON
-        case _ => val rightString = parensIfNeeded(r, p,
+        case _ => val rightString = parensIfNeeded(r, p, false,
           c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
           leftString + symbolTable.COMMA + rightString + symbolTable.SCOLON
       }
     }
 
     case p@IncompleteSystem(s) => {
-      val system = parensIfNeeded(s, p, c => {
+      val system = parensIfNeeded(s, p, false, c => {
         val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s
       })
       symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM + symbolTable.SCOLON
@@ -276,7 +276,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
           processNFContEvolve(vars,x,theta,f,symbolTable.CHECKED_EQ)
         }
         case ContEvolve(Equals(sort, left,right)) => {
-          parensIfNeeded(left, expressionToPrint)  + symbolTable.CHECKED_EQ + parensIfNeeded(right, expressionToPrint)
+          parensIfNeeded(left, expressionToPrint, false)  + symbolTable.CHECKED_EQ + parensIfNeeded(right, expressionToPrint, false)
         }
         case CheckedContEvolveFragment(_) => throw new NotImplementedError("Why do you have a checked fragment inside another checked fragment? Seems broken.")
         case _ => throw new NotImplementedError("CheckedContEvolveFragment not implemented for " + child.getClass() + " whose child is a " + child.asInstanceOf[CheckedContEvolveFragment].child.getClass())
@@ -310,11 +310,16 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   
   private def recPrefix(e:Expr, sign:String):String = 
     sign + groupIfNotAtomic(e,prettyPrinter(e))
-    
-  private def recInfix(l:Expr,r:Expr,parent:Expr,sign:String):String = 
-    parensIfNeeded(l,parent) + 
+
+
+  abstract class Assoc
+  case class LeftAssoc() extends Assoc
+  case class RightAssoc() extends Assoc
+
+  private def recInfix(l:Expr,r:Expr,parent:Expr,sign:String, assoc : Option[Assoc]):String =
+    parensIfNeeded(l,parent, assoc.getOrElse(false).isInstanceOf[RightAssoc]) + //sic
     sign + 
-    parensIfNeeded(r,parent) 
+    parensIfNeeded(r,parent, assoc.getOrElse(false).isInstanceOf[LeftAssoc]) //sic
   
   private def recPostfix(e:Expr, sign:String):String = 
     groupIfNotAtomic(e, prettyPrinter(e)) + sign
@@ -329,8 +334,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       }
     if(isAtomic(e)) s else parens._1+s+parens._2
   }
-  
-  private def parensIfNeeded(child:Expr, parent:Expr, printer: Expr=>String = prettyPrinter) = {
+
+  private def parensIfNeeded(child:Expr, parent:Expr, enforceAssociativity : Boolean, printer: Expr=>String = prettyPrinter) = {
     val parens = 
       if(child.isInstanceOf[Program]) {
         ("{","}")
@@ -338,7 +343,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       else {
         ("(",")")
       }
-    if(needsParens(child,parent)) {
+    if(needsParens(child,parent, enforceAssociativity)) {
       parens._1 + printer(child) + parens._2
     }
     else {
@@ -349,7 +354,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   /**
    * @todo this is incredible hacky and needs to be replaced!
    */
-  private def needsParens(child : Expr, parent : Expr) = {
+  private def needsParens(child : Expr, parent : Expr, enforceAssociativity : Boolean) = {
     val precedenceDS =
       //Terms.
       //TODO expP?
@@ -418,7 +423,13 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       val classes = precedence.reduce(_ + "\n" + _)
       throw new Exception("parent not found in precedence list: " + parent.getClass.getCanonicalName + " in: " + "\n" + classes)
     }
-    childPrecedence < parentPrecedence
+
+    if(!enforceAssociativity) {
+      childPrecedence < parentPrecedence
+    }
+    else {
+      childPrecedence <= parentPrecedence
+    }
   }
   /**
    * Returns true if this expression does NOT need to be placed in parens.
