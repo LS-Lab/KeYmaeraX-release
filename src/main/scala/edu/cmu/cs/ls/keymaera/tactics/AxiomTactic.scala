@@ -319,13 +319,13 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
 
           val axiomPos = SuccPosition(node.sequent.succ.length)
 
-          val axiomInstanceTactic = (assertPT(forKAxiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
+          val axiomInstanceTactic = (assertPT(forKAxiomInstance, s"$getClass A.1") & cohideT)(axiomPos) & (assertT(0,1) &
             assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
             abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
             assertT(0, 1) & cutT(Some(axiomInstance)) &
             onBranch((cutUseLbl,
-              (assertPT(axiomInstance)(AntePosition(0)) & equalityRewriting(AntePosition(0), pos) &
-                ((assertPT(axiomInstance)&hideT)(AntePosition(0)) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) &
+              (assertPT(axiomInstance, s"$getClass A.2")(AntePosition(0)) & equalityRewriting(AntePosition(0), pos) &
+                ((assertPT(axiomInstance, s"$getClass A.3")&hideT)(AntePosition(0)) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) &
                 AxiomCloseT) ~
                 (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
               (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
@@ -479,13 +479,13 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
           constructInstanceAndSubst(getTerm(node.sequent, pos), ax, pos) match {
             case Some((axiomInstance, subst)) =>
               val axiomInstPos = AntePosition(node.sequent.ante.length)
-              val axiomApplyTactic = assertPT(axiomInstance)(axiomInstPos) & (axiomInstance match {
+              val axiomApplyTactic = assertPT(axiomInstance, s"$getClass A.1")(axiomInstPos) & (axiomInstance match {
                 //@TODO If Pos.isAnte the following position management seems wrong since unstable.
-                case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos, checkDisjoint = false) & ((assertPT(axiomInstance)&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),"hiding original instance")&hideT)(pos.topLevel))
+                case Equals(Real, _, _) => equalityRewriting(axiomInstPos, pos, checkDisjoint = false) & ((assertPT(axiomInstance, s"$getClass A.2")&hideT)(axiomInstPos) & (assertPT(node.sequent(pos),s"$getClass A.3")&hideT)(pos.topLevel))
                 case _ => ???
               })
               val axiomPos = SuccPosition(node.sequent.succ.length)
-              val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT)
+              val axiomInstanceTactic = (assertPT(axiomInstance, s"$getClass A.4") & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT)
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }

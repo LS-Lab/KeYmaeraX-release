@@ -158,7 +158,7 @@ object SyntacticDerivativeProofRulesInContext {
 
             val axiomInstPos = AntePosition(node.sequent.ante.length)
 
-            val axiomApplyTactic = assertPT(forKAxiomInstance)(axiomInstPos) &
+            val axiomApplyTactic = assertPT(forKAxiomInstance, s"$getClass A.1")(axiomInstPos) &
               ImplyLeftT(axiomInstPos) && (
               hideT(SuccPosition(0)) /* desired result remains */,
               AxiomCloseT ~ TacticLibrary.debugT("axiomclose failed here.")&assertT(0,0)
@@ -171,7 +171,7 @@ object SyntacticDerivativeProofRulesInContext {
 
             val axiomPos = SuccPosition(node.sequent.succ.length)
 
-            val axiomInstanceTactic = (assertPT(forKAxiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
+            val axiomInstanceTactic = (assertPT(forKAxiomInstance, s"$getClass A.2") & cohideT)(axiomPos) & (assertT(0,1) &
               assertT(forKAxiomInstance, SuccPosition(0))  & kModalModusPonensT(SuccPosition(0)) &
               abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
               assertT(0, 1) & cutT(Some(axiomInstance)) & debugT("Did the equiv I just cut in make sense??") &
