@@ -80,12 +80,20 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     n.openGoals().flatMap(_.sequent.succ) should contain only "!true | ((!x>=0)' & 2>=2)".asFormula
   }
 
-  it should "work with a complicated example" in {
-    val s = sequent(Nil, "x>=0".asFormula::Nil, "[x' = y, y' = x & x^2 + y^2 = 4;]1=1".asFormula::Nil)
+  it should "detect constant symbols" in {
+    val s = sequent(Nil, "x>=0 & y>=0".asFormula::Nil, "[x' = 2;](x>=0 & y>=0)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
-    fail()
-    // TODO check expected result
+    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0 & x>=x".asFormula
+    n.openGoals().flatMap(_.sequent.succ) should contain only "!true | (2>=0 & 0>=0)".asFormula
+  }
+
+  it should "work with a complicated example" in {
+    val s = sequent(Nil, Nil, "[x' = y, y' = x & x^2 + y^2 = 4;]1=1".asFormula::Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    n.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    n.openGoals().flatMap(_.sequent.succ) should contain only "!(x^2+y^2=4) | [x':=y;](!true | 0=0)".asFormula
   }
 
   "Diff inv system intro" should "introduce marker and prime postcondition" in {
@@ -114,5 +122,12 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     val secondNode = helper.runTactic(tactic, node.openGoals().head)
     secondNode.openGoals().foreach(_.sequent should be (
       sucSequent("[$$x' ≚ x & x>3, y' ≚ x & y>2&z<0$$;][y':=x;](y>2&z<0 -> [x':=x;](x>3 -> (y>0)'))".asFormula)))
+  }
+
+  "Diff inv tail" should "remove marked ODE" in {
+    val s = sucSequent("[$$x' ≚ x & x>3$$;][x':=x;](x>0)'".asFormula)
+    val tactic = locateSucc(diffInvariantSystemTailT)
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("[x':=x;](x>0)'".asFormula))
   }
 }
