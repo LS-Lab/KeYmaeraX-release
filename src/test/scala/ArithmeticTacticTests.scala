@@ -1,17 +1,20 @@
-import edu.cmu.cs.ls.keymaera.core.{RootNode, ToolBase}
+import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics
+import edu.cmu.cs.ls.keymaera.tactics.{Config, BranchLabels, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaera.tactics.ArithmeticTacticsImpl._
 
+import scala.collection.immutable.Map
+
 /**
  * Created by smitsch on 2/14/15.
  * @author Stefan Mitsch
  */
 class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
+  Config.maxCPUs = 1
   val helper = new ProvabilityTestHelper((x) => println(x))
 
   override def beforeEach() = {
@@ -51,6 +54,22 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val tactic = locateAnte(NegateEqualsT)
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sequent(Nil, "x=0".asFormula :: Nil, Nil)
+    ))
+  }
+
+  it should "negate at position" in {
+    val s = sequent(Nil, "a=b & !(x!=0)".asFormula :: Nil, Nil)
+    val tactic = NegateEqualsT(AntePosition(0, PosInExpr(1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, "a=b & x=0".asFormula :: Nil, Nil)
+    ))
+  }
+
+  it should "negate inside formula derivative" in {
+    val s = sequent(Nil, "(!(x!=0))'".asFormula :: Nil, Nil)
+    val tactic = NegateEqualsT(AntePosition(0, PosInExpr(0::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, "(x=0)'".asFormula :: Nil, Nil)
     ))
   }
 
@@ -194,6 +213,70 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
+  "GreaterThanFlipT" should "flip > in succedent" in {
+    val s = sucSequent("x>0".asFormula)
+    val tactic = locateSucc(GreaterThanFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("0<x".asFormula)
+    ))
+  }
+
+  it should "flip < in succedent" in {
+    val s = sucSequent("x<0".asFormula)
+    val tactic = locateSucc(GreaterThanFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("0>x".asFormula)
+    ))
+  }
+
+  it should "flip > in antecedent" in {
+    val s = sequent(Nil, "x>0".asFormula::Nil, Nil)
+    val tactic = locateAnte(GreaterThanFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, "0<x".asFormula::Nil, Nil)
+    ))
+  }
+
+  it should "flip < in antecedent" in {
+    val s = sequent(Nil, "x<0".asFormula::Nil, Nil)
+    val tactic = locateAnte(GreaterThanFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, "0>x".asFormula::Nil, Nil)
+    ))
+  }
+
+  "GreaterEqualsFlipT" should "flip >= in succedent" in {
+    val s = sucSequent("x>=0".asFormula)
+    val tactic = locateSucc(GreaterEqualFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("0<=x".asFormula)
+    ))
+  }
+
+  it should "flip <= in succedent" in {
+    val s = sucSequent("x<=0".asFormula)
+    val tactic = locateSucc(GreaterEqualFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("0>=x".asFormula)
+    ))
+  }
+
+  it should "flip >= in antecedent" in {
+    val s = sequent(Nil, "x>=0".asFormula::Nil, Nil)
+    val tactic = locateAnte(GreaterEqualFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, "0<=x".asFormula::Nil, Nil)
+    ))
+  }
+
+  it should "flip <= in antecedent" in {
+    val s = sequent(Nil, "x<=0".asFormula::Nil, Nil)
+    val tactic = locateAnte(GreaterEqualFlipT)
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sequent(Nil, "0>=x".asFormula::Nil, Nil)
+    ))
+  }
+
   "NegateGreaterThanT" should "negate > in succedent" in {
     val s = sucSequent("x>0".asFormula)
     val tactic = locateSucc(NegateGreaterThanT)
@@ -202,8 +285,15 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
-  /* TODO not implemented yet */
-  ignore should "negate !(<=) in succedent" in {
+  it should "negate > inside formula" in {
+    val s = sucSequent("a=b & x>0".asFormula)
+    val tactic = NegateGreaterThanT(SuccPosition(0, PosInExpr(1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b & !(x<=0)".asFormula)
+    ))
+  }
+
+  it should "negate !(<=) in succedent" in {
     val s = sucSequent("!(x<=0)".asFormula)
     val tactic = locateSucc(NegateGreaterThanT)
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
@@ -211,8 +301,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
-  /* TODO not implemented yet */
-  ignore should "negate > in antecedent" in {
+  it should "negate > in antecedent" in {
     val s = sequent(Nil, "x>0".asFormula :: Nil, Nil)
     val tactic = locateAnte(NegateGreaterThanT)
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
@@ -220,8 +309,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
-  /* TODO not implemented yet */
-  ignore should "negate !(<=) in antecedent" in {
+  it should "negate !(<=) in antecedent" in {
     val s = sequent(Nil, "!(x<=0)".asFormula :: Nil, Nil)
     val tactic = locateAnte(NegateGreaterThanT)
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (

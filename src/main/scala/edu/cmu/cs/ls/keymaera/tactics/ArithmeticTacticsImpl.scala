@@ -2,7 +2,6 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
@@ -287,51 +286,86 @@ object ArithmeticTacticsImpl {
   }
 
   /**
-   * Creates a new axiom tactic for splitting >=: s>=t <-> s > t | s=t
+   * Creates a new axiom tactic for flipping >=
    * @return The axiom tactic.
    */
-  def GreaterEqualSplitT = new AxiomTactic(">=", ">=") {
+  def GreaterEqualFlipT = new AxiomTactic(">= flip", ">= flip") {
     override def applies(f: Formula): Boolean = f match {
       case GreaterEqual(_, _, _) => true
-      case Or(GreaterThan(sort, s, t), Equals(sort2, s2, t2)) => sort == sort2 && s == s2 && t == t2
+      case LessEqual(_, _, _) => true
       case _ => false
     }
 
     override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
       case GreaterEqual(sort, f, g) =>
-        // TODO check that axiom is of the expected form s>=t <-> (s > t | s=t)
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
         val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
 
-        // construct axiom instance: s>=t <-> (s > t | s=t)
-        val h = Or(GreaterThan(sort, f, g), Equals(sort, f, g))
+        // construct axiom instance
+        val h = LessEqual(sort, g, f)
         val axiomInstance = Equiv(frm, h)
 
         Some(axiomInstance, subst)
-      case Or(GreaterThan(sort, f, g), Equals(sort2, f2, g2)) if sort == sort2 && f == f2 && g == g2 =>
-        // TODO check that axiom is of the expected form s>=t <-> (s > t | s=t)
+      case LessEqual(sort, f, g) =>
         // construct substitution
-        val aS = Variable("s", None, sort)
-        val aT = Variable("t", None, sort)
-        val subst = Substitution(List(SubstitutionPair(aS, f), SubstitutionPair(aT, g)))
+        val aF = Apply(Function("f", None, sort, sort), Anything)
+        val aG = Apply(Function("g", None, sort, sort), Anything)
+        val subst = Substitution(List(SubstitutionPair(aF, g), SubstitutionPair(aG, f)))
 
-        // construct axiom instance: s>=t <-> (s > t | s=t)
-        val h = GreaterEqual(sort, f, g)
+        // construct axiom instance
+        val h = GreaterEqual(sort, g, f)
         val axiomInstance = Equiv(h, frm)
 
         Some(axiomInstance, subst)
     }
   }
 
+  /**
+   * Creates a new axiom tactic for flipping >
+   * @return The axiom tactic.
+   */
+  def GreaterThanFlipT = new AxiomTactic("> flip", "> flip") {
+    override def applies(f: Formula): Boolean = f match {
+      case GreaterThan(_, _, _) => true
+      case LessThan(_, _, _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
+      case GreaterThan(sort, f, g) =>
+        // construct substitution
+        val aF = Apply(Function("f", None, sort, sort), Anything)
+        val aG = Apply(Function("g", None, sort, sort), Anything)
+        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+
+        // construct axiom instance
+        val h = LessThan(sort, g, f)
+        val axiomInstance = Equiv(frm, h)
+
+        Some(axiomInstance, subst)
+      case LessThan(sort, f, g) =>
+        // construct substitution
+        val aF = Apply(Function("f", None, sort, sort), Anything)
+        val aG = Apply(Function("g", None, sort, sort), Anything)
+        val subst = Substitution(List(SubstitutionPair(aF, g), SubstitutionPair(aG, f)))
+
+        // construct axiom instance
+        val h = GreaterThan(sort, g, f)
+        val axiomInstance = Equiv(h, frm)
+
+        Some(axiomInstance, subst)
+    }
+  }
+
+
   def NegateGreaterThanT = new PositionTactic("> negate") {
-    override def applies(s: Sequent, p: Position): Boolean = {
-      s(p) match {
-        case GreaterThan(_, _, _) => true
-        case Not(LessEqual(_, _, _)) => true
-        case _ => false
-      }
+    import TacticLibrary.TacticHelper.getFormula
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case GreaterThan(_, _, _) => true
+      case Not(LessEqual(_, _, _)) => true
+      case _ => false
     }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
@@ -339,33 +373,17 @@ object ArithmeticTacticsImpl {
 
       import PropositionalTacticsImpl.{cutT, NotRightT, AxiomCloseT, OrRightT, OrLeftT}
       import scala.language.postfixOps
-      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case GreaterThan(sort, s, t) =>
-          val cutSPos = SuccPosition(node.sequent.succ.length)
-          val cutAPos = AntePosition(node.sequent.ante.length)
-          if (p.isAnte) {
-            Some(
-              cutT(Some(Not(LessEqual(sort, s, t)))) &
-                onBranch(
-                  (cutShowLbl, NotRightT(cutSPos) & LessEqualSplitT(cutAPos) & OrLeftT(cutAPos) /* TODO */),
-                  (cutUseLbl, hideT(p))
-                )
-            )
-          } else {
-            Some(
-              cutT(Some(Not(LessEqual(sort, s, t)))) &
-                onBranch(
-                  (cutShowLbl, hideT(p)),
-                  (cutUseLbl, NotLeftT(cutAPos) & LessEqualSplitT(cutSPos) & OrRightT(cutSPos) &
-                    NegateLessThanT(cutSPos) & NotRightT(new SuccPosition(cutSPos.index + 1)) &
-                    GreaterEqualSplitT(cutAPos) & OrLeftT(cutAPos) & AxiomCloseT))
-            )
-          }
+          Some(GreaterThanFlipT(p) & NegateLessThanT(p) & GreaterEqualFlipT(p.first))
         case Not(LessEqual(sort, s, t)) =>
-          val sPos = SuccPosition(node.sequent.succ.length)
-          val aPos = AntePosition(node.sequent.ante.length)
-          if (p.isAnte) Some(NotLeftT(p) /* TODO */)
-          else Some(NotRightT(p) /* TODO */)
+          val pa = AntePosition(node.sequent.ante.length)
+          val ps = SuccPosition(node.sequent.succ.length)
+          if (p.isAnte) {
+            Some(NotLeftT(p) & GreaterEqualFlipT(ps) & NegateGreaterEqualsT(ps) & GreaterThanFlipT(ps.first) & NotRightT(ps))
+          } else {
+            Some(NotRightT(p) & GreaterEqualFlipT(pa) & NegateGreaterEqualsT(pa) & GreaterThanFlipT(pa.first) & NotLeftT(pa))
+          }
       }
     }
   }
