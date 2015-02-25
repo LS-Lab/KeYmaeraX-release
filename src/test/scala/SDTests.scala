@@ -199,4 +199,20 @@ class SDTests extends TacticTestSuite {
     containsOpenGoal(node, helper.parseFormula("[x := 0;]0=0")) shouldBe true
     node.openGoals().length shouldBe 1
   }
+
+  "Failure scenarios from dsolve" should "be fixed for the failure case from x'=v,v'=a (using multiplyderivative)" in {
+    val f= "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2*k4_t_1)'*v_2+2*k4_t_1*v_2')+(2*x_2)')".asFormula
+    val expected = helper.parseFormula("x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2'*k4_t_1+2*k4_t_1')*v_2+2*k4_t_1*v_2')+(2'*x_2+2*x_2'))")
+    val n = helper.formulaToNode(f)
+    helper.runTactic((SearchTacticsImpl.locateTerm(MultiplyDerivativeT)*), n, true)
+    containsOpenGoal(n, expected) shouldBe true
+  }
+
+  it should "be fixed for the failure case from x'=v,v'=a (using bare sytnacticderivationt)" in {
+    val f= "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2*k4_t_1)'*v_2+2*k4_t_1*v_2')+(2*x_2)')".asFormula
+    val expected = helper.parseFormula("x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2'*k4_t_1+2*k4_t_1')*v_2+2*k4_t_1*v_2')+(2'*x_2+2*x_2'))")
+    val n = helper.formulaToNode(f)
+    helper.runTactic((SearchTacticsImpl.locateTerm(SyntacticDerivationT)*), n, true)
+    containsOpenGoal(n, expected) shouldBe (true)
+  }
 }
