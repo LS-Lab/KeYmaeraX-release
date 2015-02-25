@@ -544,8 +544,17 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   }
   
   def proofHeader(ns : List[NamedSymbol]) : String = {
-      val varDecls = ns.map(symbol => sortProofPrinter(symbol.domain) + " " + symbol.name + ".")
-      "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
+    val varDecls = ns.map({
+      case Variable(n, i, s) => sortProofPrinter(s) + " " + n + printIndex(i)
+      case Function(n, i, Unit, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "()"
+      case Function(n, i, d, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "(" + sortProofPrinter(d) + ")"
+    })
+    "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
+  }
+
+  private def printIndex(index: Option[Int]) = index match {
+    case None => ""
+    case Some(i) => "_" + i
   }
 
   private def sortProofPrinter(s:Sort):String = s match {
@@ -556,7 +565,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Real        => "T"
     case s:TupleT    => ???
     case s:UserSort  => ???
-    case Unit        => ???
+    case Unit        => "Void"
   }
 
 }
