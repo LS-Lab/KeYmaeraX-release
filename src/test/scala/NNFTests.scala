@@ -1,12 +1,13 @@
-/**
- * Created by nfulton on 2/11/15.
- */
-
 import edu.cmu.cs.ls.keymaera.core.{EquivRight, PosInExpr, SuccPosition}
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, NNFRewrite}
 import edu.cmu.cs.ls.keymaera.tactics.NNFRewrite._
 import testHelper.StringConverter._
 
+/**
+ * Created by nfulton on 2/11/15.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
+ */
 class NNFTests extends TacticTestSuite {
   "Double negation elimination" should "eliminate" in {
     val node = helper.formulaToNode("!(!(1=1))".asFormula)
@@ -88,7 +89,7 @@ class NNFTests extends TacticTestSuite {
 
     helper.runTactic(tactic, node)
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node.openGoals().flatMap(_.sequent.succ) should contain only "( !(1=1) & !(2=2) ) | !(2=2)".asFormula //OK.
+    node.openGoals().flatMap(_.sequent.succ) should contain only "( 1!=1 & 2!=2 ) | 2!=2".asFormula //OK.
   }
 
   it should "prove example 1" in {
@@ -106,6 +107,6 @@ class NNFTests extends TacticTestSuite {
 
     helper.runTactic(tactic, node)
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node.openGoals().flatMap(_.sequent.succ) should contain only "(1=1|2=2)& !2=2".asFormula //OK.
+    node.openGoals().flatMap(_.sequent.succ) should contain only "(1=1|2=2) & 2!=2".asFormula //OK.
   }
 }

@@ -38,10 +38,20 @@ object NNFRewrite {
     //@todo example of pt 5 desirability...
     override def apply(p: Position): Tactic = {
       import scala.language.postfixOps
+      import ArithmeticTacticsImpl._
       def l : PositionTactic => Tactic = SearchTacticsImpl.locateSubposition(p)
-      (debugT("Before an iteration of the NNF rewrite:") &
+      def nl: PositionTactic => Tactic = SearchTacticsImpl.locateSubposition(p, { case Not(_) => true case _ => false})
+      ((debugT("Before an iteration of the NNF rewrite:") &
         (l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) |
-         l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT) | NilT))*
+         l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT)))*) ~ (
+        (debugT("Before an iteration of binary relation negation") &
+          (nl(NegateGreaterEqualsT)
+            | nl(NegateGreaterThanT)
+            | nl(NegateEqualsT)
+            | nl(NegateNotEqualsT)
+            | nl(NegateLessThanT)
+            | nl(NegateLessEqualsT)))*)
+
     }
   }
 
