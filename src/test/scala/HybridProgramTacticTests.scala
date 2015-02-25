@@ -174,7 +174,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     getProofSequent(assignT, new RootNode(s)) should be (sequent(Nil, "\\forall x_0. (x_0=x+1 -> x_0>0)".asFormula :: Nil, Nil))
   }
 
-  it should "use the appropriate axiom variant" in {
+  // TODO not yet implemented
+  ignore should "use the appropriate axiom variant" in {
     import TacticLibrary.boxAssignT
     val s = sequent(Nil, "[x:=1;]x>0".asFormula :: Nil, Nil)
     getProofSequent(locateAnte(boxAssignT), new RootNode(s)) should be (sequent(Nil, "1>0".asFormula :: Nil, Nil))
@@ -183,6 +184,15 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val u = sucSequent("[x:=x+1;]x>0".asFormula)
     getProofSequent(locateSucc(boxAssignT), new RootNode(u)) should be (
       sequent("x_1".asNamedSymbol::Nil, "x_1=x+1".asFormula::Nil, "x_1>0".asFormula::Nil))
+  }
+
+  it should "use the skolemization method asked for" in {
+    import HybridProgramTacticsImpl.boxAssignT
+    val s = sucSequent("[x:=1;]x>0".asFormula)
+    getProofSequent(locateSucc(boxAssignT(FOQuantifierTacticsImpl.skolemizeT)), new RootNode(s)) should be (
+      sequent("x_1".asNamedSymbol :: Nil, "x_1=1".asFormula :: Nil, "x_1>0".asFormula :: Nil))
+    getProofSequent(locateSucc(boxAssignT(FOQuantifierTacticsImpl.skolemizeToFnT)), new RootNode(s)) should be (
+      sequent(Function("x", Some(1), Unit, Real) :: Nil, "x_1()=1".asFormula :: Nil, "x_1()>0".asFormula :: Nil))
   }
 
   "v2tBoxAssignT" should "work on self assignment" in {

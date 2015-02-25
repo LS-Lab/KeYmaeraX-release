@@ -241,7 +241,9 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  def boxAssignT: PositionTactic = new PositionTactic("[:=] assign equational") {
+  def boxAssignT: PositionTactic = boxAssignT(FOQuantifierTacticsImpl.skolemizeT)
+  def boxAssignT(skolemizeHow: Boolean => PositionTactic): PositionTactic =
+      new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(Assign(Variable(_, _, _), _), _) => true
       case _ => false
@@ -260,7 +262,7 @@ object HybridProgramTacticsImpl {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
-          else Some(boxAssignEqualT(p) & skolemizeT(forceUniquify = true)(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
+          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
         case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) => Some(v2tBoxAssignT(p))
         }
       }
