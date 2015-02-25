@@ -204,6 +204,14 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent("x_0".asNamedSymbol :: Nil, Nil, "x_0>0".asFormula :: Nil))
   }
 
+  it should "skolemize to a function symbol" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeToFnT
+    val tactic = locateSucc(skolemizeToFnT)
+    getProofSequent(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula))) should be (
+      sequent(edu.cmu.cs.ls.keymaera.core.Function("x", None, edu.cmu.cs.ls.keymaera.core.Unit, Real) :: Nil, Nil,
+        "x()>0".asFormula :: Nil))
+  }
+
   "Quantifier instantiation" should "instantiate quantifier with given term" in {
     import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT(Variable("x", None, Real), "y+1".asTerm))

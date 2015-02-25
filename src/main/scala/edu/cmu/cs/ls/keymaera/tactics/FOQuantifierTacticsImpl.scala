@@ -274,7 +274,12 @@ object FOQuantifierTacticsImpl {
    * @return The skolemization tactic.
    */
   def skolemizeT: PositionTactic = skolemizeT(forceUniquify = false)
-  def skolemizeT(forceUniquify: Boolean): PositionTactic = new PositionTactic("Skolemize") {
+  def skolemizeT(forceUniquify: Boolean): PositionTactic = skolemize(new Skolemize(_), forceUniquify)
+  def skolemizeToFnT: PositionTactic = skolemizeToFnT(forceUniquify = false)
+  def skolemizeToFnT(forceUniquify: Boolean): PositionTactic = skolemize(new SkolemizeToFn(_), forceUniquify)
+
+  private def skolemize(factory: Position => PositionRule, forceUniquify: Boolean): PositionTactic =
+      new PositionTactic("Skolemize") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case Forall(_, _) => !p.isAnte
       case Exists(_, _) => p.isAnte
@@ -288,14 +293,14 @@ object FOQuantifierTacticsImpl {
           val rename =
             if (forceUniquify || Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
             else NilT
-          Some(rename ~ new ApplyRule(new Skolemize(p)) {
+          Some(rename ~ new ApplyRule(factory(p)) {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           })
         case Exists(vars, _) =>
           val rename =
             if (forceUniquify || Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
             else NilT
-          Some(rename ~ new ApplyRule(new Skolemize(p)) {
+          Some(rename ~ new ApplyRule(factory(p)) {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           })
       }
