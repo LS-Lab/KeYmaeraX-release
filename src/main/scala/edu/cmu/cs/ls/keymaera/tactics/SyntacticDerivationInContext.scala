@@ -465,7 +465,7 @@ object SyntacticDerivationInContext {
         case Derivative(dSort, s@Apply(Function(n, i, Unit, nSort), Nothing)) if dSort == nSort => {
           val sort = nSort
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aS = Apply(Function("c", None, Unit, sort), Nothing)
 
           val subst = Substitution(List(SubstitutionPair(aS, s)))
 
