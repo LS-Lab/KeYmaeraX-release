@@ -140,7 +140,7 @@ object ArithmeticTacticsImpl {
           || anteNames.filter((j: (Int, Set[NamedSymbol])) => i != j._1).map(_._2).flatten.contains(l)) None
         else Some(i)
         ).flatten.sortWith((i: Int, j: Int) => i > j)
-      if (res.isEmpty) Some(NilT) else Some(res.map((i: Int) => hideT(AntePosition(i))).reduce(seqT(_, _)))
+      if (res.isEmpty) Some(NilT) else Some(res.map((i: Int) => hideT(AntePosition(i))).reduce(seqT))
     }
 
     override def applicable(node: ProofNode): Boolean = true
@@ -371,7 +371,7 @@ object ArithmeticTacticsImpl {
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
-      import PropositionalTacticsImpl.{cutT, NotRightT, AxiomCloseT, OrRightT, OrLeftT}
+      import PropositionalTacticsImpl.NotRightT
       import scala.language.postfixOps
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case GreaterThan(sort, s, t) =>
@@ -399,7 +399,7 @@ object ArithmeticTacticsImpl {
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
-      import PropositionalTacticsImpl.{cutT, NotRightT, AxiomCloseT, OrRightT, OrLeftT}
+      import PropositionalTacticsImpl.NotRightT
       import scala.language.postfixOps
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case LessEqual(sort, s, t) =>
@@ -418,6 +418,7 @@ object ArithmeticTacticsImpl {
 
   def NegateBinaryRelationT[T: Manifest](name: String, rel: T => Option[(Sort, Term, Term)],
                                          neg: T => Option[(Sort, Term, Term)],
+                                         relFactory: (Sort, Term, Term) => Formula,
                                          negFactory: (Sort, Term, Term) => Formula,
                                          baseTactic: PositionTactic) = new PositionTactic(name) {
     class Unapplyer(f: T => Option[(Sort, Term, Term)]) {
@@ -440,6 +441,7 @@ object ArithmeticTacticsImpl {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       import PropositionalTacticsImpl.{cutT, NotRightT, AxiomCloseT}
+      import scala.language.postfixOps
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case Rel(sort, s, t) =>
           val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
@@ -451,13 +453,11 @@ object ArithmeticTacticsImpl {
             case None => throw new IllegalArgumentException("Checked by applies to never occur")
           }
 
-          val cutSPos = SuccPosition(node.sequent.succ.length)
-          val cutAPos = AntePosition(node.sequent.ante.length)
           if (p.isAnte) {
             Some(
               cutT(Some(replFormula)) &
                 onBranch(
-                  (cutShowLbl, TacticLibrary.propositional ~ baseTactic(cutAPos) & NotLeftT(cutAPos) & AxiomCloseT),
+                  (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
                   (cutUseLbl, hideT(p.topLevel)))
             )
           } else {
@@ -465,14 +465,29 @@ object ArithmeticTacticsImpl {
               cutT(Some(replFormula)) &
                 onBranch(
                   (cutShowLbl, hideT(p.topLevel)),
-                  (cutUseLbl, TacticLibrary.propositional ~ baseTactic(cutSPos) & NotRightT(cutSPos) & AxiomCloseT))
+                  (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*))
             )
           }
         case Not(Neg(sort, s, t)) =>
-          val sPos = SuccPosition(node.sequent.succ.length)
-          val aPos = AntePosition(node.sequent.ante.length)
-          if (p.isAnte) Some(TacticLibrary.propositional ~ baseTactic(sPos) & NotRightT(sPos))
-          else Some(TacticLibrary.propositional ~ baseTactic(aPos) & NotLeftT(aPos))
+          val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+            override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
+              Right(relFactory(sort, s, t))
+            }
+          }), node.sequent(p)) match {
+            case Some(f) => f
+            case None => throw new IllegalArgumentException("Checked by applies to never occur")
+          }
+
+          if (p.isAnte) Some(
+            cutT(Some(replFormula)) & onBranch(
+              (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
+              (cutUseLbl, hideT(p.topLevel))
+            ))
+          else Some(
+            cutT(Some(replFormula)) & onBranch(
+              (cutShowLbl, hideT(p.topLevel)),
+              (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*)
+            ))
       }
     }
   }
@@ -481,13 +496,13 @@ object ArithmeticTacticsImpl {
    * Creates a new tactic for negating =: s!=t <-> !(s=t)
    * @return The tactic.
    */
-  def NegateNotEqualsT = NegateBinaryRelationT("!= negate", NotEquals.unapply, Equals.unapply, Equals.apply,
-    NegateEqualsT)
+  def NegateNotEqualsT = NegateBinaryRelationT("!= negate", NotEquals.unapply, Equals.unapply, NotEquals.apply,
+    Equals.apply, NegateEqualsT)
 
   /**
    * Creates a new tactic for negating >=: s < t <-> !(s>=t)
    * @return The tactic.
    */
-  def NegateGreaterEqualsT = NegateBinaryRelationT(">= negate", GreaterEqual.unapply, LessThan.unapply, LessThan.apply,
-    NegateLessThanT)
+  def NegateGreaterEqualsT = NegateBinaryRelationT(">= negate", GreaterEqual.unapply, LessThan.unapply,
+    GreaterEqual.apply, LessThan.apply, NegateLessThanT)
 }

@@ -197,6 +197,14 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
+  it should "negate >= inside implication" in {
+    val s = sucSequent("a=b -> x>=0".asFormula)
+    val tactic = NegateGreaterEqualsT(SuccPosition(0, PosInExpr(1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b -> !(x<0)".asFormula)
+    ))
+  }
+
   it should "negate !(<) in succedent" in {
     val s = sucSequent("!(x<0)".asFormula)
     val tactic = locateSucc(NegateGreaterEqualsT)
@@ -209,7 +217,7 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val s = sucSequent("a=b | !(x<0)".asFormula)
     val tactic = NegateGreaterEqualsT(SuccPosition(0, PosInExpr(1::Nil)))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent(Nil, Nil, "a=b".asFormula :: "x>=0".asFormula :: Nil)
+      sequent(Nil, Nil, "a=b | x>=0".asFormula :: Nil)
     ))
   }
 
@@ -233,8 +241,8 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val s = sequent(Nil, "a=b -> !(x<0)".asFormula :: Nil, Nil)
     val tactic = NegateGreaterEqualsT(AntePosition(0, PosInExpr(1::Nil)))
     val node = helper.runTactic(tactic, new RootNode(s))
-    node.openGoals().flatMap(_.sequent.ante) should contain only ("x>=0".asFormula)
-    node.openGoals().flatMap(_.sequent.succ) should contain only ("a=b".asFormula)
+    node.openGoals().flatMap(_.sequent.ante) should contain only "a=b -> x>=0".asFormula
+    node.openGoals().flatMap(_.sequent.succ) shouldBe empty
   }
 
   "GreaterThanFlipT" should "flip > in succedent" in {

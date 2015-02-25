@@ -8,13 +8,15 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
  * Implementation of search tactics.
  */
 object SearchTacticsImpl {
-  def locateSubposition(p : Position)(pT : PositionTactic) : Tactic = new ApplyPositionTactic("LocateSubposition(" + pT.name + ")", pT) {
+  def locateSubposition(p : Position, cond: Expr => Boolean = _ => true)(pT : PositionTactic) : Tactic =
+      new ApplyPositionTactic("LocateSubposition(" + pT.name + ")", pT) {
     override def findPosition(s: Sequent): Option[Position] = {
       val fn = new ExpressionTraversalFunction {
         var result : Option[Position] = None
         override def preF(p : PosInExpr, f : Formula) = {
           val position = makePos(p)
-          if(isSubpos(position) && pT.applies(s, position)) { result = Some(position); Left(Some(ExpressionTraversal.stop)) }
+          if(isSubpos(position) && cond(TacticLibrary.TacticHelper.getFormula(s, position)) &&
+            pT.applies(s, position)) { result = Some(position); Left(Some(ExpressionTraversal.stop)) }
           else Left(None)
         }
       }
