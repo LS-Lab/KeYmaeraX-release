@@ -6,12 +6,9 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxAssignT
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxNDetAssign
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxTestT
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
+import PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, diffCutT, arithmeticT, default}
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
@@ -111,22 +108,12 @@ object ODETactics {
         import HybridProgramTacticsImpl.{discreteGhostT, boxAssignT}
         def createTactic(ode: ContEvolveProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                          diffEqPos: Position) = {
-          val anteAfterGhostsLength = node.sequent.ante.length + primedSymbols(ode).size
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
-            a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(diffEqPos)))
-          val diffAuxConsts = (Helper.names(solution) -- primedSymbols(ode)).foldLeft(NilT)((a, b) =>
-            // HACK type cast to variable
-            a & diffAuxiliaryT(b.asInstanceOf[Variable], Number(0), Number(0))(diffEqPos) &
-              AndRightT(diffEqPos) && (EquivRightT(diffEqPos) &
-              // not sure if vacuous is the right thing for all cases, but it works for the examples so far
-              onBranch((equivLeftLbl, vacuousExistentialQuanT(None)(diffEqPos) & AxiomCloseT),
-                       (equivRightLbl, vacuousExistentialQuanT(None)(AntePosition(anteAfterGhostsLength)) & AxiomCloseT)),
-              /* desired result */ NilT)
-          )
+            a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(skolemizeToFnT(_))(diffEqPos)))
           val cut = diffCutT(solution)(p) & AndRightT(p)
           val proveSol = diffInvariantT(diffEqPos)
           val useSol = diffWeakenT(diffEqPos)
-          Some(initialGhosts & diffAuxConsts & cut & (proveSol, useSol))
+          Some(initialGhosts & cut && (debugT("Prove Solution") & proveSol, debugT("Use Solution") & useSol))
         }
 
         val diffEq = node.sequent(p) match {
@@ -136,7 +123,7 @@ object ODETactics {
 
         val iv = primedSymbols(diffEq).map(v => v -> TacticHelper.freshNamedSymbol(v, node.sequent(p))).toMap
         // boxAssignT will increment the index twice (universal quantifier, skolemization) -> tell Mathematica
-        val ivm = iv.map(e =>  (e._1, Variable(e._2.name, Some(e._2.index.get + 2), e._2.sort))).toMap
+        val ivm = iv.map(e =>  (e._1, Function(e._2.name, Some(e._2.index.get + 2), Unit, e._2.sort))).toMap
 
         val theSolution = solution match {
           case sol@Some(_) => sol
@@ -150,8 +137,9 @@ object ODETactics {
         theSolution match {
           // add relation to initial time
           case Some(s) =>
-            val sol = And(if (tIsZero) s else SubstitutionHelper.replaceFree(s)(time, Subtract(time.sort, time, ivm(time))),
-              GreaterEqual(time.sort, time, ivm(time)))
+            val sol = And(if (tIsZero) s
+                          else SubstitutionHelper.replaceFree(s)(time, Subtract(time.sort, time, Apply(ivm(time), Nothing))),
+                          GreaterEqual(time.sort, time, Apply(ivm(time), Nothing)))
             createTactic(diffEq, sol, time, iv, diffEqPos)
           case None => None
         }
