@@ -679,6 +679,7 @@ object ODETactics {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         import scala.language.postfixOps
+        import SearchTacticsImpl.locateSucc
         node.sequent(p) match {
           case BoxModality(_: ContEvolveProduct, _) => {
 
@@ -691,13 +692,14 @@ object ODETactics {
 
             //NNFRewrite(p)
 
-            val finishingTouch = ((propositional | (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)))*) ~ arithmeticT
+            val finishingTouch = (locateSucc(OrRightT) | locateSucc(NotRightT) |
+              (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) | arithmeticT)*
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
               debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
                 diffInvariantSystemTailT(p) &
-                debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") &
+                debugT("About to NNF rewrite") & NNFRewrite(p) ~ debugT("Finished NNF rewrite") &
                 SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") &
                 finishingTouch
             ))
