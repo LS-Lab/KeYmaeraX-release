@@ -28,6 +28,34 @@ object SyntacticDerivativeTermAxiomsInContext {
   // The top-level tactic implementations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+  def ConstantFnDerivativeInContextT = new PositionTactic("Constant Function Symbol Derivative in context") {
+    val theTactic = ConstantFnDerivativeT
+
+    override def applies(s: Sequent, p: Position): Boolean = {
+      getTermAtPosition(s(p), p.inExpr) match {
+        case Some(term) => theTactic.applies(term)
+        case None => false
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
+        case Some(term) => term match {
+          case Derivative(dSort, Neg(sSort, s)) => {
+            val ds = Derivative(sSort, s)
+            val replacement = Neg(sSort, ds)
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
+
+            Some(contextTactic(p))
+          }
+          case _ => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
   def NegativeDerivativeInContextT = new PositionTactic("Negative Derivative in context") {
     val theTactic = NegativeDerivativeT 
 

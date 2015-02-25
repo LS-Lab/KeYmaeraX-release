@@ -86,7 +86,6 @@ object SyntacticDerivationInContext {
     }
   }
 
-
   /*
    * Axiom "&' derive and".
    *   (p & q)' <-> ((p') & (q'))
@@ -449,6 +448,36 @@ object SyntacticDerivationInContext {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //@todo throughout this section, the <- direction applicability is disabled in comments because the Atomize/Aggregate thing isn't possible to implement without position tactics for terms.
   //@todo when re-enabliong these applies lines, uncomment and re-run the relevant tests in SyntacticDerivationTests
+
+  /*
+   * Axiom "c()' derive constant fn".
+   *   c()' = 0
+   * End.
+   */
+  def ConstantFnDerivativeT = new TermAxiomTactic("c()' derive constant fn","c()' derive constant fn") {
+    override def applies(t: Term): Boolean = t match {
+      case Derivative(dSort, Apply(Function(_, _, Unit, nSort), Nothing)) => dSort == nSort
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = {
+      t match {
+        case Derivative(dSort, s@Apply(Function(n, i, Unit, nSort), Nothing)) if dSort == nSort => {
+          val sort = nSort
+
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+
+          val subst = Substitution(List(SubstitutionPair(aS, s)))
+
+          val right = Number(0)
+          val axiomInstance = Equals(sort, t, right)
+
+          Some(axiomInstance, subst)
+        }
+        case _ => None
+      }
+    }
+  }
 
   /*
    * Axiom "-' derive neg".
@@ -847,6 +876,7 @@ End.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //@todo So that when this gets refactored we're not stuck changing a bunch of stuff.
+  def ConstantFnDerivativeAtomizeT = ConstantFnDerivativeT
   def NegativeDerivativeAtomizeT = NegativeDerivativeT
   def AddDerivativeAtomizeT      = AddDerivativeT
   def SubtractDerivativeAtomizeT = SubtractDerivativeT
@@ -863,6 +893,7 @@ End.
    */
   val termDerivativeTactics : List[TermAxiomTactic] =
     NegativeDerivativeAtomizeT ::
+      ConstantFnDerivativeAtomizeT ::
       AddDerivativeAtomizeT ::
       SubtractDerivativeAtomizeT ::
       MultiplyDerivativeAtomizeT ::

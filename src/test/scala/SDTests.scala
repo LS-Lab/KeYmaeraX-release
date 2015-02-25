@@ -1,7 +1,8 @@
-import edu.cmu.cs.ls.keymaera.core.{DeriveMonomial, Sequent, SuccPosition, PosInExpr}
-import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivativeProofRulesInContext, SyntacticDerivativeTermAxiomsInContext, SearchTacticsImpl}
+import edu.cmu.cs.ls.keymaera.core.{RootNode, SuccPosition, PosInExpr}
+import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivativeProofRulesInContext, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._
+import testHelper.SequentFactory._
 
 /**
  * These are post-development "integration" tests for syntactic derivation
@@ -114,6 +115,14 @@ class SDTests extends TacticTestSuite {
     val expected = helper.parseFormula("[a'=b;](a'-y'<=1')")
     helper.report(node)
     require(containsOpenGoal(node, expected))
+  }
+
+  "Syntactic derivation of constant function symbols" should "work" in {
+    val tactic = SearchTacticsImpl.locateSucc(SyntacticDerivationT)
+    val s = sucSequent("c()'<=5".asFormula)
+    val node = helper.runTactic(tactic, new RootNode(s), mustApply = true)
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "0<=5".asFormula
   }
 
 
