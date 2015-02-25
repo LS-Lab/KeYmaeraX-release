@@ -244,11 +244,10 @@ object SyntacticDerivativeTermAxiomsInContext {
       val replacementPositionOption = findApplicablePositionForTermAxiom(f, termTactic)
 
       replacementPositionOption match {
-        case Some((replacementPosition, _)) => {
+        case Some((replacementPosition, _)) =>
           val (smallest, _) = smallestFormulaContainingTerm(f, replacementPosition)
           val desiredResult = replaceTerm(replacementTerm, termToFind, smallest)
           Some(desiredResult, None)
-        }
         case None => None
       }
     }
@@ -256,10 +255,10 @@ object SyntacticDerivativeTermAxiomsInContext {
     override def apply(pos : Position) = {
       def knowledgeContinuationTactic : Tactic = SearchTacticsImpl.onBranch(
         (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl, locateTerm(termTactic) & AxiomCloseT),
-          (BranchLabels.equivRightLbl, locateTerm(termTactic) & AxiomCloseT)
+          (BranchLabels.equivLeftLbl, locateTerm(termTactic, inAnte = Some(true)) & AxiomCloseT),
+          (BranchLabels.equivRightLbl, locateTerm(termTactic, inAnte = Some(false)) & AxiomCloseT)
         )),
-        ("additional obligation", locateSucc(ImplyRightT) & locateTerm(termTactic) & AxiomCloseT)
+        ("additional obligation", (locateSucc(ImplyRightT) & locateTerm(termTactic)) ~ AxiomCloseT)
       )
 
       super.apply(pos) & knowledgeContinuationTactic
