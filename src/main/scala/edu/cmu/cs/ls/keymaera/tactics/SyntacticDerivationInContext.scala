@@ -921,6 +921,24 @@ End.
     }
   }
 
+  def formulaContainsModality(f : Formula) : Option[(PosInExpr, Formula)] = {
+    val fn = new ExpressionTraversalFunction {
+      var thePair : Option[(PosInExpr, Formula)] = None
+      override def preF(p : PosInExpr, f : Formula) = {
+        val matches : Boolean = f match {
+          case Modality(_,_) => true
+          case BoxModality(_,_) => true
+          case DiamondModality(_,_) => true
+          case _ => false
+        }
+        if(matches) {thePair = Some( (p,f) ); Left(Some(ExpressionTraversal.stop))}
+        else Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn,f)
+    fn.thePair
+  }
+
   /**
    * The wrapper tactic for total synactic derivation of *terms*.
    * In a single step, this tactic finds *one* location where *one* of the atomizing term derivative rewrites applies,
@@ -928,14 +946,10 @@ End.
    */
   def TermSyntacticDerivationT = new PositionTactic("Total Syntactic Derivation of Terms") {
     //@todo this is wrong b/c what if we're applying in ^A -> [pi;](^^x > 0)' where ^^ is the term pos and ^ the formula pos?
+    //@todo better but not quite right; what if we have something like ^[pi;]a -> ^^b?
 
     def applies(s : Sequent, p : Position) : Boolean = {
-      appliesRegardlessOfContext(s,p) && {val theF : Formula = s(p); theF match {
-        case Modality(_,_)        => false
-        case BoxModality(_,_)     => false
-        case DiamondModality(_,_) => false
-        case _                    => true
-      }}
+      appliesRegardlessOfContext(s,p) && !formulaContainsModality(s(p)).isDefined
     }
 
     //@todo move this into SyntacticDerivationT I guess...
