@@ -43,6 +43,7 @@ object ArithmeticTacticsImpl {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
           e match {
             case Pair(_, _, _) => qeAble = false
+            case Apply(Function(_, _, Unit, _), Nothing) => true
             case Apply(fun, _) => qeAble = false // check if fun is an external function
             case Derivative(_, _) => qeAble = false
             case IfThenElseTerm(_, _, _) => qeAble = false
