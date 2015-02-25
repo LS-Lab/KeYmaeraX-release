@@ -1151,7 +1151,45 @@ End.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section: Syntactic derivation of constants and monomials.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /**
+   * @todo I cannot believe that this does not exist somewhere already.
+   */
+  def getTermAtPosition(s : Sequent, p : Position) : Option[Term] = {
+    val fn = new ExpressionTraversalFunction {
+      var retVal : Option[Term] = None
+      override def preT(pie : PosInExpr, t : Term) = {
+        if(p.inExpr == pie) { //yummy
+          retVal = Some(t)
+          Left(Some(ExpressionTraversal.stop))
+        }
+        else Left(None)
+      }
+    }
+    ExpressionTraversal.traverse(fn, s(p))
+    fn.retVal
+  }
 
+  def MonomialAndConstantDerivationT = new PositionTactic("Derive monomial and constant") {
+    override def applies(s: Sequent, p: Position): Boolean = !formulaContainsModality(s(p)).isDefined && {getTermAtPosition(s,p) match {
+      case Some(Derivative(_, Number(_))) => true
+      case Some(Derivative(_, exp:Exp)) => true
+      case _ => false
+    }}
+
+    override def apply(p: Position): Tactic = MonomialDerivativeT(p) ~ ConstantDerivativeT(p)
+  }
+
+  def MonomialAndConstantInContextDerivationT = new PositionTactic("Derive monomial and context in context") {
+    override def applies(s: Sequent, p: Position): Boolean = {
+      formulaContainsModality(s(p)).isDefined && {getTermAtPosition(s,p) match {
+        case Some(Derivative(_, Number(_))) => true
+        case Some(Derivative(_, exp:Exp)) => true
+        case _ => false
+      }}
+    }
+
+    override def apply(p: Position): Tactic =  SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext(p) ~ SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext(p)
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Section: Wrapper tactic for syntactic derivation
@@ -1166,12 +1204,19 @@ End.
 //  }
 
 
+  import SyntacticDerivativeProofRulesInContext._
+
+  /**
+   * @todo this is just brokwn. Needs to apply at position, not everywhere... But that's an interface change, so for the moment I'll leave as-is.
+   */
   def SyntacticDerivationT = new PositionTactic("Single Step of Total Syntactic Derivation") {
     import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.appliesRegardlessOfContext(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
+    override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.appliesRegardlessOfContext(s,p) || MonomialAndConstantDerivationT.applies(s,p) || MonomialAndConstantInContextDerivationT.applies(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
 
     override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~
-      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*) ~ (locateTerm(TermSyntacticDerivationT) *)
+      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*) ~ (locateTerm(TermSyntacticDerivationT) *) ~
+      (locateTerm(MonomialAndConstantDerivationT) *) ~ (locateTerm(MonomialAndConstantInContextDerivationT) *)
+
 
   }
 }

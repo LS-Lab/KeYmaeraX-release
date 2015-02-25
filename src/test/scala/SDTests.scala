@@ -224,4 +224,13 @@ class SDTests extends TacticTestSuite {
     helper.runTactic((SearchTacticsImpl.locateTerm(SyntacticDerivationT)*), n, true)
     containsOpenGoal(n, expected) shouldBe (true)
   }
+
+
+  it should "be fixed for Tues. night example 2" in {
+    val f = "x'=(1'*2-1*2')/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)'".asFormula
+    val n = helper.formulaToNode(f)
+
+    helper.runTactic((SearchTacticsImpl.locateTerm(SyntacticDerivationT)*), n, true)
+
+  }
 }
