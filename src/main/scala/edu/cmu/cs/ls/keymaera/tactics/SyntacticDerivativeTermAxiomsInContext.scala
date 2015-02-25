@@ -41,9 +41,8 @@ object SyntacticDerivativeTermAxiomsInContext {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
         case Some(term) => term match {
-          case Derivative(dSort, Neg(sSort, s)) => {
-            val ds = Derivative(sSort, s)
-            val replacement = Neg(sSort, ds)
+          case Derivative(dSort, s@Apply(Function(_, _, Unit, sSort), Nothing)) => {
+            val replacement = Number(0)
             val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
 
             Some(contextTactic(p))
@@ -198,7 +197,10 @@ object SyntacticDerivativeTermAxiomsInContext {
 
 
   def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
-    def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext :: SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext :: SubtractDerivativeInContextT :: AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT :: DivideDerivativeInContextT :: Nil
+    def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext ::
+      SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext :: SubtractDerivativeInContextT ::
+      AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT ::
+      DivideDerivativeInContextT :: ConstantFnDerivativeInContextT :: Nil
 
     def applicableTactic(s : Sequent, p : Position) = {
       val l = tactics.filter(_.applies(s,p))
