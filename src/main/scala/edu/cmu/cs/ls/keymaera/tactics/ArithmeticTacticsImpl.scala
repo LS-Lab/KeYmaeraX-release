@@ -441,6 +441,7 @@ object ArithmeticTacticsImpl {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       import PropositionalTacticsImpl.{cutT, NotRightT, AxiomCloseT}
+      import scala.language.postfixOps
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case Rel(sort, s, t) =>
           val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
@@ -452,13 +453,11 @@ object ArithmeticTacticsImpl {
             case None => throw new IllegalArgumentException("Checked by applies to never occur")
           }
 
-          val cutSPos = SuccPosition(node.sequent.succ.length)
-          val cutAPos = AntePosition(node.sequent.ante.length)
           if (p.isAnte) {
             Some(
               cutT(Some(replFormula)) &
                 onBranch(
-                  (cutShowLbl, TacticLibrary.propositional & baseTactic(cutAPos) & NotLeftT(cutAPos) & AxiomCloseT),
+                  (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
                   (cutUseLbl, hideT(p.topLevel)))
             )
           } else {
@@ -466,7 +465,7 @@ object ArithmeticTacticsImpl {
               cutT(Some(replFormula)) &
                 onBranch(
                   (cutShowLbl, hideT(p.topLevel)),
-                  (cutUseLbl, TacticLibrary.propositional & baseTactic(cutSPos) & NotRightT(cutSPos) & AxiomCloseT))
+                  (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*))
             )
           }
         case Not(Neg(sort, s, t)) =>
@@ -479,17 +478,15 @@ object ArithmeticTacticsImpl {
             case None => throw new IllegalArgumentException("Checked by applies to never occur")
           }
 
-          val sPos = SuccPosition(node.sequent.succ.length + 1)
-          val aPos = AntePosition(node.sequent.ante.length + 1)
           if (p.isAnte) Some(
             cutT(Some(replFormula)) & onBranch(
-              (cutShowLbl, TacticLibrary.propositional & baseTactic(sPos) & TacticLibrary.propositional & AxiomCloseT),
+              (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
               (cutUseLbl, hideT(p.topLevel))
             ))
           else Some(
             cutT(Some(replFormula)) & onBranch(
               (cutShowLbl, hideT(p.topLevel)),
-              (cutUseLbl, TacticLibrary.propositional & baseTactic(aPos) & TacticLibrary.propositional & AxiomCloseT)
+              (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*)
             ))
       }
     }
