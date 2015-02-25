@@ -2189,6 +2189,43 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
 }
 
 /**
+ * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
+ * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ */
+class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
+  require(p.inExpr == HereP, "Can only skolemize top level formulas")
+  import Helper._
+
+  override def apply(s: Sequent): List[Sequent] = {
+    // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
+    val vars = namesIgnoringPosition(s, p)
+    val (fn, phi) = s(p) match {
+      case Forall(qvs, qphi) if !p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
+      case Exists(qvs, qphi) if p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
+      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
+    }
+    if (vars.intersect(fn.toSet).nonEmpty)
+      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
+        vars.intersect(fn.toSet))
+    List(if (p.isAnte) Sequent(s.pref ++ fn, s.ante.updated(p.index, phi), s.succ)
+    else Sequent(s.pref ++ fn, s.ante, s.succ.updated(p.index, phi)))
+  }
+
+  // TODO flat implementation, get rid of expression traversal
+  import ExpressionTraversal.traverse
+  private def varsToFnIn(vs: Seq[NamedSymbol], f: Formula) = traverse(new ExpressionTraversalFunction {
+      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+        case v: Variable if vs.contains(v) => Right(Apply(Function(v.name, v.index, Unit, v.sort), Nothing))
+        case _ => Left(None)
+      }
+    }, f) match {
+    case Some(frm) => frm
+    case _ => throw new IllegalArgumentException("Skolemization was unable to replace quantified variables with constant function symbols")
+  }
+
+}
+
+/**
  * Assignment as equation
  * Assumptions: We assume that the variable has been made unique through alpha conversion first. That way, we can just
  * replace the assignment by an equation without further checking
