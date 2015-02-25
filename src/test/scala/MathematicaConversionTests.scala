@@ -187,6 +187,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "convert Apply()" in {
     round trip Apply(Function("x", None, Real, Real), Number(0))
+    round trip Apply(Function("x", None, Real, Real), Variable("y", None, Real))
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {

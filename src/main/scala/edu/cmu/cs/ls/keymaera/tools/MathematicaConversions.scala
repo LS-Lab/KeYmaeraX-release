@@ -224,7 +224,7 @@ object MathematicaToKeYmaera {
       case result : Function => {
         val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
         if(arguments.nonEmpty) {
-          if (arguments.size == 1) {
+          if (result.name == "Apply") {
             arguments(0) match {
               case Variable(n, i, d) => Apply(Function(n, i, Unit, d), Nothing)
               case _ => throw new IllegalArgumentException("Unexpected argument type")
