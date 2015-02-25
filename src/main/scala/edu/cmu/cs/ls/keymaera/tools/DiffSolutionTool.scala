@@ -14,7 +14,7 @@ trait DiffSolutionTool {
    * @param iv The initial values per derivative.
    * @return The solution if found; None otherwise
    */
-  def diffSol(diffSys: ContEvolveProgram, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula]
+  def diffSol(diffSys: ContEvolveProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula]
 
   /**
    * Computes the symbolic solution of a system of differential equations.
@@ -23,5 +23,5 @@ trait DiffSolutionTool {
    * @param iv The initial values per derivative.
    * @return The solution if found; None otherwise
    */
-  def diffSol(diffSys: ContEvolve, diffArg: Variable, iv: Map[Variable, Variable]): Option[Formula]
+  def diffSol(diffSys: ContEvolve, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula]
 }

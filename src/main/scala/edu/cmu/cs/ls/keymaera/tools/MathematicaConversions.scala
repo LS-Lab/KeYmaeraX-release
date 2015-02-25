@@ -224,10 +224,17 @@ object MathematicaToKeYmaera {
       case result : Function => {
         val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
         if(arguments.nonEmpty) {
-          val argumentsAsPair = arguments.reduceRight[Term]( 
-            (l,r) => Pair(TupleT(l.sort,r.sort), l,r) 
-          )
-          Apply(result, argumentsAsPair)
+          if (arguments.size == 1) {
+            arguments(0) match {
+              case Variable(n, i, d) => Apply(Function(n, i, Unit, d), Nothing)
+              case _ => throw new IllegalArgumentException("Unexpected argument type")
+            }
+          } else {
+            val argumentsAsPair = arguments.reduceRight[Term](
+              (l, r) => Pair(TupleT(l.sort, r.sort), l, r)
+            )
+            Apply(result, argumentsAsPair)
+          }
         }
         else {
           result
@@ -460,7 +467,7 @@ object KeYmaeraToMathematica {
    * Converts a KeYmaera terms to a Mathematica expression.
    */
   def convertTerm(t : Term) : MExpr = {
-    require(t.sort == Real, "Mathematica can only deal with reals not with sort " + t.sort)
+    require(t.sort == Real || t.sort == Unit, "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       case Apply(fn, child) => convertFnApply(fn, child)
       case t: IfThenElseTerm => ???
@@ -534,9 +541,11 @@ object KeYmaeraToMathematica {
     val args = Array[MExpr](convertTerm(l), convertTerm(r))
     new MExpr(MathematicaSymbols.EXP, args)
   }
-  def convertFnApply(fn: Function, child: Term) = {
-    val args = Array[MExpr](convertNS(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
-    new MExpr(MathematicaSymbols.APPLY, args)
+  def convertFnApply(fn: Function, child: Term) = child match {
+    case Nothing => new MExpr(MathematicaSymbols.APPLY, Array[MExpr](convertNS(fn)))
+    case _ =>
+      val args = Array[MExpr](convertNS(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
+      new MExpr(MathematicaSymbols.APPLY, args)
   }
   def convertDerivative(t:Term) = {
     val args = Array[MExpr](convertTerm(t))

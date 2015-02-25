@@ -15,8 +15,8 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
   private val y = Variable("y", None, Real)
   private val z = Variable("z", None, Real)
   private val t = Variable("t", None, Real)
-  private val x0 = Variable("x0", None, Real)
-  private val y0 = Variable("y0", None, Real)
+  private val x0 = Function("x0", None, Unit, Real)
+  private val y0 = Function("y0", None, Unit, Real)
   private val one = Number(BigDecimal(1))
 
   override def beforeEach() = {
@@ -37,7 +37,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
 
   it should "x=x0+y*t with NFContEvolve" in {
     val eq = NFContEvolve(List(), Derivative(Real, x), one, True)
-    val expected = Some("x=1*t+x0".asFormula)
+    val expected = Some("x=1*t+x0()".asFormula)
     link.diffSol(eq, t,  Map(x->x0)) should be (expected)
   }
 

@@ -181,6 +181,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip Forall(Seq(x), LessThan(Real,x,y))
   }
 
+  it should "convert parameterless Apply()" in {
+    round trip Apply(Function("x", None, Unit, Real), Nothing)
+  }
+
+  it should "convert Apply()" in {
+    round trip Apply(Function("x", None, Real, Real), Number(0))
+  }
+
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x
@@ -198,6 +206,14 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
       Array[MExpr](
         new MExpr(Expr.SYMBOL, "KeYmaera`y"),
         new MExpr(Expr.SYM_LIST, Array[MExpr](new MExpr(Expr.SYMBOL, "KeYmaera`x")))))
+    KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
+  }
+
+  it should "convert parameterless Apply()" in {
+    val in = Apply(Function("y", None, Unit, Real), Nothing)
+    val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
+      Array[MExpr](
+        new MExpr(Expr.SYMBOL, "KeYmaera`y")))
     KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
   }
 }
