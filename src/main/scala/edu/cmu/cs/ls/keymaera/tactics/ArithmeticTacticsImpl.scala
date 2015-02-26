@@ -442,17 +442,17 @@ object ArithmeticTacticsImpl {
 
           if (p.isAnte) {
             Some(
-              cutT(Some(replFormula)) &
-                onBranch(
-                  (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
+              cutT(Some(replFormula)) & onBranch(
+                  (cutShowLbl, AxiomCloseT ~ TacticLibrary.propositional ~
+                    (locateAnte(baseTactic) & ((locateAnte(NotLeftT) & locateAnte(baseTactic))*)) ~ AxiomCloseT),
                   (cutUseLbl, hideT(p.topLevel)))
             )
           } else {
             Some(
-              cutT(Some(replFormula)) &
-                onBranch(
+              cutT(Some(replFormula)) & onBranch(
                   (cutShowLbl, hideT(p.topLevel)),
-                  (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*))
+                  (cutUseLbl, AxiomCloseT ~ TacticLibrary.propositional ~
+                    (locateSucc(baseTactic) & ((locateSucc(NotRightT) & locateSucc(baseTactic))*)) ~ AxiomCloseT))
             )
           }
         case Not(Neg(sort, s, t)) =>
@@ -467,13 +467,16 @@ object ArithmeticTacticsImpl {
 
           if (p.isAnte) Some(
             cutT(Some(replFormula)) & onBranch(
-              (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
+              (cutShowLbl,
+                AxiomCloseT ~ TacticLibrary.propositional ~
+                  (locateSucc(baseTactic) & ((locateSucc(NotRightT) & locateSucc(baseTactic))*)) ~ AxiomCloseT),
               (cutUseLbl, hideT(p.topLevel))
             ))
           else Some(
             cutT(Some(replFormula)) & onBranch(
               (cutShowLbl, hideT(p.topLevel)),
-              (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*)
+              (cutUseLbl, AxiomCloseT ~ TacticLibrary.propositional ~
+                (locateAnte(baseTactic) & ((locateAnte(NotLeftT) & locateAnte(baseTactic))*)) ~ AxiomCloseT)
             ))
       }
     }
@@ -492,4 +495,5 @@ object ArithmeticTacticsImpl {
    */
   def NegateGreaterEqualsT = NegateBinaryRelationT(">= negate", GreaterEqual.unapply, LessThan.unapply,
     GreaterEqual.apply, LessThan.apply, NegateLessThanT)
+
 }

@@ -105,6 +105,22 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
+  it should "negate != inside formulas that contain multiple occurrences" in {
+    val s = sucSequent("a=b & (x!=y & y!=z)".asFormula)
+    val tactic = NegateNotEqualsT(SuccPosition(0, PosInExpr(1::0::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b & (!(x=y) & y!=z)".asFormula)
+    ))
+  }
+
+  it should "negate != inside formulas that contain occurrences of its negation" in {
+    val s = sucSequent("a=b & (x!=y & !y!=z)".asFormula)
+    val tactic = NegateNotEqualsT(SuccPosition(0, PosInExpr(1::0::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b & (!x=y & !y!=z)".asFormula)
+    ))
+  }
+
   "LessEqualSplitT" should "split <= in succedent" in {
     val s = sucSequent("x<=0".asFormula)
     val tactic = locateSucc(LessEqualSplitT)
@@ -202,6 +218,22 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     val tactic = NegateGreaterEqualsT(SuccPosition(0, PosInExpr(1::Nil)))
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("a=b -> !(x<0)".asFormula)
+    ))
+  }
+
+  it should "negate >= inside formulas that contain multiple occurrences" in {
+    val s = sucSequent("a=b & (x>=y & y>=z)".asFormula)
+    val tactic = NegateGreaterEqualsT(SuccPosition(0, PosInExpr(1::0::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b & (!(x<y) & y>=z)".asFormula)
+    ))
+  }
+
+  it should "negate >= inside formulas that contain occurrences of its negation" in {
+    val s = sucSequent("a=b & (x>=y & !y<z)".asFormula)
+    val tactic = NegateGreaterEqualsT(SuccPosition(0, PosInExpr(1::0::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b & (!(x<y) & !y<z)".asFormula)
     ))
   }
 
