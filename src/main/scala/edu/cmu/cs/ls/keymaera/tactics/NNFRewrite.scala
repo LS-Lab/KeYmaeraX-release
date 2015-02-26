@@ -48,9 +48,10 @@ object NNFRewrite {
           (nl(NegateGreaterEqualsT)
             | nl(NegateGreaterThanT)
             | nl(NegateEqualsT)
-            | nl(NegateNotEqualsT)
+//            | (debugT("Negate !=") & nl(NegateNotEqualsT))
             | nl(NegateLessThanT)
-            | nl(NegateLessEqualsT)))*)
+            | nl(NegateLessEqualsT)
+            ))*)
 
     }
   }
