@@ -372,19 +372,12 @@ object ArithmeticTacticsImpl {
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
-      import PropositionalTacticsImpl.NotRightT
-      import scala.language.postfixOps
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case GreaterThan(sort, s, t) =>
           Some(GreaterThanFlipT(p) & NegateLessThanT(p) & GreaterEqualFlipT(p.first))
         case Not(LessEqual(sort, s, t)) =>
-          val pa = AntePosition(node.sequent.ante.length)
-          val ps = SuccPosition(node.sequent.succ.length)
-          if (p.isAnte) {
-            Some(NotLeftT(p) & GreaterEqualFlipT(ps) & NegateGreaterEqualsT(ps) & GreaterThanFlipT(ps.first) & NotRightT(ps))
-          } else {
-            Some(NotRightT(p) & GreaterEqualFlipT(pa) & NegateGreaterEqualsT(pa) & GreaterThanFlipT(pa.first) & NotLeftT(pa))
-          }
+          Some(GreaterEqualFlipT(p.first) & NegateLessThanT(p) & GreaterThanFlipT(p))
+        case _ => None
       }
     }
   }
@@ -400,19 +393,12 @@ object ArithmeticTacticsImpl {
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
-      import PropositionalTacticsImpl.NotRightT
-      import scala.language.postfixOps
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case LessEqual(sort, s, t) =>
-          Some(GreaterEqualFlipT(p) & TacticLibrary.debugT("foo") & NegateGreaterEqualsT(p) & GreaterThanFlipT(p.first))
+          Some(GreaterEqualFlipT(p) & NegateGreaterEqualsT(p) & GreaterThanFlipT(p.first))
         case Not(GreaterThan(sort, s, t)) =>
-          val pa = AntePosition(node.sequent.ante.length)
-          val ps = SuccPosition(node.sequent.succ.length)
-          if (p.isAnte) {
-            Some(NotLeftT(p) & GreaterThanFlipT(ps) & NegateLessThanT(ps) & GreaterEqualFlipT(ps.first) & NotRightT(ps))
-          } else {
-            Some(NotRightT(p) & GreaterThanFlipT(pa) & NegateLessThanT(pa) & GreaterEqualFlipT(pa.first) & NotLeftT(pa))
-          }
+          Some(GreaterThanFlipT(p.first) & NegateGreaterEqualsT(p) & GreaterEqualFlipT(p))
+        case _ => None
       }
     }
   }
