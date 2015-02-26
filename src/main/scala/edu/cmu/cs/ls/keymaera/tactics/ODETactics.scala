@@ -84,8 +84,9 @@ object ODETactics {
 
         val t = constructTactic(p, time, tIsZero = timeZeroInitially)
         t.scheduler = Tactics.MathematicaScheduler
-        t.continuation = continuation
-        (timeTactic & t).dispatch(this, node)
+        val diffSolTactic = timeTactic & t
+        diffSolTactic.continuation = continuation
+        diffSolTactic.dispatch(this, node)
       }
     }
 
@@ -133,11 +134,11 @@ object ODETactics {
 
           var x = 0
 
-          val cuts = flatSolution.foldLeft(debugT(s"Weakening at $p") & diffWeakenT(p) & debugT("Done weakening"))((a, b) =>
+          val cuts = flatSolution.foldLeft(diffWeakenT(p))((a, b) =>
             debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & AndRightT(p) &&
-            (debugT(s"Prove Solution using DI at $p") & (diffInvariantT(p) | debugT("Done DI")), a))
+            (debugT(s"Prove Solution using DI at $p") & diffInvariantT(p), a))
 
-          Some(initialGhosts & cuts & debugT("diff result"))
+          Some(initialGhosts & cuts)
         }
 
         val diffEq = node.sequent(p) match {

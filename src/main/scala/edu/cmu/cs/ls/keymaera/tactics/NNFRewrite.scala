@@ -44,14 +44,14 @@ object NNFRewrite {
       ((debugT("Before an iteration of the NNF rewrite:") &
         (l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) |
          l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT)))*) ~ (
-        (debugT("Before an iteration of binary relation negation") &
+        (debugT("Binary relation negation") &
           (nl(NegateGreaterEqualsT)
             | nl(NegateGreaterThanT)
             | nl(NegateEqualsT)
-//            | (debugT("Negate !=") & nl(NegateNotEqualsT))
+//            | (debugT("Negate !=") & nl(NegateNotEqualsT)) // TODO endless loop even for simple questions
             | nl(NegateLessThanT)
             | nl(NegateLessEqualsT)
-            ))*)
+            ))*) ~ NilT /* so that we don't fail this tactic if none of the negation stuff applies */
 
     }
   }
