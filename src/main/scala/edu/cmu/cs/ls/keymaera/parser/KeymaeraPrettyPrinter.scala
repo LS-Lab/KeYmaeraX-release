@@ -545,9 +545,9 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   
   def proofHeader(ns : List[NamedSymbol]) : String = {
     val varDecls = ns.map({
-      case Variable(n, i, s) => sortProofPrinter(s) + " " + n + printIndex(i)
-      case Function(n, i, Unit, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "()"
-      case Function(n, i, d, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "(" + sortProofPrinter(d) + ")"
+      case Variable(n, i, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "."
+      case Function(n, i, Unit, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "()" + "."
+      case Function(n, i, d, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "(" + sortProofPrinter(d) + ")" + "."
     })
     "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
   }

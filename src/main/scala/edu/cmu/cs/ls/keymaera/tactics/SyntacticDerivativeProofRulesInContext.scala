@@ -78,7 +78,7 @@ object SyntacticDerivativeProofRulesInContext {
       case _ => false
     }
 
-    override def apply(p: Position): Tactic = debugT("This needs to close with a single term rewrite and axiom close.") & SearchTacticsImpl.locateTerm(prt) & debugT("here...") & AxiomCloseT
+    override def apply(p: Position): Tactic = debugT("This needs to close with a single term rewrite and axiom close.") & SearchTacticsImpl.locateTerm(prt) & debugT("here...") & (AxiomCloseT | debugT("Foo"))
   }
 
 
@@ -112,8 +112,8 @@ object SyntacticDerivativeProofRulesInContext {
     override def apply(pos : Position) = {
       def knowledgeContinuationTactic : Tactic = debugT("Trying to close something in context based on a term equivalence tactic.") & SearchTacticsImpl.onBranch(
         (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl, locateTerm(termTactic) & AxiomCloseT),
-          (BranchLabels.equivRightLbl, locateTerm(termTactic) & AxiomCloseT)
+          (BranchLabels.equivLeftLbl, locateTerm(termTactic, inAnte = Some(true)) & AxiomCloseT),
+          (BranchLabels.equivRightLbl, locateTerm(termTactic, inAnte = Some(false)) & AxiomCloseT)
         )),
         ("additional obligation", locateSucc(ImplyRightT) & locateTerm(termTactic) & AxiomCloseT)
       )

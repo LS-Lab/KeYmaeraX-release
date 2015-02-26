@@ -32,23 +32,42 @@ object SearchTacticsImpl {
     }
   }
 
-  def locateTerm(posT : PositionTactic) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
-    override def findPosition(s: Sequent): Option[Position] = {
-      for((anteF, idx) <- s.ante.zipWithIndex) {
-        def appliesInExpr(p : PosInExpr) = posT.applies(s, AntePosition(idx, p))
-        findPosInExpr(appliesInExpr, anteF) match {
-          case Some(posInExpr) => return Some(AntePosition(idx, posInExpr))
-          case None            => //
+  def locateTerm(posT : PositionTactic, inAnte: Option[Boolean] = None) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
+    override def findPosition(s: Sequent): Option[Position] = inAnte match {
+      case Some(ante) if ante =>
+        for ((anteF, idx) <- s.ante.zipWithIndex) {
+          def appliesInExpr(p: PosInExpr) = posT.applies(s, AntePosition(idx, p))
+          findPosInExpr(appliesInExpr, anteF) match {
+            case Some(posInExpr) => return Some(AntePosition(idx, posInExpr))
+            case None => //
+          }
         }
-      }
-      for((succF, idx) <- s.succ.zipWithIndex) {
-        def appliesInExpr(p : PosInExpr) = posT.applies(s, SuccPosition(idx, p))
-        findPosInExpr(appliesInExpr, succF) match {
-          case Some(posInExpr) => return Some(SuccPosition(idx, posInExpr))
-          case None            => //
+        None
+      case Some(ante) if !ante =>
+        for ((succF, idx) <- s.succ.zipWithIndex) {
+          def appliesInExpr(p: PosInExpr) = posT.applies(s, SuccPosition(idx, p))
+          findPosInExpr(appliesInExpr, succF) match {
+            case Some(posInExpr) => return Some(SuccPosition(idx, posInExpr))
+            case None => //
+          }
         }
-      }
-      return None
+        None
+      case None =>
+        for ((anteF, idx) <- s.ante.zipWithIndex) {
+          def appliesInExpr(p: PosInExpr) = posT.applies(s, AntePosition(idx, p))
+          findPosInExpr(appliesInExpr, anteF) match {
+            case Some(posInExpr) => return Some(AntePosition(idx, posInExpr))
+            case None => //
+          }
+        }
+        for ((succF, idx) <- s.succ.zipWithIndex) {
+          def appliesInExpr(p: PosInExpr) = posT.applies(s, SuccPosition(idx, p))
+          findPosInExpr(appliesInExpr, succF) match {
+            case Some(posInExpr) => return Some(SuccPosition(idx, posInExpr))
+            case None => //
+          }
+        }
+        None
     }
 
     def findPosInExpr(appliesInExpr : PosInExpr => Boolean, f : Formula) : Option[PosInExpr] = {
