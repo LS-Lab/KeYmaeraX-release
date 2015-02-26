@@ -22,6 +22,8 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
 
   //Mathematica
+  Config.maxCPUs = 1
+  Config.mathlicenses = 1
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
@@ -168,15 +170,22 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         "x_3>b".asFormula :: Nil))
   }
 
-  it should "find solutions for x'=v, v'=a if None is provided" in {
-    val s = sequent(Nil, "x>0".asFormula :: Nil, "[x'=v, v'=a;]x>0".asFormula :: Nil)
+  it should "find solutions for x'=v if None is provided" in {
+    val s = sequent(Nil, "x>0 & v()>=0".asFormula :: Nil, "[x'=v();]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
-    val tactic = locateSucc(diffSolution(None))
+    val tactic = locateSucc(diffSolution(None)) ~ debugT("Diff Solution result")
 
-    val node = getProofSequent(tactic, new RootNode(s))
-    fail()
-    // TODO check expected result
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "find solutions for x'=v, v'=a if None is provided" in {
+    val s = sequent(Nil, "x>0 & v>=0 & a()>0".asFormula :: Nil, "[x'=v, v'=a();]x>0".asFormula :: Nil)
+
+    // solution = None -> Mathematica
+    val tactic = locateSucc(diffSolution(None)) & arithmeticT
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
   it should "not introduce time if already present" in {

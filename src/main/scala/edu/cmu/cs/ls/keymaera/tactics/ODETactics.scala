@@ -106,14 +106,38 @@ object ODETactics {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         import HybridProgramTacticsImpl.{discreteGhostT, boxAssignT}
+
+        def flattenConjunctions(f: Formula): List[Formula] = {
+          var result: List[Formula] = Nil
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+            override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+              case And(l, r) => result = result ++ flattenConjunctions(l) ++ flattenConjunctions(r); Left(Some(ExpressionTraversal.stop))
+              case a => result = result :+ a; Left(Some(ExpressionTraversal.stop))
+            }
+          }, f)
+          result
+        }
+
+        def sizeOf[T](s: SetLattice[T]): Int = s.s match {
+          case Left(_) => ???
+          case Right(ts) => ts.size
+        }
+
         def createTactic(ode: ContEvolveProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                          diffEqPos: Position) = {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(skolemizeToFnT(_))(diffEqPos)))
-          val cut = diffCutT(solution)(p) & AndRightT(p)
-          val proveSol = diffInvariantT(diffEqPos)
-          val useSol = diffWeakenT(diffEqPos)
-          Some(initialGhosts & cut && (debugT("Prove Solution") & proveSol, debugT("Use Solution") & useSol))
+          // flatten conjunctions and sort by free variables to approximate ODE dependencies
+          val flatSolution = flattenConjunctions(solution).
+            sortWith((f, g) => sizeOf(BindingAssessment.catVars(f).fv) < sizeOf(BindingAssessment.catVars(g).fv)).reverse
+
+          var x = 0
+
+          val cuts = flatSolution.foldLeft(debugT(s"Weakening at $p") & diffWeakenT(p) & debugT("Done weakening"))((a, b) =>
+            debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & AndRightT(p) &&
+            (debugT(s"Prove Solution using DI at $p") & (diffInvariantT(p) | debugT("Done DI")), a))
+
+          Some(initialGhosts & cuts & debugT("diff result"))
         }
 
         val diffEq = node.sequent(p) match {
@@ -680,16 +704,16 @@ object ODETactics {
 
             //NNFRewrite(p)
 
-            val finishingTouch = (locateSucc(OrRightT) | locateSucc(NotRightT) |
+            val finishingTouch = (AxiomCloseT | locateSucc(OrRightT) | locateSucc(NotRightT) |
               (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) | arithmeticT)*
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
               debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
                 diffInvariantSystemTailT(p) &
-                debugT("About to NNF rewrite") & NNFRewrite(p) ~ debugT("Finished NNF rewrite") &
+                debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") &
                 SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") &
-                finishingTouch
+                finishingTouch ~ debugT("Finished result")
             ))
           }
         }
