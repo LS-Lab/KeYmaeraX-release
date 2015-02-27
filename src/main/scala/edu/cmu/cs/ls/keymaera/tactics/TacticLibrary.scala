@@ -110,6 +110,11 @@ object TacticLibrary {
     }
   }
 
+  def debugAtT(s: String) = new PositionTactic("Debug") {
+    def applies(s: Sequent, p: Position): Boolean = true
+    def apply(p: Position): Tactic = debugT(s"$s at $p")
+  }
+
   /*******************************************************************
    * Major tactics
    *******************************************************************/

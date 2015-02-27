@@ -5,9 +5,9 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT}
+import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT}
 import BuiltinHigherTactics.stepAt
-import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT}
+import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT}
 import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
 
@@ -418,6 +418,10 @@ object ArithmeticTacticsImpl {
     val Neg = new Unapplyer(neg)
 
     import TacticLibrary.TacticHelper.getFormula
+    import TacticLibrary.locate
+    import PropositionalTacticsImpl.{kModalModusPonensT, NotT, ImplyT}
+    import FOQuantifierTacticsImpl.skolemizeT
+    import TacticLibrary.abstractionT
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
         case Rel(_, _, _) => true
         case Not(Neg(_, _, _)) => true
@@ -425,56 +429,70 @@ object ArithmeticTacticsImpl {
       }
 
     override def apply(p: Position) = new ConstructionTactic(name) {
-      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def applicable(node: ProofNode) = applies(node.sequent, p)
 
-      import PropositionalTacticsImpl.{cutT, NotRightT, AxiomCloseT}
+      import PropositionalTacticsImpl.{cutT, AxiomCloseT}
       import scala.language.postfixOps
-      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case Rel(sort, s, t) =>
-          val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
-            override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
-              Right(Not(negFactory(sort, s, t)))
-            }
-          }), node.sequent(p)) match {
-            case Some(f) => f
-            case None => throw new IllegalArgumentException("Checked by applies to never occur")
-          }
 
-          if (p.isAnte) {
-            Some(
-              cutT(Some(replFormula)) &
-                onBranch(
-                  (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
-                  (cutUseLbl, hideT(p.topLevel)))
-            )
-          } else {
-            Some(
-              cutT(Some(replFormula)) &
-                onBranch(
-                  (cutShowLbl, hideT(p.topLevel)),
-                  (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*))
-            )
-          }
-        case Not(Neg(sort, s, t)) =>
-          val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
-            override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
-              Right(relFactory(sort, s, t))
-            }
-          }), node.sequent(p)) match {
-            case Some(f) => f
-            case None => throw new IllegalArgumentException("Checked by applies to never occur")
-          }
+      def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
 
-          if (p.isAnte) Some(
-            cutT(Some(replFormula)) & onBranch(
-              (cutShowLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*),
-              (cutUseLbl, hideT(p.topLevel))
-            ))
-          else Some(
-            cutT(Some(replFormula)) & onBranch(
-              (cutShowLbl, hideT(p.topLevel)),
-              (cutUseLbl, (AxiomCloseT | (TacticLibrary.propositional & (locateAnte(baseTactic) | locateSucc(baseTactic))))*)
-            ))
+        def cutShowTactic = {
+          val ps = SuccPosition(node.sequent.succ.length)
+          val pa0 = AntePosition(0)
+          val ps0 = SuccPosition(0)
+
+          cohideT(ps) & assertT(0, 1) & (
+            (kModalModusPonensT(ps0) & abstractionT(ps0) & hideT(ps0) & skolemizeT(ps0) & ImplyT(ps0) & NotT(pa0))
+              | TacticLibrary.propositional) &
+            locate(baseTactic) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
+        }
+
+        val pa = AntePosition(node.sequent.ante.length)
+        getFormula(node.sequent, p) match {
+          case Rel(sort, s, t) =>
+            val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+              override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
+                Right(Not(negFactory(sort, s, t)))
+              }
+            }), node.sequent(p)) match {
+              case Some(f) => f
+              case None => throw new IllegalArgumentException("Checked by applies to never occur")
+            }
+
+            if (p.isAnte) {
+              Some(
+                cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
+                  (cutShowLbl, cutShowTactic),
+                  (cutUseLbl, ImplyT(pa) && (AxiomCloseT | debugT("BAD 2") & stopT, hideT(p.topLevel))))
+              )
+            } else {
+              Some(
+                cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
+                  (cutShowLbl, cutShowTactic),
+                  (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 3") & stopT)))
+              )
+            }
+          case Not(Neg(sort, s, t)) =>
+            val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+              override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
+                Right(relFactory(sort, s, t))
+              }
+            }), node.sequent(p)) match {
+              case Some(f) => f
+              case None => throw new IllegalArgumentException("Checked by applies to never occur")
+            }
+
+            if (p.isAnte) Some(
+              cutT(Some(Imply(node.sequent(p), replFormula))) & onBranch(
+                (cutShowLbl, cutShowTactic),
+                (cutUseLbl, ImplyT(pa) && (AxiomCloseT | debugT("BAD 4") & stopT, hideT(p.topLevel))))
+            )
+            else Some(
+              cutT(Some(Imply(replFormula, node.sequent(p)))) & onBranch(
+                (cutShowLbl, cutShowTactic),
+                (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 5") & stopT)))
+            )
+        }
       }
     }
   }
@@ -492,4 +510,5 @@ object ArithmeticTacticsImpl {
    */
   def NegateGreaterEqualsT = NegateBinaryRelationT(">= negate", GreaterEqual.unapply, LessThan.unapply,
     GreaterEqual.apply, LessThan.apply, NegateLessThanT)
+
 }

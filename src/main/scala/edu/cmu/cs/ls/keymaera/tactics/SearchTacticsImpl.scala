@@ -131,6 +131,10 @@ object SearchTacticsImpl {
     }
   }
 
+  def last(pt: PositionTactic): Tactic = lastSuccAnte(pt)
+  def lastSuccAnte(pt: PositionTactic): Tactic = lastSucc(pt) | lastAnte(pt)
+  def lastAnteSucc(pt: PositionTactic): Tactic = lastAnte(pt) | lastSucc(pt)
+
   /**
    * Applies a position tactic at the last position in the succedent.
    * @param pt The position tactic.
