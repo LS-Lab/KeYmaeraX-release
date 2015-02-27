@@ -121,6 +121,38 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     ))
   }
 
+  it should "negate != in the context of boxes" in {
+    val s = sucSequent("[x:=2;]x!=y".asFormula)
+    val tactic = NegateNotEqualsT(SuccPosition(0, PosInExpr(1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[x:=2;](!x=y)".asFormula)
+    ))
+  }
+
+  it should "negate != in the context of boxes of propositional stuff" in {
+    val s = sucSequent("[x:=2;](a=b & x!=y)".asFormula)
+    val tactic = NegateNotEqualsT(SuccPosition(0, PosInExpr(1::1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[x:=2;](a=b & (!x=y))".asFormula)
+    ))
+  }
+
+  it should "negate != in the context of propositional stuff and boxes" in {
+    val s = sucSequent("a=b & [x:=2;]x!=y".asFormula)
+    val tactic = NegateNotEqualsT(SuccPosition(0, PosInExpr(1::1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("a=b & [x:=2;](!x=y)".asFormula)
+    ))
+  }
+
+  it should "negate != in the context of multiple boxes" in {
+    val s = sucSequent("[x:=2;][x:=3;]x!=y".asFormula)
+    val tactic = NegateNotEqualsT(SuccPosition(0, PosInExpr(1::1::Nil)))
+    helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
+      sucSequent("[x:=2;][x:=3;](!x=y)".asFormula)
+    ))
+  }
+
   "LessEqualSplitT" should "split <= in succedent" in {
     val s = sucSequent("x<=0".asFormula)
     val tactic = locateSucc(LessEqualSplitT)
