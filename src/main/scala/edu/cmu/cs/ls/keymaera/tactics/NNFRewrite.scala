@@ -48,7 +48,7 @@ object NNFRewrite {
           (nl(NegateGreaterEqualsT)
             | nl(NegateGreaterThanT)
             | nl(NegateEqualsT)
-//            | (debugT("Negate !=") & nl(NegateNotEqualsT)) // TODO endless loop even for simple questions
+            | nl(NegateNotEqualsT)
             | nl(NegateLessThanT)
             | nl(NegateLessEqualsT)
             ))*) ~ NilT /* so that we don't fail this tactic if none of the negation stuff applies */
