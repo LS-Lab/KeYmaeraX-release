@@ -1215,7 +1215,8 @@ End.
 
     override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~
       (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*) ~ (locateTerm(TermSyntacticDerivationT) *) ~
-      (locateTerm(MonomialAndConstantDerivationT) *) ~ (locateTerm(MonomialAndConstantInContextDerivationT) *)
+      (locateTerm(MonomialAndConstantDerivationT) *) ~ (locateTerm(MonomialAndConstantInContextDerivationT) *) ~
+      (PropositionalTacticsImpl.AxiomCloseT | NilT) /* something leaves stuff open :-( */
 
 
   }
