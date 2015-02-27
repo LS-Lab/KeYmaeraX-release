@@ -11,6 +11,30 @@ import scala.collection.immutable.{Map, List}
  * Implementation of tactics for handling propositions.
  */
 object PropositionalTacticsImpl {
+  protected[tactics] def NonBranchingPropositionalT: PositionTactic = ListPropositionalT("Nonbranching Propositional",
+    NotLeftT :: AndLeftT :: NotRightT :: ImplyRightT :: OrRightT :: Nil)
+
+  protected[tactics] def Propositional: PositionTactic = new PositionTactic("Propositional") {
+    def applies(s: Sequent, p: Position) = if (p.isAnte) PropositionalLeftT.applies(s, p) else PropositionalRightT.applies(s, p)
+    def apply(pos: Position): Tactic = if (pos.isAnte) PropositionalLeftT.apply(pos) else PropositionalRightT.apply(pos)
+  }
+
+  protected[tactics] def PropositionalLeftT: PositionTactic = ListPropositionalT("Propositional Left",
+    NotLeftT :: AndLeftT :: OrLeftT :: ImplyLeftT :: EquivLeftT :: Nil)
+
+  protected[tactics] def PropositionalRightT: PositionTactic = ListPropositionalT("Propositional Right",
+    NotRightT :: AndRightT :: OrRightT :: ImplyRightT :: EquivRightT :: Nil)
+
+  private def ListPropositionalT(name: String, tactics: List[PositionTactic]): PositionTactic = new PositionTactic(name) {
+    def applies(s: Sequent, p: Position) = tactics.exists(_.applies(s, p))
+    def apply(pos: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) : Boolean = applies(node.sequent, pos)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        Some(tactics.find(_.applies(node.sequent, pos)).get(pos))
+      }
+    }
+  }
+
   protected[tactics] def AndT: PositionTactic = new PositionTactic("And") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) AndLeftT.applies(s, p) else AndRightT.applies(s, p)
     def apply(pos: Position): Tactic = if (pos.isAnte) AndLeftT.apply(pos) else AndRightT.apply(pos)
