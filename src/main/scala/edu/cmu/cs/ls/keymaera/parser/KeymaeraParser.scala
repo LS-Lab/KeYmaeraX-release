@@ -448,7 +448,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //Numbers
     
     lazy val numberP:SubtermParser = {
-      lazy val pattern = """[0-9]+(\.[0-9]+)?""".r
+      lazy val pattern = """[0-9]+(\.[0-9]+)?""".r //copied into combinator language parser; if you change, change there as well. @todo Does this allow negatives?!
       log(pattern)("NUMBER") ^^ {
         case n => Number.apply(BigDecimal(n))
       }

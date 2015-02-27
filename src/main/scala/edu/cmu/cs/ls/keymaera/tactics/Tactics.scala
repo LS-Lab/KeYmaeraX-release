@@ -356,6 +356,8 @@ object Tactics {
     */
     def &(a: Tactic, o: Tactic*): Tactic = seqComposeT(this, a, o: _*)
     def &&(a: Tactic, o: Tactic*): Tactic = seqComposeExactT(this, a, o: _*)
+    def &&(o : List[Tactic]): Tactic = seqComposeExactListT(this, o)
+
     /**
      * Weak sequential composition if possible.
      * Execute the given tactics in that order if possible: t1 ~ t2 = (t1 & t2) | t2
@@ -519,6 +521,20 @@ object Tactics {
         for (t <- r)
           t.continuation = continuation
         left.continuation = onSuccess(r: _*)
+        left.dispatch(this, node)
+      }
+    }
+
+  def seqComposeExactListT(left: Tactic, rights: List[Tactic]) =
+    new Tactic("SeqComposeExactT(" + left.name + ", " + rights.map(_.name).mkString(", ") + ")") {
+      assert(rights.length != 0)
+      def applicable(node : ProofNode) = left.applicable(node)
+
+      def apply(tool : Tool, node : ProofNode) = {
+        val r = rights
+        for (t <- r)
+          t.continuation = continuation
+        left.continuation = onSuccessExact(r: _*)
         left.dispatch(this, node)
       }
     }
