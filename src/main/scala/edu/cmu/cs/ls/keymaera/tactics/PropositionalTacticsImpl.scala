@@ -11,6 +11,11 @@ import scala.collection.immutable.{Map, List}
  * Implementation of tactics for handling propositions.
  */
 object PropositionalTacticsImpl {
+  protected[tactics] def AndT: PositionTactic = new PositionTactic("And") {
+    def applies(s: Sequent, p: Position) = if (p.isAnte) AndLeftT.applies(s, p) else AndRightT.applies(s, p)
+    def apply(pos: Position): Tactic = if (pos.isAnte) AndLeftT.apply(pos) else AndRightT.apply(pos)
+  }
+
   protected[tactics] def AndLeftT: PositionTactic = new PositionTactic("AndLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case And(_, _) => true
@@ -31,6 +36,11 @@ object PropositionalTacticsImpl {
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(AndRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
     }
+  }
+
+  protected[tactics] def OrT: PositionTactic = new PositionTactic("Or") {
+    def applies(s: Sequent, p: Position) = if (p.isAnte) OrLeftT.applies(s, p) else OrRightT.applies(s, p)
+    def apply(pos: Position): Tactic = if (pos.isAnte) OrLeftT.apply(pos) else OrRightT.apply(pos)
   }
 
   protected[tactics] def OrLeftT: PositionTactic = new PositionTactic("OrLeft") {
@@ -55,6 +65,11 @@ object PropositionalTacticsImpl {
     }
   }
 
+  protected[tactics] def ImplyT: PositionTactic = new PositionTactic("Imply") {
+    def applies(s: Sequent, p: Position) = if (p.isAnte) ImplyLeftT.applies(s, p) else ImplyRightT.applies(s, p)
+    def apply(pos: Position): Tactic = if (pos.isAnte) ImplyLeftT.apply(pos) else ImplyRightT.apply(pos)
+  }
+
   protected[tactics] def ImplyLeftT: PositionTactic = new PositionTactic("ImplyLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Imply(_, _) => p.inExpr == HereP
@@ -77,6 +92,11 @@ object PropositionalTacticsImpl {
     }
   }
 
+  protected[tactics] def EquivT: PositionTactic = new PositionTactic("Equiv") {
+    def applies(s: Sequent, p: Position) = if (p.isAnte) EquivLeftT.applies(s, p) else EquivRightT.applies(s, p)
+    def apply(pos: Position): Tactic = if (pos.isAnte) EquivLeftT.apply(pos) else EquivRightT.apply(pos)
+  }
+
   protected[tactics] def EquivLeftT: PositionTactic = new PositionTactic("EquivLeft") {
     def applies(s: Sequent, p: Position) = if (p.isAnte) s.ante(p.index) match {
       case Equiv(_, _) => true
@@ -97,6 +117,11 @@ object PropositionalTacticsImpl {
     def apply(pos: Position): Tactic = new Tactics.ApplyRule(EquivRight(pos)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
     } & (LabelBranch(equivLeftLbl), LabelBranch(equivRightLbl))
+  }
+
+  protected[tactics] def NotT: PositionTactic = new PositionTactic("Not") {
+    def applies(s: Sequent, p: Position) = if (p.isAnte) NotLeftT.applies(s, p) else NotRightT.applies(s, p)
+    def apply(pos: Position): Tactic = if (pos.isAnte) NotLeftT.apply(pos) else NotRightT.apply(pos)
   }
 
   protected[tactics] def NotLeftT: PositionTactic = new PositionTactic("NotLeft") {
