@@ -232,6 +232,15 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(arithmeticT, node.openGoals().last) shouldBe 'closed
   }
 
+  it should "work with evolution domain constraints" in {
+    val s = sequent(Nil, "x>0 & v>=0".asFormula :: Nil, "[x'=v, v'=a() & v>=0;]x>0".asFormula :: Nil)
+
+    // solution = None -> Mathematica
+    val tactic = locateSucc(diffSolution(None)) & debugT("After Diff Solution") & arithmeticT
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
   "Differential auxiliaries tactic" should "add y'=1 to [x'=2]x>0" in {
     import ODETactics.diffAuxiliaryT
     val s = sucSequent("[x'=2;]x>0".asFormula)

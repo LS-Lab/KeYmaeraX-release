@@ -22,7 +22,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.SubtractDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   it should "replace fvs" in {
@@ -32,7 +32,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.SubtractDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   it should "replace bvs" in {
@@ -42,7 +42,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.SubtractDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   it should "replace bvs in a larger expression." in {
@@ -52,7 +52,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.SubtractDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   "add" should "replace" in {
@@ -62,7 +62,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.AddDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node, true)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   it should "replace bvs" in {
@@ -72,7 +72,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.AddDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node, true)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
 
@@ -83,7 +83,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.NegativeDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   it should "replace in context" in {
@@ -93,7 +93,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.NegativeDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   "multiply" should "replace" in {
@@ -103,7 +103,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.MultiplyDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
 
@@ -114,7 +114,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.MultiplyDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   "divide" should "replace" in {
@@ -124,7 +124,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.DivideDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
   it should "replace bvs" in {
@@ -134,7 +134,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.DivideDerivativeInContextT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node)
-    require(containsOnlyExactlyOpenGoal(node, expected))
+    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
 }
