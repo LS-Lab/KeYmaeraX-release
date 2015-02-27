@@ -394,6 +394,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       False.getClass.getCanonicalName ::
       //Programs.
       Choice.getClass.getCanonicalName     ::
+      IfThenElse.getClass.getCanonicalName ::
       Sequence.getClass.getCanonicalName   ::
       Loop.getClass.getCanonicalName ::
       Assign.getClass.getCanonicalName ::
