@@ -217,7 +217,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
   }
 
-  lazy val funcdefP = ParseSymbols.EXTERNAL_FUNCTION.?  ~ ident ~ ident ~ ("(" ~ rep1sep(ident, ",") ~ ")").? ^^ {
+  lazy val funcdefP = ParseSymbols.EXTERNAL_FUNCTION.?  ~ ident ~ ident ~ ("(" ~ repsep(ident, ",") ~ ")").? ^^ {
     case external ~ rsort ~ name ~ tail =>
       tail match {
         case Some(_ ~ argsorts ~ _) => {
@@ -1065,8 +1065,12 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    * @see identToSort
    */
   def identsToSorts(idents : List[String]):Sort = {
-    val sortList = idents.map(ident => identToSort(ident))
-    sortList.reduceRight( (l,r) => TupleT.apply(l, r) )
+    if (idents.isEmpty) {
+      Unit
+    } else {
+      val sortList = idents.map(ident => identToSort(ident))
+      sortList.reduceRight((l, r) => TupleT.apply(l, r))
+    }
   }
   
   def projectName(v:Variable): Option[(String, Option[Int])] = Variable.unapply(v) match {
