@@ -1086,6 +1086,16 @@ object BindingAssessment {
     case _: EmptyContEvolveProgram => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
   }
+
+  // all variables x and their differential symbols x' occurring in the ode.
+  def coprimedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+    case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
+    case ContEvolveProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
+    case IncompleteSystem(a) => coprimedVariables(a)
+    case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x,NamedDerivative(x))
+    case _: EmptyContEvolveProgram => Set.empty
+    case _: ContEvolveProgramConstant => Set.empty
+  }
 }
 
 /**
@@ -1581,9 +1591,9 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case Test(f) => Test(usubst(f))
         case ode: ContEvolveProgram =>
           // redundant with the checks on NFContEvolve in usubst(ode, primed)
-          require(admissible(scala.collection.immutable.Seq(primedVariables(ode).toSeq: _*), ode),
-            s"Substitution clash in ODE: {x}=${primedVariables(ode)} when substituting ${ode.prettyString()}")
-          usubstODE(ode, primedVariables(ode))
+          require(admissible(scala.collection.immutable.Seq(coprimedVariables(ode).toSeq: _*), ode),
+            s"Substitution clash in ODE: {x}=${coprimedVariables(ode)} when substituting ${ode.prettyString()}")
+          usubstODE(ode, coprimedVariables(ode))
         case Choice(a, b) => Choice(usubst(a), usubst(b))
         case Sequence(a, b) => require(admissible(catVars(usubst(a)).bv, b),
           s"Substitution clash: BV(sigma a)=${catVars(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")

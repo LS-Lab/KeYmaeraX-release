@@ -154,27 +154,30 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
-    val s = sequent(Nil, "b=0".asFormula :: "x>b".asFormula :: Nil, "[x'=2;]x>b".asFormula :: Nil)
+    val s = sequent(Nil, "b=0 & x>b".asFormula :: Nil, "[x'=2;]x>b".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
 
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sequent("k4_t_1".asNamedSymbol :: "x_2".asNamedSymbol :: "k4_t_4".asNamedSymbol :: "x_3".asNamedSymbol ::
-              "k4_t_5".asNamedSymbol :: "x_4".asNamedSymbol :: /*"k4_t_6".asNamedSymbol ::*/ Nil,
-        // TODO could simplify all those true &
-        // TODO not robust if Mathematica reports equivalent formula but differently formatted
-        "b=0".asFormula :: "x>b".asFormula :: "k4_t_1=0".asFormula :: "x_2=x".asFormula :: "k4_t_4=k4_t_1".asFormula ::
-          "true".asFormula :: "true".asFormula :: "true".asFormula ::
-          "true&(x_3=2*k4_t_5 + x_4 & k4_t_5 >= k4_t_4)".asFormula :: Nil,
-        "x_3>b".asFormula :: Nil))
+    val node = helper.runTactic(tactic, new RootNode(s))
+
+    node.openGoals() should have size 1
+    node.openGoals().flatMap(_.sequent.ante) should contain only (
+      "b=0 & x>b".asFormula,
+      "k4_t_1=0".asFormula,
+      "x_2()=x".asFormula,
+      "k4_t_4()=k4_t_1".asFormula,
+      "true".asFormula,
+      "true & k4_t_5>=k4_t_4() & x_3=2*k4_t_5 + x_2()".asFormula
+      )
+    node.openGoals().flatMap(_.sequent.succ) should contain only "x_3>b".asFormula
   }
 
   it should "find solutions for x'=v if None is provided" in {
     val s = sequent(Nil, "x>0 & v()>=0".asFormula :: Nil, "[x'=v();]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
-    val tactic = locateSucc(diffSolution(None)) ~ debugT("Diff Solution result")
+    val tactic = locateSucc(diffSolution(None)) & debugT("After Diff Solution") & arithmeticT
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
@@ -183,7 +186,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = sequent(Nil, "x>0 & v>=0 & a()>0".asFormula :: Nil, "[x'=v, v'=a();]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
-    val tactic = locateSucc(diffSolution(None)) & arithmeticT
+    val tactic = locateSucc(diffSolution(None)) & debugT("After Diff Solution") & arithmeticT
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
@@ -193,37 +196,40 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sequent("x_2".asNamedSymbol :: "t_2".asNamedSymbol :: "x_3".asNamedSymbol :: "t_3".asNamedSymbol :: Nil,
-        // TODO could simplify all those true &
-        // TODO not robust if Mathematica reports equivalent formula but differently formatted
-        "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula ::
-          "true & x_3=2*(t_3-t_2)+x_2 & t_3>=t_2".asFormula :: "true".asFormula :: Nil,
-        "x_0>0".asFormula :: Nil))
+    val node = helper.runTactic(tactic, new RootNode(s))
+
+    node.openGoals() should have size 1
+    node.openGoals().flatMap(_.sequent.ante) should contain only (
+      "x>0".asFormula,
+      "t=0".asFormula,
+      "x_2()=x".asFormula,
+      "t_2()=t".asFormula,
+      "true & t_3>=t_2() & x_3=2*(t_3-t_2())+x_2()".asFormula,
+      "true".asFormula
+      )
+    node.openGoals().flatMap(_.sequent.succ) should contain only "x_3>0".asFormula
+
+    helper.runTactic(arithmeticT, node.openGoals().last) shouldBe 'closed
   }
 
   it should "preserve time evolution domain constraints when using Mathematica to find solution" in {
-    val s = sequent(Nil, "x>0".asFormula :: "t=0".asFormula :: Nil, "[x'=2, t'=1 & t<=5;]x>0".asFormula :: Nil)
+    val s = sequent(Nil, "x>0 & t=0".asFormula :: Nil, "[x'=2, t'=1 & t<=5;]x>0".asFormula :: Nil)
 
     // solution = None -> Mathematica
     val tactic = locateSucc(diffSolution(None))
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sequent("x_2".asNamedSymbol :: "t_2".asNamedSymbol :: "x_3".asNamedSymbol :: "t_3".asNamedSymbol :: Nil,
-        // TODO could simplify all those true &
-        // TODO not robust if Mathematica reports equivalent formula but differently formatted
-        "x>0".asFormula :: "t=0".asFormula :: "x_2=x".asFormula :: "t_2=t".asFormula ::
-          "t_3<=5 & x_3=2*t_3+x_2 & t_3>=t_2".asFormula :: "true".asFormula :: Nil,
-        "x_0>0".asFormula :: Nil))
-  }
+    val node = helper.runTactic(tactic, new RootNode(s))
 
-  it should "prove with differential solution tactic" in {
-    import scala.language.postfixOps
-    import TacticLibrary.{boxAssignT, boxSeqT}
-    val s = sucSequent("x>0 -> [t:=0; x'=2, t'=1;]x>0".asFormula)
-    val diffNode = helper.runTactic(locateSucc(ImplyRightT) & locateSucc(boxSeqT) & locateSucc(boxAssignT),
-      new RootNode(s)).openGoals().head
-    val postDiffSolNode = helper.runTactic(locateSucc(diffSolution(None)), diffNode).openGoals().head
-    helper.runTactic(default, postDiffSolNode) shouldBe 'closed
+    node.openGoals() should have size 1
+    node.openGoals().flatMap(_.sequent.ante) should contain only (
+      "x>0 & t=0".asFormula,
+      "x_2()=x".asFormula,
+      "t_2()=t".asFormula,
+      "t_3<=5 & t_3>=t_2() & x_3=2*(t_3-t_2())+x_2()".asFormula,
+      "true".asFormula
+      )
+    node.openGoals().flatMap(_.sequent.succ) should contain only "x_3>0".asFormula
+
+    helper.runTactic(arithmeticT, node.openGoals().last) shouldBe 'closed
   }
 
   "Differential auxiliaries tactic" should "add y'=1 to [x'=2]x>0" in {
