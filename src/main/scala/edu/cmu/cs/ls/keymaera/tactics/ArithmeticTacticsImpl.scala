@@ -435,15 +435,40 @@ object ArithmeticTacticsImpl {
       import scala.language.postfixOps
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        def prepareKMP = new ConstructionTactic("Prepare KMP") {
+          override def applicable(node : ProofNode): Boolean = {
+            val antePrgs = node.sequent.ante.filter({ case BoxModality(_, _) => true case _ => false }).
+              map({ case BoxModality(prg, _) => prg })
+            val succPrgs = node.sequent.succ.filter({ case BoxModality(_, _) => true case _ => false }).
+              map({ case BoxModality(prg, _) => prg })
+            antePrgs.intersect(succPrgs).nonEmpty
+          }
+
+          def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+            val (f, fPrg) = node.sequent.ante.filter({ case BoxModality(_, _) => true case _ => false }).
+              map({ case b@BoxModality(prg, _) => (b, prg) }).last
+            val g = node.sequent.succ.filter({ case BoxModality(prg, _) => prg == fPrg case _ => false }).
+              map({ case b@BoxModality(_, _) => b }).last
+
+            val pa = AntePosition(node.sequent.ante.length)
+            val ps = SuccPosition(node.sequent.succ.length)
+            Some(
+              cutT(Some(Imply(f, g))) & onBranch (
+                (cutUseLbl, ImplyT(pa) & (AxiomCloseT | debugT("Should not happen") & stopT)),
+                (cutShowLbl, cohideT(ps))
+              )
+            )
+          }
+        }
 
         def cutShowTactic = {
           val ps = SuccPosition(node.sequent.succ.length)
-          val pa0 = AntePosition(0)
           val ps0 = SuccPosition(0)
 
-          cohideT(ps) & assertT(0, 1) & (
-            (kModalModusPonensT(ps0) & abstractionT(ps0) & hideT(ps0) & skolemizeT(ps0) & ImplyT(ps0) & NotT(pa0))
-              | TacticLibrary.propositional) &
+          cohideT(ps) & assertT(0, 1) & TacticLibrary.propositional & (
+            ((prepareKMP & debugT("Prepared KMP") & kModalModusPonensT(ps0) & abstractionT(ps0) & hideT(ps0) &
+              skolemizeT(ps0) & ImplyT(ps0) & TacticLibrary.propositional)*)
+              | TacticLibrary.propositional) & debugT("AFTER K/PROP") &
             locate(baseTactic) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
         }
 
