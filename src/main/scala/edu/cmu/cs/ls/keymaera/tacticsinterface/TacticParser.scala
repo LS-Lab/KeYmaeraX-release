@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tacticsinterface
 
-import edu.cmu.cs.ls.keymaera.core.{Position, SuccPosition, AntePosition}
+import edu.cmu.cs.ls.keymaera.core.{Formula, Position, SuccPosition, AntePosition}
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 
@@ -52,6 +53,7 @@ object CLParser {
       kleeneP    ::
       labelP     ::
       posApplyP  ::
+      argApplyP  ::
       builtinP   ::
       groupP     ::
       Nil
@@ -63,6 +65,7 @@ object CLParser {
       """(\s|(?m)\(\*(\*(?!/)|[^*])*\*\)|/\*(.)*?\*/|\/\*[\w\W\s\S\d\D]+?\*\/)+""".r
     protected val space = """[\ \t\n]*""".r
     protected val ident = """[a-zA-Z][a-zA-Z0-9\_]*""".r
+    val notDoubleQoute = """[^\"]*""".r
 
     lazy val groupP : PackratParser[CLTerm] = {
       lazy val pattern = "(" ~> cltermP <~ ")"
@@ -134,10 +137,24 @@ object CLParser {
       }
     }
 
+    lazy val argApplyP : PackratParser[CLTerm] = {
+      lazy val pattern = (ident ~ ("(\"" ~> notDoubleQoute <~ "\")"))
+      log(pattern)("argument application") ^^ {
+        case name ~ formula => {
+          formulaParser(formula) match {
+            case Some(f) => ArgApplyC(name, f)
+            case None    => throw new Exception("failed to parse the formula.")
+          }
+        }
+      }
+    }
+
+    def formulaParser(s:String) : Option[Formula] = new KeYmaeraParser().parseBareFormulaUnquantified(s)
+
     lazy val posApplyP: PackratParser[CLTerm] = {
-      lazy val pattern = ident ~ ("(" ~> ("""s|a""".r ~ numberP) <~ ")")
+      lazy val pattern = (builtinP | argApplyP) ~ ("(" ~> ("""s|a""".r ~ numberP) <~ ")")
       log(pattern)("ApplyP") ^^ {
-        case name ~ (marker ~ pos) => PosApplyC(name, numberToPosition(marker, pos))
+        case t ~ (marker ~ pos) => PosApplyC(t, numberToPosition(marker, pos))
       }
     }
 

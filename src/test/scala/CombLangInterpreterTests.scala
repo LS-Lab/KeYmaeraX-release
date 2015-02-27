@@ -14,7 +14,7 @@ class CombLangInterpreterTests extends TacticTestSuite {
     helper.runTactic(t,n)
   }
 
-  "CLInterpreter" should "hello, world!" in {
+  it should "hello, world!" in {
     val t = CLInterpreter.construct(CLParser("NilT & NilT & AxiomCloseT").get)
     val n = new RootNode(
       Sequent(Nil, scala.collection.immutable.IndexedSeq("1=1".asFormula), scala.collection.immutable.IndexedSeq("1=1".asFormula))
@@ -22,4 +22,12 @@ class CombLangInterpreterTests extends TacticTestSuite {
     helper.runTactic(t,n)
     n.isClosed() shouldBe true
   }
+
+  it should "cut" in {
+    val t = CLInterpreter.construct(CLParser("cutT(\"1 > 0\")").get)
+    val n = new RootNode(Sequent(Nil,scala.collection.immutable.IndexedSeq("x>1".asFormula),scala.collection.immutable.IndexedSeq("x>0".asFormula)))
+    helper.runTactic(t, n)
+    helper.report(n)
+  }
+
 }

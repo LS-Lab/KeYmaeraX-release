@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.tacticsinterface
 
-import edu.cmu.cs.ls.keymaera.core.{ProofNode, Position}
+import edu.cmu.cs.ls.keymaera.core.{Formula, ProofNode, Position}
 import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticLibrary, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{LabelBranch, Tactic, PositionTactic}
 
@@ -9,18 +9,17 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics.{LabelBranch, Tactic, PositionTact
  * Created by nfulton on 2/26/15.
  */
 abstract class CLTerm
-  case class WeakSeqC(left : CLTerm, right : CLTerm)   extends CLTerm
-  case class StrongSeqC(left : CLTerm,
-                        right : List[CLTerm])          extends CLTerm
-  case class SeqC(left : CLTerm, right : CLTerm)       extends CLTerm
-  case class OrC(left : CLTerm, right : CLTerm)        extends CLTerm
-  case class BranchC(children : List[CLTerm])          extends CLTerm
-  case class KleeneC(child : CLTerm)                   extends CLTerm
-  case class LabelC(name : String)                     extends CLTerm
-  case class OnLabelC(label : String, term : CLTerm)   extends CLTerm //@todo add support for the more typical onBranch((), (), ...)
-  case class BuiltInC(name : String)                   extends CLTerm
-  case class PosApplyC(name : String, pos : Position)  extends CLTerm //punting the problem of representing and mapping positions to the grammar/parser.
-//  case class ifC(cond : _, term : CLTerm)              extends CLTerm //Decided to delay support; see Andre/Stefan/Nathan email 26/2.
+  case class WeakSeqC(left : CLTerm, right : CLTerm)            extends CLTerm
+  case class StrongSeqC(left : CLTerm, right : List[CLTerm])    extends CLTerm
+  case class SeqC(left : CLTerm, right : CLTerm)                extends CLTerm
+  case class OrC(left : CLTerm, right : CLTerm)                 extends CLTerm
+  case class BranchC(children : List[CLTerm])                   extends CLTerm
+  case class KleeneC(child : CLTerm)                            extends CLTerm
+  case class LabelC(name : String)                              extends CLTerm
+  case class OnLabelC(label : String, term : CLTerm)            extends CLTerm //@todo add support for the more typical onBranch((), (), ...)
+  case class BuiltInC(name : String)                            extends CLTerm
+  case class ArgApplyC(name : String, arg : Formula)            extends CLTerm
+  case class PosApplyC(term : CLTerm, pos : Position)           extends CLTerm
 
 /**
  * The *C*ombinator *L*anguage *Interpreter*
@@ -37,7 +36,7 @@ object CLInterpreter {
    * @todo security audit
    * @return The tactic.
    */
-  def getBuiltIn(name : String) : Either[Tactic, PositionTactic] =
+  def getBuiltIn(name : String, arg : Option[Formula]) : Either[Tactic, PositionTactic] =
     ExposedTacticsLibrary.getClass().getMethods().find(_.getName().equals(name)) match {
       case Some(method) => {
         val ru = scala.reflect.runtime.universe; //The *r*untime *u*niverse.
@@ -51,11 +50,24 @@ object CLInterpreter {
         //construct a wrapper so that we return a function instead of a mirror.
         val returnTypeName = method.getReturnType().getSimpleName()
 
+//        //run-time type checking.
+//        val expectedSimpleName : String = arg.getClass().getSimpleName()
+//        arg match {
+//          case Some(f) => assert(method.getParameterTypes().head.getSimpleName().equals(expectedSimpleName), "Expect " + method.getParameterTypes().head.getSimpleName() + " to have domain " + expectedSimpleName)
+//          case None    => //ok.
+//        }
+
         if(returnTypeName.equals("Tactic")) {
-          Left(methodMirror().asInstanceOf[Tactic])
+          arg match {
+            case Some(f) => Left(methodMirror(Some(f)).asInstanceOf[Tactic])
+            case None    => Left(methodMirror().asInstanceOf[Tactic]) //Well that's ine, but now we can't cutT(None). Is that a problem?
+          }
         }
         else if(returnTypeName.equals("PositionTactic")) {
-          Right(methodMirror().asInstanceOf[PositionTactic])
+          arg match {
+            case Some(f) => Right(methodMirror(arg).asInstanceOf[PositionTactic])
+            case None    => Right(methodMirror().asInstanceOf[PositionTactic])
+          }
         }
         else {
           throw new InvalidTacticType(name, returnTypeName)
@@ -82,17 +94,32 @@ object CLInterpreter {
     case KleeneC(child) => (construct(child) *)
     case LabelC(label) => LabelBranch(label)
     case OnLabelC(label, term) => SearchTacticsImpl.onBranch(label, construct(term))
-    case PosApplyC(name, pos) => {
-      val tactic = getBuiltIn(name)
-      if(tactic.isRight) (tactic.right.get)(pos)
-      else throw new CombinatorTypeError("Cannot apply a built-in, non-position tactic to a position.")
-    }
+    case PosApplyC(term, pos) => constructPositionTactic(term)(pos)
     case BuiltInC(name : String) => {
-      val tactic = getBuiltIn(name)
+      val tactic = getBuiltIn(name, None)
       //Can't pattern match because tactic maps out to LCA(Tactic, PositionTactic) = Object.
       if(tactic.isLeft) tactic.left.get
       else throw new CombinatorTypeError("Cannot use a built-in position tactic without specifying a position")
     }
+    case ArgApplyC(name : String, arg : Formula) =>
+      val tactic = getBuiltIn(name, Some(arg))
+      if(tactic.isLeft) tactic.left.get
+      else throw new CombinatorTypeError("Cannot use a built-in position tactic without specifying a position (note: " +
+        tactic.right.get.name + " takes an argument in addition to a position")
+  }
+
+  def constructPositionTactic(tactic : CLTerm) : PositionTactic = tactic match {
+    case BuiltInC(name : String) => {
+      val tactic = getBuiltIn(name, None)
+      if(tactic.isRight) (tactic.right.get)
+      else throw new CombinatorTypeError("Expected to find a PositionTactic but found a Tactic: " + tactic.left.get.name)
+    }
+    case ArgApplyC(name : String, arg : Formula) => {
+      val tactic = getBuiltIn(name, Some(arg))
+      if(tactic.isRight) tactic.right.get
+      else throw new CombinatorTypeError("Expected to find a PositionTactic but found a Tactic: " + tactic.left.get.name)
+    }
+    case _ => throw new CombinatorTypeError("Expected to find an BuiltIn or an Argument Application but found a " + tactic)
   }
 
   /**
