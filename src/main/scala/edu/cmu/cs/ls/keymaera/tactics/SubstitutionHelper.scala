@@ -36,13 +36,20 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
     t match {
       // homomorphic cases
-      case Neg(s, e) => Neg(s, usubst(o, u, e))
-      case Add(s, l, r) => Add(s, usubst(o, u, l), usubst(o, u, r))
-      case Subtract(s, l, r) => Subtract(s, usubst(o, u, l), usubst(o, u, r))
-      case Multiply(s, l, r) => Multiply(s, usubst(o, u, l), usubst(o, u, r))
-      case Divide(s, l, r) => Divide(s, usubst(o, u, l), usubst(o, u, r))
-      case Exp(s, l, r) => Exp(s, usubst(o, u, l), usubst(o, u, r))
-      case Pair(dom, l, r) => Pair(dom, usubst(o, u, l), usubst(o, u, r))
+      case Neg(s, e) if t != what => Neg(s, usubst(o, u, e))
+      case Neg(s, e) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Add(s, l, r) if t != what => Add(s, usubst(o, u, l), usubst(o, u, r))
+      case Add(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Subtract(s, l, r) if t != what => Subtract(s, usubst(o, u, l), usubst(o, u, r))
+      case Subtract(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Multiply(s, l, r) if t != what => Multiply(s, usubst(o, u, l), usubst(o, u, r))
+      case Multiply(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Divide(s, l, r) if t != what => Divide(s, usubst(o, u, l), usubst(o, u, r))
+      case Divide(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Exp(s, l, r) if t != what => Exp(s, usubst(o, u, l), usubst(o, u, r))
+      case Exp(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Pair(dom, l, r) if t != what => Pair(dom, usubst(o, u, l), usubst(o, u, r))
+      case Pair(dom, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
@@ -51,6 +58,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case Derivative(_, e) if e != what => t
       case Apply(fn, theta) => Apply(fn, usubst(o, u, theta))
       case Nothing => Nothing
+      case Number(_, _) if t == what => repl
       case x: Atom => x
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
     }
