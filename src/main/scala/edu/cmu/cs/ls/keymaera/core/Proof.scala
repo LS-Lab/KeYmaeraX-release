@@ -2360,7 +2360,9 @@ object DeriveMonomial {
 class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
   val Derivative(Real, Exp(Real, base, Number(Real, n))) = t
   override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, t, Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))))), IndexedSeq())))
+    List(s.glue(Sequent(s.pref,
+      IndexedSeq(Equals(Real, t, Multiply(Real, Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))), Derivative(Real, base)))),
+      IndexedSeq())))
 }
 
 // the following rules will turn into axioms
