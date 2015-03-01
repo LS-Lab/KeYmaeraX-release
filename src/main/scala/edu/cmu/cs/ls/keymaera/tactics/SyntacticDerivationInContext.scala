@@ -71,14 +71,13 @@ object SyntacticDerivationInContext {
       case FormulaDerivative(Imply(p, q)) => {
         val g = FormulaDerivative(Or(Not(p), q))
 
-        val aF = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-        val aG = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aQ = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
 
-        val usubst = uniformSubstT(Substitution(List(SubstitutionPair(aF, f),
-          SubstitutionPair(aG, g))),
+        val usubst = uniformSubstT(Substitution(List(SubstitutionPair(aP, p), SubstitutionPair(aQ, q))),
           Map(Equiv(f, FormulaDerivative(Or(Not(p), q))) ->
-            Equiv(FormulaDerivative(Imply(aF, aG)),
-              FormulaDerivative(Or(Not(aF), aG)))))
+            Equiv(FormulaDerivative(Imply(aP, aQ)),
+              FormulaDerivative(Or(Not(aP), aQ)))))
 
         Some(g, Some(usubst))
       }
@@ -496,7 +495,7 @@ object SyntacticDerivationInContext {
         case Derivative(dSort, Neg(nSort, s)) => {
           val sort = nSort; assert(nSort == dSort)
 
-          val aS = Variable("s", None, sort)
+          val aS = Apply(Function("s", None, Unit, sort), Nothing)
 
           val subst = Substitution(List(
             SubstitutionPair(aS, s)
@@ -741,7 +740,9 @@ End.
   // Proof rule implementations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //
-  def SyntacticDerivationRulesT : Tactic = (SearchTacticsImpl.locateTerm(ConstantDerivativeT) *) ~ (SearchTacticsImpl.locateTerm(MonomialDerivativeT) *)
+  def SyntacticDerivationRulesT : Tactic =
+    (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
+    (SearchTacticsImpl.locateTerm(MonomialDerivativeT, inAnte = false) *)
   def ConstantDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
     override def applies(t : Term) = isConstant(t)
 
@@ -1213,10 +1214,12 @@ End.
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.appliesRegardlessOfContext(s,p) || MonomialAndConstantDerivationT.applies(s,p) || MonomialAndConstantInContextDerivationT.applies(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
 
-    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~
-      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT)*) ~ (locateTerm(TermSyntacticDerivationT) *) ~
-      (locateTerm(MonomialAndConstantDerivationT) *) ~ (locateTerm(MonomialAndConstantInContextDerivationT) *) ~
-      (PropositionalTacticsImpl.AxiomCloseT | NilT) /* something leaves stuff open :-( */
+    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~ debugT("After formula derive") ~
+      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT, inAnte = false)*) ~ debugT("After term in context derive") ~
+      (locateTerm(TermSyntacticDerivationT, inAnte = false) *) ~ debugT("Terms should be gone now (except for monomials and numbers") ~
+      (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) ~ debugT("After monomial and constants") ~
+      (locateTerm(MonomialAndConstantInContextDerivationT, inAnte = false) *) ~ debugT("Finished")
+      //(PropositionalTacticsImpl.AxiomCloseT | NilT) /* something leaves stuff open :-( */
 
 
   }
