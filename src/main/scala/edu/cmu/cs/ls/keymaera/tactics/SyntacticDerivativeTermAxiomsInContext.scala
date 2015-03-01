@@ -198,9 +198,10 @@ object SyntacticDerivativeTermAxiomsInContext {
 
   def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
     def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext ::
+      ConstantFnDerivativeInContextT ::
       SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext :: SubtractDerivativeInContextT ::
       AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT ::
-      DivideDerivativeInContextT :: ConstantFnDerivativeInContextT :: Nil
+      DivideDerivativeInContextT :: Nil
 
     def applicableTactic(s : Sequent, p : Position) = {
       val l = tactics.filter(_.applies(s,p))
@@ -255,10 +256,10 @@ object SyntacticDerivativeTermAxiomsInContext {
     override def apply(pos : Position) = {
       def knowledgeContinuationTactic : Tactic = SearchTacticsImpl.onBranch(
         (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl, locateTerm(termTactic, inAnte = Some(true)) & AxiomCloseT),
-          (BranchLabels.equivRightLbl, locateTerm(termTactic, inAnte = Some(false)) & AxiomCloseT)
+          (BranchLabels.equivLeftLbl, locateTerm(termTactic, inAnte = true) & (AxiomCloseT | debugT("Should never happen") & stopT)),
+          (BranchLabels.equivRightLbl, locateTerm(termTactic, inAnte = false) & (AxiomCloseT | debugT("Should never happen") & stopT))
         )),
-        ("additional obligation", (locateSucc(ImplyRightT) & locateTerm(termTactic)) ~ AxiomCloseT)
+        ("additional obligation", debugT("Ever called?") & (locateSucc(ImplyRightT) & locateTerm(termTactic, inAnte = false)) ~ AxiomCloseT)
       )
 
       super.apply(pos) & knowledgeContinuationTactic

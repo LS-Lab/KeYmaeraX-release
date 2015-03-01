@@ -1,74 +1,77 @@
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.TraverseToPosition
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
+import testHelper.StringConverter._
 
 /**
  * Created by nfulton on 2/5/15.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class SyntacticDerivationTests extends TacticTestSuite {
   "AndDerivativeT tactics" should "atomize" in {
-    val node = helper.formulaToNode(helper.parseFormula( " (1=1 & 2=2)' "))
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationInContext.AndDerivativeT)
+    val f = "[x:=2;](1=1 & 2=2)'".asFormula
 
-    helper.runTactic(tactic, node, true)
-    require(containsOpenGoal(node, helper.parseFormula("(1=1)' & (2=2)'")))
+    val tactic = SyntacticDerivationInContext.AndDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
+
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
   }
 
   it should "agree on atomization" in {
-    val node1 = helper.formulaToNode(helper.parseFormula( " (1=1 & 2=2)' "))
-    val node2 = helper.formulaToNode(helper.parseFormula( " (1=1 & 2=2)' "))
+    val f = " [x:=2;](1=1 & 2=2)' ".asFormula
 
-    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationInContext.AndDerivativeT)
-    helper.runTactic(tactic1, node1, true)
+    val tactic1 = SyntacticDerivationInContext.AndDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
+    val node1 = helper.runTactic(tactic1, helper.formulaToNode(f), mustApply = true)
 
-    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationInContext.AndDerivativeAtomizeT)
-    helper.runTactic(tactic2, node2, true)
+    val tactic2 = SyntacticDerivationInContext.AndDerivativeAtomizeT(SuccPosition(0, PosInExpr(1::Nil)))
+    val node2 = helper.runTactic(tactic2, helper.formulaToNode(f), mustApply = true)
 
-    require(node1.openGoals().length == node2.openGoals().length)
-    require(containsOpenGoal(node1, helper.parseFormula("(1=1)' & (2=2)'")))
-    require(containsOpenGoal(node2, helper.parseFormula("(1=1)' & (2=2)'")))
+    node1.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node1.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
+    node2.openGoals().flatMap(_.sequent.ante) shouldBe node2.openGoals().flatMap(_.sequent.ante)
+    node2.openGoals().flatMap(_.sequent.succ) shouldBe node2.openGoals().flatMap(_.sequent.succ)
   }
 
   "OrDerivativeT tactics" should "atomize" in {
-    val node = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationInContext.OrDerivativeT)
+    val f = helper.parseFormula( "[x:=2;](1=1 | 2=2)' ")
+    val tactic = SyntacticDerivationInContext.OrDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
 
-    helper.runTactic(tactic, node, true)
-    require(containsOpenGoal(node, helper.parseFormula("(1=1)' & (2=2)'")))
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
   }
 
   it should "agree on atomization" in {
-    val node1 = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
-    val node2 = helper.formulaToNode(helper.parseFormula( " (1=1 | 2=2)' "))
+    val f = " [x:=2;](1=1 | 2=2)' ".asFormula
 
-    val tactic1 = helper.positionTacticToTactic(SyntacticDerivationInContext.OrDerivativeT)
-    helper.runTactic(tactic1, node1, true)
+    val tactic1 = SyntacticDerivationInContext.OrDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
+    val node1 = helper.runTactic(tactic1, helper.formulaToNode(f), mustApply = true)
 
-    val tactic2 = helper.positionTacticToTactic(SyntacticDerivationInContext.OrDerivativeAtomizeT)
-    helper.runTactic(tactic2, node2, true)
+    val tactic2 = SyntacticDerivationInContext.OrDerivativeAtomizeT(SuccPosition(0, PosInExpr(1::Nil)))
+    val node2 = helper.runTactic(tactic2, helper.formulaToNode(f), mustApply = true)
 
-    require(node1.openGoals().length == node2.openGoals().length)
-    require(containsOpenGoal(node1, helper.parseFormula("(1=1)' & (2=2)'")))
-    require(containsOpenGoal(node2, helper.parseFormula("(1=1)' & (2=2)'")))
+    node1.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node1.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
+    node2.openGoals().flatMap(_.sequent.ante) shouldBe node2.openGoals().flatMap(_.sequent.ante)
+    node2.openGoals().flatMap(_.sequent.succ) shouldBe node2.openGoals().flatMap(_.sequent.succ)
   }
 
   def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : DerivativeAxiomInContextTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
-    val s = "(" + sNoParen + ")"
-    val t = "(" + tNoParen + ")"
-    val tactic = helper.positionTacticToTactic(axTactic)
-    val atomizeTactic = helper.positionTacticToTactic(atomizePosTactic)
+    val tactic = axTactic(SuccPosition(0, PosInExpr(1::Nil)))
+    val atomizeTactic = atomizePosTactic(SuccPosition(0, PosInExpr(1::Nil)))
 
-    def primer(x:String) = "("+x+")'"
+    val node = helper.formulaToNode(s"[x:=2;]($sNoParen $innerOp $tNoParen)'".asFormula)
+    val node2 = helper.formulaToNode(s"[x:=2;]($sNoParen $innerOp $tNoParen)'".asFormula)
 
-    val node = helper.formulaToNode(helper.parseFormula(
-      primer(s + " " + innerOp + " " + t)
-    ))
-    val node2 = helper.formulaToNode(helper.parseFormula(
-      primer(s + " " + innerOp + " " + t)
-    ))
-    helper.runTactic(tactic, node, true)
-    require(containsOpenGoal(node, helper.parseFormula(primer(s) + outerOp + primer(t))))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only s"[x:=2;](($sNoParen)' $outerOp ($tNoParen)')".asFormula
+
+    val result2 = helper.runTactic(atomizeTactic, node2, mustApply = true)
+    result2.openGoals().flatMap(_.sequent.ante) shouldBe result.openGoals().flatMap(_.sequent.ante)
+    result2.openGoals().flatMap(_.sequent.succ) shouldBe result.openGoals().flatMap(_.sequent.succ)
   }
 
   import SyntacticDerivationInContext._
@@ -154,136 +157,124 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   it should "work for -y" in {
-    val in = helper.parseFormula("n*m + (-y)' + 1 + c^n = a^2 + 2") //nonsense idk just want some extra terms.
+    val in = "n*m + (-y)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic,node)
-    require(containsOpenGoal(node, helper.parseFormula("n*m + -(y') + 1 + c^n = a^2 + 2"))) //again, nonsense...
+    val result = helper.runTactic(tactic,node)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(y') + 1 + c^n = a^2 + 2".asFormula
   }
 
   it should "work for -x" in {
-    val in = helper.parseFormula("n*m + (-x)' + 1 + c^n = a^2 + 2") //nonsense idk just want some extra terms.
+    val in = "n*m + (-x)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic,node)
-    require(containsOpenGoal(node, helper.parseFormula("n*m + -(x') + 1 + c^n = a^2 + 2"))) //again, nonsense...
+    val result = helper.runTactic(tactic,node)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(x') + 1 + c^n = a^2 + 2".asFormula
   }
 
   "DeriveMonomial" should "work" in {
-    val in = helper.parseFormula("1 + (x^2)' = 1 + 2*x")
+    val in = "1 + (x^2)' = 1 + 2*x*x'".asFormula
     val node = helper.formulaToNode(in)
     val tactic = MonomialDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    require(containsOpenGoal(node, helper.parseFormula("1+2*x^1=1+2*x")))
-    require(!containsOpenGoal(node, in))
+    val result = helper.runTactic(tactic, node)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^1*x'=1+2*x*x'".asFormula
   }
 
   "DeriveConstant" should "work" in {
-    val in = helper.parseFormula("1 + 2' = 1 + 0")
+    val in = "1 + 2' = 1 + 0".asFormula
     val node = helper.formulaToNode(in)
     val tactic = ConstantDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    require(containsOpenGoal(node, helper.parseFormula("1+0=1+0")))
-    require(!containsOpenGoal(node, in))
+    val result = helper.runTactic(tactic, node)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "1+0=1+0".asFormula
   }
 
   "FormulaSyntacticDerivationT" should "work for |" in {
-    val f = helper.parseFormula("(1'=1 | 2=2)'")
+    val f = "[x:=2;](1'=1 | 2=2)'".asFormula
     val node = helper.formulaToNode(f)
 
-    val tactic = helper.positionTacticToTactic(FormulaSyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
-
-    val expected = helper.parseFormula("(1'=1)'&(2=2)'")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val tactic = FormulaSyntacticDerivationT(SuccPosition(0, PosInExpr(1::Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1'=1)' & (2=2)')".asFormula
   }
 
   it should "work for =" in {
-    val f = helper.parseFormula("(1 = 2)'")
+    val f = "[x:=2;](1 = 2)'".asFormula
     val node = helper.formulaToNode(f)
     val ptactic = TacticLibrary.ClosureT(FormulaSyntacticDerivationT)
 
-    val tactic = helper.positionTacticToTactic(ptactic)
-    helper.runTactic(tactic, node, true)
-    val expected = helper.parseFormula("1' = 2'")
-    require(containsOpenGoal(node, expected))
+    val tactic = ptactic(SuccPosition(0, PosInExpr(1::Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]1' = 2'".asFormula
   }
 
   "SyntacticDerivationT" should "intermediate step for next test" in {
-    val f = helper.parseFormula("(1=1)' & true")
-    val node = helper.formulaToNode(f)
+    val f = "[x:=2;]((1=1)' & true)".asFormula
 
-    val position = SuccPosition(0, PosInExpr(List(0)))
+    val position = SuccPosition(0, PosInExpr(1 :: 0 :: Nil))
     val tactic = EqualsDerivativeT(position)
 
-    helper.runTactic(tactic, node, true)
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
 
-    val expected = helper.parseFormula("(1'=1') & true")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](1'=1' & true)".asFormula
   }
 
   it should "work for | with an internal term that needs rewriting" in {
-    val f = helper.parseFormula("(1'=1 | 2=2)'")
-    val node = helper.formulaToNode(f)
+    val f = "[x:=2;](1'=1 | 2=2)'".asFormula
 
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val position = SuccPosition(0, PosInExpr(1 :: Nil))
+    val tactic = SyntacticDerivationT(position)
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
 
-    val expected = helper.parseFormula("((1')'=1')&(2'=2')")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](0=0 & 0=0)".asFormula
   }
 
   it should "work on imply" in {
-    val f = helper.parseFormula("(true->(x^2+y^2=1))'")
-    val node = helper.formulaToNode(f)
+    val f = "[x:=2;](true->(x^2+y^2=1))'".asFormula
 
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val position = SuccPosition(0, PosInExpr(1 :: Nil))
+    val tactic = SyntacticDerivationT(position)
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
 
-    val expected = helper.parseFormula("(!true)'&(x^2+y^2)'=1'")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((!true)' & 2*x^1*x' + 2*y^1*y' = 0)".asFormula
   }
 
   it should "work on *" in {
-    val f = helper.parseFormula("(x*y=1)'")
+    val f = "[x:=2;](x*y=1)'".asFormula
     val node = helper.formulaToNode(f)
 
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
-
-    val expected = helper.parseFormula("(x'*y+x*y'=1')")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val tactic = SyntacticDerivationT(SuccPosition(0, PosInExpr(1::Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]x'*y+x*y'=0".asFormula
   }
 
   it should "work on +" in {
-    val f = helper.parseFormula("(x+y=1)'")
+    val f = "[x:=2;](x+y=1)'".asFormula
     val node = helper.formulaToNode(f)
 
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
-
-    val expected = helper.parseFormula("(x'+y'=1')")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val tactic = SyntacticDerivationT(SuccPosition(0, PosInExpr(1::Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]x'+y'=0".asFormula
   }
 
   it should "work on boxes" in {
-    val f = helper.parseFormula("[x'=b;](x-x<1)'")
+    val f = "[x'=b;](x-x<1)'".asFormula
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
-
-    val expected = helper.parseFormula("[a'=b;](x'-y'<0)")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'-x'<=0".asFormula
   }
 
   it should "work on a previous counter-example" in {

@@ -85,12 +85,36 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     n.openGoals().flatMap(_.sequent.succ) should contain only "2<=0 & 2>=2".asFormula
   }
 
-  it should "keep constant symbols as derivatives" in {
-    val s = sequent(Nil, "x>=0 & y>=0".asFormula::Nil, "[x' = 2;](x>=0 & y>=0)".asFormula :: Nil)
+  it should "derive constant symbols to 0" in {
+    val s = sequent(Nil, "x>=0 & y()>=0".asFormula::Nil, "[x' = 2;](x>=0 & y()>=0)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
-    n.openGoals().flatMap(_.sequent.ante) should contain only ("x>=0 & y>=0".asFormula, "true".asFormula)
-    n.openGoals().flatMap(_.sequent.succ) should contain only "2>=0 & y'>=0".asFormula
+    // 2>=0 && 0>=0
+    n shouldBe 'closed
+  }
+
+  it should "derive multiplication" in {
+    val s = sequent(Nil, "x>=0 & y()>=0".asFormula::Nil, "[x' = 2;](x*y()>=0)".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    // x*0 + 2*y()>=0
+    n shouldBe 'closed
+  }
+
+  it should "derive nested multiplication" in {
+    val s = sequent(Nil, "x>=0 & y()>=0 & z>=0".asFormula::Nil, "[x' = 2, z'=1;](x*y()*z>=0)".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    // x*(0*z + y()*1) + 2*(y()*z)>=0
+    n shouldBe 'closed
+  }
+
+  it should "derive division" in {
+    val s = sequent(Nil, "x>=0 & y()>0".asFormula::Nil, "[x' = 2;](x/y()>=0)".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    // x*0 + 2*y()>=0
+    n shouldBe 'closed
   }
 
   // infinite loop (might also be caused by pretty printer issue because nothing ever closes)

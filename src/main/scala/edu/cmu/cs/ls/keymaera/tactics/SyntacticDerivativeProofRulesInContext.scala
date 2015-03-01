@@ -32,7 +32,7 @@ object SyntacticDerivativeProofRulesInContext {
       override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
         case Some(term) => term match {
           case Derivative(dSort, Exp(eSort, x:Variable, Number(nSort, n))) => {
-            val replacement = Multiply(eSort, Number(nSort, n), Exp(eSort, x, Number(nSort, n - 1)))
+            val replacement = Multiply(eSort, Multiply(eSort, Number(nSort, n), Exp(eSort, x, Number(nSort, n - 1))), Derivative(dSort, x))
             val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, equivTactic(theTactic))
             Some(contextTactic(p))
           }
@@ -44,7 +44,7 @@ object SyntacticDerivativeProofRulesInContext {
     }
   }
 
-  def ConstantDerivativeInContext = new PositionTactic("Monomial Derivative in context") {
+  def ConstantDerivativeInContext = new PositionTactic("Constant Derivative in context") {
     val theTactic : PositionTactic with ApplicableAtTerm = ConstantDerivativeT
 
     override def applies(s: Sequent, p: Position): Boolean = {
@@ -78,7 +78,15 @@ object SyntacticDerivativeProofRulesInContext {
       case _ => false
     }
 
-    override def apply(p: Position): Tactic = debugT("This needs to close with a single term rewrite and axiom close.") & SearchTacticsImpl.locateTerm(prt) & debugT("here...") & (AxiomCloseT | debugT("Foo"))
+    import scala.language.postfixOps
+    override def apply(p: Position): Tactic =
+      debugT("This needs to close with a single term rewrite and axiom close.") &
+      onBranch(
+        (BranchLabels.equivLeftLbl, (SearchTacticsImpl.locateTerm(prt, inAnte = true)*) &
+          (SearchTacticsImpl.locateTerm(prt, inAnte = false)*)),
+        (BranchLabels.equivRightLbl, (SearchTacticsImpl.locateTerm(prt, inAnte = true)*) &
+          (SearchTacticsImpl.locateTerm(prt, inAnte = false)*))) &
+      (AxiomCloseT | debugT(s"Prove equiv for derivative: Should never happen using ${prt.name}"))
   }
 
 
@@ -110,12 +118,20 @@ object SyntacticDerivativeProofRulesInContext {
     }
 
     override def apply(pos : Position) = {
+      import scala.language.postfixOps
       def knowledgeContinuationTactic : Tactic = debugT("Trying to close something in context based on a term equivalence tactic.") & SearchTacticsImpl.onBranch(
         (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl, locateTerm(termTactic, inAnte = Some(true)) & AxiomCloseT),
-          (BranchLabels.equivRightLbl, locateTerm(termTactic, inAnte = Some(false)) & AxiomCloseT)
+          (BranchLabels.equivLeftLbl,
+            (locateTerm(termTactic, inAnte = true)*) &
+            (locateTerm(termTactic, inAnte = false)*) &
+            (AxiomCloseT | debugT(s"${getClass.getCanonicalName}: Should never happen using ${termTactic.name}") & stopT)),
+          (BranchLabels.equivRightLbl,
+            (locateTerm(termTactic, inAnte = true)*) &
+            (locateTerm(termTactic, inAnte = false)*) &
+            (AxiomCloseT | debugT(s"${getClass.getCanonicalName}: Should never happen using ${termTactic.name}") & stopT))
         )),
-        ("additional obligation", locateSucc(ImplyRightT) & locateTerm(termTactic) & AxiomCloseT)
+        ("additional obligation", debugT("Ever called?") & locateSucc(ImplyRightT) & locateTerm(termTactic, inAnte = false) &
+          (AxiomCloseT | debugT("Should never happen") & stopT))
       )
 
       super.apply(pos) & knowledgeContinuationTactic

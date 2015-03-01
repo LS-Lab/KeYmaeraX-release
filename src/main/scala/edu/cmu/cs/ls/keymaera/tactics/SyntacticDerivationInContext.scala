@@ -344,7 +344,7 @@ object SyntacticDerivationInContext {
     override def constructInstanceAndSubst(f : Formula) = f match {
       case FormulaDerivative(LessEqual(eqSort, s, t)) =>
         val usubst = createSubstitution(f, s, t, eqSort, LessEqual.apply, LessEqual.apply)
-        Some(LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), None)
+        Some(LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
     }
   }
 
@@ -495,10 +495,10 @@ object SyntacticDerivationInContext {
         case Derivative(dSort, Neg(nSort, s)) => {
           val sort = nSort; assert(nSort == dSort)
 
-          val aS = Apply(Function("s", None, Unit, sort), Nothing)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s)
+            SubstitutionPair(aF, s)
           ))
 
           val right = Neg(sort, Derivative(sort, s))
@@ -509,10 +509,10 @@ object SyntacticDerivationInContext {
         case Neg(nSort, Derivative(dSort, s)) => {
           val sort = nSort; assert(nSort == dSort)
 
-          val aS = Variable("s", None, sort)
+          val aF = Apply(Function("f", None, sort, sort), Anything)
 
           val subst = Substitution(List(
-            SubstitutionPair(aS, s)
+            SubstitutionPair(aF, s)
           ))
 
           val left = Derivative(sort, Neg(sort, s))
@@ -743,7 +743,7 @@ End.
   def SyntacticDerivationRulesT : Tactic =
     (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
     (SearchTacticsImpl.locateTerm(MonomialDerivativeT, inAnte = false) *)
-  def ConstantDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
+  def ConstantDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Constant Derivative") with ApplicableAtTerm {
     override def applies(t : Term) = isConstant(t)
 
     /**
@@ -757,7 +757,7 @@ End.
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val term = getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("MonomialDerivative.applies is incorrect."))
+        val term = getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("ConstantDerivative.applies is incorrect."))
 
         val newHypothesisCutLocation = AntePosition(node.sequent.ante.length, HereP)
 
@@ -1218,8 +1218,7 @@ End.
       (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT, inAnte = false)*) ~ debugT("After term in context derive") ~
       (locateTerm(TermSyntacticDerivationT, inAnte = false) *) ~ debugT("Terms should be gone now (except for monomials and numbers") ~
       (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) ~ debugT("After monomial and constants") ~
-      (locateTerm(MonomialAndConstantInContextDerivationT, inAnte = false) *) ~ debugT("Finished")
-      //(PropositionalTacticsImpl.AxiomCloseT | NilT) /* something leaves stuff open :-( */
+      (locateTerm(MonomialAndConstantInContextDerivationT, inAnte = false) *)
 
 
   }
