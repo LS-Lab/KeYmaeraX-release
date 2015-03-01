@@ -376,7 +376,7 @@ object HybridProgramTacticsImpl {
       val aT = Apply(Function("t", None, Unit, Real), Nothing)
       val aP = Function("p", None, Real, Bool)
       val l = List(new SubstitutionPair(aT, t),
-        new SubstitutionPair(ApplyPredicate(aP, CDot), replaceFree(f)(t, CDot)))
+        new SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(f)(t, CDot)))
 
       // check specified name, or construct a new name for the ghost variable if None
       val v = ghost match {
@@ -389,7 +389,7 @@ object HybridProgramTacticsImpl {
 
       // construct axiom instance: [v:=t]p(v) <-> p(t)
       val aV = Variable("v", None, Real)
-      val g = BoxModality(Assign(v, t), replaceFree(f)(t, v))
+      val g = BoxModality(Assign(v, t), SubstitutionHelper.replaceFree(f)(t, v))
       val axiomInstance = Equiv(g, f)
 
       // rename to match axiom if necessary
