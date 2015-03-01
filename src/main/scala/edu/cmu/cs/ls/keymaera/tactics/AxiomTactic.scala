@@ -270,7 +270,17 @@ abstract class CascadedAxiomTactic(name: String, axiomName: String) extends Posi
  */
 abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic(name) {
   def applies(f: Formula): Boolean
-  override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
+  override def applies(s: Sequent, p: Position): Boolean =
+    !p.isTopLevel && inContextOfModality(s, parentPosition(p)) && applies(getFormula(s, p))
+
+  def parentPosition(p: Position) =
+    if (p.isAnte) AntePosition(p.index, PosInExpr(p.inExpr.pos.init))
+    else SuccPosition(p.index, PosInExpr(p.inExpr.pos.init))
+
+  def inContextOfModality(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+    case BoxModality(_, _) => true
+    case _ => !p.isTopLevel && inContextOfModality(s, parentPosition(p))
+  }
 
   /**
    * This method constructs the desired result before the renaming.
@@ -363,7 +373,8 @@ abstract class DerivativeAxiomInContextTactic(name: String, axiomName: String)
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       import AxiomTactic.axiomT
-      Some(onBranch("knowledge subclass continue", assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT))
+      Some(onBranch("knowledge subclass continue", assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) &
+        (AxiomCloseT | TacticLibrary.debugT("Should never happen") & stopT)))
     }
   }
 }
