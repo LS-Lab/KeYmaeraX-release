@@ -128,6 +128,7 @@ object ODETactics {
                          diffEqPos: Position) = {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(skolemizeToFnT(_))(diffEqPos)))
+
           // flatten conjunctions and sort by free variables to approximate ODE dependencies
           val flatSolution = flattenConjunctions(solution).
             sortWith((f, g) => sizeOf(BindingAssessment.catVars(f).fv) < sizeOf(BindingAssessment.catVars(g).fv)).reverse
@@ -138,7 +139,7 @@ object ODETactics {
             debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & AndRightT(p) &&
             (debugT(s"Prove Solution using DI at $p") & diffInvariantT(p), a))
 
-          Some(initialGhosts & cuts)
+          Some(initialGhosts && cuts)
         }
 
         val diffEq = node.sequent(p) match {
@@ -706,14 +707,14 @@ object ODETactics {
             //NNFRewrite(p)
 
             val finishingTouch = (AxiomCloseT | locateSucc(OrRightT) | locateSucc(NotRightT) |
-              (TacticLibrary.boxDerivativeAssignT(p) & ImplyRightT(p)) | arithmeticT)*
+              locateSucc(TacticLibrary.boxDerivativeAssignT) | locateSucc(ImplyRightT) | arithmeticT)*
 
             Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
               debugT("left branch") & default,
               debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
-                diffInvariantSystemTailT(p) &
-                debugT("About to NNF rewrite") & NNFRewrite(p) & debugT("Finished NNF rewrite") &
-                SyntacticDerivationInContext.SyntacticDerivationT(p) & debugT("Done with syntactic derivation") &
+                diffInvariantSystemTailT(p) &&
+                debugT("About to NNF rewrite") & NNFRewrite(p) && debugT("Finished NNF rewrite") &
+                SyntacticDerivationInContext.SyntacticDerivationT(p) && debugT("Done with syntactic derivation") &
                 finishingTouch ~ debugT("Finished result")
             ))
           }

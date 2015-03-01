@@ -815,9 +815,7 @@ End.
      * @param p The position of a term.
      * @return true iff the position exists in the sequent and is a monomial.
      */
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getApplicableTerm(s,p).isDefined
-    }
+    override def applies(s: Sequent, p: Position): Boolean = getApplicableTerm(s, p).isDefined
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
@@ -834,14 +832,7 @@ End.
         }
 
         //Build the equality, put it to work, and dispense after use. Also dispense of the current position, because we'll now have a new sequent.
-        val topLevelPosition = if(p.isAnte) {
-          new AntePosition(p.getIndex)
-        }
-        else {
-          new SuccPosition(p.getIndex)
-        }
-
-        Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
+        Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(p.topLevel))
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -1217,9 +1208,6 @@ End.
     override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~ debugT("After formula derive") ~
       (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT, inAnte = false)*) ~ debugT("After term in context derive") ~
       (locateTerm(TermSyntacticDerivationT, inAnte = false) *) ~ debugT("Terms should be gone now (except for monomials and numbers") ~
-      (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) ~ debugT("After monomial and constants") ~
-      (locateTerm(MonomialAndConstantInContextDerivationT, inAnte = false) *)
-
-
+      (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) ~ debugT("After monomial and constants")
   }
 }

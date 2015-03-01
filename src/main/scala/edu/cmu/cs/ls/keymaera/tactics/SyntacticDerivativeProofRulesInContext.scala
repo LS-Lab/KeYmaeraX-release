@@ -31,10 +31,10 @@ object SyntacticDerivativeProofRulesInContext {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
         case Some(term) => term match {
-          case Derivative(dSort, Exp(eSort, x:Variable, Number(nSort, n))) => {
+          case Derivative(dSort, Exp(eSort, x, Number(nSort, n))) => {
             val replacement = Multiply(eSort, Multiply(eSort, Number(nSort, n), Exp(eSort, x, Number(nSort, n - 1))), Derivative(dSort, x))
             val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, equivTactic(theTactic))
-            Some(contextTactic(p))
+            Some(errorT(s"WARNING: monomial derivative assumes $x != 0") ~ contextTactic(p))
           }
           case _ => None
         }
