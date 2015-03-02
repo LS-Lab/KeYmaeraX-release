@@ -135,9 +135,11 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
               println("Axiom instance " + axiomInstance)
               val axiomInstanceTactic = (assertPT(axiomInstance) & cohideT)(axiomPos) & (assertT(0,1) &
                 assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> modAx)) &
-                assertT(0, 1) & succCont & axiomT(axiomName) & assertT(1, 1) & anteCont & AxiomCloseT)
+                assertT(0, 1) & succCont & axiomT(axiomName) & assertT(1, 1) & anteCont &
+                  (AxiomCloseT | TacticLibrary.debugT(s"${getClass.getCanonicalName}: axiom close expected") & stopT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
-            case None => None
+            case None => if (applicable(node)) throw new IllegalStateException(s"Tactic $name: applicable is true but no concrete tactic returned")
+                         else None
           }
         case None => None
       }
