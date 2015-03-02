@@ -632,9 +632,6 @@ object ODETactics {
             val instance = Imply(p, f)
 
             //construct substitution.
-            import Substitution.maybeFreeVariables
-            val aX = Variable("x", None, Real)
-
             val aT = Apply(Function("f", None, Real, Real), Anything)
 
             val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
@@ -650,22 +647,24 @@ object ODETactics {
               new SubstitutionPair(aH, h)
             ))
 
+            // alpha renaming if necessary
+            val aX = Variable("x", None, Real)
             val alpha = new PositionTactic("Alpha") {
               override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-                case Imply(BoxModality(NDetAssign(_), _), BoxModality(IncompleteSystem(_), _)) => true
+                case Imply(aP, BoxModality(IncompleteSystem(_), _)) => true
                 case _ => false
               }
 
               override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
                 override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                  Some(globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+                  Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
 
                 override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
               }
             }
 
             val (axiom, cont) =
-              if (x.name != aX.name || x.index != None) (replace(ax)(aX, x), Some(alpha))
+              if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
               else (ax, None)
 
             Some(axiom, instance, subst, None, cont)
