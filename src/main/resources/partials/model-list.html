@@ -48,7 +48,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr ng-repeat="model in models">
+        <tr ng-repeat="model in models | orderBy:'name'">
             <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
             <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
             <td><a href="{{model.pubLink}}">{{model.pubLink}}</a></td>
