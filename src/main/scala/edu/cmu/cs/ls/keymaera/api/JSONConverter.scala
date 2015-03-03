@@ -93,6 +93,8 @@ object JSONConverter {
           case Multiply(_, a, b) => JsObject(("name" -> JsString("multiply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Divide(_, a, b) => JsObject(("name" -> JsString("divide")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Exp(_, a, b) => JsObject(("name" -> JsString("exp")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case Nothing => JsObject(("name" -> JsString("")) +: cf)
+          case Anything => JsObject(("name" -> JsString("?")) +: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)
