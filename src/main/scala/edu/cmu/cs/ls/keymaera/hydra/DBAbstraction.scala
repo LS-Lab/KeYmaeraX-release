@@ -23,8 +23,11 @@ object DispatchedTacticStatus extends Enumeration {
  * @param name The name of the model.
  * @param date The creation date.
  * @param keyFile The model file content.
+ * @param description The description of the model.
+ * @param pubLink Link to additional information (paper) on the model.
  */
-class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String)
+class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String,
+                val description:String, val pubLink:String)
 
 /**
  * Data object for proofs. A proof

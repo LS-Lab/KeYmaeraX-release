@@ -64,6 +64,8 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "id" -> JsString(modelpojo.modelId),
     "name" -> JsString(modelpojo.name),
     "date" -> JsString(modelpojo.date),
+    "description" -> JsString(modelpojo.description),
+    "pubLink" -> JsString(modelpojo.pubLink),
     "keyFile" -> JsString(modelpojo.keyFile)
   ))
 
@@ -116,6 +118,8 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "id" -> JsString(model.modelId),
     "name" -> JsString(model.name),
     "date" -> JsString(model.date),
+    "description" -> JsString(model.description),
+    "pubLink" -> JsString(model.pubLink),
     "keyFile" -> JsString(model.keyFile)
   )
 }

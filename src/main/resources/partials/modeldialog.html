@@ -2,9 +2,10 @@
     <h3 class="modal-title">{{model.name}}</h3>
 </div>
 <div class="modal-body" style="overflow: scroll; height: 400px">
-<pre><code>
-{{model.keyFile}}
-</code></pre>
+    <h1>{{model.title}}</h1>
+    <p>{{model.description}}</p>
+    <p>See additionally <a href="{{model.pubLink}}">{{model.pubLink}}</a> for further information</p>
+    <pre><code>{{model.keyFile}}</code></pre>
 </div>
 <div class="modal-footer">
     <button class="btn btn-primary" ng-click="ok()">Close</button>
