@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 //@todo minimize imports
 
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
@@ -1078,29 +1078,16 @@ End.
 
     override def apply(p:Position) : Tactic = new ConstructionTactic("Formula Syntactic Derivation") {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        //I think this will be easier to read than the mapping approach.
-        for((anteF : Formula, idx : Int) <- node.sequent.ante.zipWithIndex) {
-          val applicableTactics : Seq[(PositionTactic, PosInExpr)] =
-            formulaDerivativeTactics.map(t => (t, findApplicablePositionForFormulaDerivativeAxiom(anteF, t))).filter(_._2.isDefined).map(p => (p._1, p._2.get._1))
-          if(applicableTactics.length > 0) {
-            val tactic    = applicableTactics.last._1
-            val posInExpr = applicableTactics.last._2
-            return Some(tactic(AntePosition(idx, posInExpr)));
-          }
+        val applicableTactics : Seq[(PositionTactic, PosInExpr)] =
+          formulaDerivativeTactics.map(t => (t, findApplicablePositionForFormulaDerivativeAxiom(node.sequent(p), t))).
+            filter(_._2.isDefined).map(p => (p._1, p._2.get._1))
+        if (applicableTactics.length > 0) {
+          val tactic    = applicableTactics.last._1
+          val posInExpr = applicableTactics.last._2
+          return Some(tactic(if (p.isAnte) AntePosition(p.index, posInExpr) else SuccPosition(p.index, posInExpr)))
         }
-
-        for((succF, idx : Int) <- node.sequent.succ.zipWithIndex) {
-          val applicableTactics : Seq[(PositionTactic, PosInExpr)] =
-            formulaDerivativeTactics.map(t => (t, findApplicablePositionForFormulaDerivativeAxiom(succF, t))).filter(_._2.isDefined).map(p => (p._1, p._2.get._1))
-          if(applicableTactics.length > 0) {
-            val tactic    = applicableTactics.last._1
-            val posInExpr = applicableTactics.last._2
-            println(tactic.name + " " + idx + " " + posInExpr.toString())
-            return Some(tactic(SuccPosition(idx, posInExpr)));
-          }
-        }
-
-        return None;
+        assert(!applicable(node), "tactic signalled applicability, but about to return None")
+        None
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -1205,9 +1192,58 @@ End.
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = FormulaSyntacticDerivationT.applies(s, p) || TermSyntacticDerivationT.appliesRegardlessOfContext(s,p) || MonomialAndConstantDerivationT.applies(s,p) || MonomialAndConstantInContextDerivationT.applies(s,p) //@todo oh dear... should move this applies logic into SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT
 
-    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) ~ debugT("After formula derive") ~
-      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT, inAnte = false)*) ~ debugT("After term in context derive") ~
-      (locateTerm(TermSyntacticDerivationT, inAnte = false) *) ~ debugT("Terms should be gone now (except for monomials and numbers") ~
-      (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) ~ debugT("After monomial and constants")
+    override def apply(p: Position): Tactic = (locate(FormulaSyntacticDerivationT)*) &
+      assertT(!containsFormulaDerivative(_), "Formula derivative left unhandled by FormulaSyntacticDerivationT") &
+      (locateTerm(SyntacticDerivativeTermAxiomsInContext.SyntacticDerivativeInContextT, inAnte = false)*) &
+      (locateTerm(TermSyntacticDerivationT, inAnte = false) *) &
+      assertT(!containsTermDerivative(_), "Term derivative left unhandled by TermSyntacticDerivationT") &
+      (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) &
+      assertT(containsOnlyVariableDerivatives(_), "Syntactic derivation left monomial or constant unhandled")
+
+    private def containsFormulaDerivative(s: Sequent): Boolean =
+      s.ante.exists(containsFormulaDerivative) || s.succ.exists(containsFormulaDerivative)
+
+    private def containsFormulaDerivative(f: Formula): Boolean = {
+      var containsFd = false
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, frm: Formula): Either[Option[StopTraversal], Formula] = frm match {
+          case FormulaDerivative(_) => containsFd = true; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, f)
+      containsFd
+    }
+
+    private def containsTermDerivative(s: Sequent): Boolean =
+      s.ante.exists(containsTermDerivative) || s.succ.exists(containsTermDerivative)
+
+    private def containsTermDerivative(f: Formula): Boolean = {
+      var containsTd = false
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case Derivative(_, _: Variable) => Left(None)
+          case Derivative(_, _: Exp) => Left(None)
+          case Derivative(_, _) => containsTd = true; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, f)
+      containsTd
+    }
+
+    private def containsOnlyVariableDerivatives(s: Sequent): Boolean =
+      s.ante.forall(containsOnlyVariableDerivatives) && s.succ.forall(containsOnlyVariableDerivatives)
+
+    private def containsOnlyVariableDerivatives(f: Formula): Boolean = {
+      var onlyPrimitiveDerivatives = true
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case Derivative(_, _: Variable) => Left(None)
+          case Derivative(_, _) => onlyPrimitiveDerivatives = false; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, f)
+      onlyPrimitiveDerivatives
+    }
+
   }
 }
