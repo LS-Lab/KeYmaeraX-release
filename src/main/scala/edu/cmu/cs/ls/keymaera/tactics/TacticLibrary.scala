@@ -266,7 +266,7 @@ object TacticLibrary {
   def boxSeqT = HybridProgramTacticsImpl.boxSeqT
   def boxInductionT = HybridProgramTacticsImpl.boxInductionT
   def boxChoiceT = HybridProgramTacticsImpl.boxChoiceT
-  def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.inductionT(inv)
+  def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.wipeContextInductionT(inv)
   def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
   def diffInvariantSystemT = ODETactics.diffInvariantT
   def diffSolutionT = ODETactics.diffSolution(None)
