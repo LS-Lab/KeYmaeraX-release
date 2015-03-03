@@ -27,7 +27,7 @@ object JSONConverter {
         e match {
           case True() => /* nothing to do */
           case False() => /* nothing to do */
-          case x@PredicateConstant(a, b) => /* nothing to do */
+          case PredicateConstant(_, _) => /* nothing to do */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -35,8 +35,10 @@ object JSONConverter {
 
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
         e match {
-          case Number(s, i) => /* Nothing to do here */
-          case x@Variable(_, _, _) => /* Nothing to do here */
+          case Number(_, _) => /* Nothing to do here */
+          case Variable(_, _, _) => /* Nothing to do here */
+          case Nothing => /* Nothing to do here */
+          case Anything => /* Nothing to do here */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -44,7 +46,8 @@ object JSONConverter {
 
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         e match {
-          case x@ProgramConstant(_, _) => /* Nothing to do */
+          case ProgramConstant(_, _) => /* Nothing to do */
+          case ContEvolveProgramConstant(_, _) => /* Nothing to do */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -85,6 +88,8 @@ object JSONConverter {
         val o = e match {
           case Number(s, i) => JsObject(("name" -> JsString(i.toString())) +: cf)
           case x@Variable(_, _, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[Variable])) +: cf)
+          case Nothing => JsObject(("name" -> JsString("")) +: cf)
+          case Anything => JsObject(("name" -> JsString("?")) +: cf)
           case Apply(a, b) => JsObject(("name" -> JsString("apply")) :: ("children" -> JsArray(convertNamedSymbol(a) :: Nil ++: jsonStack.pop())) :: Nil ++: cf)
           case Neg(_, a) => JsObject(("name" -> JsString("neg")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Derivative(_, a) => JsObject(("name" -> JsString("derivative")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
@@ -93,8 +98,6 @@ object JSONConverter {
           case Multiply(_, a, b) => JsObject(("name" -> JsString("multiply")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Divide(_, a, b) => JsObject(("name" -> JsString("divide")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Exp(_, a, b) => JsObject(("name" -> JsString("exp")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case Nothing => JsObject(("name" -> JsString("")) +: cf)
-          case Anything => JsObject(("name" -> JsString("?")) +: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)
@@ -104,6 +107,7 @@ object JSONConverter {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
           case x@ProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConstant])) +: cf)
+          case x@ContEvolveProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ContEvolveProgramConstant])) +: cf)
           case Assign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case NDetAssign(_) => JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Sequence(_, _) => JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
