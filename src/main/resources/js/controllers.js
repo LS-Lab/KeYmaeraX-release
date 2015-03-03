@@ -171,13 +171,12 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{\\text{QE}(\\phi)}{\\phi} \\)",
               "input" : [ { "name" : "0", "label" : "Tool", "placeholder" : "Mathematica", "type" : "text" } ]
             },
-        "dl.di" :
+        "dl.diffinvariant" :
             {
-                "name" : "dl.di",
+                "name" : "dl.diffinvariant",
                 "label" : makeRuleLabel("\\text{DI}",
                 "\\Gamma, H ~\\vdash~ F, \\Delta \\quad \\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow F_{x_1, \\ldots , x_n}^{\\theta_1, \\ldots , \\theta_n}, \\Delta)",
-                "\\Gamma ~\\vdash~ \\left[ x_1' = \\theta_1, \\ldots , x_n' = \\theta_n, H \\right]F, \\Delta"),
-                "input" : [ {"name" : "0", "label" : "Differential Invariant", "placeholder" : "Formula", "type" : "text"} ]
+                "\\Gamma ~\\vdash~ \\left[ x_1' = \\theta_1, \\ldots , x_n' = \\theta_n, H \\right]F, \\Delta")
             },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
@@ -586,6 +585,8 @@ keymaeraProofControllers.controller('TaskListCtrl',
             "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/" :
             "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/" + nodeId;
 
+        // TODO tree does not yet work with large data
+        /*
         $http.get(uri)
             .success(function(data) {
                 $scope.treedata = data;
@@ -593,6 +594,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
             .error(function() {
                 alert("error encountered while trying to retrieve the tree.")
             })
+            */
     }
 
     $scope.$watch('agenda',

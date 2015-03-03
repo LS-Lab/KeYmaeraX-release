@@ -56,8 +56,7 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
     initTactic("dl.box-test", "TacticLibrary.boxTestT", TacticKind.PositionTactic, TacticLibrary.boxTestT)
 
     initTactic("dl.diffsolution", "TacticLibrary.diffSolutionT", TacticKind.PositionTactic, TacticLibrary.diffSolutionT)
-
-    initInputPositionTactic[Option[Formula]]("dl.di", "TacticLibrary.differentialInvariant", TacticKind.InputTactic, TacticLibrary.diffInductionT) //??
+    initTactic("dl.diffinvariant", "TacticLibrary.diffInvariant", TacticKind.PositionTactic, TacticLibrary.diffInvariant)
 
     initInputTactic[Option[Formula]]("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
     initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT _)
