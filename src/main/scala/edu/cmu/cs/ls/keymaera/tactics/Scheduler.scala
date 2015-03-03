@@ -79,10 +79,12 @@ class TacticWrapper(val tactic : Tactic, val node : ProofNode) extends TacticToo
     }
     if (!node.tacticInfo.isLocalClosed) {
       try {
-        if (tactic.applicable(node))
+        if (tactic.applicable(node)) {
+          node.tacticInfo.infos += "Executing tactic" -> tactic.toString
           tactic(tool, node)
-        else
+        } else {
           tactic.continuation(tactic, Failed, Seq(node))
+        }
       } catch {
         case e: Exception =>
           // TODO report exception somewhere useful

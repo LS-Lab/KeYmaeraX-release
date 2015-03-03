@@ -281,7 +281,10 @@ object Sequent {
     // TODO: there should be a TestCase that checks that this field is never read in the prover core
     val tacticInfo: ProofNodeInfo = new ProofNodeInfo(if(parent == null) Map() else parent.tacticInfo.infos, this)
 
-    override def toString = "ProofNode(" + sequent + "\nfrom " + parent + ")"
+    override def toString = "ProofNode(" + sequent + " by " +
+      (if (parent != null) parent.tacticInfo.infos.get("Executing tactic")
+       else "") +
+      "\nfrom " + parent + ")"
 
     /**
      * @return true iff the node is closed.
