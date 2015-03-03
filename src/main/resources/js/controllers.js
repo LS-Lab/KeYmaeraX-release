@@ -178,6 +178,13 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
                 "\\Gamma, H ~\\vdash~ F, \\Delta \\quad \\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow F_{x_1, \\ldots , x_n}^{\\theta_1, \\ldots , \\theta_n}, \\Delta)",
                 "\\Gamma ~\\vdash~ \\left[ x_1' = \\theta_1, \\ldots , x_n' = \\theta_n, H \\right]F, \\Delta")
             },
+        "dl.diffweaken" :
+            {
+                "name" : "dl.diffweaken",
+                "label" : makeRuleLabel("\\text{DW}",
+                "\\Gamma ~\\vdash~\\forall^{\\alpha}(H \\rightarrow \\phi, \\Delta)",
+                "\\Gamma ~\\vdash~ \\left[ x' = \\theta \\& H \\right]\\phi, \\Delta")
+            },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
               "label" : "\\(\\left(= \\text{rewrite}\\right) \\frac{\\Gamma, \\phi(t) ~\\vdash \\psi(t), \\Delta}{\\Gamma, x=t, \\phi(x) ~\\vdash \\psi(x), \\Delta}\\)",
