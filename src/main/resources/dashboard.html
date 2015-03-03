@@ -63,24 +63,24 @@
             <ul class="nav navbar-nav nav-pills">
                 <li ng-class="{active: theview == 'dashboard'}"><a href="dashboard.html?#/dashboard">Dashboard</a></li>
                 <li ng-class="{active: theview == 'models'}"><a href="dashboard.html?#/models">Models</a></li>
-                <li><a href="#">Lemmas</a></li>
+                <!--<li><a href="#">Lemmas</a></li>-->
                 <!-- TODO nav pill shows how many updates where made to proofs since last logged in. Currently, it shows the number of OPEN proofs! -->
                 <li ng-model="open_proofs" ><a href="dashboard.html?#/proofs"><span class="badge pull-right">{{ open_proof_count }}</span> Proofs</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
-                <li><a href="#">Profile</a></li>
+                <!--<li><a href="#">Profile</a></li>-->
                 <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <span class="caret"></span></a>
                     <ul class="dropdown-menu" role="menu">
-                        <li><a href="#">Examples</a></li>
-                        <li><a href="#">Tutorials</a></li>
-                        <li><a href="#">Videos</a></li>
+                        <!--<li><a href="#">Examples</a></li>-->
+                        <li><a href="dashboard.html?#/tutorials">Tutorials</a></li>
+                        <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
                         <li><a href="#">Hybrid Program Syntax</a></li>
-                        <li class="divider"></li>
+                        <!--<li class="divider"></li>-->
                         <li><a href="#">Hybrid Program Semantics</a></li>
-                        <li class="divider"></li>
-                        <li><a href="dashboard.html?#/dev">Developer Actions</a></li>
+                        <!--<li class="divider"></li>-->
+                        <!--<li><a href="dashboard.html?#/dev">Developer Actions</a></li>-->
                     </ul>
                 </li>
             </ul>

@@ -26,6 +26,9 @@
 
     <!-- Navigation / global operations... -->
     <script type="text/javascript">
+        function defaultLogin() {
+          ApiClient.login("guest", "guest")
+        }
         // We should find a better home for this function.
 
         function processLogin() {
@@ -102,19 +105,19 @@
     <div class="row">
         <div class="col-md-4">
             <h2>Examples</h2>
-            <p>View the KeYmaera examples. </p>
-            <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+            <p>View the KeYmaera examples.</p>
+            <p><a class="btn btn-default" href="dashboard.html?#/models" role="button" onclick="defaultLogin();">View details &raquo;</a></p>
         </div>
         <div class="col-md-4">
             <h2>Tutorials</h2>
-            <p>Learn how to use KeYmaera with these tutorials. </p>
-            <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+            <p>Learn how to model hybrid systems with these tutorials. </p>
+            <p><a class="btn btn-default" href="dashboard.html?#/tutorials" role="button" onclick="defaultLogin();">View details &raquo;</a></p>
         </div>
-        <div class="col-md-4">
-            <h2>Videos</h2>
-            <p>Watch videos of robots, cars, and airplanes verified with KeYmaera.</p>
-            <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
-        </div>
+        <!--<div class="col-md-4">-->
+            <!--<h2>Videos</h2>-->
+            <!--<p>Watch videos of robots, cars, and airplanes verified with KeYmaera.</p>-->
+            <!--<p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>-->
+        <!--</div>-->
     </div>
 
 </div> <!-- /container -->
