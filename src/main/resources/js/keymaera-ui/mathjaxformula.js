@@ -17,8 +17,6 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                   "divide" ,
                   "exp" ,
                   "neg" ,
-                  "derivative" ,
-                  "apply" ,
                   "function" ,
                   "programconstant" , //real-valued.
                   "number"   ,
@@ -41,9 +39,6 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                   "gt" ,
                   "formuladerivative" ,
                   "predicateconstant" ,
-                  "applypredicate" ,
-                  "true" ,
-                  "false" ,
                   //Programs.
                   "Choice" ,
                   "Sequence" ,
@@ -52,7 +47,14 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                   "NDetAssign" ,
                   "Test" ,
                   "ContEvolve" ,
+                  // Atoms
                   "ProgramConstant" ,
+                  "ContEvolveProgramConstant",
+                  "applypredicate" ,
+                  "true" ,
+                  "false" ,
+                  "apply",
+                  "derivative" ,
                   "Variable",
                   "Number"].reverse()
 
@@ -249,7 +251,11 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                         case "ContEvolveProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + ", " + right;
+                            if (c[1].name != "EmptyContEvolveProgram") {
+                              content = left + ", " + right;
+                            } else {
+                              content = left;
+                            }
                             break;
 
                         case "formuladerivative":
@@ -259,6 +265,18 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                         case "derivative":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "\\dot{" + left + "}";
+                            break;
+
+                        case "Anything": content = "?"; break;
+                        case "Nothing": content = ""; break;
+
+                        case "apply":
+                            var name = c[0]
+                            if (c[1].name != "Nothing") {
+                              content = name + parensIfNeeded(json, c[1], depth + 1);
+                            } else {
+                              content = name + "()";
+                            }
                             break;
 
                         default:
