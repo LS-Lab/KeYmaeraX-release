@@ -162,6 +162,10 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
               "label" : "\\(\\left(\\text{diff. cut}\\right) \\frac{\\Gamma ~\\vdash~ \\left[x'=\\theta \\& H \\right] C, \\Delta \\quad \\Gamma ~\\vdash~ \\left[x'=\\theta \\& H \\wedge C \\right]\\phi, \\Delta}{\\Gamma ~\\vdash~ \\left[x' = \\theta \\& H \\right] \\phi, \\Delta}\\)",
               "input" : [ { "name" : "0", "label" : "\\(C\\)", "placeholder" : "Formula", "type" : "text" } ]
             },
+        "dl.diffsolution" :
+            { "name" : "dl.diffsolution",
+              "label" : "\\(\\left(\\text{ODE solve}\\right) \\frac{\\Gamma, H \\wedge S ~\\vdash~ \\Delta}{\\Gamma ~\\vdash~ \\left[x' = \\theta \\& H \\right] \\phi, \\Delta} \\text{ where } S \\text{ solves } x'=\\theta\\)",
+            },
         "dl.qe" :
             { "name" : "dl.qe",
               "label" : "\\(\\left(\\text{QE}\\right) \\frac{\\text{QE}(\\phi)}{\\phi} \\)",
@@ -177,7 +181,7 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.equalityRewriting" :
             { "name" : "dl.equalityRewriting",
-              "label" : "\\(\\left(\\text{Foo}\\right) \\frac{Foo}{Bar}\\)",
+              "label" : "\\(\\left(= \\text{rewrite}\\right) \\frac{\\Gamma, \\phi(t) ~\\vdash \\psi(t), \\Delta}{\\Gamma, x=t, \\phi(x) ~\\vdash \\psi(x), \\Delta}\\)",
               "input" : [ { "name" : "0", "label" : "Assumption", "placeholder" : "ante:3", "type" : "text" },
                           { "name" : "1", "label" : "Position", "placeholder" : "succ:2,0", "type" : "text" },
                           { "name" : "2", "label" : "Disjoint", "placeholder" : "true", "type" : "text" }

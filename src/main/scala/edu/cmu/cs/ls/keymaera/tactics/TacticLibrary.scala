@@ -269,6 +269,7 @@ object TacticLibrary {
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.inductionT(inv)
   def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
   def diffInvariantSystemT = ODETactics.diffInvariantT
+  def diffSolutionT = ODETactics.diffSolution(None)
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
       new PositionTactic("Alpha Renaming") {
