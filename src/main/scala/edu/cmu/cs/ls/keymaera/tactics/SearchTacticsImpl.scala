@@ -76,11 +76,14 @@ object SearchTacticsImpl {
   }
 
   /**
-   * Locates a position in the antecedent where the specified position tactic is applicable.
+   * Locates a position in the antecedent where the specified position tactic is applicable and the specified condition
+   * on the formula in that position holds.
    * @param posT The position tactic.
+   * @param cond The condition, default is true
    * @return A new tactic that applies said tactic at the specified position.
    */
-  def locateAnte(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
+  def locateAnte(posT: PositionTactic, cond: Formula => Boolean = _ => true): Tactic =
+      new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
@@ -95,17 +98,20 @@ object SearchTacticsImpl {
   }
 
   /**
-   * Locates a position in the succedent where the specified position tactic is applicable.
+   * Locates a position in the succedent where the specified position tactic is applicable and the specified condition
+   * on the formula in that position holds.
    * @param posT The position tactic.
+   * @param cond The condition, default is true.
    * @return A new tactic that applies said tactic at the specified position.
    */
-  def locateSucc(posT: PositionTactic): Tactic = new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
+  def locateSucc(posT: PositionTactic, cond: Formula => Boolean = _ => true): Tactic =
+      new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
     override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.succ.length) {
         val pos = SuccPosition(i)
-        if(posT.applies(s, pos)) {
+        if (posT.applies(s, pos) && cond(s(pos))) {
           return Some(pos)
         }
       }
