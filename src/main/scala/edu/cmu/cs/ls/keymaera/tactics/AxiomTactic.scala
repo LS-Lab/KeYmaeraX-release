@@ -138,8 +138,9 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
                 assertT(0, 1) & succCont & axiomT(axiomName) & assertT(1, 1) & anteCont &
                   (AxiomCloseT | TacticLibrary.debugT(s"${getClass.getCanonicalName}: axiom close expected") & stopT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
-            case None => if (applicable(node)) throw new IllegalStateException(s"Tactic $name: applicable is true but no concrete tactic returned")
-                         else None
+            case None =>
+              assert(applicable(node), "tactic signalled applicability, but returned None")
+              None
           }
         case None => None
       }
@@ -256,7 +257,9 @@ abstract class CascadedAxiomTactic(name: String, axiomName: String) extends Posi
                 assertT(axiomInstance, SuccPosition(0)) & substitutions &
                 assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & anteCont & AxiomCloseT)
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
-            case None => None
+            case None =>
+              assert(applicable(node), "tactic signalled applicability, but returned None")
+              None
           }
         case None => None
       }
@@ -343,7 +346,9 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
               (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
 
           Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
-        case None => None
+        case None =>
+          assert(applicable(node), "tactic signalled applicability, but returned None")
+          None
       }
     }
   }
@@ -502,7 +507,9 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }
-        case None => None
+        case None =>
+          assert(applicable(node), "tactic signalled applicability, but returned None")
+          None
       }
     }
   }

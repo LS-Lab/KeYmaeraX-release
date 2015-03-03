@@ -114,6 +114,15 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
   }
 
+  it should "not be applicable outside context" in {
+    def axiomT: PositionTactic = new DerivativeAxiomInContextTactic("+' derive sum", "+' derive sum") {
+      override def applies(f: Formula) = true
+    }
+
+    val tactic = axiomT(SuccPosition(0, PosInExpr(1 :: Nil)))
+    tactic.applicable(new RootNode(sucSequent("(x+y)'>=0".asFormula))) shouldBe false
+  }
+
   "Propositional context axiom tactic" should "use desired result and renaming tactic constructed by subclasses" in {
     def propT: PositionTactic = new PropositionalInContextTactic("NNF") {
       override def applies(f: Formula) = f match {
