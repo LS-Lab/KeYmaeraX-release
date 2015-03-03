@@ -85,9 +85,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "Example 3a" should ""
   // TODO not implemented yet: evolution domain must hold in the beginning
-  ignore /*"Example 3a"*/ should "be provable" in {
+  ignore /*"Example 3a"*/ should "Example 3a be provable" in {
     val file = new File("examples/dev/t/casestudies/tutorial/example3a.key")
     val s = parseToSequent(file)
 
@@ -111,9 +110,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "Example 4a" should ""
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
-  ignore /*"Example 4a"*/ should "be provable" in {
+  ignore /*"Example 4a"*/ should "Example 4a be provable" in {
     val file = new File("examples/dev/t/casestudies/tutorial/example4a.key")
     val s = parseToSequent(file)
 
@@ -129,9 +127,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "Example 4b" should ""
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
-  ignore /*"Example 4b"*/ should "be provable" in {
+  ignore /*"Example 4b"*/ should "Example 4b be provable" in {
     val file = new File("examples/dev/t/casestudies/tutorial/example4b.key")
     val s = parseToSequent(file)
 
@@ -147,9 +144,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "Example 4c" should ""
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
-  ignore /*"Example 4c"*/ should "be provable" in {
+  ignore /*"Example 4c"*/ should "Example 4c be provable" in {
     val file = new File("examples/dev/t/casestudies/tutorial/example4c.key")
     val s = parseToSequent(file)
 
@@ -259,8 +255,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "Example 8" should ""
   // TODO not yet implemented: differential inequalities
+  // Example 8
 
   "Example 9a" should "be provable" in {
     val file = new File("examples/dev/t/casestudies/tutorial/example9a.key")
@@ -299,7 +295,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  "Example 10" should "be provable" in {
+  // TODO needs better assignment tactic (when ODE is not first statement in subsequent modality, like in [w:=0;][c:=0; v'=w, w'=5;]1>0)
+  ignore /* "Example 10"*/ should "Example 10 be provable" in {
     val file = new File("examples/dev/t/casestudies/tutorial/example10.key")
     val s = parseToSequent(file)
 
