@@ -206,6 +206,18 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
               "input" : [ { "name" : "0", "label" : "antecedent", "placeholder" : "ante:0", "type" : "text" },
                           { "name" : "1", "label" : "succedent", "placeholder" : "succ:1", "type" : "text" }
                ]
+            },
+        "dl.hide" :
+            { "name" : "dl.hide",
+              "label" : "\\(\\left(\\text{weaken}\\right) \\frac{\\Gamma ~\\vdash~ \\Delta}{\\Gamma,\\phi ~\\vdash~ \\psi,\\Delta}\\)"
+            },
+        "keymaera.arithmetic" :
+            { "name" : "keymaera.arithmetic",
+              "label" : "\\(\\left(\\text{QE}\\right) \\frac{QE(\\forall X. \\Phi(X) ~\\vdash~ \\Psi(X))}{\\Phi(X_1,\\ldots,X_n) ~\\vdash~ \\Psi(X_1,\\ldots,X_n)}\\)"
+            },
+        "keymaera.default":
+            { "name" : "keymaera.default",
+              "label" : "KeYmaera Master Tactic"
             }
     };
     var userTactics = {
@@ -375,9 +387,34 @@ keymaeraProofControllers.controller('ProofListCtrl',
 
     $scope.loadProof = function(proof) {
         proof.loadStatus = 'Loading'
+        alert("Loading proof");
         $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+            alert(data.loadStatus);
             proof.loadStatus = data.loadStatus
-        })
+            if (data.loadStatus == 'Loading') {
+              (function poll(){
+                 alert("Start polling");
+                 setTimeout(function() {
+                      $http.get('proofs/user/' + $cookies.userId + '/' + proof.id + '/status')
+                              .success(function(data) {
+                          if (data.loadStatus == 'Loading') {
+                            alert("Polling status")
+                            poll();
+                          } else {
+                            alert("Received status")
+                            proof.loadStatus = data.loadStatus
+                          }
+                      }).
+                      error(function(data, status, headers, config) {
+                          alert('Unable to poll proof status.')
+                      });
+                }, 1000);
+              })();
+            }
+        }).
+        error(function(data, status, headers, config) {
+            alert('Error loading proof.')
+        });
     }
 
     $scope.$emit('routeLoaded', {theview: 'allproofs'});
@@ -411,7 +448,30 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     $scope.loadProof = function(proof) {
         proof.loadStatus = 'Loading'
         $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
-            proof.loadStatus = data.loadStatus
+            proof.loadStatus = 'Loading'
+            $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+                proof.loadStatus = data.loadStatus
+                if (data.loadStatus == 'Loading') {
+                  (function poll(){
+                     setTimeout(function() {
+                          $http.get('proofs/user/' + $cookies.userId + '/' + proof.id + '/status')
+                                  .success(function(data) {
+                              if (data.status == undefined) {
+                                poll();
+                              } else {
+                                proof.loadStatus = data.status
+                              }
+                          }).
+                          error(function(data, status, headers, config) {
+                              alert('Unable to poll proof status.')
+                          });
+                    }, 1000);
+                  })();
+                }
+            }).
+            error(function(data, status, headers, config) {
+                alert('Error loading proof.')
+            });
         })
     }
     //Load the proof list and emit as a view.
@@ -594,16 +654,13 @@ keymaeraProofControllers.controller('TaskListCtrl',
             "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/" :
             "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/" + nodeId;
 
-        // TODO tree does not yet work with large data
-        /*
-        $http.get(uri)
-            .success(function(data) {
-                $scope.treedata = data;
-            })
-            .error(function() {
-                alert("error encountered while trying to retrieve the tree.")
-            })
-            */
+//        $http.get(uri)
+//            .success(function(data) {
+//                $scope.treedata = data;
+//            })
+//            .error(function() {
+//                alert("error encountered while trying to retrieve the tree.")
+//            })
     }
 
     $scope.$watch('agenda',
@@ -624,6 +681,54 @@ keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
     $scope.cancel = function () {
         $modalInstance.dismiss('cancel');
     };
+});
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Proof history
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+keymaeraProofControllers.controller('ProofHistoryCtrl',
+        function ($scope, $http, $cookies, $routeParams, Tactics, Agenda) {
+    $scope.fetchHistory = function() {
+      var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/proofhistory";
+      $http.get(uri)
+        .success(function(data) {
+          $scope.proofHistory = [];
+          for (var i = 0; i < data.length; i++) {
+            var tacticName = data[i].tactic.name;
+            var tactic = Tactics.getRuleTactics()[tacticName];
+            if (tactic !== undefined) {
+              var tacticInst = {
+                id: data[i].tactic.id,
+                name: tactic.name,
+                label: tactic.label,
+                tooltip: tactic.tooltip
+              }
+              var historyItem = {
+                index: i,
+                dispatched: data[i].dispatched,
+                tactic: tacticInst
+              }
+              $scope.proofHistory.push(historyItem)
+            } else {
+              alert("pretty printing undefined for tactic " + tacticName)
+            }
+          }
+        })
+        .error(function() {
+          alert("error encountered while trying to retrieve the proof history.")
+        })
+    }
+
+    $scope.fetchNodeInfo = function(dispatched) {
+      var uri = "/proofs/user/" + $cookies.userId + "/" + dispatched.id + "/agendaDetails/" + dispatched.nodeId;
+      $http.get(uri)
+        .success(function(data) {
+        Agenda.setSelectedTask(data);
+      })
+      .error(function() {
+        alert("error encountered while trying to retrieve the proof history details.")
+      })
+    }
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

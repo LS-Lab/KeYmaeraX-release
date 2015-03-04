@@ -180,6 +180,20 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val proofTask = path("proofs" / "user" / Segment / Segment / "agendaDetails" / Segment.?) { (userId, proofId, nodeId) => { pathEnd {
+    get {
+      val request = new GetProofNodeInfoRequest(database, userId, proofId, nodeId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new GetProofStatusRequest(database, userId, proofId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   val nodeFormulaTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics") { (userId, proofId, nodeId, formulaId) => { pathEnd {
     get {
       val nId = if (proofId.equals(nodeId)) None else Some(nodeId)
@@ -270,6 +284,13 @@ trait RestApi extends HttpService {
     }
   }}
 
+  val proofHistory = path("proofs" / "user" / Segment / Segment / "proofhistory") { (userId, proofId) => {
+    get {
+      val request = new GetProofHistoryRequest(database, userId, proofId)
+      complete(standardCompletion(request))
+    }
+  }}
+
   val devAction = path("dev" / Segment) { (action) => {
     get {
       if(action.equals("deletedb")) {
@@ -298,7 +319,9 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofList             ::
     openProof             ::
+    proofStatus           ::
     proofTasks            ::
+    proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
     nodeSaturateTactics   ::
@@ -306,6 +329,7 @@ trait RestApi extends HttpService {
     nodeSaturateTacticsByName ::
     dispatchedTactic      ::
     proofTree             ::
+    proofHistory          ::
     devAction             ::
     sequent               ::
     dashInfo              ::

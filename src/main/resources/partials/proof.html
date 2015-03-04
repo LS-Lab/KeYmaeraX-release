@@ -34,17 +34,18 @@
                     </a>
                 </div>
             </tab>
-            <tab>
+            <tab ng-click="fetchHistory()" ng-controller="ProofHistoryCtrl">
                 <tab-heading>
                     <i class="fa fa-sitemap"></i> Overview
                 </tab-heading>
                 <!--<div ng-include="'partials/nodes-renderer.html'"></div>-->
+                <div ng-include="'partials/proofhistory.html'"></div>
             </tab>
-            <tab>
-                <tab-heading>
-                    <i class="fa fa-tasks"></i> Progress
-                </tab-heading>
-            </tab>
+            <!--<tab>-->
+                <!--<tab-heading>-->
+                    <!--<i class="fa fa-tasks"></i> Progress-->
+                <!--</tab-heading>-->
+            <!--</tab>-->
         </tabset>
     </div>
 

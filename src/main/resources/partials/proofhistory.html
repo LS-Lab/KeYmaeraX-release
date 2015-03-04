@@ -1,0 +1,8 @@
+<div ng-controller="ProofHistoryCtrl">
+<p>{{proofHistory.length}} Steps</p>
+<div class="list-group">
+    <a class="list-group-item" ng-repeat="item in proofHistory | orderBy:'index'" ng-click="fetchNodeInfo(item.dispatched)">
+        <span k4-mathjaxbind="item.tactic.label"></span>
+    </a>
+</div>
+</div>

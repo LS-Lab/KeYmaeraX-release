@@ -233,8 +233,8 @@ object KeYmaeraInterface {
    * @return The task status.
    */
   def getTaskStatus(taskId : String) : TaskStatus.Value = {
-    if (containsTask(taskId)) TaskStatus.Loaded
-    else if (isLoadingTask(taskId)) TaskStatus.Loading
+    if (isLoadingTask(taskId)) TaskStatus.Loading
+    else if (containsTask(taskId)) TaskStatus.Loaded
     else TaskStatus.NotLoaded
   }
 
@@ -254,9 +254,7 @@ object KeYmaeraInterface {
         val seq = Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f) )
         val r = new RootNode(seq)
         TaskManagement.addTask(r, taskId)
-        val result = json(r, taskId, 0, taskId, printSequent = false)
-        TaskManagement.finishedLoadingTask(taskId)
-        result
+        json(r, taskId, 0, taskId, printSequent = false)
       case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
     }
   }

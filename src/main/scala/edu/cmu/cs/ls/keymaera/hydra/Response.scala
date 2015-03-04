@@ -174,6 +174,13 @@ class GetProblemResponse(proofid:String, tree:String) extends Response {
 }
 
 //class TacticDispatchedResponse(proofId: String, taskId: String, nodeId: String, tacticId: String, tacticInstId: String) extends Response {
+class ProofIsLoadedResponse(proofId: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "status" -> JsString("Loaded")
+  )
+}
+
 class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
   val nid = t.nodeId match {
     case Some(nodeId) => nodeId
@@ -226,6 +233,14 @@ class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Res
   )})
 
   val json = JsArray(objects)
+}
+
+class ProofNodeInfoResponse(proofId: String, nodeId: Option[String], nodeJson: String) extends Response {
+  val json = JsObject(
+    "proofId" -> JsString(proofId),
+    "nodeId" -> JsString(nodeId match { case Some(nId) => nId case None => "" }),
+    "proofNode" -> JsonParser(nodeJson)
+  )
 }
 
 class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
@@ -289,6 +304,25 @@ class AngularTreeViewResponse(tree : String) extends Response {
       )
     }
   }
+}
+
+class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) extends Response {
+  val json = JsArray(history.map { case (dispatched, tactic) => convert(dispatched, tactic)})
+
+  private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
+    "dispatched" -> JsObject(
+      "id" -> JsString(dispatched.id),
+      "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
+      "status" -> JsString(dispatched.status.toString),
+      "input" -> convertInput(dispatched.input)
+    ),
+    "tactic" -> JsObject(
+      "id" -> JsString(tactic.tacticId),
+      "name" -> JsString(tactic.name)
+    )
+  )
+
+  private def convertInput(input: Map[Int, String]) = JsArray(/* TODO */)
 }
 
 class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {

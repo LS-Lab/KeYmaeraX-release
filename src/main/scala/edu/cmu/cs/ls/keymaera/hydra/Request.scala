@@ -11,6 +11,7 @@ import java.util.Calendar
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
@@ -164,6 +165,8 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
       val nextStep = steps(next)
       KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
         Some(tacticCompleted(steps, next + 1)), nextStep.input, nextStep.auto)
+    } else {
+      TaskManagement.finishedLoadingTask(proofId)
     }
   }
 }
@@ -304,6 +307,55 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
     }
   }
 }
+
+class GetProofHistoryRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).map(_.get).
+      map(step => step -> db.getTactic(step.tacticsId).getOrElse(
+        throw new IllegalStateException(s"Proof refers to unknown tactic ${step.tacticsId}")))
+    if (steps.nonEmpty) {
+      new ProofHistoryResponse(steps) :: Nil
+    } else new ErrorResponse(new Exception("Could not find a proof history associated with these ids.")) :: Nil
+  }
+}
+
+class GetProofNodeInfoRequest(db : DBAbstraction, userId : String, proofId : String, nodeId: Option[String]) extends Request {
+  def getResultingResponses() = {
+    // TODO refactor into template method for all tasks that interact with the proof
+    if (!KeYmaeraInterface.containsTask(proofId)) {
+      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
+        new ProofNotLoadedResponse(proofId) :: Nil
+      } else {
+        new ProofIsLoadingResponse(proofId) :: Nil
+      }
+    } else {
+      val proofNode = KeYmaeraInterface.getSubtree(proofId, nodeId, 0, printSequent = true) match {
+        case Some(pn) => pn
+        case None => throw new IllegalStateException("No subtree for goal " + nodeId + " in proof " + proofId)
+      }
+      new ProofNodeInfoResponse(proofId, nodeId, proofNode) :: Nil
+    }
+  }
+}
+
+class GetProofStatusRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+  def getResultingResponses() = {
+    if (!KeYmaeraInterface.containsTask(proofId)) {
+      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
+        new ProofNotLoadedResponse(proofId) :: Nil
+      } else {
+        new ProofIsLoadingResponse(proofId) :: Nil
+      }
+    } else {
+      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
+        new ProofIsLoadedResponse(proofId) :: Nil
+      } else {
+        new ProofIsLoadingResponse(proofId) :: Nil
+      }
+    }
+  }
+}
+
 
 /**
  * like GetProofTreeRequest, but fetches 0 instead of 1000 subnodes.
