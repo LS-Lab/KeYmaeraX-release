@@ -118,7 +118,8 @@ object MongoDB extends DBAbstraction {
         model.getAs[String]("date").getOrElse(""),
         model.getAs[String]("fileContents").getOrElse(""),
         model.getAs[String]("description").getOrElse(""),
-        model.getAs[String]("pubLink").getOrElse("")
+        model.getAs[String]("pubLink").getOrElse(""),
+        model.getAs[String]("title").getOrElse("")
       )
     ).toList
   }
@@ -135,7 +136,8 @@ object MongoDB extends DBAbstraction {
       result.getAs[String]("date").getOrElse(""),
       result.getAs[String]("fileContents").getOrElse(""),
       result.getAs[String]("description").getOrElse(""),
-      result.getAs[String]("pubLink").getOrElse("")
+      result.getAs[String]("pubLink").getOrElse(""),
+      result.getAs[String]("title").getOrElse("")
     )).toList.last
   }
 

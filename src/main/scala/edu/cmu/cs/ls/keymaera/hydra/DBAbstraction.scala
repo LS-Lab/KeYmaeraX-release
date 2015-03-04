@@ -27,7 +27,7 @@ object DispatchedTacticStatus extends Enumeration {
  * @param pubLink Link to additional information (paper) on the model.
  */
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String,
-                val description:String, val pubLink:String)
+                val description:String, val pubLink:String, val title:String)
 
 /**
  * Data object for proofs. A proof

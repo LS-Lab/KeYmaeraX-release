@@ -66,7 +66,8 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "date" -> JsString(modelpojo.date),
     "description" -> JsString(modelpojo.description),
     "pubLink" -> JsString(modelpojo.pubLink),
-    "keyFile" -> JsString(modelpojo.keyFile)
+    "keyFile" -> JsString(modelpojo.keyFile),
+    "title" -> JsString(modelpojo.title)
   ))
 
   val json = JsArray(objects)
@@ -120,7 +121,8 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "date" -> JsString(model.date),
     "description" -> JsString(model.description),
     "pubLink" -> JsString(model.pubLink),
-    "keyFile" -> JsString(model.keyFile)
+    "keyFile" -> JsString(model.keyFile),
+    "title" -> JsString(model.title)
   )
 }
 
