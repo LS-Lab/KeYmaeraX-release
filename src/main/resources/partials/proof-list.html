@@ -17,10 +17,10 @@
         </tr>
         </thead>
         <tbody>
-        <tr ng-repeat="proof in allproofs">
+        <tr ng-repeat="proof in allproofs | orderBy:'name'">
             <td>{{ proof.id }}</td>
-            <td>{{ proof.modelName }}</td>
             <td>{{ proof.name }}</td>
+            <td>{{ proof.modelName }}</td>
             <td>{{ proof.date }}</td>
             <td>{{ proof.stepCount }}</td>
             <td><span ng-if="proof.status" class="fa fa-check"></span>
