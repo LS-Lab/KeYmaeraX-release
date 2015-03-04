@@ -326,6 +326,7 @@ class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) e
   private def convert(dispatched: DispatchedTacticPOJO, tactic: TacticPOJO): JsValue = JsObject(
     "dispatched" -> JsObject(
       "id" -> JsString(dispatched.id),
+      "proofId" -> JsString(dispatched.proofId),
       "nodeId" -> JsString(dispatched.nodeId match { case Some(nId) => nId case _ => "" }),
       "status" -> JsString(dispatched.status.toString),
       "input" -> convertInput(dispatched.input)

@@ -684,31 +684,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
 //            })
     }
 
-    $scope.$watch('agenda',
-        function (newTasks) { if (newTasks) Agenda.setTasks(newTasks); }
-    );
-    $scope.$watch('selectedTask',
-        function() { return Agenda.getSelectedTask(); },
-        function(t) { if (t) Agenda.setSelectedTask(t); }
-    );
-    $scope.$watch('dispatchedTactics',
-        function() { return Tactics.getDispatchedTactics(); },
-        function(tId) { Tactics.removeDispatchedTactics(tId); }
-    );
-  });
-
-keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $modalInstance, proofId) {
-    $scope.cancel = function () {
-        $modalInstance.dismiss('cancel');
-    };
-});
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Proof history
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-keymaeraProofControllers.controller('ProofHistoryCtrl',
-        function ($scope, $http, $cookies, $routeParams, Tactics, Agenda) {
     $scope.fetchHistory = function() {
       var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/proofhistory";
       $http.get(uri)
@@ -741,15 +716,36 @@ keymaeraProofControllers.controller('ProofHistoryCtrl',
     }
 
     $scope.fetchNodeInfo = function(dispatched) {
-      var uri = "/proofs/user/" + $cookies.userId + "/" + dispatched.id + "/agendaDetails/" + dispatched.nodeId;
+      var uri = "/proofs/user/" + $cookies.userId + "/" + dispatched.proofId + "/agendaDetails/" + dispatched.nodeId;
       $http.get(uri)
         .success(function(data) {
-        Agenda.setSelectedTask(data);
+        data.readOnly = true;
+        $scope.selectedTask = data;
+//        Agenda.setSelectedTask(data);
       })
       .error(function() {
         alert("error encountered while trying to retrieve the proof history details.")
       })
     }
+
+    $scope.$watch('agenda',
+        function (newTasks) { if (newTasks) Agenda.setTasks(newTasks); }
+    );
+    $scope.$watch('selectedTask',
+        function() { return Agenda.getSelectedTask(); },
+        function(t) { if (t) Agenda.setSelectedTask(t); }
+    );
+    $scope.$watch('dispatchedTactics',
+        function() { return Tactics.getDispatchedTactics(); },
+        function(tId) { Tactics.removeDispatchedTactics(tId); }
+    );
+  });
+
+keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
+        function($scope, $http, $modalInstance, proofId) {
+    $scope.cancel = function () {
+        $modalInstance.dismiss('cancel');
+    };
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
