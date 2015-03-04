@@ -552,9 +552,11 @@ object KeYmaeraInterface {
 
  // def json(p: ProofNode): String = JSONConverter(p)
 
-  private def json(p: ProofNode, id: String, l: Int, rootId: String, printSequent: Boolean): String = JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x), printSequent).prettyPrint
+  private def json(p: ProofNode, id: String, l: Int, rootId: String, printSequent: Boolean): String =
+    JSONConverter(p, id, l, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x), printSequent).toString
 
-  private def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String, printSequent: Boolean): String = JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x), printSequent).prettyPrint
+  private def json(p: ProofNode, id: String, filter: (ProofStepInfo => Boolean), rootId: String, printSequent: Boolean): String =
+    JSONConverter(p, id, filter, (x: ProofNode, i: String) => TaskManagement.addNode(rootId, i, x), printSequent).toString
 
   private def getActualNode(taskId : String, nodeIdOpt : Option[String]) : Option[ProofNode] = nodeIdOpt match {
     case Some(nodeId) => TaskManagement.getNode(taskId, nodeId)
