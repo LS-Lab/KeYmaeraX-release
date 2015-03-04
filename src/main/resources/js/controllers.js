@@ -248,6 +248,8 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $http.get('/users/' + $cookies.userId + '/dashinfo')
         .success(function(data) {
             $scope.open_proof_count = data.open_proof_count;
+            $scope.all_models_count = data.all_models_count;
+            $scope.proved_models_count = data.proved_models_count;
         })
 
     $scope.$emit('routeLoaded', {theview: 'dashboard'});

@@ -291,10 +291,12 @@ class AngularTreeViewResponse(tree : String) extends Response {
   }
 }
 
-class DashInfoResponse(openProofs:Int) extends Response {
+class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
   override val schema = Some(new File(SCHEMA_DIRECTORY + "DashInfoResponse.js"))
   val json = JsObject(
-    "open_proof_count" -> JsNumber(openProofs)
+    "open_proof_count" -> JsNumber(openProofs),
+    "all_models_count" -> JsNumber(allModels),
+    "proved_models_count" -> JsNumber(provedModels)
   )
 }
 

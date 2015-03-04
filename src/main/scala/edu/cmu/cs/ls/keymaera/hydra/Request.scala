@@ -68,8 +68,10 @@ class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
 class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
   override def getResultingResponses() : List[Response] = {
     val openProofCount : Int = db.openProofs(userId).length
+    val allModelsCount: Int = db.getModelList(userId).length
+    val provedModelsCount: Int = db.getModelList(userId).flatMap(m => db.getProofsForModel(m.modelId)).count(_.closed)
 
-    new DashInfoResponse(openProofCount) :: Nil
+    new DashInfoResponse(openProofCount, allModelsCount, provedModelsCount) :: Nil
   }
 }
 
