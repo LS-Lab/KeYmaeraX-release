@@ -731,11 +731,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
       })
     }
 
-//    $scope.inRange = function(historyItem) {
-//      return ($scope.currentProofHistoryPage - 1) * $scope.proofHistoryItemsPerPage  <= historyItem.index
-//        & historyItem.index < $scope.currentProofHistoryPage * $scope.proofHistoryItemsPerPage;
-//    }
-
     $scope.$watch('agenda',
         function (newTasks) { if (newTasks) Agenda.setTasks(newTasks); }
     );
