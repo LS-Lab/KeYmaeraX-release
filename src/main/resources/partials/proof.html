@@ -34,7 +34,7 @@
                     </a>
                 </div>
             </tab>
-            <tab ng-click="fetchHistory()" ng-controller="ProofHistoryCtrl">
+            <tab ng-click="fetchHistory()">
                 <tab-heading>
                     <i class="fa fa-sitemap"></i> Overview
                 </tab-heading>
@@ -60,7 +60,7 @@
                             read-only="selectedTask.readOnly"></k4-sequent>
             </div>
         </div>
-        <div class="row">
+        <div class="row" ng-if="!selectedTask.readOnly">
             <!-- The combinator language tactic input form -->
             <form novalidate class="simple-form" ng-submit="execute()" ng-controller="TaskListCtrl">
                 <div class="input-group">
