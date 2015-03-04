@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 import com.mongodb.casbah.Imports._
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
+import edu.cmu.cs.ls.keymaera.hydra.DispatchedTacticStatus
 import org.bson.types.ObjectId
 
 import scala.collection.mutable.ListBuffer
@@ -17,6 +18,8 @@ object MongoDB extends DBAbstraction {
   val proofs  = mongoClient("keymaera")("proofs")
   val logs    = mongoClient("keymaera")("logs")
   val tactics = mongoClient("keymaera")("tactics")
+  val dispatchedTactics = mongoClient("keymaera")("dispatchedTactics")
+  val dispatchedCLTerms = mongoClient("keymaera")("dispatchedCLTerms")
 
   def cleanup() = {
     config.drop()
@@ -25,6 +28,8 @@ object MongoDB extends DBAbstraction {
     proofs.drop()
     logs.drop()
     tactics.drop()
+    dispatchedTactics.drop()
+    dispatchedCLTerms.drop()
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -325,6 +330,13 @@ object MongoDB extends DBAbstraction {
     }
   }
 
+  override def getDispatchedTermOrTactic(tId : String) : Option[AbstractDispatchedPOJO] = {
+    getDispatchedTactics(tId) match {
+      case Some(x) => Some(x)
+      case None    => getDispatchedCLTerm(tId)
+    }
+  }
+
   override def updateDispatchedTactics(tactic : DispatchedTacticPOJO) = {
     val builder = MongoDBObject.newBuilder
     builder += "_id"          -> new ObjectId(tactic.id)
@@ -358,4 +370,84 @@ object MongoDB extends DBAbstraction {
 
     proofs.update(query, update)
   }
+
+  override def createDispatchedCLTerm(taskId : String, nodeId : Option[String], clTerm : String) : String = {
+    val builder = MongoDBObject.newBuilder
+    builder += "_id" -> new ObjectId()
+    builder += "proofId" -> new ObjectId(taskId)
+    if(nodeId.isDefined) builder += "nodeId" -> nodeId.get
+    builder += "clTerm" -> clTerm
+    builder += "status" -> DispatchedTacticStatus.Prepared.toString()
+
+    val result = builder.result()
+
+    dispatchedCLTerms.insert(result)
+    result.get("_id").toString()
+  }
+
+  override def getDispatchedCLTerm(id : String) = {
+    val q = MongoDBObject("_id" -> new ObjectId(id))
+    val result = dispatchedCLTerms.find(q)
+    result.map(x => new DispatchedCLTermPOJO(
+      x.getAs[ObjectId]("_id").orNull.toString,
+      x.getAs[ObjectId]("proofId").orNull.toString(),
+      if(x.containsField("nodeId")) Some(x.getAs[String]("nodeId").get) else None,
+      x.getAs[String]("clTerm").orNull,
+      if(x.containsField("status")) Some(DispatchedTacticStatus.withName(x.getAs[String]("status").orNull)) else None
+    )).toList.headOption
+  }
+
+  override def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO) = {
+    val builder = MongoDBObject.newBuilder
+    builder += "_id"          -> new ObjectId(termToUpdate.id)
+    builder += "proofId"      -> new ObjectId(termToUpdate.proofId)
+    builder += "clTerm"        -> termToUpdate.clTerm
+    if (termToUpdate.nodeId.isDefined) builder += "nodeId" -> termToUpdate.nodeId.get
+    if(termToUpdate.status.isDefined) builder += "status" -> termToUpdate.status.toString()
+
+    val update = $set("dispatchedCLTerm.$" -> builder.result())
+
+    val query = MongoDBObject("dispatchedCLTerm._id" -> new ObjectId(termToUpdate.id))
+    dispatchedCLTerms.update(query, update)
+  }
+
+  override def updateProofOnCLTermCompletion(proofId : String, termId : String) = {
+    val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
+
+    //Add to the list of completed tactics.
+    val query = MongoDBObject("_id" -> new ObjectId(proofId))
+    val results = proofs.find(query)
+    if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
+    if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
+    val update = $addToSet("completedSteps" -> new ObjectId(termId))
+    proofs.update(query, update)
+
+
+    //Update the term itself.
+    val update2 = $set("dispatchedCLTerm.status" -> DispatchedTacticStatus.Finished.toString)
+    val query2 = MongoDBObject("dispatchedCLTerm._id" -> new ObjectId(termId))
+    dispatchedCLTerms.update(query2, update2)
+  }
+
+  private def updateProo2fOnTacticCompletion(proofId: String, tId: String): Unit = {
+    val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
+
+    val query = MongoDBObject("dispatchedTactics._id" -> new ObjectId(tId))
+
+    val results = proofs.find(query)
+    if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
+    if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
+
+    val update = $addToSet("completedSteps" -> new ObjectId(tId)) ++ $set(
+      // TODO update step count
+      if (openGoals == 0) "closed" -> true else "closed" -> false,
+      "dispatchedTactics.$.status" -> DispatchedTacticStatus.Finished.toString
+    )
+
+    proofs.update(query, update)
+  }
 }
+
+
+
+

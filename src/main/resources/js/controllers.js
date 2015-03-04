@@ -583,6 +583,27 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.setSelected = function(agendaItem) {
         $scope.selectedTask = agendaItem;
     }
+
+    //Executes a combinator language term.
+    $scope.execute = function() {
+        var nodeId = this.selectedTask.nodeId;
+        var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/nodes/" + nodeId + "/tactics/runTerm"
+        var dataObj = {clTerm: $scope.clTerm};
+
+        $http.post(uri, dataObj)
+             .success(function(data) {
+                if(data.errorThrown) {
+                    alert("Error when trying to run your custom tactic: " + JSON.stringify(data))
+                }
+                else {
+                    //todo : update the running tasks...
+                }
+             })
+             .error(function() {
+                alert("encountered error during post on runTerm.")
+             })
+    }
+
     $scope.isSelected = function(agendaItem) {
         $scope.selectedTask == agendaItem;
     }

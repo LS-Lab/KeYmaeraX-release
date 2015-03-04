@@ -51,6 +51,9 @@ class ProofPOJO(val proofId:String, val modelId:String, val name:String, val des
  */
 class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kind : TacticKind.Value)
 
+
+abstract class AbstractDispatchedPOJO
+
 /**
  * Data object for a tactic instance running on the specified formula of a particular proof (node).
  * @param id Identifies the tactic instance.
@@ -59,9 +62,11 @@ class TacticPOJO(val tacticId:String, val name:String, val clazz:String, val kin
  * @param formulaId Identifies the formula.
  * @param tacticsId Identifies the tactic that is being run.
  */
-class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
+case class DispatchedTacticPOJO(val id:String, val proofId:String, val nodeId:Option[String], val formulaId:Option[String],
                            val tacticsId:String, val input:Map[Int,String],
-                           val auto:Option[PositionTacticAutomation.Value], val status:DispatchedTacticStatus.Value)
+                           val auto:Option[PositionTacticAutomation.Value], val status:DispatchedTacticStatus.Value) extends AbstractDispatchedPOJO
+
+case class DispatchedCLTermPOJO(val id : String, val proofId : String, val nodeId : Option[String], val clTerm : String, val status:Option[DispatchedTacticStatus.Value]) extends AbstractDispatchedPOJO
 
 class ConfigurationPOJO(val name: String, val config: Map[String,String])
 
@@ -117,5 +122,12 @@ trait DBAbstraction {
                               status:DispatchedTacticStatus.Value) : String
   def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
   def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
+  def getDispatchedTermOrTactic(tId : String) : Option[AbstractDispatchedPOJO]
   def updateProofOnTacticCompletion(proofId: String, tId: String)
+
+  def createDispatchedCLTerm(taskId : String, nodeId : Option[String], clTerm : String) : String
+  def getDispatchedCLTerm(id : String) : Option[DispatchedCLTermPOJO]
+  def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
+  def updateProofOnCLTermCompletion(proofId : String, termId : String)
+
 }

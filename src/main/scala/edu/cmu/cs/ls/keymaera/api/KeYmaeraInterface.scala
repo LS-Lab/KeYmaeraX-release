@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
 import edu.cmu.cs.ls.keymaera.core.Sequent
+import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLParser, CLInterpreter}
 
 import scala.reflect.runtime.universe.{TypeTag,typeOf}
 
@@ -427,6 +428,22 @@ object KeYmaeraInterface {
         Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(t, node))
       case None => None
     }
+  }
+
+  /**
+   * @throws Exception -s...
+   */
+  def runTerm(termId : String, proofId : String, nodeId : Option[String], term : String, callback : Option[String => (String, Option[String], String) => Unit]) = {
+    val (node,position) = getPosition(proofId, nodeId, None)
+    val tactic = CLInterpreter.construct(CLParser(term).getOrElse(throw new Exception("failed to parse.")))
+    RunningTactics.add(tactic, termId)
+    tactic.registerCompletionEventListener(_ => {
+      generateIds()(termId)(proofId, nodeId, term)
+      callback.foreach(_(termId)(proofId, nodeId, term))
+    })
+    tactic.updateInfo = (p : ProofNodeInfo) => p.infos += ("termId" -> termId)
+    tactic.updateStepInfo = (p : ProofStepInfo) => p.infos += ("termId" -> termId)
+    Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
   }
 
   def isRunning(tacticInstanceId: String): Boolean = {

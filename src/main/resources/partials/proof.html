@@ -59,6 +59,18 @@
                             read-only="selectedTask.readOnly"></k4-sequent>
             </div>
         </div>
+        <div class="row">
+            <!-- The combinator language tactic input form -->
+            <form novalidate class="simple-form" ng-submit="execute()" ng-controller="TaskListCtrl">
+                <div class="input-group">
+                    <label for="clTerm">Combinator Language Term</label>
+                    <textarea ng-model="clTerm" id="clTerm" class="form-control" /></textarea>
+                </div>
+                <div class="input-group">
+                    <input type="submit" value="Run Custom Tactic" class="form-control" />
+                </div>
+            </form>
+        </div>
     </div>
 
 </div>
