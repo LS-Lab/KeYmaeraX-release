@@ -640,6 +640,9 @@ keymaeraProofControllers.controller('TaskListCtrl',
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Subsection on selecting tasks
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    $scope.proofHistoryPageSize = 10
+    $scope.proofHistoryNumPages = 5
+
     $scope.setSelected = function(agendaItem) {
         $scope.selectedTask = agendaItem;
     }
@@ -689,6 +692,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
       $http.get(uri)
         .success(function(data) {
           $scope.proofHistory = [];
+          $scope.currentProofHistoryPage = 1;
           for (var i = 0; i < data.length; i++) {
             var tacticName = data[i].tactic.name;
             var tactic = Tactics.getRuleTactics()[tacticName];
@@ -721,12 +725,16 @@ keymaeraProofControllers.controller('TaskListCtrl',
         .success(function(data) {
         data.readOnly = true;
         $scope.selectedTask = data;
-//        Agenda.setSelectedTask(data);
       })
       .error(function() {
         alert("error encountered while trying to retrieve the proof history details.")
       })
     }
+
+//    $scope.inRange = function(historyItem) {
+//      return ($scope.currentProofHistoryPage - 1) * $scope.proofHistoryItemsPerPage  <= historyItem.index
+//        & historyItem.index < $scope.currentProofHistoryPage * $scope.proofHistoryItemsPerPage;
+//    }
 
     $scope.$watch('agenda',
         function (newTasks) { if (newTasks) Agenda.setTasks(newTasks); }
