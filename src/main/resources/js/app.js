@@ -33,6 +33,9 @@ keymaeraProofApp.config(['$routeProvider',
       when('/tutorials', {
         templateUrl: 'partials/tutorials.html'
       }).
+      when('/syntax', {
+        templateUrl: 'partials/syntax.html'
+      }).
       when('/models/:modelId', {
         templateUrl: 'partials/model-detail.html',
         controller: 'ModelDetailCtrl'

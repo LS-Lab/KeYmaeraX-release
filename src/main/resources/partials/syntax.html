@@ -1,0 +1,134 @@
+<div class="row">
+    <div class="col-md-10">
+        <h1>Hybrid Program Syntax</h1>
+
+        <h3></h3>
+
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <td>Mathematical Syntax</td>
+                <td>ASCII Syntax</td>
+                <td>Effect</td>
+            </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>\(x := \theta\)</td>
+                    <td><code>x := y</code></td>
+                    <td>discrete assignment of the value of term \(\theta\) to variable \(x\) (jump)</td>
+                </tr>
+                <tr>
+                    <td>\(x := *\)</td>
+                    <td><code>x := *</code></td>
+                    <td>nondeterministic assignment of an arbitrary real number to \(x\) </td>
+                </tr>
+                <tr>
+                    <td>\(x_1'=\theta_1, \ldots x_n'=\theta_n \& F\)</td>
+                    <td><code>x'=y & x >= 0</code></td>
+                    <td>continuous evolution of \(x_i\) along the differential equation system \(x_i' = \theta_i\)
+                        restricted to evolution domain \(F\)</td>
+                </tr>
+                <tr>
+                    <td>\(\alpha;~\beta\)</td>
+                    <td><code>x := 5; y := x</code></td>
+                    <td>sequential composition where \(\beta\) starts after \(\alpha\) finishes</td>
+                </tr>
+                <tr>
+                    <td>\(\alpha \cup \beta\)</td>
+                    <td><code>x := 5 ++ y := x</code></td>
+                    <td>nondeterministic choice, following either alternative \(\alpha\) or \(\beta\)</td>
+                </tr>
+                <tr>
+                    <td>\(\alpha^*\)</td>
+                    <td><code>{x := x+1}*</code></td>
+                    <td>nondeterministic repetition, repeating \(\alpha\) \(n\) times for any \(n \in \mathbb{N}\)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>
+            The syntax of hybrid programs is shown together with an informal semantics in the table above. The basic terms
+            (called \(\theta\) in the table) are either rational number constants, real-valued variables or (possibly
+            nonlinear) polynomial or rational arithmetic expressions built from those.
+            The effect of \(x := \theta\) is an instantaneous discrete jump
+            assigning the value of \(\theta\) to the variable \(x\). The term \(\theta\) can be an arbitrary polynomial.
+            For a car with current velocity \(v\) the deceleration necessary to come to a stop within distance \(m\)
+            is given by \(-\frac{v^2}{2 m}\).
+            The controller could assign this value to the acceleration
+            by the assignment \(a := −\frac{v^2}{2 m}\), provided \(m \neq 0\).
+        </p>
+        <p>
+            The effect of \(x' = \theta \& F\) is an ongoing continuous evolution
+            controlled by the differential equation \(x' = \theta\) that
+            is restricted to remain within the evolution domain \(F\),
+            which is a formula of real arithmetic over unprimed variables.
+            The evolution is allowed to stop at any point in \(F\)
+            but it must not leave \(F\). Systems of differential equations
+            and higher-order derivatives are defined accordingly:
+            \(p' = v, v' = −B \& v \geq 0\), for instance, characterizes
+            the braking mode of a car with braking force \(B\) that
+            holds within \(v \geq 0\) and stops any time before \(v < 0\).
+        </p>
+        <p>
+            For discrete control, the test action \(?F\) (read as "assume
+            F") is used as a condition statement. It succeeds
+            without changing the state if \(F\) is true in the current
+            state, otherwise it aborts all further evolution. For example,
+            a car controller can check whether the chosen acceleration
+            is within physical limits by \(?(−B \leq a \leq A)\).
+            If a computation branch does not satisfy this condition,
+            that branch is discontinued and aborts. From a modeling
+            perspective, tests should only fail if a branch is not
+            possible in the original system, as it will no longer be
+            possible in the model of the system. Therefore, during
+            verification we consider only those branches of a system
+            where all tests succeed.
+        </p>
+        <p>
+            From these basic constructs, more complex hybrid
+            programs can be built in KeYmaera similar to regular
+            expressions. The sequential composition \(\alpha;~\beta\) expresses
+            that hybrid program \(\beta\) starts after hybrid program \(\alpha\) finishes. The nondeterministic choice
+            \(\alpha \cup \beta\) expresses alternatives in the behavior of the hybrid
+            system that are selected nondeterministically. Nondeterministic
+            repetition \(\alpha^*\) says that the hybrid program \(\alpha\)
+            repeats an arbitrary number of times, including zero.
+        </p>
+
+
+        <h3>Example</h3>
+        <p>
+
+        </p>
+
+        <code><pre>
+        Functions.
+            R A.        /* maximum acceleration */
+            R B.        /* maximum braking */
+            R a().      /* current acceleration: actuated */
+        End.
+
+        ProgramVariables.
+            R x.        /* position */
+            R v.        /* velocity */
+            R a.        /* current acceleration: controller choice */
+        End.
+
+        Problem.
+            v >= 0 & A > 0 & B > 0              /* initial condition */
+            ->
+            [                                   /* system dynamics */
+            { {a := A ++ a := 0 ++ a := -B};    /* non-deterministic choice between assignments */
+              ?a()=a;                           /* test for equality */
+              x' = v, v' = a() & v >= 0;        /* differential equation system */
+            }* @invariant(v >= 0)               /* repeat transitions */
+            ] v >= 0                            /* safety/postcondition */
+        End.
+        </pre></code>
+    </div>
+</div>
+
+<script>
+    MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+</script>
