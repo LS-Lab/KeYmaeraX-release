@@ -216,6 +216,16 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val runClTerm = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runTerm") { (userId, proofId, nodeId) => { pathEnd {
+    post {
+      entity(as[String]) { params => {
+        val clTerm = JsonParser(params).asJsObject.fields.last._2.asInstanceOf[JsString].value
+        val request = new RunCLTermRequest(database, userId, proofId, Some(nodeId), clTerm)
+        complete(standardCompletion(request))
+      }}
+    }
+  }}}
+
   val nodeSaturateTactics = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "formulas" / Segment / "tactics" / "run" / Segment / Segment) { (userId, proofId, nodeId, formulaId, tacticId, automation) => { pathEnd {
     post {
       entity(as[String]) { params => {
@@ -324,6 +334,7 @@ trait RestApi extends HttpService {
     proofTask             ::
     nodeFormulaTactics    ::
     nodeRunTactics        ::
+    runClTerm             ::
     nodeSaturateTactics   ::
     nodeRunTacticsByName  ::
     nodeSaturateTacticsByName ::

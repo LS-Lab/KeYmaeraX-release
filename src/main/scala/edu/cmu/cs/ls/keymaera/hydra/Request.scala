@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLParser, CLInterpreter}
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -146,11 +147,17 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
     if (!KeYmaeraInterface.containsTask(proof.proofId)) {
       val model = db.getModel(proof.modelId)
       KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
-      val steps = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTactics(step)).map(_.get)
+      val steps : List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
       if (steps.nonEmpty) {
-        val firstStep = steps.head
-        KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-          firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
+          steps.head match {
+          case firstStep : DispatchedTacticPOJO => {
+            KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
+              firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
+          }
+          case firstStep : DispatchedCLTermPOJO => {
+            KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)))
+          }
+        }
       }
     }
 
@@ -159,12 +166,20 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
     new OpenProofResponse(proof, status.toString) :: Nil
   }
 
-  private def tacticCompleted(steps : Array[DispatchedTacticPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
+  //@todo To improve readability, move the once-unwinding above and this implementation into a single function.
+  private def tacticCompleted(steps : Array[AbstractDispatchedPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
                                                                                tacticId: String) {
     if (next < steps.length) {
       val nextStep = steps(next)
-      KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
-        Some(tacticCompleted(steps, next + 1)), nextStep.input, nextStep.auto)
+      steps(next) match {
+        case nextStep : DispatchedTacticPOJO => {
+          KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
+            Some(tacticCompleted(steps, next + 1)), nextStep.input, nextStep.auto)
+        }
+        case nextStep : DispatchedCLTermPOJO => {
+          KeYmaeraInterface.runTerm(nextStep.id, nextStep.proofId, nextStep.nodeId, nextStep.clTerm, Some(tacticCompleted(steps, next + 1)))
+        }
+      }
     } else {
       TaskManagement.finishedLoadingTask(proofId)
     }
@@ -276,6 +291,34 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
   private def tacticCompleted(db : DBAbstraction)(tId: String)(proofId: String, nId: Option[String], tacticId: String) {
     db.synchronized {
       db.updateProofOnTacticCompletion(proofId, tId)
+    }
+  }
+}
+
+
+class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], clTerm : String) extends Request {
+  def getResultingResponses() = {
+    try {
+      //Make sure that the tactic is going to construct and parse before updating the database.
+      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse.")))
+
+      val termId = db.createDispatchedCLTerm(proofId, nodeId, clTerm)
+      //Run the tactic.
+      KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
+      //Update status to running.
+      val dispatchedTerm = new DispatchedCLTermPOJO(termId, proofId, nodeId, clTerm, Some(DispatchedTacticStatus.Running))
+      db.updateDispatchedCLTerm(dispatchedTerm)
+      //Construct the response to this request.
+      new DispatchedCLTermResponse(dispatchedTerm):: Nil
+    }
+    catch {
+      case e:Exception => { e.printStackTrace(); new ErrorResponse(e) :: Nil }
+    }
+  }
+
+  private def completionContinuation(db : DBAbstraction)(termId : String)(proodId : String, nodeId : Option[String], clTerm : String): Unit = {
+    db.synchronized {
+      db.updateProofOnCLTermCompletion(proofId, termId)
     }
   }
 }

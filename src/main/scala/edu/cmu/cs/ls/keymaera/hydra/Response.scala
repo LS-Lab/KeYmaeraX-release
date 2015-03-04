@@ -196,6 +196,20 @@ class DispatchedTacticResponse(t : DispatchedTacticPOJO) extends Response {
   )
 }
 
+class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
+  val nid = t.nodeId match {
+    case Some(nodeId) => nodeId
+    case None => t.proofId
+  }
+
+  val json = JsObject(
+    "proofId" -> JsString(t.proofId),
+    "nodeId" -> JsString(nid),
+    "termId" -> JsString(t.id),
+    "term" -> JsString(t.clTerm)
+  )
+}
+
 class UpdateResponse(update: String) extends Response {
   val json = JsObject(
     "type" -> JsString("update"),
