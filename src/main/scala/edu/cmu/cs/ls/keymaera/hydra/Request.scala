@@ -158,6 +158,8 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
             KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)))
           }
         }
+      } else {
+        TaskManagement.finishedLoadingTask(proofId)
       }
     }
 
