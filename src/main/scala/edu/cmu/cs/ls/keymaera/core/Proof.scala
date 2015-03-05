@@ -788,15 +788,16 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
 // equality/equivalence rewriting
 //@TODO Review
 /**
- * Rewrites position ``p" according to ``ass"; for instance, if p="f" and ass="f=g" then this equality-rewrites p to g.
- * @param ass The position of the equality (should be in the antecedent) @todo rename.
- * @param p The position of an occurance of the (l?)hs of ``ass"
+ * Rewrites position ``p" according to assumption; for instance, if p="f" and assumption="f=g" then this
+ * equality-rewrites p to g.
+ * @param assumption The position of the equality (should be in the antecedent)
+ * @param p The position of an occurance of the (l?)hs of assumption
  */
-class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equality Rewriting", ass, p) {
+class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
   import BindingAssessment.allNames
   override def apply(s: Sequent): List[Sequent] = {
-    require(ass.isAnte && ass.inExpr == HereP)
-    val (blacklist, fn) = s.ante(ass.getIndex) match {
+    require(assumption.isAnte && assumption.inExpr == HereP)
+    val (blacklist, fn) = s.ante(assumption.getIndex) match {
       case Equals(d, a, b) =>
         (allNames(a) ++ allNames(b),
         new ExpressionTraversalFunction {
