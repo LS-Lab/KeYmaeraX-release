@@ -840,18 +840,16 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
 /**
  * Representation of a substitution replacing n with t.
  *
- * @param n the expression to be replaced. n can have one of the following forms:
- *          - Variable
- *          - PredicateConstant
- *          - ApplyPredicate(p:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . p(x)"
- *          - Apply(f:Function, x:Variable) where the variable x is meant as a \lambda abstraction in "\lambda x . f(x)"
- *          - ProgramConstant
+ * @param what the expression to be replaced. what can have one of the following forms:
+ *          - CDot
+ *          - Nothing/Anything
+ *          - ApplyPredicate(p:Function, CDot/Nothing/Anything)
+ *          - Apply(f:Function, CDot/Nothing/Anything)
+ *          - ProgramConstant/ContEvolveProgramConstant
  *          - Derivative(...)
- * @param t the expression to be used in place of n
- * @TODO Rename n to match or something
- * @TODO Rename t to repl or something
+ * @param repl the expression to be used in place of what
  */
-sealed class SubstitutionPair (val n: Expr, val t: Expr) {
+sealed class SubstitutionPair (val what: Expr, val repl: Expr) {
   applicable
   // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
   //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
@@ -859,10 +857,10 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
   @elidable(ASSERTION) def applicable = {
     // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
     if(false) { //@todo Nathan suppressed this for now...
-      if (!(n != t)) println("INFO: Unnecessary identity substitution " + n + " by equal " + t + "\n(non-critical, just indicates a possible tactics inefficiency)")
+      if (what == repl) println("INFO: Unnecessary identity substitution " + what + " by equal " + repl + "\n(non-critical, just indicates a possible tactics inefficiency)")
     }
-    require(n.sort == t.sort, "Sorts have to match in substitution pairs: " + n.sort + " != " + t.sort)
-    require(n match {
+    require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
+    require(what match {
       case CDot => true
       case Anything => true
       case _:ProgramConstant => true
@@ -870,17 +868,17 @@ sealed class SubstitutionPair (val n: Expr, val t: Expr) {
       case Derivative(_, _:Variable) => true
       case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
       case Apply(_:Function, CDot | Nothing | Anything) => true
-      case Nothing => t == Nothing
+      case Nothing => repl == Nothing
       case _ => false
-      }, "Substitutable expression required, found " + n)
+      }, "Substitutable expression required, found " + what)
   }
 
-  override def toString: String = "(" + n.prettyString() + ", " + t.prettyString() + ")"
+  override def toString: String = "(" + what.prettyString() + ", " + repl.prettyString() + ")"
 }
 object SubstitutionPair {
   def apply(n: Expr, t: Expr): SubstitutionPair = new SubstitutionPair(n, t)
   def unapply(e: Any): Option[(Expr,Expr)] = e match {
-    case x: SubstitutionPair => Some((x.n,x.t))
+    case x: SubstitutionPair => Some((x.what,x.repl))
     case _ => None
   }
 }
@@ -1204,10 +1202,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable = {
     // check that we never replace n by something and then again replacing the same n by something
-    val lefts = subsDefs.map(sp=>sp.n).toList
+    val lefts = subsDefs.map(sp=>sp.what).toList
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
     // check that we never replace p(x) by something and also p(t) by something
-    val lambdaNames = subsDefs.map(sp=>sp.n match {
+    val lambdaNames = subsDefs.map(sp=>sp.what match {
       case ApplyPredicate(p:Function, _:Variable) => List(p)
       case Apply(f:Function, _:Variable) => List(f)
       case _ => Nil
@@ -1269,12 +1267,12 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(p)}")
 
   private def substDiff(s: Seq[SubstitutionPair], names: SetLattice[NamedSymbol]) =
-    new Substitution(s.filter(_.n match { case en: NamedSymbol => !names.contains(en) case _ => true }))
+    new Substitution(s.filter(_.what match { case en: NamedSymbol => !names.contains(en) case _ => true }))
 
   /**
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    */
-  def sameHead(left: SubstitutionPair, right: Expr) = left.n match {
+  def sameHead(left: SubstitutionPair, right: Expr) = left.what match {
     case Apply(lf, CDot | Anything | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
     case ApplyPredicate(lf, CDot | Anything | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
     case _ => false
@@ -1293,7 +1291,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
    * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
    */
   private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
-    def subst(t: Term) = subsDefs.find(_.n == t).get.t.asInstanceOf[Term]
+    def subst(t: Term) = subsDefs.find(_.what == t).get.repl.asInstanceOf[Term]
     t match {
       // homomorphic cases
       case Neg(s, e) => Neg(s, usubst(o, u, e))
@@ -1305,10 +1303,10 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       // TODO not mentioned in substitution
       case Pair(dom, l, r) => Pair(dom, usubst(o, u, l), usubst(o, u, r)) // @todo eisegesis
       // uniform substitution base cases
-      case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
+      case x: Variable => require(!subsDefs.exists(_.what == x), s"Substitution of variables not supported: $x"); x
       // TODO not mentioned in substitution
-      case CDot if !subsDefs.exists(_.n == CDot) || o.contains(CDot) => CDot //@todo eisegesis
-      case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.n == CDot) => //@todo eisegesis
+      case CDot if !subsDefs.exists(_.what == CDot) || o.contains(CDot) => CDot //@todo eisegesis
+      case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.what == CDot) => //@todo eisegesis
         require((SetLattice[NamedSymbol](CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
           s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
         subst(CDot)
@@ -1319,16 +1317,16 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
         val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
         val (rArg, rTerm) =
-          (subs.n match { case Apply(_, v: NamedSymbol) => v
+          (subs.what match { case Apply(_, v: NamedSymbol) => v
                           case _ => throw new IllegalArgumentException(
                             s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
-           subs.t match { case t: Term => t
+           subs.repl match { case t: Term => t
                           case _ => throw new IllegalArgumentException(
                             s"Can only substitute terms for ${app.prettyString()}")}
           )
         val restrictedU = theta match { case CDot => u case Anything => SetLattice.bottom[NamedSymbol] case _ => u-rArg }
         require(freeVariables(rTerm).intersect(restrictedU).isEmpty,
-          s"Substitution clash: ${freeVariables(subs.t.asInstanceOf[Term])} ∩ $u is not empty")
+          s"Substitution clash: ${freeVariables(subs.repl.asInstanceOf[Term])} ∩ $u is not empty")
         instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
       case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
       case Anything => Anything
@@ -1362,16 +1360,16 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
 
     // uniform substitution base cases
     case app@ApplyPredicate(_, Anything) if subsDefs.exists(sameHead(_, app)) =>
-      val rFormula = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app)).t.asInstanceOf[Formula]
+      val rFormula = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app)).repl.asInstanceOf[Formula]
       Substitution(List()).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
     case app@ApplyPredicate(_, Anything) if !subsDefs.exists(sameHead(_, app)) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
       val (rArg, rFormula) = (
-        subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v
+        subs.what match { case ApplyPredicate(_, v: NamedSymbol) => v
                        case _ => throw new IllegalArgumentException(
                          s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=$theta not supported")},
-        subs.t match { case f: Formula => f
+        subs.repl match { case f: Formula => f
                        case _ => throw new IllegalArgumentException(
                          s"Can only substitute formulas for ${app.prettyString()}")}
         )
@@ -1426,11 +1424,11 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
         usubst(r, w, a).u == w, s"Unstable U: ${usubst(r, w, a).u} not equal to $w")
 
     //@TODO check implementation
-    case a: ProgramConstant if  subsDefs.exists(_.n == p) =>
-      val sigmaP = subsDefs.find(_.n == p).get.t.asInstanceOf[Program]
+    case a: ProgramConstant if  subsDefs.exists(_.what == p) =>
+      val sigmaP = subsDefs.find(_.what == p).get.repl.asInstanceOf[Program]
       // programs don't have a side condition, since their meaning does not depend on state
       USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP)
-    case a: ProgramConstant if !subsDefs.exists(_.n == p) => USR(o++catVars(a).mbv, u++catVars(a).bv, p)
+    case a: ProgramConstant if !subsDefs.exists(_.what == p) => USR(o++catVars(a).mbv, u++catVars(a).bv, p)
     case _ => throw new UnknownOperatorException("Not implemented yet", p)
   }} ensuring (r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U")
 
@@ -1455,14 +1453,14 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
       case _: EmptyContEvolveProgram => p
       case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
       case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
-      case a: ContEvolveProgramConstant if subsDefs.exists(_.n == p) =>
-        val repl = subsDefs.find(_.n == p).get.t
+      case a: ContEvolveProgramConstant if subsDefs.exists(_.what == p) =>
+        val repl = subsDefs.find(_.what == p).get.repl
         repl match {
           case replODE: ContEvolveProgram => replODE
           case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
             s"continuous program constants: $repl not allowed for $a")
         }
-      case a: ContEvolveProgramConstant if !subsDefs.exists(_.n == p) => p
+      case a: ContEvolveProgramConstant if !subsDefs.exists(_.what == p) => p
     }
   }
 }
@@ -1481,10 +1479,10 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable() = {
     // check that we never replace n by something and then again replacing the same n by something
-    val lefts = subsDefs.map(_.n).toList
+    val lefts = subsDefs.map(_.what).toList
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
     // check that we never replace p(x) by something and also p(t) by something
-    val lambdaNames = subsDefs.map(_.n match {
+    val lambdaNames = subsDefs.map(_.what match {
       case ApplyPredicate(p: Function, _: Variable) => List(p)
       case Apply(f: Function, _: Variable) => List(f)
       case _ => Nil
@@ -1519,16 +1517,16 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     try {
       t match {
         // uniform substitution base cases
-        case x: Variable => require(!subsDefs.exists(_.n == x), s"Substitution of variables not supported: $x"); x
-        case xp@Derivative(Real, x: Variable) => require(!subsDefs.exists(_.n == xp),
+        case x: Variable => require(!subsDefs.exists(_.what == x), s"Substitution of variables not supported: $x"); x
+        case xp@Derivative(Real, x: Variable) => require(!subsDefs.exists(_.what == xp),
           s"Substitution of differential symbols not supported: $xp"); xp
         case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rTerm) =
-            (subs.n match { case Apply(_, v: NamedSymbol) => v
+            (subs.what match { case Apply(_, v: NamedSymbol) => v
                             case _ => throw new IllegalArgumentException(
                               s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
-             subs.t match { case t: Term => t
+             subs.repl match { case t: Term => t
                             case _ => throw new IllegalArgumentException(
                               s"Can only substitute terms for ${app.prettyString()}")}
             )
@@ -1536,9 +1534,9 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(theta))
         case Anything => Anything // TODO check
         case Nothing => Nothing // TODO check
-        case CDot if !subsDefs.exists(_.n == CDot) => CDot // TODO check (should be case x = sigma x for variable x)
-        case CDot if  subsDefs.exists(_.n == CDot) => // TODO check (should be case x = sigma x for variable x)
-          subsDefs.find(_.n == CDot).get.t match {
+        case CDot if !subsDefs.exists(_.what == CDot) => CDot // TODO check (should be case x = sigma x for variable x)
+        case CDot if  subsDefs.exists(_.what == CDot) => // TODO check (should be case x = sigma x for variable x)
+          subsDefs.find(_.what == CDot).get.repl match {
             case t: Term => t
             case _ => throw new IllegalArgumentException("Can only substitute terms for .")
           }
@@ -1569,10 +1567,10 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
         case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rFormula) = (
-            subs.n match { case ApplyPredicate(_, v: NamedSymbol) => v
+            subs.what match { case ApplyPredicate(_, v: NamedSymbol) => v
                            case _ => throw new IllegalArgumentException(
                             s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=${theta.prettyString()} not supported")},
-            subs.t match { case f: Formula => f
+            subs.repl match { case f: Formula => f
                            case _ => throw new IllegalArgumentException(
                              s"Can only substitute formulas for ${app.prettyString()}")
             })
@@ -1622,9 +1620,9 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   private[core] def usubst(p: Program): Program = {
     try {
       p match {
-        case a: ProgramConstant if subsDefs.exists(_.n == a) =>
-          subsDefs.find(_.n == a).get.t.asInstanceOf[Program]
-        case a: ProgramConstant if !subsDefs.exists(_.n == a) => a
+        case a: ProgramConstant if subsDefs.exists(_.what == a) =>
+          subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
+        case a: ProgramConstant if !subsDefs.exists(_.what == a) => a
         case Assign(x: Variable, e) => Assign(x, usubst(e))
         case Assign(xp@Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
         case NDetAssign(x: Variable) => NDetAssign(x)
@@ -1659,14 +1657,14 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
       else throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
-    case c: ContEvolveProgramConstant if  subsDefs.exists(_.n == c) =>
-      val repl = subsDefs.find(_.n == c).get.t
+    case c: ContEvolveProgramConstant if  subsDefs.exists(_.what == c) =>
+      val repl = subsDefs.find(_.what == c).get.repl
       repl match {
         case replODE: ContEvolveProgram => replODE
         case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
           s"continuous program constants: $repl not allowed for $c")
       }
-    case c: ContEvolveProgramConstant if !subsDefs.exists(_.n == c) => c
+    case c: ContEvolveProgramConstant if !subsDefs.exists(_.what == c) => c
     case _: EmptyContEvolveProgram => ode
   }
   
@@ -1684,13 +1682,13 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
     // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
     // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
     // occurs in theta (or phi or alpha)
-    def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.t match {
-        case t: Term => sigma.n match {
+    def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
+        case t: Term => sigma.what match {
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with f(x,y,z): freeVariables(t) -- {x,y,z}
           case _ => freeVariables(t)
         }
-        case f: Formula => sigma.n match {
+        case f: Formula => sigma.what match {
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with p(x,y,z): freeVariables(f) -- {x,y,z}
           case _ => catVars(f).fv
@@ -1706,7 +1704,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
       case _ => throw new IllegalArgumentException(s"Unexpected ${symbol.prettyString()} in substitution pair")
     }
 
-    subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.n)).forall(fn => !occurrences.contains(fn))
+    subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.what)).forall(fn => !occurrences.contains(fn))
   }
 
   private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
@@ -1781,7 +1779,7 @@ sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Su
   /**
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    */
-  def sameHead(left: SubstitutionPair, right: Expr) = left.n match {
+  def sameHead(left: SubstitutionPair, right: Expr) = left.what match {
     case Apply(lf, CDot | Anything | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
     case ApplyPredicate(lf, CDot | Anything | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
     case _ => false
