@@ -1,5 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaera.tactics.NameCategorizer
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{Matchers, FlatSpec}
 import testHelper.StringConverter._
@@ -38,7 +39,7 @@ class SubstitutionTests extends FlatSpec with Matchers {
       case Imply(BoxModality(_, Imply(theH, _)), _) => theH should be (ApplyPredicate(Function("H", None, Real, Bool), x))
       case _ => fail("axiom has wrong form.")
     }
-    Substitution.maybeFreeVariables(axiom) should contain only x
+    NameCategorizer.maybeFreeVariables(axiom) should contain only x
 
     val substitution = Substitution(List(
       SubstitutionPair(aT, "12345".asTerm),

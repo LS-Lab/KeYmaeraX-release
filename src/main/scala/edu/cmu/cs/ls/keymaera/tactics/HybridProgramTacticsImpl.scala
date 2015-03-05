@@ -291,12 +291,12 @@ object HybridProgramTacticsImpl {
 
         node.sequent(p) match {
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: Loop, _))
-            if allNames(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            if allNames(prg).contains(v) && !NameCategorizer.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: ContEvolveProgram, _))
-            if allNames(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            if allNames(prg).contains(v) && !NameCategorizer.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
@@ -471,19 +471,13 @@ object HybridProgramTacticsImpl {
    * @return The tactic.
    */
   def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assign") {
-    def certainlyFreeNames(f: Formula) = {
-      (BindingAssessment.catVars(f).fv -- BindingAssessment.catVars(f).bv).s match {
-        case Left(_) => throw new IllegalArgumentException("Unexpected formula: any variable imaginable is free")
-        case Right(ts) => ts
-      }
-    }
-
+    import NameCategorizer.freeVariables
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case BoxModality(Assign(_: Variable, v: Variable), pred) => pred match {
-        case BoxModality(_: ContEvolveProgram, _) => !certainlyFreeNames(pred).contains(v)
-        case BoxModality(_: Loop, _) => !certainlyFreeNames(pred).contains(v)
-        case DiamondModality(_: ContEvolveProgram, _) => !certainlyFreeNames(pred).contains(v)
-        case DiamondModality(_: Loop, _) => !certainlyFreeNames(pred).contains(v)
+        case BoxModality(_: ContEvolveProgram, _) => !freeVariables(pred).contains(v)
+        case BoxModality(_: Loop, _) => !freeVariables(pred).contains(v)
+        case DiamondModality(_: ContEvolveProgram, _) => !freeVariables(pred).contains(v)
+        case DiamondModality(_: Loop, _) => !freeVariables(pred).contains(v)
         // prevent application on anything else. otherwise, boxAssignT has the surprising effect of handling multiple
         // assignments at once
         case _ => false

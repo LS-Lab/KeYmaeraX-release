@@ -164,11 +164,7 @@ object TacticLibrary {
    *******************************************************************/
 
   def universalClosure(f: Formula): Formula = {
-//    val vars = Helper.certainlyFreeNames(f)
-    val vars = BindingAssessment.catVars(f).fv.s match {
-      case Left(_) => ???
-      case Right(ts) => ts
-    }
+    val vars = NameCategorizer.freeVariables(f)
     if(vars.isEmpty) f else Forall(vars.toList, f)
   }
 

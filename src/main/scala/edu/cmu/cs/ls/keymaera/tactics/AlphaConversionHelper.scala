@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.core.Substitution._
+import NameCategorizer.{maybeFreeVariables, freeVariables}
 
 /**
  * Performs alpha conversion on formulas and terms. Used in tactics to setup axiom instances and substitution

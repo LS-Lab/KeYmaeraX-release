@@ -120,13 +120,6 @@ object ArithmeticTacticsImpl {
 
     import BindingAssessment.allNames
 
-    def certainlyFreeNames(f: Formula) = {
-      (BindingAssessment.catVars(f).fv -- BindingAssessment.catVars(f).bv).s match {
-        case Left(_) => throw new IllegalArgumentException("Unexpected formula: any variable imaginable is free")
-        case Right(ts) => ts
-      }
-    }
-
     def collectEquations(s: Sequent): Seq[(Int, Term, Term)] =
       (for (i <- 0 until s.ante.length)
       yield s.ante(i) match {
@@ -139,9 +132,9 @@ object ArithmeticTacticsImpl {
       val eqS: Seq[(Int, Term, Term)] = collectEquations(node.sequent)
       val s = node.sequent
       val anteNames = for (i <- 0 until s.ante.length)
-      yield (i, certainlyFreeNames(s.ante(i)))
+      yield (i, NameCategorizer.freeVariables(s.ante(i)))
 
-      val succNames = s.succ.flatMap(certainlyFreeNames)
+      val succNames = s.succ.flatMap(NameCategorizer.freeVariables)
 
       val res = (for ((i, l, r) <- eqS)
       yield if (succNames.contains(l)

@@ -1173,40 +1173,6 @@ object BindingAssessment {
 }
 
 /**
- * Static access to functions of Substitution.
- * @author Stefan Mitsch
- */
-object Substitution {
-  /** Returns the set of names maybe free in term t (same as certainly free). */
-  def maybeFreeVariables(t: Term): Set[NamedSymbol] = BindingAssessment.freeVariables(t).s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-  /** Returns the set of names maybe free in formula f. */
-  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = BindingAssessment.catVars(f).fv.s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-  /** Returns the set of names maybe free in program p. */
-  def maybeFreeVariables(p: Program): Set[NamedSymbol] = BindingAssessment.catVars(p).fv.s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-  /** Returns the set of names certainly free in program p. */
-  def freeVariables(p: Program): Set[NamedSymbol] = {
-    val ba = BindingAssessment.catVars(p)
-    (ba.fv -- (ba.mbv ++ ba.bv)).s match {
-      case Right(ts) => ts
-      case Left(_) => ???
-    }
-  }
-  /** Returns the set of names maybe bound in program p. */
-  def maybeBoundVariables(p: Program): Set[NamedSymbol] = BindingAssessment.catVars(p).bv.s match {
-    case Right(ts) => ts
-    case Left(_) => ???
-  }
-}
-/**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
  * Explicit construction computing bound variables on the fly.
