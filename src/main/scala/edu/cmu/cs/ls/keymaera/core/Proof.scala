@@ -2308,37 +2308,6 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
 }
 
-/**
- * Assignment as equation
- * Assumptions: We assume that the variable has been made unique through alpha conversion first. That way, we can just
- * replace the assignment by an equation without further checking
- * @TODO Review. Will turn into an axiom.
- */
-class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
-  override def apply(s: Sequent): List[Sequent] = {
-    // we need to make sure that the variable does not occur in any other formula in the sequent
-    val vars = BindingAssessment.allNamesExceptAt(s, p)
-    // TODO: we have to make sure that the variable does not occur in the formula itself
-    // if we want to have positions different from HereP
-    require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
-    val (exp, res, rhs) = s(p) match {
-      case BoxModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post), r)
-      case DiamondModality(Assign(l, r), post) => (l, Imply(Equals(l.sort, l, r), post), r)
-      case _ => throw new InapplicableRuleException("The assigment rule is only applicable to box and diamond modalities" +
-        "containing a single assignment", this, s)
-    }
-    // check that v is not contained in any other formula
-    val rhsVars = BindingAssessment.allNames(rhs)
-    val v = exp match {
-      case x: Variable if(!vars.contains(x) && !rhsVars.contains(x)) => x
-      case x: Variable if(vars.contains(x) || rhsVars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
-      case _ => throw new UnknownOperatorException("Assignment handling is only implemented for varibles right now, not for " + exp.toString(), exp) //?
-    }
-
-    List(if(p.isAnte) Sequent(s.pref :+ v, s.ante.updated(p.index, res), s.succ) else Sequent(s.pref :+ v, s.ante, s.succ.updated(p.index, res)))
-  }
-}
-
 // @TODO Review. Will turn into axiom QuantifierAbstraction.
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
