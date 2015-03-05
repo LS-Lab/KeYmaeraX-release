@@ -34,87 +34,82 @@ class SDTests extends TacticTestSuite {
   }
 
   "Syntactic Derivation" should "work when there's no binding" in {
-    val f = helper.parseFormula("[a'=b;](x-y<1)'")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[a'=b;](x-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[a'=b & true;](x'-y'<=1')")
-    helper.report(node)
-    containsOpenGoal(node, expected) shouldBe true
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[a'=b & true;]x'-y'<=0".asFormula
   }
 
   it should "work on marked boxes when there's no binding" in {
-    val f = helper.parseFormula("[$$a'=b$$;](x-y<1)'")  //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping
-    val node = helper.formulaToNode(f)
+    //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping
+    val node = helper.formulaToNode("[$$a'=b$$;](x-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[$$a'=b$$;](x'-y'<=1')")
-    helper.report(node)
-    containsOpenGoal(node, expected) shouldBe true
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[$$a'=b$$;]x'-y'<=0".asFormula
   }
 
   it should "work on an identical example with assignment" in {
-    val f = helper.parseFormula("[a:=b;](x-y<1)'") //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping (findApplicablePositionForTermAxiom)
-    val node = helper.formulaToNode(f)
+    //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping (findApplicablePositionForTermAxiom)
+    val node = helper.formulaToNode("[a:=b;](x-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[a:=b;](x'-y'<=1')")
-    helper.report(node)
-    containsOpenGoal(node, expected) shouldBe true
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[a:=b;]x'-y'<=0".asFormula
   }
 
   it should "work when the next step is syntactic term derivation context" in {
-    val f = helper.parseFormula("[x':=b;](x-y)'<=1'")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[x':=b;](x-y)'<=1'".asFormula)
 
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[x':=b;](x'-y'<=1')")
-    helper.report(node)
-    containsOpenGoal(node, expected) shouldBe true
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=b;]x'-y'<=0".asFormula
   }
 
   it should "work on formulas containing bound variables." in {
-    val f = helper.parseFormula("[x'=b;](x+y<1)'")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[x'=b;](x+y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[x'=b;](x'+y'<=1')")
-    helper.report(node)
-    containsOpenGoal(node, expected) shouldBe true
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'+y'<=0".asFormula
   }
 
   it should "work on an identical example when there is binding inside of a marked box" in {
-    val f = helper.parseFormula("[x'=b;](x-y<1)'")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[x'=b;](x-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[x'=b;](x'-y'<=1')")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'-y'<=0".asFormula
   }
 
   it should "identical to prev test but alpha-varied" in {
-    val f = helper.parseFormula("[a'=b;](a-y<1)'")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[a'=b;](a-y<1)'".asFormula)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
+    val result = helper.runTactic(tactic, node, mustApply = true)
 
-    val expected = helper.parseFormula("[a'=b;](a'-y'<=1')")
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[a'=b;]a'-y'<=0".asFormula
   }
 
   "Syntactic derivation of constant function symbols" should "work" in {
@@ -130,74 +125,64 @@ class SDTests extends TacticTestSuite {
   // Non-integration tests of the K-modal approach to in-context term derivations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  "ImplyDerivative" should "work in no context" in {
-    val f = helper.parseFormula(" (1=1 -> 2=2)' ")
-    val expected = helper.parseFormula(" (!(1=1) | 2=2)' ")
-    val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(ImplyDerivativeT)
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
-  }
-
-  it should "work in a context" in {
-    val f = helper.parseFormula("[x:=1;](x=1 -> 2=2)'")
-    val expected = helper.parseFormula("[x:=1;]((!(x=1) | 2=2)')")
-    val node = helper.formulaToNode(f)
+  "ImplyDerivative" should "work in a context" in {
+    val node = helper.formulaToNode("[x:=1;](x=1 -> 2=2)'".asFormula)
     val tactic = ImplyDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val result = helper.runTactic(tactic, node)
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=1;]((!(x=1) | 2=2)')".asFormula
   }
 
   it should "work in a nested context" in {
-    val f = helper.parseFormula("[x':=1;][y':=1;](x=1 -> y=2)'") //non-sense.
-    val expected = helper.parseFormula("[x':=1;][y':=1;]((!(x=1) | y=2)')")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[x':=1;][y':=1;](x=1 -> y=2)'".asFormula) //nonsense
     val tactic = ImplyDerivativeT(SuccPosition(0, PosInExpr(1::1::Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val result = helper.runTactic(tactic, node)
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;][y':=1;]((!(x=1) | y=2)')".asFormula
   }
 
   "LessThanDerivativeT" should "work in a nested context" in {
-    val f = helper.parseFormula("[x':=1;][y':=1;](x < y)'") //non-sense.
-    val expected = helper.parseFormula("[x':=1;][y':=1;](x' <= y')")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[x':=1;][y':=1;](x < y)'".asFormula) //nonsense
     val tactic = LessThanDerivativeT(SuccPosition(0, PosInExpr(1::1::Nil)))
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    require(containsOpenGoal(node, expected))
+    val result = helper.runTactic(tactic, node)
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;][y':=1;](x' <= y')".asFormula
   }
 
   "monomial derivation" should "work outside of context" in {
-    val f = helper.parseFormula("(x^2)'=0")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("(x^2)'=0".asFormula)
     val tactic = SearchTacticsImpl.locateTerm(MonomialDerivativeT)
-    helper.runTactic(tactic, node)
-    helper.report(node)
-    containsOpenGoal(node, helper.parseFormula("2*x^1=0")) shouldBe true
-    node.openGoals().length shouldBe 1
+    val result = helper.runTactic(tactic, node)
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "2*x^1*x'=0".asFormula
   }
 
   it should "work inside of a non-binding context" in {
-    val f = helper.parseFormula("[a := 0;](x^2)'=0")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[a := 0;](x^2)'=0".asFormula)
     val tactic = SearchTacticsImpl.locateTerm(MonomialDerivativeT)
-    helper.runTactic(tactic, node)
-    containsOpenGoal(node, helper.parseFormula("[a := 0;]2*x^1=0")) shouldBe true
-    node.openGoals().length shouldBe 1
+    val result = helper.runTactic(tactic, node)
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[a := 0;]2*x^1*x'=0".asFormula
   }
 
   it should "work inside of a binding context" in {
-    val f = helper.parseFormula("[x := 0;](x^2)'=0")
-    val node = helper.formulaToNode(f)
+    val node = helper.formulaToNode("[x := 0;](x^2)'=0".asFormula)
     val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext)
-    helper.runTactic(tactic, node)
-    containsOpenGoal(node, helper.parseFormula("[x := 0;]2*x^1=0")) shouldBe true
-    node.openGoals().length shouldBe 1
+    val result = helper.runTactic(tactic, node)
 
-
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x := 0;]2*x^1*x'=0".asFormula
   }
 
   "constant derivation" should "work" in {

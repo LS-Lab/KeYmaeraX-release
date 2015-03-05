@@ -2,9 +2,12 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{Matchers, FlatSpec}
+import testHelper.StringConverter._
 
 /**
  * Created by nfulton on 1/14/15.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class SubstitutionTests extends FlatSpec with Matchers {
   val helper = new ProvabilityTestHelper()
@@ -14,40 +17,38 @@ class SubstitutionTests extends FlatSpec with Matchers {
       """
         |Variables.
         | T x.
-        | T t.
-        | F H.
-        | F p.
+        | T t(T).
+        | F H(T).
+        | F p(T).
         |End.
         |
         |Axiom "DI differential invariant".
-        |  [x'=t&H;]p <- ([x'=t&H;](H->[x':=t;](p')))
+        |  [x'=t(x)&H(x);]p(x) <- ([x'=t(x)&H(x);](H(x)->[x':=t(x);](p(x)')))
         |End.
       """.stripMargin)
 
     knowledge.last.name should be("DI differential invariant")
     val axiom:Formula = knowledge.last.formula
 
-    val aX = Variable("x", None, Real)
-    val aT = Variable("t", None, Real)
-    val aH = PredicateConstant("H", None)
-    val aP = Variable("p", None, Bool)
+    val x = Variable("x", None, Real)
+    val aT = Apply(Function("t", None, Real, Real), CDot)
+    val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
 
     axiom match {
-      case Imply(BoxModality(_, Imply(theH, _)), _) => require(theH == aH)
+      case Imply(BoxModality(_, Imply(theH, _)), _) => theH should be (ApplyPredicate(Function("H", None, Real, Bool), x))
       case _ => fail("axiom has wrong form.")
     }
-    require(Substitution.maybeFreeVariables(axiom).contains(aT))
+    Substitution.maybeFreeVariables(axiom) should contain only x
 
     val substitution = Substitution(List(
-      new SubstitutionPair(aT, Number(12345)),
-      new SubstitutionPair(aH, And(True, Equals(Real, Number(1), Number(1))))
+      SubstitutionPair(aT, "12345".asTerm),
+      SubstitutionPair(aH, "true & 1=1".asFormula)
     ))
 
     val result = substitution(axiom)
     result match {
-      case Imply(BoxModality(_, Imply(theH, _)), _) => require(theH == And(True, Equals(Real,Number(1),Number(1))))
+      case Imply(BoxModality(_, Imply(theH, _)), _) => theH should be ("true & 1=1".asFormula)
       case _ => fail("axiom has wrong form.")
     }
-    require(!Substitution.maybeFreeVariables(result).contains(aT))
   }
 }

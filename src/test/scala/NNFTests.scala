@@ -1,5 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core.{EquivRight, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, NNFRewrite}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaera.tactics.{SearchTacticsImpl, TacticLibrary, NNFRewrite}
 import edu.cmu.cs.ls.keymaera.tactics.NNFRewrite._
 import testHelper.StringConverter._
 
@@ -94,10 +96,17 @@ class NNFTests extends TacticTestSuite {
 
   it should "prove example 1" in {
     import TacticLibrary.{EquivRightT,AxiomCloseT}
+    import scala.language.postfixOps
 
     val node = helper.formulaToNode("((2=2&3=3)->4=4)<->(!(2=2&3=3)|4=4)".asFormula)
     val pos = SuccPosition(0)
-    val tactic = NNFRewrite(pos) ~ (EquivRightT(pos) & AxiomCloseT)
+
+    def l : PositionTactic => Tactic = SearchTacticsImpl.locateSubposition(pos)
+    val nnfTactics =
+      (l(rewriteImplicationToDisjunction) | l(rewriteNegConjunct) |
+        l(rewriteNegDisjunct) | l(rewriteDoubleNegationEliminationT))*
+
+    val tactic = nnfTactics ~ (EquivRightT(pos) & AxiomCloseT)
     helper.runTactic(tactic, node, mustApply = true) shouldBe 'closed
   }
 

@@ -785,7 +785,7 @@ object HybridProgramTacticsImpl {
    * @param inv The invariant.
    * @return The position tactic.
    */
-  protected[tactics] def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
+  def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
     def getBody(g: Formula): Option[Program] = g match {
       case BoxModality(Loop(a), _) => Some(a)
       case _ => None

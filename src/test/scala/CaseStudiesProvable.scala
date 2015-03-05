@@ -118,10 +118,9 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(inductionT(Some("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula))) &
       onBranch(
-        (indInitLbl, ls(AndRightT) && (AxiomCloseT(AntePosition(4), SuccPosition(0)),
+        (indInitLbl, debugT("base case") & ls(AndRightT) && (AxiomCloseT(AntePosition(4), SuccPosition(0)),
                                        AxiomCloseT(AntePosition(3), SuccPosition(0)))),
-        (indStepLbl, debugT("step") & List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ ls(skolemizeT) &
-          ls(ImplyRightT) & la(AndLeftT) & ls(boxChoiceT) & ls(AndRightT) &&
+        (indStepLbl, debugT("step") & ls(ImplyRightT) & la(AndLeftT) & ls(boxChoiceT) & ls(AndRightT) &&
           (debugT("choice 1") & ((ls(boxSeqT) ~ (ls(boxAssignT) | ls(boxNDetAssign)))*) &
                                 ls(boxTestT) & ls(ImplyRightT) & (la(AndLeftT)*) &
                                 ls(AndRightT) && (/* v,z not written without self-assignment */ arithmeticT,
@@ -150,8 +149,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
                   )
               )
             )),
-        (indUseCaseLbl, List(5,4,3).foldLeft(NilT)((t, i) => t & hideT(AntePosition(i))) ~ ls(skolemizeT) &
-          ls(ImplyRightT) & la(AndLeftT) & arithmeticT))
+        (indUseCaseLbl, debugT("use case") & ls(ImplyRightT) & la(AndLeftT) & arithmeticT))
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
@@ -162,11 +160,11 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-safety" should "be provable with master strategy" in {
-    val file = new File("examples/dev/t/tactics/ETCS-safety.key")
-    val s = parseToSequent(file)
-    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
-  }
+//  "ETCS-safety" should "be provable with master strategy" in {
+//    val file = new File("examples/dev/t/tactics/ETCS-safety.key")
+//    val s = parseToSequent(file)
+//    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
+//  }
 
   "Saturable" should "be provable" in {
     val file = new File("examples/dev/t/tactics/Saturable.key")
@@ -182,39 +180,6 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
   }
 
-  "Local lane control" should "be provable" in {
-    import scala.language.postfixOps
-    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
-    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
-    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
-    import Tactics.NilT
-
-    val file = new File("examples/dev/t/casestudies/car/dccs/llc.key")
-    val s = parseToSequent(file)
-
-    val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxAssignT) & NilT
-
-    val tactic = ls(ImplyRightT) &
-      ls(wipeContextInductionT(Some("vf>=0 & vl>=0 & xf<xl & xl > xf + vf^2/(2*b) - vl^2/(2*B)".asFormula))) &
-      onBranch(
-        (indInitLbl, debugT("init") & defaultNoArith),
-        (indStepLbl, debugT("step") & ls(ImplyRightT) &
-          ls(boxSeqT) & ls(boxNDetAssign) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) &
-          ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-            debugT("choice 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxNDetAssign) &
-              ls(boxTestT) & ls(ImplyRightT) & plantTactic,
-            debugT("choice 2") & ls(boxChoiceT) & ls(AndRightT) && (
-              debugT("choice 2.1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) & plantTactic,
-              debugT("choice 2.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(boxTestT) & ls(ImplyRightT) & plantTactic
-            )
-          )
-        ),
-        (indUseCaseLbl, debugT("use") & default)
-      )
-
-    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
-  }
-
   "Simple car" should "be provable" in {
     import scala.language.postfixOps
     import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
@@ -222,15 +187,15 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
     import Tactics.NilT
 
-    val file = new File("examples/dev/t/casestudies/car/tutorial/simplecar.key")
+    val file = new File("examples/dev/t/casestudies/tutorial/simplecar.key")
     val s = parseToSequent(file)
 
-    val plantTactic = debugT("plant") & NilT
+    val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolutionT) & arithmeticT
 
-    val tactic = ls(ImplyRightT) &
+    val tactic = ls(ImplyRightT) & la(AndLeftT) &
       ls(wipeContextInductionT(Some("v>=0".asFormula))) &
       onBranch(
-        (indInitLbl, debugT("init") & la(AndLeftT) & AxiomCloseT),
+        (indInitLbl, debugT("init") & AxiomCloseT),
         (indStepLbl, debugT("step") & ls(ImplyRightT) &
           ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
             ls(boxAssignT) & plantTactic,
@@ -239,40 +204,6 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
           ),
         (indUseCaseLbl, debugT("use") & ls(ImplyRightT) & AxiomCloseT)
       )
-
-    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
-  }
-
-  "Passive safety" should "be provable" in {
-    import scala.language.postfixOps
-    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
-    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
-    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
-    import edu.cmu.cs.ls.keymaera.tactics.ArithmeticTacticsImpl.NegateEqualsT
-    import Tactics.NilT
-
-    val file = new File("examples/dev/t/casestudies/robix/passivesafety.key")
-    val s = parseToSequent(file)
-
-    // TODO .asFormula for strings with functions
-    //v>=0 & dx^2+dy^2=1 & r != 0 & (v = 0 | Abs(x - xo) > v^2/(2*B) + V*v/B | Abs(y - yo) > v^2/(2*B) + V*v/B)
-    val inv = Some(
-      And("v>=0 & dx^2+dy^2=1 & r != 0".asFormula, Or("v=0".asFormula,
-        Or(GreaterThan(Real, Apply(Function("Abs", None, Real, Real), "x-xo".asTerm), "v^2/(2*B) + V*v/B".asTerm),
-          GreaterThan(Real, Apply(Function("Abs", None, Real, Real), "y-yo".asTerm), "v^2/(2*B) + V*v/B".asTerm))))
-    )
-
-    val plantTactic = debugT("plant") & NilT
-
-    val tactic = ls(ImplyRightT) & ls(wipeContextInductionT(inv)) &
-      onBranch(
-        (indInitLbl, (la(AndLeftT)*) & (ls(AndRightT)*) & (ls(OrRightT)*) & la(OrLeftT) & AxiomCloseT),
-        (indStepLbl, debugT("step")
-          ),
-        (indUseCaseLbl, (ls(ImplyRightT)*) & (la(AndLeftT)*) & la(OrLeftT) &&
-          (NegateEqualsT(AntePosition(1)) & la(NotLeftT) & AxiomCloseT, debugT("use")))
-      )
-
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }

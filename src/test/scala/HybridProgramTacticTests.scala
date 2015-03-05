@@ -499,7 +499,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Induction tactic" should "rename all bound variables" in {
-    import TacticLibrary.inductionT
+    import HybridProgramTacticsImpl.inductionT
     val tactic = locateSucc(inductionT(Some("x*y>5".asFormula)))
     val result = getProofSequent(tactic, new RootNode(
       sequent(Nil,
@@ -638,7 +638,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     )
   }
 
-  "Box derivative assign in context" should "rename free occurrences in subsequent modalities" in {
+  // TODO not yet supported
+  ignore should "rename free occurrences in subsequent modalities" in {
     import HybridProgramTacticsImpl.boxDerivativeAssignInContextT
     val tactic = boxDerivativeAssignInContextT(SuccPosition(0, PosInExpr(1::Nil)))
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=z;]x'+y'>0".asFormula))) should be (
@@ -646,7 +647,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     )
   }
 
-  it should "work on mutual assignments" in {
+  // TODO not yet supported
+  ignore should "work on mutual assignments" in {
     import HybridProgramTacticsImpl.boxDerivativeAssignInContextT
     val tactic = boxDerivativeAssignInContextT(SuccPosition(0, PosInExpr(1::Nil)))
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=x;]x'+y'>0".asFormula))) should be (
@@ -654,7 +656,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     )
   }
 
-  "Box derivative assign" should "work inside out" in {
+  // TODO not yet supported
+  ignore should "work inside out" in {
     import HybridProgramTacticsImpl.boxDerivativeAssignT
     val tactic = boxDerivativeAssignT(SuccPosition(0))
     getProofSequent(tactic, new RootNode(sucSequent("[x':=y;][y':=x;]x'+y'>0".asFormula))) should be (
