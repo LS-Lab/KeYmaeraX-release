@@ -929,28 +929,4 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  /*********************************************
-   * Rule Tactics
-   *********************************************/
-
-  /**
-   * Creates a new position tactic for the derivative assignment rule.
-   * @return The assignment rule tactic.
-   */
-  protected[tactics] def derivativeAssignment = new PositionTactic("Assignment") {
-    import FOQuantifierTacticsImpl.uniquify
-    // for now only on top level
-    override def applies(s: Sequent, p: Position): Boolean = {
-      (p.inExpr == HereP) && ((if (p.isAnte) s.ante else s.succ)(p.index) match {
-        case BoxModality(Assign(Derivative(_,Variable(_, _, _)), _), _) => true
-        case DiamondModality(Assign(Derivative(_, Variable(_, _, _)), _), _) => true
-        case _ => false
-      })
-    }
-
-    override def apply(p: Position): Tactic = Tactics.weakSeqT(uniquify(p), new ApplyRule(new DerivativeAssignmentRule(p)) {
-      override def applicable(n: ProofNode): Boolean = applies(n.sequent, p)
-    })
-  }
-
 }

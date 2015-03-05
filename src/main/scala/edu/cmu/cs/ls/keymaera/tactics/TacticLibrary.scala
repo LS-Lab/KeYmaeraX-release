@@ -253,8 +253,6 @@ object TacticLibrary {
    * Hybrid Program Tactics
    *********************************************/
 
-  def derivativeAssignment = HybridProgramTacticsImpl.derivativeAssignment
-
   // axiom wrappers
 
   // axiomatic version of assignment axiom assignaxiom
