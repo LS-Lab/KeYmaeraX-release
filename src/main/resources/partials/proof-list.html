@@ -31,7 +31,7 @@
             <td class="input-btn-group">
                 <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
                 <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
-                <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i></span> Reproving...</a>
+                <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i> Reproving...</a>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
                     <span class="caret"></span>
                     <span class="sr-only">Toggle Dropdown</span>
@@ -40,7 +40,7 @@
                     <li>
                         <a ng-if="proof.loadStatus === 'Loaded'" class="btn btn-default" ng-href="dashboard.html?#/proofs/{{ proof.id }}"><span class="fa fa-folder-open"></span> Open</a>
                         <a ng-if="proof.loadStatus === 'NotLoaded'" class="btn btn-default" ng-href="" ng-click="loadProof(proof)"><span class="fa fa-refresh"></span> Load</a>
-                        <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i></span> Reproving...</a>
+                        <a ng-if="proof.loadStatus === 'Loading'" class="btn btn-default btn-disabled"><i class="fa fa-circle-o-notch fa-spin"></i> Reproving...</a>
                     </li>
                     <!-- these are unimplemented. <li><a href="#">Download (BROKEN)</a></li>
                     <li><a href="#">Delete</a></li>-->

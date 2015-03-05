@@ -387,34 +387,32 @@ keymaeraProofControllers.controller('ProofListCtrl',
 
     $scope.loadProof = function(proof) {
         proof.loadStatus = 'Loading'
-        alert("Loading proof");
         $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
-            alert(data.loadStatus);
-            proof.loadStatus = data.loadStatus
-            if (data.loadStatus == 'Loading') {
-              (function poll(){
-                 alert("Start polling");
-                 setTimeout(function() {
-                      $http.get('proofs/user/' + $cookies.userId + '/' + proof.id + '/status')
-                              .success(function(data) {
-                          if (data.loadStatus == 'Loading') {
-                            alert("Polling status")
-                            poll();
-                          } else {
-                            alert("Received status")
-                            proof.loadStatus = data.loadStatus
-                          }
-                      }).
-                      error(function(data, status, headers, config) {
-                          alert('Unable to poll proof status.')
-                      });
-                }, 1000);
-              })();
-            }
-        }).
-        error(function(data, status, headers, config) {
-            alert('Error loading proof.')
-        });
+            proof.loadStatus = 'Loading'
+            $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+                proof.loadStatus = data.loadStatus
+                if (data.loadStatus == 'Loading') {
+                  (function poll(){
+                     setTimeout(function() {
+                          $http.get('proofs/user/' + $cookies.userId + '/' + proof.id + '/status')
+                                  .success(function(data) {
+                              if (data.status == undefined) {
+                                poll();
+                              } else {
+                                proof.loadStatus = data.status
+                              }
+                          }).
+                          error(function(data, status, headers, config) {
+                              alert('Unable to poll proof status.')
+                          });
+                    }, 1000);
+                  })();
+                }
+            }).
+            error(function(data, status, headers, config) {
+                alert('Error loading proof.')
+            });
+        })
     }
 
     $scope.$emit('routeLoaded', {theview: 'allproofs'});
