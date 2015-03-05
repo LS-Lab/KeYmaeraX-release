@@ -13,9 +13,9 @@ object EqualityRewritingImpl {
   // exhaustive equality rewriting
   // check variable disjointness between left and right side
   protected[tactics] def isEquality(s: Sequent, p: Position, checkDisjointness: Boolean = false): Boolean = {
-    import Helper.names
+    import BindingAssessment.allNames
     p.isAnte && p.inExpr == HereP && (s.ante(p.getIndex) match {
-      case Equals(_, a, b) => if (checkDisjointness) names(a).intersect(names(b)).isEmpty else true
+      case Equals(_, a, b) => if (checkDisjointness) allNames(a).intersect(allNames(b)).isEmpty else true
       case ProgramEquals(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
       case Equiv(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
       case _ => false
@@ -23,11 +23,11 @@ object EqualityRewritingImpl {
   }
 
   private def equalityApplicable(left: Boolean, eqPos: Position, p: Position, s: Sequent): Boolean = {
-    import Helper.names
+    import BindingAssessment.allNames
     var applicable = false
     val (blacklist, f) = s.ante(eqPos.getIndex) match {
       case Equals(_, a, b) => val search = if(left) a else b
-        (names(a) ++ names(b),
+        (allNames(a) ++ allNames(b),
           new ExpressionTraversalFunction {
             override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
               if (e == search) applicable = true
@@ -35,7 +35,7 @@ object EqualityRewritingImpl {
             }
           })
       case ProgramEquals(a, b) => val search = if(left) a else b
-        (names(a) ++ names(b),
+        (allNames(a) ++ allNames(b),
           new ExpressionTraversalFunction {
             override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
               if (e == search) applicable = true
@@ -43,7 +43,7 @@ object EqualityRewritingImpl {
             }
           })
       case Equiv(a, b) => val search = if(left) a else b
-        (names(a) ++ names(b),
+        (allNames(a) ++ allNames(b),
           new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
               if (e == search) applicable = true
@@ -176,7 +176,7 @@ object EqualityRewritingImpl {
 
   private def findPosInExpr(left: Boolean, s: Sequent, eqPos: Position): Option[Position] = {
     val eq = s.ante(eqPos.getIndex)
-    val blacklist = Helper.names(eq)
+    val blacklist = BindingAssessment.allNames(eq)
     val search: Expr = eq match {
       case Equals(_, a, b) => if(left) a else b
       case ProgramEquals(a, b) => if(left) a else b

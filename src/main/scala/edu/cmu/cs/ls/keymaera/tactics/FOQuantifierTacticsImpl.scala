@@ -136,12 +136,12 @@ object FOQuantifierTacticsImpl {
    * @return The tactic.
    */
   def existentialGenT(x: Variable, t: Term) = new AxiomTactic("exists generalize", "exists generalize") {
-    override def applies(f: Formula): Boolean = !Helper.names(f).contains(x)
+    override def applies(f: Formula): Boolean = !BindingAssessment.allNames(f).contains(x)
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
         Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
       import AlphaConversionHelper.replaceFree
-      require(!Helper.names(f).contains(x))
+      require(!BindingAssessment.allNames(f).contains(x))
 
       // construct substitution
       val aT = Apply(Function("t", None, Unit, Real), Nothing)
@@ -184,9 +184,9 @@ object FOQuantifierTacticsImpl {
                                             quantFactory: (Seq[NamedSymbol], Formula) => Quantifier)
       extends AxiomTactic(axiomName, axiomName) {
     override def applies(f: Formula): Boolean = x match {
-      case Some(v) => !Helper.names(f).contains(v)
+      case Some(v) => !BindingAssessment.allNames(f).contains(v)
       case None => f match {
-        case q: Quantifier => q.variables.size == 1 && Helper.names(q.child.asInstanceOf[Formula]).
+        case q: Quantifier => q.variables.size == 1 && BindingAssessment.allNames(q.child.asInstanceOf[Formula]).
           intersect(q.variables.toSet).isEmpty
         case _ => false
       }
@@ -213,7 +213,9 @@ object FOQuantifierTacticsImpl {
         }
       }
       val Equiv(left, right) = axiom
-      val (ax, cont) = (Equiv(left, replaceFree(right)(aX, v)), Some(alpha))
+      val (ax, cont) =
+        if (v.name == aX.name && v.index == aX.index) (Equiv(left, right), None)
+        else (Equiv(left, replaceFree(right)(aX, v)), Some(alpha))
 
       Some(ax, axiomInstance, Substitution(l), None, cont)
     }
@@ -222,7 +224,7 @@ object FOQuantifierTacticsImpl {
         Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = x match {
       case Some(v) =>
         import AlphaConversionHelper.replaceFree
-        require(!Helper.names(f).contains(v))
+        require(!BindingAssessment.allNames(f).contains(v))
         // construct axiom instance: p <-> \exists/\forall x. p
         constructSubstAndAlphaRename(axiom, f, Equiv(f, quantFactory(v :: Nil, f)), v)
       case None => f match {
@@ -287,18 +289,18 @@ object FOQuantifierTacticsImpl {
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-
+      import BindingAssessment.allNamesExceptAt
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Forall(vars, _) =>
           val rename =
-            if (forceUniquify || Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
+            if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
             else NilT
           Some(rename ~ new ApplyRule(factory(p)) {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           })
         case Exists(vars, _) =>
           val rename =
-            if (forceUniquify || Helper.namesIgnoringPosition(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
+            if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
             else NilT
           Some(rename ~ new ApplyRule(factory(p)) {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
@@ -333,10 +335,11 @@ object FOQuantifierTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import BindingAssessment.{allNames,allNamesExceptAt}
         getBoundVariables(node.sequent, p) match {
           case Some(s) =>
-            var otherVars = Helper.namesIgnoringPosition(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s
-            val pVars = Helper.names(node.sequent(p)).map((n: NamedSymbol) => (n.name, n.index))
+            var otherVars = allNamesExceptAt(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s
+            val pVars = allNames(node.sequent(p)).map((n: NamedSymbol) => (n.name, n.index))
             val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
               val vars = otherVars.filter(_._1 == n) ++ pVars.filter(_._1 == n)
               //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)

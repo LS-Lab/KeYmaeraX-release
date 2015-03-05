@@ -10,11 +10,11 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.cutT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.kModalModusPonensT
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import BindingAssessment.allNames
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import SearchTacticsImpl.{locateSucc,locateAnte,onBranch}
+import SearchTacticsImpl.onBranch
 
 import scala.collection.immutable.{List, Seq}
 
@@ -252,7 +252,7 @@ object HybridProgramTacticsImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = Helper.names(t).contains(v) || (rest match {
+      def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = allNames(t).contains(v) || (rest match {
         case BoxModality(_: ContEvolveProgram, _) => true
         case BoxModality(_: Loop, _) => true
         case _ => /* false requires substitution of variables */ true
@@ -291,12 +291,12 @@ object HybridProgramTacticsImpl {
 
         node.sequent(p) match {
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: Loop, _))
-            if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            if allNames(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
           case BoxModality(Assign(v: Variable, _), BoxModality(prg: ContEvolveProgram, _))
-            if Helper.names(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
+            if allNames(prg).contains(v) && !Substitution.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
@@ -313,7 +313,7 @@ object HybridProgramTacticsImpl {
   private def boxAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic =
       new AxiomTactic("[:=] assign equational", "[:=] assign equational") {
     override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Variable(_, _,_), _), _) => !checkNewV || !Helper.names(f).contains(newV)
+      case BoxModality(Assign(Variable(_, _,_), _), _) => !checkNewV || !allNames(f).contains(newV)
       case _ => false
     }
 
@@ -380,7 +380,7 @@ object HybridProgramTacticsImpl {
 
       // check specified name, or construct a new name for the ghost variable if None
       val v = ghost match {
-        case Some(gv) => require(gv == t || (!Helper.names(f).contains(gv))); gv
+        case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
         case None => t match {
           case v: Variable => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
@@ -431,7 +431,7 @@ object HybridProgramTacticsImpl {
 
       // check specified name, or construct a new name for the ghost variable if None
       val v = ghost match {
-        case Some(gv) => require(gv == t || (!Helper.names(f).contains(gv))); gv
+        case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
         case None => t match {
           case v: Variable => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
@@ -471,12 +471,19 @@ object HybridProgramTacticsImpl {
    * @return The tactic.
    */
   def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assign") {
+    def certainlyFreeNames(f: Formula) = {
+      (BindingAssessment.catVars(f).fv -- BindingAssessment.catVars(f).bv).s match {
+        case Left(_) => throw new IllegalArgumentException("Unexpected formula: any variable imaginable is free")
+        case Right(ts) => ts
+      }
+    }
+
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case BoxModality(Assign(_: Variable, v: Variable), pred) => pred match {
-        case BoxModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
-        case BoxModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
-        case DiamondModality(_: ContEvolveProgram, _) => !Helper.certainlyFreeNames(pred).contains(v)
-        case DiamondModality(_: Loop, _) => !Helper.certainlyFreeNames(pred).contains(v)
+        case BoxModality(_: ContEvolveProgram, _) => !certainlyFreeNames(pred).contains(v)
+        case BoxModality(_: Loop, _) => !certainlyFreeNames(pred).contains(v)
+        case DiamondModality(_: ContEvolveProgram, _) => !certainlyFreeNames(pred).contains(v)
+        case DiamondModality(_: Loop, _) => !certainlyFreeNames(pred).contains(v)
         // prevent application on anything else. otherwise, boxAssignT has the surprising effect of handling multiple
         // assignments at once
         case _ => false
@@ -548,7 +555,7 @@ object HybridProgramTacticsImpl {
         case DiamondModality(_: Loop, _) => t match { case tv: Variable => v == tv case _ => false }
         case _ => t match {
           case tv: Variable => true
-          case _ => !Helper.names(t).contains(v)
+          case _ => !allNames(t).contains(v)
         }
       }
       case _ => false
@@ -853,11 +860,11 @@ object HybridProgramTacticsImpl {
           case Forall(vars, _) =>
             val anteExcepts = except.filter(_.isInstanceOf[AntePosition]).map(_.index).toSet
             val anteHidePos = node.sequent.ante.zipWithIndex.collect {
-              case (f,i) if Helper.names(f).intersect(vars.toSet).nonEmpty => i }.toSet -- anteExcepts
+              case (f,i) if allNames(f).intersect(vars.toSet).nonEmpty => i }.toSet -- anteExcepts
             val anteHides = anteHidePos.toList.sorted.reverse.map(i => hideT(AntePosition(i)))
             val succExcepts = except.filter(_.isInstanceOf[SuccPosition]).map(_.index).toSet
             val succHidePos = node.sequent.succ.zipWithIndex.collect {
-              case (f,i) if Helper.names(f).intersect(vars.toSet).nonEmpty => i }.toSet -- succExcepts
+              case (f,i) if allNames(f).intersect(vars.toSet).nonEmpty => i }.toSet -- succExcepts
             val succHides = succHidePos.toList.sorted.reverse.map(i => hideT(SuccPosition(i)))
             val bvFromPosCorr = succHidePos.count(_ < bvFromPos.index)
             Some((anteHides ++ succHides).foldLeft(NilT)((t, i) => t & i) &

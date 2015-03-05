@@ -90,7 +90,7 @@ object AlphaConversionHelper {
             case None => Right(n)
           }
           case t: Term if t == o => free match {
-            case Some(freeVars) => if (Helper.names(t).subsetOf(freeVars)) Right(n) else Left(None)
+            case Some(freeVars) => if (BindingAssessment.allNames(t).subsetOf(freeVars)) Right(n) else Left(None)
             case None => Right(n)
           }
           case _ => Left(None)
@@ -119,7 +119,7 @@ object AlphaConversionHelper {
           case _ => Right(n)
         }
         case t: Term if t == o => free match {
-          case Some(freeVars) => if (Helper.names(t).subsetOf(freeVars)) Right(n) else Left(None)
+          case Some(freeVars) => if (BindingAssessment.allNames(t).subsetOf(freeVars)) Right(n) else Left(None)
           case None => Right(n)
         }
         case _ => Left(None)

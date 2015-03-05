@@ -334,9 +334,10 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   def diffAuxiliaryT(x: Variable, t: Term, s: Term, psi: Option[Formula] = None): PositionTactic =
       new AxiomTactic("DA differential ghost", "DA differential ghost") {
+    import BindingAssessment.allNames
     def applies(f: Formula) = f match {
       case BoxModality(ode: ContEvolveProgram, _) => !BindingAssessment.catVars(ode).bv.contains(x) &&
-        !Helper.names(t).contains(x) && !Helper.names(s).contains(x)
+        !allNames(t).contains(x) && !allNames(s).contains(x)
       case _ => false
     }
 

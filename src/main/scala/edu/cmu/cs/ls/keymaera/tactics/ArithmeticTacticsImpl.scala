@@ -118,12 +118,19 @@ object ArithmeticTacticsImpl {
    */
   protected[tactics] def hideUnnecessaryLeftEqT: Tactic = new ConstructionTactic("Hide Equations") {
 
-    import Helper.names
+    import BindingAssessment.allNames
+
+    def certainlyFreeNames(f: Formula) = {
+      (BindingAssessment.catVars(f).fv -- BindingAssessment.catVars(f).bv).s match {
+        case Left(_) => throw new IllegalArgumentException("Unexpected formula: any variable imaginable is free")
+        case Right(ts) => ts
+      }
+    }
 
     def collectEquations(s: Sequent): Seq[(Int, Term, Term)] =
       (for (i <- 0 until s.ante.length)
       yield s.ante(i) match {
-          case Equals(_, a, b) if names(a).intersect(names(b)).isEmpty => Some((i, a, b))
+          case Equals(_, a, b) if allNames(a).intersect(allNames(b)).isEmpty => Some((i, a, b))
           case _ => None
         }
         ).flatten
@@ -132,9 +139,9 @@ object ArithmeticTacticsImpl {
       val eqS: Seq[(Int, Term, Term)] = collectEquations(node.sequent)
       val s = node.sequent
       val anteNames = for (i <- 0 until s.ante.length)
-      yield (i, Helper.certainlyFreeNames(s.ante(i)))
+      yield (i, certainlyFreeNames(s.ante(i)))
 
-      val succNames = s.succ.map(Helper.certainlyFreeNames(_)).flatten
+      val succNames = s.succ.flatMap(certainlyFreeNames)
 
       val res = (for ((i, l, r) <- eqS)
       yield if (succNames.contains(l)

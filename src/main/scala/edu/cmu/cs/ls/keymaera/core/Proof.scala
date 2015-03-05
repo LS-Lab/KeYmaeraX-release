@@ -793,12 +793,12 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
  * @param p The position of an occurance of the (l?)hs of ``ass"
  */
 class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equality Rewriting", ass, p) {
-  import Helper._
+  import BindingAssessment.allNames
   override def apply(s: Sequent): List[Sequent] = {
     require(ass.isAnte && ass.inExpr == HereP)
     val (blacklist, fn) = s.ante(ass.getIndex) match {
       case Equals(d, a, b) =>
-        (names(a) ++ names(b),
+        (allNames(a) ++ allNames(b),
         new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
             if(e == a) Right(b)
@@ -806,7 +806,7 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })
       case ProgramEquals(a, b) =>
-        (names(a) ++ names(b),
+        (allNames(a) ++ allNames(b),
         new ExpressionTraversalFunction {
           override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
             if(e == a) Right(b)
@@ -814,7 +814,7 @@ class EqualityRewriting(ass: Position, p: Position) extends AssumptionRule("Equa
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })
       case Equiv(a, b) =>
-        (names(a) ++ names(b),
+        (allNames(a) ++ allNames(b),
         new ExpressionTraversalFunction {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
             if (e == a) Right(b)
@@ -1098,6 +1098,77 @@ object BindingAssessment {
     case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x,NamedDerivative(x))
     case _: EmptyContEvolveProgram => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
+  }
+
+  def allNames(f: Formula): Set[NamedSymbol] = f match {
+    // homomorphic cases
+    case Equals(d, l, r) => allNames(l) ++ allNames(r)
+    case NotEquals(d, l, r) => allNames(l) ++ allNames(r)
+    case GreaterEqual(d, l, r) => allNames(l) ++ allNames(r)
+    case GreaterThan(d, l, r) => allNames(l) ++ allNames(r)
+    case LessEqual(d, l, r) => allNames(l) ++ allNames(r)
+    case LessThan(d, l, r) => allNames(l) ++ allNames(r)
+
+    case Not(g) => allNames(g)
+    case And(l, r) => allNames(l) ++ allNames(r)
+    case Or(l, r) => allNames(l) ++ allNames(r)
+    case Imply(l, r) => allNames(l) ++ allNames(r)
+    case Equiv(l, r) => allNames(l) ++ allNames(r)
+    case FormulaDerivative(df) => allNames(df)
+
+    case Forall(vars, g) => vars.toSet ++ allNames(g)
+    case Exists(vars, g) => vars.toSet ++ allNames(g)
+
+    case BoxModality(p, g) => allNames(p) ++ allNames(g)
+    case DiamondModality(p, g) => allNames(p) ++ allNames(g)
+
+    // base cases
+    case ApplyPredicate(p, arg) => Set(p) ++ allNames(arg)
+    case True | False => Set.empty
+    case _ => throw new UnknownOperatorException("Not implemented", f)
+  }
+
+  def allNames(t: Term): Set[NamedSymbol] = t match {
+    // homomorphic cases
+    case Neg(s, l) => allNames(l)
+    case Add(s, l, r) => allNames(l) ++ allNames(r)
+    case Subtract(s, l, r) => allNames(l) ++ allNames(r)
+    case Multiply(s, l, r) => allNames(l) ++ allNames(r)
+    case Divide(s, l, r) => allNames(l) ++ allNames(r)
+    case Exp(s, l, r) => allNames(l) ++ allNames(r)
+    case Pair(dom, l, r) => allNames(l) ++ allNames(r)
+    case Derivative(s, e) => allNames(e)
+    // base cases
+    case Apply(f, arg) => Set(f) ++ allNames(arg)
+    case x: Variable => Set(x)
+    case CDot => Set(CDot)
+    case nd: NamedDerivative => Set(nd)
+    case True | False | _: NumberObj | Nothing | Anything => Set.empty
+  }
+
+  def allNames(p: Program): Set[NamedSymbol] = p match {
+    case Assign(x: Variable, e) => Set(x) ++ allNames(e)
+    case Assign(Derivative(_, x : NamedSymbol), e) => Set(x) ++ allNames(e)
+    case Assign(x : NamedDerivative, e) => Set(x) ++ allNames(e)
+    case NDetAssign(x: Variable) => Set(x)
+    case Test(f) => allNames(f)
+    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) => Set(x) ++ allNames(e) ++ allNames(h)
+    case ContEvolveProduct(a, b) => allNames(a) ++ allNames(b)
+    case IncompleteSystem(a) => allNames(a)
+    case CheckedContEvolveFragment(a) => allNames(a)
+    case _: EmptyContEvolveProgram => Set()
+    case Sequence(a, b) => allNames(a) ++ allNames(b)
+    case Choice(a, b) => allNames(a) ++ allNames(b)
+    case Loop(a) => allNames(a)
+    case prg: ProgramConstant => Set(prg)
+    case prg: ContEvolveProgramConstant => Set(prg)
+    case _ => throw new UnknownOperatorException("Not implemented", p)
+  }
+
+  def allNamesExceptAt(s: Sequent, p: Position) = {
+    val fs = if (p.isAnte) s.ante.slice(0, p.index) ++ s.ante.slice(p.index + 1, s.ante.length) ++ s.succ
+             else s.ante ++ s.succ.slice(0, p.index) ++ s.succ.slice(p.index + 1, s.ante.length)
+    fs.flatMap(BindingAssessment.allNames).toSet
   }
 }
 
@@ -2090,7 +2161,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   }
 
   def apply(f: Formula): Formula = {
-    require(!Helper.names(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
+    require(!BindingAssessment.allNames(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
     rename(f)
   }
 
@@ -2184,10 +2255,9 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
-  import Helper._
   override def apply(s: Sequent): List[Sequent] = {
     // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-    val vars = namesIgnoringPosition(s, p)
+    val vars = BindingAssessment.allNamesExceptAt(s, p)
     val (v,phi) = s(p) match {
       case Forall(qv, qphi) if !p.isAnte => (qv,qphi)
       case Exists(qv, qphi) if p.isAnte => (qv,qphi)
@@ -2207,11 +2277,11 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
  */
 class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
-  import Helper._
 
   override def apply(s: Sequent): List[Sequent] = {
     // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-    val vars = namesIgnoringPosition(s, p)
+
+    val vars = BindingAssessment.allNamesExceptAt(s, p)
     val (fn, phi) = s(p) match {
       case Forall(qvs, qphi) if !p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
       case Exists(qvs, qphi) if p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
@@ -2245,10 +2315,9 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
  * @TODO Review. Will turn into an axiom.
  */
 class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
-  import Helper._
   override def apply(s: Sequent): List[Sequent] = {
     // we need to make sure that the variable does not occur in any other formula in the sequent
-    val vars = namesIgnoringPosition(s, p)
+    val vars = BindingAssessment.allNamesExceptAt(s, p)
     // TODO: we have to make sure that the variable does not occur in the formula itself
     // if we want to have positions different from HereP
     require(p.inExpr == HereP, "we can only deal with assignments on the top-level for now")
@@ -2259,7 +2328,7 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
         "containing a single assignment", this, s)
     }
     // check that v is not contained in any other formula
-    val rhsVars = names(rhs)
+    val rhsVars = BindingAssessment.allNames(rhs)
     val v = exp match {
       case x: Variable if(!vars.contains(x) && !rhsVars.contains(x)) => x
       case x: Variable if(vars.contains(x) || rhsVars.contains(x)) => throw new IllegalArgumentException("Varible " + x + " is not unique in the sequent")
@@ -2276,11 +2345,9 @@ class AssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
  */
 class DerivativeAssignmentRule(p: Position) extends PositionRule("AssignmentRule", p) {
 
-  import Helper._
-
   override def apply(s: Sequent): List[Sequent] = {
     // we need to make sure that the variable does not occur in any other formula in the sequent
-    val vars = namesIgnoringPosition(s, p)
+    val vars = BindingAssessment.allNamesExceptAt(s, p)
 
     // TODO: we have to make sure that the variable does not occur in the formula itself
     // if we want to have positions different from HereP
@@ -2297,7 +2364,7 @@ class DerivativeAssignmentRule(p: Position) extends PositionRule("AssignmentRule
     }
 
     // check that v is not contained in any other formula
-    val rhsVars = names(rhs)
+    val rhsVars = BindingAssessment.allNames(rhs)
     val v: Variable = exp match {
       case Derivative(dsort, Variable(name, idx, sort)) => {
         val x: Variable = Variable(name, idx, sort)
@@ -2521,98 +2588,6 @@ object LookupLemma {
       case _ => None
     }
   }
-}
-
-/*********************************************************************************
- * Helper code
- *********************************************************************************
- */
-
-//@TODO Review
-object Helper {
-  /**
-   * Collect all NamedSymbols occurring in a formula/term/program/game
-   */
-  def names(s: Sequent): Set[NamedSymbol] =  Set() ++ (s.ante ++ s.succ).map((f: Formula) => names(f)).flatten
-
-  def names[A: FTPG](a: A): Set[NamedSymbol] = names(a, false)
-
-  /**
-   * Collect all NamedSymbols occurring in a formula/term/program/game ignoring (potentially) bound ones
-   */
-  def freeNames[A: FTPG](a: A): Set[NamedSymbol] = names(a, true)
-
-  /**
-   * Collect all NamedSymbols occurring in a formula/term/program/game ignoring those that definitely bound
-   * That is, we add all those written by modalities just to be sure to capture all those that might be read
-   */
-  def certainlyFreeNames[A: FTPG](a: A): Set[NamedSymbol] = names(a, true, true)
-
-  /**
-   * Collect all NamedSymbols occurring in a formula/term/program/game
-   * @param a
-   * @param onlyFree
-   * @tparam A
-   * @return
-   */
-  def names[A: FTPG](a: A, onlyFree: Boolean, certainlyFree: Boolean = false): Set[NamedSymbol] = {
-    var vars: Set[NamedSymbol] = Set.empty
-    val fn = new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        e match {
-          case x: Variable => vars += x
-          case x: ProgramConstant => vars += x
-          case Apply(f, _) => vars += f
-          case _ =>
-        }
-        Left(None)
-      }
-
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        e match {
-          case x: PredicateConstant => vars += x
-          case ApplyPredicate(f, _) => vars += f
-          case _ =>
-        }
-        Left(None)
-      }
-
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        if(onlyFree) {
-          e match {
-            case Forall(v, f) => vars = vars.filter(!v.contains(_))
-            case Exists(v, f) => vars = vars.filter(!v.contains(_))
-            case x: Modality if(!certainlyFree) => vars = vars.filter(!x.writes.contains(_))
-            case _ =>
-          }
-        }
-        Left(None)
-      }
-    }
-    ExpressionTraversal.traverse(fn, a)
-    vars
-  }
-
-  /**
-   * Finds all names in a sequent, ignoring those in the formula at top-level position p.
-   */
-  def namesIgnoringPosition(s: Sequent, p: Position): Set[NamedSymbol] = {
-    require(p.inExpr == HereP, "namesIgnoringPosition only implemented for top-level positions HereP");
-    var vars: Set[NamedSymbol] = Set.empty
-    for(i <- 0 until s.ante.length) {
-      if(!(p.isAnte && i == p.getIndex)) {
-        vars ++= names(s.ante(i))
-      }
-    }
-    for(i <- 0 until s.succ.length) {
-      if(!(!p.isAnte && i == p.getIndex)) {
-        vars ++= names(s.succ(i))
-      }
-    }
-    vars
-  }
-
-
 }
 
 // vim: set ts=4 sw=4 et:

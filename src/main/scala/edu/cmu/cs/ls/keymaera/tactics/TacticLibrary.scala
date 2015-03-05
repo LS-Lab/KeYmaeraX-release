@@ -14,8 +14,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 
 import BuiltinHigherTactics._
-
-import scala.collection.mutable
+import BindingAssessment.allNames
 
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
@@ -60,8 +59,8 @@ object TacticLibrary {
       }
 
     def freshIndexInFormula(name: String, f: Formula) =
-      if (Helper.names(f).exists(_.name == name)) {
-        val vars = Helper.names(f).map(n => (n.name, n.index)).filter(_._1 == name)
+      if (allNames(f).exists(_.name == name)) {
+        val vars = allNames(f).map(n => (n.name, n.index)).filter(_._1 == name)
         require(vars.size > 0)
         val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
           acc match {
@@ -77,20 +76,22 @@ object TacticLibrary {
         }
       } else None
 
+    def names(s: Sequent) = s.ante.flatMap(allNames) ++ s.succ.flatMap(allNames)
+
     def freshIndexInSequent(name: String, s: Sequent) =
-      if (Helper.names(s).exists(_.name == name))
+      if (names(s).exists(_.name == name))
         (s.ante.map(freshIndexInFormula(name, _)) ++ s.succ.map(freshIndexInFormula(name, _))).max
       else None
 
     def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T =
-      if (Helper.names(f).exists(_.name == t.name)) t match {
+      if (allNames(f).exists(_.name == t.name)) t match {
         case Variable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
         case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
         case _ => ???
       } else t
 
     def freshNamedSymbol[T <: NamedSymbol](t: T, s: Sequent): T =
-      if (Helper.names(s).exists(_.name == t.name)) t match {
+      if (names(s).exists(_.name == t.name)) t match {
         case Variable(vName, _, vSort) => Variable(vName, freshIndexInSequent(vName, s), vSort).asInstanceOf[T]
         case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInSequent(fName, s), fDomain, fSort).asInstanceOf[T]
         case _ => ???
