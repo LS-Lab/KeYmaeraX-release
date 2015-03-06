@@ -262,7 +262,6 @@ object TacticLibrary {
   def boxInductionT = HybridProgramTacticsImpl.boxInductionT
   def boxChoiceT = HybridProgramTacticsImpl.boxChoiceT
   def inductionT(inv: Option[Formula]) = HybridProgramTacticsImpl.wipeContextInductionT(inv)
-  def diffInductionT(inv : Option[Formula]) = TacticLibrary.differentialInvariant(inv)
   def diffInvariantSystemT = ODETactics.diffInvariantT
   def diffSolutionT = ODETactics.diffSolution(None)
 
@@ -341,70 +340,6 @@ object TacticLibrary {
 
   def diffInvariant = ODETactics.diffInvariantT
 
-      //not at all sure about this...
-  def differentialInvariant(invariant : Option[Formula]) : PositionTactic = new PositionTactic("differential induction") {
-    /**
-     *
-     * @param g
-     * @return the body of the continuous evolution operation.
-     */
-    def getBody(g: Formula): Option[Formula] = g match {
-      case BoxModality(ContEvolve(a), _) => Some(a)
-      case BoxModality(NFContEvolve(variables, x, theta, f), _) => Some(And(Equals(Real, x, theta), f)) //?
-      case _ => None
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      def ind(cutSPos: Position, cont: Tactic) = differentialInduction(cutSPos) & AndRightT(cutSPos) &(LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = invariant match {
-        case Some(f) => {
-          //cutAPos is the location where the differential invariant is cut into the antecedent.
-          val cutAPos = AntePosition(node.sequent.ante.length, HereP)
-
-          //This is copied from the box induction tactic and I'm not so sure about it.
-          val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-              case x@BoxModality(a, _) =>
-                val cPos = AntePosition(node.sequent.ante.length)
-                val b1 = ImplyLeftT(cPos) & AxiomCloseT
-                val b2 = hideT(p)
-                Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
-              case _ => None
-            }
-
-            override def applicable(node: ProofNode): Boolean = true
-          }
-
-          //cutSPos is the location of the box containg the diffeq?
-          val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
-
-          //not sure what this is for.
-          val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) & hideT(cutSPos) & LabelBranch(indUseCaseLbl)
-
-          //@todo change these so that the proof closes appropriately.
-          val branch1Tactic = ImplyLeftT(cutAPos) &(hideT(p) & LabelBranch(indInitLbl), useCase)
-          val branch2Tactic = hideT(p) &
-            ImplyRightT(cutSPos) &
-            ind(cutSPos, hideT(cutAPos) & LabelBranch(indStepLbl)) &
-            onBranch(("Close Next", AxiomCloseT))
-
-          //Cut in the assumption and
-          getBody(node.sequent(p)) match {
-            case Some(a) =>
-              Some(cutT(Some(Imply(f, BoxModality(ContEvolve(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
-            case None => None
-          }
-        }
-        case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
-      }
-    }
-  }
-
   def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with ") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
       case Some(BoxModality(_: ContEvolve, _)) => true
@@ -414,35 +349,6 @@ object TacticLibrary {
     }
 
     override def apply(p: Position): Tactic = new ApplyRule(new DiffCut(p, h)) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-  def differentialInduction: PositionTactic = new PositionTactic("Perform differential induction") {
-    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case Some(BoxModality(ContEvolve(_), _)) => true
-      case Some(BoxModality(_: NFContEvolve, _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(diffIndT(p) & abstractionT(p) & skolemizeT(p) & ImplyRightT(p) & deriveFormulaT(p))
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-  def diffIndT: PositionTactic = new PositionTactic("Differential Induction") {
-
-    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case Some(BoxModality(ContEvolve(_), _)) => true
-      case Some(BoxModality(_: NFContEvolve, _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ApplyRule(new DiffInd(p)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }

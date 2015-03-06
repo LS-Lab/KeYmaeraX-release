@@ -2155,35 +2155,6 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
   }
 }
 
-/**
- * [x' = t, H]p <- (H -> [x' = t]p')
- * @author Jan
- *         @author nfulton added case where there's no domain constraint.
- * @param p
- * @TODO Looks unsound. Removal suggested. Missing p. And occurrence constraints do not seem to be enforced.
- */
-class DiffInd(p: Position) extends PositionRule("Differential Induction", p) {
-  override def apply(s: Sequent): List[Sequent] = {
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case BoxModality(ev@ContEvolve(And(Equals(s, xp@Derivative(_, _), t), h)), f) =>
-          //TODO: require that t and h do not contain derivatives
-          Right(BoxModality(ev, Imply(h, BoxModality(Assign(xp, t), FormulaDerivative(f)))))
-        case BoxModality(evolution@ContEvolve(Equals(s, xp@Derivative(_, _), t)), f) =>
-          //TODO: require that t and h do not contain derivatives
-          Right(
-            BoxModality(evolution, BoxModality(Assign(xp, t), FormulaDerivative(f)))
-          )
-        case _ => ???
-      }
-    }
-    ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, fn), s(p)) match {
-      case Some(f) => List(s.updated(p, f))
-      case a => throw new IllegalStateException("Unexpected traversal result " + a)
-    }
-  }
-}
-
 /*********************************************************************************
  * Block Quantifier Decomposition
  *********************************************************************************
