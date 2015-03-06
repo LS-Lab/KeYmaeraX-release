@@ -623,6 +623,30 @@ object HybridProgramTacticsImpl {
     }
   }
 
+  /**
+   * Creates a new axiom tactic for diamond test.
+   * @return The new tactic.
+   */
+  def diamondTestT: PositionTactic = new AxiomTactic("<?> test", "<?> test") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(Test(_), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case DiamondModality(Test(h), p) =>
+        // construct substitution
+        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
+        // construct axiom instance: <?H>p <-> (H & p).
+        val g = And(h, p)
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+  }
+
   def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
       case BoxModality(NDetAssign(v: Variable), _) => true

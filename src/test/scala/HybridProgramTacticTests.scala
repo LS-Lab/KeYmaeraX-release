@@ -226,6 +226,14 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("y>2 -> y>0".asFormula))
   }
 
+  "Diamond test tactic" should "use axiom <?H>p <-> (H & p)" in {
+    import HybridProgramTacticsImpl.diamondTestT
+    val s = sucSequent("<?y>2;>y>0".asFormula)
+    val tactic = locateSucc(diamondTestT)
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("y>2 & y>0".asFormula))
+  }
+
   "Box nondeterministic assignment tactic" should "introduce universal quantifier and rename free variables" in {
     import TacticLibrary.boxNDetAssign
     val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;]y>0".asFormula :: Nil)
