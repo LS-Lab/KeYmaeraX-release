@@ -20,20 +20,11 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
 
   def run(cmd : String) : (String, KExpr)
   def run(cmd : MExpr) : (String, KExpr)
-  
-  def dispatch(cmd : String) : Unit
-  def dispatch(cmd : MExpr) : Unit
 
   /**
    * @return true if the job is finished, false if it is still running.
    */
   def ready : Boolean
-
-  /**
-   * @return The result of a dispatched job. This method blocks on
-   * Mathematica.
-   */
-  def getAnswer : (String, KExpr)
 
   /** Cancels the current request.
    * @return True if job is successfully cancelled, or False if the new
@@ -83,27 +74,31 @@ class JLinkMathematicaLink extends MathematicaLink {
    * Runs the command and then halts program exception until answer is returned.
    */
   def run(cmd: String) = {
-    dispatch(cmd)
-    getAnswer()
+    ml.synchronized {
+      dispatch(cmd)
+      getAnswer
+    }
   }
   
   def run(cmd: MExpr) = {
-    dispatch(cmd)
-    getAnswer()
+    ml.synchronized {
+      dispatch(cmd)
+      getAnswer
+    }
   }
 
-  def dispatch(cmd: String) : Unit = {
+  private def dispatch(cmd: String) : Unit = {
     ml.evaluate(cmd)
   }
 
-  def dispatch(cmd: MExpr) = {
+  private def dispatch(cmd: MExpr) = {
     ml.evaluate(cmd)
   }
 
   /**
    * blocks and returns the answer.
    */
-  def getAnswer() = {
+  private def getAnswer = {
     ml.waitForAnswer()
     val res = ml.getExpr
     val keymaeraResult = MathematicaToKeYmaera.fromMathematica(res)
