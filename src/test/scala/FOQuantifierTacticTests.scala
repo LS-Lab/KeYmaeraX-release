@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{Variable, Real, RootNode}
-import edu.cmu.cs.ls.keymaera.tactics.{Config, Tactics}
+import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Config, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
@@ -17,13 +17,13 @@ import scala.collection.immutable.Map
  */
 class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
-  Config.mathlicenses = 1
-  Config.maxCPUs = 1
 
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
   }
@@ -31,6 +31,8 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   override def afterEach() = {
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.MathematicaScheduler = null
+    Tactics.KeYmaeraScheduler = null
   }
 
   "Uniquify" should "rename universally quantified variables" in {

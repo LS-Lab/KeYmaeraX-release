@@ -2,7 +2,7 @@ import java.io.File
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
-import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticLibrary, Tactics, Config}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable.Map
@@ -16,14 +16,12 @@ import TacticLibrary._
  * @author Stefan Mitsch
  */
 class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
-
-  Config.mathlicenses = 1
-  Config.maxCPUs = 1
-
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
   }
@@ -31,6 +29,8 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
   override def afterEach() = {
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.MathematicaScheduler = null
+    Tactics.KeYmaeraScheduler = null
   }
 
   def ls(t: PositionTactic) = locateSucc(t)

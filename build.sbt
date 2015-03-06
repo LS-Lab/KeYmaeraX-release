@@ -31,6 +31,8 @@ resolvers += "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/" //
 
 scalacOptions := Seq("-unchecked", "-deprecation", "-encoding", "utf8")
 
+javaOptions += "-Xss20M"
+
 libraryDependencies ++= {
   val akkaV = "2.1.4"
   val sprayV = "1.1.1"

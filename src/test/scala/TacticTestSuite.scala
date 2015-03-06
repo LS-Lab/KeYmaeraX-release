@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -17,6 +17,9 @@ trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
   val mathematicaConfig = helper.mathematicaConfig
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
+
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
@@ -24,6 +27,8 @@ trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
+    Tactics.MathematicaScheduler = null
   }
 
   protected def containsOpenGoal(node:ProofNode, f:Formula) =

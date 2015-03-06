@@ -20,13 +20,12 @@ import scala.collection.immutable.Map
  * @author Ran Ji
  */
 class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach with PrivateMethodTester {
-  Config.mathlicenses = 1
-  Config.maxCPUs = 1
-
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
   }
@@ -34,6 +33,8 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   override def afterEach() = {
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
+    Tactics.MathematicaScheduler = null
   }
 
   "Box assignment equal tactic" should "introduce universal quantifier with new variable" in {

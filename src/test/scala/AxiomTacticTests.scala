@@ -16,11 +16,13 @@ import scala.collection.immutable.List
 class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.KeYmaeraScheduler.init(Map())
   }
 
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
   }
 
   "Term axiom tactic" should "use axiom instance and substitution constructed by subclasses" in {

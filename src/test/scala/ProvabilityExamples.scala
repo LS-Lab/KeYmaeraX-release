@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.Mathematica
-import edu.cmu.cs.ls.keymaera.tactics.{Tactics, Config, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.core.{KeYmaera, Mathematica}
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, Config, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -13,11 +13,12 @@ class ProvabilityExamples extends FlatSpec with Matchers with BeforeAndAfterEach
   import helper._ // import helper methods for thests.
 
   //Mathematica
-  Config.maxCPUs = 1
-  Config.mathlicenses = 1
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
+
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
@@ -25,6 +26,8 @@ class ProvabilityExamples extends FlatSpec with Matchers with BeforeAndAfterEach
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
+    Tactics.MathematicaScheduler = null
   }
 
 

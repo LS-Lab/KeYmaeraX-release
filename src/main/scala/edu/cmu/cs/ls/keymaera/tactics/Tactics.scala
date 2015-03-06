@@ -93,10 +93,10 @@ import java.util.concurrent.ConcurrentLinkedQueue
 // TODO: clearly mark exit points of tactics to give a & (b, c) a well defined meaning over complex tactics instead of just rule applications
 object Tactics {
 
-  val KeYmaeraScheduler = new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
-  val MathematicaScheduler = new Scheduler(for (i <- 0 until Config.mathlicenses) yield new Mathematica)
-
-
+  // TODO replace with dependency injection
+  var KeYmaeraScheduler = new Interpreter(KeYmaera)//new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
+  var MathematicaScheduler = new Interpreter(new Mathematica)
+    //new Scheduler(for (i <- 0 until Config.mathlicenses) yield new Mathematica)
 
   class Stats(var executionTime : Int, var branches : Int, var rules : Int) {
     var tacs : Int = 0
@@ -238,7 +238,7 @@ object Tactics {
 
   abstract class Tactic(val name : String) extends Stats {
 
-    var scheduler : Scheduler = KeYmaeraScheduler // scheduler of this tactics
+    var scheduler: ExecutionEngine = KeYmaeraScheduler // scheduler of this tactics
 
     var limit  : Limits = defaultLimits // limit
 

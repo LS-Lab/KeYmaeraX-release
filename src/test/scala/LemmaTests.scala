@@ -1,7 +1,7 @@
 import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, Config}
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, TacticLibrary, Config}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import scala.Equals
@@ -12,8 +12,6 @@ import scala.collection.immutable.{Nil, Map}
  * @author Stefan Mitsch
  */
 class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  Config.mathlicenses = 1
-  Config.maxCPUs = 1
 
   val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
   var math: Mathematica = null

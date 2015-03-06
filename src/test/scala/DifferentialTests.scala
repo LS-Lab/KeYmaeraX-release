@@ -22,11 +22,11 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
 
   //Mathematica
-  Config.maxCPUs = 1
-  Config.mathlicenses = 1
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
@@ -34,6 +34,8 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
+    Tactics.MathematicaScheduler = null
   }
 
   "differential weaken" should "turn nondeterministic assignments and tests of the evolution domain into facts in the antecedent" in {

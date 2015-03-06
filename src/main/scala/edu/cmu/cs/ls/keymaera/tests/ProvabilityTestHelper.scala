@@ -176,14 +176,14 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
     logger("Dispatching tactic " + tactic.name)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, rootNode))
 
-    logger("beginning wait sequence for " + tactic.name)
-    tactic.synchronized {
-      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll));
-      tactic.wait();
-      tactic.unregister;
-    }
+//    logger("beginning wait sequence for " + tactic.name)
+//    tactic.synchronized {
+//      tactic.registerCompletionEventListener(_ => tactic.synchronized(tactic.notifyAll));
+//      tactic.wait();
+//      tactic.unregister;
+//    }
 
-    logger("Ending wait sequence for " + tactic.name)
+//    logger("Ending wait sequence for " + tactic.name)
     logger("Proof is closed: " + rootNode.isClosed())
     if(!rootNode.isClosed()) {
       rootNode.openGoals().map(x => logger("Open Goal: " + x.sequent.toString()))

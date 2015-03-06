@@ -1,4 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{Sequent, RootNode}
+import edu.cmu.cs.ls.keymaera.core.{KeYmaera, Sequent, RootNode}
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Config}
 import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLInterpreter, CLParser}
 import testHelper.StringConverter._
 

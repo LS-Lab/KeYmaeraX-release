@@ -20,8 +20,6 @@ object BadassignT extends Tag("BadassignT")
 
 
 class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  Config.mathlicenses = 1
-  Config.maxCPUs = 1
 
   val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
 
@@ -29,6 +27,9 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val randomFormulaComplexity = 5
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
+
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
   }
@@ -36,6 +37,8 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def afterEach() = {
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.MathematicaScheduler = null
+    Tactics.KeYmaeraScheduler = null
   }
 
   def num(n : Integer) = Number(new BigDecimal(n.toString))
@@ -378,9 +381,9 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val zero = Number(0)
     val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
-    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
-      Thread.sleep(10)
-    }
+//    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
+//      Thread.sleep(10)
+//    }
     r
   }
 

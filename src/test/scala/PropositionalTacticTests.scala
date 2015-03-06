@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.core.RootNode
+import edu.cmu.cs.ls.keymaera.core.{Mathematica, KeYmaera, RootNode}
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
-import edu.cmu.cs.ls.keymaera.tactics.{Tactics, Config}
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, Config}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ProofFactory._
@@ -14,13 +14,13 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  */
 class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  Config.mathlicenses = 1
-  Config.maxCPUs = 1
 
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
   }
@@ -28,6 +28,8 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   override def afterEach() = {
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.MathematicaScheduler = null
+    Tactics.KeYmaeraScheduler = null
   }
 
   "K Modal Modus Ponens" should "be [x:=2;](x>1 -> x>0) on [x:=2;]x>1 -> [x:=2;]x>0" in {

@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.{Config, BranchLabels, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Config, BranchLabels, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
@@ -14,15 +14,16 @@ import scala.collection.immutable.Map
  * @author Stefan Mitsch
  */
 class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  Config.maxCPUs = 1
   val helper = new ProvabilityTestHelper((x) => println(x))
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.KeYmaeraScheduler.init(Map())
   }
 
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
   }
 
   "NegateEqualsT" should "negate = in succedent" in {

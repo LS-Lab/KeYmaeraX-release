@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{HybridProgramTacticsImpl, ODETactics, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -20,6 +20,8 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   val mathematicaConfig = helper.mathematicaConfig
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
@@ -27,6 +29,8 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
+    Tactics.MathematicaScheduler = null
   }
 
   private def containsOpenGoal(node:ProofNode, f:Formula) =

@@ -140,9 +140,21 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
 }
 
 /**
+ * Executes tactics on tools.
+ */
+trait ExecutionEngine {
+  /** Initializes the execution engine with configuration values specified as key-value pairs */
+  def init(config: Map[String,String]): Unit
+  /** Shuts down the execution engine */
+  def shutdown(): Unit
+  /** Executes the specified tactic */
+  def dispatch(t: TacticToolBinding): ExecutionEngine
+}
+
+/**
  * Main scheduler class; contains prio list and starts scheduler threads upon creation
  */
-class Scheduler(tools : Seq[Tool]) {
+class Scheduler(tools : Seq[Tool]) extends ExecutionEngine {
 
   val maxThreads = tools.length
   val thread   : Array[java.lang.Thread] = new Array(maxThreads)
@@ -150,7 +162,7 @@ class Scheduler(tools : Seq[Tool]) {
   val prioList = new scala.collection.mutable.SynchronizedPriorityQueue[TacticToolBinding]()
   @volatile var blocked = 0/* threads blocked on the scheduler */
 
-  def init(config: Map[String,String]) = {
+  override def init(config: Map[String,String]) = {
     for (x <- 0 to maxThreads - 1) {
       val te = new TacticExecutor(this, tools(x), x)
       executors.update(x, te)
@@ -161,7 +173,7 @@ class Scheduler(tools : Seq[Tool]) {
     thread.foreach(_.start())
   }
 
-  def shutdown() = {
+  override def shutdown() = {
     executors.foreach(_.stop())
     // interrupt long running tools to make them check their stopped flag
     thread.foreach(_.interrupt())
@@ -169,7 +181,7 @@ class Scheduler(tools : Seq[Tool]) {
     thread.foreach(_.join())
   }
 
-  def dispatch(t : TacticToolBinding) : this.type = {
+  override def dispatch(t : TacticToolBinding) = {
     prioList += t
     this.synchronized {
       if (blocked > 0) {
@@ -177,6 +189,21 @@ class Scheduler(tools : Seq[Tool]) {
         notify() /* release one executor at a time to avoid trampling herd */
       }
     }
+    this
+  }
+}
+
+/**
+ * Sequential interpretation of tactics.
+ * @param tool The tool to execute tactics.
+ */
+class Interpreter(tool : Tool) extends ExecutionEngine {
+  override def init(config: Map[String,String]) = tool.init(config)
+
+  override def shutdown() = tool.shutdown()
+
+  override def dispatch(t : TacticToolBinding) = {
+    t.execute(tool)
     this
   }
 }

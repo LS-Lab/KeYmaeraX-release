@@ -1,7 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, AlphaConversionHelper, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, ApplyRule, Tactic, PositionTactic}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import testHelper.StringConverter._
@@ -60,11 +60,13 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   override def beforeEach() = {
+    Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.KeYmaeraScheduler.init(Map())
   }
 
   override def afterEach() = {
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.KeYmaeraScheduler = null
   }
 
   /**
