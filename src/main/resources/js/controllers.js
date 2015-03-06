@@ -374,6 +374,22 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl',
 // The proof lists
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+var pollProofStatus = function(proof, userId, http) {
+   setTimeout(function() {
+      http.get('proofs/user/' + userId + '/' + proof.id + '/status')
+              .success(function(data) {
+          if (data.status == undefined) {
+            pollProofStatus(proof, userId, http);
+          } else {
+            proof.loadStatus = data.status
+          }
+      }).
+      error(function(data, status, headers, config) {
+          alert('Unable to poll proof status.')
+      });
+  }, 1000);
+}
+
 // Proof list for all models belonging to a user.
 keymaeraProofControllers.controller('ProofListCtrl',
   function ($scope, $http, $cookies,$location, $routeParams) {
@@ -388,31 +404,16 @@ keymaeraProofControllers.controller('ProofListCtrl',
     $scope.loadProof = function(proof) {
         proof.loadStatus = 'Loading'
         $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
-            proof.loadStatus = 'Loading'
-            $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
-                proof.loadStatus = data.loadStatus
-                if (data.loadStatus == 'Loading') {
-                  (function poll(){
-                     setTimeout(function() {
-                          $http.get('proofs/user/' + $cookies.userId + '/' + proof.id + '/status')
-                                  .success(function(data) {
-                              if (data.status == undefined) {
-                                poll();
-                              } else {
-                                proof.loadStatus = data.status
-                              }
-                          }).
-                          error(function(data, status, headers, config) {
-                              alert('Unable to poll proof status.')
-                          });
-                    }, 1000);
-                  })();
-                }
-            }).
-            error(function(data, status, headers, config) {
-                alert('Error loading proof.')
-            });
-        })
+            proof.loadStatus = data.loadStatus
+            // when server loads proof itself asynchronously
+            if (data.loadStatus == 'Loading') {
+              pollProofStatus(proof, $cookies.userId, $http);
+            }
+        }).
+        error(function(data, status, headers, config) {
+          // TODO check that it is a time out
+          pollProofStatus(proof, $cookies.userId, $http);
+        });
     }
 
     $scope.$emit('routeLoaded', {theview: 'allproofs'});
@@ -444,33 +445,18 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     }
 
     $scope.loadProof = function(proof) {
-        proof.loadStatus = 'Loading'
-        $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
-            proof.loadStatus = 'Loading'
-            $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
-                proof.loadStatus = data.loadStatus
-                if (data.loadStatus == 'Loading') {
-                  (function poll(){
-                     setTimeout(function() {
-                          $http.get('proofs/user/' + $cookies.userId + '/' + proof.id + '/status')
-                                  .success(function(data) {
-                              if (data.status == undefined) {
-                                poll();
-                              } else {
-                                proof.loadStatus = data.status
-                              }
-                          }).
-                          error(function(data, status, headers, config) {
-                              alert('Unable to poll proof status.')
-                          });
-                    }, 1000);
-                  })();
-                }
-            }).
-            error(function(data, status, headers, config) {
-                alert('Error loading proof.')
-            });
-        })
+      proof.loadStatus = 'Loading'
+      $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
+        proof.loadStatus = data.loadStatus
+        // when server loads proof itself asynchronously
+        if (data.loadStatus == 'Loading') {
+          pollProofStatus(proof, $cookies.userId, $http);
+        }
+      }).
+      error(function(data, status, headers, config) {
+        // TODO check that it is a time out
+        pollProofStatus(proof, $cookies.userId, $http);
+      });
     }
     //Load the proof list and emit as a view.
     $http.get('models/users/' + $cookies.userId + "/model/" + $routeParams.modelId + "/proofs").success(function(data) {
