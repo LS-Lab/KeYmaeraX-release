@@ -756,6 +756,32 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for diamond sequential composition <;>
+   * @return The new tactic.
+   */
+  def diamondSeqT: PositionTactic = new AxiomTactic("<;> compose", "<;> compose") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(Sequence(_, _), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case DiamondModality(Sequence(a, b), p) =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aB = ProgramConstant("b")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aB, b), SubstitutionPair(aP, p))
+        // construct axiom instance: < a; b >p <-> <a><b>p.
+        val g = DiamondModality(a, DiamondModality(b, p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+
+  }
+
+  /**
    * Creates a new axiom tactic for box induction [*] I induction
    * @return The new tactic.
    */
