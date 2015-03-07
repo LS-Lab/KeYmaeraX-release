@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
+import edu.cmu.cs.ls.keymaera.tactics.NameCategorizer._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyLeftT
@@ -262,7 +263,7 @@ object HybridProgramTacticsImpl {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
-          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) & (v2vBoxAssignT(p) | NilT))
+          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) & (v2vAssignT(p) | NilT))
         case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) => Some(v2tBoxAssignT(p))
         }
       }
@@ -470,18 +471,21 @@ object HybridProgramTacticsImpl {
    * Alpha renaming in ODEs and loops introduces initial value assignments. This tactic is designed to handle those.
    * @return The tactic.
    */
-  def v2vBoxAssignT: PositionTactic = new PositionTactic("[:=] assign") {
+  def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
     import NameCategorizer.freeVariables
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case BoxModality(Assign(_: Variable, v: Variable), pred) => pred match {
-        case BoxModality(_: ContEvolveProgram, _) => !freeVariables(pred).contains(v)
-        case BoxModality(_: Loop, _) => !freeVariables(pred).contains(v)
-        case DiamondModality(_: ContEvolveProgram, _) => !freeVariables(pred).contains(v)
-        case DiamondModality(_: Loop, _) => !freeVariables(pred).contains(v)
-        // prevent application on anything else. otherwise, boxAssignT has the surprising effect of handling multiple
-        // assignments at once
-        case _ => false
-      }
+      case BoxModality(Assign(_: Variable, v: Variable), pred) => checkNested(pred, v)
+      case DiamondModality(Assign(_: Variable, v: Variable), pred) => checkNested(pred, v)
+      case _ => false
+    }
+
+    private def checkNested(f: Formula, v: Variable) = f match {
+      case BoxModality(_: ContEvolveProgram, _) => !freeVariables(f).contains(v)
+      case BoxModality(_: Loop, _) => !freeVariables(f).contains(v)
+      case DiamondModality(_: ContEvolveProgram, _) => !freeVariables(f).contains(v)
+      case DiamondModality(_: Loop, _) => !freeVariables(f).contains(v)
+      // prevent application on anything else. otherwise, assignT has the surprising effect of handling multiple
+      // assignments at once
       case _ => false
     }
 
@@ -497,18 +501,22 @@ object HybridProgramTacticsImpl {
         val succLength = node.sequent.succ.length
         val anteLength = node.sequent.ante.length
 
+        def createTactic(m: Formula, pred: Formula, v: Variable, t: Variable) = Some(
+          cutT(Some(Equiv(m, replace(pred)(v, t)))) &
+            onBranch(
+              (cutShowLbl,
+                // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
+                PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
+                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: Nil))) &
+                  EquivRightT(SuccPosition(0)) & AxiomCloseT),
+              (cutUseLbl, equalityRewriting(AntePosition(anteLength), p) &
+                hideT(AntePosition(anteLength)) & hideT(p))
+            )
+        )
+
         node.sequent(p) match {
-          case b@BoxModality(Assign(v: Variable, t: Variable), pred) => Some(
-            cutT(Some(Equiv(b, replace(pred)(v, t)))) &
-              onBranch(
-                (cutShowLbl,
-                  alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(succLength, PosInExpr(1 :: Nil))) &
-                    EquivRightT(SuccPosition(succLength)) &
-                    AxiomCloseT(AntePosition(anteLength), SuccPosition(succLength))),
-                (cutUseLbl, equalityRewriting(AntePosition(anteLength), p) &
-                  hideT(AntePosition(anteLength)) & hideT(p))
-              )
-          )
+          case b@BoxModality(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
+          case d@DiamondModality(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
         }
       }
     }
@@ -671,12 +679,12 @@ object HybridProgramTacticsImpl {
           case BoxModality(NDetAssign(v: Variable), BoxModality(prg: Loop, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vBoxAssignT(p)
+              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vAssignT(p)
           )
           case BoxModality(NDetAssign(v: Variable), BoxModality(prg: ContEvolveProgram, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vBoxAssignT(p)
+              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vAssignT(p)
           )
           case _ => Some(boxNDetAssignWithoutAlpha(p) & skolemizeT(p))
         }
@@ -710,6 +718,88 @@ object HybridProgramTacticsImpl {
         val alpha = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(NDetAssign(_), _), Forall(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+        // rename to match axiom if necessary
+        val (ax, cont) =
+          if (v.name != aV.name || v.index != None) (replaceFree(axiom)(aV, v, None), Some(alpha))
+          else (axiom, None)
+        Some(ax, axiomInstance, Substitution(l), None, cont)
+      case _ => None
+    }
+  }
+
+  def diamondNDetAssign: PositionTactic = new PositionTactic("<:=> assign nondet") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case DiamondModality(NDetAssign(v: Variable), _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        import scala.language.postfixOps
+        import FOQuantifierTacticsImpl.skolemizeT
+
+        val f = node.sequent(p)
+        // construct a new name for renaming in ODE
+        val newV = f match {
+          case DiamondModality(NDetAssign(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
+          case _ => throw new IllegalStateException("Checked by applies to never happen")
+        }
+
+        node.sequent(p) match {
+          case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: Loop, _))
+            if BindingAssessment.catVars(prg).bv.contains(v) => Some(
+            alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
+              diamondNDetAssignWithoutAlpha(p)
+          )
+          case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: ContEvolveProgram, _))
+            if BindingAssessment.catVars(prg).bv.contains(v) => Some(
+            alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
+              diamondNDetAssignWithoutAlpha(p)
+          )
+          case _ => Some(diamondNDetAssignWithoutAlpha(p))
+        }
+      }
+    }
+  }
+
+  /**
+   * Creates a new axiom tactic for non-deterministic assignment [x := *].
+   * @return The new tactic.
+   */
+  private def diamondNDetAssignWithoutAlpha: PositionTactic = new AxiomTactic("<:*> assign nondet", "<:*> assign nondet") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(NDetAssign(_), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, Substitution,
+      Option[PositionTactic], Option[PositionTactic])] = f match {
+      case DiamondModality(NDetAssign(x), p) if Variable.unapply(x).isDefined =>
+        val v = x.asInstanceOf[Variable]
+        // construct substitution
+        val aP = Function("p", None, Real, Bool)
+        val l = List(new SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(x, CDot)))
+        // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
+        val g = Exists(Seq(v), p)
+        val axiomInstance = Equiv(f, g)
+
+        // alpha renaming
+        val aV = Variable("v", None, Real)
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(DiamondModality(NDetAssign(_), _), Exists(_, _)) => true
             case _ => false
           }
 
