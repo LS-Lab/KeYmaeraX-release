@@ -1244,16 +1244,14 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // uniform substitution of rules
   
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
-    val x = Variable("x", None, Real)
     val p = Function("p", None, Real, Bool)
     val a = ProgramConstant("a")
-    val f = GreaterEqual(Real, Exp(Real, Neg(Real, x), Number(2)), Number(0))
+    val f = "(-x)^2>=0".asFormula
     val fseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(f))
-    val prog = Assign(x, Subtract(Real, x, Number(1)))
-    val conc = BoxModality(prog, f)
-    val concseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
-    val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p, Anything), f),
-      SubstitutionPair(a, prog)))
-    AxiomaticRule("Goedel", s)(fseq) should be concseq
+    val prog = "x:=x-1;".asProgram
+    val s = Substitution(
+      SubstitutionPair(ApplyPredicate(p, Anything), f) ::
+      SubstitutionPair(a, prog) :: Nil)
+    AxiomaticRule("Goedel", s)(fseq) should be (Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, f))))
   }
 }
