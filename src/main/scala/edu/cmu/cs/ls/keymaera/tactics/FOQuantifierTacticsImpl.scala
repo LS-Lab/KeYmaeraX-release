@@ -22,16 +22,21 @@ import scala.collection.immutable.Seq
 object FOQuantifierTacticsImpl {
 
   def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
-    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
-      case Forall(_, _) => true
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Forall(_, _) => p.isAnte
+      case Exists(_, _) => !p.isAnte
       case _ => false
-    })
+    }
 
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(pos) match {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
         case Forall(vars, phi) =>
+          Some(vars.filter(_.isInstanceOf[Variable]).
+            map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
+            fold(NilT)((a, b) => a & b))
+        case Exists(vars, phi) =>
           Some(vars.filter(_.isInstanceOf[Variable]).
             map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
             fold(NilT)((a, b) => a & b))
@@ -47,6 +52,23 @@ object FOQuantifierTacticsImpl {
    * @return The tactic.
    */
   def instantiateT(quantified: Variable, instance: Term): PositionTactic = new PositionTactic("Quantifier Instantiation") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Forall(vars, _) => p.isAnte && vars.contains(quantified)
+      case Exists(vars, _) => !p.isAnte && vars.contains(quantified)
+      case _ => false
+    }
+
+    override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
+        case Forall(_, _) => Some(instantiateUniversalQuanT(quantified, instance)(pos))
+        case Exists(_, _) => Some(instantiateExistentialQuanT(quantified, instance)(pos))
+        case _ => None
+      }
+    }
+  }
+
+  def instantiateUniversalQuanT(quantified: Variable, instance: Term): PositionTactic = new PositionTactic("Universal Quantifier Instantiation") {
     val axiomName = "all instantiate"
     val axiom = Axiom.axioms.get(axiomName)
     require(axiom.isDefined)
@@ -56,7 +78,7 @@ object FOQuantifierTacticsImpl {
       case _ => false
     })
 
-    override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
+    override def apply(pos: Position): Tactic = new ConstructionTactic("Universal Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       def replace(f: Formula)(o: NamedSymbol, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
@@ -129,6 +151,31 @@ object FOQuantifierTacticsImpl {
     }
   }
 
+  def instantiateExistentialQuanT(quantified: Variable, t: Term) = new PositionTactic("exists instantiate") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Exists(vars, _) => !p.isAnte && vars.contains(quantified)
+      case _ => false
+    }
+
+    override def apply(p: Position) = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Exists(vars, phi) =>
+          val anteLength = node.sequent.ante.length
+          val succLength = node.sequent.succ.length
+          val desired = replace(phi)(quantified, t)
+          val cutFrm = Imply(desired, node.sequent(p))
+          import TacticLibrary.debugT
+          Some(cutT(Some(cutFrm)) & onBranch(
+            (cutUseLbl, ImplyLeftT(AntePosition(anteLength)) && (hideT(p), AxiomCloseT)),
+            (cutShowLbl, cohideT(SuccPosition(succLength)) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
+              ImplyRightT(SuccPosition(0)) & existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT)
+          ))
+        case _ => None
+      }
+    }
+  }
+
   /**
    * Tactic for existential quantifier generalization.
    * @param x The new existentially quantified variable.
@@ -136,12 +183,11 @@ object FOQuantifierTacticsImpl {
    * @return The tactic.
    */
   def existentialGenT(x: Variable, t: Term) = new AxiomTactic("exists generalize", "exists generalize") {
-    override def applies(f: Formula): Boolean = !BindingAssessment.allNames(f).contains(x)
+    override def applies(f: Formula): Boolean = true
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
         Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
       import AlphaConversionHelper.replaceFree
-      require(!BindingAssessment.allNames(f).contains(x))
 
       // construct substitution
       val aT = Apply(Function("t", None, Unit, Real), Nothing)
@@ -168,7 +214,9 @@ object FOQuantifierTacticsImpl {
         }
       }
       val Imply(left, right) = axiom
-      val (ax, cont) = (Imply(left, replaceFree(right)(aX, x)), Some(alpha))
+      val (ax, cont) =
+        if (x.name != aX.name || x.index != aX.index) (Imply(left, replaceFree(right)(aX, x)), Some(alpha))
+        else (Imply(left, right), None)
 
       Some(ax, axiomInstance, Substitution(l), None, cont)
     }

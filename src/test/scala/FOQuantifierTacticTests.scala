@@ -6,8 +6,8 @@ import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
-import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateT,existentialGenT,
-  vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT}
+import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
+  instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT}
 
 import scala.collection.immutable.Map
 
@@ -72,28 +72,72 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sucSequent("[y_1:=*;][y_0:=y_1;]y_0>0".asFormula))
   }
 
-  "Quantifier instantiation" should "instantiate simple predicate" in {
-    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+  "Quantifier instantiation of universal quantifier" should "instantiate simple predicate" in {
+    val tactic = locateAnte(instantiateUniversalQuanT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "z>0".asFormula :: Nil, Nil))
   }
 
   it should "instantiate assignment modality" in {
-    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    val tactic = locateAnte(instantiateUniversalQuanT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[y:=z;][y:=2;]y>0".asFormula :: Nil, Nil))
   }
 
   it should "instantiate ODE modality" in {
-    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    val tactic = locateAnte(instantiateUniversalQuanT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. [y'=x;]y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[y'=z;]y>0".asFormula :: Nil, Nil))
   }
 
   it should "instantiate assignment irrespective of what follows" in {
-    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    val tactic = locateAnte(instantiateUniversalQuanT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y'=1;]y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[y:=z;][y'=1;]y>0".asFormula :: Nil, Nil))
+  }
+
+  "Quantifier instantiation of existential quantifier" should "instantiate simple predicate" in {
+    val tactic = locateSucc(instantiateExistentialQuanT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x. x>0".asFormula))) should be (
+      sucSequent("z>0".asFormula))
+  }
+
+  it should "instantiate assignment modality" in {
+    val tactic = locateSucc(instantiateExistentialQuanT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x. [y:=x;][y:=2;]y>0".asFormula))) should be (
+      sucSequent("[y:=z;][y:=2;]y>0".asFormula))
+  }
+
+  it should "instantiate ODE modality" in {
+    val tactic = locateSucc(instantiateExistentialQuanT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x. [y'=x;]y>0".asFormula))) should be (
+      sucSequent("[y'=z;]y>0".asFormula))
+  }
+
+  it should "instantiate assignment irrespective of what follows" in {
+    val tactic = locateSucc(instantiateExistentialQuanT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x. [y:=x;][y'=1;]y>0".asFormula))) should be (
+      sucSequent("[y:=z;][y'=1;]y>0".asFormula))
+  }
+
+  "Quantifier instantiation" should "pick the correct subtactic" in {
+    val t1 = locateSucc(instantiateT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(t1, new RootNode(sucSequent("\\exists x. [y:=x;][y'=1;]y>0".asFormula))) should be (
+      sucSequent("[y:=z;][y'=1;]y>0".asFormula))
+
+    val t2 = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(t2, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[y:=z;][y:=2;]y>0".asFormula :: Nil, Nil))
+  }
+
+  it should "pick the correct subtactic and try the quantified names for instantiation" in {
+    val t1 = locateSucc(instantiateT)
+    getProofSequent(t1, new RootNode(sucSequent("\\exists x. [y:=x;][y'=1;]y>0".asFormula))) should be (
+      sucSequent("[y:=x;][y'=1;]y>0".asFormula))
+
+    val t2 = locateAnte(instantiateT)
+    getProofSequent(t2, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))
   }
 
   "Existential generalization p(t) -> \\exists x. p(x)" should "introduce existential quantifier in antecedent" in {
