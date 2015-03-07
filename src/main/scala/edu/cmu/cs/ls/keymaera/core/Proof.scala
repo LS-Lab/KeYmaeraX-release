@@ -164,7 +164,7 @@ object Provable {
  * @note soundness-critical
  * @note Only private constructor calls for soundness
  */
-sealed case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
+final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   // has the conclusion of this Provable been proved?
   final def isProved : Boolean = (subgoals.isEmpty)
 
