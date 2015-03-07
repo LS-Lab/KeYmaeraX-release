@@ -609,7 +609,35 @@ object Axiom {
  */
 object AxiomaticRule {
   // immutable list of locally sound "axiomatic" proof rules (premise, conclusion)
-  val rules: scala.collection.immutable.Map[String, Pair[Sequent,Sequent]] = Map()
+  val rules: scala.collection.immutable.Map[String, Pair[Sequent,Sequent]] = loadRuleFile
+
+  private def loadRuleFile() = {
+    val x = Variable("x", None, Real)
+    val p = Function("p", None, Real, Bool)
+    val q = Function("q", None, Real, Bool)
+    val anyt = Anything
+    val a = ProgramConstant("a")
+    Map(
+      ("all generalization",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, x))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x)))))),
+      ("[] monotone",
+         (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
+          Sequent(Seq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))), IndexedSeq(BoxModality(a, ApplyPredicate(q, anyt)))))),
+      ("<> monotone",
+        (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
+          Sequent(Seq(), IndexedSeq(DiamondModality(a, ApplyPredicate(p, anyt))), IndexedSeq(DiamondModality(a, ApplyPredicate(q, anyt)))))),
+      ("[] congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, ApplyPredicate(p, anyt))), BoxModality(a, ApplyPredicate(q, anyt)))))),
+      ("<> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, ApplyPredicate(p, anyt))), DiamondModality(a, ApplyPredicate(q, anyt)))))),
+      ("Goedel", /* unsound for hybrid games */
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, anyt))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))))))
+    )
+  }
 
   // apply uniform substitution instance subst of "axiomatic" rule named id
   final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
@@ -1250,7 +1278,7 @@ object BindingAssessment {
  * @author Stefan Mitsch
  * @TODO Rename to FastSubstitution
  */
-sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
+final case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
 
   import BindingAssessment._
@@ -1544,9 +1572,9 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
  * Used for UniformSubstitution rule.
  * @author aplatzer
  * @see GlobalUniformSubstitution
- * @TODO Rename to USubstitution or so. Or just Substitution?
+ * @TODO Rename to Substitution. Or USubst?
  */
-sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
+final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable()
 
   // unique left hand sides in l
@@ -1960,7 +1988,7 @@ object GlobalUniformSubstitution {
 
 // alpha conversion
 
-//@TODO Replace by flat implementation
+/*@TODO Replace by flat implementation*/
 class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
@@ -2089,7 +2117,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
- * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization"
+ * @TODO Could replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
@@ -2149,7 +2177,10 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
 }
 
-// @TODO Review. Might turn into axiom QuantifierAbstraction.
+  /**
+   * @TODO Review. Might turn into axiom QuantifierAbstraction.
+   * @deprecated Use [] monotone and <> monotone or Goedel rule instead.
+   */
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
@@ -2201,6 +2232,7 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 // the following rules will turn into axioms
 
 //@TODO Removal suggested since better axiom DC differential cut exists.
+//@deprecated
 class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
   require(!p.isAnte)
   override def apply(s: Sequent): List[Sequent] = {
