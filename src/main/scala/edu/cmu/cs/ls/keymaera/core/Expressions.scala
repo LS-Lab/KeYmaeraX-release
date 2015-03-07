@@ -230,6 +230,7 @@ object PredicateConstant {
     case _ => None
   }
 }
+//@TODO replace with just predicate functions, alias functions that happen to be of type ()=>bool
 final class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
 object ProgramConstant {
