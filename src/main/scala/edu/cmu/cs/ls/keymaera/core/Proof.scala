@@ -2008,9 +2008,14 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
           // if ODE binds var, then rename with stored initial value
           case BoxModality(ode: ContEvolveProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
+          case DiamondModality(ode: ContEvolveProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+            Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
           // if loop binds var, then rename with stored initial value
           case BoxModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
+          case DiamondModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
+            Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
+
           case _ => Left(Some(ExpressionTraversal.stop))
         }
       }), s(p)) match {

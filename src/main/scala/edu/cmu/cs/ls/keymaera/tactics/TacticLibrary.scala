@@ -276,7 +276,9 @@ object TacticLibrary {
             case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
             case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
             case BoxModality(ode: ContEvolveProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
+            case DiamondModality(ode: ContEvolveProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
             case BoxModality(Loop(a), _) => applicable = BindingAssessment.catVars(a).bv.exists(v => v.name == from && v.index == fromIdx)
+            case DiamondModality(Loop(a), _) => applicable = BindingAssessment.catVars(a).bv.exists(v => v.name == from && v.index == fromIdx)
             case _ => applicable = false
           }
           Left(Some(ExpressionTraversal.stop))
