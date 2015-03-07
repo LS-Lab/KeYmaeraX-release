@@ -25,6 +25,11 @@ import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
  * Implementation of tactics for handling hybrid programs.
  */
 object HybridProgramTacticsImpl {
+  private class ModalityUnapplyer[T: Manifest](m: T => Option[(Program, Formula)]) {
+    def unapply(a: Any): Option[(Program, Formula)] = {
+      if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
+    }
+  }
 
   /*********************************************
    * Axiom Tactics
@@ -581,13 +586,7 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   private def substitutionAssignT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = new AxiomTactic(name, name) {
-    class Unapplyer(m: T => Option[(Program, Formula)]) {
-      def unapply(a: Any): Option[(Program, Formula)] = {
-        if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
-      }
-    }
-
-    val BDModality = new Unapplyer(mod)
+    val BDModality = new ModalityUnapplyer(mod)
 
     override def applies(f: Formula): Boolean = f match {
       case BDModality(Assign(v: Variable, t: Term), pred) => pred match {
@@ -885,54 +884,46 @@ object HybridProgramTacticsImpl {
   /**
    * Creates a new axiom tactic for sequential composition [;]
    * @return The new tactic.
+   * @author Stefan Mitsch
    */
-  protected[tactics] def boxSeqT: PositionTactic = new AxiomTactic("[;] compose", "[;] compose") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Sequence(_, _), _) => true
-      case _ => false
-    }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case BoxModality(Sequence(a, b), p) =>
-        // construct substitution
-        val aA = ProgramConstant("a")
-        val aB = ProgramConstant("b")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aB, b), SubstitutionPair(aP, p))
-        // construct axiom instance: [ a; b ]p <-> [a][b]p.
-        val g = BoxModality(a, BoxModality(b, p))
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, Substitution(l))
-      case _ => None
-    }
-
-  }
+  def boxSeqT = seqT("[;] compose", BoxModality.unapply, BoxModality.apply)
 
   /**
    * Creates a new axiom tactic for diamond sequential composition <;>
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  def diamondSeqT: PositionTactic = new AxiomTactic("<;> compose", "<;> compose") {
+  def diamondSeqT = seqT("<;> compose", DiamondModality.unapply, DiamondModality.apply)
+
+  /**
+   * Creates a new axiom tactic for box/diamond sequential composition
+   * @param name The name of the axiom.
+   * @param mod The unapply method of the concrete modality.
+   * @param factory The apply method of the concrete modality.
+   * @return The new tactic.
+   * @author Stefan Mitsch
+   */
+  private def seqT[T: Manifest](name: String, mod: T => Option[(Program, Formula)],
+                                factory: (Program, Formula) => Formula): PositionTactic = new AxiomTactic(name, name) {
+    val BDModality = new ModalityUnapplyer(mod)
     override def applies(f: Formula): Boolean = f match {
-      case DiamondModality(Sequence(_, _), _) => true
+      case BDModality(Sequence(_, _), _) => true
       case _ => false
     }
 
     override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
-      case DiamondModality(Sequence(a, b), p) =>
+      case BDModality(Sequence(a, b), p) =>
         // construct substitution
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val l = List(SubstitutionPair(aA, a), SubstitutionPair(aB, b), SubstitutionPair(aP, p))
-        // construct axiom instance: < a; b >p <-> <a><b>p.
-        val g = DiamondModality(a, DiamondModality(b, p))
+        // construct axiom instance
+        val g = factory(a, factory(b, p))
         val axiomInstance = Equiv(f, g)
         Some(axiomInstance, Substitution(l))
       case _ => None
     }
-
   }
 
   /**
