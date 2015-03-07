@@ -34,7 +34,7 @@ class SubstitutionClashException(msg:String, s:Any/*Substitution*/, e:Expr, info
 
 class SkolemClashException(msg:String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 
-class InapplicableRuleException(msg:String, r:Rule, s:Sequent) extends CoreException(msg + "\nRule " + r + " applied to " + s) {
+class InapplicableRuleException(msg:String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
 }
 

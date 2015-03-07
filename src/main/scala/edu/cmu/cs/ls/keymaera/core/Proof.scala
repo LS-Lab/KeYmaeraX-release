@@ -609,7 +609,7 @@ object Axiom {
  */
 object AxiomaticRule {
   // immutable list of locally sound "axiomatic" proof rules (premise, conclusion)
-  val rules: scala.collection.immutable.Map[String, Pair[Sequent,Sequent]] = loadRuleFile
+  val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
 
   private def loadRuleFile() = {
     val x = Variable("x", None, Real)
@@ -620,19 +620,19 @@ object AxiomaticRule {
     Map(
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, x))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x)))))),
       ("[] monotone",
-         (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
+        (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
           Sequent(Seq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))), IndexedSeq(BoxModality(a, ApplyPredicate(q, anyt)))))),
       ("<> monotone",
         (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
           Sequent(Seq(), IndexedSeq(DiamondModality(a, ApplyPredicate(p, anyt))), IndexedSeq(DiamondModality(a, ApplyPredicate(q, anyt)))))),
       ("[] congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, ApplyPredicate(p, anyt))), BoxModality(a, ApplyPredicate(q, anyt)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, ApplyPredicate(p, anyt)), BoxModality(a, ApplyPredicate(q, anyt))))))),
       ("<> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, ApplyPredicate(p, anyt))), DiamondModality(a, ApplyPredicate(q, anyt)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, ApplyPredicate(p, anyt)), DiamondModality(a, ApplyPredicate(q, anyt))))))),
       ("Goedel", /* unsound for hybrid games */
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, anyt))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))))))
@@ -647,6 +647,7 @@ object AxiomaticRule {
       case Some(pair) => pair
       case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
     }
+
     /**
      * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
      * Leads to same substitution instance of axiomatic rule's premise.
@@ -660,6 +661,8 @@ object AxiomaticRule {
       }
     }
   }
+
+}
 
 /*********************************************************************************
  * Sequent Proof Rules for identity/closing and cut
