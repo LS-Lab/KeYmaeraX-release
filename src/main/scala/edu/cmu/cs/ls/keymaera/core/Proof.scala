@@ -153,7 +153,7 @@ object Provable {
    * @result a Provable whose subgoals need to be all proved in order to prove goal.
    * @note soundness-critical
    */
-  def startProvable(goal : Sequent) = Provable(goal, scala.collection.immutable.IndexedSeq(goal))
+  def startProof(goal : Sequent) = Provable(goal, scala.collection.immutable.IndexedSeq(goal))
 }
 
 /**
