@@ -777,6 +777,12 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[x:=2;]x>0 & [x:=3;]x>0".asFormula))
   }
 
+  "Diamond choice" should "transform choice into a disjunction" in {
+    val tactic = locateSucc(diamondChoiceT)
+    getProofSequent(tactic, new RootNode(sucSequent("<x:=2 ++ x:=3>x>0".asFormula))) should be (
+      sucSequent("<x:=2;>x>0 | <x:=3;>x>0".asFormula))
+  }
+
   "Box sequence" should "transform sequence into two boxes" in {
     import TacticLibrary.boxSeqT
     val tactic = locateSucc(boxSeqT)

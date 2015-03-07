@@ -922,6 +922,31 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for diamond choice <++>.
+   * @return The new tactic.
+   */
+  def diamondChoiceT: PositionTactic = new AxiomTactic("<++> choice", "<++> choice") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(Choice(_, _), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+      case DiamondModality(Choice(a, b), p) =>
+        // construct substitution
+        val aA = ProgramConstant("a")
+        val aB = ProgramConstant("b")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
+        // construct axiom instance: < a ++ b >p <-> <a>p | <b>p.
+        val g = Or(DiamondModality(a, p), DiamondModality(b, p))
+        val axiomInstance = Equiv(f, g)
+        Some(axiomInstance, Substitution(l))
+      case _ => None
+    }
+  }
+
+  /**
    * Creates a new position tactic to apply the induction rule.
    * @param inv The invariant.
    * @return The position tactic.
