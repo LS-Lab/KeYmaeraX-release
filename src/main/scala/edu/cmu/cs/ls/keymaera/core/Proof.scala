@@ -15,7 +15,7 @@ import scala.collection.immutable.List
 import scala.collection.immutable.Map
 import scala.collection.immutable.Set
 
-import scala.annotation.elidable
+import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
 import scala.collection.immutable.HashMap
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
@@ -29,10 +29,13 @@ import scala.collection.GenTraversableOnce
 /*--------------------------------------------------------------------------------*/
 
 /**
- * Sequent notation
+ * Sequents
+ * @author aplatzer
  */
 
-final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], val ante: scala.collection.immutable.IndexedSeq[Formula], val succ: scala.collection.immutable.IndexedSeq[Formula]) {
+final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
+                         val ante: scala.collection.immutable.IndexedSeq[Formula],
+                         val succ: scala.collection.immutable.IndexedSeq[Formula]) {
   // Could use scala.collection.immutable.Seq instead of IndexedSeq, since equivalent except for performance. But many KeYmaera parts construct Sequents, so safer for performance.
   override def equals(e: Any): Boolean = e match {
     case Sequent(p, a, s) => pref == p && ante == a && succ == s
@@ -124,17 +127,6 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol], 
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
 }
 
-/*
-object Sequent {
-  def apply(pref: scala.collection.immutable.Seq[NamedSymbol], ante: scala.collection.immutable.IndexedSeq[Formula], succ: scala.collection.immutable.IndexedSeq[Formula]) : Sequent = new Sequent(pref, ante, succ)
-
-  def unapply(e: Sequent): Option[(scala.collection.immutable.Seq[NamedSymbol], scala.collection.immutable.IndexedSeq[Formula], scala.collection.immutable.IndexedSeq[Formula])] = e match {
-    case s: Sequent => Some((s.pref,s.ante,s.succ))
-    case _ => None
-  }
-
-  }*/
-
 
 /**
  * Subclasses represent all proof rules.
@@ -163,6 +155,7 @@ object Provable {
  * @param subgoals the premisses that, if they are all valid, imply the conclusion.
  * @note soundness-critical
  * @note Only private constructor calls for soundness
+ * @author aplatzer
  */
 final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   // has the conclusion of this Provable been proved?
@@ -598,6 +591,8 @@ object Axiom {
       yield (k.name -> k.formula)).toMap
   }
 
+  // lookup axiom named id
+  //@TODO Hasn't this been replaced by an axiom lookup rule that closes if axiom occurs in antecedent?
   final def apply(id: String): Rule = new Rule("Axiom " + id) {
     def apply(s: Sequent): List[Sequent] = {
       axioms.get(id) match {
@@ -608,6 +603,36 @@ object Axiom {
   }
 }
 
+/**
+ * Apply a uniform substitution instance of an axiomatic proof rule.
+ * @author aplatzer
+ */
+object AxiomaticRule {
+  // immutable list of locally sound "axiomatic" proof rules (premise, conclusion)
+  val rules: scala.collection.immutable.Map[String, Pair[Sequent,Sequent]] = Map()
+
+  // apply uniform substitution instance subst of "axiomatic" rule named id
+  final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
+
+  private final class AxiomaticRuleInstance(id: String, subst: Substitution) extends Rule("Axiomatic Rule " + id + " instance") {
+    private val rule = rules.get(id) match {
+      case Some(pair) => pair
+      case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
+    }
+    /**
+     * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
+     * Leads to same substitution instance of axiomatic rule's premise.
+     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+     */
+    def apply(conclusion: Sequent): List[Sequent] = {
+      if (subst(rule._2) == conclusion) {
+        List(subst(rule._1))
+      } else {
+        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + rule._2 + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(rule._2) + "\ninstead of\n  " + conclusion)
+      }
+    }
+  }
+
 /*********************************************************************************
  * Sequent Proof Rules for identity/closing and cut
  *********************************************************************************
@@ -616,6 +641,7 @@ object Axiom {
 //@TODO Mark these rules as ClosingRules and add contract "ensuring (!_.isEmpty)" globally to all rules that are not ClosingRules
 
 // Ax Axiom close / Identity rule
+//@TODO Rename to Close or so to avoid confusion with Axiom
 object AxiomClose extends ((Position, Position) => Rule) {
   def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
 }
@@ -1218,10 +1244,11 @@ object BindingAssessment {
 /**
  * A Uniform Substitution.
  * Implementation of applying uniform substitutions to terms, formulas, programs.
- * Explicit construction computing bound variables on the fly.
+ * Fast application explicit construction computing bound variables on the fly.
  * Used for UniformSubstitution rule.
  * @author aplatzer
  * @author Stefan Mitsch
+ * @TODO Rename to FastSubstitution
  */
 sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable
@@ -1517,6 +1544,7 @@ sealed case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitu
  * Used for UniformSubstitution rule.
  * @author aplatzer
  * @see GlobalUniformSubstitution
+ * @TODO Rename to USubstitution or so. Or just Substitution?
  */
 sealed case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable()
@@ -1937,6 +1965,9 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   extends Rule("Alpha Conversion") {
 
   import BindingAssessment._
+
+  @unspecialized
+  override def compose[A](g: (A) => _root_.edu.cmu.cs.ls.keymaera.core.Sequent): (A) => scala.List[_root_.edu.cmu.cs.ls.keymaera.core.Sequent] = super.compose(g)
 
   def apply(s: Sequent): List[Sequent] = pos match {
     case Some(p) =>
