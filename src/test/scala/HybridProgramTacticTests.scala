@@ -218,6 +218,22 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("\\forall y. y>0".asFormula))
   }
 
+  "Substitution diamond assignment" should "work on self assignment" in {
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionDiamondAssignT)
+    getProofSequent(assignT, new RootNode(sucSequent("<y:=y;>y>0".asFormula))) should be (sucSequent("y>0".asFormula))
+    getProofSequent(assignT, new RootNode(sucSequent("<y:=y;><y:=2;>y>0".asFormula))) should be (sucSequent("<y:=2;>y>0".asFormula))
+  }
+
+  it should "update self assignments" in {
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionDiamondAssignT)
+    getProofSequent(assignT, new RootNode(sucSequent("<y:=z;><y:=y;>y>0".asFormula))) should be (sucSequent("<y:=z;>y>0".asFormula))
+  }
+
+  it should "assign terms in simple predicates" in {
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionDiamondAssignT)
+    getProofSequent(assignT, new RootNode(sucSequent("<y:=z+5*y;>y>0".asFormula))) should be (sucSequent("z+5*y>0".asFormula))
+  }
+
   "Box test tactic" should "use axiom [?H]p <-> (H->p)" in {
     import TacticLibrary.boxTestT
     val s = sucSequent("[?y>2;]y>0".asFormula)

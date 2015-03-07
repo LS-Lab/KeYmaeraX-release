@@ -626,6 +626,61 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for box assignment [x := t;]
+   * @return The axiom tactic.
+   * @author Stefan Mitsch
+   */
+  def substitutionDiamondAssignT: PositionTactic = new AxiomTactic("<:=> assign", "<:=> assign") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(Assign(_, _), _) => true // TODO is there a check other than "Substitution fails"?
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
+    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+      case DiamondModality(Assign(v: Variable, t: Term), p) =>
+        // TODO check that axiom is of the expected form <v:=t>p(v) <-> p(t))
+        // construct substitution
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aP = Function("p", None, Real, Bool)
+        val l = List(SubstitutionPair(aT, t), SubstitutionPair(ApplyPredicate(aP, CDot),
+          SubstitutionHelper.replaceFree(p)(v, CDot)))
+
+        // construct axiom instance: <v:=t>p(v) <-> p(t)
+        val g = SubstitutionHelper.replaceFree(p)(v, t)
+        val axiomInstance = Equiv(f, g)
+
+        // rename to match axiom if necessary
+        val aV = Variable("v", None, Real)
+        def alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(DiamondModality(Assign(_, _), _), _) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~ globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
+        val Equiv(lhs, rhs) = axiom
+        val (ax, cont) = {
+          val lhsrepl = if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs
+          val thealpha = if (v.name != aV.name || v.index != None) Some(alpha) else None
+
+          (Equiv(lhsrepl, rhs), thealpha)
+        }
+
+        // return tactic
+        Some(ax, axiomInstance, Substitution(l), None, cont)
+      case _ => None
+    }
+  }
+
+  /**
    * Creates a new axiom tactic for test [?H].
    * @return The new tactic.
    */
