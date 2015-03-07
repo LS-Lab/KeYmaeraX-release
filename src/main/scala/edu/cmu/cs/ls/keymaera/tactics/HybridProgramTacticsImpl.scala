@@ -270,7 +270,8 @@ object HybridProgramTacticsImpl {
         case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
           else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) & (v2vAssignT(p) | NilT))
-        case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) => Some(v2tBoxAssignT(p))
+        case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) =>
+          Some(substitutionBoxAssignT(p))
         }
       }
   }
@@ -565,80 +566,56 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  protected[tactics] def v2tBoxAssignT: PositionTactic = new AxiomTactic("[:=] assign", "[:=] assign") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(v: Variable, t: Term), pred) => pred match {
-        // loop and ODE are probably a little too strict, but we have v2vBoxAssignT to handle those
-        case BoxModality(_: ContEvolveProgram, _) => t match { case tv: Variable => v == tv case _ => false }
-        case BoxModality(_: Loop, _) => t match { case tv: Variable => v == tv case _ => false }
-        case DiamondModality(_: ContEvolveProgram, _) => t match { case tv: Variable => v == tv case _ => false }
-        case DiamondModality(_: Loop, _) => t match { case tv: Variable => v == tv case _ => false }
-        case _ => t match {
-          case tv: Variable => true
-          case _ => !allNames(t).contains(v)
-        }
-      }
-      case _ => false
-    }
-
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(Assign(v: Variable, t: Term), p) =>
-        // TODO check that axiom is of the expected form [v:=t]p(v) <-> p(t))
-        // construct substitution
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
-        val aP = Function("p", None, Real, Bool)
-        val l = List(SubstitutionPair(aT, t), SubstitutionPair(ApplyPredicate(aP, CDot),
-          SubstitutionHelper.replaceFree(p)(v, CDot)))
-
-        // construct axiom instance: [v:=t]p(v) <-> p(t)
-        val g = SubstitutionHelper.replaceFree(p)(v, t)
-        val axiomInstance = Equiv(f, g)
-
-        // rename to match axiom if necessary
-        val aV = Variable("v", None, Real)
-        def alpha = new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(_, _), _), _) => true
-            case _ => false
-          }
-
-          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~ globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
-
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-          }
-        }
-
-        val Equiv(lhs, rhs) = axiom
-        val (ax, cont) = {
-          val lhsrepl = if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs
-          val thealpha = if (v.name != aV.name || v.index != None) Some(alpha) else None
-
-          (Equiv(lhsrepl, rhs), thealpha)
-        }
-
-        // return tactic
-        Some(ax, axiomInstance, Substitution(l), None, cont)
-      case _ => None
-    }
-  }
+  def substitutionBoxAssignT = substitutionAssignT("[:=] assign", BoxModality.unapply)
 
   /**
    * Creates a new axiom tactic for box assignment [x := t;]
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  def substitutionDiamondAssignT: PositionTactic = new AxiomTactic("<:=> assign", "<:=> assign") {
+  def substitutionDiamondAssignT = substitutionAssignT("<:=> assign", DiamondModality.unapply)
+
+  /**
+   * Creates a new axiom tactic for box/diamond assignment [x := t;], < x := t;>.
+   * @return The axiom tactic.
+   * @author Stefan Mitsch
+   */
+  private def substitutionAssignT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = new AxiomTactic(name, name) {
+    class Unapplyer(m: T => Option[(Program, Formula)]) {
+      def unapply(a: Any): Option[(Program, Formula)] = {
+        if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
+      }
+    }
+
+    val BDModality = new Unapplyer(mod)
+
     override def applies(f: Formula): Boolean = f match {
-      case DiamondModality(Assign(_, _), _) => true // TODO is there a check other than "Substitution fails"?
+      case BDModality(Assign(v: Variable, t: Term), pred) => pred match {
+        // loop and ODE are probably a little too strict here, but we have v2vBoxAssignT to handle those
+        case BoxModality(_: ContEvolveProgram, _) => t match {
+          case tv: Variable => v == tv
+          case _ => false
+        }
+        case BoxModality(_: Loop, _) => t match {
+          case tv: Variable => v == tv
+          case _ => false
+        }
+        case DiamondModality(_: ContEvolveProgram, _) => t match {
+          case tv: Variable => v == tv
+          case _ => false
+        }
+        case DiamondModality(_: Loop, _) => t match {
+          case tv: Variable => v == tv
+          case _ => false
+        }
+        case _ => true
+      }
       case _ => false
     }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
     Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
-      case DiamondModality(Assign(v: Variable, t: Term), p) =>
+      case BDModality(Assign(v: Variable, t: Term), p) =>
         // TODO check that axiom is of the expected form <v:=t>p(v) <-> p(t))
         // construct substitution
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
@@ -654,7 +631,7 @@ object HybridProgramTacticsImpl {
         val aV = Variable("v", None, Real)
         def alpha = new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(DiamondModality(Assign(_, _), _), _) => true
+            case Equiv(BDModality(Assign(_, _), _), _) => true
             case _ => false
           }
 

@@ -196,17 +196,15 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sequent(Function("x", Some(1), Unit, Real) :: Nil, "x_1()=1".asFormula :: Nil, "x_1()>0".asFormula :: Nil))
   }
 
-  "v2tBoxAssignT" should "work on self assignment" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
-    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
+  "Substitution box assignment" should "work on self assignment" in {
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
     getProofSequent(assignT, new RootNode(sucSequent("[y:=y;]y>0".asFormula))) should be (sucSequent("y>0".asFormula))
     getProofSequent(assignT, new RootNode(sucSequent("[y:=y;][y:=2;]y>0".asFormula))) should be (sucSequent("[y:=2;]y>0".asFormula))
 //    getProofSequent(assignT, new RootNode(sucSequent("[y:=y;][{y:=y+1;}*;]y>0".asFormula))) should be (sucSequent("[{y:=y+1;}*;]y>0".asFormula))
   }
 
   it should "update self assignments" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
-    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
     getProofSequent(assignT, new RootNode(sucSequent("[y:=z;][y:=y;]y>0".asFormula))) should be (sucSequent("[y:=z;]y>0".asFormula))
   }
 
@@ -371,28 +369,23 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sequent(Nil, Nil, "\\exists y. <y_0:=y;><y_0'=2;>y_0>0".asFormula :: Nil))
   }
 
-  "v2tBoxAssignT" should "replace with variables" in {
+  "Substitution box assignment" should "replace with variables" in {
     val s = sucSequent("[y:=z;]y>0".asFormula)
-    val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
-    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
     getProofSequent(assignT, new RootNode(s)) should be (
       sucSequent("z>0".asFormula))
   }
 
   it should "work with arbitrary terms" in {
     val s = sucSequent("[y:=1;][y:=y;]y>0".asFormula)
-    val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
-    val assignT = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
+    val assignT = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
     getProofSequent(assignT, new RootNode(s)) should be (sucSequent("[y:=1;]y>0".asFormula))
   }
 
   it should "not apply when immediately followed by an ODE or loop" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('v2tBoxAssignT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory())
-    an [Exception] should be thrownBy
-      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula)))
-    an [Exception] should be thrownBy
-      getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][{y:=z+1;}*]y>0".asFormula)))
+    val tactic = locateSucc(HybridProgramTacticsImpl.substitutionBoxAssignT)
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][y'=z+1;]y>0".asFormula))) shouldBe false
+    tactic.applicable(new RootNode(sucSequent("[y:=z;][{y:=z+1;}*]y>0".asFormula))) shouldBe false
   }
 
   "v2vBoxAssignT" should "work on box ODEs" in {
