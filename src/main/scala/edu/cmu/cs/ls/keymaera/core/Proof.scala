@@ -835,6 +835,7 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
  * equality-rewrites p to g.
  * @param assumption The position of the equality (should be in the antecedent)
  * @param p The position of an occurance of the (l?)hs of assumption
+ * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
  */
 class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
   import BindingAssessment.allNames
@@ -1931,6 +1932,7 @@ object GlobalUniformSubstitution {
 
 // alpha conversion
 
+//@TODO Replace by flat implementation
 class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
@@ -2056,6 +2058,8 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization"
+ * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
@@ -2078,6 +2082,8 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization" for functions
+ * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
  */
 class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
@@ -2112,12 +2118,13 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
 }
 
-// @TODO Review. Will turn into axiom QuantifierAbstraction.
+// @TODO Review. Might turn into axiom QuantifierAbstraction.
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
       val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+          //@TODO Do not use @deprecated .writes functions
           case BoxModality(prg, f) => Right(factory(prg.writes, f))
           case DiamondModality(prg, f) => Right(factory(prg.writes, f))
           case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
@@ -2162,7 +2169,7 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 
 // the following rules will turn into axioms
 
-//@TODO Removal suggested since better axiom exists.
+//@TODO Removal suggested since better axiom DC differential cut exists.
 class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
   require(!p.isAnte)
   override def apply(s: Sequent): List[Sequent] = {
