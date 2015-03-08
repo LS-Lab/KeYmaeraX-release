@@ -65,7 +65,7 @@ class USubstTests extends FlatSpec with Matchers {
     AxiomaticRule("Goedel", s)(fseq) should be (concseq)
   }
   
-  it should "instantiate Goedel from (-x)^2>=0" in {
+  it should "instantiate Goedel from (-x)^2>=0" taggedAs(USubstTest) in {
     val p = Function("p", None, Real, Bool)
     val a = ProgramConstant("a")
     val f = "(-x)^2>=0".asFormula

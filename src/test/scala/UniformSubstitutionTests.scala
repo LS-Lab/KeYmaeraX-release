@@ -1235,8 +1235,6 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val s = Substitution(Seq(SubstitutionPair("x()".asTerm, "y".asTerm)))
     a [SubstitutionClashException] should be thrownBy applySubstitutionF(s, Set.empty, Set(V("y")), "x()=y".asFormula)
   }
-<<<<<<< HEAD
-=======
 
 
   "Uniform substitution" should "clash when using V on x:=x-1 for x>=0" in {
@@ -1269,5 +1267,4 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
       SubstitutionPair(a, prog) :: Nil)
     AxiomaticRule("Goedel", s)(fseq) should be (Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, f))))
   }
->>>>>>> 2fe96f930ca483d55ba6c504e255d6df8474db1f
 }
