@@ -16,9 +16,15 @@ object USubstTest extends Tag("USubstTest")
 
 class USubstTests extends FlatSpec with Matchers {
 
+  val randomTrials = 10
+  val randomComplexity = 5
+  val rand = new RandomFormula()
+
+
   val x = Variable("x", None, Real)
   val p0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
   val p1 = Function("p", None, Real, Bool)
+  val pn = Function("p", None, Real, Bool)
   val ap = ProgramConstant("a")
 
   "Uniform substitution" should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
@@ -104,4 +110,96 @@ class USubstTests extends FlatSpec with Matchers {
     AxiomaticRule("Goedel", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
+  
+  it should "instantiate nontrivial binding structures in [] congruence" taggedAs USubstTest in {
+      val prem = "(-x)^2>=y <-> x^2>=y".asFormula
+      val conc = "[{y:=y+1++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
+
+      val prog = "{y:=y+1++{z:=x+z;}*}; z:=x+y*z;".asProgram
+      val q = Function("q", None, Real, Bool)
+      val y = Variable("y", None, Real)
+      val s = Substitution(Seq(
+        SubstitutionPair(ap, prog),
+        SubstitutionPair(ApplyPredicate(pn, CDot), GreaterEqual(Real, Exp(Real, Neg(Real, x), Number(2)), y)),
+        SubstitutionPair(ApplyPredicate(q, CDot), GreaterEqual(Real, Exp(Real, x, Number(2)), y))
+         ))
+        AxiomaticRule("[] congruence", s)(
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+    }
+
+    it should "instantiate random programs in [] monotone" taggedAs USubstTest in {
+      for (i <- 1 to randomTrials) {
+        val prem1 = "(-z1)^2>=z4".asFormula
+        val prem2 = "z4<=z1^2".asFormula
+        val prem = Imply(prem1, prem2)
+        val prog = rand.nextProgram(randomComplexity)
+        val conc = Imply(BoxModality(prog, prem1), BoxModality(prog, prem2))
+
+        val q = Function("q", None, Real, Bool)
+        val s = Substitution(Seq(
+          SubstitutionPair(ap, prog),
+          SubstitutionPair(ApplyPredicate(pn, CDot), prem1),
+          SubstitutionPair(ApplyPredicate(q, CDot), prem2)
+           ))
+          AxiomaticRule("[] monotone", s)(
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+      }
+    }
+
+    it should "instantiate random programs in [] congruence" taggedAs USubstTest in {
+      for (i <- 1 to randomTrials) {
+        val prem1 = "(-z1)^2>=z4".asFormula
+        val prem2 = "z4<=z1^2".asFormula
+        val prem = Equiv(prem1, prem2)
+        val prog = rand.nextProgram(randomComplexity)
+        val conc = Equiv(BoxModality(prog, prem1), BoxModality(prog, prem2))
+
+        val q = Function("q", None, Real, Bool)
+        val s = Substitution(Seq(
+          SubstitutionPair(ap, prog),
+          SubstitutionPair(ApplyPredicate(pn, CDot), prem1),
+          SubstitutionPair(ApplyPredicate(q, CDot), prem2)
+           ))
+          AxiomaticRule("[] congruence", s)(
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+      }
+    }
+
+    it should "instantiate random programs in <> congruence" taggedAs USubstTest in {
+      for (i <- 1 to randomTrials) {
+        val prem1 = "(-z1)^2>=z4".asFormula
+        val prem2 = "z4<=z1^2".asFormula
+        val prem = Equiv(prem1, prem2)
+        val prog = rand.nextProgram(randomComplexity)
+        val conc = Equiv(DiamondModality(prog, prem1), DiamondModality(prog, prem2))
+
+        val q = Function("q", None, Real, Bool)
+        val s = Substitution(Seq(
+          SubstitutionPair(ap, prog),
+          SubstitutionPair(ApplyPredicate(pn, CDot), prem1),
+          SubstitutionPair(ApplyPredicate(q, CDot), prem2)
+           ))
+          AxiomaticRule("<> congruence", s)(
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+      }
+    }
+
+    it should "instantiate random programs in <> monotone" taggedAs USubstTest in {
+      for (i <- 1 to randomTrials) {
+        val prem1 = "(-z1)^2>=z4".asFormula
+        val prem2 = "z4<=z1^2".asFormula
+        val prem = Imply(prem1, prem2)
+        val prog = rand.nextProgram(randomComplexity)
+        val conc = Imply(DiamondModality(prog, prem1), DiamondModality(prog, prem2))
+
+        val q = Function("q", None, Real, Bool)
+        val s = Substitution(Seq(
+          SubstitutionPair(ap, prog),
+          SubstitutionPair(ApplyPredicate(pn, CDot), prem1),
+          SubstitutionPair(ApplyPredicate(q, CDot), prem2)
+           ))
+          AxiomaticRule("<> monotone", s)(
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+      }
+    }
 }
