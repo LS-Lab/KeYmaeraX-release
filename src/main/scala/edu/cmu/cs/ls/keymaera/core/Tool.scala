@@ -75,7 +75,8 @@ class Mathematica extends ToolBase("Mathematica") {
       case Some(l) => l
       case None => throw new IllegalArgumentException("Missing configuration parameter 'linkName'")
     }
-    jlink.init(linkName)
+    val libDir = config.get("libDir") // doesn't need to be defined
+    jlink.init(linkName, libDir)
   }
 
   override def shutdown() = jlink.shutdown()

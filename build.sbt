@@ -22,6 +22,8 @@ unmanagedJars in Compile += file("/Applications/Mathematica.app/SystemFiles/Link
 
 unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink/JLink.jar")
 
+unmanagedJars in Compile += file("/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/JLink.jar")
+
 ////////////////////////////////////////////////////////////////////////////////
 // Hyrda Settings
 // Taken from https://www.assembla.com/wiki/show/liftweb/using_sbt

@@ -19,7 +19,11 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
     env.db.createConfiguration("mathematica")
     // TODO replace with dependency injection
     getMathematicaLinkName match {
-      case Some(l) => Tactics.MathematicaScheduler.init(Map("linkName" -> l))
+      case Some(l) => getMathematicaLibDir match {
+        case Some(libDir) => Tactics.MathematicaScheduler.init(Map("linkName" -> l, "libDir" -> libDir))
+        case None => Tactics.MathematicaScheduler.init(Map("linkName" -> l))
+      }
+
       case None => println("Warning: Mathematica not configured")
     }
 
@@ -119,5 +123,11 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
 
   private def getMathematicaLinkName = {
     env.db.getConfiguration("mathematica").config.get("linkName")
+  }
+
+  private def getMathematicaLibDir : Option[String] = {
+    val config = env.db.getConfiguration("mathematica").config
+    if (config.contains("jlinkLibDir")) Some(config.get("jlinkLibDir").get)
+    else None
   }
 }

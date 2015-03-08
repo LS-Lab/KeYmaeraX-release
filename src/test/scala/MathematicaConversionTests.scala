@@ -26,7 +26,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   override def beforeEach() = {
     ml = new JLinkMathematicaLink()
-    ml.init(mathematicaConfig("linkName"))
+    ml.init(mathematicaConfig("linkName"), Some(mathematicaConfig("jlinkLibDir"))) //@todo jlink
   }
 
   override def afterEach() = {

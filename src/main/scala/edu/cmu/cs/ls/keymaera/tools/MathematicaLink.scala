@@ -54,7 +54,10 @@ class JLinkMathematicaLink extends MathematicaLink {
    * Initializes the connection to Mathematica.
    * @param linkName The name of the link to use (platform-dependent, see Mathematica documentation)
    */
-  def init(linkName : String) = {
+  def init(linkName : String, jlinkLibDir : Option[String]) = {
+    if(jlinkLibDir.isDefined) {
+      System.setProperty("com.wolfram.jlink.libdir", jlinkLibDir.get) //e.g., "/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink"
+    }
     ml = MathLinkFactory.createKernelLink(Array[String](
       "-linkmode", "launch",
       "-linkname", linkName + " -mathlink"))

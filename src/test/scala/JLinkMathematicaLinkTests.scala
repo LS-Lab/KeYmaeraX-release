@@ -21,7 +21,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
 
   override def beforeEach() = {
     link = new JLinkMathematicaLink
-    link.init("/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+    link.init("/Applications/Mathematica.app/Contents/MacOS/MathKernel", None)
   }
 
   override def afterEach() = {

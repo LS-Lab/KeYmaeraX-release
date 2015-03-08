@@ -19,7 +19,7 @@ class QETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   override def beforeEach() = {
     qet = new JLinkMathematicaLink()
     qet match {
-      case qetml : JLinkMathematicaLink => qetml.init(mathematicaConfig("linkName"))
+      case qetml : JLinkMathematicaLink => qetml.init(mathematicaConfig("linkName"), Some(mathematicaConfig("jlinkLibDir"))) //@todo jlink
     }
   }
 
