@@ -13,6 +13,7 @@ object USubstTest extends Tag("USubstTest")
 
 /**
  * @author aplatzer
+ * @author smitsch
  */
 
 class USubstTests extends FlatSpec with Matchers {
@@ -62,5 +63,17 @@ class USubstTests extends FlatSpec with Matchers {
     val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p, Anything), f),
       SubstitutionPair(a, prog)))
     AxiomaticRule("Goedel", s)(fseq) should be (concseq)
+  }
+  
+  it should "instantiate Goedel from (-x)^2>=0" in {
+    val p = Function("p", None, Real, Bool)
+    val a = ProgramConstant("a")
+    val f = "(-x)^2>=0".asFormula
+    val fseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(f))
+    val prog = "x:=x-1;".asProgram
+    val s = Substitution(
+      SubstitutionPair(ApplyPredicate(p, Anything), f) ::
+      SubstitutionPair(a, prog) :: Nil)
+    AxiomaticRule("Goedel", s)(fseq) should be (Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, f))))
   }
 }
