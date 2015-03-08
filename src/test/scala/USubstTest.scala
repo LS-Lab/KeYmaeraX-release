@@ -51,7 +51,7 @@ class USubstTests extends FlatSpec with Matchers {
   
   // uniform substitution of rules
   
-  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" taggedAs(USubstTest) in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs(USubstTest) in {
     val x = Variable("x", None, Real)
     val p = Function("p", None, Real, Bool)
     val a = ProgramConstant("a")
@@ -62,18 +62,19 @@ class USubstTests extends FlatSpec with Matchers {
     val concseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
     val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p, Anything), f),
       SubstitutionPair(a, prog)))
-    AxiomaticRule("Goedel", s)(fseq) should be (concseq)
+    AxiomaticRule("Goedel", s)(concseq) should be (List(fseq))
   }
   
-  it should "instantiate Goedel from (-x)^2>=0" taggedAs(USubstTest) in {
+  it should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs(USubstTest) in {
     val p = Function("p", None, Real, Bool)
     val a = ProgramConstant("a")
     val f = "(-x)^2>=0".asFormula
     val fseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(f))
     val prog = "x:=x-1;".asProgram
+    val concseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, f)))
     val s = Substitution(
       SubstitutionPair(ApplyPredicate(p, Anything), f) ::
       SubstitutionPair(a, prog) :: Nil)
-    AxiomaticRule("Goedel", s)(fseq) should be (Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, f))))
+    AxiomaticRule("Goedel", s)(concseq) should be (List(fseq))
   }
 }

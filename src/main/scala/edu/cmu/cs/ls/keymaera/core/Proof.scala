@@ -643,7 +643,7 @@ object AxiomaticRule {
   final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
 
   private final class AxiomaticRuleInstance(id: String, subst: Substitution) extends Rule("Axiomatic Rule " + id + " instance") {
-    private val rule = rules.get(id) match {
+    private val (rulepremise,ruleconclusion) = rules.get(id) match {
       case Some(pair) => pair
       case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
     }
@@ -654,10 +654,10 @@ object AxiomaticRule {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      if (subst(rule._2) == conclusion) {
-        List(subst(rule._1))
+      if (subst(ruleconclusion) == conclusion) {
+        List(subst(rulepremise))
       } else {
-        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + rule._2 + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(rule._2) + "\ninstead of\n  " + conclusion)
+        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
       }
     }
   }
