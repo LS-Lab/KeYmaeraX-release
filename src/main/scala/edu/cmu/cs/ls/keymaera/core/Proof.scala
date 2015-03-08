@@ -608,7 +608,7 @@ object Axiom {
  * @author aplatzer
  */
 object AxiomaticRule {
-  // immutable list of locally sound "axiomatic" proof rules (premise, conclusion)
+  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
   val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
 
   // apply uniform substitution instance subst of "axiomatic" rule named id
@@ -634,6 +634,11 @@ object AxiomaticRule {
     }
   }
 
+  /**
+   * KeYmaera Axiomatic Proof Rules.
+   * @note Soundness-critical: Only return locally sound proof rules.
+   * @author aplatzer
+   */
   private def loadRuleFile() = {
     val x = Variable("x", None, Real)
     val p = Function("p", None, Real, Bool)
