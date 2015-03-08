@@ -16,8 +16,8 @@ object USubstTest extends Tag("USubstTest")
 
 class USubstTests extends FlatSpec with Matchers {
 
-  val randomTrials = 10
-  val randomComplexity = 5
+  val randomTrials = 40
+  val randomComplexity = 20
   val rand = new RandomFormula()
 
 
@@ -199,6 +199,21 @@ class USubstTests extends FlatSpec with Matchers {
            ))
           AxiomaticRule("<> monotone", s)(
             Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
+      }
+    }
+
+    it should "instantiate random programs in Goedel" taggedAs USubstTest in {
+      for (i <- 1 to randomTrials) {
+        val prem = "(-z1)^2>=0".asFormula
+        val prog = rand.nextProgram(randomComplexity)
+        val conc = BoxModality(prog, prem)
+
+        val s = Substitution(Seq(
+          SubstitutionPair(ap, prog),
+          SubstitutionPair(ApplyPredicate(pn, Anything), prem)
+           ))
+          AxiomaticRule("Goedel", s)(
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
       }
     }
 }
