@@ -3,6 +3,7 @@
  * @author Jan-David Quesel
  * @author aplatzer
  * @author nfulton
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -606,11 +607,40 @@ object Axiom {
 /**
  * Apply a uniform substitution instance of an axiomatic proof rule.
  * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 object AxiomaticRule {
-  // immutable list of locally sound "axiomatic" proof rules (premise, conclusion)
+  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
   val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
 
+  // apply uniform substitution instance subst of "axiomatic" rule named id
+  final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
+
+  private final class AxiomaticRuleInstance(id: String, subst: Substitution) extends Rule("Axiomatic Rule " + id + " instance") {
+    private val (rulepremise,ruleconclusion) = rules.get(id) match {
+      case Some(pair) => pair
+      case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
+    }
+
+    /**
+     * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
+     * Leads to same substitution instance of axiomatic rule's premise.
+     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+     */
+    def apply(conclusion: Sequent): List[Sequent] = {
+      if (subst(ruleconclusion) == conclusion) {
+        List(subst(rulepremise))
+      } else {
+        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
+      }
+    }
+  }
+
+  /**
+   * KeYmaera Axiomatic Proof Rules.
+   * @note Soundness-critical: Only return locally sound proof rules.
+   * @author aplatzer
+   */
   private def loadRuleFile() = {
     val x = Variable("x", None, Real)
     val p = Function("p", None, Real, Bool)
@@ -637,29 +667,6 @@ object AxiomaticRule {
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, anyt))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))))))
     )
-  }
-
-  // apply uniform substitution instance subst of "axiomatic" rule named id
-  final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
-
-  private final class AxiomaticRuleInstance(id: String, subst: Substitution) extends Rule("Axiomatic Rule " + id + " instance") {
-    private val (rulepremise,ruleconclusion) = rules.get(id) match {
-      case Some(pair) => pair
-      case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
-    }
-
-    /**
-     * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
-     * Leads to same substitution instance of axiomatic rule's premise.
-     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-     */
-    def apply(conclusion: Sequent): List[Sequent] = {
-      if (subst(ruleconclusion) == conclusion) {
-        List(subst(rulepremise))
-      } else {
-        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
-      }
-    }
   }
 
 }

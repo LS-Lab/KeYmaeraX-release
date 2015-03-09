@@ -1240,8 +1240,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution" should "clash when using V on x:=x-1 for x>=0" in {
     val x = Variable("x", None, Real)
     val f = GreaterEqual(Real, x, Number(0))
-    val p0 = PredicateConstant("p")
-      // = Function("p", None, None, Bool) //@TODO check if this is p()
+    val p0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
     val aA = ProgramConstant("a")
     //@TODO val prem = Axioms.axioms("V vacuous")
     val prem = Imply(p0, BoxModality(aA, p0))
@@ -1249,8 +1248,9 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, f)
     val concseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
-    val s = Substitution(Seq(SubstitutionPair(p0, f),
-      SubstitutionPair(aA, prog)))
+    val s = Substitution(
+      SubstitutionPair(p0, f) ::
+      SubstitutionPair(aA, prog) :: Nil)
     a [SubstitutionClashException] should be thrownBy UniformSubstitution(s, premseq)(concseq)
   }
   
@@ -1259,12 +1259,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0" in {
     val p = Function("p", None, Real, Bool)
     val a = ProgramConstant("a")
-    val f = "(-x)^2>=0".asFormula
-    val fseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(f))
-    val prog = "x:=x-1;".asProgram
+    val conc = Sequent(Seq(), IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = Substitution(
-      SubstitutionPair(ApplyPredicate(p, Anything), f) ::
-      SubstitutionPair(a, prog) :: Nil)
-    AxiomaticRule("Goedel", s)(fseq) should be (Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, f))))
+      SubstitutionPair(ApplyPredicate(p, Anything), "(-x)^2>=0".asFormula) ::
+      SubstitutionPair(a, "x:=x-1;".asProgram) :: Nil)
+    AxiomaticRule("Goedel", s)(conc) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }
 }

@@ -33,6 +33,9 @@ keymaeraProofApp.config(['$routeProvider',
       when('/tutorials', {
         templateUrl: 'partials/tutorials.html'
       }).
+      when('/usage', {
+        templateUrl: 'partials/usage.html'
+      }).
       when('/syntax', {
         templateUrl: 'partials/syntax.html'
       }).
