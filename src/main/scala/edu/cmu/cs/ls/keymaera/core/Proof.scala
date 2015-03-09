@@ -3,6 +3,7 @@
  * @author Jan-David Quesel
  * @author aplatzer
  * @author nfulton
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -606,6 +607,7 @@ object Axiom {
 /**
  * Apply a uniform substitution instance of an axiomatic proof rule.
  * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 object AxiomaticRule {
   // immutable list of locally sound axiomatic proof rules (premise, conclusion)

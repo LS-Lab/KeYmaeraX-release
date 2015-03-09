@@ -79,17 +79,18 @@ class RandomFormula(val rand : Random = new Random()) {
     def nextP(vars : IndexedSeq[Variable], n : Int) : Program = {
   	  require(n>=0)
   	  if (n == 0 || rand.nextInt(10)<1) return Test(True)
-        val r = rand.nextInt(65)
+        val r = rand.nextInt(80)
         r match {
           case 0 => Test(False)
           case 1 => Test(True)
-          case it if 2 until 10 contains it => Test(nextF(vars, n-1))
-          case it if 10 until 20 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1))
-          case it if 20 until 30 contains it => NDetAssign(vars(rand.nextInt(vars.length)))
-          case it if 30 until 40 contains it => Test(True)//@TODO replace by ODE
-          case it if 40 until 50 contains it => Choice(nextP(vars, n-1), nextP(vars, n-1))
-          case it if 50 until 60 contains it => Sequence(nextP(vars, n-1), nextP(vars, n-1))
-          case it if 60 until 65 contains it => Loop(nextP(vars, n-1))
+          case it if 2 until 10 contains it => val v = vars(rand.nextInt(vars.length)); Assign(v, v)
+          case it if 10 until 20 contains it => Test(nextF(vars, n-1))
+          case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1))
+          case it if 30 until 40 contains it => NDetAssign(vars(rand.nextInt(vars.length)))
+          case it if 40 until 50 contains it => Test(True)//@TODO replace by ODE
+          case it if 50 until 60 contains it => Choice(nextP(vars, n-1), nextP(vars, n-1))
+          case it if 60 until 70 contains it => Sequence(nextP(vars, n-1), nextP(vars, n-1))
+          case it if 70 until 80 contains it => Loop(nextP(vars, n-1))
   		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
         }
     }
