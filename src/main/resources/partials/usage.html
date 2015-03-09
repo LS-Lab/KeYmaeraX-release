@@ -1,0 +1,154 @@
+<div class="row">
+    <div class="col-md-12">
+
+        <h1>Using KeYmaera 4</h1>
+
+        <div id="carousel-example-generic" class="carousel slide" data-ride="carousel">
+            <!-- Indicators -->
+            <ol class="carousel-indicators">
+                <li data-target="#carousel-example-generic" data-slide-to="0" class="active"></li>
+                <li data-target="#carousel-example-generic" data-slide-to="1"></li>
+                <li data-target="#carousel-example-generic" data-slide-to="2"></li>
+                <li data-target="#carousel-example-generic" data-slide-to="3"></li>
+                <li data-target="#carousel-example-generic" data-slide-to="4"></li>
+                <li data-target="#carousel-example-generic" data-slide-to="5"></li>
+            </ol>
+
+            <!-- Wrapper for slides -->
+            <div class="carousel-inner" role="listbox">
+                <div class="item active">
+                    <img src="images/help/modellist.png" alt="Model list">
+                    <div class="k4-carousel-caption">
+                        <p>
+                            The page "Your Models" lists the available models and allows you to upload new models.
+                            You can list the proofs of a model by clicking on "Show proofs", and start a new proof by selecting
+                            "Start new proof" from the drop-down-box.
+                        </p>
+                    </div>
+                </div>
+                <div class="item">
+                    <img src="images/help/modeldetails.png" alt="Model details">
+                    <div class="k4-carousel-caption">
+                        <p>
+                            Click on the model name to look at the model. Click on the description to get additional information.
+                        </p>
+                    </div>
+                </div>
+                <div class="item">
+                    <img src="images/help/prooflist.png" alt="Proof list">
+                    <div class="k4-carousel-caption">
+                        <p>
+                            The page "Your Proofs" lists the available proofs and allows you to load and reprove. While reproving, a
+                            spinning wheel indicates that the prover is busy. When reproving finished, the spinning wheel changes into
+                            a button that lets you open the proof.
+                        </p>
+                    </div>
+                </div>
+                <div class="item">
+                    <img src="images/help/sequent.png" alt="Proof search on a formula">
+                    <div class="k4-carousel-caption">
+                        <p>
+                            The proof view indicates your tasks in a proof agenda. Right of or below the agenda, depending on your screen
+                            resolution, you can find the proof obligation of the selected agenda item. Hover the mouse over formulas in
+                            the proof obligation to see your options for proof search locally at that formula.
+                            Step (<span class="fa fa-step-forward"></span> Step) performs a single proof step based on the top-level operator in that formula (here,
+                            it will execute a propositional tactic handling implication).
+                            Hide (<span class="fa fa-eye-slash"></span> Hide) performs weakening, which means it removes the formula from the proof obligation.
+                        </p>
+                    </div>
+                </div>
+                <div class="item">
+                    <img src="images/help/tacticapplication.png" alt="Manual tactic application">
+                    <div class="k4-carousel-caption">
+                        <p>
+                            Instead of automated proof search, you can manually interact with the prover by clicking an operator in a
+                            formula (e.g., the implication symbol). This opens a popup dialog that displays the applicable tactics.
+                            Click a tactic button to execute that tactic on the formula displayed at the top of the dialog (this
+                            is the formula selected when opening the dialog).
+                        </p>
+                    </div>
+                </div>
+                <div class="item">
+                    <img src="images/help/sequenttactics.png" alt="Proof search on an obligation">
+                    <div class="k4-carousel-caption">
+                        <p>
+                            To let KeYmaera search for a proof fully automated, hover the mouse over the turnstile symbol.
+                            This will show automated tactics to handle all kinds of formulas (<i class="fa fa-magic"></i> Auto),
+                            only propositional tactics (<i class="fa fa-forward"></i> Propositional), tactics to handle
+                            arithmetic (<i class="fa fa-calculator"></i> Arithmetic),
+                            or automated tactics without making arithmetic steps, such as quantifier elimination (<span class="fa-stack">
+                                <i class="fa fa-calculator fa-stack-1x"></i>
+                                <i class="fa fa-ban fa-stack-2x"></i>
+                            </span> w/o Arith.).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
+                <span class="glyphicon glyphicon-chevron-left" aria-hidden="true"></span>
+                <span class="sr-only">Previous</span>
+            </a>
+            <a class="right carousel-control" href="#carousel-example-generic" role="button" data-slide="next">
+                <span class="glyphicon glyphicon-chevron-right" aria-hidden="true"></span>
+                <span class="sr-only">Next</span>
+            </a>
+        </div>
+
+<!--
+        <h3>Your Models</h3>
+        <div class="row">
+            <div class="col-md-5">
+        <p>
+        The page "Your Models" lists the available models and allows you to upload new models.
+        You can list the proofs of a model by clicking on "Show proofs", and start a new proof by selecting
+        "Start new proof" from the drop-down-box.
+        </p>
+            </div>
+            <div class="col-md-7">
+        <img src="images/help/modellist.png" alt="Model list" class="img-responsive">
+            </div>
+        </div>
+
+
+        <p>
+        Click on the model name to look at the model. Click on the description to get additional information.
+        </p>
+        <img src="images/help/modeldetails.png" alt="Model details" class="img-responsive">
+
+
+        <h3>Your Proofs</h3>
+        <p>
+        The page "Your Proofs" lists the available proofs and allows you to load and reprove. While reproving, a
+        spinning wheel indicates that the prover is busy. When reproving finished, the spinning wheel changes into
+        a button that lets you open the proof.
+        </p>
+        <img src="images/help/prooflist.png" alt="Proof list" class="img-responsive">
+
+
+        <h3>Proving</h3>
+        <p>
+        The proof view indicates your tasks in a proof agenda. Right of or below the agenda, depending on your screen
+        resolution, you can find the proof obligation of the selected agenda item. Hover the mouse over formulas in
+            the proof obligation to see your options for proof search locally at that formula.
+        </p>
+        <img src="images/help/sequent.png" alt="Proof search on a formula" class="img-responsive">
+
+        <p>
+            To let KeYmaera search for a proof fully automated, hover the mouse over the turnstile symbol. This will
+            show automated tactics to handle all kinds of formulas, only propositional tactics, or tactics to handle
+            arithmetic.
+        </p>
+        <img src="images/help/sequenttactics.png" alt="Proof search on an obligation" class="img-responsive">
+
+        <p>
+            Instead of automated proof search, you can manually interact with the prover by clicking an operator in a
+            formula (e.g., the implication symbol). This opens a popup dialog that displays the applicable tactics.
+            Click a tactic button to execute that tactic.
+        </p>
+        <img src="images/help/tacticapplication.png" alt="Manual tactic application" class="img-responsive">
+-->
+    </div>
+
+</div>
