@@ -146,7 +146,7 @@ object SearchTacticsImpl {
       pt.applies(node.sequent, AntePosition(node.sequent.ante.length - 1))
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-      Some(pt(SuccPosition(node.sequent.ante.length - 1)))
+      Some(pt(AntePosition(node.sequent.ante.length - 1)))
   }
 
   /**
