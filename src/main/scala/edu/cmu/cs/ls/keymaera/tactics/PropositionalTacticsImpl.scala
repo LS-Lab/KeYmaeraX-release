@@ -248,10 +248,10 @@ object PropositionalTacticsImpl {
     }
   }
 
-  protected[tactics] def modusPonensT(assumption: Position, implication: Position): Tactic = new ConstructionTactic("Modus Ponens") {
+  def modusPonensT(assumption: Position, implication: Position): Tactic = new ConstructionTactic("Modus Ponens") {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       val p = AntePosition(assumption.getIndex - (if(assumption.getIndex > implication.getIndex) 1 else 0))
-      Some(ImplyLeftT(implication) & (AxiomCloseT(p, SuccPosition(node.sequent.succ.length)), hideT(assumption)))
+      Some(ImplyLeftT(implication) & (AxiomCloseT(p, SuccPosition(node.sequent.succ.length)), hideT(p)))
     }
 
     override def applicable(node: ProofNode): Boolean = assumption.isAnte && implication.isAnte &&
