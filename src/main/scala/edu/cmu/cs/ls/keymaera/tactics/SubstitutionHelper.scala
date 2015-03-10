@@ -56,7 +56,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case d: Derivative if d == what => repl
       case Derivative(s, e) if e == what => Derivative(s, repl)
       case Derivative(_, e) if e != what => t
-      case Apply(fn, theta) => Apply(fn, usubst(o, u, theta))
+      case app@Apply(fn, theta) if !u.contains(fn) && app == what => repl
+      case app@Apply(fn, theta) if  u.contains(fn) || app != what => Apply(fn, usubst(o, u, theta))
       case Nothing => Nothing
       case Number(_, _) if t == what => repl
       case x: Atom => x
