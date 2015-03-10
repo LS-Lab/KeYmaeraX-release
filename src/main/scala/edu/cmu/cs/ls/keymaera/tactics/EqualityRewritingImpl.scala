@@ -83,7 +83,12 @@ object EqualityRewritingImpl {
   protected[tactics] def eqRewritePos(left: Boolean, eqPos: Position): Tactic = new ConstructionTactic("Apply Equality Left") {
     require(eqPos.isAnte && eqPos.inExpr == HereP, "Equalities for rewriting have to be in the antecedent")
 
-    override def applicable(node: ProofNode): Boolean = findPosInExpr(left, node.sequent, eqPos).isDefined
+    override def applicable(node: ProofNode): Boolean = node.sequent(eqPos) match {
+      case Equals(_, _, _) => true
+      case ProgramEquals(_, _) => true
+      case Equiv(_, _) => true
+      case _ => false
+    }
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
       import PropositionalTacticsImpl.hideT
