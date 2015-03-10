@@ -3,7 +3,6 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
-import edu.cmu.cs.ls.keymaera.tactics.NameCategorizer._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyLeftT
@@ -15,6 +14,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import BindingAssessment.allNames
 
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+import TacticHelper.getFormula
 import SearchTacticsImpl.onBranch
 
 import scala.collection.immutable.{List, Seq}
@@ -495,7 +495,7 @@ object HybridProgramTacticsImpl {
    */
   def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
     import NameCategorizer.freeVariables
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case BoxModality(Assign(_: Variable, v: Variable), pred) => checkNested(pred, v)
       case DiamondModality(Assign(_: Variable, v: Variable), pred) => checkNested(pred, v)
       case _ => false
@@ -799,7 +799,7 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def diamondNDetAssign: PositionTactic = new PositionTactic("<:=> assign nondet") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case DiamondModality(NDetAssign(v: Variable), _) => true
       case _ => false
     }
@@ -811,14 +811,14 @@ object HybridProgramTacticsImpl {
         import scala.language.postfixOps
         import FOQuantifierTacticsImpl.skolemizeT
 
-        val f = node.sequent(p)
+        val f = getFormula(node.sequent, p)
         // construct a new name for renaming in ODE
         val newV = f match {
           case DiamondModality(NDetAssign(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
-        node.sequent(p) match {
+        f match {
           case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: Loop, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
