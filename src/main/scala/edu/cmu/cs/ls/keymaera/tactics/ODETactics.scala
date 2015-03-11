@@ -211,6 +211,7 @@ object ODETactics {
    * Returns a tactic to introduce a marker around an ODE for differential weakening.
    * @return The tactic.
    */
+  @deprecated("Use axiom DW differential weaken instead.")
   def diffWeakenSystemIntroT: PositionTactic = new AxiomTactic("DW differential weaken system introduce",
     "DW differential weaken system introduce") {
     def applies(f: Formula) = f match {
