@@ -282,10 +282,12 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
       case _ => None
     }
     val tId = db.createDispatchedTactics(proofId, nodeId, formulaId, tacticId, input, automation, DispatchedTacticStatus.Prepared)
-    KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-      Some(tacticCompleted(db)), input, automation)
     db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running))
+
+    KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
+      Some(tacticCompleted(db)), input, automation)
+
     new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running)) :: Nil
   }
@@ -305,11 +307,11 @@ class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, no
       CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse.")))
 
       val termId = db.createDispatchedCLTerm(proofId, nodeId, clTerm)
-      //Run the tactic.
-      KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
       //Update status to running.
       val dispatchedTerm = new DispatchedCLTermPOJO(termId, proofId, nodeId, clTerm, Some(DispatchedTacticStatus.Running))
       db.updateDispatchedCLTerm(dispatchedTerm)
+      //Run the tactic.
+      KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
       //Construct the response to this request.
       new DispatchedCLTermResponse(dispatchedTerm):: Nil
     }
@@ -330,6 +332,15 @@ class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : 
     db.getDispatchedTactics(tId) match {
       case Some(d) => new DispatchedTacticResponse(d) :: Nil
       case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched tactic with ID: " + tId)) :: Nil
+    }
+  }
+}
+
+class GetDispatchedTermRequest(db : DBAbstraction, userId : String, proofId : String, termId : String) extends Request {
+  def getResultingResponses() = {
+    db.getDispatchedCLTerm(termId) match {
+      case Some(d) => new DispatchedCLTermResponse(d) :: Nil
+      case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched term with ID: " + termId)) :: Nil
     }
   }
 }

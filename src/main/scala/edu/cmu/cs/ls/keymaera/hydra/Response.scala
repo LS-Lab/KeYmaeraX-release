@@ -205,10 +205,12 @@ class DispatchedCLTermResponse(t : DispatchedCLTermPOJO) extends Response {
   }
 
   val json = JsObject(
+    "id" -> JsString(t.id),
     "proofId" -> JsString(t.proofId),
     "nodeId" -> JsString(nid),
     "termId" -> JsString(t.id),
-    "term" -> JsString(t.clTerm)
+    "term" -> JsString(t.clTerm),
+    "status" -> JsString(t.status.get.toString)
   )
 }
 

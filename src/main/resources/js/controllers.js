@@ -230,6 +230,10 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
     dispatchedTacticsNotificationService.broadcastDispatchedTactics = function(tId) {
         $rootScope.$broadcast('handleDispatchedTactics', tId);
     };
+    dispatchedTacticsNotificationService.broadcastDispatchedTerm = function(termId) {
+            $rootScope.$broadcast('handleDispatchedTerm', termId);
+        };
+
 
     return {
         getRuleTactics: function() { return ruleTactics; },
@@ -631,6 +635,14 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.selectedTask = agendaItem;
     }
 
+    $scope.isSelected = function(agendaItem) {
+        $scope.selectedTask == agendaItem;
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Subsection on executing tasks
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //Executes a combinator language term.
     $scope.execute = function() {
         var nodeId = this.selectedTask.nodeId;
@@ -643,17 +655,37 @@ keymaeraProofControllers.controller('TaskListCtrl',
                     alert("Error when trying to run your custom tactic: " + JSON.stringify(data))
                 }
                 else {
-                    //todo : update the running tasks...
+//                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
+                    $scope.$broadcast('handleDispatchedTerm', data.id);
                 }
              })
              .error(function() {
                 alert("encountered error during post on runTerm.")
              })
     }
-
-    $scope.isSelected = function(agendaItem) {
-        $scope.selectedTask == agendaItem;
-    }
+    $scope.$on('handleDispatchedTerm', function(event, tId) {
+        // TODO create defer per tId
+        $scope.defer = $q.defer();
+        $scope.defer.promise.then(function (tacticResult) {
+            if (tacticResult == 'Finished') {
+                $scope.fetchAgenda($cookies.userId, $scope.proofId)
+            } else {
+                // TODO not yet used, but could be used to report an error in running the tactic
+            }
+        });
+        (function poll(){
+           setTimeout(function() {
+                $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
+                        .success(function(data) {
+                    if (data.status == 'Running') {
+                      poll();
+                    } else {
+                        $scope.defer.resolve(data.status)
+                    }
+                })
+          }, 1000);
+        })();
+    });
 
     $scope.refreshTree = function() {
         //pulling this variable out so that I can print it back out.

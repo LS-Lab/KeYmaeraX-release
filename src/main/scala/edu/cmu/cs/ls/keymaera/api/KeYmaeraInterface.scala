@@ -439,8 +439,8 @@ object KeYmaeraInterface {
       generateIds()(termId)(proofId, nodeId, term)
       callback.foreach(_(termId)(proofId, nodeId, term))
     })
-    tactic.updateInfo = (p : ProofNodeInfo) => p.infos += ("termId" -> termId)
-    tactic.updateStepInfo = (p : ProofStepInfo) => p.infos += ("termId" -> termId)
+    tactic.updateInfo = (p : ProofNodeInfo) => p.infos += ("tactic" -> termId)
+    tactic.updateStepInfo = (p : ProofStepInfo) => p.infos += ("tactic" -> termId)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, node))
   }
 

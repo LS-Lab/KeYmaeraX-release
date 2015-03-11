@@ -358,19 +358,31 @@ object MongoDB extends DBAbstraction {
   override def updateProofOnTacticCompletion(proofId: String, tId: String): Unit = {
     val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
 
-    val query = MongoDBObject("dispatchedTactics._id" -> new ObjectId(tId))
+    val oid = new ObjectId(tId)
+
+    val query = MongoDBObject("dispatchedTactics._id" -> oid)
 
     val results = proofs.find(query)
     if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")
     if(results.length < 1) throw new IllegalArgumentException(proofId + " is a bad proofId!")
 
-    val update = $addToSet("completedSteps" -> new ObjectId(tId)) ++ $set(
-      // TODO update step count
-      if (openGoals == 0) "closed" -> true else "closed" -> false,
-      "dispatchedTactics.$.status" -> DispatchedTacticStatus.Finished.toString
-    )
-
+    val update = $addToSet("completedSteps" -> new ObjectId(tId));
     proofs.update(query, update)
+
+    val update2 = $set("dispatchedTactics.$.status" -> DispatchedTacticStatus.Finished.toString)
+    val query2 = MongoDBObject("dispatchedTactics._id" -> oid)
+    proofs.update(query2, update2)
+
+    val update3 = $set(if (openGoals == 0) "closed" -> true else "closed" -> false)
+    val query3 = MongoDBObject("dispatchedTactics._id" -> oid)
+    proofs.update(query3, update3)
+
+//    ++ $set(
+//      // TODO update step count
+//      if (openGoals == 0) "closed" -> true else "closed" -> false,
+//      "dispatchedTactics.$.status" -> DispatchedTacticStatus.Finished.toString
+//    )
+
   }
 
   override def createDispatchedCLTerm(taskId : String, nodeId : Option[String], clTerm : String) : String = {
@@ -400,17 +412,26 @@ object MongoDB extends DBAbstraction {
   }
 
   override def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO) = {
-    val builder = MongoDBObject.newBuilder
-    builder += "_id"          -> new ObjectId(termToUpdate.id)
-    builder += "proofId"      -> new ObjectId(termToUpdate.proofId)
-    builder += "clTerm"        -> termToUpdate.clTerm
-    if (termToUpdate.nodeId.isDefined) builder += "nodeId" -> termToUpdate.nodeId.get
-    if(termToUpdate.status.isDefined) builder += "status" -> termToUpdate.status.toString()
+//    val map = "_id"          -> new ObjectId(termToUpdate.id),
+//              "proofId"      -> new ObjectId(termToUpdate.proofId)
+//              "clTerm"        -> termToUpdate.clTerm,
+//              if (termToUpdate.nodeId.isDefined) "nodeId" -> termToUpdate.nodeId.get,
+//    if(termToUpdate.status.isDefined) builder += "status" -> termToUpdate.status.toString()
 
-    val update = $set("dispatchedCLTerm.$" -> builder.result())
-
-    val query = MongoDBObject("dispatchedCLTerm._id" -> new ObjectId(termToUpdate.id))
+    val update = $set(
+      "proofId"      -> new ObjectId(termToUpdate.proofId),
+      "clTerm"        -> termToUpdate.clTerm)
+    val query = MongoDBObject("_id" -> new ObjectId(termToUpdate.id))
     dispatchedCLTerms.update(query, update)
+
+      if (termToUpdate.nodeId.isDefined) {
+        val query2 = MongoDBObject("_id" -> new ObjectId(termToUpdate.id))
+        dispatchedCLTerms.update(query2, $set("nodeId" -> termToUpdate.nodeId.get))
+      }
+      if(termToUpdate.status.isDefined) {
+        val query3 = MongoDBObject("_id" -> new ObjectId(termToUpdate.id))
+        dispatchedCLTerms.update(query3, $set("status" -> termToUpdate.status.toString()))
+      }
   }
 
   override def updateProofOnCLTermCompletion(proofId : String, termId : String) = {
@@ -426,8 +447,8 @@ object MongoDB extends DBAbstraction {
 
 
     //Update the term itself.
-    val update2 = $set("dispatchedCLTerm.status" -> DispatchedTacticStatus.Finished.toString)
-    val query2 = MongoDBObject("dispatchedCLTerm._id" -> new ObjectId(termId))
+    val update2 = $set("status" -> DispatchedTacticStatus.Finished.toString)
+    val query2 = MongoDBObject("_id" -> new ObjectId(termId))
     dispatchedCLTerms.update(query2, update2)
   }
 

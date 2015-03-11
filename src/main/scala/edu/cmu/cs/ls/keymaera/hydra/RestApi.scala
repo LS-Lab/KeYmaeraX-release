@@ -276,6 +276,13 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val dispatchedTerm = path("proofs" / "user" / Segment / Segment / "dispatchedTerm" / Segment) { (userId, proofId, termId) => { pathEnd {
+    get {
+      val request = new GetDispatchedTermRequest(database, userId, proofId, termId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
   /**
    * exactly like getting a proof tree except we get only the node instead of everything under it as well.
    */
@@ -339,6 +346,7 @@ trait RestApi extends HttpService {
     nodeRunTacticsByName  ::
     nodeSaturateTacticsByName ::
     dispatchedTactic      ::
+    dispatchedTerm        ::
     proofTree             ::
     proofHistory          ::
     devAction             ::
