@@ -248,7 +248,7 @@ object KeYmaeraInterface {
    */
   def addTask(taskId: String, content: String): String = {
     if (TaskManagement.containsTask(taskId)) throw new IllegalArgumentException("Duplicate task ID " + taskId)
-    TaskManagement.startLoadingTask(taskId)
+//    TaskManagement.startLoadingTask(taskId) -- This doesn't make sense. If the parse succeeds then we can automatically open the task because there will be no extant tactics. But if hte parse does not succeed then we don't want references to this proof in the server state at all.
     // TODO ComponentConfig will be provided from outside once KeYmaeraInterface is dependency injection enabled
     new KeYmaeraParser(false, ComponentConfig).runParser(content) match {
       case f: Formula =>
