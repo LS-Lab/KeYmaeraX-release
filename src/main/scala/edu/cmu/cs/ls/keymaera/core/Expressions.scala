@@ -845,7 +845,9 @@ final class IfThenElseTerm(cond: Formula, thenT: Term, elseT: Term)
  */
 
 sealed trait ModalOp extends Expr {
+  @deprecated()
   def reads: Seq[NamedSymbol]
+  @deprecated()
   def writes: Seq[NamedSymbol]
 }
 /* Modality */
@@ -917,59 +919,6 @@ final class DiamondModality (child : Program) extends Unary(ModalOpSort, Program
   override def hashCode: Int = hash(137, child)
 }
 
-/* Games */
-/*
-final class BoxStar         (child : Game)    extends UnaryGame(child){
-  def reads = child.reads
-  def writes = child.writes
-
-  override def equals(e: Any): Boolean = e match {
-    case x: BoxStar => x.child == child
-    case _ => false
-  }
-  override def hashCode: Int = hash(139, child)
-}
-final class DiamondStar     (child : Game)    extends UnaryGame(child) {
-  def reads = child.reads
-  def writes = child.writes
-
-  override def equals(e: Any): Boolean = e match {
-    case x: DiamondStar => x.child == child
-    case _ => false
-  }
-  override def hashCode: Int = hash(149, child)
-}
-final class SequenceGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
-  def reads = left.reads ++ right.reads
-  def writes = left.writes ++ left.writes
-
-  override def equals(e: Any): Boolean = e match {
-    case x: SequenceGame => x.left == left && x.right == right
-    case _ => false
-  }
-  override def hashCode: Int = hash(151, left, right)
-}
-final class DisjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
-  def reads = left.reads ++ right.reads
-  def writes = left.writes ++ left.writes
-
-  override def equals(e: Any): Boolean = e match {
-    case x: DisjunctGame => x.left == left && x.right == right
-    case _ => false
-  }
-  override def hashCode: Int = hash(157, left, right)
-}
-final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left, right) {
-  def reads = left.reads ++ right.reads
-  def writes = left.writes ++ left.writes
-
-  override def equals(e: Any): Boolean = e match {
-    case x: ConjunctGame => x.left == left && x.right == right
-    case _ => false
-  }
-  override def hashCode: Int = hash(163, left, right)
-}
-*/
 
 /**
  * Programs
@@ -978,7 +927,9 @@ final class ConjunctGame    (left  : Game, right : Game) extends BinaryGame(left
 
 sealed trait Program extends Expr {
   //@TODO reads+writes have redundancy with bound and free variable definitions.
+  @deprecated()
   def reads: Seq[NamedSymbol]
+  @deprecated()
   def writes: Seq[NamedSymbol]
 }
 

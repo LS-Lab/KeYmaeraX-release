@@ -239,6 +239,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   class ProofStepInfo(var infos: Map[String, String])
 
+  @deprecated("Use Provable() instead.")
   object ProofNode {
     /**
      * Represents a deduction step in a proof using the indicated rule which leads to the given conjunctive list of subgoals.

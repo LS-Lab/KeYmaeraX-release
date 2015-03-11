@@ -39,6 +39,19 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
+  
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs USubstTest in {
+    val fn = Apply(Function("f", None, Unit, Real), Nothing)
+    val prem = Equiv(
+      BoxModality("x:=f();".asProgram, ApplyPredicate(p1, "x".asTerm)),
+      ApplyPredicate(p1, fn)) // axioms.axiom("[:=])
+    val conc = "[x:=0;]x=x <-> 0=x".asFormula
+    val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), Equals(Real, CDot, "x".asTerm)),
+      SubstitutionPair(fn, "0".asTerm)))
+    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+  }
 
   /* TODO programs where not all branches write the same variables are not yet supported */
   ignore should "handle nontrivial binding structures" taggedAs USubstTest in {
