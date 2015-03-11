@@ -53,7 +53,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
   def parseBareExpression(s:String) : Option[Expr] = {
     val variables = allVariableOccurances(s)
     // HACK: allow parameterless functions for everything that could be a variable
-    val functions = variables.map(v => Function(v.name, v.index, Unit, Real))
+    val functions = variables.map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
     val parser = new KeYmaeraParser(false, env)
 
     val formulaParser = new FormulaParser(variables, functions, Nil, Nil, Nil).parser
@@ -74,7 +74,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
   def parseBareTerm(s:String) : Option[Term] = {
     val variables = allVariableOccurances(s)
     // HACK: allow parameterless functions for everything that could be a variable
-    val functions = variables.map(v => Function(v.name, v.index, Unit, Real))
+    val functions = variables.map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
     val parser = new KeYmaeraParser(false, env)
 
     val exprParser = parser.makeTermParser(variables, functions)
@@ -132,7 +132,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     
     //Parse the problem.
-    val exprParser = parser.makeExprParser(variables, functions, predicateConstants, programs, contEvolvePrograms)
+    val exprParser = parser.makeExprParser(variables, functions ++ builtinFunctions, predicateConstants, programs, contEvolvePrograms)
     val parseResult : Expr = parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result.asInstanceOf[Expr]
         case parser.Failure(result,next) => throw new Exception(failureMessage(result,next))
@@ -141,7 +141,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
     val printOfParse = KeYmaeraPrettyPrinter.stringify(parseResult)
-    checkParser(functions, predicateConstants, variables, programs, contEvolvePrograms, parseResult,printOfParse)
+    checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, contEvolvePrograms, parseResult,printOfParse)
     
     parseResult
   }
@@ -177,11 +177,11 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
   }
-   
+
   import edu.cmu.cs.ls.keymaera.parser.ParseSymbols._
   
   type Tokens = StdLexical
-  
+
   //////////////////////////////////////////////////////////////////////////////
   // Primitive syntactic constructs
   //////////////////////////////////////////////////////////////////////////////
@@ -198,6 +198,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
   protected val everything = """[\w\W\s\S\d\D\n\r]""".r
   
   protected val notDblQuote = """[^\"]*""".r
+
+  protected val builtinFunctions = Function("Abs", None, Real, Real) :: Nil
   
   val lexical = new StdLexical
   //TODO should we add the rest of the \\'s to the delimiters list?
@@ -1167,7 +1169,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       
       val inReader = new PackratReader(new CharSequenceReader(in))
       val (programs, contEvolvePrograms, formulas, terms, funs, nextIn) = parse(firstPassParser, inReader) match {
-        case Success(result, next) => (result._1, result._2, result._3, result._4, result._5, next)
+        case Success(result, next) => (result._1, result._2, result._3, result._4, result._5 ++ builtinFunctions, next)
         case Failure(msg, next)    => 
           throw new Exception("Failed to parse variables section:"  + msg)
         case Error(msg,next)       =>
