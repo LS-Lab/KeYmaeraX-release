@@ -120,7 +120,81 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sucSequent("[y:=z;][y'=1;]y>0".asFormula))
   }
 
-  "Quantifier instantiation" should "pick the correct subtactic" in {
+  it should "instantiate at one-below-top positions in propositional formulas" in {
+    val tactic = instantiateExistentialQuanT(Variable("x", None, Real), Variable("z", None, Real))
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1::Nil))),
+      new RootNode(sucSequent("y>0 & \\exists x. x=5".asFormula))) should be (sucSequent("y>0 & z=5".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(0::Nil))),
+      new RootNode(sucSequent("(\\exists x. x=5) & y>0".asFormula))) should be (sucSequent("z=5 & y>0".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1::Nil))),
+      new RootNode(sucSequent("y>0 | \\exists x. x=5".asFormula))) should be (sucSequent("y>0 | z=5".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(0::Nil))),
+      new RootNode(sucSequent("(\\exists x. x=5) | y>0".asFormula))) should be (sucSequent("z=5 | y>0".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1::Nil))),
+      new RootNode(sucSequent("y>0 -> \\exists x. x=5".asFormula))) should be (sucSequent("y>0 -> z=5".asFormula))
+  }
+
+  it should "instantiate anywhere in propositional formulas when existential quantifier has positive polarity" in {
+    val tactic = instantiateExistentialQuanT(Variable("x", None, Real), Variable("z", None, Real))
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1 :: 1 :: Nil))),
+      new RootNode(sucSequent("y>0 & (y>2 & \\exists x. x=5)".asFormula))) should be(sucSequent("y>0 & (y>2 & z=5)".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1 :: 1 :: Nil))),
+      new RootNode(sucSequent("y>0 & (y>2 | \\exists x. x=5)".asFormula))) should be(sucSequent("y>0 & (y>2 | z=5)".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1 :: 1 :: Nil))),
+      new RootNode(sucSequent("y>0 & (y>2 -> \\exists x. x=5)".asFormula))) should be(sucSequent("y>0 & (y>2 -> z=5)".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1 :: 1 :: Nil))),
+      new RootNode(sucSequent("y>0 | (y>2 & \\exists x. x=5)".asFormula))) should be(sucSequent("y>0 | (y>2 & z=5)".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1 :: 1 :: Nil))),
+      new RootNode(sucSequent("y>0 -> (y>2 & \\exists x. x=5)".asFormula))) should be(sucSequent("y>0 -> (y>2 & z=5)".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1 :: 1 :: Nil))),
+      new RootNode(sucSequent("y>0 -> (y>2 -> \\exists x. x=5)".asFormula))) should be(sucSequent("y>0 -> (y>2 -> z=5)".asFormula))
+
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))),
+      new RootNode(sucSequent("(\\exists x. x=5 -> y>0) -> y>2".asFormula))) should be(sucSequent("(z=5 -> y>0) -> y>2".asFormula))
+  }
+
+  it should "be applicable when existential quantifier appears in positive polarity" in {
+    val tactic = instantiateExistentialQuanT(Variable("x", None, Real), Variable("z", None, Real))
+
+    tactic(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))).
+      applicable(new RootNode(sucSequent("((\\exists x. x=5) -> y > 5) -> y>2".asFormula))) shouldBe true
+
+    tactic(SuccPosition(0, PosInExpr(0 :: 1 :: 0 :: Nil))).
+      applicable(new RootNode(sucSequent("(y > 5 -> ((\\exists x. x=5) -> z = 1)) -> y>2".asFormula))) shouldBe true
+
+    tactic(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))).
+      applicable(new RootNode(sucSequent("(!\\exists x. x=5) -> z = 1".asFormula))) shouldBe true
+  }
+
+  it should "not be applicable when existential quantifier appears in negative polarity" in {
+    val tactic = instantiateExistentialQuanT(Variable("x", None, Real), Variable("z", None, Real))
+
+    tactic(AntePosition(0)).
+      applicable(new RootNode(sequent(Nil, "\\exists x. x=5".asFormula :: Nil, Nil))) shouldBe false
+
+    tactic(SuccPosition(0, PosInExpr(0 :: Nil))).
+      applicable(new RootNode(sucSequent("!(\\exists x. x=5)".asFormula))) shouldBe false
+
+    tactic(SuccPosition(0, PosInExpr(0 :: Nil))).
+      applicable(new RootNode(sucSequent("(\\exists x. x=5) -> y>2".asFormula))) shouldBe false
+
+    tactic(SuccPosition(0, PosInExpr(0 :: 1 :: Nil))).
+      applicable(new RootNode(sucSequent("(y > 5 -> \\exists x. x=5) -> y>2".asFormula))) shouldBe false
+
+    tactic(SuccPosition(0, PosInExpr(0 :: Nil))).
+      applicable(new RootNode(sucSequent("!\\exists x. x=5".asFormula))) shouldBe false
+  }
+
+    "Quantifier instantiation" should "pick the correct subtactic" in {
     val t1 = locateSucc(instantiateT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(t1, new RootNode(sucSequent("\\exists x. [y:=x;][y'=1;]y>0".asFormula))) should be (
       sucSequent("[y:=z;][y'=1;]y>0".asFormula))
@@ -157,6 +231,12 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     getProofSequent(tactic, new RootNode(sequent(Nil, "[x:=x+1;]x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "\\exists y. [x:=y+1;]x>0".asFormula :: Nil, Nil))
   }
+
+//  it should "work inside formulas" in {
+//    val tactic = existentialGenT(Variable("z", None, Real), "x".asTerm)(AntePosition(0, PosInExpr(1::Nil)))
+//    getProofSequent(tactic, new RootNode(sequent(Nil, "y>0 & x=5".asFormula :: Nil, Nil))) should be (
+//      sequent(Nil, "y>0".asFormula :: "\\exists z. z=5".asFormula :: Nil, Nil))
+//  }
 
   // TODO AlphaConversionHelper replaces variable bound by quantifier -> might be needed by some tactics (check before fixing)
   ignore should "not replace bound occurrences of t with x" in {

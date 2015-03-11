@@ -152,26 +152,58 @@ object FOQuantifierTacticsImpl {
   }
 
   def instantiateExistentialQuanT(quantified: Variable, t: Term) = new PositionTactic("exists instantiate") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Exists(vars, _) => !p.isAnte && vars.contains(quantified)
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Exists(vars, _) => vars.contains(quantified) &&
+        ((p.isAnte && polarityAt(s, p) == -1) || (!p.isAnte && polarityAt(s, p) == 1))
       case _ => false
     }
 
+    private def parentPosOf(p: Position) =
+      if (p.isAnte) AntePosition(p.index, PosInExpr(p.inExpr.pos.init))
+      else SuccPosition(p.index, PosInExpr(p.inExpr.pos.init))
+
+    private def polarityAt(s: Sequent, p: Position): Int =
+      if (p.isTopLevel) 1 else getFormula(s, parentPosOf(p)) match {
+        case Not(_) => -polarityAt(s, parentPosOf(p))
+        case Imply(_, _) if p.inExpr.pos.last == 0 => -polarityAt(s, parentPosOf(p))
+        case Imply(_, _) if p.inExpr.pos.last == 1 => polarityAt(s, parentPosOf(p))
+        case Equiv(_, _) => 0
+        case _ => polarityAt(s, parentPosOf(p))
+      }
+
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case Exists(vars, phi) =>
-          val anteLength = node.sequent.ante.length
-          val succLength = node.sequent.succ.length
-          val desired = replace(phi)(quantified, t)
+          val desired = createDesired(node.sequent)
           val cutFrm = Imply(desired, node.sequent(p))
-          import TacticLibrary.debugT
           Some(cutT(Some(cutFrm)) & onBranch(
-            (cutUseLbl, ImplyLeftT(AntePosition(anteLength)) && (hideT(p), AxiomCloseT)),
-            (cutShowLbl, cohideT(SuccPosition(succLength)) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
-              ImplyRightT(SuccPosition(0)) & existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT)
+            (cutUseLbl, lastAnte(assertPT(cutFrm)) & lastAnte(ImplyLeftT) && (hideT(p.topLevel), AxiomCloseT)),
+            (cutShowLbl, lastSucc(assertPT(cutFrm)) & lastSucc(cohideT) & assertT(0, 1) & assertPT(cutFrm)(SuccPosition(0)) &
+              ImplyRightT(SuccPosition(0)) & assertT(1, 1) &
+              generalize(replace(phi)(quantified, t)))
           ))
         case _ => None
+      }
+
+      private def createDesired(s: Sequent) = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = f match {
+          case Exists(_, phi) => Right(replace(phi)(quantified, t))
+          case _ => Left(Some(ExpressionTraversal.stop))
+        }
+      }), s(p)) match {
+        case Some(frm) => frm
+        case None => throw new IllegalArgumentException(s"Did not find existential quantifier in $s at $p")
+      }
+
+      private def generalize(fToGen: Formula) = {
+        if (p.isTopLevel) {
+          existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT
+        } else {
+          repeatT(locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT)) &
+            (AxiomCloseT | locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT)
+        }
       }
     }
   }
