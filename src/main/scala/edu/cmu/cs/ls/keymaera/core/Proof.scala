@@ -2194,8 +2194,8 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
   /**
    * @TODO Review. Might turn into axiom QuantifierAbstraction.
-   * @deprecated Use [] monotone and <> monotone or Goedel rule instead.
    */
+@deprecated("Use [] monotone and <> monotone or Goedel rule instead.")
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
@@ -2225,6 +2225,7 @@ object DeriveConstant {
  * Derive a numeral / number constant n.
  * Observe that derivative n'=0 is added to top-level, which is sound, because number constants are constants, so rigid.
  */
+@deprecated("Use const' derive constants instead")
 class DeriveConstant(t: Term) extends Rule("Derive Constant") {
   val Derivative(Real, Number(Real, n)) = t
   override def apply(s: Sequent): List[Sequent] =
@@ -2247,7 +2248,7 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 // the following rules will turn into axioms
 
 //@TODO Removal suggested since better axiom DC differential cut exists.
-//@deprecated
+@deprecated("Use DC differential cut axiom instead")
 class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
   require(!p.isAnte)
   override def apply(s: Sequent): List[Sequent] = {
