@@ -84,12 +84,15 @@ object SearchTacticsImpl {
    */
   def locateAnte(posT: PositionTactic, cond: Formula => Boolean = _ => true): Tactic =
       new ApplyPositionTactic("locateAnte (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
+    override def applicable(p: ProofNode): Boolean = {
+      val pos = findPosition(p.sequent)
+      pos.isDefined && cond(p.sequent(pos.get))
+    }
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.ante.length) {
         val pos = AntePosition(i)
-        if(posT.applies(s, pos)) {
+        if (cond(s(pos)) && posT.applies(s, pos)) {
           return Some(pos)
         }
       }
@@ -106,12 +109,15 @@ object SearchTacticsImpl {
    */
   def locateSucc(posT: PositionTactic, cond: Formula => Boolean = _ => true): Tactic =
       new ApplyPositionTactic("locateSucc (" + posT.name + ")", posT) {
-    override def applicable(p: ProofNode): Boolean = findPosition(p.sequent).isDefined
+    override def applicable(p: ProofNode): Boolean = {
+      val pos = findPosition(p.sequent)
+      pos.isDefined && cond(p.sequent(pos.get))
+    }
 
     override def findPosition(s: Sequent): Option[Position] = {
       for (i <- 0 until s.succ.length) {
         val pos = SuccPosition(i)
-        if (posT.applies(s, pos) && cond(s(pos))) {
+        if (cond(s(pos)) && posT.applies(s, pos) && cond(s(pos))) {
           return Some(pos)
         }
       }
@@ -146,7 +152,7 @@ object SearchTacticsImpl {
       pt.applies(node.sequent, AntePosition(node.sequent.ante.length - 1))
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-      Some(pt(SuccPosition(node.sequent.ante.length - 1)))
+      Some(pt(AntePosition(node.sequent.ante.length - 1)))
   }
 
   /**
