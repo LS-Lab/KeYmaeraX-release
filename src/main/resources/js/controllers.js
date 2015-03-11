@@ -230,9 +230,9 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
     dispatchedTacticsNotificationService.broadcastDispatchedTactics = function(tId) {
         $rootScope.$broadcast('handleDispatchedTactics', tId);
     };
-    dispatchedTacticsNotificationService.broadcastDispatchedTerm = function(termId) {
-            $rootScope.$broadcast('handleDispatchedTerm', termId);
-        };
+//    dispatchedTacticsNotificationService.broadcastDispatchedTerm = function(termId) {
+//            $rootScope.$broadcast('handleDispatchedTerm', termId);
+//        };
 
 
     return {
@@ -486,7 +486,7 @@ keymaeraProofControllers.controller('ProofCtrl',
   });
 
 keymaeraProofControllers.controller('TaskListCtrl',
-  function($scope, $http, $cookies, $routeParams, $q, $modal, Agenda, Tactics) {
+  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $modal, Agenda, Tactics) {
     $scope.proofId = $routeParams.proofId;
 
     $scope.fetchAgenda = function(userId, proofId) {
@@ -656,7 +656,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 }
                 else {
 //                    Tactics.getDispatchedTacticsNotificationService().broadcastDispatchedTerm(data.id)
-                    $scope.$broadcast('handleDispatchedTerm', data.id);
+                    $rootScope.$broadcast('handleDispatchedTerm', data.id);
                 }
              })
              .error(function() {
@@ -668,6 +668,8 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.defer = $q.defer();
         $scope.defer.promise.then(function (tacticResult) {
             if (tacticResult == 'Finished') {
+                $scope.fetchAgenda($cookies.userId, $scope.proofId);
+                $scope.fetchAgenda($cookies.userId, $scope.proofId);
                 $scope.fetchAgenda($cookies.userId, $scope.proofId)
             } else {
                 // TODO not yet used, but could be used to report an error in running the tactic
