@@ -715,32 +715,33 @@ object TacticLibrary {
     }
   }
 
-  def deriveConstantT: PositionTactic = new TermAxiomTactic("const' derive constant", "const' derive constant") {
-    override def applies(term: Term): Boolean = term match {
-      case Derivative(Real, Number(_, _)) => true
-      case Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) => true
+  def deriveConstantT: PositionTactic = new AxiomTactic("const' derive constant", "const' derive constant") {
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Number(_, _))) => true
+      case Some(Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing))) => true
       case _ => false
-    }
+    })
 
-    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
-      term match {
-        case f@Derivative(Real, s@Number(_, _)) =>
+    override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
+      Retrieve.subTerm(in, pos.inExpr) match {
+        case Some(f@Derivative(Real, s@Number(_, _))) => true
           // construct substitution
           val aC = Apply(Function("c", None, Unit, Real), Nothing)
           val l = List(new SubstitutionPair(aC, s))
           val g = Number(0)
           val axiomInstance = Equals(Real, f, g)
-          Some(axiomInstance, l)
-        case f@Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing)) =>
+          Some(ax, axiomInstance, l, None, None)
+        case Some(f@Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing))) => true
           // construct substitution
           val aC = Apply(Function("c", None, Unit, Real), Nothing)
           val l = List(new SubstitutionPair(aC, s))
           val g = Number(0)
           val axiomInstance = Equals(Real, f, g)
-          Some(axiomInstance, l)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
       }
-    }
   }
 
   object Retrieve {

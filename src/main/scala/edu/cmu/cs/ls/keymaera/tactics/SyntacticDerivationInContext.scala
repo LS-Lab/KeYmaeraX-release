@@ -739,48 +739,31 @@ End.
     (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
     (SearchTacticsImpl.locateTerm(MonomialDerivativeT, inAnte = false) *)
 
-  def ConstantDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Constant Derivative") with ApplicableAtTerm {
-    override def applies(t : Term) = isConstant(t)
-
-    /**
-     *
-     * @param p The position of a term.
-     * @return true iff the position exists in the sequent and is a monomial.
-     */
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getApplicableTerm(s,p).isDefined
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("ConstantDerivative.applies is incorrect."))
-        Some(deriveConstantT(p))
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-
-    def getApplicableTerm(sequent : Sequent, position : Position) : Option[Term] = {
-      var foundTerm : Option[Term] = None
-
-      val fn = new ExpressionTraversalFunction {
-        override def preT(pos : PosInExpr, t : Term) = {
-          if(pos == position.inExpr && isConstant(t)) {
-            foundTerm = Some(t)
-            Left(Some(ExpressionTraversal.stop))
-          }
-          else {
-            Left(None)
-          }
-        }
-      }
-      ExpressionTraversal.traverse(fn, sequent(position))
-      foundTerm
-    }
-
-    def isConstant(term : Term) = term match {
-      case Derivative(Real, Number(Real, n)) => true //copied from the rule itself.
+  def ConstantDerivativeT = new TermAxiomTactic("const' derive constant", "const' derive constant") {
+    override def applies(term: Term): Boolean = term match {
+      case Derivative(Real, Number(_, _)) => true
+      case Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) => true
       case _ => false
+    }
+
+    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
+      term match {
+        case f@Derivative(Real, s@Number(_, _)) =>
+          // construct substitution
+          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+          val l = List(new SubstitutionPair(aC, s))
+          val g = Number(0)
+          val axiomInstance = Equals(Real, f, g)
+          Some(axiomInstance, l)
+        case f@Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing)) =>
+          // construct substitution
+          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+          val l = List(new SubstitutionPair(aC, s))
+          val g = Number(0)
+          val axiomInstance = Equals(Real, f, g)
+          Some(axiomInstance, l)
+        case _ => None
+      }
     }
   }
 
@@ -851,6 +834,7 @@ End.
   def SubtractDerivativeAtomizeT = SubtractDerivativeT
   def MultiplyDerivativeAtomizeT = MultiplyDerivativeT
   def DivideDerivativeAtomizeT   = DivideDerivativeT
+  def ConstantDerivativeAtomizeT = ConstantDerivativeT
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -867,6 +851,7 @@ End.
       SubtractDerivativeAtomizeT ::
       MultiplyDerivativeAtomizeT ::
       DivideDerivativeAtomizeT ::
+      ConstantDerivativeAtomizeT ::
       Nil
 
   val formulaDerivativeTactics : List[DerivativeAxiomInContextTactic] =
@@ -961,7 +946,7 @@ End.
 
       termDerivativeTactics.foldLeft(false)((b, tat : TermAxiomTactic) => {
         tacticApplies(tat) || b
-      }) || findApplicablePositionForTermAxiom(s(p), MonomialDerivativeT).isDefined || findApplicablePositionForTermAxiom(s(p), ConstantDerivativeT).isDefined
+      }) || findApplicablePositionForTermAxiom(s(p), MonomialDerivativeT).isDefined
     }
 
     /**
