@@ -93,7 +93,7 @@ object FOQuantifierTacticsImpl {
         case None => throw new IllegalStateException("Replacing one variable by another should not fail")
       }
 
-      def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution, (Variable, Variable), (Term, Term))] = f match {
+      def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair], (Variable, Variable), (Term, Term))] = f match {
         case Forall(x, qf) if x.contains(quantified) =>
           def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
           // construct substitution
@@ -105,7 +105,7 @@ object FOQuantifierTacticsImpl {
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = replace(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
-          Some(axiomInstance, Substitution(l), (quantified, aX), (instance, aT))
+          Some(axiomInstance, l, (quantified, aX), (instance, aT))
         case Forall(x, qf) if !x.contains(quantified) => None
         case _ => None
       }
@@ -218,7 +218,7 @@ object FOQuantifierTacticsImpl {
     override def applies(f: Formula): Boolean = true
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = {
+        Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = {
       import AlphaConversionHelper.replaceFree
 
       // construct substitution
@@ -250,7 +250,7 @@ object FOQuantifierTacticsImpl {
         if (x.name != aX.name || x.index != aX.index) (Imply(left, replaceFree(right)(aX, x)), Some(alpha))
         else (Imply(left, right), None)
 
-      Some(ax, axiomInstance, Substitution(l), None, cont)
+      Some(ax, axiomInstance, l, None, cont)
     }
   }
 
@@ -297,11 +297,11 @@ object FOQuantifierTacticsImpl {
         if (v.name == aX.name && v.index == aX.index) (Equiv(left, right), None)
         else (Equiv(left, replaceFree(right)(aX, v)), Some(alpha))
 
-      Some(ax, axiomInstance, Substitution(l), None, cont)
+      Some(ax, axiomInstance, l, None, cont)
     }
 
     override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = x match {
+        Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = x match {
       case Some(v) =>
         import AlphaConversionHelper.replaceFree
         require(!BindingAssessment.allNames(f).contains(v))

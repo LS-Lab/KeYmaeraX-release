@@ -68,11 +68,11 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
    *         argument into the actual axiom (usually alpha renaming)).
    * @see #constructInstanceAndSubst(Formula)
    */
-  def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, Substitution,
+  def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, List[SubstitutionPair],
       Option[PositionTactic], Option[PositionTactic])] =
     constructInstanceAndSubst(f, ax)
 
-  def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, Substitution,
+  def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, Formula, List[SubstitutionPair],
       Option[PositionTactic], Option[PositionTactic])] = {
     constructInstanceAndSubst(f) match {
       case Some((instance, subst)) => Some((ax, instance, subst, None, None))
@@ -91,7 +91,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
    *          Substitution to transform the axiom into its instance)
    * @see #constructInstanceAndSubst(Formula,Formula)
    */
-  def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = ???
+  def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = ???
 
   //@TODO Add contract that applies()=>\result fine
   override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
@@ -191,10 +191,10 @@ abstract class CascadedAxiomTactic(name: String, axiomName: String) extends Posi
    * @see #constructInstanceAndSubst(Formula)
    */
   def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula,
-    List[(Substitution, Map[Formula, Formula])], Option[PositionTactic])] =
+    List[(List[SubstitutionPair], Map[Formula, Formula])], Option[PositionTactic])] =
     constructInstanceAndSubst(f, ax)
 
-  def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])],
+  def constructInstanceAndSubst(f: Formula, ax: Formula): Option[(Formula, List[(List[SubstitutionPair], Map[Formula, Formula])],
     Option[PositionTactic])] = {
     constructInstanceAndSubst(f) match {
       case Some((instance, subst)) => Some((instance, subst, None))
@@ -213,7 +213,7 @@ abstract class CascadedAxiomTactic(name: String, axiomName: String) extends Posi
    *          Substitutions to transform the axiom into its instance)
    * @see #constructInstanceAndSubst(Formula,Formula)
    */
-  def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(Substitution, Map[Formula, Formula])])] = ???
+  def constructInstanceAndSubst(f: Formula): Option[(Formula, List[(List[SubstitutionPair], Map[Formula, Formula])])] = ???
 
   //@TODO Add contract that applies()=>\result fine
   override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
@@ -483,7 +483,7 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
    *         the uniform substitution that transforms the axiom into the axiom instance (Hilbert style)).
    * @see #constructInstanceAndSubst(Term)
    */
-  def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)]
+  def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])]
 
   //@TODO Add contract that applies()=>\result fine
   override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {

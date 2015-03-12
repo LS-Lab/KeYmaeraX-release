@@ -32,7 +32,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         case _ => false
       }
 
-      override def constructInstanceAndSubst(e: Term, ax: Formula, pos: Position): Option[(Formula, Substitution)] = e match {
+      override def constructInstanceAndSubst(e: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = e match {
         case Derivative(sort, Add(sort2, s, t)) if sort == sort2 =>
           // expected axiom instance
           val expected = Add(sort, Derivative(sort, s), Derivative(sort, t))
@@ -42,7 +42,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           val aT = Apply(Function("g", None, Real, Real), Anything)
           val subsDefs = List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))
           // bundle result
-          Some(axiomInstance, Substitution(subsDefs))
+          Some(axiomInstance, subsDefs)
         case _ => None
       }
     }
@@ -67,7 +67,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           val aF = Apply(Function("f", None, sort, sort), Anything)
           val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aF, s), SubstitutionPair(aG, t))),
+          val usubst = uniformSubstT(List(SubstitutionPair(aF, s), SubstitutionPair(aG, t)),
             Map(Equiv(fd, GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))) ->
               Equiv(FormulaDerivative(GreaterThan(sort, aF, aG)),
                 GreaterEqual(sort, Derivative(sort, aF), Derivative(sort, aG)))
@@ -98,7 +98,7 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
           val aF = Apply(Function("f", None, sort, sort), Anything)
           val aG = Apply(Function("g", None, sort, sort), Anything)
 
-          val usubst = uniformSubstT(new Substitution(List(SubstitutionPair(aF, s), SubstitutionPair(aG, t))),
+          val usubst = uniformSubstT(List(SubstitutionPair(aF, s), SubstitutionPair(aG, t)),
             Map(Equiv(fd, GreaterEqual(sort, Derivative(sort, s), Derivative(sort, t))) ->
               Equiv(FormulaDerivative(GreaterThan(sort, aF, aG)),
                 GreaterEqual(sort, Derivative(sort, aF), Derivative(sort, aG)))

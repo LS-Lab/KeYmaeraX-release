@@ -222,7 +222,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(c: ContEvolveProduct, p) =>
         // construct instance
         val g = BoxModality(IncompleteSystem(c), p)
@@ -233,7 +233,7 @@ object ODETactics {
         val aC = ContEvolveProgramConstant("c")
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aC, c))
 
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -253,7 +253,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(cep: ContEvolveProduct), p) => cep.normalize() match {
         case ContEvolveProduct(NFContEvolve(_, d: Derivative, t, h), c) =>
           // construct instance
@@ -292,7 +292,7 @@ object ODETactics {
             if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
             else (ax, None)
 
-          Some(axiom, axiomInstance, Substitution(l), None, cont)
+          Some(axiom, axiomInstance, l, None, cont)
         case _ => None
       }
       case _ => None
@@ -314,7 +314,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(_: EmptyContEvolveProgram), BoxModality(b@Test(h), p)) =>
         // construct instance
         val lhs = BoxModality(b, p)
@@ -325,7 +325,7 @@ object ODETactics {
         val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aH, h))
 
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -345,7 +345,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && super.applies(s, p)
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-        Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+        Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(ode: ContEvolveProgram, p) =>
         // construct instance
         val q = psi match { case Some(pred) => pred case None => p }
@@ -382,7 +382,7 @@ object ODETactics {
           if (x.name != aX.name || x.index != aX.index) (replaceFree(ax)(aX, x, None), Some(alpha))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), None, cont)
+        Some(axiom, axiomInstance, l, None, cont)
       case _ => None
     }
   }
@@ -411,7 +411,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(ContEvolveProduct(NFContEvolve(vars, d: Derivative, t, h), empty:EmptyContEvolveProgram), p) => {
         // construct instance
         val x = d.child match {
@@ -459,7 +459,7 @@ object ODETactics {
           if (x.name != "x" || x.index != None) (replaceFree(ax)(aX, x), Some(alpha))
           else (ax, None)
 
-        Some(axiom, axiomInstance, Substitution(l), None, cont)
+        Some(axiom, axiomInstance, l, None, cont)
       }
       case _ => None
     }
@@ -484,7 +484,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(c: ContEvolveProduct, p) => {
         //[c]p <- p & [{c}]p'
 
@@ -500,10 +500,10 @@ object ODETactics {
         //construct substitution.
         val aC = ContEvolveProgramConstant("c")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val subst = Substitution(List(
+        val subst = List(
           new SubstitutionPair(aC, c),
           new SubstitutionPair(aP, p)
-        ))
+        )
 
         Some(ax, axiomInstance, subst, None, None)
       }
@@ -534,7 +534,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(boxProgram : Program, p:Formula) => {
         val (nfce : NFContEvolve, c:ContEvolveProgram) = boxProgram match {
           case IncompleteSystem(ContEvolveProduct(nfce:NFContEvolve, c:ContEvolveProgram)) => {
@@ -571,12 +571,12 @@ object ODETactics {
             val aC = ContEvolveProgramConstant("c")
             val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 
-            val subst = Substitution(List(
+            val subst = List(
               SubstitutionPair(aT, t),
               SubstitutionPair(aC, c),
               SubstitutionPair(aP, p),
               SubstitutionPair(aH, h)
-            ))
+            )
 
             // alpha rename if necessary
             val aX = Variable("x", None, Real)
@@ -626,7 +626,7 @@ object ODETactics {
     }
 
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, Substitution, Option[PositionTactic], Option[PositionTactic])] = f match {
+    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(IncompleteSystem(cp : ContEvolveProduct), p:Formula) => {
         cp.normalize() match {
           case ContEvolveProduct(CheckedContEvolveFragment(NFContEvolve(bvs,Derivative(Real,x:Variable),t,h)), c) => {
@@ -642,12 +642,12 @@ object ODETactics {
 
             val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 
-            val subst = Substitution(List(
+            val subst = List(
               new SubstitutionPair(aT, t),
               new SubstitutionPair(aC,c),
               new SubstitutionPair(aP, p),
               new SubstitutionPair(aH, h)
-            ))
+            )
 
             // alpha renaming if necessary
             val aX = Variable("x", None, Real)

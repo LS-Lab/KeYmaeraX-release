@@ -267,7 +267,7 @@ object PropositionalTacticsImpl {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Substitution)] = f match {
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
       case Imply(BoxModality(a, p), BoxModality(b, q)) if a == b =>
         // construct substitution
         val aA = ProgramConstant("a")
@@ -277,7 +277,7 @@ object PropositionalTacticsImpl {
         // construct axiom instance: [a](p->q) -> (([a]p) -> ([a]q))
         val g = BoxModality(a, Imply(p, q))
         val axiomInstance = Imply(g, f)
-        Some(axiomInstance, Substitution(l))
+        Some(axiomInstance, l)
       case _ => None
     }
   }
@@ -292,7 +292,7 @@ object PropositionalTacticsImpl {
    *              in order to construct the origin of the uniform substitution.
    * @return an instance of a tactic that performs the given uniform substitution
    */
-  def uniformSubstT(subst: Substitution, delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
+  def uniformSubstT(subst: List[SubstitutionPair], delta: (Map[Formula, Formula])): Tactic = new ConstructionTactic("Uniform Substitution") {
     def applicable(pn: ProofNode) = true
 
     def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = {
@@ -304,7 +304,7 @@ object PropositionalTacticsImpl {
         case Some(frm) => frm
         case _ => f
       }
-      Some(new Tactics.ApplyRule(UniformSubstitution(subst, Sequent(p.sequent.pref, ante, succ))) {
+      Some(new Tactics.ApplyRule(UniformSubstitution(Substitution(subst), Sequent(p.sequent.pref, ante, succ))) {
         override def applicable(node: ProofNode): Boolean = true
       })
     }
