@@ -738,6 +738,7 @@ End.
   def SyntacticDerivationRulesT : Tactic =
     (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
     (SearchTacticsImpl.locateTerm(MonomialDerivativeT, inAnte = false) *)
+
   def ConstantDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Constant Derivative") with ApplicableAtTerm {
     override def applies(t : Term) = isConstant(t)
 
@@ -752,27 +753,8 @@ End.
 
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val term = getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("ConstantDerivative.applies is incorrect."))
-
-        val newHypothesisCutLocation = AntePosition(node.sequent.ante.length, HereP)
-
-        val buildConstantEqualityHypothesis : Tactic = new ApplyRule(new DeriveConstant(term)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        }
-
-        val equalityRewrite : Tactic = new ApplyRule(new EqualityRewriting(newHypothesisCutLocation, p)) {
-          override def applicable(node: ProofNode): Boolean = true //@todo?
-        }
-
-        //Build the equality, put it to work, and dispense after use. Also dispense of the current position, because we'll now have a new sequent.
-        val topLevelPosition = if(p.isAnte) {
-          new AntePosition(p.getIndex)
-        }
-        else {
-          new SuccPosition(p.getIndex)
-        }
-
-        Some(buildConstantEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(topLevelPosition))
+        getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("ConstantDerivative.applies is incorrect."))
+        Some(deriveConstantT(p))
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)

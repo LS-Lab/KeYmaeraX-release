@@ -2219,20 +2219,6 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
  * Rules for derivatives that are not currently expressible as axioms
  *********************************************************************************
  */
-object DeriveConstant {
-  def apply(t: Term): Rule = new DeriveConstant(t)
-}
-/**
- * Derive a numeral / number constant n.
- * Observe that derivative n'=0 is added to top-level, which is sound, because number constants are constants, so rigid.
- */
-@deprecated("Use const' derive constant instead")
-class DeriveConstant(t: Term) extends Rule("Derive Constant") {
-  val Derivative(Real, Number(Real, n)) = t
-  override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref, IndexedSeq(Equals(Real, t, Number(Real, 0))), IndexedSeq())))
-}
-
 object DeriveMonomial {
   def apply(t: Term): Rule = new DeriveMonomial(t)
 }
