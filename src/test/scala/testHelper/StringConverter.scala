@@ -26,10 +26,7 @@ class StringConverter(val s: String) {
     case Some(t) => t.asInstanceOf[NamedSymbol]
     case None => throw new IllegalArgumentException(s + " is not a Term")
   }
-  def asFormula: Formula = new KeYmaeraParser().parseBareFormulaUnquantified(s) match {
-    case Some(f) => f
-    case None => throw new IllegalArgumentException(s + " is not a Formula")
-  }
+  def asFormula: Formula = new KeYmaeraParser().parseBareFormulaUnquantified(s)
 
   def asProgram: Program = new KeYmaeraParser().parseBareExpression("[" + s + "] true") match {
     case Some(BoxModality(p, f)) => p

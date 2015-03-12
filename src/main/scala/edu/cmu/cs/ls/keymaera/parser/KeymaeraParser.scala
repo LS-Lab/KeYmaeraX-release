@@ -52,11 +52,10 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   def parseBareExpression(s:String) : Option[Expr] = {
     val variables = allVariableOccurances(s)
-    // HACK: allow parameterless functions for everything that could be a variable
-    val functions = variables.map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
+    // HACK: allow parameterless functions for everything that could be a variable, but exclude builtin functions
+    val functions = variables.filter(v => !builtinFunctions.exists(_.name == v.name)).map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
     val parser = new KeYmaeraParser(false, env)
 
-    val formulaParser = new FormulaParser(variables, functions, Nil, Nil, Nil).parser
     val exprParser = parser.makeExprParser(variables, functions, Nil, Nil, Nil)
     parser.parseAll(exprParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[Expr])
@@ -73,8 +72,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   def parseBareTerm(s:String) : Option[Term] = {
     val variables = allVariableOccurances(s)
-    // HACK: allow parameterless functions for everything that could be a variable
-    val functions = variables.map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
+    // HACK: allow parameterless functions for everything that could be a variable, but exclude builtin functions
+    val functions = variables.filter(v => !builtinFunctions.exists(_.name == v.name)).map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
     val parser = new KeYmaeraParser(false, env)
 
     val exprParser = parser.makeTermParser(variables, functions)
@@ -96,15 +95,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
   }
 
-  def parseBareFormulaUnquantified(s : String) : Option[Formula] = {
-    try {
-      val expr      = this.parseBareExpression(s).get
-      val formula   = expr.asInstanceOf[Formula]
-      Some(formula)
-    }
-    catch {
-      case e:Exception => None
-    }
+  def parseBareFormulaUnquantified(s : String) : Formula = {
+    parseBareExpression(s).get.asInstanceOf[Formula]
   }
 
   def runParser(s:String):Expr = {
