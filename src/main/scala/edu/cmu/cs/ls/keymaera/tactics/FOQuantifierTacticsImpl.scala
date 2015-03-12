@@ -201,8 +201,8 @@ object FOQuantifierTacticsImpl {
         if (p.isTopLevel) {
           existentialGenT(quantified, t)(AntePosition(0)) & AxiomCloseT
         } else {
-          repeatT(locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT)) &
-            (AxiomCloseT | locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT)
+          repeatT(AxiomCloseT | locateAnte(PropositionalLeftT) | locateSucc(PropositionalRightT)) &
+            locateAnte(existentialGenT(quantified, t), _ == fToGen) & AxiomCloseT
         }
       }
     }
