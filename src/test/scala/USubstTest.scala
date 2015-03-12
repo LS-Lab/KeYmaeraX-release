@@ -101,7 +101,26 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
+  it should "clash when using \"const' derive constant\" for a substitution with free occurrences" taggedAs USubstTest in {
+    val aC = Apply(Function("c", None, Unit, Real), Nothing)
+    val prem = "(c())'=0".asFormula // axioms.axiom("const' derive constant")
+    val conc = "(x)'=0".asFormula
+    val s = Substitution(Seq(SubstitutionPair(aC, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+  }
   
+  it should "clash when using \"const' derive constant\" for a substitution with free differential occurrences" taggedAs USubstTest in {
+    val aC = Apply(Function("c", None, Unit, Real), Nothing)
+    val prem = "(c())'=0".asFormula // axioms.axiom("const' derive constant")
+    val conc = "(x')'=0".asFormula
+    val s = Substitution(Seq(SubstitutionPair(aC, "x'".asTerm)))
+    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+  }
+
   // uniform substitution of rules
   
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
