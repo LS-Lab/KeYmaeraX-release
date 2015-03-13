@@ -149,26 +149,7 @@ abstract class Ternary(sort: Sort, val domain: TupleT, val fst: Expr, val snd: E
  * Variables and Functions
  *=========================
  */
-object NameCounter {
-  private var next_id : Int = 0
-
-  @elidable(ASSERTION) def applicable = require(next_id < Int.MaxValue, "Error: too many variable objects; counter overflow")
-
-  def next() : Int = {
-    this.synchronized {
-      applicable
-      next_id = next_id + 1;
-      return next_id;
-    }
-  }
-}
-
 abstract class NamedSymbol(val name : String, val index: Option[Int], val domain: Sort, sort : Sort) extends Expr(sort) {
-
-  //private val id : Int = NameCounter.next()
-
-  //def deepName = name + "_" + index + "_" + id;
-
   override def equals(e : Any): Boolean = {
     e match {
       case x: NamedSymbol =>
@@ -177,9 +158,6 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
     }
   }
   override def hashCode: Int = hash(5, getClass, name, index, domain)
-
-  //def deepEquals(x : NamedSymbol) =
-  //  flatEquals(x) && this.id == x.id
 }
 
 /*********************************************************************************
