@@ -1153,17 +1153,6 @@ object BindingAssessment {
     case _: ContEvolveProgramConstant => Set.empty
   }
 
-  // all variables x and their differential symbols x' occurring in the ode.
-  @deprecated("Use StaticSemantics(ode).bv instead")
-  def coprimedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
-    case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
-    case ContEvolveProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
-    case IncompleteSystem(a) => coprimedVariables(a)
-    case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x,NamedDerivative(x))
-    case _: EmptyContEvolveProgram => Set.empty
-    case _: ContEvolveProgramConstant => Set.empty
-  }
-
   def allNames(f: Formula): Set[NamedSymbol] = f match {
     // homomorphic cases
     case Equals(d, l, r) => allNames(l) ++ allNames(r)
@@ -1698,8 +1687,8 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case ode: ContEvolveProgram =>
           // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
           require(admissible(StaticSemantics(ode).bv, ode),
-            s"Substitution clash in ODE: {x}=${coprimedVariables(ode)} when substituting ${ode.prettyString()}")
-          usubstODE(ode, coprimedVariables(ode))
+            s"Substitution clash in ODE: {x}=${StaticSemantics(ode).bv} when substituting ${ode.prettyString()}")
+          usubstODE(ode, StaticSemantics(ode).bv)
         case Choice(a, b) => Choice(usubst(a), usubst(b))
         case Sequence(a, b) => require(admissible(StaticSemantics(usubst(a)).bv, b),
           s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
@@ -1754,7 +1743,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case t: Term => sigma.what match {
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with f(x,y,z): freeVariables(t) -- {x,y,z}
-          case _ => StaticSemantics.freeVars(t)
+          case _ => StaticSemantics(t)
         }
         case f: Formula => sigma.what match {
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
