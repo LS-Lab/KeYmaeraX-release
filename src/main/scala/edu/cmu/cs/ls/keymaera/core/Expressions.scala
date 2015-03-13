@@ -240,10 +240,7 @@ object ProgramConstant {
     case _ => None
   }
 }
-class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram {
-  def reads = Nil
-  def writes = Nil
-}
+class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
 
 object ContEvolveProgramConstant {
   def apply(name : String, index: Option[Int] = None): ContEvolveProgramConstant = new ContEvolveProgramConstant(name, index)
@@ -252,10 +249,7 @@ object ContEvolveProgramConstant {
     case _ => None
   }
 }
-class ContEvolveProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram with ContEvolveProgram {
-  def reads = Nil
-  def writes = Nil
-}
+class ContEvolveProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram with ContEvolveProgram
 
 object Function {
   def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Function = new Function(name, index, domain, sort)
@@ -844,12 +838,8 @@ final class IfThenElseTerm(cond: Formula, thenT: Term, elseT: Term)
  *=======
  */
 
-sealed trait ModalOp extends Expr {
-  @deprecated()
-  def reads: Seq[NamedSymbol]
-  @deprecated()
-  def writes: Seq[NamedSymbol]
-}
+sealed trait ModalOp extends Expr
+
 /* Modality */
 object Modality {
   def apply(g: ModalOp, f: Formula): Formula = new Modality(g, f)
@@ -862,9 +852,6 @@ object Modality {
   }
 }
 final class Modality (left : ModalOp, right : Formula) extends Binary(Bool, TupleT(ModalOpSort, Bool), left, right) with Formula {
-  def reads: Seq[NamedSymbol] = ???
-  def writes: Seq[NamedSymbol] = left.writes
-
   override def equals(e: Any): Boolean = e match {
     case Modality(a, b) => a == left && b == right
     case _ => false
@@ -888,9 +875,6 @@ object BoxModality {
   }
 }
 final class BoxModality     (child : Program) extends Unary(ModalOpSort, ProgramSort, child) with ModalOp {
-  def reads = child.reads
-  def writes = child.writes
-
   override def equals(e: Any): Boolean = e match {
     case x: BoxModality => x.child == child
     case _ => false
@@ -909,9 +893,6 @@ object DiamondModality {
   }
 }
 final class DiamondModality (child : Program) extends Unary(ModalOpSort, ProgramSort, child) with ModalOp {
-  def reads = child.reads
-  def writes = child.writes
-
   override def equals(e: Any): Boolean = e match {
     case x: DiamondModality => x.child == child
     case _ => false
@@ -925,13 +906,7 @@ final class DiamondModality (child : Program) extends Unary(ModalOpSort, Program
  *==========
  */
 
-sealed trait Program extends Expr {
-  //@TODO reads+writes have redundancy with bound and free variable definitions.
-  @deprecated()
-  def reads: Seq[NamedSymbol]
-  @deprecated()
-  def writes: Seq[NamedSymbol]
-}
+sealed trait Program extends Expr
 
 abstract class UnaryProgram  (child : Program) extends Unary(ProgramSort, ProgramSort, child) with Program
 abstract class BinaryProgram (left  : Program, right : Program) extends Binary(ProgramSort, TupleT(ProgramSort, ProgramSort), left, right) with Program
@@ -947,9 +922,6 @@ object Sequence {
   }
 }
 final class Sequence(left  : Program, right : Program) extends BinaryProgram(left, right) {
-  def reads = (left.reads ++ right.reads).distinct
-  def writes = (left.writes ++ right.writes).distinct
-
   override def equals(e: Any): Boolean = e match {
     case x: Sequence => x.left == left && x.right == right
     case _ => false
@@ -968,9 +940,6 @@ object Choice {
   }
 }
 final class Choice  (left  : Program, right : Program) extends BinaryProgram(left, right) {
-  def reads = (left.reads ++ right.reads).distinct
-  def writes = (left.writes ++ right.writes).distinct
-
   override def equals(e: Any): Boolean = e match {
     case x: Choice => x.left == left && x.right == right
     case _ => false
@@ -989,9 +958,6 @@ object Parallel {
   }
 }
 final class Parallel(left  : Program, right : Program) extends BinaryProgram(left, right) {
-  def reads = (left.reads ++ right.reads).distinct
-  def writes = (left.writes ++ right.writes).distinct
-
   override def equals(e: Any): Boolean = e match {
     case x: Parallel => x.left == left && x.right == right
     case _ => false
@@ -1011,9 +977,6 @@ object Loop {
   }
 }
 final class Loop    (child : Program)               extends UnaryProgram(child) {
-  def reads = child.reads
-  def writes = child.writes
-
   override def equals(e: Any): Boolean = e match {
     case x: Loop => x.child == child
     case _ => false
@@ -1032,9 +995,6 @@ object IfThen {
   }
 }
 final class IfThen(cond: Formula, thenP: Program) extends Binary(ProgramSort, TupleT(Bool, ProgramSort), cond, thenP) with Program {
-  def reads = ???
-  def writes = thenP.writes
-
   override def equals(e: Any): Boolean = e match {
     case x: IfThen => x.left == left && x.right == right
     case _ => false
@@ -1054,8 +1014,6 @@ object IfThenElse {
 }
 final class IfThenElse(cond: Formula, thenP: Program, elseP: Program)
   extends Ternary(ProgramSort, TupleT(Bool, TupleT(ProgramSort, ProgramSort)), cond, thenP, elseP) with Program {
-  def reads = ???
-  def writes = (thenP.writes ++ elseP.writes).distinct
 
   override def equals(e: Any): Boolean = e match {
     case x: IfThenElse => x.fst == fst && x.snd == snd && x.thd == thd
@@ -1089,12 +1047,6 @@ object Assign {
   }
 }
 final class Assign(left: Term, right: Term) extends Binary(ProgramSort, TupleT(left.sort, left.sort), left, right) with AtomicProgram {
-  def reads = ???
-  def writes = BindingAssessment.catVars(this).bv.s match {
-    case Left(_) => /* top */ ???
-    case Right(ts) => scala.collection.immutable.Seq(ts.toSeq: _*)
-  }
-
   override def equals(e: Any): Boolean = e match {
     case x: Assign => x.left == left && x.right == right
     case _ => false
@@ -1114,12 +1066,6 @@ object NDetAssign {
   }
 }
 final class NDetAssign(child: Term) extends Unary(ProgramSort, child.sort, child) with AtomicProgram {
-  def reads = Nil
-  def writes = BindingAssessment.catVars(this).bv.s match {
-    case Left(_) => /* top */ ???
-    case Right(ts) => scala.collection.immutable.Seq(ts.toSeq: _*)
-  }
-
   override def equals(e: Any): Boolean = e match {
     case x: NDetAssign => x.child == child
     case _ => false
@@ -1138,10 +1084,7 @@ object Test {
   }
 }
 final class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram {
-  def reads = ???
-  def writes = Nil
-
-   override def equals(e: Any): Boolean = e match {
+  override def equals(e: Any): Boolean = e match {
     case x: Test => x.child == child
     case _ => false
   }
@@ -1160,9 +1103,6 @@ object ContEvolve {
   }
 }
 final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with ContEvolveProgram {
-  def reads = ???
-  def writes = ??? // not implemented in BindingAssessment (ContEvolve should be deprecated and removed)
-
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
     case _ => false
@@ -1184,9 +1124,6 @@ object CheckedContEvolveFragment {
   }
 }
 final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with ContEvolveProgram {
-  def reads = ???
-  def writes = ??? //@todo
-
   override def equals(e: Any): Boolean = e match {
     case x: CheckedContEvolveFragment => x.child.equals(child)
     case _ => false
@@ -1216,12 +1153,6 @@ object NFContEvolve {
 final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Derivative, val theta: Term, val f: Formula)
     extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   require(!vars.contains(x), "Quantified disturbance should not have differential equations")
-  def reads = ???
-  def writes = BindingAssessment.catVars(this).bv.s match {
-    case Left(_) => /* top */ ???
-    case Right(ts) => scala.collection.immutable.Seq(ts.toSeq: _*)
-  }
-
   override def equals(e: Any): Boolean = e match {
     case o: NFContEvolve => o.vars == vars && o.x == x && o.theta == theta && o.f == f
     case _ => false
@@ -1234,9 +1165,6 @@ object EmptyContEvolveProgram {
   def unapply(x:Any): Option[_] = { None }
 }
 final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
-  def reads = Nil
-  def writes = Nil
-
   override def equals(e: Any): Boolean = e match {
     case _: EmptyContEvolveProgram => true
     case ContEvolveProduct(_: EmptyContEvolveProgram, _: EmptyContEvolveProgram) => true
@@ -1258,9 +1186,6 @@ object ContEvolveProduct {
 }
 final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/*Either[EmptyContEvolveProgram, ContEvolveProduct]*/)
     extends BinaryProgram(left, right) with ContEvolveProgram {
-  def reads = (left.reads ++ right.reads).distinct
-  def writes = (left.writes ++ right.writes).distinct
-
   def flatten(): List[ContEvolveProgram] = {
     val leftList = left match {
       case left: ContEvolveProduct => left.flatten()
@@ -1314,39 +1239,12 @@ object IncompleteSystem {
   }
 }
 final class IncompleteSystem(val system: ContEvolveProgram) extends Expr(ProgramSort) with ContEvolveProgram {
-  def reads = system.reads.distinct
-  def writes = system.writes.distinct
-
   override def equals(e: Any): Boolean = e match {
     case IncompleteSystem(s) => system == s
     case _ => false
   }
   override def hashCode: Int = hash(263, system)
 }
-
-/**
- * A system of differential equations in normal form.
- */
-//object NFContEvolveSystem {
-//  def apply(vars: Seq[NamedSymbol], eqs: Seq[(Derivative, Term)], f: Formula): NFContEvolveSystem = new NFContEvolveSystem(vars, eqs, f)
-//  def unapply(e: Any): Option[(Seq[NamedSymbol], Seq[(Derivative, Term)], Formula)] = e match {
-//    case x: NFContEvolveSystem => Some((x.vars, x.eqs, x.f))
-//    case _ => None
-//  }
-//}
-//final class NFContEvolveSystem(val vars: Seq[NamedSymbol], val eqs: Seq[(Derivative, Term)], val f: Formula) extends Expr(ProgramSort) with AtomicProgram {
-//  require(eqs.forall{ case (v, _) => !vars.contains(v) }, "Quantified disturbance should not have differential equations")
-//  //@TODO Why not just "x:Variable"
-//  def reads = ???
-//  def writes = eqs.map(eq => VSearch.primed(eq._1)).flatten.distinct
-//
-//  override def equals(e: Any): Boolean = e match {
-//    case o: NFContEvolveSystem => o.vars == vars && o.eqs == eqs && o.f == f
-//    case _ => false
-//  }
-//  override def hashCode: Int = hash(227, vars, eqs, f)
-//}
-
 
 /**
  * Quantifiers

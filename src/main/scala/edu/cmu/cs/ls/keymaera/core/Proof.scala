@@ -2242,8 +2242,18 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
       val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
           //@TODO Do not use @deprecated .writes functions
-          case BoxModality(prg, f) => Right(factory(prg.writes, f))
-          case DiamondModality(prg, f) => Right(factory(prg.writes, f))
+          case BoxModality(prg, f) =>
+            val writes = BindingAssessment.catVars(prg).bv.s match {
+              case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
+              case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
+            }
+            Right(factory(writes, f))
+          case DiamondModality(prg, f) =>
+            val writes = BindingAssessment.catVars(prg).bv.s match {
+              case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
+              case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
+            }
+            Right(factory(writes, f))
           case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
       }
     }

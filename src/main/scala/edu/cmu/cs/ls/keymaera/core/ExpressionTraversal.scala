@@ -59,8 +59,8 @@ object ExpressionTraversal {
       else e match {
         case Forall(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
         case Exists(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case BoxModality(a, c) if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case DiamondModality(a, c) if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) =>  Left(Some(stop))
+        case BoxModality(a, c) if(blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_||_)) => Left(Some(stop))
+        case DiamondModality(a, c) if(blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_||_)) =>  Left(Some(stop))
         case _ =>
           if (p.isPrefixOf(t))
           // proceed
