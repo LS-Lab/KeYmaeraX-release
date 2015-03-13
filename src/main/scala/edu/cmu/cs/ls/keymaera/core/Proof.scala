@@ -1126,112 +1126,23 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
 
 @deprecated("Use StaticSemantics instead")
 object BindingAssessment {
-  /**
-   * Structure recording which names are free or bound.
-   * @param fv Free names (maybe read)
-   * @param bv Bound names (maybe written)
-   */
-  sealed case class VC2(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol])
-
-  /**
-   * Structure recording which names are free, bound, or must-bound.
-   * @param fv Free names (maybe read)
-   * @param bv Bound names (maybe written)
-   * @param mbv Must-bound names (certainly written).
-   */
-  sealed case class VC3(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol],
-                        mbv: SetLattice[NamedSymbol])
-
+  import StaticSemantics._
   /**
    * Categorizes the names of formula f into free variables FV and bound variables BV.
    * @param f The formula to categorize.
    * @return The names in f categorized into free and bound names.
    */
   @deprecated("Use StaticSemantics(f) instead")
-  def catVars(f: Formula): VC2 = f match {
-    // homomorphic cases
-    case Equals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
-    case NotEquals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
-    case GreaterEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
-    case GreaterThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
-    case LessEqual(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
-    case LessThan(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
-
-    case Not(g) => val vg = catVars(g); VC2(fv = vg.fv, bv = vg.bv)
-    case And(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    case Or(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    case Imply(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    case Equiv(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
-    // TODO formuladerivative not mentioned in Definition 7 and 8
-    case FormulaDerivative(df) => val vdf = catVars(df); VC2(fv = vdf.fv, bv = vdf.bv) //@todo eisegesis //@TODO bug see StaticSemantics
-
-    // binding cases add bound variables to u
-    case Forall(vars, g) => val vg = catVars(g); VC2(fv = vg.fv -- vars, bv = vg.bv ++ vars)
-    case Exists(vars, g) => val vg = catVars(g); VC2(fv = vg.fv -- vars, bv = vg.bv ++ vars)
-
-    case BoxModality(p, g) => val vp = catVars(p); val vg = catVars(g)
-      VC2(fv = vp.fv ++ (vg.fv -- vp.mbv), bv = vp.bv ++ vg.bv)
-    case DiamondModality(p, g) => val vp = catVars(p); val vg = catVars(g)
-      VC2(fv = vp.fv ++ (vg.fv -- vp.mbv), bv = vp.bv ++ vg.bv)
-
-    // base cases
-    case ApplyPredicate(p, arg) => VC2(fv = freeVariables(arg), bv = SetLattice.bottom)
-    case True | False => VC2(fv = SetLattice.bottom, bv = SetLattice.bottom)
-    case _ => throw new UnknownOperatorException("Not implemented", f)
-  }
-
+  def catVars(f: Formula) = StaticSemantics(f)
+  
   /**
    * The set of all (may) free variables whose value t depends on (syntactically).
    */
   @deprecated("Use StaticSemantics(t) or StaticSemantics.freeVars(t) instead")
-  def freeVariables(t: Term): SetLattice[NamedSymbol] = t match {
-    // homomorphic cases
-    case Neg(s, l) => freeVariables(l)
-    case Add(s, l, r) => freeVariables(l) ++ freeVariables(r)
-    case Subtract(s, l, r) => freeVariables(l) ++ freeVariables(r)
-    case Multiply(s, l, r) => freeVariables(l) ++ freeVariables(r)
-    case Divide(s, l, r) => freeVariables(l) ++ freeVariables(r)
-    case Exp(s, l, r) => freeVariables(l) ++ freeVariables(r)
-    case Pair(dom, l, r) => freeVariables(l) ++ freeVariables(r)
-    // base cases
-    case x: Variable => SetLattice(x)
-    case CDot => SetLattice(CDot)
-    case NamedDerivative(x : NamedSymbol) => SetLattice(NamedDerivative(x))
-    case Derivative(s, x:NamedSymbol) => SetLattice(NamedDerivative(x))
-    case Derivative(s, e) => freeVariables(e) //@TODO bug. See StaticSemantics.freeVars
-    case Apply(f, arg) => freeVariables(arg)
-    case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
-  }
+  def freeVariables(t: Term): SetLattice[NamedSymbol] = StaticSemantics(t)
 
-  def catVars(p: Program): VC3 = { p match {
-    case Assign(x: Variable, e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x))
-    // TODO CDot and derivative not mentioned in Definition 9
-      //@todo wrong eisegesis:?
-//    case Assign(Derivative(_, x: Variable), e) => VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
-    case Assign(Derivative(_, x : NamedSymbol), e) => VC3(fv = freeVariables(e), bv = SetLattice(NamedDerivative(x)), mbv = SetLattice(NamedDerivative(x)))
-    case Assign(x : NamedDerivative, e) => {throw new Exception("wasn't expecting to get here."); VC3(fv = freeVariables(e), bv = SetLattice(x), mbv = SetLattice(x))}
-    // TODO x:=* not mentioned in Definition 9
-    case NDetAssign(x: Variable) => VC3(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x)) //@todo eisegesis
-    case Test(f) => VC3(fv = catVars(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
-    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) =>
-      VC3(fv = SetLattice[NamedSymbol](x) ++ freeVariables(e) ++ catVars(h).fv, bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)))
-    // TODO system of ODE cases not mentioned in Definition 9
-    case ContEvolveProduct(a, b) => val va = catVars(a); val vb = catVars(b)
-      VC3(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv) //@todo eisegesis
-    case IncompleteSystem(a) => catVars(a) //@todo eisegesis
-    case CheckedContEvolveFragment(a) => catVars(a) //@todo eisegesis
-    case _: EmptyContEvolveProgram => VC3(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom) //@todo eisegesis
-    case Sequence(a, b) => val va = catVars(a); val vb = catVars(b)
-      VC3(fv = va.fv ++ (vb.fv -- va.mbv), bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
-    case Choice(a, b) => val va = catVars(a); val vb = catVars(b)
-      VC3(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
-    case Loop(a) => val va = catVars(a); VC3(fv = va.fv, bv = va.bv, mbv = SetLattice.bottom)
-    case _: ProgramConstant => VC3(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
-    case _: ContEvolveProgramConstant => VC3(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
-    case _ => throw new UnknownOperatorException("Not implemented", p)
-  }} ensuring(r => { val VC3(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) not a subset of BV($p)")
+  @deprecated("Use StaticSemantics(p) instead")
+  def catVars(p: Program) = StaticSemantics(p)
 
   def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
@@ -1243,6 +1154,7 @@ object BindingAssessment {
   }
 
   // all variables x and their differential symbols x' occurring in the ode.
+  @deprecated("Use StaticSemantics(ode).bv instead")
   def coprimedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
     case ContEvolveProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
@@ -1759,11 +1671,11 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
           s"Substitution clash: {x}=$vars when substituting exists ${g.prettyString()}")
             Exists(vars, usubst(g))
 
-        case BoxModality(p, g) => require(admissible(catVars(usubst(p)).bv, g),
-          s"Substitution clash: BV(sigma a)=${catVars(usubst(p)).bv} when substituting [${p.prettyString()}]${g.prettyString()}")
+        case BoxModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
+          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(p)).bv} when substituting [${p.prettyString()}]${g.prettyString()}")
             BoxModality(usubst(p), usubst(g))
-        case DiamondModality(p, g) => require(admissible(catVars(usubst(p)).bv, g),
-          s"Substitution clash: BV(sigma a)=${catVars(usubst(p)).bv} when substituting <${p.prettyString()}>${g.prettyString()}")
+        case DiamondModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
+          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(p)).bv} when substituting <${p.prettyString()}>${g.prettyString()}")
             DiamondModality(usubst(p), usubst(g))
       }
     } catch {
@@ -1784,16 +1696,16 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case NDetAssign(x: Variable) => NDetAssign(x)
         case Test(f) => Test(usubst(f))
         case ode: ContEvolveProgram =>
-          // redundant with the checks on NFContEvolve in usubst(ode, primed)
-          require(admissible(scala.collection.immutable.Seq(coprimedVariables(ode).toSeq: _*), ode),
+          // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
+          require(admissible(StaticSemantics(ode).bv, ode),
             s"Substitution clash in ODE: {x}=${coprimedVariables(ode)} when substituting ${ode.prettyString()}")
           usubstODE(ode, coprimedVariables(ode))
         case Choice(a, b) => Choice(usubst(a), usubst(b))
-        case Sequence(a, b) => require(admissible(catVars(usubst(a)).bv, b),
-          s"Substitution clash: BV(sigma a)=${catVars(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
+        case Sequence(a, b) => require(admissible(StaticSemantics(usubst(a)).bv, b),
+          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
           Sequence(usubst(a), usubst(b))
-        case Loop(a) => require(admissible(catVars(usubst(a)).bv, a),
-          s"Substitution clash: BV(sigma a)=${catVars(usubst(a)).bv} when substituting ${a.prettyString()} *")
+        case Loop(a) => require(admissible(StaticSemantics(usubst(a)).bv, a),
+          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} *")
           Loop(usubst(a))
       }
     } catch {
@@ -1842,12 +1754,12 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case t: Term => sigma.what match {
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with f(x,y,z): freeVariables(t) -- {x,y,z}
-          case _ => freeVariables(t)
+          case _ => StaticSemantics.freeVars(t)
         }
         case f: Formula => sigma.what match {
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with p(x,y,z): freeVariables(f) -- {x,y,z}
-          case _ => catVars(f).fv
+          case _ => StaticSemantics(f).fv
         }
         case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
       }).intersect(U) != SetLattice.bottom
