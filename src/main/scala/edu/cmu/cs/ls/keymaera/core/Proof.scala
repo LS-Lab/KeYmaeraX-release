@@ -1070,6 +1070,8 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => true /* top contains everything that's imaginable */
     case Right(ts) => ts.exists(pred)
   }
+  def map[B](trafo: A => B) : SetLattice[B] = ??? //@TODO
+  
   def +(elem: A): SetLattice[A] = s match {
     case Left(_) => this /* top remains top */
     case Right(ts) => SetLattice(ts+elem)
@@ -1122,9 +1124,10 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
   }
 }
 
+@deprecated("Use StaticSemantics instead")
 object BindingAssessment {
   /**
-   * Records which names are free or bound.
+   * Structure recording which names are free or bound.
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written)
    */
@@ -1132,7 +1135,7 @@ object BindingAssessment {
                         bv: SetLattice[NamedSymbol])
 
   /**
-   * Records which names are free, bound, or must-bound.
+   * Structure recording which names are free, bound, or must-bound.
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written)
    * @param mbv Must-bound names (certainly written).
@@ -1146,6 +1149,7 @@ object BindingAssessment {
    * @param f The formula to categorize.
    * @return The names in f categorized into free and bound names.
    */
+  @deprecated("Use StaticSemantics(f) instead")
   def catVars(f: Formula): VC2 = f match {
     // homomorphic cases
     case Equals(d, l, r) => VC2(fv = freeVariables(l) ++ freeVariables(r), bv = SetLattice.bottom)
@@ -1161,7 +1165,7 @@ object BindingAssessment {
     case Imply(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
     case Equiv(l, r) => val vl = catVars(l); val vr = catVars(r); VC2(fv = vl.fv ++ vr.fv, bv = vl.bv ++ vr.bv)
     // TODO formuladerivative not mentioned in Definition 7 and 8
-    case FormulaDerivative(df) => val vdf = catVars(df); VC2(fv = vdf.fv, bv = vdf.bv) //@todo eisegesis
+    case FormulaDerivative(df) => val vdf = catVars(df); VC2(fv = vdf.fv, bv = vdf.bv) //@todo eisegesis //@TODO bug see StaticSemantics
 
     // binding cases add bound variables to u
     case Forall(vars, g) => val vg = catVars(g); VC2(fv = vg.fv -- vars, bv = vg.bv ++ vars)
@@ -1181,6 +1185,7 @@ object BindingAssessment {
   /**
    * The set of all (may) free variables whose value t depends on (syntactically).
    */
+  @deprecated("Use StaticSemantics(t) or StaticSemantics.freeVars(t) instead")
   def freeVariables(t: Term): SetLattice[NamedSymbol] = t match {
     // homomorphic cases
     case Neg(s, l) => freeVariables(l)
@@ -1195,7 +1200,7 @@ object BindingAssessment {
     case CDot => SetLattice(CDot)
     case NamedDerivative(x : NamedSymbol) => SetLattice(NamedDerivative(x))
     case Derivative(s, x:NamedSymbol) => SetLattice(NamedDerivative(x))
-    case Derivative(s, e) => freeVariables(e)
+    case Derivative(s, e) => freeVariables(e) //@TODO bug. See StaticSemantics.freeVars
     case Apply(f, arg) => freeVariables(arg)
     case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
   }
