@@ -55,7 +55,7 @@ object StaticSemantics {
    */
   def apply(t: Term): SetLattice[NamedSymbol] = freeVars(t)
 
-  private def freeVars(t: Term): SetLattice[NamedSymbol] = t match {
+  private def freeVars(t: Term): SetLattice[NamedSymbol] = {t match {
     // base cases
     case x: Variable => SetLattice(x)
     case CDot => SetLattice(CDot)
@@ -73,7 +73,8 @@ object StaticSemantics {
     case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
     case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>DifferentialSymbol(x))
     case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
-  }
+  }}/*@TODO ensuring (r => r != SetLattice.top,
+    "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
 
   /**
    * Compute the static semantics of formula f, i.e., its set of free and bound variables.
@@ -234,17 +235,17 @@ object StaticSemantics {
   /**
    * Any symbol occuring in term, whether variable or function
    */
-  def symbols(t : Term): Set[NamedSymbol] = signature(t) ++ freeVars(t)
+  def symbols(t : Term): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSet
 
   /**
    * Any symbol occuring in formula, whether free or bound variable or function or predicate or program constant
    */
-  def symbols(f : Formula): Set[NamedSymbol] = {val stat = apply(f); signature(f) ++ stat.fv ++ stat.bf}
+  def symbols(f : Formula): Set[NamedSymbol] = {val stat = apply(f); signature(f) ++ stat.fv.toSet ++ stat.bv.toSet}
 
   /**
    * Any symbol occuring in program, whether free or bound variable or function or predicate or program constant
    */
-  def symbols(p : Program): Set[NamedSymbol] = {val stat = apply(p); signature(p) ++ stat.fv ++ stat.bf}
+  def symbols(p : Program): Set[NamedSymbol] = {val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet}
 }
 
 
@@ -341,6 +342,11 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
       case Left(_) => false
       case Right(ts) => ts == os
     }
+  }
+
+  def toSet: Set[A] = s match {
+    case Right(ts) => ts
+    case Left(_) => throw new IllegalStateException("SetLattice.top has no set representation")
   }
 }
 
