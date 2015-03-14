@@ -119,7 +119,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "(1=1 -> 1=1)&[$$x'=y, y'=x$$ & (1=1);](1=1)'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "1=1 -> (1=1&[$$x'=y, y'=x$$ & (1=1);](1=1)')".asFormula
   }
 
   it should "introduce a marker when there is no test" in {
@@ -132,7 +132,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "(true -> 1=1)&[$$x'=y,y'=x$$;](1=1)'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "true -> (1=1&[$$x'=y,y'=x$$;](1=1)')".asFormula
   }
 
   // TODO not yet supported by parser

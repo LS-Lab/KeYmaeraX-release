@@ -72,7 +72,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     val s = sequent(Nil, "x>=0 -> x>=x".asFormula::Nil, "[x' = 2;](x>=0 -> x>=x)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
-    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0 -> x>=x".asFormula
+    n.openGoals().flatMap(_.sequent.ante) should contain only ("x>=0 -> x>=x".asFormula, "true".asFormula)
     n.openGoals().flatMap(_.sequent.succ) should contain only "2<=0 & 2>=2".asFormula
   }
 
@@ -121,7 +121,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     val s = sucSequent("[x'=x, y'=x & y>2 & z<0;]y>0".asFormula)
     val tactic = locateSucc(diffInvariantSystemIntroT)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("(y>2&z<0 -> y>0) & [$$x'=x, y'=x$$ & y>2&z<0;](y>0)'".asFormula))
+      sucSequent("y>2&z<0 -> (y>0 & [$$x'=x, y'=x$$ & y>2&z<0;](y>0)')".asFormula))
   }
 
   "Diff inv system head" should "pull out first ODE from marked system" in {

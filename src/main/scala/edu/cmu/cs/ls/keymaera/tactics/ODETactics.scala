@@ -374,12 +374,12 @@ object ODETactics {
         //[c&H]p <- (p & [{c}&H](H->p')
 
         //construct instance
-        val g = And(
-          Imply(h, p),
+        val g = Imply(h,
+          And(p,
           BoxModality(
             ODESystem(d, IncompleteSystem(c), h), FormulaDerivative(p)
           )
-        )
+        ))
         val axiomInstance = Imply(g, f)
 
         //construct substitution.
@@ -569,7 +569,7 @@ object ODETactics {
             val finishingTouch = (AxiomCloseT | locateSucc(OrRightT) | locateSucc(NotRightT) |
               locateSucc(TacticLibrary.boxDerivativeAssignT) | locateSucc(ImplyRightT) | arithmeticT)*
 
-            Some(diffInvariantSystemIntroT(p) & AndRightT(p) & (
+            Some(diffInvariantSystemIntroT(p) & ImplyRightT(p) & AndRightT(p) & (
               debugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
               debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
                 diffInvariantSystemTailT(p) &&
