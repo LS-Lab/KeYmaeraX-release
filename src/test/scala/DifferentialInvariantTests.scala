@@ -68,7 +68,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   ignore should "work when there IS a test condition (no tests when there is none..." in {
     val f = helper.parseFormula("[x'=1 & true;]z>=0")
     f match {
-      case BoxModality(NFContEvolveProgram(_, _, _), _) => ()
+      case BoxModality(ODESystem(_, _, _), _) => ()
       case _ => fail("parsed into wrong form.")
     }
     val node = helper.formulaToNode(f)

@@ -8,23 +8,23 @@ import testHelper.StringConverter._
  */
 class ExpressionTests extends FlatSpec with Matchers {
   "IncompleteSystem(c)" should "be equal to IncompleteSystem(c)" in {
-    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
+    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem(c) should be (IncompleteSystem(c))
   }
 
   it should "not be equal to empty IncompleteSystem" in {
-    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
+    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem(c) should not be IncompleteSystem()
   }
 
   it should "not be equal to empty IncompleteSystem(d)" in {
-    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
-    val d = AtomicContEvolve(Derivative(Real, Variable("y", None, Real)), Number(1))
+    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
+    val d = AtomicODE(Derivative(Real, Variable("y", None, Real)), Number(1))
     IncompleteSystem(c) should not be IncompleteSystem(d)
   }
 
   it should "match IncompleteSystem(c) " in {
-    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
+    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem(c) match {
       case IncompleteSystem(cc) => cc should be (c)
       case _ => fail()
@@ -36,65 +36,65 @@ class ExpressionTests extends FlatSpec with Matchers {
   }
 
   it should "not be equal to IncompleteSystem(c)" in {
-    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
+    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem() should not be IncompleteSystem(c)
   }
 
-  it should "match IncompleteSystem(EmptyContEvolveProgram) " in {
+  it should "match IncompleteSystem(EmptyODE) " in {
     IncompleteSystem() match {
-      case IncompleteSystem(c) => c should be (EmptyContEvolveProgram())
+      case IncompleteSystem(c) => c should be (EmptyODE())
       case _ => fail()
     }
   }
 
   it should "not match IncompleteSystem(c)" in {
     IncompleteSystem() match {
-      case IncompleteSystem(_: EmptyContEvolveProgram) => /* expected */
+      case IncompleteSystem(_: EmptyODE) => /* expected */
       case _ => fail()
     }
   }
 
-  "Equality of EmptyContEvolveProgram" should "consider a product of empty programs an empty program" in {
-    EmptyContEvolveProgram() should be (ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()))
+  "Equality of EmptyODE" should "consider a product of empty programs an empty program" in {
+    EmptyODE() should be (ODEProduct(EmptyODE(), EmptyODE()))
   }
 
-  "Equality of ContEvolveProducts" should "consider a product of empty programs an empty program" in {
-    ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()) should be {
-      EmptyContEvolveProgram()
+  "Equality of ODEProducts" should "consider a product of empty programs an empty program" in {
+    ODEProduct(EmptyODE(), EmptyODE()) should be {
+      EmptyODE()
     }
   }
 
   it should "ignore empty programs" in {
-    def nf(x: String) = AtomicContEvolve(Derivative(Real, x.asTerm), "1".asTerm)
-    ContEvolveProduct(ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"))),
-      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z"), EmptyContEvolveProgram()))) should be (
-      ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"), nf("z"))))
-    ContEvolveProduct(ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("x"), nf("y"))),
-      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))) should be (
-      ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"), nf("z"))))
+    def nf(x: String) = AtomicODE(Derivative(Real, x.asTerm), "1".asTerm)
+    ODEProduct(ODEProduct(nf("x"), ODEProduct(nf("y"))),
+      ODEProduct(EmptyODE(), ODEProduct(nf("z"), EmptyODE()))) should be (
+      ODEProduct(nf("x"), ODEProduct(nf("y"), nf("z"))))
+    ODEProduct(ODEProduct(EmptyODE(), ODEProduct(nf("x"), nf("y"))),
+      ODEProduct(EmptyODE(), ODEProduct(nf("z")))) should be (
+      ODEProduct(nf("x"), ODEProduct(nf("y"), nf("z"))))
   }
 
-  "Normalization of ContEvolveProducts" should "reduce two empty programs to one" in {
-    ContEvolveProduct(EmptyContEvolveProgram(), EmptyContEvolveProgram()).normalize() should be (
-      EmptyContEvolveProgram())
+  "Normalization of ODEProducts" should "reduce two empty programs to one" in {
+    ODEProduct(EmptyODE(), EmptyODE()).normalize() should be (
+      EmptyODE())
   }
 
   it should "not change an already normalized product" in {
-    def nf(x: String) = AtomicContEvolve(Derivative(Real, x.asTerm), "1".asTerm)
-    ContEvolveProduct(nf("x"), EmptyContEvolveProgram()).normalize() should be (
-      ContEvolveProduct(nf("x"), EmptyContEvolveProgram()))
+    def nf(x: String) = AtomicODE(Derivative(Real, x.asTerm), "1".asTerm)
+    ODEProduct(nf("x"), EmptyODE()).normalize() should be (
+      ODEProduct(nf("x"), EmptyODE()))
   }
 
   it should "always start with an atomic ODE" in {
-    def nf(x: String) = AtomicContEvolve(Derivative(Real, x.asTerm), "1".asTerm)
-    ContEvolveProduct(ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"))),
-      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))).normalize() match {
-      case ContEvolveProduct(_: AtomicContEvolve, _) =>
+    def nf(x: String) = AtomicODE(Derivative(Real, x.asTerm), "1".asTerm)
+    ODEProduct(ODEProduct(nf("x"), ODEProduct(nf("y"))),
+      ODEProduct(EmptyODE(), ODEProduct(nf("z")))).normalize() match {
+      case ODEProduct(_: AtomicODE, _) =>
       case _ => fail("First element in normalized system of ODEs is not an atomic ODE")
     }
-    ContEvolveProduct(ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("x"), nf("y"))),
-      ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))).normalize() match {
-      case ContEvolveProduct(_: AtomicContEvolve, _) =>
+    ODEProduct(ODEProduct(EmptyODE(), ODEProduct(nf("x"), nf("y"))),
+      ODEProduct(EmptyODE(), ODEProduct(nf("z")))).normalize() match {
+      case ODEProduct(_: AtomicODE, _) =>
       case _ => fail("First element in normalized system of ODEs is not an atomic ODE")
     }
   }

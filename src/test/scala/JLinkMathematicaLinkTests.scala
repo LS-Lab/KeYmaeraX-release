@@ -35,8 +35,8 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
     link.diffSol(eq, t, Map(x->x0)) should be (expected)
   }
 
-  it should "x=x0+y*t with AtomicContEvolve" in {
-    val eq = AtomicContEvolve(Derivative(Real, x), one)
+  it should "x=x0+y*t with AtomicODE" in {
+    val eq = AtomicODE(Derivative(Real, x), one)
     val expected = Some("x=1*t+x0()".asFormula)
     link.diffSol(eq, t,  Map(x->x0)) should be (expected)
   }
@@ -54,9 +54,9 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
   }
 
   it should "y=y0+z*t and x=x0+y0*t+z/2*t^2 with ContProduct" in {
-    val eq = ContEvolveProduct(
-      AtomicContEvolve(Derivative(Real, x), y),
-      AtomicContEvolve(Derivative(Real, y), z))
+    val eq = ODEProduct(
+      AtomicODE(Derivative(Real, x), y),
+      AtomicODE(Derivative(Real, y), z))
     val expected = Some("x=1/2*(t^2*z + 2*x0() + 2*t*y0()) & y=t*z + y0()".asFormula)
     link.diffSol(eq, t, Map(x->x0, y->y0)) should be (expected)
   }
@@ -70,9 +70,9 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
 
   it should "x=x0+y*t with ContProduct" in {
     // special treatment of t for now
-    val eq = ContEvolveProduct(
-      AtomicContEvolve(Derivative(Real, x), y),
-      AtomicContEvolve(Derivative(Real, t), one))
+    val eq = ODEProduct(
+      AtomicODE(Derivative(Real, x), y),
+      AtomicODE(Derivative(Real, t), one))
     val expected = Some("x=t*y+x0()".asFormula)
     link.diffSol(eq, t, Map(x->x0)) should be (expected)
   }
