@@ -46,6 +46,8 @@ object StaticSemantics {
                         bv: SetLattice[NamedSymbol],
                         mbv: SetLattice[NamedSymbol])
   
+  // variables
+  
   /**
    * Compute the static semantics of term t, i.e., the set of its free variables.
    */
@@ -142,5 +144,88 @@ object StaticSemantics {
     case _: EmptyContEvolveProgram => VCP(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom) //@todo eisegesis
   }} ensuring(r => { val VCP(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) must be a subset of BV($p)")
 
+  // signature of function, predicate, atomic program symbols
+  
+  /**
+   * The signature of a term, i.e., set of function symbols occurring in it.
+   * Disregarding number literals.
+   * @TODO Change return type to Set[Function]
+   */
+  def signature(t: Term): Set[NamedSymbol] = t match {
+    // base cases
+    case Apply(f, arg) => Set(f) ++ signature(arg)
+    case x: Variable => Set.empty
+    case CDot => Set.empty
+    case nd: NamedDerivative => Set.empty
+    // homomorphic cases
+    case Neg(s, e) => signature(e)
+    case Add(s, l, r) => signature(l) ++ signature(r)
+    case Subtract(s, l, r) => signature(l) ++ signature(r)
+    case Multiply(s, l, r) => signature(l) ++ signature(r)
+    case Divide(s, l, r) => signature(l) ++ signature(r)
+    case Exp(s, l, r) => signature(l) ++ signature(r)
+    case Pair(dom, l, r) => signature(l) ++ signature(r)
+    case Derivative(s, e) => signature(e)
+    // special
+    case _: NumberObj | Nothing | Anything => Set.empty
+  }
+  //ensuring (r => r.forall(f => isInstanceOf[Function](f)), "signature of term " + t + " can only be functions")
+
+  /**
+   * The signature of a formula, i.e., set of function, predicate, and atomic program 
+   * symbols occurring in it.
+   */
+  def signature(f: Formula): Set[NamedSymbol] = f match {
+    // base cases
+    case ApplyPredicate(p, arg) => Set(p) ++ signature(arg)
+    case True | False => Set.empty
+    // pseudo-homomorphic cases
+    case Equals(d, l, r) => signature(l) ++ signature(r)
+    case NotEquals(d, l, r) => signature(l) ++ signature(r)
+    case GreaterEqual(d, l, r) => signature(l) ++ signature(r)
+    case GreaterThan(d, l, r) => signature(l) ++ signature(r)
+    case LessEqual(d, l, r) => signature(l) ++ signature(r)
+    case LessThan(d, l, r) => signature(l) ++ signature(r)
+
+    // homomorphic cases
+    case Not(g) => signature(g)
+    case And(l, r) => signature(l) ++ signature(r)
+    case Or(l, r) => signature(l) ++ signature(r)
+    case Imply(l, r) => signature(l) ++ signature(r)
+    case Equiv(l, r) => signature(l) ++ signature(r)
+    case FormulaDerivative(df) => signature(df)
+
+    case Forall(vars, g) => signature(g)
+    case Exists(vars, g) => signature(g)
+
+    case BoxModality(p, g) => signature(p) ++ signature(g)
+    case DiamondModality(p, g) => signature(p) ++ signature(g)
+
+  }
+
+  /**
+   * The signature of a program, i.e., set of function, predicate, and atomic program 
+   * symbols occurring in it.
+   */
+  def signature(p: Program): Set[NamedSymbol] = p match {
+    // base cases
+    case ap: ProgramConstant => Set(ap)
+    case ap: ContEvolveProgramConstant => Set(ap)
+    case Assign(x: Variable, e) => signature(e)
+    case Assign(x : NamedDerivative, e) => signature(e)
+    case Assign(Derivative(_, x : NamedSymbol), e) => signature(e)
+    case NDetAssign(x: Variable) => Set.empty
+    case Test(f) => signature(f)
+    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) => signature(e) ++ signature(h)
+    case ContEvolveProduct(a, b) => signature(a) ++ signature(b)
+    case IncompleteSystem(a) => signature(a)
+    case CheckedContEvolveFragment(a) => signature(a)
+    case _: EmptyContEvolveProgram => Set()
+    // homomorphic cases
+    case Choice(a, b) => signature(a) ++ signature(b)
+    case Sequence(a, b) => signature(a) ++ signature(b)
+    case Loop(a) => signature(a)
+  }
+  
 }
 

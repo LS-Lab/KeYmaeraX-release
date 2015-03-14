@@ -49,7 +49,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 271
+   * Next free prime is 277
    * @param prime
    * @param a
    * @return
