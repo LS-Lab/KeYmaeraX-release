@@ -2,6 +2,7 @@
  * @author Marcus Völp
  * @author Jan-David Quesel
  * @author aplatzer
+ * @author smitsch
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -169,15 +170,15 @@ object Anything extends NamedSymbol("\\anything", None, Unit, Real) with Atom wi
 object Nothing extends NamedSymbol("\\nothing", None, Unit, Unit) with Atom with Term
 object CDot extends NamedSymbol("\\cdot", None, Unit, Real) with Atom with Term
 
-object NamedDerivative {
-  def apply(symbol : NamedSymbol): NamedDerivative = new NamedDerivative(symbol)
+object DifferentialSymbol {
+  def apply(symbol : NamedSymbol): DifferentialSymbol = new DifferentialSymbol(symbol)
 
   def unapply(e: Any): Option[NamedSymbol] = e match {
-    case x : NamedDerivative => Some(x.ns)
+    case x : DifferentialSymbol => Some(x.ns)
     case _ => None
   }
 }
-final class NamedDerivative(val ns : NamedSymbol) extends NamedSymbol(ns.name, ns.index, ns.domain, ns.sort) with Atom with Term
+final class DifferentialSymbol(val ns : NamedSymbol) extends NamedSymbol(ns.name, ns.index, ns.domain, ns.sort) with Atom with Term
 
 object Variable {
   def apply(name : String, index: Option[Int] = None, sort : Sort): Variable = new Variable(name, index, sort)

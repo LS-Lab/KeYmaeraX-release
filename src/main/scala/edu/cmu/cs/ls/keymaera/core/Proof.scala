@@ -1167,7 +1167,7 @@ object BindingAssessment {
     case ContEvolveProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
     case NFContEvolveProgram(_, child, _) => coprimedVariables(child)
     case IncompleteSystem(a) => coprimedVariables(a)
-    case AtomicContEvolve(Derivative(_, x: Variable), _) => Set(x, NamedDerivative(x))
+    case AtomicContEvolve(Derivative(_, x: Variable), _) => Set(x, DifferentialSymbol(x))
     case _: EmptyContEvolveProgram => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
   }
@@ -1215,7 +1215,7 @@ object BindingAssessment {
     case Apply(f, arg) => Set(f) ++ allNames(arg)
     case x: Variable => Set(x)
     case CDot => Set(CDot)
-    case nd: NamedDerivative => Set(nd)
+    case nd: DifferentialSymbol => Set(nd)
     case True | False | _: NumberObj | Nothing | Anything => Set.empty
   }
 
@@ -1223,7 +1223,7 @@ object BindingAssessment {
   def allNames(p: Program): Set[NamedSymbol] = p match {
     case Assign(x: Variable, e) => Set(x) ++ allNames(e)
     case Assign(Derivative(_, x : NamedSymbol), e) => Set(x) ++ allNames(e)
-    case Assign(x : NamedDerivative, e) => Set(x) ++ allNames(e)
+    case Assign(x : DifferentialSymbol, e) => Set(x) ++ allNames(e)
     case NDetAssign(x: Variable) => Set(x)
     case Test(f) => allNames(f)
     case AtomicContEvolve(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
@@ -1475,7 +1475,7 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
    */
   private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
     case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
-    case Assign(d@Derivative(_, x: Variable), e) => USR(o+NamedDerivative(x), u+NamedDerivative(x), Assign(d, usubst(o, u, e))) //@todo eisegesis
+    case Assign(d@Derivative(_, x: Variable), e) => USR(o+DifferentialSymbol(x), u+DifferentialSymbol(x), Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
     case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
@@ -1520,7 +1520,7 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
    */
   private def usubstODE(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
     ContEvolveProgram = {
-    val primedPrimed : Set[NamedSymbol] = primed.map(NamedDerivative(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
+    val primedPrimed : Set[NamedSymbol] = primed.map(DifferentialSymbol(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
     p match {
       case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
       case NFContEvolveProgram(d, a, h) if d.isEmpty => NFContEvolveProgram(d, usubstODE(o, u, primed, a), usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h))
@@ -2083,7 +2083,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 
   private def rename(e: NamedSymbol): NamedSymbol = e match {
     case v: Variable => renameVar(v)
-    case NamedDerivative(v: Variable) => NamedDerivative(renameVar(v))
+    case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
     case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
   }
 

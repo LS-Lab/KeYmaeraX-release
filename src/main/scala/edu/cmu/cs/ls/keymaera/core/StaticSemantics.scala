@@ -57,7 +57,7 @@ object StaticSemantics {
     // base cases
     case x: Variable => SetLattice(x)
     case CDot => SetLattice(CDot)
-    case NamedDerivative(x : NamedSymbol) => SetLattice(NamedDerivative(x))
+    case DifferentialSymbol(x : NamedSymbol) => SetLattice(DifferentialSymbol(x))
     // homomorphic cases
     case Apply(f, arg) => freeVars(arg)
     case Neg(s, l) => freeVars(l)
@@ -68,8 +68,8 @@ object StaticSemantics {
     case Exp(s, l, r) => freeVars(l) ++ freeVars(r)
     case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
-    case Derivative(s, x:NamedSymbol) => SetLattice(NamedDerivative(x)) //@TODO This case is weird
-    case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>NamedDerivative(x))
+    case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
+    case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>DifferentialSymbol(x))
     case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
   }
 
@@ -107,7 +107,7 @@ object StaticSemantics {
 
     // special cases
     // TODO formuladerivative not mentioned in Definition 7 and 8
-    case FormulaDerivative(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ vdf.fv.map[NamedSymbol](x=>NamedDerivative(x)), bv = vdf.bv) //@todo eisegesis
+    case FormulaDerivative(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ vdf.fv.map[NamedSymbol](x=>DifferentialSymbol(x)), bv = vdf.bv) //@todo eisegesis
     case True | False => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
   }
 
@@ -121,8 +121,8 @@ object StaticSemantics {
     case _: ProgramConstant => VCP(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom) //@TODO this includes x,x' for all x?
     case _: ContEvolveProgramConstant => VCP(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
     case Assign(x: Variable, e) => VCP(fv = apply(e), bv = SetLattice(x), mbv = SetLattice(x))
-    case Assign(Derivative(_, x : NamedSymbol), e) => VCP(fv = apply(e), bv = SetLattice(NamedDerivative(x)), mbv = SetLattice(NamedDerivative(x)))
-    case Assign(x : NamedDerivative, e) => {throw new Exception("wasn't expecting to get here."); VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))}
+    case Assign(Derivative(_, x : NamedSymbol), e) => VCP(fv = apply(e), bv = SetLattice(DifferentialSymbol(x)), mbv = SetLattice(DifferentialSymbol(x)))
+    case Assign(x : DifferentialSymbol, e) => {throw new Exception("wasn't expecting to get here."); VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))}
     case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     // combinator cases
     case Choice(a, b) => val va = progVars(a); val vb = progVars(b)
@@ -135,7 +135,7 @@ object StaticSemantics {
     //@NOTE x:=* not mentioned in Definition 9
     case NDetAssign(x: Variable) => VCP(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x))
     case AtomicContEvolve(Derivative(_, x: Variable), e) =>
-      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)))
+      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)))
     // TODO system of ODE cases not mentioned in Definition 9
     case NFContEvolveProgram(v, a, h) => val va = progVars(a); VCP(fv = va.fv ++ apply(h).fv, bv = va.bv, mbv = va.mbv) //@todo eisegesis
     case ContEvolveProduct(a, b) => val va = progVars(a); val vb = progVars(b)
@@ -157,7 +157,7 @@ object StaticSemantics {
     case Apply(f, arg) => Set(f) ++ signature(arg)
     case x: Variable => Set.empty
     case CDot => Set.empty
-    case nd: NamedDerivative => Set.empty
+    case nd: DifferentialSymbol => Set.empty
     // homomorphic cases
     case Neg(s, e) => signature(e)
     case Add(s, l, r) => signature(l) ++ signature(r)
@@ -213,7 +213,7 @@ object StaticSemantics {
     case ap: ProgramConstant => Set(ap)
     case ap: ContEvolveProgramConstant => Set(ap)
     case Assign(x: Variable, e) => signature(e)
-    case Assign(x : NamedDerivative, e) => signature(e)
+    case Assign(x : DifferentialSymbol, e) => signature(e)
     case Assign(Derivative(_, x : NamedSymbol), e) => signature(e)
     case NDetAssign(x: Variable) => Set.empty
     case Test(f) => signature(f)

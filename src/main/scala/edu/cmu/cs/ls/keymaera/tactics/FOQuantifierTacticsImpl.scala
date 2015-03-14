@@ -396,12 +396,12 @@ object FOQuantifierTacticsImpl {
     def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
       case Forall(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
-        case NamedDerivative(Variable(n, i, _)) => (n, i)
+        case DifferentialSymbol(Variable(n, i, _)) => (n, i)
         case _ => ???
       })
       case Exists(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
-        case NamedDerivative(Variable(n, i, _)) => (n, i)
+        case DifferentialSymbol(Variable(n, i, _)) => (n, i)
         case _ => ???
       })
       case BoxModality(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))

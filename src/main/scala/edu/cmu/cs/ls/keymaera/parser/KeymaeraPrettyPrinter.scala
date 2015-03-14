@@ -301,7 +301,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Modality(_,_) => ???
     case Exists(_,_) => ???
 
-    case NamedDerivative(x : NamedSymbol) => "(" + prettyPrinter(x) + ")" + symbolTable.PRIME //@todo these parens are probably excessive, but namedderivative is not in the prec. list.
+    case DifferentialSymbol(x : NamedSymbol) => "(" + prettyPrinter(x) + ")" + symbolTable.PRIME //@todo these parens are probably excessive, but DifferentialSymbol is not in the prec. list.
     
     case _ => throw new Exception("Ended up in the _ case of the pretty printer for: " + expressionToPrint.getClass())
   }
