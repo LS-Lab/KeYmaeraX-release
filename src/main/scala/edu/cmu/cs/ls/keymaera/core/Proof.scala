@@ -1073,7 +1073,10 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => true /* top contains everything that's imaginable */
     case Right(ts) => ts.exists(pred)
   }
-  def map[B](trafo: A => B) : SetLattice[B] = ??? //@TODO
+  def map[B](trafo: A => B): SetLattice[B] = s match {
+    case Left(_) => SetLattice.top
+    case Right(ts) => SetLattice(ts.map(trafo))
+  }
   
   def +(elem: A): SetLattice[A] = s match {
     case Left(_) => this /* top remains top */
@@ -1672,10 +1675,10 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case FormulaDerivative(g) => FormulaDerivative(usubst(g))
 
         // binding cases add bound variables to u
-        case Forall(vars, g) => require(admissible(vars, g),
+        case Forall(vars, g) => require(admissible(SetLattice(vars), g),
           s"Substitution clash: {x}=$vars when substituting forall ${g.prettyString()}")
             Forall(vars, usubst(g))
-        case Exists(vars, g) => require(admissible(vars, g),
+        case Exists(vars, g) => require(admissible(SetLattice(vars), g),
           s"Substitution clash: {x}=$vars when substituting exists ${g.prettyString()}")
             Exists(vars, usubst(g))
 
@@ -1722,16 +1725,14 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     }
   }
 
-  private def usubstODE(ode: ContEvolveProgram, primed: Set[NamedSymbol]): ContEvolveProgram = ode match {
+  private def usubstODE(ode: ContEvolveProgram, primed: SetLattice[NamedSymbol]): ContEvolveProgram = ode match {
     case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(a, primed), usubstODE(b, primed))
     case NFContEvolveProgram(d, a, h) if d.isEmpty =>
-      require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), h),
-        s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
+      require(admissible(primed, h), s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
       NFContEvolveProgram(d, usubstODE(a, primed), usubst(h))
     case NFContEvolveProgram(d, a , h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
     case AtomicContEvolve(dv: Derivative, t) =>
-      require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), t),
-        s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
+      require(admissible(primed, t), s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
       AtomicContEvolve(dv, usubst(t))
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
@@ -1788,9 +1789,6 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
   private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
   private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
   private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], t: Term) : Boolean = admissible(SetLattice(U.toSet), t)
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], f: Formula) : Boolean = admissible(SetLattice(U.toSet), f)
-  private def admissible(U: scala.collection.immutable.Seq[NamedSymbol], p: Program) : Boolean = admissible(SetLattice(U), p)
 
   private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
     case Not(g) => fnPredPrgSymbolsOf(g)

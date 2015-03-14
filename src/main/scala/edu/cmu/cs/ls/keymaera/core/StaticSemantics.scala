@@ -69,7 +69,7 @@ object StaticSemantics {
     case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
     case Derivative(s, x:NamedSymbol) => SetLattice(NamedDerivative(x)) //@TODO This case is weird
-    case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map(x=>NamedDerivative(x))
+    case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>NamedDerivative(x))
     case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
   }
 
@@ -107,7 +107,7 @@ object StaticSemantics {
 
     // special cases
     // TODO formuladerivative not mentioned in Definition 7 and 8
-    case FormulaDerivative(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ vdf.fv.map(x=>NamedDerivative(x)), bv = vdf.bv) //@todo eisegesis
+    case FormulaDerivative(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ vdf.fv.map[NamedSymbol](x=>NamedDerivative(x)), bv = vdf.bv) //@todo eisegesis
     case True | False => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
   }
 
@@ -217,7 +217,8 @@ object StaticSemantics {
     case Assign(Derivative(_, x : NamedSymbol), e) => signature(e)
     case NDetAssign(x: Variable) => Set.empty
     case Test(f) => signature(f)
-    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) => signature(e) ++ signature(h)
+    case AtomicContEvolve(Derivative(_, x: Variable), e) => signature(e)
+    case NFContEvolveProgram(vars, a, h) => signature(a) ++ signature(h)
     case ContEvolveProduct(a, b) => signature(a) ++ signature(b)
     case IncompleteSystem(a) => signature(a)
     case CheckedContEvolveFragment(a) => signature(a)

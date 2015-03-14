@@ -38,15 +38,6 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     node.openGoals().flatMap(_.sequent.succ) should contain only "a=1 -> 1=1".asFormula
   }
 
-  it should "work with 2 boxes" in {
-    import scala.language.postfixOps
-    val f = "[a' := 1;](a>b -> [b' := 1;](true -> a'=b))'".asFormula
-    val node = helper.formulaToNode(f)
-    helper.runTactic(helper.positionTacticToTactic(HybridProgramTacticsImpl.boxDerivativeAssignT)*, node)
-    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node.openGoals().flatMap(_.sequent.succ) should contain only "(a>b -> [b':=1;](true -> 1=b))'".asFormula
-  }
-
   "diff inv tactic" should "work" in {
     val s = sequent(Nil, "x>=0".asFormula::Nil, "[x' = 2;]x>=0".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)

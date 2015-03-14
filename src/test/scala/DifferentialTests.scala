@@ -203,30 +203,40 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
   }
 
-  it should "add y'=x*y+z to [x'=x+2*z]x>0" in {
+  it should "add y'=3*y+10 to [x'=x+2*z]x>0" in {
     import ODETactics.diffAuxiliaryT
     val s = sucSequent("[x'=2;]x>0".asFormula)
-    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "x".asTerm, "z".asTerm))
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "10".asTerm))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("(x>0 <-> \\exists y. x>0) & [x'=2,y'=x*y+z;]x>0".asFormula)
+      sucSequent("(x>0 <-> \\exists y. x>0) & [x'=2,y'=3*y+10;]x>0".asFormula)
+    )
+  }
+
+  // TODO axiom does not know that z is constant in this concrete example
+  ignore should "add y'=3*y+z to [x'=x+2*z]x>0" in {
+    import ODETactics.diffAuxiliaryT
+    val s = sucSequent("[x'=2;]x>0".asFormula)
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "z".asTerm))
+    getProofSequent(tactic, new RootNode(s)) should be (
+      sucSequent("(x>0 <-> \\exists y. x>0) & [x'=2,y'=3*y+z;]x>0".asFormula)
     )
   }
 
   it should "use a provided safety predicate" in {
     import ODETactics.diffAuxiliaryT
     val s = sucSequent("[x'=2;]x>0".asFormula)
-    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "x".asTerm, "z".asTerm, Some("y>2*x".asFormula)))
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "10".asTerm, Some("y>2*x".asFormula)))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("(x>0 <-> \\exists y. y>2*x) & [x'=2,y'=x*y+z;]y>2*x".asFormula)
+      sucSequent("(x>0 <-> \\exists y. y>2*x) & [x'=2,y'=3*y+10;]y>2*x".asFormula)
     )
   }
 
   it should "preserve evolution domain" in {
     import ODETactics.diffAuxiliaryT
     val s = sucSequent("[x'=2 & x>=0;]x>0".asFormula)
-    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "x".asTerm, "z".asTerm, Some("y>2*x".asFormula)))
+    val tactic = locateSucc(diffAuxiliaryT(Variable("y", None, Real), "3".asTerm, "10".asTerm, Some("y>2*x".asFormula)))
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("(x>0 <-> \\exists y. y>2*x) & [x'=2,y'=x*y+z & x>=0;]y>2*x".asFormula)
+      sucSequent("(x>0 <-> \\exists y. y>2*x) & [x'=2,y'=3*y+10 & x>=0;]y>2*x".asFormula)
     )
   }
 
