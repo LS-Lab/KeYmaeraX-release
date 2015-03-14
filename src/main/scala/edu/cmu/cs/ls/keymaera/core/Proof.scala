@@ -1150,13 +1150,25 @@ object BindingAssessment {
   def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
     case ContEvolveProduct(a, b) => primedVariables(a) ++ primedVariables(b)
+    case NFContEvolveProgram(_, child, _) => primedVariables(child)
     case IncompleteSystem(a) => primedVariables(a)
-    case NFContEvolve(_, Derivative(_, x: Variable), _, _) => Set(x)
+    case AtomicContEvolve(Derivative(_, x: Variable), _) => Set(x)
     case _: EmptyContEvolveProgram => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
   }
 
   @deprecated("Use StaticSemantics.signature(f)++StaticSemantics(f).fv++StaticSemantics(f).bv instead.")
+  // all variables x and their differential symbols x' occurring in the ode.
+  def coprimedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+    case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
+    case ContEvolveProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
+    case NFContEvolveProgram(_, child, _) => coprimedVariables(child)
+    case IncompleteSystem(a) => coprimedVariables(a)
+    case AtomicContEvolve(Derivative(_, x: Variable), _) => Set(x, NamedDerivative(x))
+    case _: EmptyContEvolveProgram => Set.empty
+    case _: ContEvolveProgramConstant => Set.empty
+  }
+
   def allNames(f: Formula): Set[NamedSymbol] = f match {
     // homomorphic cases
     case Equals(d, l, r) => allNames(l) ++ allNames(r)
@@ -1211,8 +1223,9 @@ object BindingAssessment {
     case Assign(x : NamedDerivative, e) => Set(x) ++ allNames(e)
     case NDetAssign(x: Variable) => Set(x)
     case Test(f) => allNames(f)
-    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) => Set(x) ++ allNames(e) ++ allNames(h)
+    case AtomicContEvolve(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
     case ContEvolveProduct(a, b) => allNames(a) ++ allNames(b)
+    case NFContEvolveProgram(disturbance, a, h) => allNames(a) ++ allNames(h) // TODO disturbance?
     case IncompleteSystem(a) => allNames(a)
     case CheckedContEvolveFragment(a) => allNames(a)
     case _: EmptyContEvolveProgram => Set()
@@ -1507,11 +1520,11 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
     val primedPrimed : Set[NamedSymbol] = primed.map(NamedDerivative(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
     p match {
       case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
-      case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-        NFContEvolve(v, d, usubst(o ++ SetLattice(primed) ++ SetLattice(primedPrimed),
-          u ++ SetLattice(primed) ++ SetLattice(primedPrimed), e),
-          usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h)) //@todo for something like x' := y' +1 we'll need to add primedPrimed to the back lists as well.
-      } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+      case NFContEvolveProgram(d, a, h) if d.isEmpty => NFContEvolveProgram(d, usubstODE(o, u, primed, a), usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h))
+      case NFContEvolveProgram(d, a, h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+      case AtomicContEvolve(d@Derivative(_, x: Variable), e) =>
+        AtomicContEvolve(d, usubst(o ++ SetLattice(primed) ++ SetLattice(primedPrimed),
+          u ++ SetLattice(primed) ++ SetLattice(primedPrimed), e)) //@todo for something like x' := y' +1 we'll need to add primedPrimed to the back lists as well.
       case _: EmptyContEvolveProgram => p
       case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
       case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
@@ -1711,13 +1724,15 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
 
   private def usubstODE(ode: ContEvolveProgram, primed: Set[NamedSymbol]): ContEvolveProgram = ode match {
     case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(a, primed), usubstODE(b, primed))
-    case NFContEvolve(v, dv: Derivative, t, h) =>
-      require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), t),
-        s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
+    case NFContEvolveProgram(d, a, h) if d.isEmpty =>
       require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), h),
         s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
-      if (v.isEmpty) NFContEvolve(v, dv, usubst(t), usubst(h))
-      else throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
+      NFContEvolveProgram(d, usubstODE(a, primed), usubst(h))
+    case NFContEvolveProgram(d, a , h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
+    case AtomicContEvolve(dv: Derivative, t) =>
+      require(admissible(scala.collection.immutable.Seq(primed.toSeq: _*), t),
+        s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
+      AtomicContEvolve(dv, usubst(t))
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
     case c: ContEvolveProgramConstant if  subsDefs.exists(_.what == c) =>
@@ -1826,8 +1841,9 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     case CheckedContEvolveFragment(c) => fnPredPrgSymbolsOf(c) //@todo eisegesis
     case Assign(_, t) => fnPredPrgSymbolsOf(t)
     case Test(phi) => fnPredPrgSymbolsOf(phi)
-    case NFContEvolve(_, _, t, h) => fnPredPrgSymbolsOf(t) ++ fnPredPrgSymbolsOf(h)
+    case AtomicContEvolve(_, t) => fnPredPrgSymbolsOf(t)
     case ContEvolveProduct(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
+    case NFContEvolveProgram(_, a, h) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(h)
     case IncompleteSystem(a) => fnPredPrgSymbolsOf(a)
     case Sequence(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
     case Choice(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
@@ -2051,11 +2067,12 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   }
 
   private def renameODE(p: ContEvolveProgram): ContEvolveProgram = p match {
-      case NFContEvolve(v, Derivative(dd, Variable(n, i, d)), t, h) if n == name && i == idx =>
-        NFContEvolve(v, Derivative(dd, Variable(target, tIdx, d)), rename(t), rename(h))
-      case NFContEvolve(v, dv@Derivative(_, Variable(n, i, _)), t, h) if n != name || i != idx =>
-        NFContEvolve(v, dv, rename(t), rename(h))
+      case AtomicContEvolve(Derivative(dd, Variable(n, i, d)), t) if n == name && i == idx =>
+        AtomicContEvolve(Derivative(dd, Variable(target, tIdx, d)), rename(t))
+      case AtomicContEvolve(dv@Derivative(_, Variable(n, i, _)), t) if n != name || i != idx =>
+        AtomicContEvolve(dv, rename(t))
       case ContEvolveProduct(a, b) => ContEvolveProduct(renameODE(a), renameODE(b))
+      case NFContEvolveProgram(d, a, h) => NFContEvolveProgram(d, renameODE(a), rename(h))
       case _: EmptyContEvolveProgram => p
       case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
       case CheckedContEvolveFragment(a) => CheckedContEvolveFragment(renameODE(a))
@@ -2068,6 +2085,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 
   private def rename(e: NamedSymbol): NamedSymbol = e match {
     case v: Variable => renameVar(v)
+    case NamedDerivative(v: Variable) => NamedDerivative(renameVar(v))
     case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
   }
 
@@ -2202,8 +2220,7 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
   override def apply(s: Sequent): List[Sequent] = {
     val prgFn = new ExpressionTraversalFunction {
       override def postP(pos: PosInExpr, prg: Program) = prg match {
-        case ContEvolveProduct(NFContEvolve(v, x, theta, hh), e: EmptyContEvolveProgram) =>
-          Right(ContEvolveProduct(NFContEvolve(v, x, theta, And(hh, h)), e))
+        case NFContEvolveProgram(d, a, hh) => Right(NFContEvolveProgram(d, a, And(hh, h)))
         case ContEvolve(f) => Right(ContEvolve(And(f, h)))
         case _ => super.postP(pos, prg)
       }
@@ -2212,16 +2229,8 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
         case BoxModality(ev@ContEvolve(evolve), f) => Right(And(BoxModality(ev, h),
           BoxModality(ContEvolve(And(evolve, h)), f)))
-        case BoxModality(ev@NFContEvolve(vs, x, t, dom), f) => Right(And(BoxModality(ev, h),
-          BoxModality(NFContEvolve(vs, x, t, And(dom, h)), f)))
-        // append to evolution domain constraint of rightmost (NF)ContEvolve in product
-        case BoxModality(ev@ContEvolveProduct(a, b), f) =>
-          val rightMostCut = ExpressionTraversal.traverse(HereP, prgFn, ev) match {
-            case Some(prg) => prg
-            case None => throw new IllegalArgumentException("Unexpected program type at rightmost position in " +
-              "ContEvolveProduct")
-          }
-          Right(And(BoxModality(ev, h), BoxModality(rightMostCut, f)))
+        case BoxModality(ev@NFContEvolveProgram(d, a, hh), f) => Right(And(BoxModality(ev, h),
+          BoxModality(NFContEvolveProgram(d, a, And(hh, h)), f)))
         case _ => ???
       }
     }

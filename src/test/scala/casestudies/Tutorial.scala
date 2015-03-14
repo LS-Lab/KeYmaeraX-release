@@ -52,7 +52,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val file = new File("examples/dev/t/casestudies/tutorial/example1.key")
     val s = parseToSequent(file)
 
-    val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(diffSolution(None)) & arithmeticT
+    val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
@@ -61,7 +61,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val file = new File("examples/dev/t/casestudies/tutorial/example1a.key")
     val s = parseToSequent(file)
 
-    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffSolution(None)) & arithmeticT
+    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
@@ -80,7 +80,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
           debugT("Case 2") & ls(boxAssignT),
           debugT("Case 3") & ls(boxAssignT)
           )
-        ) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & arithmeticT)
+        ) & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT)
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
@@ -92,7 +92,8 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxChoiceT) & ls(AndRightT) &&
-      (debugT("evolution domain <=") & ls(diffSolution(None)), debugT("evolution domain >=") & ls(diffSolution(None)))
+      (debugT("evolution domain <=") & ls(diffSolution(None)) & ls(ImplyRightT),
+       debugT("evolution domain >=") & ls(diffSolution(None)) & ls(ImplyRightT))
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v>=0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -116,7 +117,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val file = new File("examples/dev/t/casestudies/tutorial/example4a.key")
     val s = parseToSequent(file)
 
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None))
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v <= V".asFormula))) & onBranch(
@@ -133,7 +134,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val file = new File("examples/dev/t/casestudies/tutorial/example4b.key")
     val s = parseToSequent(file)
 
-    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None))
+    val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v <= V".asFormula))) & onBranch(
@@ -151,7 +152,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxChoiceT) & ls(AndRightT) &
-      ls(diffSolution(None))
+      ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v <= V".asFormula))) & onBranch(
@@ -169,7 +170,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None))
+      ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -187,7 +188,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None))
+      ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -211,7 +212,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None))
+      ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*B) <= S".asFormula))) & onBranch(
@@ -236,7 +237,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
-      ls(diffSolution(None))
+      ls(diffSolution(None)) & ls(ImplyRightT)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
       ls(wipeContextInductionT(Some("v >= 0 & x+v^2/(2*b) <= S".asFormula))) & onBranch(
@@ -277,7 +278,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
         debugT("Show cut 1") & ls(diffInvariant),
         debugT("Use cut 1") & ls(diffCutT("5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2".asFormula)) & ls(AndRightT) && (
           debugT("Show cut 2") & ls(diffInvariant),
-          debugT("Use cut 2") & ls(diffWeakenT) & debugT("Result Weaken")
+          debugT("Use cut 2") & ls(diffWeakenT) & ls(ImplyRightT) & debugT("Result Weaken")
           )
       )
 

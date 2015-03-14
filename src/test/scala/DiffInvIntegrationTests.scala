@@ -81,7 +81,7 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     val s = sequent(Nil, "x>=0 -> x>=x".asFormula::Nil, "[x' = 2;](x>=0 -> x>=x)".asFormula :: Nil)
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
-    n.openGoals().flatMap(_.sequent.ante) should contain only ("x>=0 -> x>=x".asFormula, "true".asFormula)
+    n.openGoals().flatMap(_.sequent.ante) should contain only "x>=0 -> x>=x".asFormula
     n.openGoals().flatMap(_.sequent.succ) should contain only "2<=0 & 2>=2".asFormula
   }
 
@@ -127,35 +127,35 @@ class DiffInvIntegrationTests extends TacticTestSuite {
   }
 
   "Diff inv system intro" should "introduce marker and prime postcondition" in {
-    val s = sucSequent("[x'=x & x>3, y'=x & y>2 & z<0;]y>0".asFormula)
+    val s = sucSequent("[x'=x, y'=x & y>2 & z<0;]y>0".asFormula)
     val tactic = locateSucc(diffInvariantSystemIntroT)
     getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("y>0 & [$$x'=x & x>3, y'=x & y>2&z<0$$;](y>0)'".asFormula))
+      sucSequent("(y>2&z<0 -> y>0) & [$$x'=x, y'=x$$ & y>2&z<0;](y>0)'".asFormula))
   }
 
   "Diff inv system head" should "pull out first ODE from marked system" in {
-    val s = sucSequent("[$$x'=x & x>3, y'=x & y>2 & z<0$$;](y>0)'".asFormula)
+    val s = sucSequent("[$$x'=x, y'=x $$ & y>2 & z<0;](y>0)'".asFormula)
     val tactic = locateSucc(diffInvariantSystemHeadT)
     getProofSequent(tactic, new RootNode(s)) should be (
       // [$$c, x' ≚ f(?) & H(?)$$;][x' := f(?);](H(?) -> p(?))
-      sucSequent("[$$y'=x & y>2&z<0, x' ≚ x & x>3$$;][x':=x;](x>3 -> (y>0)')".asFormula))
+      sucSequent("[$$y'=x, x' ≚ x$$ & y>2&z<0;][x':=x;](y>0)'".asFormula))
   }
 
   it should "pull out first ODE from marked system repeatedly" in {
-    val s = sucSequent("[$$x'=x & x>3, y'=x & y>2 & z<0$$;](y>0)'".asFormula)
+    val s = sucSequent("[$$x'=x, y'=x$$ & y>2 & z<0;](y>0)'".asFormula)
     val tactic = locateSucc(diffInvariantSystemHeadT)
     val node = helper.runTactic(tactic, new RootNode(s))
     node.openGoals().foreach(_.sequent should be (
       // [$$c, x' ≚ f(?) & H(?)$$;][x' := f(?);](H(?) -> p(?))
-      sucSequent("[$$y'=x & y>2&z<0, x' ≚ x & x>3$$;][x':=x;](x>3 -> (y>0)')".asFormula)))
+      sucSequent("[$$y'=x, x' ≚ x$$ & y>2&z<0;][x':=x;](y>0)'".asFormula)))
 
     val secondNode = helper.runTactic(tactic, node.openGoals().head)
     secondNode.openGoals().foreach(_.sequent should be (
-      sucSequent("[$$x' ≚ x & x>3, y' ≚ x & y>2&z<0$$;][y':=x;](y>2&z<0 -> [x':=x;](x>3 -> (y>0)'))".asFormula)))
+      sucSequent("[$$x' ≚ x, y' ≚ x$$ & y>2&z<0;][y':=x;][x':=x;](y>0)'".asFormula)))
   }
 
   "Diff inv tail" should "remove marked ODE" in {
-    val s = sucSequent("[$$x' ≚ x & x>3$$;][x':=x;](x>0)'".asFormula)
+    val s = sucSequent("[$$x' ≚ x$$ & x>3;][x':=x;](x>0)'".asFormula)
     val tactic = locateSucc(diffInvariantSystemTailT)
     getProofSequent(tactic, new RootNode(s)) should be (
       sucSequent("[x':=x;](x>0)'".asFormula))

@@ -785,7 +785,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       incompleteSystemP ::
       normalFormEvolutionSystemP :: //@todo document this.
       checkedEvolutionFragmentP :: //@todo not sure where this really should go in the precedence list... If you move it make sure to also move it in the pretty printer list.
-      evolutionP  :: //@todo should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
@@ -794,15 +793,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     //@todo after some refactoring this is now only used with normalFormEvolutionSystemP, with the actual system filtered out.
     //If that's really the only place we need this, maybe we should move it into local scope.
-    val contEvolveProgramP : Parser[ContEvolveProgram] =
-      (
-          normalFormEvolutionSystemP ::
-          checkedEvolutionFragmentP  ::
-          normalFormEvolutionP       ::
-          evolutionP                 ::
-          contEvolvePVarP            ::
-          Nil
-      ).reduce(_|_)
+    val contEvolveProgramPPrecedence =
+      normalFormEvolutionSystemP ::
+      checkedEvolutionFragmentP  ::
+      evolutionP                 ::
+      contEvolvePVarP            ::
+      Nil
+
+    val contEvolveProgramP : Parser[ContEvolveProgram] = contEvolveProgramPPrecedence.reduce(_|_)
 
     lazy val pvarP:PackratParser[ProgramConstant] = {
       lazy val pattern = {
@@ -913,73 +911,61 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    //@todo Per December 2014 systems of diff eqs meeting, ContEvolves are temporarily deprecated.
-    lazy val evolutionP:PackratParser[ContEvolve] = {
-      lazy val pattern = (
-                          rep1sep(formulaParser, COMMA) ~
-                          AND.? ~ formulaParser.?
-                         )
-      log(pattern)("Cont Evolution") ^^ {
-        case des ~ andOption ~ constraintOption => constraintOption match {
-          case Some(constraint) => ContEvolve( And(des.reduceRight(And(_,_)) , constraint) )
-          case None => ContEvolve( des.reduceRight(And(_,_)) )
+    lazy val normalFormEvolutionSystemP : PackratParser[ContEvolveProgram] = {
+      /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
+       * intended as an ev. dom. constraint
+       */
+      lazy val pattern = evolutionSystemP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
+      log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
+        case odes ~ f => f match {
+          case Some(h) => NFContEvolveProgram(odes, h)
+          case None => NFContEvolveProgram(odes, True)
         }
       }
     }
 
-    //@todo this is no longer actually a normal form evolution system, which would probably just contain normal forms. But it never was because contevolve was always in this parser. Hm.
-    lazy val normalFormEvolutionSystemP : PackratParser[ContEvolveProgram] = {
-      //The pattern is "everything except for another system"
-      lazy val pattern = rep1sep(contEvolveProgramP.filter(_ != normalFormEvolutionSystemP), COMMA)
+    lazy val evolutionSystemP : PackratParser[ContEvolveProgram] = {
+      // the pattern is "everything except for another system"
+      lazy val pattern = rep1sep(contEvolveProgramPPrecedence.filter(_ != normalFormEvolutionSystemP).reduce(_|_), COMMA)
       log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
-        case odes => {
+        case odes =>
           odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram())((a:ContEvolveProgram,b:ContEvolveProgram) => ContEvolveProduct(a,b))
-        }
       }
     }
 
     lazy val checkedEvolutionFragmentP: PackratParser[CheckedContEvolveFragment] = {
-      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser) ~ (AND ~> formulaParser).?
+      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser)
       log(pattern)("checked evolution") ^^ {
-        case d ~ t ~ f => {
-          f match {
-            case Some(f) => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, f))
-            case None => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, True)) //@todo this is necessary for usubst
-//            case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, d, t)))
-          }
-        }
+        case d ~ t => CheckedContEvolveFragment(AtomicContEvolve(d, t))
       }
     }
 
-    // Normal form is: f' = g & H.
-    lazy val normalFormEvolutionP: PackratParser[NFContEvolve] = {
-      /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
-       * intended as an ev. dom. constraint
-       */
-      lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
+    lazy val evolutionP: PackratParser[AtomicContEvolve] = {
+      lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP
 
-      log(pattern)("NFContEvolve Parser") ^^ {
-        case lhs ~ rhs ~ constraintOption => {
-          val constraint = constraintOption match {
-            case Some(f) => f
-            case None    => True
-          }
+      log(pattern)("AtomicContEvolve Parser") ^^ {
+        case lhs ~ rhs => {
           lhs match {
-            case t: Derivative => new NFContEvolve(Nil, t, rhs, constraint)
-            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing NFContEvolve")
+            case t: Derivative => new AtomicContEvolve(t, rhs)
+            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing AtomicContEvolve")
           }
         }
       }
     }
 
     //@todo find a better term for this construct
-    lazy val incompleteSystemP: PackratParser[IncompleteSystem] = {
-      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (normalFormEvolutionSystemP.? <~ END_INCOMPLETE_SYSTEM)
+    lazy val incompleteSystemP: PackratParser[ContEvolveProgram] = {
+      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (evolutionSystemP.? <~ END_INCOMPLETE_SYSTEM) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
 
       log(pattern)("Incomplete Differential Equation System") ^^ {
-        case system => system match {
-          case Some(x: ContEvolveProgram) => IncompleteSystem(x)
-          case None => IncompleteSystem()
+        case system ~ f => system match {
+          case Some(x: ContEvolveProgram) => f match {
+            case Some(frm) => NFContEvolveProgram(IncompleteSystem(x), frm)
+            case None => NFContEvolveProgram(IncompleteSystem(x), True)
+          }
+          case None =>
+            require(!f.isDefined, "Empty incomplete system with evolution domain constraint not supported")
+            IncompleteSystem()
           case _ => throw new Exception("Expected the interior of an IncompleteSystem to be a continuous evolution, but found: " + system.getClass.getCanonicalName + ".")
         }
       }

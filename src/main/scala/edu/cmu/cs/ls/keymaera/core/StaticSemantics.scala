@@ -134,9 +134,10 @@ object StaticSemantics {
     // special cases //@TODO check all special cases
     //@NOTE x:=* not mentioned in Definition 9
     case NDetAssign(x: Variable) => VCP(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x))
-    case NFContEvolve(vars, Derivative(_, x: Variable), e, h) =>
-      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e) ++ apply(h).fv, bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)))
+    case AtomicContEvolve(Derivative(_, x: Variable), e) =>
+      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](NamedDerivative(x)))
     // TODO system of ODE cases not mentioned in Definition 9
+    case NFContEvolveProgram(v, a, h) => val va = progVars(a); VCP(fv = va.fv ++ apply(h).fv, bv = va.bv, mbv = va.mbv) //@todo eisegesis
     case ContEvolveProduct(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv) //@todo eisegesis
     case IncompleteSystem(a) => progVars(a) //@todo eisegesis

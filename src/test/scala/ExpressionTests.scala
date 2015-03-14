@@ -8,23 +8,23 @@ import testHelper.StringConverter._
  */
 class ExpressionTests extends FlatSpec with Matchers {
   "IncompleteSystem(c)" should "be equal to IncompleteSystem(c)" in {
-    val c = NFContEvolve(Nil, Derivative(Real, Variable("x", None, Real)), Number(1), True)
+    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem(c) should be (IncompleteSystem(c))
   }
 
   it should "not be equal to empty IncompleteSystem" in {
-    val c = NFContEvolve(Nil, Derivative(Real, Variable("x", None, Real)), Number(1), True)
+    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem(c) should not be IncompleteSystem()
   }
 
   it should "not be equal to empty IncompleteSystem(d)" in {
-    val c = NFContEvolve(Nil, Derivative(Real, Variable("x", None, Real)), Number(1), True)
-    val d = NFContEvolve(Nil, Derivative(Real, Variable("y", None, Real)), Number(1), True)
+    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
+    val d = AtomicContEvolve(Derivative(Real, Variable("y", None, Real)), Number(1))
     IncompleteSystem(c) should not be IncompleteSystem(d)
   }
 
   it should "match IncompleteSystem(c) " in {
-    val c = NFContEvolve(Nil, Derivative(Real, Variable("x", None, Real)), Number(1), True)
+    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem(c) match {
       case IncompleteSystem(cc) => cc should be (c)
       case _ => fail()
@@ -36,7 +36,7 @@ class ExpressionTests extends FlatSpec with Matchers {
   }
 
   it should "not be equal to IncompleteSystem(c)" in {
-    val c = NFContEvolve(Nil, Derivative(Real, Variable("x", None, Real)), Number(1), True)
+    val c = AtomicContEvolve(Derivative(Real, Variable("x", None, Real)), Number(1))
     IncompleteSystem() should not be IncompleteSystem(c)
   }
 
@@ -65,7 +65,7 @@ class ExpressionTests extends FlatSpec with Matchers {
   }
 
   it should "ignore empty programs" in {
-    def nf(x: String) = NFContEvolve(Nil, Derivative(Real, x.asTerm), "1".asTerm, "true".asFormula)
+    def nf(x: String) = AtomicContEvolve(Derivative(Real, x.asTerm), "1".asTerm)
     ContEvolveProduct(ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"))),
       ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z"), EmptyContEvolveProgram()))) should be (
       ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"), nf("z"))))
@@ -80,22 +80,22 @@ class ExpressionTests extends FlatSpec with Matchers {
   }
 
   it should "not change an already normalized product" in {
-    def nf(x: String) = NFContEvolve(Nil, Derivative(Real, x.asTerm), "1".asTerm, "true".asFormula)
+    def nf(x: String) = AtomicContEvolve(Derivative(Real, x.asTerm), "1".asTerm)
     ContEvolveProduct(nf("x"), EmptyContEvolveProgram()).normalize() should be (
       ContEvolveProduct(nf("x"), EmptyContEvolveProgram()))
   }
 
-  it should "always start with an ODE in normal form" in {
-    def nf(x: String) = NFContEvolve(Nil, Derivative(Real, x.asTerm), "1".asTerm, "true".asFormula)
+  it should "always start with an atomic ODE" in {
+    def nf(x: String) = AtomicContEvolve(Derivative(Real, x.asTerm), "1".asTerm)
     ContEvolveProduct(ContEvolveProduct(nf("x"), ContEvolveProduct(nf("y"))),
       ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))).normalize() match {
-      case ContEvolveProduct(_: NFContEvolve, _) =>
-      case _ => fail("First element in normalized system of ODEs is not a normal form ODE")
+      case ContEvolveProduct(_: AtomicContEvolve, _) =>
+      case _ => fail("First element in normalized system of ODEs is not an atomic ODE")
     }
     ContEvolveProduct(ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("x"), nf("y"))),
       ContEvolveProduct(EmptyContEvolveProgram(), ContEvolveProduct(nf("z")))).normalize() match {
-      case ContEvolveProduct(_: NFContEvolve, _) =>
-      case _ => fail("First element in normalized system of ODEs is not a normal form ODE")
+      case ContEvolveProduct(_: AtomicContEvolve, _) =>
+      case _ => fail("First element in normalized system of ODEs is not an atomic ODE")
     }
   }
 }

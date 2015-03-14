@@ -143,13 +143,15 @@ object HybridProgramTacticsImpl {
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
         val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
 
-        val desiredResult = replaceFree(phi)(dv, t)
+        val desiredResult = SubstitutionHelper.replaceFree(phi)(dv, t)
 
         val usubst = uniformSubstT(List(SubstitutionPair(aT, t),
-          SubstitutionPair(aP, replaceFree(phi)(dv, CDot))),
-          Map(Equiv(b, desiredResult) -> replaceFree(axiom)(aV, v, None)))
+          SubstitutionPair(aP, SubstitutionHelper.replaceFree(phi)(dv, CDot))),
+          Map(Equiv(b, desiredResult) -> replace(axiom)(aV, v)))
 
-        val alpha = assertT(0, 1) & globalAlphaRenamingT(v.name, v.index, aV.name, aV.index)
+        val alpha = assertT(0, 1) & (
+          if (v.name != aV.name || v.index != aV.index) globalAlphaRenamingT(v.name, v.index, aV.name, aV.index)
+          else NilT)
 
         Some(desiredResult, Some(usubst & alpha))
       case _ => None

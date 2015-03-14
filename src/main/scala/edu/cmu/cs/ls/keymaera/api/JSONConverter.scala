@@ -117,8 +117,9 @@ object JSONConverter {
           case _: EmptyContEvolveProgram => JsObject("name" -> JsString("EmptyContEvolveProgram") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case CheckedContEvolveFragment(_) => JsObject("name" -> JsString("checked=") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ContEvolve(_) => JsObject(("name" -> JsString("ContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case NFContEvolve(_, _, _, _) => JsObject(("name" -> JsString("NFContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case AtomicContEvolve(_, _) => JsObject(("name" -> JsString("AtomicContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ContEvolveProduct(_, _) => JsObject(("name" -> JsString("ContEvolveProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case NFContEvolveProgram(_, _, _) => JsObject(("name" -> JsString("NFContEvolveProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)

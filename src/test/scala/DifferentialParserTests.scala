@@ -21,7 +21,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
 
   "The parser" should "parse diff eqs in normal form into Product(NFContEvolve,Empty)" in {
     helper.parseBareProgram("x' = 1 & x > 0;") match {
-      case Some(program) => program should be (finalODE(NFContEvolve(Nil, Derivative(Real, x), Number(1), GreaterThan(Real, x, zero))))
+      case Some(program) => program should be (NFContEvolveProgram(finalODE(AtomicContEvolve(Derivative(Real, x), Number(1))), GreaterThan(Real, x, zero)))
       case None => fail("Parse failed.")
     }
   }
@@ -29,22 +29,22 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   it should "not confuse a portion of the diffeq with the evolution domain constraint" in {
     helper.parseBareProgram("x'=y, y'=x & true;") match {
       case Some(program) =>
-        program should be (ContEvolveProduct(
-          NFContEvolve(Nil, Derivative(Real, x), y, True),
-          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, True))))
+        program should be (NFContEvolveProgram(ContEvolveProduct(
+          AtomicContEvolve(Derivative(Real, x), y),
+          finalODE(AtomicContEvolve(Derivative(Real, y), x))), True))
       case None => fail("Failed to parse.")
     }
   }
 
   it should "parse into normal form when parsing a formula" in {
-    val f = helper.parseFormula("[x'=1 & x>0;]z>=0");
+    val f = helper.parseFormula("[x'=1 & x>0;]z>=0")
     f match {
-      case BoxModality(ev, _) => ev match {
+      case BoxModality(NFContEvolveProgram(_, ev, _), _) => ev match {
         case ContEvolveProduct(l,r) => l match {
-          case a:NFContEvolve => /* ok */
+          case _: AtomicContEvolve => /* ok */
           case _ => fail()
         }; r match {
-          case x:EmptyContEvolveProgram => /* ok */
+          case _: EmptyContEvolveProgram => /* ok */
           case _ => fail()
         }
       }
@@ -55,9 +55,9 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   it should "not confuse a portion of the diffeq system with the evolution domain constraint" in {
     helper.parseBareProgram("x'=x, y'=y;") match {
       case Some(program) =>
-        program should be (ContEvolveProduct(
-          NFContEvolve(Nil, Derivative(Real, x), x, True),
-          finalODE(NFContEvolve(Nil, Derivative(Real, y), y, True))))
+        program should be (NFContEvolveProgram(ContEvolveProduct(
+          AtomicContEvolve(Derivative(Real, x), x),
+          finalODE(AtomicContEvolve(Derivative(Real, y), y))), True))
       case None => fail("Parse failed.")
     }
   }
@@ -65,9 +65,9 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   it should "parse an evolution domain constraint given last into the correct position" in {
     helper.parseBareProgram("x'=y, y'=x & y>0;") match {
       case Some(program) =>
-        program should be (ContEvolveProduct(
-          NFContEvolve(Nil, Derivative(Real, x), y, True),
-          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, GreaterThan(Real, y, zero)))))
+        program should be (NFContEvolveProgram(ContEvolveProduct(
+          AtomicContEvolve(Derivative(Real, x), y),
+          finalODE(AtomicContEvolve(Derivative(Real, y), x))), GreaterThan(Real, y, zero)))
       case None => fail("Failed to parse.")
     }
   }
@@ -75,54 +75,56 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   it should "parse a conjunction of evolution domain constraints given last into the correct position" in {
     helper.parseBareProgram("x'=y, y'=x & y>0 & x<0;") match {
       case Some(program) =>
-        program should be (ContEvolveProduct(
-          NFContEvolve(Nil, Derivative(Real, x), y, True),
-          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))))
+        program should be (NFContEvolveProgram(ContEvolveProduct(
+          AtomicContEvolve(Derivative(Real, x), y),
+          finalODE(AtomicContEvolve(Derivative(Real, y), x))), And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))
       case None => fail("Failed to parse.")
     }
   }
 
   it should "parse a single equation with a constraint as an evolution, not an AND-formula." in {
     helper.parseBareProgram("x' = y & x >= 0;") match {
-      case Some(p) => p should be (finalODE(NFContEvolve(Nil, Derivative(Real, x), y, GreaterEqual(Real, x, zero))))
+      case Some(p) => p should be (NFContEvolveProgram(finalODE(AtomicContEvolve(Derivative(Real, x), y)), GreaterEqual(Real, x, zero)))
       case _ => fail("failed to parse.")
     }
   }
 
-  it should "parse scattered evolution domain constraints into the correct positions" in {
+  // TODO not yet supported by parser
+  ignore should "collect scattered evolution domain constraints into one evolution domain constraint" in {
     helper.parseBareProgram("x'=y & x>5, y'=x & y>0 & x<0;") match {
       case Some(program) =>
-        program should be (ContEvolveProduct(
-          NFContEvolve(Nil, Derivative(Real, x), y, GreaterThan(Real, x, Number(BigDecimal(5)))),
-          finalODE(NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero))))))
+        program should be (NFContEvolveProgram(ContEvolveProduct(
+          AtomicContEvolve(Derivative(Real, x), y),
+          finalODE(AtomicContEvolve(Derivative(Real, y), x))), And(GreaterThan(Real, x, Number(5)), And(GreaterThan(Real, y, zero), LessThan(Real, x, zero)))))
       case None => fail("Failed to parse.")
     }
   }
 
-  it should "parse and associate multiple ODEs correctly" in {
+  // TODO not yet supported by parser
+  ignore should "parse and associate multiple ODEs correctly" in {
     helper.parseBareProgram("x'=y & x>5, z'=5, y'=x & y>0 & x<0;") match {
       case Some(program) =>
-        program should be (ContEvolveProduct(
-          NFContEvolve(Nil, Derivative(Real, x), y, GreaterThan(Real, x, Number(BigDecimal(5)))),
+        program should be (NFContEvolveProgram(ContEvolveProduct(
+          AtomicContEvolve(Derivative(Real, x), y),
           ContEvolveProduct(
-            NFContEvolve(Nil, Derivative(Real, Variable("z", None, Real)), Number(BigDecimal(5)), True),
-            finalODE(NFContEvolve(Nil, Derivative(Real, y), x, And(GreaterThan(Real, y, zero), LessThan(Real, x, zero)))))))
+            AtomicContEvolve(Derivative(Real, Variable("z", None, Real)), Number(5)),
+            finalODE(AtomicContEvolve(Derivative(Real, y), x)))), And(GreaterThan(Real, x, Number(5)), And(GreaterThan(Real, y, zero), LessThan(Real, x, zero)))))
       case None => fail("Failed to parse.")
     }
   }
 
   it should "parse ContEvolveProgramConstants" in {
     new KeYmaeraParser().ProofFileParser.runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [a;]p End.") match {
-      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be (finalODE(ContEvolveProgramConstant("a")))
+      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be (NFContEvolveProgram(finalODE(ContEvolveProgramConstant("a")), True))
     }
   }
 
   it should "parse ContEvolveProgramConstants in a system with NFContEvolve" in {
     new KeYmaeraParser().ProofFileParser.
-      runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [x'=1 & x>5, a;]p End.") match {
-      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be(ContEvolveProduct(
-        NFContEvolve(Nil, Derivative(Real, x), one, GreaterThan(Real, x, Number(BigDecimal(5)))),
-        finalODE(ContEvolveProgramConstant("a"))))
+      runParser("Variables. CP a. T x. F p. End. Axiom \"Foo\" . [x'=1, a & x>5;]p End.") match {
+      case List(LoadedAxiom(_, BoxModality(prg, _))) => prg should be(NFContEvolveProgram(ContEvolveProduct(
+        AtomicContEvolve(Derivative(Real, x), one),
+        finalODE(ContEvolveProgramConstant("a"))), GreaterThan(Real, x, Number(5))))
     }
   }
 
@@ -137,9 +139,8 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
   }
 
   "The IncompleteSystem Parser" should "parse incomplete systems" in {
-    val systemCommand = "x'=y & x>0, y' =x, t' = 1 & t < eps" //no semicolon.
-    helper.parseBareProgram(systemCommand +";") //Sanity test; it should at least parse.
-    helper.parseBareProgram("$$" + systemCommand + "$$;") //should not throw an exception.
+    helper.parseBareProgram("x'=y, y' =x, t' = 1 & t < eps;") //Sanity test; it should at least parse.
+    helper.parseBareProgram("$$x'=y, y' =x, t' = 1$$ & t < eps;") //should not throw an exception.
   }
 
   {
@@ -159,15 +160,15 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
     }
 
     it should "parse the System-Diff-Final rule" in {
-      parse(preamble + "[$$ x' = tx & Hx $$;]p <- [x' := tx;][?Hx;]p" + end)
+      parse(preamble + "[$$ x' = tx $$ & Hx ;]p <- [x' := tx;][?Hx;]p" + end)
     }
 
     it should "parse the System-Diff-Head-Test rule" in {
-      parse(preamble + "[$$ x' = tx & Hx, a $$;][?H;]p <- [x' := tx;][a;][?H&Hx;]p" + end)
+      parse(preamble + "[$$ x' = tx, a $$ & Hx;][?H;]p <- [x' := tx;][a;][?H&Hx;]p" + end)
     }
 
     it should "parse the System-Diff-NoHead-Test rule" in {
-      parse(preamble + "[$$ x' = tx & Hx, a $$;]p <- [x' := tx;][a;][?Hx;]p" + end)
+      parse(preamble + "[$$ x' = tx, a $$ & Hx;]p <- [x' := tx;][a;][?Hx;]p" + end)
     }
 
 

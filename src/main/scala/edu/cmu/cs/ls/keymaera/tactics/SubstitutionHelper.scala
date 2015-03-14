@@ -2,10 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 
-import scala.Equals
-import scala.annotation.elidable
-import scala.annotation.elidable._
-import scala.collection.immutable.{Set, Seq, List}
+import scala.collection.immutable.Set
 
 /**
  * Created by smitsch on 2/19/15.
@@ -119,9 +116,9 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
       ContEvolveProgram = p match {
     case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-      NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
-    } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+    case NFContEvolveProgram(d, a, h) if d.isEmpty => NFContEvolveProgram(d, usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
+    case NFContEvolveProgram(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+    case AtomicContEvolve(d@Derivative(_, x: Variable), e) => AtomicContEvolve(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: EmptyContEvolveProgram => p
     case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))

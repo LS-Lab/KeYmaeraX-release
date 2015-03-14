@@ -36,7 +36,7 @@ trait Annotable
 
 object HashFn {
   /**
-   * Next free prime is 277
+   * Next free prime is 281
    * @param prime
    * @param a
    * @return
@@ -1057,6 +1057,7 @@ final class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with A
 }
 
 /* child = differential algebraic formula */
+@deprecated(message="Use AtomicContEvolve, ContEvolveProduct, NFContEvolveProgram etc. instead", since="")
 object ContEvolve {
   def apply(child: Formula): ContEvolve = new ContEvolve(child)
   def unapply(e: Any): Option[Formula] = e match {
@@ -1101,28 +1102,19 @@ sealed trait ContEvolveProgram extends Program {
   def normalize() = this
 }
 
-/**
- * Normal form differential equation data structures for explicit ODE
- * NFContEvolve(Seq(a,b,c), x, theta, F) is \exists R a,b,c. (\D{x} = \theta & F) where a,b,c are disturbances.
- * See page 10 of the DAL paper.
- */
-// TODO refactor to VarDerivative (child of x must be a Variable)
-object NFContEvolve {
-  def apply(vars: Seq[NamedSymbol], x: Derivative, theta: Term, f: Formula): NFContEvolve =
-    new NFContEvolve(vars, x, theta, f)
-  def unapply(e: Any): Option[(Seq[NamedSymbol], Derivative, Term, Formula)] = e match {
-    case x: NFContEvolve => Some((x.vars, x.x, x.theta, x.f))
+object AtomicContEvolve {
+  def apply(x: Derivative, theta: Term): AtomicContEvolve = new AtomicContEvolve(x, theta)
+  def unapply(e: Any): Option[(Derivative, Term)] = e match {
+    case x: AtomicContEvolve => Some((x.x, x.theta))
     case _ => None
   }
 }
-final class NFContEvolve(val vars: Seq[NamedSymbol], val x: Derivative, val theta: Term, val f: Formula)
-    extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
-  require(!vars.contains(x), "Quantified disturbance should not have differential equations")
+final class AtomicContEvolve(val x: Derivative, val theta: Term) extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   override def equals(e: Any): Boolean = e match {
-    case o: NFContEvolve => o.vars == vars && o.x == x && o.theta == theta && o.f == f
+    case o: AtomicContEvolve => o.x == x && o.theta == theta
     case _ => false
   }
-  override def hashCode: Int = hash(227, vars, x, theta, f)
+  override def hashCode: Int = hash(271, x, theta)
 }
 
 object EmptyContEvolveProgram {
@@ -1149,7 +1141,7 @@ object ContEvolveProduct {
     case _ => None
   }
 }
-final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/*Either[EmptyContEvolveProgram, ContEvolveProduct]*/)
+final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
     extends BinaryProgram(left, right) with ContEvolveProgram {
   def flatten(): List[ContEvolveProgram] = {
     val leftList = left match {
@@ -1193,6 +1185,28 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram/
   }
 
   override def hashCode: Int = hash(257, left, right)
+}
+
+/**
+ * Normal form differential equation data structures for explicit ODE
+ * NFContEvolve(Seq(a,b,c), child, F) is \exists R a,b,c. (\D{x_1} = \theta_1, ..., \D{x_n)=\theta_n & F) where a,b,c are disturbances.
+ * See page 10 of the DAL paper.
+ */
+object NFContEvolveProgram {
+  def apply(disturbance: Seq[NamedSymbol], child: ContEvolveProgram, f: Formula) = new NFContEvolveProgram(disturbance, child, f)
+  def apply(child: ContEvolveProgram, f: Formula) = new NFContEvolveProgram(Nil, child, f)
+
+  def unapply(e: Any): Option[(Seq[NamedSymbol], ContEvolveProgram, Formula)] = e match {
+    case s: NFContEvolveProgram => Some(s.disturbance, s.child, s.f)
+    case _ => None
+  }
+}
+final class NFContEvolveProgram(val disturbance: Seq[NamedSymbol], val child: ContEvolveProgram, val f: Formula) extends Expr(ProgramSort) with ContEvolveProgram {
+  override def equals(e: Any): Boolean = e match {
+    case NFContEvolveProgram(d, c, frm) => disturbance == d && child == c && f == frm
+    case _ => false
+  }
+  override def hashCode: Int = hash(277, child, f)
 }
 
 object IncompleteSystem {

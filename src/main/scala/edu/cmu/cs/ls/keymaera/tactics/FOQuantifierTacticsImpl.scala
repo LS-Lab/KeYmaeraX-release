@@ -396,10 +396,12 @@ object FOQuantifierTacticsImpl {
     def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
       case Forall(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
+        case NamedDerivative(Variable(n, i, _)) => (n, i)
         case _ => ???
       })
       case Exists(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
+        case NamedDerivative(Variable(n, i, _)) => (n, i)
         case _ => ???
       })
       case BoxModality(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
@@ -418,9 +420,9 @@ object FOQuantifierTacticsImpl {
         import BindingAssessment.{allNames,allNamesExceptAt}
         getBoundVariables(node.sequent, p) match {
           case Some(s) =>
-            var otherVars = allNamesExceptAt(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s
+            var otherVars = allNamesExceptAt(node.sequent, p).map((n: NamedSymbol) => (n.name, n.index)) ++ s.distinct
             val pVars = allNames(node.sequent(p)).map((n: NamedSymbol) => (n.name, n.index))
-            val res: Seq[Option[Tactic]] = for((n, idx) <- s) yield {
+            val res: Seq[Option[Tactic]] = for((n, idx) <- s.distinct) yield {
               val vars = otherVars.filter(_._1 == n) ++ pVars.filter(_._1 == n)
               //require(vars.size > 0, "The variable we want to rename was not found in the sequent all together " + n + " " + node.sequent)
               // we do not have to rename if there are no name clashes

@@ -160,9 +160,10 @@ class JLinkMathematicaLink extends MathematicaLink {
     var result = List[(Variable, Term)]()
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case NFContEvolve(_, Derivative(_, x: Variable), theta, _) if x != diffArg => result = result :+ (x, theta); Left(None)
-        case NFContEvolve(_, Derivative(_, x: Variable), theta, _) if x == diffArg => Left(None)
-        case ContEvolveProduct(a, b) => Left(None)
+        case AtomicContEvolve(Derivative(_, x: Variable), theta) if x != diffArg => result = result :+ (x, theta); Left(None)
+        case AtomicContEvolve(Derivative(_, x: Variable), theta) if x == diffArg => Left(None)
+        case NFContEvolveProgram(_, _, _) => Left(None)
+        case ContEvolveProduct(_, _) => Left(None)
         case _: EmptyContEvolveProgram => Left(None)
       }
     }, diffSys)

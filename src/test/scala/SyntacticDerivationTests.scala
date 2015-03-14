@@ -279,7 +279,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   it should "work on a previous counter-example" in {
-    val f = helper.parseFormula("x=1&[$$x'=y & true,y'=x & (x^2+y^2=1)$$;](x=1)'")
+    val f = helper.parseFormula("x=1&[$$x'=y,y'=x$$ & (x^2+y^2=1);](x=1)'")
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(SyntacticDerivationT)

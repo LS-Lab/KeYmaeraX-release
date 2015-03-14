@@ -46,21 +46,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   /**
    * This is extracted from the pretty printer because it is used in both the
    */
-  private def processNFContEvolve(vars:Seq[NamedSymbol],x:Derivative,theta:Term,f:Formula,eqSymbol:String) = {
-    if(vars.length != 0) {
-      symbolTable.EXISTS + " "
-      vars.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
-        "." +
-        groupIfNotAtomic(x, prettyPrinter(x)) + eqSymbol +
-        groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
-        groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
-    } else {
-      groupIfNotAtomic(x, prettyPrinter(x)) + eqSymbol +
-        groupIfNotAtomic(theta, prettyPrinter(theta)) + " " + symbolTable.AND + " " +
-        groupIfNotAtomic(f, prettyPrinter(f)) + symbolTable.SCOLON
-    }
-  }
-
+  private def processNFContEvolve(x:Derivative, theta:Term, eqSymbol:String) =
+    groupIfNotAtomic(x, prettyPrinter(x)) + eqSymbol + groupIfNotAtomic(theta, prettyPrinter(theta))
 
   private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
     //arith
@@ -239,26 +226,39 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case None => ""
     })
 
-    case NFContEvolve(vars,x,theta,f) => {
-      processNFContEvolve(vars,x,theta,f,symbolTable.EQ)
-    }
+    case AtomicContEvolve(x, theta) => processNFContEvolve(x, theta, symbolTable.EQ)
 
     case p@ContEvolveProduct(l, r) => {
       val leftString = parensIfNeeded(l, p, false,
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
       r match {
-        case prg: EmptyContEvolveProgram => leftString + symbolTable.SCOLON
+        case prg: EmptyContEvolveProgram => leftString
         case _ => val rightString = parensIfNeeded(r, p, false,
           c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
-          leftString + symbolTable.COMMA + rightString + symbolTable.SCOLON
+          leftString + symbolTable.COMMA + rightString
       }
     }
+
+    case NFContEvolveProgram(d, a, f) if d.size > 0 =>
+      def printEvolDom(f: Formula) = f match {
+        case True => ""
+        case _ => " " + symbolTable.AND + " " + groupIfNotAtomic(f, prettyPrinter(f))
+      }
+      symbolTable.EXISTS + " "
+      d.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
+        "." + prettyPrinter(a) + printEvolDom(f) + symbolTable.SCOLON
+    case NFContEvolveProgram(d, a, f) if d.size == 0 =>
+      def printEvolDom(f: Formula) = f match {
+        case True => ""
+        case _ => " " + symbolTable.AND + " " + groupIfNotAtomic(f, prettyPrinter(f))
+      }
+      prettyPrinter(a) + printEvolDom(f) + symbolTable.SCOLON
 
     case p@IncompleteSystem(s) => {
       val system = parensIfNeeded(s, p, false, c => {
         val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s
       })
-      symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM + symbolTable.SCOLON
+      symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM
     }
     case p: EmptyContEvolveProgram => ""
 
@@ -272,8 +272,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case CheckedContEvolveFragment(child) => {
       child match {
         //@todo well this is awkward.
-        case NFContEvolve(vars, x, theta, f) => {
-          processNFContEvolve(vars,x,theta,f,symbolTable.CHECKED_EQ)
+        case AtomicContEvolve(x, theta) => {
+          processNFContEvolve(x, theta, symbolTable.CHECKED_EQ)
         }
         case ContEvolve(Equals(sort, left,right)) => {
           parensIfNeeded(left, expressionToPrint, false)  + symbolTable.CHECKED_EQ + parensIfNeeded(right, expressionToPrint, false)
@@ -403,7 +403,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       EmptyContEvolveProgram.getClass.getCanonicalName ::
       IncompleteSystem.getClass.getCanonicalName ::
       ContEvolveProduct.getClass.getCanonicalName ::
-      NFContEvolve.getClass.getCanonicalName ::
+      NFContEvolveProgram.getClass.getCanonicalName ::
+      AtomicContEvolve.getClass.getCanonicalName ::
       ContEvolve.getClass.getCanonicalName ::
       CheckedContEvolveFragment.getClass().getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName ::
@@ -442,8 +443,9 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case PredicateConstant(name,_) => true
     case ProgramConstant(name, _) => true
     case Variable(name, _,_) => true
-    case NFContEvolve(vars,x,theta,f) => true
+    case AtomicContEvolve(_, _) => true
     case ContEvolveProduct(_, _) => false
+    case NFContEvolveProgram(_, a, _) => isAtomic(a)
     case Number(_) => true
     case Number(_,_) => true
     case Loop(p) => true 

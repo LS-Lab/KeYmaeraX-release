@@ -2,6 +2,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
+import testHelper.StringConverter._
 
 /**
  * A suite of fine-grained tests of the Differential Invariant tactics.
@@ -33,8 +34,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     Tactics.MathematicaScheduler = null
   }
 
-  private def containsOpenGoal(node:ProofNode, f:Formula) =
-    !node.openGoals().find(_.sequent.succ.contains(f)).isEmpty
+  private def containsOpenGoal(node:ProofNode, f:Formula) = node.openGoals().find(_.sequent.succ.contains(f)).nonEmpty
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,8 +46,8 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
 
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(HybridProgramTacticsImpl.boxDerivativeAssignT)
-    helper.runTactic(tactic, node, true)
-    containsOpenGoal(node, expected) shouldBe (true)
+    helper.runTactic(tactic, node, mustApply = true)
+    containsOpenGoal(node, expected) shouldBe true
   }
 
   ignore should "work in a more complicated example" in {
@@ -68,7 +68,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   ignore should "work when there IS a test condition (no tests when there is none..." in {
     val f = helper.parseFormula("[x'=1 & true;]z>=0")
     f match {
-      case BoxModality(ContEvolveProduct(_: NFContEvolve,_), _) => ()
+      case BoxModality(NFContEvolveProgram(_, _, _), _) => ()
       case _ => fail("parsed into wrong form.")
     }
     val node = helper.formulaToNode(f)
@@ -82,62 +82,61 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
 
 
   it should "simplest example with a test" in {
-    val f = helper.parseFormula("[x'=1 & z>0;]z>=0")
-    f match {
-      case BoxModality(ContEvolveProduct(_: NFContEvolve, _), _) => ()
-      case BoxModality(pi,phi) => fail("f doesn't match the applicability condition; wanted an NFContEvolve but got a: " + pi)
-      case _ => fail("Expected a modality but got something completely wrong.")
-    }
-
+    val f = "[x'=1 & z>0;]z>=0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
 
-    tactic.applicable(node) should be (true)
-    try {
-      helper.runTactic(tactic, node)
-    }
-    catch {
-      case e: Exception => fail("Expected no exceptions.")
-    }
+    tactic.applicable(node) shouldBe true
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "(z>0 -> z>=0) & [x'=1 & z>0;][(x'):=1;](z>=0)'".asFormula
+  }
 
-    val expectedResult = helper.parseFormula("[x'=1 & (z>0);](z>0->[(x'):=1;](z>=0)')")
+  // TODO alpha renaming not yet correct
+  ignore should "alpha rename in simplest example with a test" in {
+    val f = "[y'=1 & z>0;]z>=0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
 
-    require(node.openGoals().map(pn => {
-      val f = pn.sequent.succ.last
-      f == expectedResult
-    }).contains(true))
+    tactic.applicable(node) shouldBe true
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "(z>0 -> z>=0) & [y'=1 & z>0;][(y'):=1;](z>=0)'".asFormula
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system introduction'
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "DI System Marker Intro" should "introduce a marker when there is a test" in {
-    val f=  helper.parseFormula("[x'=y, y'=x & 1=1;]1=1")
+    val f =  "[x'=y, y'=x & 1=1;]1=1".asFormula
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemIntroT)
-    assert(tactic.applicable(node))
-    helper.runTactic(tactic, node)
+    tactic.applicable(node) shouldBe true
+    val result = helper.runTactic(tactic, node)
 
-    //@todo the introduction of true here is strange behavior, but I think intended. We should document this carefully.
-    val expected = helper.parseFormula("1=1&[$$x'=y & true,y'=x & (1=1)$$;](1=1)'")
-    require(containsOpenGoal(node, expected))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "(1=1 -> 1=1)&[$$x'=y, y'=x$$ & (1=1);](1=1)'".asFormula
   }
 
   it should "introduce a marker when there is no test" in {
-    val f=  helper.parseFormula("[x'=y, y'=x;]1=1")
+    val f =  "[x'=y, y'=x;]1=1".asFormula
     val node = helper.formulaToNode(f)
 
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemIntroT)
-    assert(tactic.applicable(node))
-    helper.runTactic(tactic, node)
+    tactic.applicable(node) shouldBe true
+    val result = helper.runTactic(tactic, node)
 
-    //@todo the introduction of true here is strange behavior, but I think intended. We should document this carefully.
-    val expected = helper.parseFormula("1=1&[$$x'=y & true,y'=x$$;](1=1)'")
-    containsOpenGoal(node, expected) shouldBe true
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "(true -> 1=1)&[$$x'=y,y'=x$$;](1=1)'".asFormula
   }
 
-  it should "introduce a marker when there are interleaved tests" in {
+  // TODO not yet supported by parser
+  ignore should "introduce a marker when there are interleaved tests" in {
     val f=  helper.parseFormula("[x'=y & 2=2, y'=x & 3=3;]1=1")
     val node = helper.formulaToNode(f)
 
@@ -145,7 +144,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
     assert(tactic.applicable(node))
     helper.runTactic(tactic, node)
 
-    val expected = helper.parseFormula("1=1&[$$x'=y & 2=2,y'=x & 3=3$$;](1=1)'")
+    val expected = helper.parseFormula("(2=2 & 3=3 -> 1=1)&[$$x'=y,y'=x$$ & 2=2 & 3=3;](1=1)'")
     containsOpenGoal(node, expected) shouldBe true
   }
 
@@ -154,77 +153,85 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   "Diff invariant system head test" should "peel off 1st equation" in {
-    val f = helper.parseFormula("[$$ x'=y & 2=2, y'=x & 3=3$$;]1=1")
+    val f = helper.parseFormula("[$$ x'=y, y'=x$$ & 2=2 & 3=3;]1=1")
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemHeadT)
     require(tactic.applicable(node))
 
     helper.runTactic(tactic, node)
 
-    val expected = helper.parseFormula("[$$y'=x & (3=3),x' ≚ y & (2=2)$$;][(x'):=y;](2=2->1=1)")
-    containsOpenGoal(node,expected) shouldBe(true)
+    val expected = helper.parseFormula("[$$y'=x,x' ≚ y$$ & 2=2 & 3=3;][(x'):=y;]1=1")
+    containsOpenGoal(node,expected) shouldBe true
   }
 
   it should "peel off 2nd equation" in {
-    val f = helper.parseFormula("[$$y'=x & 3=3,x' ≚ y & 2=2$$;][(x'):=y;]1=1")
+    val f = helper.parseFormula("[$$y'=x,x' ≚ y$$ & 2=2 & 3=3;][(x'):=y;]1=1")
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemHeadT)
     require(tactic.applicable(node))
 
     helper.runTactic(tactic, node)
 
-    val expected = helper.parseFormula("[$$x' ≚ y & (2=2),y' ≚ x & (3=3)$$;][(y'):=x;](3=3->[(x'):=y;]1=1)")
-    containsOpenGoal(node,expected) shouldBe (true)
+    val expected = helper.parseFormula("[$$x' ≚ y,y' ≚ x$$ & 2=2 & 3=3;][(y'):=x;][(x'):=y;]1=1")
+    containsOpenGoal(node,expected) shouldBe true
   }
 
   it should "peel off 1st equation -- no xs" in {
-    val f = helper.parseFormula("[$$ a'=y & 2=2, y'=a & 3=3$$;]1=1")
+    val f = "[$$ a'=y, y'=a$$ & 2=2 & 3=3;]1=1".asFormula
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemHeadT)
-    require(tactic.applicable(node))
+    tactic.applicable(node) shouldBe true
 
-    helper.runTactic(tactic, node)
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only
+      "[$$y'=a, a'≚y$$ & (2=2) & (3=3);][(a'):=y;]1=1".asFormula
 
-    val expected = helper.parseFormula("[$$y'=a & (3=3),a'≚y & (2=2)$$;][(a'):=y;](2=2->1=1)")
-    containsOpenGoal(node,expected) shouldBe true
   }
 
   it should "peel off 2nd equation -- no xs" in {
-    val f = helper.parseFormula("[$$y'=a & (3=3),a'≚y & (2=2)$$;][(a'):=y;](2=2->1=1)")
+    val f = "[$$y'=a,a'≚y $$ & (2=2) & (3=3);][(a'):=y;]1=1".asFormula
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemHeadT)
-    require(tactic.applicable(node))
 
-    helper.runTactic(tactic, node)
+    tactic.applicable(node) shouldBe true
 
-    val expected = helper.parseFormula("[$$a'≚y & (2=2),y'≚a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;](2=2->1=1))")
-    containsOpenGoal(node,expected) shouldBe true
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only
+      "[$$a'≚y, y'≚a $$ & (2=2) & (3=3);][(y'):=a;][(a'):=y;]1=1".asFormula
   }
 
   it should "not apply in a variety of conditions" in {
-    val f = helper.parseFormula("[$$x'≚y & true,y'≚x & true$$;][(y'):=x;][(x'):=y;]1=1")
+    val f = "[$$x'≚y,y'≚x$$;][(y'):=x;][(x'):=y;]1=1".asFormula
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemHeadT)
-    require(!tactic.applicable(node))
+    tactic.applicable(node) shouldBe false
   }
 //
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system tail
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "Diff invariant system tail" should "apply to an appropriate system" in {
-    val f = helper.parseFormula("[$$a'≚y & (2=2),y'≚a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;]1=1)")
+    val f = "[$$a'≚y,y'≚a$$  & (2=2) & (3=3);][(y'):=a;][(a'):=y;]1=1".asFormula
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemTailT)
-    require(tactic.applicable(node))
-    helper.runTactic(tactic, node)
-    require(containsOpenGoal(node, helper.parseFormula("[(y'):=a;](3=3->[(a'):=y;]1=1)")))
+
+    tactic.applicable(node) shouldBe true
+
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[(y'):=a;][(a'):=y;]1=1".asFormula
   }
 
   it should "not apply to an inappropriate system" in {
-    val expected = helper.parseFormula("[$$a'=y & (2=2),y'≚a & (3=3)$$;][(y'):=a;](3=3->[(a'):=y;]1=1)") //just removed the ` from the first equality.
+    val expected = "[$$a'=y,y'≚a$$ & (2=2) & (3=3);][(y'):=a;][(a'):=y;]1=1".asFormula //just removed the ` from the first equality.
     val node = helper.formulaToNode(expected)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantSystemTailT)
-    require(!tactic.applicable(node))
+    tactic.applicable(node) shouldBe false
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
