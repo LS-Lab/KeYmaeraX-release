@@ -26,7 +26,7 @@ object ODETactics {
    */
   def diffSolution(solution: Option[Formula]): PositionTactic = new PositionTactic("differential solution") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case BoxModality(odes: ContEvolveProgram, _) => odes != EmptyODE()
+      case BoxModality(odes: DifferentialProgram, _) => odes != EmptyODE()
       case _ => false
     })
 
@@ -37,7 +37,7 @@ object ODETactics {
      */
     private def findTimeInOdes(f: Formula): Option[Variable] = {
       val odes = f match {
-        case BoxModality(prg: ContEvolveProgram, _) => prg
+        case BoxModality(prg: DifferentialProgram, _) => prg
         case _ => throw new IllegalStateException("Checked by applies to never happen")
       }
 
@@ -93,7 +93,7 @@ object ODETactics {
     private def constructTactic(p: Position, time: Variable, tIsZero: Boolean) = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      private def primedSymbols(ode: ContEvolveProgram) = {
+      private def primedSymbols(ode: DifferentialProgram) = {
         var primedSymbols = Set[Variable]()
         ExpressionTraversal.traverse(new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
@@ -124,7 +124,7 @@ object ODETactics {
           case Right(ts) => ts.size
         }
 
-        def createTactic(ode: ContEvolveProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
+        def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                          diffEqPos: Position) = {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(skolemizeToFnT(_))(diffEqPos)))
@@ -143,7 +143,7 @@ object ODETactics {
         }
 
         val diffEq = node.sequent(p) match {
-          case BoxModality(ode: ContEvolveProgram, _) => ode
+          case BoxModality(ode: DifferentialProgram, _) => ode
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
@@ -213,7 +213,7 @@ object ODETactics {
 
         // construct substitution
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aC = ContEvolveProgramConstant("c")
+        val aC = DifferentialProgramConstant("c")
         val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
         val l = List(SubstitutionPair(aP, p), SubstitutionPair(aC, c), SubstitutionPair(aH, h))
 
@@ -249,7 +249,7 @@ object ODETactics {
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
         val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-        val aC = ContEvolveProgramConstant("c")
+        val aC = DifferentialProgramConstant("c")
         val aS = Apply(Function("s", None, Unit, Real), Nothing)
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
         val l = List(SubstitutionPair(aP, p), SubstitutionPair(aQ, q), SubstitutionPair(aH, h),
@@ -383,7 +383,7 @@ object ODETactics {
         val axiomInstance = Imply(g, f)
 
         //construct substitution.
-        val aC = ContEvolveProgramConstant("c")
+        val aC = DifferentialProgramConstant("c")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
         val subst = List(
@@ -420,11 +420,11 @@ object ODETactics {
     override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
     Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
       case BoxModality(ODESystem(vars, a, h), p) => a match {
-        //          case IncompleteSystem(ODEProduct(nfce:NFContEvolve, c:ContEvolveProgram)) => {
+        //          case IncompleteSystem(ODEProduct(nfce:NFContEvolve, c:DifferentialProgram)) => {
         //            (nfce, c)
         //          }
         case IncompleteSystem(cp : ODEProduct) => cp.normalize() match {
-          case ODEProduct(AtomicODE(d@Derivative(Real, x: Variable), t: Term), c: ContEvolveProgram) =>
+          case ODEProduct(AtomicODE(d@Derivative(Real, x: Variable), t: Term), c: DifferentialProgram) =>
             val g = BoxModality(
               ODESystem(vars,
                 IncompleteSystem(
@@ -440,7 +440,7 @@ object ODETactics {
             //construct substitution
             val aT = Apply(Function("f", None, Real, Real), Anything) //@todo wow that's a bad name...
             val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-            val aC = ContEvolveProgramConstant("c")
+            val aC = DifferentialProgramConstant("c")
             val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 
             val subst = List(
@@ -508,7 +508,7 @@ object ODETactics {
 
             val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
 
-            val aC = ContEvolveProgramConstant("c")
+            val aC = DifferentialProgramConstant("c")
 
             val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
 

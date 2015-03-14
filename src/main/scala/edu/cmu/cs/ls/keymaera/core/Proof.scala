@@ -997,7 +997,7 @@ class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRul
  *          - Nothing/Anything
  *          - ApplyPredicate(p:Function, CDot/Nothing/Anything)
  *          - Apply(f:Function, CDot/Nothing/Anything)
- *          - ProgramConstant/ContEvolveProgramConstant
+ *          - ProgramConstant/DifferentialProgramConstant
  *          - Derivative(...)
  * @param repl the expression to be used in place of what
  */
@@ -1016,7 +1016,7 @@ sealed class SubstitutionPair (val what: Expr, val repl: Expr) {
       case CDot => true
       case Anything => true
       case _:ProgramConstant => true
-      case _:ContEvolveProgramConstant => true
+      case _:DifferentialProgramConstant => true
       case Derivative(_, _:Variable) => true
       case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
       case Apply(_:Function, CDot | Nothing | Anything) => true
@@ -1055,26 +1055,26 @@ object BindingAssessment {
   @deprecated("Use StaticSemantics(p) instead")
   def catVars(p: Program) = StaticSemantics(p)
 
-  def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+  def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
     case ODEProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case ODESystem(_, child, _) => primedVariables(child)
     case IncompleteSystem(a) => primedVariables(a)
     case AtomicODE(Derivative(_, x: Variable), _) => Set(x)
     case _: EmptyODE => Set.empty
-    case _: ContEvolveProgramConstant => Set.empty
+    case _: DifferentialProgramConstant => Set.empty
   }
 
   @deprecated("Use StaticSemantics.signature(f)++StaticSemantics(f).fv++StaticSemantics(f).bv instead.")
   // all variables x and their differential symbols x' occurring in the ode.
-  def coprimedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
+  def coprimedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
     case ODEProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
     case ODESystem(_, child, _) => coprimedVariables(child)
     case IncompleteSystem(a) => coprimedVariables(a)
     case AtomicODE(Derivative(_, x: Variable), _) => Set(x, DifferentialSymbol(x))
     case _: EmptyODE => Set.empty
-    case _: ContEvolveProgramConstant => Set.empty
+    case _: DifferentialProgramConstant => Set.empty
   }
 
   def allNames(f: Formula): Set[NamedSymbol] = f match {
@@ -1141,7 +1141,7 @@ object BindingAssessment {
     case Choice(a, b) => allNames(a) ++ allNames(b)
     case Loop(a) => allNames(a)
     case prg: ProgramConstant => Set(prg)
-    case prg: ContEvolveProgramConstant => Set(prg)
+    case prg: DifferentialProgramConstant => Set(prg)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   }
 
@@ -1383,7 +1383,7 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+DifferentialSymbol(x), u+DifferentialSymbol(x), Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
+    case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
@@ -1423,8 +1423,8 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
    * @param p The ODE.
    * @return The substitution result.
    */
-  private def usubstODE(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
-    ContEvolveProgram = {
+  private def usubstODE(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
+    DifferentialProgram = {
     val primedPrimed : Set[NamedSymbol] = primed.map(DifferentialSymbol(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
     p match {
       case ODEProduct(a, b) => ODEProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
@@ -1436,14 +1436,14 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
       case _: EmptyODE => p
       case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
       case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
-      case a: ContEvolveProgramConstant if subsDefs.exists(_.what == p) =>
+      case a: DifferentialProgramConstant if subsDefs.exists(_.what == p) =>
         val repl = subsDefs.find(_.what == p).get.repl
         repl match {
-          case replODE: ContEvolveProgram => replODE
+          case replODE: DifferentialProgram => replODE
           case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
             s"continuous program constants: $repl not allowed for $a")
         }
-      case a: ContEvolveProgramConstant if !subsDefs.exists(_.what == p) => p
+      case a: DifferentialProgramConstant if !subsDefs.exists(_.what == p) => p
     }
   }
 }
@@ -1611,7 +1611,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case Assign(xp@Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
         case NDetAssign(x: Variable) => NDetAssign(x)
         case Test(f) => Test(usubst(f))
-        case ode: ContEvolveProgram =>
+        case ode: DifferentialProgram =>
           // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
           require(admissible(StaticSemantics(ode).bv, ode),
             s"Substitution clash in ODE: {x}=${StaticSemantics(ode).bv} when substituting ${ode.prettyString()}")
@@ -1630,7 +1630,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     }
   }
 
-  private def usubstODE(ode: ContEvolveProgram, primed: SetLattice[NamedSymbol]): ContEvolveProgram = ode match {
+  private def usubstODE(ode: DifferentialProgram, primed: SetLattice[NamedSymbol]): DifferentialProgram = ode match {
     case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
     case ODESystem(d, a, h) if d.isEmpty =>
       require(admissible(primed, h), s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
@@ -1641,14 +1641,14 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
       AtomicODE(dv, usubst(t))
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
-    case c: ContEvolveProgramConstant if  subsDefs.exists(_.what == c) =>
+    case c: DifferentialProgramConstant if  subsDefs.exists(_.what == c) =>
       val repl = subsDefs.find(_.what == c).get.repl
       repl match {
-        case replODE: ContEvolveProgram => replODE
+        case replODE: DifferentialProgram => replODE
         case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
           s"continuous program constants: $repl not allowed for $c")
       }
-    case c: ContEvolveProgramConstant if !subsDefs.exists(_.what == c) => c
+    case c: DifferentialProgramConstant if !subsDefs.exists(_.what == c) => c
     case _: EmptyODE => ode
   }
   
@@ -1751,7 +1751,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     case Sequence(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
     case Choice(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
     case Loop(a) => fnPredPrgSymbolsOf(a)
-    case c: ContEvolveProgramConstant => Set(c)
+    case c: DifferentialProgramConstant => Set(c)
     case c: ProgramConstant => Set(c)
     case NDetAssign(_) => Set()
     case _: EmptyODE => Set()
@@ -1887,9 +1887,9 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
           case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
           case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
           // if ODE binds var, then rename with stored initial value
-          case BoxModality(ode: ContEvolveProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+          case BoxModality(ode: DifferentialProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
-          case DiamondModality(ode: ContEvolveProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+          case DiamondModality(ode: DifferentialProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
           // if loop binds var, then rename with stored initial value
           case BoxModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
@@ -1963,13 +1963,13 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case Assign(Derivative(s, v: Variable), t) => Assign(Derivative(s, renameVar(v)), rename(t))
     case NDetAssign(v: Variable) => NDetAssign(renameVar(v))
     case Test(phi) => Test(rename(phi))
-    case ode: ContEvolveProgram => renameODE(ode)
+    case ode: DifferentialProgram => renameODE(ode)
     case Sequence(a, b) => Sequence(rename(a), rename(b))
     case Choice(a, b) => Choice(rename(a), rename(b))
     case Loop(a) => Loop(rename(a))
   }
 
-  private def renameODE(p: ContEvolveProgram): ContEvolveProgram = p match {
+  private def renameODE(p: DifferentialProgram): DifferentialProgram = p match {
       case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == name && i == idx =>
         AtomicODE(Derivative(dd, Variable(target, tIdx, d)), rename(t))
       case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != name || i != idx =>
@@ -1979,7 +1979,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
       case _: EmptyODE => p
       case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
       case CheckedContEvolveFragment(a) => CheckedContEvolveFragment(renameODE(a))
-      case _: ContEvolveProgramConstant => p
+      case _: DifferentialProgramConstant => p
   }
 
   private def renameVar(e: Variable): Variable =

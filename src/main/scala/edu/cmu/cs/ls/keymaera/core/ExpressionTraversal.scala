@@ -253,7 +253,7 @@ object ExpressionTraversal {
 
         // Programs
         case ProgramConstant(_, _) => matchZero(p, f, e)
-        case ContEvolveProgramConstant(_, _) => matchZero(p, f, e)
+        case DifferentialProgramConstant(_, _) => matchZero(p, f, e)
         case CDot => matchZero(p, f, e)
         case Nothing => matchZero(p, f, e)
         case Anything => matchZero(p, f, e)
@@ -269,7 +269,7 @@ object ExpressionTraversal {
         case Loop(a) => matchOne(p, Loop.apply, f, a)
         case AtomicODE(x, t) => matchTwo(p, AtomicODE.apply, f, x, t)
         case ODEProduct(a, b) => matchTwo(p, ODEProduct.apply, f, a, b)
-        case ODESystem(v, a, h) => matchTwo(p, ODESystem(v, _: ContEvolveProgram, _: Formula), f, a, h)
+        case ODESystem(v, a, h) => matchTwo(p, ODESystem(v, _: DifferentialProgram, _: Formula), f, a, h)
         case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s) //@todo eisegesis
         case CheckedContEvolveFragment(fragment) => matchOne(p, CheckedContEvolveFragment.apply, f, fragment) //@todo eisegesis
         case _: EmptyODE => matchZero(p, f, e)

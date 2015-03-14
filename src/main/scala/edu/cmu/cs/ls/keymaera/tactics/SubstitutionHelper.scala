@@ -96,7 +96,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e)))
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
+    case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
@@ -113,8 +113,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
    * @param p The ODE.
    * @return The substitution result.
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
-      ContEvolveProgram = p match {
+  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
+      DifferentialProgram = p match {
     case ODEProduct(a, b) => ODEProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
     case ODESystem(d, a, h) if d.isEmpty => ODESystem(d, usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
     case ODESystem(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)

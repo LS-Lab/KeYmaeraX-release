@@ -47,7 +47,7 @@ object JSONConverter {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         e match {
           case ProgramConstant(_, _) => /* Nothing to do */
-          case ContEvolveProgramConstant(_, _) => /* Nothing to do */
+          case DifferentialProgramConstant(_, _) => /* Nothing to do */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -107,7 +107,7 @@ object JSONConverter {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
           case x@ProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConstant])) +: cf)
-          case x@ContEvolveProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ContEvolveProgramConstant])) +: cf)
+          case x@DifferentialProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[DifferentialProgramConstant])) +: cf)
           case Assign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case NDetAssign(_) => JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Sequence(_, _) => JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)

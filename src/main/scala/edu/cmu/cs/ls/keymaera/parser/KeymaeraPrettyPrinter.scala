@@ -33,7 +33,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Test(_) => !needsParens(e,parent, false )
     case NDetAssign(_) => !needsParens(e,parent, false)
     case ContEvolve(_) => !needsParens(e,parent,false)
-    case _: ContEvolveProgram => !needsParens(e,parent, false)
+    case _: DifferentialProgram => !needsParens(e,parent, false)
     case _ => false
   }
 
@@ -213,7 +213,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case Some(idx) => "_" + idx
       case None => ""
     })
-    case ContEvolveProgramConstant(name, i) => name + (i match {
+    case DifferentialProgramConstant(name, i) => name + (i match {
       case Some(idx) => "_" + idx
       case None => ""
     })
@@ -408,7 +408,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       ContEvolve.getClass.getCanonicalName ::
       CheckedContEvolveFragment.getClass().getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName ::
-      ContEvolveProgramConstant.getClass.getCanonicalName ::
+      DifferentialProgramConstant.getClass.getCanonicalName ::
       CDot.getClass.getCanonicalName ::
       Variable.getClass.getCanonicalName ::
       Number.NumberObj.getClass.getCanonicalName ::

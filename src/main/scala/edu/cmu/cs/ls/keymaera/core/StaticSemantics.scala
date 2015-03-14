@@ -119,7 +119,7 @@ object StaticSemantics {
   private def progVars(p: Program): VCP = { p match {
     // base cases
     case _: ProgramConstant => VCP(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom) //@TODO this includes x,x' for all x?
-    case _: ContEvolveProgramConstant => VCP(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
+    case _: DifferentialProgramConstant => VCP(fv = SetLattice.top, bv = SetLattice.top, mbv = SetLattice.bottom)
     case Assign(x: Variable, e) => VCP(fv = apply(e), bv = SetLattice(x), mbv = SetLattice(x))
     case Assign(Derivative(_, x : NamedSymbol), e) => VCP(fv = apply(e), bv = SetLattice(DifferentialSymbol(x)), mbv = SetLattice(DifferentialSymbol(x)))
     case Assign(x : DifferentialSymbol, e) => {throw new Exception("wasn't expecting to get here."); VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))}
@@ -211,7 +211,7 @@ object StaticSemantics {
   def signature(p: Program): Set[NamedSymbol] = p match {
     // base cases
     case ap: ProgramConstant => Set(ap)
-    case ap: ContEvolveProgramConstant => Set(ap)
+    case ap: DifferentialProgramConstant => Set(ap)
     case Assign(x: Variable, e) => signature(e)
     case Assign(x : DifferentialSymbol, e) => signature(e)
     case Assign(Derivative(_, x : NamedSymbol), e) => signature(e)

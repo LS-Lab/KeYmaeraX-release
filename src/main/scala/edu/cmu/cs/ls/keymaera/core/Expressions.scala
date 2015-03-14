@@ -208,14 +208,14 @@ object ProgramConstant {
 }
 class ProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram
 
-object ContEvolveProgramConstant {
-  def apply(name : String, index: Option[Int] = None): ContEvolveProgramConstant = new ContEvolveProgramConstant(name, index)
+object DifferentialProgramConstant {
+  def apply(name : String, index: Option[Int] = None): DifferentialProgramConstant = new DifferentialProgramConstant(name, index)
   def unapply(e: Any): Option[(String, Option[Int])] = e match {
-    case x: ContEvolveProgramConstant => Some((x.name, x.index))
+    case x: DifferentialProgramConstant => Some((x.name, x.index))
     case _ => None
   }
 }
-class ContEvolveProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram with ContEvolveProgram
+class DifferentialProgramConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, ProgramSort) with AtomicProgram with DifferentialProgram
 
 object Function {
   def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Function = new Function(name, index, domain, sort)
@@ -1069,7 +1069,7 @@ object ContEvolve {
     case _ => None
   }
 }
-final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with ContEvolveProgram {
+final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
     case _ => false
@@ -1078,19 +1078,19 @@ final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) 
 }
 
 object CheckedContEvolveFragment {
-  def apply(child: ContEvolveProgram): CheckedContEvolveFragment = {
+  def apply(child: DifferentialProgram): CheckedContEvolveFragment = {
     assert(!child.isInstanceOf[CheckedContEvolveFragment])
     new CheckedContEvolveFragment(child)
   }
-  def unapply(e:Any) : Option[ContEvolveProgram] = e match {
+  def unapply(e:Any) : Option[DifferentialProgram] = e match {
     case x: CheckedContEvolveFragment => {
-      assert(x.child.isInstanceOf[ContEvolveProgram]) //the lone constructor should enforce this.
-      Some(x.child.asInstanceOf[ContEvolveProgram])
+      assert(x.child.isInstanceOf[DifferentialProgram]) //the lone constructor should enforce this.
+      Some(x.child.asInstanceOf[DifferentialProgram])
     }
     case _ => None
   }
 }
-final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with ContEvolveProgram {
+final class CheckedContEvolveFragment(child:DifferentialProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: CheckedContEvolveFragment => x.child.equals(child)
     case _ => false
@@ -1099,7 +1099,7 @@ final class CheckedContEvolveFragment(child:ContEvolveProgram) extends Unary(Pro
 }
 
 
-sealed trait ContEvolveProgram extends Program {
+sealed trait DifferentialProgram extends Program {
   def normalize() = this
 }
 
@@ -1111,7 +1111,7 @@ object AtomicODE {
   }
 }
 //@TODO Change types to "val x: DifferentialSymbol" for now?
-final class AtomicODE(val x: Derivative, val theta: Term) extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
+final class AtomicODE(val x: Derivative, val theta: Term) extends Expr(ProgramSort) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case o: AtomicODE => o.x == x && o.theta == theta
     case _ => false
@@ -1124,7 +1124,7 @@ object EmptyODE {
   def unapply(x:Any): Option[_] = { None }
 }
 //@TODO Turn into object since singleton
-final class EmptyODE extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
+final class EmptyODE extends Expr(ProgramSort) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case _: EmptyODE => true
     case ODEProduct(_: EmptyODE, _: EmptyODE) => true
@@ -1134,19 +1134,19 @@ final class EmptyODE extends Expr(ProgramSort) with AtomicProgram with ContEvolv
 }
 
 object ODEProduct {
-  def apply(left: ContEvolveProgram, right: ContEvolveProgram) = new ODEProduct(left, right)
-  def apply(left: ContEvolveProgram) = new ODEProduct(left, EmptyODE())
-  def unapply(e: Any): Option[(ContEvolveProgram, ContEvolveProgram)] = e match {
+  def apply(left: DifferentialProgram, right: DifferentialProgram) = new ODEProduct(left, right)
+  def apply(left: DifferentialProgram) = new ODEProduct(left, EmptyODE())
+  def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
     case x: ODEProduct => (x.left, x.right) match {
-      case (a: ContEvolveProgram, b: ContEvolveProgram) => Some((a, b))
+      case (a: DifferentialProgram, b: DifferentialProgram) => Some((a, b))
       case _ => None
     }
     case _ => None
   }
 }
-final class ODEProduct(left: ContEvolveProgram, right: ContEvolveProgram)
-    extends BinaryProgram(left, right) with ContEvolveProgram {
-  def flatten(): List[ContEvolveProgram] = {
+final class ODEProduct(left: DifferentialProgram, right: DifferentialProgram)
+    extends BinaryProgram(left, right) with DifferentialProgram {
+  def flatten(): List[DifferentialProgram] = {
     val leftList = left match {
       case left: ODEProduct => left.flatten()
       case _ => left :: Nil
@@ -1162,7 +1162,7 @@ final class ODEProduct(left: ContEvolveProgram, right: ContEvolveProgram)
     //Note: this has to be a type-level comparison or else equals diverges.
     val pl = flatten().filter(!_.isInstanceOf[EmptyODE])
     if (pl.isEmpty) EmptyODE()
-    else pl.foldRight[ContEvolveProgram](EmptyODE())((prg, prod) => ODEProduct(prg, prod))
+    else pl.foldRight[DifferentialProgram](EmptyODE())((prg, prod) => ODEProduct(prg, prod))
   }
 
   //@todo SYMMETRY!
@@ -1173,7 +1173,7 @@ final class ODEProduct(left: ContEvolveProgram, right: ContEvolveProgram)
     e match {
       case e: ODEProduct =>
         //Note: this has to be a type-level comparison or else equals diverges (also: cannot use normalize here for the same reason)
-        def fn(x: ContEvolveProgram) = !x.isInstanceOf[EmptyODE]
+        def fn(x: DifferentialProgram) = !x.isInstanceOf[EmptyODE]
         this.flatten().filter(fn).equals(e.flatten().filter(fn))
       case _: EmptyODE => left.isInstanceOf[EmptyODE] && right.isInstanceOf[EmptyODE]
       case _ => false
@@ -1199,15 +1199,15 @@ final class ODEProduct(left: ContEvolveProgram, right: ContEvolveProgram)
  * @param constraint evolution domain constraint.
  */
 object ODESystem {
-  def apply(disturbance: Seq[NamedSymbol], child: ContEvolveProgram, constraint: Formula) = new ODESystem(disturbance, child, constraint)
-  def apply(child: ContEvolveProgram, constraint: Formula) = new ODESystem(Nil, child, constraint)
+  def apply(disturbance: Seq[NamedSymbol], child: DifferentialProgram, constraint: Formula) = new ODESystem(disturbance, child, constraint)
+  def apply(child: DifferentialProgram, constraint: Formula) = new ODESystem(Nil, child, constraint)
 
-  def unapply(e: Any): Option[(Seq[NamedSymbol], ContEvolveProgram, Formula)] = e match {
+  def unapply(e: Any): Option[(Seq[NamedSymbol], DifferentialProgram, Formula)] = e match {
     case s: ODESystem => Some(s.disturbance, s.child, s.constraint)
     case _ => None
   }
 }
-final class ODESystem(val disturbance: Seq[NamedSymbol], val child: ContEvolveProgram, val constraint: Formula) extends Expr(ProgramSort) with ContEvolveProgram {
+final class ODESystem(val disturbance: Seq[NamedSymbol], val child: DifferentialProgram, val constraint: Formula) extends Expr(ProgramSort) with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case ODESystem(d, c, cnstr) => disturbance == d && child == c && constraint == constr
     case _ => false
@@ -1217,14 +1217,14 @@ final class ODESystem(val disturbance: Seq[NamedSymbol], val child: ContEvolvePr
 
 //@TODO What is this?
 object IncompleteSystem {
-  def apply(system: ContEvolveProgram) = new IncompleteSystem(system)
+  def apply(system: DifferentialProgram) = new IncompleteSystem(system)
   def apply() = new IncompleteSystem(new EmptyODE)
-  def unapply(e: Any): Option[ContEvolveProgram] = e match {
+  def unapply(e: Any): Option[DifferentialProgram] = e match {
       case s: IncompleteSystem => Some(s.system)
       case _                   => None
   }
 }
-final class IncompleteSystem(val system: ContEvolveProgram) extends Expr(ProgramSort) with ContEvolveProgram {
+final class IncompleteSystem(val system: DifferentialProgram) extends Expr(ProgramSort) with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case IncompleteSystem(s) => system == s
     case _ => false
