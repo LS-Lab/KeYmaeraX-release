@@ -5,21 +5,7 @@
  */
 package edu.cmu.cs.ls.keymaera.core
 
-/**
- * Todos
- *=======
- */
-
-/**
- * Points to Discuss
- *===================
- * 1) Generic traversal and rewriting function necessary
- * 2) First class * Expression: * also in if(*) \alpha else \beta vs. nondet. assignment forms (:= *)
- */
-
 // require favoring immutable Seqs for soundness
-
-import edu.cmu.cs.ls.keymaera.core
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
@@ -40,6 +26,7 @@ import scala.collection.immutable
 
 /**
  * External functions imported in core but not used in proof check mode
+ * @TODO ???
  */
 trait Annotable
 
@@ -158,11 +145,6 @@ abstract class Ternary(sort: Sort, val domain: TupleT, val fst: Expr, val snd: E
     "Sort Mismatch in Binary Expr")
 }
 
-/*********************************************************************************
- * Differential Logic
- *********************************************************************************
- */
-
 /**
  * Variables and Functions
  *=========================
@@ -199,6 +181,11 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
   //def deepEquals(x : NamedSymbol) =
   //  flatEquals(x) && this.id == x.id
 }
+
+/*********************************************************************************
+ * Differential Dynamic Logic
+ *********************************************************************************
+ */
 
 object Anything extends NamedSymbol("\\anything", None, Unit, Real) with Atom with Term
 object Nothing extends NamedSymbol("\\nothing", None, Unit, Unit) with Atom with Term
