@@ -918,8 +918,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       lazy val pattern = evolutionSystemP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
       log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
         case odes ~ f => f match {
-          case Some(h) => NFContEvolveProgram(odes, h)
-          case None => NFContEvolveProgram(odes, True)
+          case Some(h) => ODESystem(odes, h)
+          case None => ODESystem(odes, True)
         }
       }
     }
@@ -929,25 +929,25 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       lazy val pattern = rep1sep(contEvolveProgramPPrecedence.filter(_ != normalFormEvolutionSystemP).reduce(_|_), COMMA)
       log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
         case odes =>
-          odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram())((a:ContEvolveProgram,b:ContEvolveProgram) => ContEvolveProduct(a,b))
+          odes.foldRight[ContEvolveProgram](EmptyODE())((a:ContEvolveProgram,b:ContEvolveProgram) => ODEProduct(a,b))
       }
     }
 
     lazy val checkedEvolutionFragmentP: PackratParser[CheckedContEvolveFragment] = {
       lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser)
       log(pattern)("checked evolution") ^^ {
-        case d ~ t => CheckedContEvolveFragment(AtomicContEvolve(d, t))
+        case d ~ t => CheckedContEvolveFragment(AtomicODE(d, t))
       }
     }
 
-    lazy val evolutionP: PackratParser[AtomicContEvolve] = {
+    lazy val evolutionP: PackratParser[AtomicODE] = {
       lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP
 
-      log(pattern)("AtomicContEvolve Parser") ^^ {
+      log(pattern)("AtomicODE Parser") ^^ {
         case lhs ~ rhs => {
           lhs match {
-            case t: Derivative => new AtomicContEvolve(t, rhs)
-            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing AtomicContEvolve")
+            case t: Derivative => new AtomicODE(t, rhs)
+            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing AtomicODE")
           }
         }
       }
@@ -960,8 +960,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       log(pattern)("Incomplete Differential Equation System") ^^ {
         case system ~ f => system match {
           case Some(x: ContEvolveProgram) => f match {
-            case Some(frm) => NFContEvolveProgram(IncompleteSystem(x), frm)
-            case None => NFContEvolveProgram(IncompleteSystem(x), True)
+            case Some(frm) => ODESystem(IncompleteSystem(x), frm)
+            case None => ODESystem(IncompleteSystem(x), True)
           }
           case None =>
             require(!f.isDefined, "Empty incomplete system with evolution domain constraint not supported")

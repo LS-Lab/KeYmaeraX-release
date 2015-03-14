@@ -56,8 +56,8 @@ object StaticSemantics {
   private def freeVars(t: Term): SetLattice[NamedSymbol] = t match {
     // base cases
     case x: Variable => SetLattice(x)
-    case CDot => SetLattice(CDot)
-    case DifferentialSymbol(x : NamedSymbol) => SetLattice(DifferentialSymbol(x))
+    case cdot: CDot => SetLattice(cdot)
+    case xp: DifferentialSymbol(NamedSymbol) => SetLattice(xp)
     // homomorphic cases
     case Apply(f, arg) => freeVars(arg)
     case Neg(s, l) => freeVars(l)
@@ -123,6 +123,8 @@ object StaticSemantics {
     case Assign(x: Variable, e) => VCP(fv = apply(e), bv = SetLattice(x), mbv = SetLattice(x))
     case Assign(Derivative(_, x : NamedSymbol), e) => VCP(fv = apply(e), bv = SetLattice(DifferentialSymbol(x)), mbv = SetLattice(DifferentialSymbol(x)))
     case Assign(x : DifferentialSymbol, e) => {throw new Exception("wasn't expecting to get here."); VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))}
+    case AtomicODE(Derivative(_, x: Variable), e) =>
+      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)))
     case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     // combinator cases
     case Choice(a, b) => val va = progVars(a); val vb = progVars(b)
@@ -134,15 +136,13 @@ object StaticSemantics {
     // special cases //@TODO check all special cases
     //@NOTE x:=* not mentioned in Definition 9
     case NDetAssign(x: Variable) => VCP(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x))
-    case AtomicContEvolve(Derivative(_, x: Variable), e) =>
-      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)))
     // TODO system of ODE cases not mentioned in Definition 9
-    case NFContEvolveProgram(v, a, h) => val va = progVars(a); VCP(fv = va.fv ++ apply(h).fv, bv = va.bv, mbv = va.mbv) //@todo eisegesis
-    case ContEvolveProduct(a, b) => val va = progVars(a); val vb = progVars(b)
-      VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv) //@todo eisegesis
+    case ODESystem(v, a, h) => val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
+    case ODEProduct(a, b) => val va = progVars(a); val vb = progVars(b)
+      VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
     case IncompleteSystem(a) => progVars(a) //@todo eisegesis
     case CheckedContEvolveFragment(a) => progVars(a) //@todo eisegesis
-    case _: EmptyContEvolveProgram => VCP(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom) //@todo eisegesis
+    case _: EmptyODE => VCP(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom)
   }} ensuring(r => { val VCP(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) must be a subset of BV($p)")
 
   // signature of function, predicate, atomic program symbols
@@ -217,17 +217,113 @@ object StaticSemantics {
     case Assign(Derivative(_, x : NamedSymbol), e) => signature(e)
     case NDetAssign(x: Variable) => Set.empty
     case Test(f) => signature(f)
-    case AtomicContEvolve(Derivative(_, x: Variable), e) => signature(e)
-    case NFContEvolveProgram(vars, a, h) => signature(a) ++ signature(h)
-    case ContEvolveProduct(a, b) => signature(a) ++ signature(b)
+    case AtomicODE(Derivative(_, x: Variable), e) => signature(e)
+    case ODESystem(vars, a, h) => signature(a) ++ signature(h)
+    case ODEProduct(a, b) => signature(a) ++ signature(b)
     case IncompleteSystem(a) => signature(a)
     case CheckedContEvolveFragment(a) => signature(a)
-    case _: EmptyContEvolveProgram => Set()
+    case _: EmptyODE => Set()
     // homomorphic cases
     case Choice(a, b) => signature(a) ++ signature(b)
     case Sequence(a, b) => signature(a) ++ signature(b)
     case Loop(a) => signature(a)
   }
   
+}
+
+
+object SetLattice {
+  def apply[A](e: A): SetLattice[A] = new SetLattice(Right(Set(e)))
+  def apply[A](s: Set[A]): SetLattice[A] = new SetLattice(Right(s))
+  def apply[A](s: Seq[A]): SetLattice[A] = new SetLattice(Right(s.toSet))
+  def bottom[A] = new SetLattice(Right(Set.empty[A]))
+  def top[A]: SetLattice[A] = new SetLattice[A](Left(null))
+}
+class SetLattice[A](val s: Either[Null, Set[A]]) {
+  def intersect(other: SetLattice[A]): SetLattice[A] = s match {
+    case Left(_) => other
+    case Right(ts) => other.s match {
+      case Left(_) => this
+      case Right(os) => SetLattice(ts.intersect(os))
+    }
+  }
+  def intersect(other: Set[A]): SetLattice[A] = s match {
+    case Left(_) => SetLattice(other)
+    case Right(ts) => SetLattice(ts.intersect(other))
+  }
+  def subsetOf(other: SetLattice[A]): Boolean = s match {
+    case Left(_) => other.s.isLeft  /* top is subset of top */
+    case Right(ts) => other.s match {
+      case Left(_) => true         /* everything else is subset of top */
+      case Right(os) => ts.subsetOf(os)
+    }
+  }
+  def contains(elem: A): Boolean = s match {
+    case Left(_) => true /* top contains everything */
+    case Right(ts) => ts.contains(elem)
+  }
+  def isEmpty: Boolean = s match {
+    case Left(_) => false /* top is not empty */
+    case Right(ts) => ts.isEmpty
+  }
+  def exists(pred: A => Boolean): Boolean = s match {
+    case Left(_) => true /* top contains everything that's imaginable */
+    case Right(ts) => ts.exists(pred)
+  }
+  def map[B](trafo: A => B): SetLattice[B] = s match {
+    case Left(_) => SetLattice.top
+    case Right(ts) => SetLattice(ts.map(trafo))
+  }
+  
+  def +(elem: A): SetLattice[A] = s match {
+    case Left(_) => this /* top remains top */
+    case Right(ts) => SetLattice(ts+elem)
+  }
+  def -(elem: A): SetLattice[A] = s match {
+    case Left(_) => this /* top remains top */
+    case Right(ts) => SetLattice(ts-elem)
+  }
+  def ++(other: SetLattice[A]): SetLattice[A] = s match {
+    case Left(_) => this
+    case Right(ts) => other.s match {
+      case Left(_) => other
+      case Right(os) => SetLattice(ts ++ os)
+    }
+  }
+  def ++(other: GenTraversableOnce[A]): SetLattice[A] = s match {
+    case Left(_) => this
+    case Right(ts) => SetLattice(ts ++ other)
+  }
+  def --(other: SetLattice[A]): SetLattice[A] = s match {
+    case Left(_) => other.s match {
+      case Left(_) => SetLattice.bottom /* top -- top == bottom */
+      case _ => this /* top -- _ == top */
+    }
+    case Right(ts) => other.s match {
+      case Left(_) => SetLattice.bottom /* _ -- top == bottom */
+      case Right(os) => SetLattice(ts -- os)
+    }
+  }
+  def --(other: GenTraversableOnce[A]): SetLattice[A] = s match {
+    case Left(_) => this /* top -- _ == top */
+    case Right(ts) => SetLattice(ts -- other)
+  }
+  override def toString = s match {
+    case Left(_) => "top"
+    case Right(ts) => ts.toString()
+  }
+  override def equals(other: Any): Boolean = other match {
+    case ls: SetLattice[A] => s match {
+      case Left(_) => ls.s.isLeft
+      case Right(ts) => ls.s match {
+        case Left(_) => false
+        case Right(os) => ts == os
+      }
+    }
+    case os: Set[A] => s match {
+      case Left(_) => false
+      case Right(ts) => ts == os
+    }
+  }
 }
 

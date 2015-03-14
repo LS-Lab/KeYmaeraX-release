@@ -1035,101 +1035,6 @@ object SubstitutionPair {
   }
 }
 
-object SetLattice {
-  def apply[A](e: A): SetLattice[A] = new SetLattice(Right(Set(e)))
-  def apply[A](s: Set[A]): SetLattice[A] = new SetLattice(Right(s))
-  def apply[A](s: Seq[A]): SetLattice[A] = new SetLattice(Right(s.toSet))
-  def bottom[A] = new SetLattice(Right(Set.empty[A]))
-  def top[A]: SetLattice[A] = new SetLattice[A](Left(null))
-}
-class SetLattice[A](val s: Either[Null, Set[A]]) {
-  def intersect(other: SetLattice[A]): SetLattice[A] = s match {
-    case Left(_) => other
-    case Right(ts) => other.s match {
-      case Left(_) => this
-      case Right(os) => SetLattice(ts.intersect(os))
-    }
-  }
-  def intersect(other: Set[A]): SetLattice[A] = s match {
-    case Left(_) => SetLattice(other)
-    case Right(ts) => SetLattice(ts.intersect(other))
-  }
-  def subsetOf(other: SetLattice[A]): Boolean = s match {
-    case Left(_) => other.s.isLeft  /* top is subset of top */
-    case Right(ts) => other.s match {
-      case Left(_) => true         /* everything else is subset of top */
-      case Right(os) => ts.subsetOf(os)
-    }
-  }
-  def contains(elem: A): Boolean = s match {
-    case Left(_) => true /* top contains everything */
-    case Right(ts) => ts.contains(elem)
-  }
-  def isEmpty: Boolean = s match {
-    case Left(_) => false /* top is not empty */
-    case Right(ts) => ts.isEmpty
-  }
-  def exists(pred: A => Boolean): Boolean = s match {
-    case Left(_) => true /* top contains everything that's imaginable */
-    case Right(ts) => ts.exists(pred)
-  }
-  def map[B](trafo: A => B): SetLattice[B] = s match {
-    case Left(_) => SetLattice.top
-    case Right(ts) => SetLattice(ts.map(trafo))
-  }
-  
-  def +(elem: A): SetLattice[A] = s match {
-    case Left(_) => this /* top remains top */
-    case Right(ts) => SetLattice(ts+elem)
-  }
-  def -(elem: A): SetLattice[A] = s match {
-    case Left(_) => this /* top remains top */
-    case Right(ts) => SetLattice(ts-elem)
-  }
-  def ++(other: SetLattice[A]): SetLattice[A] = s match {
-    case Left(_) => this
-    case Right(ts) => other.s match {
-      case Left(_) => other
-      case Right(os) => SetLattice(ts ++ os)
-    }
-  }
-  def ++(other: GenTraversableOnce[A]): SetLattice[A] = s match {
-    case Left(_) => this
-    case Right(ts) => SetLattice(ts ++ other)
-  }
-  def --(other: SetLattice[A]): SetLattice[A] = s match {
-    case Left(_) => other.s match {
-      case Left(_) => SetLattice.bottom /* top -- top == bottom */
-      case _ => this /* top -- _ == top */
-    }
-    case Right(ts) => other.s match {
-      case Left(_) => SetLattice.bottom /* _ -- top == bottom */
-      case Right(os) => SetLattice(ts -- os)
-    }
-  }
-  def --(other: GenTraversableOnce[A]): SetLattice[A] = s match {
-    case Left(_) => this /* top -- _ == top */
-    case Right(ts) => SetLattice(ts -- other)
-  }
-  override def toString = s match {
-    case Left(_) => "top"
-    case Right(ts) => ts.toString()
-  }
-  override def equals(other: Any): Boolean = other match {
-    case ls: SetLattice[A] => s match {
-      case Left(_) => ls.s.isLeft
-      case Right(ts) => ls.s match {
-        case Left(_) => false
-        case Right(os) => ts == os
-      }
-    }
-    case os: Set[A] => s match {
-      case Left(_) => false
-      case Right(ts) => ts == os
-    }
-  }
-}
-
 @deprecated("Use StaticSemantics instead")
 object BindingAssessment {
   import StaticSemantics._
@@ -1152,11 +1057,11 @@ object BindingAssessment {
 
   def primedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
-    case ContEvolveProduct(a, b) => primedVariables(a) ++ primedVariables(b)
-    case NFContEvolveProgram(_, child, _) => primedVariables(child)
+    case ODEProduct(a, b) => primedVariables(a) ++ primedVariables(b)
+    case ODESystem(_, child, _) => primedVariables(child)
     case IncompleteSystem(a) => primedVariables(a)
-    case AtomicContEvolve(Derivative(_, x: Variable), _) => Set(x)
-    case _: EmptyContEvolveProgram => Set.empty
+    case AtomicODE(Derivative(_, x: Variable), _) => Set(x)
+    case _: EmptyODE => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
   }
 
@@ -1164,11 +1069,11 @@ object BindingAssessment {
   // all variables x and their differential symbols x' occurring in the ode.
   def coprimedVariables(ode: ContEvolveProgram): Set[NamedSymbol] = ode match {
     case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
-    case ContEvolveProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
-    case NFContEvolveProgram(_, child, _) => coprimedVariables(child)
+    case ODEProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
+    case ODESystem(_, child, _) => coprimedVariables(child)
     case IncompleteSystem(a) => coprimedVariables(a)
-    case AtomicContEvolve(Derivative(_, x: Variable), _) => Set(x, DifferentialSymbol(x))
-    case _: EmptyContEvolveProgram => Set.empty
+    case AtomicODE(Derivative(_, x: Variable), _) => Set(x, DifferentialSymbol(x))
+    case _: EmptyODE => Set.empty
     case _: ContEvolveProgramConstant => Set.empty
   }
 
@@ -1226,12 +1131,12 @@ object BindingAssessment {
     case Assign(x : DifferentialSymbol, e) => Set(x) ++ allNames(e)
     case NDetAssign(x: Variable) => Set(x)
     case Test(f) => allNames(f)
-    case AtomicContEvolve(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
-    case ContEvolveProduct(a, b) => allNames(a) ++ allNames(b)
-    case NFContEvolveProgram(disturbance, a, h) => allNames(a) ++ allNames(h) // TODO disturbance?
+    case AtomicODE(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
+    case ODEProduct(a, b) => allNames(a) ++ allNames(b)
+    case ODESystem(disturbance, a, h) => allNames(a) ++ allNames(h) // TODO disturbance?
     case IncompleteSystem(a) => allNames(a)
     case CheckedContEvolveFragment(a) => allNames(a)
-    case _: EmptyContEvolveProgram => Set()
+    case _: EmptyODE => Set()
     case Sequence(a, b) => allNames(a) ++ allNames(b)
     case Choice(a, b) => allNames(a) ++ allNames(b)
     case Loop(a) => allNames(a)
@@ -1522,13 +1427,13 @@ final case class Substitution(subsDefs: scala.collection.immutable.Seq[Substitut
     ContEvolveProgram = {
     val primedPrimed : Set[NamedSymbol] = primed.map(DifferentialSymbol(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
     p match {
-      case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
-      case NFContEvolveProgram(d, a, h) if d.isEmpty => NFContEvolveProgram(d, usubstODE(o, u, primed, a), usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h))
-      case NFContEvolveProgram(d, a, h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
-      case AtomicContEvolve(d@Derivative(_, x: Variable), e) =>
-        AtomicContEvolve(d, usubst(o ++ SetLattice(primed) ++ SetLattice(primedPrimed),
+      case ODEProduct(a, b) => ODEProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
+      case ODESystem(d, a, h) if d.isEmpty => ODESystem(d, usubstODE(o, u, primed, a), usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h))
+      case ODESystem(d, a, h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+      case AtomicODE(d@Derivative(_, x: Variable), e) =>
+        AtomicODE(d, usubst(o ++ SetLattice(primed) ++ SetLattice(primedPrimed),
           u ++ SetLattice(primed) ++ SetLattice(primedPrimed), e)) //@todo for something like x' := y' +1 we'll need to add primedPrimed to the back lists as well.
-      case _: EmptyContEvolveProgram => p
+      case _: EmptyODE => p
       case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
       case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
       case a: ContEvolveProgramConstant if subsDefs.exists(_.what == p) =>
@@ -1726,14 +1631,14 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
   }
 
   private def usubstODE(ode: ContEvolveProgram, primed: SetLattice[NamedSymbol]): ContEvolveProgram = ode match {
-    case ContEvolveProduct(a, b) => ContEvolveProduct(usubstODE(a, primed), usubstODE(b, primed))
-    case NFContEvolveProgram(d, a, h) if d.isEmpty =>
+    case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
+    case ODESystem(d, a, h) if d.isEmpty =>
       require(admissible(primed, h), s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
-      NFContEvolveProgram(d, usubstODE(a, primed), usubst(h))
-    case NFContEvolveProgram(d, a , h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
-    case AtomicContEvolve(dv: Derivative, t) =>
+      ODESystem(d, usubstODE(a, primed), usubst(h))
+    case ODESystem(d, a , h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
+    case AtomicODE(dv: Derivative, t) =>
       require(admissible(primed, t), s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
-      AtomicContEvolve(dv, usubst(t))
+      AtomicODE(dv, usubst(t))
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
     case c: ContEvolveProgramConstant if  subsDefs.exists(_.what == c) =>
@@ -1744,7 +1649,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
           s"continuous program constants: $repl not allowed for $c")
       }
     case c: ContEvolveProgramConstant if !subsDefs.exists(_.what == c) => c
-    case _: EmptyContEvolveProgram => ode
+    case _: EmptyODE => ode
   }
   
   def apply(s: Sequent): Sequent = {
@@ -1839,9 +1744,9 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     case CheckedContEvolveFragment(c) => fnPredPrgSymbolsOf(c) //@todo eisegesis
     case Assign(_, t) => fnPredPrgSymbolsOf(t)
     case Test(phi) => fnPredPrgSymbolsOf(phi)
-    case AtomicContEvolve(_, t) => fnPredPrgSymbolsOf(t)
-    case ContEvolveProduct(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case NFContEvolveProgram(_, a, h) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(h)
+    case AtomicODE(_, t) => fnPredPrgSymbolsOf(t)
+    case ODEProduct(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
+    case ODESystem(_, a, h) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(h)
     case IncompleteSystem(a) => fnPredPrgSymbolsOf(a)
     case Sequence(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
     case Choice(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
@@ -1849,7 +1754,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     case c: ContEvolveProgramConstant => Set(c)
     case c: ProgramConstant => Set(c)
     case NDetAssign(_) => Set()
-    case _: EmptyContEvolveProgram => Set()
+    case _: EmptyODE => Set()
   }
 
   // @TODO The following are the same cop&paste as in UniformSubstitution. Copy somewhere
@@ -2065,13 +1970,13 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   }
 
   private def renameODE(p: ContEvolveProgram): ContEvolveProgram = p match {
-      case AtomicContEvolve(Derivative(dd, Variable(n, i, d)), t) if n == name && i == idx =>
-        AtomicContEvolve(Derivative(dd, Variable(target, tIdx, d)), rename(t))
-      case AtomicContEvolve(dv@Derivative(_, Variable(n, i, _)), t) if n != name || i != idx =>
-        AtomicContEvolve(dv, rename(t))
-      case ContEvolveProduct(a, b) => ContEvolveProduct(renameODE(a), renameODE(b))
-      case NFContEvolveProgram(d, a, h) => NFContEvolveProgram(d, renameODE(a), rename(h))
-      case _: EmptyContEvolveProgram => p
+      case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == name && i == idx =>
+        AtomicODE(Derivative(dd, Variable(target, tIdx, d)), rename(t))
+      case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != name || i != idx =>
+        AtomicODE(dv, rename(t))
+      case ODEProduct(a, b) => ODEProduct(renameODE(a), renameODE(b))
+      case ODESystem(d, a, h) => ODESystem(d, renameODE(a), rename(h))
+      case _: EmptyODE => p
       case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
       case CheckedContEvolveFragment(a) => CheckedContEvolveFragment(renameODE(a))
       case _: ContEvolveProgramConstant => p
@@ -2218,7 +2123,7 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
   override def apply(s: Sequent): List[Sequent] = {
     val prgFn = new ExpressionTraversalFunction {
       override def postP(pos: PosInExpr, prg: Program) = prg match {
-        case NFContEvolveProgram(d, a, hh) => Right(NFContEvolveProgram(d, a, And(hh, h)))
+        case ODESystem(d, a, hh) => Right(ODESystem(d, a, And(hh, h)))
         case ContEvolve(f) => Right(ContEvolve(And(f, h)))
         case _ => super.postP(pos, prg)
       }
@@ -2227,8 +2132,8 @@ class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", 
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
         case BoxModality(ev@ContEvolve(evolve), f) => Right(And(BoxModality(ev, h),
           BoxModality(ContEvolve(And(evolve, h)), f)))
-        case BoxModality(ev@NFContEvolveProgram(d, a, hh), f) => Right(And(BoxModality(ev, h),
-          BoxModality(NFContEvolveProgram(d, a, And(hh, h)), f)))
+        case BoxModality(ev@ODESystem(d, a, hh), f) => Right(And(BoxModality(ev, h),
+          BoxModality(ODESystem(d, a, And(hh, h)), f)))
         case _ => ???
       }
     }

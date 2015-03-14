@@ -115,11 +115,11 @@ class SubstitutionHelper(what: Term, repl: Term) {
    */
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
       ContEvolveProgram = p match {
-    case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case NFContEvolveProgram(d, a, h) if d.isEmpty => NFContEvolveProgram(d, usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
-    case NFContEvolveProgram(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
-    case AtomicContEvolve(d@Derivative(_, x: Variable), e) => AtomicContEvolve(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
-    case _: EmptyContEvolveProgram => p
+    case ODEProduct(a, b) => ODEProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
+    case ODESystem(d, a, h) if d.isEmpty => ODESystem(d, usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
+    case ODESystem(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+    case AtomicODE(d@Derivative(_, x: Variable), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
+    case _: EmptyODE => p
     case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
   }

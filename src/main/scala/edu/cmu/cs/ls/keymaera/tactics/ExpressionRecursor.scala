@@ -35,7 +35,7 @@ object ExpressionRecursor {
       case False()     => f(e)
       case e : NamedSymbol => f(e)
       case e : Number.NumberObj => f(e)
-      case AtomicContEvolve(x: Term, theta: Term) => {
+      case AtomicODE(x: Term, theta: Term) => {
         val xResult       = ePartRec(x,f,join,partialStop)
         val thetaResult   = ePartRec(theta,f,join,partialStop)
         join(List(xResult, thetaResult))

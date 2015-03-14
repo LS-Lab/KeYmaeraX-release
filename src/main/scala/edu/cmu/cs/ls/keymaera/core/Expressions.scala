@@ -1058,7 +1058,7 @@ final class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with A
 }
 
 /* child = differential algebraic formula */
-@deprecated(message="Use AtomicContEvolve, ContEvolveProduct, NFContEvolveProgram etc. instead", since="")
+@deprecated(message="Use AtomicODE, ODEProduct, ODESystem etc. instead", since="")
 object ContEvolve {
   def apply(child: Formula): ContEvolve = new ContEvolve(child)
   def unapply(e: Any): Option[Formula] = e match {
@@ -1103,54 +1103,56 @@ sealed trait ContEvolveProgram extends Program {
   def normalize() = this
 }
 
-object AtomicContEvolve {
-  def apply(x: Derivative, theta: Term): AtomicContEvolve = new AtomicContEvolve(x, theta)
+object AtomicODE {
+  def apply(x: Derivative, theta: Term): AtomicODE = new AtomicODE(x, theta)
   def unapply(e: Any): Option[(Derivative, Term)] = e match {
-    case x: AtomicContEvolve => Some((x.x, x.theta))
+    case x: AtomicODE => Some((x.x, x.theta))
     case _ => None
   }
 }
-final class AtomicContEvolve(val x: Derivative, val theta: Term) extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
+//@TODO Change types to "val x: DifferentialSymbol" for now?
+final class AtomicODE(val x: Derivative, val theta: Term) extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   override def equals(e: Any): Boolean = e match {
-    case o: AtomicContEvolve => o.x == x && o.theta == theta
+    case o: AtomicODE => o.x == x && o.theta == theta
     case _ => false
   }
   override def hashCode: Int = hash(271, x, theta)
 }
 
-object EmptyContEvolveProgram {
-  def apply() = new EmptyContEvolveProgram()
+object EmptyODE {
+  def apply() = new EmptyODE()
   def unapply(x:Any): Option[_] = { None }
 }
-final class EmptyContEvolveProgram extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
+//@TODO Turn into object since singleton
+final class EmptyODE extends Expr(ProgramSort) with AtomicProgram with ContEvolveProgram {
   override def equals(e: Any): Boolean = e match {
-    case _: EmptyContEvolveProgram => true
-    case ContEvolveProduct(_: EmptyContEvolveProgram, _: EmptyContEvolveProgram) => true
+    case _: EmptyODE => true
+    case ODEProduct(_: EmptyODE, _: EmptyODE) => true
     case _ => false
   }
   override def hashCode: Int = hash(269)
 }
 
-object ContEvolveProduct {
-  def apply(left: ContEvolveProgram, right: ContEvolveProgram) = new ContEvolveProduct(left, right)
-  def apply(left: ContEvolveProgram) = new ContEvolveProduct(left, EmptyContEvolveProgram())
+object ODEProduct {
+  def apply(left: ContEvolveProgram, right: ContEvolveProgram) = new ODEProduct(left, right)
+  def apply(left: ContEvolveProgram) = new ODEProduct(left, EmptyODE())
   def unapply(e: Any): Option[(ContEvolveProgram, ContEvolveProgram)] = e match {
-    case x: ContEvolveProduct => (x.left, x.right) match {
+    case x: ODEProduct => (x.left, x.right) match {
       case (a: ContEvolveProgram, b: ContEvolveProgram) => Some((a, b))
       case _ => None
     }
     case _ => None
   }
 }
-final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
+final class ODEProduct(left: ContEvolveProgram, right: ContEvolveProgram)
     extends BinaryProgram(left, right) with ContEvolveProgram {
   def flatten(): List[ContEvolveProgram] = {
     val leftList = left match {
-      case left: ContEvolveProduct => left.flatten()
+      case left: ODEProduct => left.flatten()
       case _ => left :: Nil
     }
     val rightList = right match {
-      case right: ContEvolveProduct => right.flatten()
+      case right: ODEProduct => right.flatten()
       case _ => right :: Nil
     }
     leftList ++ rightList
@@ -1158,9 +1160,9 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
 
   override def normalize() = {
     //Note: this has to be a type-level comparison or else equals diverges.
-    val pl = flatten().filter(!_.isInstanceOf[EmptyContEvolveProgram])
-    if (pl.isEmpty) EmptyContEvolveProgram()
-    else pl.foldRight[ContEvolveProgram](EmptyContEvolveProgram())((prg, prod) => ContEvolveProduct(prg, prod))
+    val pl = flatten().filter(!_.isInstanceOf[EmptyODE])
+    if (pl.isEmpty) EmptyODE()
+    else pl.foldRight[ContEvolveProgram](EmptyODE())((prg, prod) => ODEProduct(prg, prod))
   }
 
   //@todo SYMMETRY!
@@ -1169,20 +1171,20 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
   //Alternative implementations:
   private def equalsContEvolve(e:Any) = {
     e match {
-      case e: ContEvolveProduct =>
+      case e: ODEProduct =>
         //Note: this has to be a type-level comparison or else equals diverges (also: cannot use normalize here for the same reason)
-        def fn(x: ContEvolveProgram) = !x.isInstanceOf[EmptyContEvolveProgram]
+        def fn(x: ContEvolveProgram) = !x.isInstanceOf[EmptyODE]
         this.flatten().filter(fn).equals(e.flatten().filter(fn))
-      case _: EmptyContEvolveProgram => left.isInstanceOf[EmptyContEvolveProgram] && right.isInstanceOf[EmptyContEvolveProgram]
+      case _: EmptyODE => left.isInstanceOf[EmptyODE] && right.isInstanceOf[EmptyODE]
       case _ => false
     }
   }
 
   private def saferEquals(e:Any):Boolean = e match {
-    case e : ContEvolveProduct => {
+    case e : ODEProduct => {
       this.left.equals(e.left) && this.right.equals(e.right)
     }
-    case _ => (this.left.equals(e) && this.right.equals(EmptyContEvolveProgram())) || (this.left.equals(EmptyContEvolveProgram()) && this.right.equals(e))
+    case _ => (this.left.equals(e) && this.right.equals(EmptyODE())) || (this.left.equals(EmptyODE()) && this.right.equals(e))
   }
 
   override def hashCode: Int = hash(257, left, right)
@@ -1193,18 +1195,18 @@ final class ContEvolveProduct(left: ContEvolveProgram, right: ContEvolveProgram)
  * NFContEvolve(Seq(a,b,c), child, F) is \exists R a,b,c. (\D{x_1} = \theta_1, ..., \D{x_n)=\theta_n & F) where a,b,c are disturbances.
  * See page 10 of the DAL paper.
  */
-object NFContEvolveProgram {
-  def apply(disturbance: Seq[NamedSymbol], child: ContEvolveProgram, f: Formula) = new NFContEvolveProgram(disturbance, child, f)
-  def apply(child: ContEvolveProgram, f: Formula) = new NFContEvolveProgram(Nil, child, f)
+object ODESystem {
+  def apply(disturbance: Seq[NamedSymbol], child: ContEvolveProgram, f: Formula) = new ODESystem(disturbance, child, f)
+  def apply(child: ContEvolveProgram, f: Formula) = new ODESystem(Nil, child, f)
 
   def unapply(e: Any): Option[(Seq[NamedSymbol], ContEvolveProgram, Formula)] = e match {
-    case s: NFContEvolveProgram => Some(s.disturbance, s.child, s.f)
+    case s: ODESystem => Some(s.disturbance, s.child, s.f)
     case _ => None
   }
 }
-final class NFContEvolveProgram(val disturbance: Seq[NamedSymbol], val child: ContEvolveProgram, val f: Formula) extends Expr(ProgramSort) with ContEvolveProgram {
+final class ODESystem(val disturbance: Seq[NamedSymbol], val child: ContEvolveProgram, val f: Formula) extends Expr(ProgramSort) with ContEvolveProgram {
   override def equals(e: Any): Boolean = e match {
-    case NFContEvolveProgram(d, c, frm) => disturbance == d && child == c && f == frm
+    case ODESystem(d, c, frm) => disturbance == d && child == c && f == frm
     case _ => false
   }
   override def hashCode: Int = hash(277, child, f)
@@ -1212,7 +1214,7 @@ final class NFContEvolveProgram(val disturbance: Seq[NamedSymbol], val child: Co
 
 object IncompleteSystem {
   def apply(system: ContEvolveProgram) = new IncompleteSystem(system)
-  def apply() = new IncompleteSystem(new EmptyContEvolveProgram)
+  def apply() = new IncompleteSystem(new EmptyODE)
   def unapply(e: Any): Option[ContEvolveProgram] = e match {
       case s: IncompleteSystem => Some(s.system)
       case _                   => None

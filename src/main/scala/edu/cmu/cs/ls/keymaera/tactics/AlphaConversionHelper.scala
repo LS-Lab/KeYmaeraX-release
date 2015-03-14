@@ -44,27 +44,27 @@ object AlphaConversionHelper {
             case None => Right(BoxModality(Assign(replaceFree(x)(o, n, None), replaceFree(t)(o, n, None)),
               replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(AtomicContEvolve(xprime@Derivative(d, x: Variable), t), pred) => free match {
-            case Some(freeVars) => Right(BoxModality(AtomicContEvolve(xprime, replaceFree(t)(o, n, Some(freeVars - x))),
+          case BoxModality(AtomicODE(xprime@Derivative(d, x: Variable), t), pred) => free match {
+            case Some(freeVars) => Right(BoxModality(AtomicODE(xprime, replaceFree(t)(o, n, Some(freeVars - x))),
               replaceFree(pred)(o, n, Some(freeVars - x))))
-            case None => Right(BoxModality(AtomicContEvolve(Derivative(d, n), replaceFree(t)(o, n, None)),
+            case None => Right(BoxModality(AtomicODE(Derivative(d, n), replaceFree(t)(o, n, None)),
               replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(ContEvolveProduct(lode, rode), pred) => free match {
-            case Some(freeVars) => Right(BoxModality(ContEvolveProduct(
+          case BoxModality(ODEProduct(lode, rode), pred) => free match {
+            case Some(freeVars) => Right(BoxModality(ODEProduct(
               replaceFree(lode)(o, n, Some(certainlyFreeVariables(lode, freeVars))),
               replaceFree(rode)(o, n, Some(certainlyFreeVariables(rode, freeVars)))),
               replaceFree(pred)(o, n, Some(certainlyFreeVariables(lode, freeVars).intersect(certainlyFreeVariables(rode, freeVars))))))
-            case None => Right(BoxModality(ContEvolveProduct(
+            case None => Right(BoxModality(ODEProduct(
               replaceFree(lode)(o, n, None),
               replaceFree(rode)(o, n, None)), replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(NFContEvolveProgram(v, a, h), pred) => free match {
+          case BoxModality(ODESystem(v, a, h), pred) => free match {
             case Some(freeVars) =>
               val primed = BindingAssessment.primedVariables(a)
-              Right(BoxModality(NFContEvolveProgram(v, replaceFree(a)(o, n, Some(certainlyFreeVariables(a, freeVars))),
+              Right(BoxModality(ODESystem(v, replaceFree(a)(o, n, Some(certainlyFreeVariables(a, freeVars))),
               replaceFree(h)(o, n, Some(freeVars -- primed))), replaceFree(pred)(o, n, Some(freeVars -- primed))))
-            case None => Right(BoxModality(NFContEvolveProgram(v, replaceFree(a)(o, n, None),
+            case None => Right(BoxModality(ODESystem(v, replaceFree(a)(o, n, None),
               replaceFree(h)(o, n, None)), replaceFree(pred)(o, n, None)))
           }
           case BoxModality(IncompleteSystem(ode), pred) => free match {
