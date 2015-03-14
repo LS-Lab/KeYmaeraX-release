@@ -19,6 +19,8 @@ import scala.annotation.elidable._
 
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
 
+import scala.collection.GenTraversableOnce
+
 /**
  * The static semantics of differential dynamic logic.
  * @author aplatzer
@@ -229,6 +231,20 @@ object StaticSemantics {
     case Loop(a) => signature(a)
   }
   
+  /**
+   * Any symbol occuring in term, whether variable or function
+   */
+  def symbols(t : Term): Set[NamedSymbol] = signature(t) ++ freeVars(t)
+
+  /**
+   * Any symbol occuring in formula, whether free or bound variable or function or predicate or program constant
+   */
+  def symbols(f : Formula): Set[NamedSymbol] = {val stat = apply(f); signature(f) ++ stat.fv ++ stat.bf}
+
+  /**
+   * Any symbol occuring in program, whether free or bound variable or function or predicate or program constant
+   */
+  def symbols(p : Program): Set[NamedSymbol] = {val stat = apply(p); signature(p) ++ stat.fv ++ stat.bf}
 }
 
 

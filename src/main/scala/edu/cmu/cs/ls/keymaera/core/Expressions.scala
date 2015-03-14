@@ -1209,10 +1209,10 @@ object ODESystem {
 }
 final class ODESystem(val disturbance: Seq[NamedSymbol], val child: DifferentialProgram, val constraint: Formula) extends Expr(ProgramSort) with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
-    case ODESystem(d, c, cnstr) => disturbance == d && child == c && constraint == constr
+    case ODESystem(d, c, cnstr) => disturbance == d && child == c && constraint == cnstr
     case _ => false
   }
-  override def hashCode: Int = hash(277, child, f)
+  override def hashCode: Int = hash(277, child, constraint)
 }
 
 //@TODO What is this?

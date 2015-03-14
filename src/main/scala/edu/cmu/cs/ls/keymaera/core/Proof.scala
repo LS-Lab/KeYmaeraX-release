@@ -1065,85 +1065,14 @@ object BindingAssessment {
     case _: DifferentialProgramConstant => Set.empty
   }
 
-  @deprecated("Use StaticSemantics.signature(f)++StaticSemantics(f).fv++StaticSemantics(f).bv instead.")
-  // all variables x and their differential symbols x' occurring in the ode.
-  def coprimedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
-    case CheckedContEvolveFragment(child) => coprimedVariables(child) //@todo eisegesis
-    case ODEProduct(a, b) => coprimedVariables(a) ++ coprimedVariables(b)
-    case ODESystem(_, child, _) => coprimedVariables(child)
-    case IncompleteSystem(a) => coprimedVariables(a)
-    case AtomicODE(Derivative(_, x: Variable), _) => Set(x, DifferentialSymbol(x))
-    case _: EmptyODE => Set.empty
-    case _: DifferentialProgramConstant => Set.empty
-  }
+  @deprecated("Use StaticSemantics.symbols(t) instead.")
+  def allNames(t: Term): Set[NamedSymbol] = StaticSemantics.symbols(t)
 
-  def allNames(f: Formula): Set[NamedSymbol] = f match {
-    // homomorphic cases
-    case Equals(d, l, r) => allNames(l) ++ allNames(r)
-    case NotEquals(d, l, r) => allNames(l) ++ allNames(r)
-    case GreaterEqual(d, l, r) => allNames(l) ++ allNames(r)
-    case GreaterThan(d, l, r) => allNames(l) ++ allNames(r)
-    case LessEqual(d, l, r) => allNames(l) ++ allNames(r)
-    case LessThan(d, l, r) => allNames(l) ++ allNames(r)
+  @deprecated("Use StaticSemantics.symbols(f) instead.")
+  def allNames(f: Formula): Set[NamedSymbol] = StaticSemantics.symbols(f)
 
-    case Not(g) => allNames(g)
-    case And(l, r) => allNames(l) ++ allNames(r)
-    case Or(l, r) => allNames(l) ++ allNames(r)
-    case Imply(l, r) => allNames(l) ++ allNames(r)
-    case Equiv(l, r) => allNames(l) ++ allNames(r)
-    case FormulaDerivative(df) => allNames(df)
-
-    case Forall(vars, g) => vars.toSet ++ allNames(g)
-    case Exists(vars, g) => vars.toSet ++ allNames(g)
-
-    case BoxModality(p, g) => allNames(p) ++ allNames(g)
-    case DiamondModality(p, g) => allNames(p) ++ allNames(g)
-
-    // base cases
-    case ApplyPredicate(p, arg) => Set(p) ++ allNames(arg)
-    case True | False => Set.empty
-    case _ => throw new UnknownOperatorException("Not implemented", f)
-  }
-
-  @deprecated("Use StaticSemantics.signature(t)++StaticSemantics(t) instead.")
-  def allNames(t: Term): Set[NamedSymbol] = t match {
-    // homomorphic cases
-    case Neg(s, l) => allNames(l)
-    case Add(s, l, r) => allNames(l) ++ allNames(r)
-    case Subtract(s, l, r) => allNames(l) ++ allNames(r)
-    case Multiply(s, l, r) => allNames(l) ++ allNames(r)
-    case Divide(s, l, r) => allNames(l) ++ allNames(r)
-    case Exp(s, l, r) => allNames(l) ++ allNames(r)
-    case Pair(dom, l, r) => allNames(l) ++ allNames(r)
-    case Derivative(s, e) => allNames(e)
-    // base cases
-    case Apply(f, arg) => Set(f) ++ allNames(arg)
-    case x: Variable => Set(x)
-    case CDot => Set(CDot)
-    case nd: DifferentialSymbol => Set(nd)
-    case True | False | _: NumberObj | Nothing | Anything => Set.empty
-  }
-
-  @deprecated("Use StaticSemantics.signature(p)++StaticSemantics(p).fv++StaticSemantics(p).bv instead.")
-  def allNames(p: Program): Set[NamedSymbol] = p match {
-    case Assign(x: Variable, e) => Set(x) ++ allNames(e)
-    case Assign(Derivative(_, x : NamedSymbol), e) => Set(x) ++ allNames(e)
-    case Assign(x : DifferentialSymbol, e) => Set(x) ++ allNames(e)
-    case NDetAssign(x: Variable) => Set(x)
-    case Test(f) => allNames(f)
-    case AtomicODE(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
-    case ODEProduct(a, b) => allNames(a) ++ allNames(b)
-    case ODESystem(disturbance, a, h) => allNames(a) ++ allNames(h) // TODO disturbance?
-    case IncompleteSystem(a) => allNames(a)
-    case CheckedContEvolveFragment(a) => allNames(a)
-    case _: EmptyODE => Set()
-    case Sequence(a, b) => allNames(a) ++ allNames(b)
-    case Choice(a, b) => allNames(a) ++ allNames(b)
-    case Loop(a) => allNames(a)
-    case prg: ProgramConstant => Set(prg)
-    case prg: DifferentialProgramConstant => Set(prg)
-    case _ => throw new UnknownOperatorException("Not implemented", p)
-  }
+  @deprecated("Use StaticSemantics.symbols(p) instead.")
+  def allNames(p: Program): Set[NamedSymbol] = StaticSemantics.symbols(p)
 
   def allNamesExceptAt(s: Sequent, p: Position) = {
     val fs = if (p.isAnte) s.ante.slice(0, p.index) ++ s.ante.slice(p.index + 1, s.ante.length) ++ s.succ
