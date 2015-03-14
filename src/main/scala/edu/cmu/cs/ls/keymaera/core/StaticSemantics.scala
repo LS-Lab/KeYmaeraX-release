@@ -56,8 +56,8 @@ object StaticSemantics {
   private def freeVars(t: Term): SetLattice[NamedSymbol] = t match {
     // base cases
     case x: Variable => SetLattice(x)
-    case cdot: CDot => SetLattice(cdot)
-    case xp: DifferentialSymbol(NamedSymbol) => SetLattice(xp)
+    case CDot => SetLattice(CDot)
+    case xp: DifferentialSymbol => SetLattice(xp)
     // homomorphic cases
     case Apply(f, arg) => freeVars(arg)
     case Neg(s, l) => freeVars(l)
@@ -294,6 +294,7 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => this
     case Right(ts) => SetLattice(ts ++ other)
   }
+  //@TODO Set subtraction, right? Document
   def --(other: SetLattice[A]): SetLattice[A] = s match {
     case Left(_) => other.s match {
       case Left(_) => SetLattice.bottom /* top -- top == bottom */

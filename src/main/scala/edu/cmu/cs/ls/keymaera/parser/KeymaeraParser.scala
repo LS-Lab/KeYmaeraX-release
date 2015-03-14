@@ -112,7 +112,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
 
     val programs = List[ProgramConstant]() //TODO support these.
-    val DifferentialPrograms = List[DifferentialProgramConstant]()
+    val differentialPrograms = List[DifferentialProgramConstant]()
     
     
     /**
@@ -124,7 +124,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     
     //Parse the problem.
-    val exprParser = parser.makeExprParser(variables, functions ++ builtinFunctions, predicateConstants, programs, DifferentialPrograms)
+    val exprParser = parser.makeExprParser(variables, functions ++ builtinFunctions, predicateConstants, programs, differentialPrograms)
     val parseResult : Expr = parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result.asInstanceOf[Expr]
         case parser.Failure(result,next) => throw new Exception(failureMessage(result,next))
@@ -133,7 +133,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
     val printOfParse = KeYmaeraPrettyPrinter.stringify(parseResult)
-    checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, DifferentialPrograms, parseResult,printOfParse)
+    checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, differentialPrograms, parseResult,printOfParse)
     
     parseResult
   }
@@ -1004,10 +1004,10 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    * Gets an expression parser based upon the function and programVariable sections.
    */
   def makeExprParser(variables:List[Variable], functions:List[Function],
-      predicates:List[Function],programs:List[ProgramConstant],DifferentialPrograms:List[DifferentialProgramConstant]):PackratParser[Expr] =
+      predicates:List[Function],programs:List[ProgramConstant],differentialPrograms:List[DifferentialProgramConstant]):PackratParser[Expr] =
   {
     
-    lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs,DifferentialPrograms).parser
+    lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs,differentialPrograms).parser
     lazy val ret = formulaParser ^^ {
       case e => e
     }
@@ -1146,7 +1146,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       //variable definitions. Then, we parse the axioms and lemmas.
       
       val inReader = new PackratReader(new CharSequenceReader(in))
-      val (programs, DifferentialPrograms, formulas, terms, funs, nextIn) = parse(firstPassParser, inReader) match {
+      val (programs, differentialPrograms, formulas, terms, funs, nextIn) = parse(firstPassParser, inReader) match {
         case Success(result, next) => (result._1, result._2, result._3, result._4, result._5 ++ builtinFunctions, next)
         case Failure(msg, next)    => 
           throw new Exception("Failed to parse variables section:"  + msg)
@@ -1158,7 +1158,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         "(line: " + next.pos.line + ", column:" + next.pos.column + ")"
       }
       
-      val alParser = makeAxiomLemmaParser(programs, DifferentialPrograms, formulas, terms, funs) //axiomlemmaParser
+      val alParser = makeAxiomLemmaParser(programs, differentialPrograms, formulas, terms, funs) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
         case Failure(msg, next)    => 
@@ -1181,7 +1181,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           val programs = vars collect {
             case VProgram(p) => p
           }
-          val DifferentialPrograms = vars collect {
+          val differentialPrograms = vars collect {
             case VDifferentialProgram(p) => p
           }
           val formulas = vars collect {
@@ -1193,7 +1193,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           val funs = vars collect {
             case VFunction(f) => f
           }
-          (programs, DifferentialPrograms, formulas, terms, funs)
+          (programs, differentialPrograms, formulas, terms, funs)
         }
       }
     }
@@ -1267,7 +1267,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      */
     def makeAxiomLemmaParser(
           programs : List[ProgramConstant],
-          DifferentialPrograms: List[DifferentialProgramConstant],
+          differentialPrograms: List[DifferentialProgramConstant],
           formulas : List[Function],
           terms : List[Variable],
           funs: List[Function]) : ALPType  =
@@ -1280,7 +1280,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           funs,
           formulas,
           programs,
-          DifferentialPrograms)
+          differentialPrograms)
       lazy val formulaP = formulaParser.parser
       
       lazy val evidenceP : PackratParser[Evidence] = EvidenceParser.evidenceParser
