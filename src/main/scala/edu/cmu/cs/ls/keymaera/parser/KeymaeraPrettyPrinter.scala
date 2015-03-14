@@ -232,7 +232,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       val leftString = parensIfNeeded(l, p, false,
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
       r match {
-        case prg: EmptyContEvolveProgram => leftString
+        case prg: EmptyODE => leftString
         case _ => val rightString = parensIfNeeded(r, p, false,
           c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
           leftString + symbolTable.COMMA + rightString
@@ -260,7 +260,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       })
       symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM
     }
-    case p: EmptyContEvolveProgram => ""
+    case p: EmptyODE => ""
 
     
     case Number(n) => Number.unapply(expressionToPrint) match {
@@ -400,7 +400,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Assign.getClass.getCanonicalName ::
       NDetAssign.getClass.getCanonicalName ::
       Test.getClass.getCanonicalName ::
-      EmptyContEvolveProgram.getClass.getCanonicalName ::
+      EmptyODE.getClass.getCanonicalName ::
       IncompleteSystem.getClass.getCanonicalName ::
       ODEProduct.getClass.getCanonicalName ::
       ODESystem.getClass.getCanonicalName ::

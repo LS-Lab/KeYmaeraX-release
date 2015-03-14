@@ -1194,24 +1194,28 @@ final class ODEProduct(left: ContEvolveProgram, right: ContEvolveProgram)
  * Normal form differential equation data structures for explicit ODE
  * NFContEvolve(Seq(a,b,c), child, F) is \exists R a,b,c. (\D{x_1} = \theta_1, ..., \D{x_n)=\theta_n & F) where a,b,c are disturbances.
  * See page 10 of the DAL paper.
+ * @param disturbance list of disturbance quantifiers
+ * @param child the ordinary differential equation (in cons list representation)
+ * @param constraint evolution domain constraint.
  */
 object ODESystem {
-  def apply(disturbance: Seq[NamedSymbol], child: ContEvolveProgram, f: Formula) = new ODESystem(disturbance, child, f)
-  def apply(child: ContEvolveProgram, f: Formula) = new ODESystem(Nil, child, f)
+  def apply(disturbance: Seq[NamedSymbol], child: ContEvolveProgram, constraint: Formula) = new ODESystem(disturbance, child, constraint)
+  def apply(child: ContEvolveProgram, constraint: Formula) = new ODESystem(Nil, child, constraint)
 
   def unapply(e: Any): Option[(Seq[NamedSymbol], ContEvolveProgram, Formula)] = e match {
-    case s: ODESystem => Some(s.disturbance, s.child, s.f)
+    case s: ODESystem => Some(s.disturbance, s.child, s.constraint)
     case _ => None
   }
 }
-final class ODESystem(val disturbance: Seq[NamedSymbol], val child: ContEvolveProgram, val f: Formula) extends Expr(ProgramSort) with ContEvolveProgram {
+final class ODESystem(val disturbance: Seq[NamedSymbol], val child: ContEvolveProgram, val constraint: Formula) extends Expr(ProgramSort) with ContEvolveProgram {
   override def equals(e: Any): Boolean = e match {
-    case ODESystem(d, c, frm) => disturbance == d && child == c && f == frm
+    case ODESystem(d, c, cnstr) => disturbance == d && child == c && constraint == constr
     case _ => false
   }
   override def hashCode: Int = hash(277, child, f)
 }
 
+//@TODO What is this?
 object IncompleteSystem {
   def apply(system: ContEvolveProgram) = new IncompleteSystem(system)
   def apply() = new IncompleteSystem(new EmptyODE)
