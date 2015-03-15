@@ -91,24 +91,56 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals().flatMap(_.sequent.succ) should contain only "y>2 & z<0 -> y>0".asFormula
   }
 
-  "differential cut" should "cut formula into NFContEvolve" in {
-    val s = sucSequent("[x'=2;]x>0".asFormula)
-    val tactic = locateSucc(diffCutT(helper.parseFormula("x>1")))
-    getProofSequent(tactic, new RootNode(s)) should be (sucSequent("[x'=2;]x>1 & [x'=2 & (true&x>1);]x>0".asFormula))
+  "differential cut" should "cut in a simple formula" in {
+    import ODETactics.diffCutT
+    val s = sucSequent("[x'=2;]x>=0".asFormula)
+    val tactic = locateSucc(diffCutT("x>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante shouldBe empty
+    result.openGoals()(0).sequent.succ should contain only "[x'=2;]x>0".asFormula
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "[x'=2 & true & x>0;]x>=0".asFormula
   }
 
   it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in {
     val s = sucSequent("[x'=2, y'=3, z'=4 & y>4;]x>0".asFormula)
-    val tactic = locateSucc(diffCutT(helper.parseFormula("x>1")))
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("[x'=2,y'=3,z'=4&y>4;]x>1 & [x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula))
+    val tactic = locateSucc(diffCutT("x>1".asFormula))
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante shouldBe empty
+    result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3,z'=4 & y>4;]x>1".asFormula
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula
   }
 
   it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in {
     val s = sucSequent("[x'=2, y'=3;]x>0".asFormula)
-    val tactic = locateSucc(diffCutT(helper.parseFormula("x>1")))
-    getProofSequent(tactic, new RootNode(s)) should be (
-      sucSequent("[x'=2,y'=3;]x>1 & [x'=2,y'=3 & (true&x>1);]x>0".asFormula))
+    val tactic = locateSucc(diffCutT("x>1".asFormula))
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante shouldBe empty
+    result.openGoals()(0).sequent.succ should contain only "[x'=2, y'=3;]x>1".asFormula
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3 & (true&x>1);]x>0".asFormula
+  }
+
+  it should "preserve existing evolution domain constraint" in {
+    import ODETactics.diffCutT
+    val s = sucSequent("[x'=2 & x>=0 | y<z;]x>=0".asFormula)
+    val tactic = locateSucc(diffCutT("x>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante shouldBe empty
+    result.openGoals()(0).sequent.succ should contain only "[x'=2 & x>=0 | y<z;]x>0".asFormula
+    result.openGoals()(1).sequent.ante shouldBe empty
+    result.openGoals()(1).sequent.succ should contain only "[x'=2 & (x>=0 | y<z) & x>0;]x>=0".asFormula
   }
 
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
@@ -260,5 +292,4 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val tactic = locateSucc(diffAuxiliaryT(Variable("x", None, Real), "0".asTerm, "1".asTerm))
     tactic.applicable(new RootNode(s)) shouldBe false
   }
-
 }

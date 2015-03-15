@@ -244,10 +244,11 @@ object ODETactics {
         case BoxModality(ODESystem(_, _, _), _) =>
           val succLength = node.sequent.succ.length
           val anteLength = node.sequent.ante.length
-          Some(diffCutAxiomT(diffcut)(p) & ImplyLeftT(AntePosition(anteLength)) & (
-              debugT("diffcut show branch"),
-              debugT("diffcut use branch") & equalityRewriting(AntePosition(anteLength), p)/*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
-          )
+          Some(diffCutAxiomT(diffcut)(p) & onBranch(
+            (axiomUseLbl, debugT("diffcut show branch")),
+            (axiomShowLbl, debugT("diffcut use branch") & equalityRewriting(AntePosition(anteLength), p) &
+              hideT(AntePosition(anteLength)) & hideT(p)/*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
+          ))
         case _ => None
       }
     }
