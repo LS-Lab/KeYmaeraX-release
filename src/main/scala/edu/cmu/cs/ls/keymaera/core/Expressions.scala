@@ -487,6 +487,7 @@ final class Equals   (domain : Sort = Real, left : Term, right : Term) extends B
   override def hashCode: Int = hash(47, domain, left, right)
 }
 
+//@NOTE Could remove for now.
 object ProgramEquals {
   def apply(left : Program, right : Program): ProgramEquals = new ProgramEquals(left, right)
   def unapply(e: Any): Option[(Program, Program)] = e match {
@@ -615,19 +616,19 @@ final class LessThan     (domain : Sort = Real, left : Term, right : Term) exten
 }
 
 /* temporal */
-final class Globally (child : Formula) extends UnaryFormula(child) { /* []\Phi e.g., in [\alpha] []\Phi */
-  override def equals(e: Any): Boolean = e match {
-    case x: Globally => child == x.child
-    case _ => false
-  }
-}
-final class Finally  (child : Formula) extends UnaryFormula(child) {/* <>\Phi e.g., in [\alpha] <>\Phi */
-  override def equals(e: Any): Boolean = e match {
-    case x: Finally => child == x.child
-    case _ => false
-  }
-  override def hashCode: Int = hash(73, child)
-}
+// final class Globally (child : Formula) extends UnaryFormula(child) { /* []\Phi e.g., in [\alpha] []\Phi */
+//   override def equals(e: Any): Boolean = e match {
+//     case x: Globally => child == x.child
+//     case _ => false
+//   }
+// }
+// final class Finally  (child : Formula) extends UnaryFormula(child) {/* <>\Phi e.g., in [\alpha] <>\Phi */
+//   override def equals(e: Any): Boolean = e match {
+//     case x: Finally => child == x.child
+//     case _ => false
+//   }
+//   override def hashCode: Int = hash(73, child)
+// }
 
 object FormulaDerivative {
   def apply(child: Formula): Formula = new FormulaDerivative(child)
@@ -751,6 +752,7 @@ object Exp {
   }
 }
 final class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+  //@TODO Exp does not make sense except on sort reals.
   override def equals(e: Any): Boolean = e match {
     case Exp(a, b, c) => a == sort && b == left && c == right
     case _ => false
@@ -769,6 +771,10 @@ object Derivative {
   }
 }
 final class Derivative(sort : Sort, child : Term) extends Unary(sort, sort, child) with Term {
+  realapplicable
+
+  @elidable(ASSERTION) def realapplicable = require(sort == Real, "Only reals have derivatives " + sort)
+  //@TODO Remove sort from data structure?
   override def equals(e: Any): Boolean = e match {
     case Derivative(a, b) => a == sort && b == child
     case _ => false
@@ -800,7 +806,7 @@ final class IfThenElseTerm(cond: Formula, thenT: Term, elseT: Term)
   override def hashCode: Int = hash(113, cond, thenT, elseT)
 }
 /**
- * Games
+ * Modal operators
  *=======
  */
 
@@ -824,9 +830,6 @@ final class Modality (left : ModalOp, right : Formula) extends Binary(Bool, Tupl
   }
   override def hashCode: Int = hash(127, left, right)
 }
-
-//abstract class UnaryGame  (child : Game) extends Unary(GameSort, GameSort, child) with Game
-//abstract class BinaryGame (left : Game, right : Game) extends Binary(GameSort, TupleT(GameSort, GameSort), left, right) with Game
 
 /* Modalities */
 object BoxModality {
@@ -913,6 +916,7 @@ final class Choice  (left  : Program, right : Program) extends BinaryProgram(lef
   override def hashCode: Int = hash(173, left, right)
 }
 
+//@NOTE Could remove for now
 object Parallel {
   def apply(left: Program, right: Program) = new Parallel(left, right)
   def unapply(e: Any): Option[(Program, Program)] = e match {
@@ -994,6 +998,10 @@ final class IfThenElse(cond: Formula, thenP: Program, elseP: Program)
 * - nondeterministic assign vs. Assign(Var, Random)
 */
 
+/**
+ * Atomic programs, i.e. non-compound programs.
+ * Unlike compound programs such as sequence, choice, and loops.
+ */
 sealed trait AtomicProgram extends Program
 
 /**
@@ -1069,6 +1077,7 @@ object ContEvolve {
     case _ => None
   }
 }
+//@TODO Remove
 final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
@@ -1090,6 +1099,7 @@ object CheckedContEvolveFragment {
     case _ => None
   }
 }
+//@TODO Not sure what this is. Remove?
 final class CheckedContEvolveFragment(child:DifferentialProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: CheckedContEvolveFragment => x.child.equals(child)

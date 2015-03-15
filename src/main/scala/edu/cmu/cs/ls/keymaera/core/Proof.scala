@@ -957,14 +957,14 @@ class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRul
             else if(e == b) Right(a)
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })
-      case ProgramEquals(a, b) =>
+      /*case ProgramEquals(a, b) =>
         (allNames(a) ++ allNames(b),
         new ExpressionTraversalFunction {
           override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
             if(e == a) Right(b)
             else if(e == b) Right(a)
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })
+        })*/
       case Equiv(a, b) =>
         (allNames(a) ++ allNames(b),
         new ExpressionTraversalFunction {

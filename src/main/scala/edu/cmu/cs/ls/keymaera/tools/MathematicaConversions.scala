@@ -510,9 +510,9 @@ object KeYmaeraToMathematica {
       case GreaterThan(s,l,r) => convertGreaterThan(l,r)      
     }
     case t : Modality => ???
-    case t : Finally => ???
+    // case t : Finally => ???
     case t : FormulaDerivative => ??? //of?
-    case t : Globally => ???
+    // case t : Globally => ???
     case False() => MathematicaSymbols.FALSE
     case True() => MathematicaSymbols.TRUE
     case PredicateConstant(name,index) => new MExpr(name)
