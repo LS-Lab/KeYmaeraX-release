@@ -1887,6 +1887,7 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 // the following rules will turn into axioms
 
 //@TODO Removal suggested since better axiom DC differential cut exists.
+//@TODO ap: I don't see why this rule implementation should be sound.
 @deprecated("Use DC differential cut axiom instead")
 class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
   require(!p.isAnte)

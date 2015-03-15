@@ -7,8 +7,9 @@ import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, diffCutT, arithmeticT, default}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, /*diffCutT,*/ arithmeticT, default}
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
@@ -16,6 +17,7 @@ import scala.collection.immutable.List
 /**
  * Created by smitsch on 1/9/15.
  * @author Stefan Mitsch
+ * @author aplatzer
  */
 object ODETactics {
 
@@ -221,6 +223,66 @@ object ODETactics {
       case _ => None
     }
   }
+
+  //////////////////////////////
+  // Differential Cuts
+  //////////////////////////////
+  
+  /**
+   * Applies a differential cut with the given cut formula.
+   * @author aplatzer
+   */
+  def diffCutT(diffcut: Formula): PositionTactic = new PositionTactic("DC differential cut") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
+      case BoxModality(_: ODESystem, _) => true
+      case _ => false
+    })
+
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case BoxModality(ODESystem(_, _, _), _) =>
+          val succLength = node.sequent.succ.length
+          val anteLength = node.sequent.ante.length
+          Some(diffCutAxiomT(diffcut)(p) & ImplyLeftT(AntePosition(anteLength)) & (
+              debugT("diffcut show branch"),
+              debugT("diffcut use branch") & equalityRewriting(AntePosition(anteLength), p)/*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
+          )
+        case _ => None
+      }
+    }
+  }
+
+  /**
+   * Adds an instance of the differential cut axiom for the given cut formula.
+   * @author aplatzer
+   */
+  protected[tactics] def diffCutAxiomT(diffcut: Formula): PositionTactic = new AxiomTactic("DC differential cut", "DC differential cut") {
+    def applies(f: Formula) = f match {
+      case BoxModality(_: ODESystem, _) => true
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && super.applies(s, p)
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case BoxModality(ODESystem(dist, c, h), p) =>
+        // construct substitution
+        val aC = DifferentialProgramConstant("c")
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val aR = ApplyPredicate(Function("r", None, Real, Bool), Anything)
+        val l = List(new SubstitutionPair(aC, c), new SubstitutionPair(aH, h), new SubstitutionPair(aP, p),
+          new SubstitutionPair(aR, diffcut))
+        // construct axiom instance: ([c&H(?);]p(?) <-> [c&(H(?)&r(?));]p(?)) <- [c&H(?);]r(?)
+        val showDC = Modality(BoxModality(ODESystem(dist, c, h)), diffcut)
+        val useDC = Modality(BoxModality(ODESystem(dist, c, And(h,diffcut))), p)
+        val axiomInstance = Imply(showDC, Equiv(f, useDC))
+        Some(axiomInstance, l)
+      case _ => None
+    }
+  }
+
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Auxiliary Section.
