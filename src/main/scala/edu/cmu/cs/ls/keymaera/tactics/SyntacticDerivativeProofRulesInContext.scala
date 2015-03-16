@@ -82,11 +82,8 @@ object SyntacticDerivativeProofRulesInContext {
     import scala.language.postfixOps
     override def apply(p: Position): Tactic =
       debugT("This needs to close with a single term rewrite and axiom close.") &
-      onBranch(
-        (BranchLabels.equivLeftLbl, (SearchTacticsImpl.locateTerm(prt, inAnte = true)*) &
-          (SearchTacticsImpl.locateTerm(prt, inAnte = false)*)),
-        (BranchLabels.equivRightLbl, (SearchTacticsImpl.locateTerm(prt, inAnte = true)*) &
-          (SearchTacticsImpl.locateTerm(prt, inAnte = false)*))) &
+        ((SearchTacticsImpl.locateTerm(prt, inAnte = true) | SearchTacticsImpl.locateTerm(prt, inAnte = false))*) &
+      debugT("After Equiv") &
       (AxiomCloseT | debugT(s"Prove equiv for derivative: Should never happen using ${prt.name}"))
   }
 
@@ -121,16 +118,9 @@ object SyntacticDerivativeProofRulesInContext {
     override def apply(pos : Position) = {
       import scala.language.postfixOps
       def knowledgeContinuationTactic : Tactic = debugT("Trying to close something in context based on a term equivalence tactic.") & SearchTacticsImpl.onBranch(
-        (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl,
-            (locateTerm(termTactic, inAnte = true)*) &
-            (locateTerm(termTactic, inAnte = false)*) &
-            (AxiomCloseT | debugT(s"${getClass.getCanonicalName}: Should never happen using ${termTactic.name}") & stopT)),
-          (BranchLabels.equivRightLbl,
-            (locateTerm(termTactic, inAnte = true)*) &
-            (locateTerm(termTactic, inAnte = false)*) &
-            (AxiomCloseT | debugT(s"${getClass.getCanonicalName}: Should never happen using ${termTactic.name}") & stopT))
-        )),
+        (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) &
+          ((locateTerm(termTactic, inAnte = true) | locateTerm(termTactic, inAnte = false))*) &
+          (AxiomCloseT | debugT(s"${getClass.getCanonicalName}: Should never happen using ${termTactic.name}") & stopT)),
         ("additional obligation", debugT("Ever called?") & locateSucc(ImplyRightT) & locateTerm(termTactic, inAnte = false) &
           (AxiomCloseT | debugT("Should never happen") & stopT))
       )
