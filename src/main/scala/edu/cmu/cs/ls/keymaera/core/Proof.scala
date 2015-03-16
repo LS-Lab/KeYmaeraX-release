@@ -1684,7 +1684,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   }
 
   def apply(f: Formula): Formula = {
-    require(!BindingAssessment.allNames(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
+    require(!allNames(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
     rename(f)
   }
 
@@ -1770,6 +1770,72 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
       case Some(oldVar) => factory(vars.map(rename), rename(phi))
       case None => factory(vars, rename(phi))
     }
+  }
+
+  private def allNames(f: Formula): Set[NamedSymbol] = f match {
+    // homomorphic cases
+    case Equals(d, l, r) => allNames(l) ++ allNames(r)
+    case NotEquals(d, l, r) => allNames(l) ++ allNames(r)
+    case GreaterEqual(d, l, r) => allNames(l) ++ allNames(r)
+    case GreaterThan(d, l, r) => allNames(l) ++ allNames(r)
+    case LessEqual(d, l, r) => allNames(l) ++ allNames(r)
+    case LessThan(d, l, r) => allNames(l) ++ allNames(r)
+
+    case Not(g) => allNames(g)
+    case And(l, r) => allNames(l) ++ allNames(r)
+    case Or(l, r) => allNames(l) ++ allNames(r)
+    case Imply(l, r) => allNames(l) ++ allNames(r)
+    case Equiv(l, r) => allNames(l) ++ allNames(r)
+    case FormulaDerivative(df) => allNames(df) ++ allNames(df).map(DifferentialSymbol(_))
+
+    case Forall(vars, g) => vars.toSet ++ allNames(g)
+    case Exists(vars, g) => vars.toSet ++ allNames(g)
+
+    case BoxModality(p, g) => allNames(p) ++ allNames(g)
+    case DiamondModality(p, g) => allNames(p) ++ allNames(g)
+
+    // base cases
+    case ApplyPredicate(p, arg) => Set(p) ++ allNames(arg)
+    case True | False => Set.empty
+    case _ => throw new UnknownOperatorException("Not implemented", f)
+  }
+
+  private def allNames(t: Term): Set[NamedSymbol] = t match {
+    // homomorphic cases
+    case Neg(s, l) => allNames(l)
+    case Add(s, l, r) => allNames(l) ++ allNames(r)
+    case Subtract(s, l, r) => allNames(l) ++ allNames(r)
+    case Multiply(s, l, r) => allNames(l) ++ allNames(r)
+    case Divide(s, l, r) => allNames(l) ++ allNames(r)
+    case Exp(s, l, r) => allNames(l) ++ allNames(r)
+    case Pair(dom, l, r) => allNames(l) ++ allNames(r)
+    case Derivative(s, e) => allNames(e)
+    // base cases
+    case Apply(f, arg) => Set(f) ++ allNames(arg)
+    case x: Variable => Set(x)
+    case CDot => Set(CDot)
+    case nd: DifferentialSymbol => Set(nd)
+    case True | False | _: NumberObj | Nothing | Anything => Set.empty
+  }
+
+  private def allNames(p: Program): Set[NamedSymbol] = p match {
+    case Assign(x: Variable, e) => Set(x) ++ allNames(e)
+    case Assign(Derivative(_, x : NamedSymbol), e) => Set(x) ++ allNames(e)
+    case Assign(x : DifferentialSymbol, e) => Set(x) ++ allNames(e)
+    case NDetAssign(x: Variable) => Set(x)
+    case Test(f) => allNames(f)
+    case AtomicODE(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
+    case ODEProduct(a, b) => allNames(a) ++ allNames(b)
+    case ODESystem(vars, a, h) => allNames(a) ++ allNames(h)
+    case IncompleteSystem(a) => allNames(a)
+    case CheckedContEvolveFragment(a) => allNames(a)
+    case _: EmptyODE => Set()
+    case Sequence(a, b) => allNames(a) ++ allNames(b)
+    case Choice(a, b) => allNames(a) ++ allNames(b)
+    case Loop(a) => allNames(a)
+    case prg: ProgramConstant => Set(prg)
+    case prg: DifferentialProgramConstant  => Set(prg)
+    case _ => throw new UnknownOperatorException("Not implemented", p)
   }
 }
 
