@@ -102,7 +102,7 @@ object TacticLibrary {
    * Debug tactics
    *******************************************************************/
 
-  def debugT(s: String): Tactic = new Tactic("Debug") {
+  def debugT(s: => Any): Tactic = new Tactic("Debug") {
     override def applicable(node: ProofNode): Boolean = true
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
@@ -111,7 +111,7 @@ object TacticLibrary {
     }
   }
 
-  def debugAtT(s: String) = new PositionTactic("Debug") {
+  def debugAtT(s: => Any) = new PositionTactic("Debug") {
     def applies(s: Sequent, p: Position): Boolean = true
     def apply(p: Position): Tactic = debugT(s"$s at $p")
   }
