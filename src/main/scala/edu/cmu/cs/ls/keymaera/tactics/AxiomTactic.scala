@@ -5,8 +5,10 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
+import AxiomaticRuleTactics.boxCongruenceT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 object AxiomTactic {
@@ -316,15 +318,15 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
           }
           val desiredResultInContext = traverse(desiredResult)
           val fInContext = getFormula(node.sequent, pos.topLevel)
-          val forKAxiomInstance = Imply(desiredResultInContext, fInContext)
+          val congruenceAxiomInstance = Equiv(fInContext, desiredResultInContext)
           val axiomInstance = Equiv(f, desiredResult)
 
           val axiomInstPos = AntePosition(node.sequent.ante.length)
 
-          val axiomApplyTactic = assertPT(forKAxiomInstance)(axiomInstPos) &
-            ImplyLeftT(axiomInstPos) && (
-              hideT(SuccPosition(0)) /* desired result remains */,
-              AxiomCloseT ~ TacticLibrary.debugT("axiomclose failed here.")&assertT(0,0)
+          val axiomApplyTactic = assertPT(congruenceAxiomInstance)(axiomInstPos) &
+            EquivLeftT(axiomInstPos) & onBranch(
+            (equivLeftLbl, AndLeftT(axiomInstPos) & AxiomCloseT),
+            (equivRightLbl, hideT(pos.topLevel) & AndLeftT(axiomInstPos) & hideT(axiomInstPos) & NotLeftT(axiomInstPos))
             )
 
           val cont = renameTactic match {
@@ -334,18 +336,16 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
 
           val axiomPos = SuccPosition(node.sequent.succ.length)
 
-          val axiomInstanceTactic = (assertPT(forKAxiomInstance, s"$getClass A.1") & cohideT)(axiomPos) & (assertT(0,1) &
-            assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
-            abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
-            assertT(0, 1) & cutT(Some(axiomInstance)) &
-            onBranch((cutUseLbl,
-              (assertPT(axiomInstance, s"$getClass A.2")(AntePosition(0)) & equalityRewriting(AntePosition(0), pos) &
-                ((assertPT(axiomInstance, s"$getClass A.3")&hideT)(AntePosition(0)) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) &
-                AxiomCloseT) ~
-                (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
-              (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
+          val axiomInstanceTactic =
+            (assertPT(congruenceAxiomInstance, s"$getClass A.1") & cohideT)(axiomPos) & assertT(0,1) &
+              (boxCongruenceT*) & assertT(0,1) & cutT(Some(axiomInstance)) & onBranch(
+              (cutUseLbl, assertPT(axiomInstance, s"$getClass A.2")(AntePosition(0)) & (
+                ((AxiomCloseT | locateAnte(Propositional) | locateSucc(Propositional))*) |
+                debugT(s"$getClass: axiom close failed unexpectedly") & stopT)),
+              (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))
+            )
 
-          Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+          Some(cutT(Some(congruenceAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
         case None =>
           assert(applicable(node), "tactic signalled applicability, but returned None")
           None
@@ -503,7 +503,9 @@ abstract class TermAxiomTactic(name: String, axiomName: String) extends Position
                 case _ => ???
               })
               val axiomPos = SuccPosition(node.sequent.succ.length)
-              val axiomInstanceTactic = (assertPT(axiomInstance, s"$getClass A.4") & cohideT)(axiomPos) & (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) & assertT(0, 1) & axiomT(axiomName) & assertT(1, 1) & AxiomCloseT)
+              val axiomInstanceTactic = (assertPT(axiomInstance, s"$getClass A.4") & cohideT)(axiomPos) &
+                (assertT(0,1) & assertT(axiomInstance, SuccPosition(0)) & uniformSubstT(subst, Map(axiomInstance -> ax)) &
+                 assertT(0,1) & axiomT(axiomName) & assertT(1,1) & (AxiomCloseT | TacticLibrary.debugT(s"${this.getClass.getCanonicalName} not closed by axiom") & stopT))
               Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
             case None => None
           }

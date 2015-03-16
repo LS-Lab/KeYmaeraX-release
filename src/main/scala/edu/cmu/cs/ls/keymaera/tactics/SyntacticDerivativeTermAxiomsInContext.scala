@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
@@ -288,24 +289,24 @@ object SyntacticDerivativeTermAxiomsInContext {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import TacticLibrary.{abstractionT,skolemizeT,cutT,equalityRewriting}
+        import TacticLibrary.cutT
 
         constructInstanceAndSubst(node.sequent(pos)) match {
           case Some((desiredResult, renameTactic)) =>
-            val (f, fPos) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
+            val (f, _) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
 
             val fInContext = TacticHelper.getFormula(node.sequent, pos.topLevel)
             val desiredResultInContext = replaceFormula(desiredResult, f, fInContext)
 
-            val forKAxiomInstance = Imply(desiredResultInContext, fInContext)
+            val congruenceAxiomInstance = Equiv(fInContext, desiredResultInContext)
             val axiomInstance = Equiv(f, desiredResult)
 
             val axiomInstPos = AntePosition(node.sequent.ante.length)
 
-            val axiomApplyTactic = assertPT(forKAxiomInstance, s"$getClass A.1")(axiomInstPos) &
-              ImplyLeftT(axiomInstPos) && (
-              hideT(SuccPosition(0)) /* desired result remains */,
-              AxiomCloseT ~ TacticLibrary.debugT("axiomclose failed here.")&assertT(0,0)
+            val axiomApplyTactic = assertPT(congruenceAxiomInstance, s"$getClass A.1")(axiomInstPos) &
+              EquivLeftT(axiomInstPos) & onBranch(
+                (equivLeftLbl, AndLeftT(axiomInstPos) & AxiomCloseT),
+                (equivRightLbl, hideT(pos.topLevel) & AndLeftT(axiomInstPos) & hideT(axiomInstPos) & NotLeftT(axiomInstPos))
               )
 
             val cont = renameTactic match {
@@ -315,17 +316,17 @@ object SyntacticDerivativeTermAxiomsInContext {
 
             val axiomPos = SuccPosition(node.sequent.succ.length)
 
-            val axiomInstanceTactic = (assertPT(forKAxiomInstance, s"$getClass A.2") & cohideT)(axiomPos) & (assertT(0,1) &
-              assertT(forKAxiomInstance, SuccPosition(0)) & kModalModusPonensT(SuccPosition(0)) &
-              abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
-              assertT(0, 1) & cutT(Some(axiomInstance)) & debugT(s"ready for term rewriting at $fPos") &
-              onBranch((cutUseLbl,
-                (equalityRewriting(AntePosition(0), SuccPosition(0, fPos)) & debugT("term rewriting result") & ((assertPT(axiomInstance, s"$getClass A.3")&hideT)(AntePosition(0)) & hideT(pos.topLevel)) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
-                  (hideT(axiomInstPos) & LabelBranch("additional obligation"))), //for term stuff.
-                (cutShowLbl,
-                  hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
+            val axiomInstanceTactic = (assertPT(congruenceAxiomInstance, s"$getClass A.2") & cohideT)(axiomPos) &
+              (assertT(0,1) & assertT(congruenceAxiomInstance, SuccPosition(0)) &
+               assertT(0,1) &
+               (boxCongruenceT*) & assertT(0,1) & cutT(Some(axiomInstance)) & onBranch(
+                (cutUseLbl, assertPT(axiomInstance, s"$getClass A.2")(AntePosition(0)) &
+                  (((AxiomCloseT | locateAnte(Propositional) | locateSucc(Propositional))*) |
+                    debugT(s"$getClass: axiom close failed unexpectedly") & stopT)),
+                (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))
+              ))
 
-            Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+            Some(cutT(Some(congruenceAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
           case None => None
         }
       }
