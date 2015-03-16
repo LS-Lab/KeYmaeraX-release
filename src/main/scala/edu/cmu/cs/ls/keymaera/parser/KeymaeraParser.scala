@@ -52,11 +52,10 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   def parseBareExpression(s:String) : Option[Expr] = {
     val variables = allVariableOccurances(s)
-    // HACK: allow parameterless functions for everything that could be a variable
-    val functions = variables.map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
+    // HACK: allow parameterless functions for everything that could be a variable, but exclude builtin functions
+    val functions = variables.filter(v => !builtinFunctions.exists(_.name == v.name)).map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
     val parser = new KeYmaeraParser(false, env)
 
-    val formulaParser = new FormulaParser(variables, functions, Nil, Nil, Nil).parser
     val exprParser = parser.makeExprParser(variables, functions, Nil, Nil, Nil)
     parser.parseAll(exprParser, s) match {
       case parser.Success(result, next) => Some(result.asInstanceOf[Expr])
@@ -73,8 +72,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    */
   def parseBareTerm(s:String) : Option[Term] = {
     val variables = allVariableOccurances(s)
-    // HACK: allow parameterless functions for everything that could be a variable
-    val functions = variables.map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
+    // HACK: allow parameterless functions for everything that could be a variable, but exclude builtin functions
+    val functions = variables.filter(v => !builtinFunctions.exists(_.name == v.name)).map(v => Function(v.name, v.index, Unit, Real)) ++ builtinFunctions
     val parser = new KeYmaeraParser(false, env)
 
     val exprParser = parser.makeTermParser(variables, functions)
@@ -96,15 +95,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
   }
 
-  def parseBareFormulaUnquantified(s : String) : Option[Formula] = {
-    try {
-      val expr      = this.parseBareExpression(s).get
-      val formula   = expr.asInstanceOf[Formula]
-      Some(formula)
-    }
-    catch {
-      case e:Exception => None
-    }
+  def parseBareFormulaUnquantified(s : String) : Formula = {
+    parseBareExpression(s).get.asInstanceOf[Formula]
   }
 
   def runParser(s:String):Expr = {
@@ -120,7 +112,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
 
     val programs = List[ProgramConstant]() //TODO support these.
-    val contEvolvePrograms = List[ContEvolveProgramConstant]()
+    val differentialPrograms = List[DifferentialProgramConstant]()
     
     
     /**
@@ -132,7 +124,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     
     //Parse the problem.
-    val exprParser = parser.makeExprParser(variables, functions ++ builtinFunctions, predicateConstants, programs, contEvolvePrograms)
+    val exprParser = parser.makeExprParser(variables, functions ++ builtinFunctions, predicateConstants, programs, differentialPrograms)
     val parseResult : Expr = parser.parseAll(exprParser, problemText) match {
         case parser.Success(result,next) => result.asInstanceOf[Expr]
         case parser.Failure(result,next) => throw new Exception(failureMessage(result,next))
@@ -141,7 +133,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
     val printOfParse = KeYmaeraPrettyPrinter.stringify(parseResult)
-    checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, contEvolvePrograms, parseResult,printOfParse)
+    checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, differentialPrograms, parseResult,printOfParse)
     
     parseResult
   }
@@ -155,13 +147,13 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     predicateConstants:List[Function],
     variables:List[Variable],
     programVariables:List[ProgramConstant],
-    contEvolveProgramVariables: List[ContEvolveProgramConstant],
+    DifferentialProgramVariables: List[DifferentialProgramConstant],
     parse:Expr,
     printOfParse:String) = 
   {
     /* don't let the checking parser communicate with the objects injected into the real parser */
     val parser = new KeYmaeraParser(enabledLogging, new { val generator = new ConfigurableGenerate[Formula]() } )
-    val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programVariables, contEvolveProgramVariables)
+    val exprParser = parser.makeExprParser(variables, functions, predicateConstants,programVariables, DifferentialProgramVariables)
     try{
       val printofparseParse = parser.parseAll(exprParser, printOfParse) match {
         case parser.Success(result,next) => result
@@ -464,12 +456,12 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       functions:List[Function],
       predicates:List[Function],
       programVariables:List[ProgramConstant],
-      contEvolveProgramVariables: List[ContEvolveProgramConstant])
+      DifferentialProgramVariables: List[DifferentialProgramConstant])
   {
     type SubformulaParser = PackratParser[Formula]
     
     lazy val programParser = 
-      new ProgramParser(variables,functions,predicates,programVariables,contEvolveProgramVariables).parser
+      new ProgramParser(variables,functions,predicates,programVariables,DifferentialProgramVariables).parser
 
     /**
      * @todo Is this unused? If so, why?
@@ -762,7 +754,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       functions:List[Function],
       predicates:List[Function],
       programVariables:List[ProgramConstant],
-      contEvolveProgramVariables: List[ContEvolveProgramConstant])
+      DifferentialProgramVariables: List[DifferentialProgramConstant])
   {
     type SubprogramParser = PackratParser[Program]
     
@@ -775,7 +767,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
     // should all be put into the predicates in the first place because programVariables
     //should only hold variables which hold arbitrary programs.
-    val theFormulaParser = new FormulaParser(variables, functions, predicates,programVariables, contEvolveProgramVariables)
+    val theFormulaParser = new FormulaParser(variables, functions, predicates,programVariables, DifferentialProgramVariables)
     lazy val formulaParser = theFormulaParser.parser
 
     val theTermParser = new TermParser(variables,functions)
@@ -793,7 +785,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       incompleteSystemP ::
       normalFormEvolutionSystemP :: //@todo document this.
       checkedEvolutionFragmentP :: //@todo not sure where this really should go in the precedence list... If you move it make sure to also move it in the pretty printer list.
-      evolutionP  :: //@todo should be deprecated; for now we just prefer the normal form where it applies.
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
@@ -802,15 +793,14 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     //@todo after some refactoring this is now only used with normalFormEvolutionSystemP, with the actual system filtered out.
     //If that's really the only place we need this, maybe we should move it into local scope.
-    val contEvolveProgramP : Parser[ContEvolveProgram] =
-      (
-          normalFormEvolutionSystemP ::
-          checkedEvolutionFragmentP  ::
-          normalFormEvolutionP       ::
-          evolutionP                 ::
-          contEvolvePVarP            ::
-          Nil
-      ).reduce(_|_)
+    val DifferentialProgramPPrecedence =
+      normalFormEvolutionSystemP ::
+      checkedEvolutionFragmentP  ::
+      evolutionP                 ::
+      contEvolvePVarP            ::
+      Nil
+
+    val DifferentialProgramP : Parser[DifferentialProgram] = DifferentialProgramPPrecedence.reduce(_|_)
 
     lazy val pvarP:PackratParser[ProgramConstant] = {
       lazy val pattern = {
@@ -832,9 +822,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       } 
     }
 
-    lazy val contEvolvePVarP:PackratParser[ContEvolveProgramConstant] = {
+    lazy val contEvolvePVarP:PackratParser[DifferentialProgramConstant] = {
       lazy val pattern = {
-        val stringList =  contEvolveProgramVariables.map(ContEvolveProgramConstant.unapply(_) match {
+        val stringList =  DifferentialProgramVariables.map(DifferentialProgramConstant.unapply(_) match {
           case Some((n, i)) => n + (i match {case Some(idx) => "_" + idx case None => ""})
           case None => ???
         })
@@ -842,11 +832,11 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
       }
 
-      log(pattern)("ContEvolveProgram Variable") ^^ {
+      log(pattern)("DifferentialProgram Variable") ^^ {
         case name => {
           val (n, i) = nameAndIndex(name)
-          val p = ContEvolveProgramConstant(n, i)
-          require(contEvolveProgramVariables.contains(p), "All program constants have to be declared; '" + p.prettyString() + "' not found in " + programVariables)
+          val p = DifferentialProgramConstant(n, i)
+          require(DifferentialProgramVariables.contains(p), "All program constants have to be declared; '" + p.prettyString() + "' not found in " + programVariables)
           p
         }
       }
@@ -921,73 +911,61 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    //@todo Per December 2014 systems of diff eqs meeting, ContEvolves are temporarily deprecated.
-    lazy val evolutionP:PackratParser[ContEvolve] = {
-      lazy val pattern = (
-                          rep1sep(formulaParser, COMMA) ~
-                          AND.? ~ formulaParser.?
-                         )
-      log(pattern)("Cont Evolution") ^^ {
-        case des ~ andOption ~ constraintOption => constraintOption match {
-          case Some(constraint) => ContEvolve( And(des.reduceRight(And(_,_)) , constraint) )
-          case None => ContEvolve( des.reduceRight(And(_,_)) )
+    lazy val normalFormEvolutionSystemP : PackratParser[DifferentialProgram] = {
+      /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
+       * intended as an ev. dom. constraint
+       */
+      lazy val pattern = evolutionSystemP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
+      log(pattern)("DifferentialProgram (" + COMMA + " DifferentialProgram)*") ^^ {
+        case odes ~ f => f match {
+          case Some(h) => ODESystem(odes, h)
+          case None => ODESystem(odes, True)
         }
       }
     }
 
-    //@todo this is no longer actually a normal form evolution system, which would probably just contain normal forms. But it never was because contevolve was always in this parser. Hm.
-    lazy val normalFormEvolutionSystemP : PackratParser[ContEvolveProgram] = {
-      //The pattern is "everything except for another system"
-      lazy val pattern = rep1sep(contEvolveProgramP.filter(_ != normalFormEvolutionSystemP), COMMA)
-      log(pattern)("ContEvolveProgram (" + COMMA + " ContEvolveProgram)*") ^^ {
-        case odes => {
-          odes.foldRight[ContEvolveProgram](EmptyContEvolveProgram())((a:ContEvolveProgram,b:ContEvolveProgram) => ContEvolveProduct(a,b))
-        }
+    lazy val evolutionSystemP : PackratParser[DifferentialProgram] = {
+      // the pattern is "everything except for another system"
+      lazy val pattern = rep1sep(DifferentialProgramPPrecedence.filter(_ != normalFormEvolutionSystemP).reduce(_|_), COMMA)
+      log(pattern)("DifferentialProgram (" + COMMA + " DifferentialProgram)*") ^^ {
+        case odes =>
+          odes.foldRight[DifferentialProgram](EmptyODE())((a:DifferentialProgram,b:DifferentialProgram) => ODEProduct(a,b))
       }
     }
 
     lazy val checkedEvolutionFragmentP: PackratParser[CheckedContEvolveFragment] = {
-      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser) ~ (AND ~> formulaParser).?
+      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser)
       log(pattern)("checked evolution") ^^ {
-        case d ~ t ~ f => {
-          f match {
-            case Some(f) => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, f))
-            case None => CheckedContEvolveFragment(NFContEvolve(Nil, d, t, True)) //@todo this is necessary for usubst
-//            case None    => CheckedContEvolveFragment(ContEvolve(Equals(Real, d, t)))
-          }
-        }
+        case d ~ t => CheckedContEvolveFragment(AtomicODE(d, t))
       }
     }
 
-    // Normal form is: f' = g & H.
-    lazy val normalFormEvolutionP: PackratParser[NFContEvolve] = {
-      /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
-       * intended as an ev. dom. constraint
-       */
-      lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
+    lazy val evolutionP: PackratParser[AtomicODE] = {
+      lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP
 
-      log(pattern)("NFContEvolve Parser") ^^ {
-        case lhs ~ rhs ~ constraintOption => {
-          val constraint = constraintOption match {
-            case Some(f) => f
-            case None    => True
-          }
+      log(pattern)("AtomicODE Parser") ^^ {
+        case lhs ~ rhs => {
           lhs match {
-            case t: Derivative => new NFContEvolve(Nil, t, rhs, constraint)
-            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing NFContEvolve")
+            case t: Derivative => new AtomicODE(t, rhs)
+            case _ => throw new Exception("Expected form f' = g from termDerivativeParser but found non-derivative on LHS when parsing AtomicODE")
           }
         }
       }
     }
 
     //@todo find a better term for this construct
-    lazy val incompleteSystemP: PackratParser[IncompleteSystem] = {
-      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (normalFormEvolutionSystemP.? <~ END_INCOMPLETE_SYSTEM)
+    lazy val incompleteSystemP: PackratParser[DifferentialProgram] = {
+      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (evolutionSystemP.? <~ END_INCOMPLETE_SYSTEM) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
 
       log(pattern)("Incomplete Differential Equation System") ^^ {
-        case system => system match {
-          case Some(x: ContEvolveProgram) => IncompleteSystem(x)
-          case None => IncompleteSystem()
+        case system ~ f => system match {
+          case Some(x: DifferentialProgram) => f match {
+            case Some(frm) => ODESystem(IncompleteSystem(x), frm)
+            case None => ODESystem(IncompleteSystem(x), True)
+          }
+          case None =>
+            require(!f.isDefined, "Empty incomplete system with evolution domain constraint not supported")
+            IncompleteSystem()
           case _ => throw new Exception("Expected the interior of an IncompleteSystem to be a continuous evolution, but found: " + system.getClass.getCanonicalName + ".")
         }
       }
@@ -1026,10 +1004,10 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
    * Gets an expression parser based upon the function and programVariable sections.
    */
   def makeExprParser(variables:List[Variable], functions:List[Function],
-      predicates:List[Function],programs:List[ProgramConstant],contEvolvePrograms:List[ContEvolveProgramConstant]):PackratParser[Expr] =
+      predicates:List[Function],programs:List[ProgramConstant],differentialPrograms:List[DifferentialProgramConstant]):PackratParser[Expr] =
   {
     
-    lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs,contEvolvePrograms).parser
+    lazy val formulaParser = new FormulaParser(variables,functions,predicates,programs,differentialPrograms).parser
     lazy val ret = formulaParser ^^ {
       case e => e
     }
@@ -1151,7 +1129,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      */
     sealed trait VType
       case class VProgram(variable: ProgramConstant) extends VType
-      case class VContEvolveProgram(variable: ContEvolveProgramConstant) extends VType
+      case class VDifferentialProgram(variable: DifferentialProgramConstant) extends VType
       case class VFormula(variable: Function) extends VType
       case class VTerm(variable: Variable) extends VType
       case class VFunction(fn: Function) extends VType
@@ -1168,7 +1146,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       //variable definitions. Then, we parse the axioms and lemmas.
       
       val inReader = new PackratReader(new CharSequenceReader(in))
-      val (programs, contEvolvePrograms, formulas, terms, funs, nextIn) = parse(firstPassParser, inReader) match {
+      val (programs, differentialPrograms, formulas, terms, funs, nextIn) = parse(firstPassParser, inReader) match {
         case Success(result, next) => (result._1, result._2, result._3, result._4, result._5 ++ builtinFunctions, next)
         case Failure(msg, next)    => 
           throw new Exception("Failed to parse variables section:"  + msg)
@@ -1180,7 +1158,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         "(line: " + next.pos.line + ", column:" + next.pos.column + ")"
       }
       
-      val alParser = makeAxiomLemmaParser(programs, contEvolvePrograms, formulas, terms, funs) //axiomlemmaParser
+      val alParser = makeAxiomLemmaParser(programs, differentialPrograms, formulas, terms, funs) //axiomlemmaParser
       val knowledge = parseAll(alParser, nextIn) match {
         case Success(result, next) => result
         case Failure(msg, next)    => 
@@ -1195,7 +1173,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      * This is the parser for the first pass
      */
     lazy val firstPassParser 
-    : PackratParser[(List[ProgramConstant], List[ContEvolveProgramConstant], List[Function], List[Variable], List[Function])] =
+    : PackratParser[(List[ProgramConstant], List[DifferentialProgramConstant], List[Function], List[Variable], List[Function])] =
     {
       lazy val pattern = variablesP
       log(pattern)("Parsing variable declarations in proof file.") ^^ {
@@ -1203,8 +1181,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           val programs = vars collect {
             case VProgram(p) => p
           }
-          val contEvolvePrograms = vars collect {
-            case VContEvolveProgram(p) => p
+          val differentialPrograms = vars collect {
+            case VDifferentialProgram(p) => p
           }
           val formulas = vars collect {
             case VFormula(f) => f
@@ -1215,7 +1193,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           val funs = vars collect {
             case VFunction(f) => f
           }
-          (programs, contEvolvePrograms, formulas, terms, funs)
+          (programs, differentialPrograms, formulas, terms, funs)
         }
       }
     }
@@ -1227,7 +1205,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       val (n, idx) = nameAndIndex(name)
       ty match {
         case "P" => VProgram(ProgramConstant(n, idx))
-        case "CP" => VContEvolveProgram(ContEvolveProgramConstant(n, idx))
+        case "CP" => VDifferentialProgram(DifferentialProgramConstant(n, idx))
         case "F" => VFormula(Function(n, idx, Unit, Bool))
         case "T" => VTerm(Variable(n, idx, Real))
         case _ => throw new Exception("Type " + ty + " is unknown! Expected P (program) or F (formula) or T (term)")
@@ -1289,7 +1267,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      */
     def makeAxiomLemmaParser(
           programs : List[ProgramConstant],
-          contEvolvePrograms: List[ContEvolveProgramConstant],
+          differentialPrograms: List[DifferentialProgramConstant],
           formulas : List[Function],
           terms : List[Variable],
           funs: List[Function]) : ALPType  =
@@ -1302,7 +1280,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           funs,
           formulas,
           programs,
-          contEvolvePrograms)
+          differentialPrograms)
       lazy val formulaP = formulaParser.parser
       
       lazy val evidenceP : PackratParser[Evidence] = EvidenceParser.evidenceParser

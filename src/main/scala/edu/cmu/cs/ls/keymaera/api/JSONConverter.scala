@@ -47,7 +47,7 @@ object JSONConverter {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
         e match {
           case ProgramConstant(_, _) => /* Nothing to do */
-          case ContEvolveProgramConstant(_, _) => /* Nothing to do */
+          case DifferentialProgramConstant(_, _) => /* Nothing to do */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -107,18 +107,19 @@ object JSONConverter {
         val cf = ("nodeId" -> JsString(nodeId)) :: ("id" -> convertPos(p)) :: Nil
         val o = e match {
           case x@ProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ProgramConstant])) +: cf)
-          case x@ContEvolveProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[ContEvolveProgramConstant])) +: cf)
+          case x@DifferentialProgramConstant(_, _) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[DifferentialProgramConstant])) +: cf)
           case Assign(_, _) => JsObject(("name" -> JsString("Assign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case NDetAssign(_) => JsObject(("name" -> JsString("NDetAssign")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Sequence(_, _) => JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Choice(_, _) => JsObject(("name" -> JsString("Choice")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Test(_) => JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Loop(_) => JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case _: EmptyContEvolveProgram => JsObject("name" -> JsString("EmptyContEvolveProgram") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case _: EmptyODE => JsObject("name" -> JsString("EmptyODE") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case CheckedContEvolveFragment(_) => JsObject("name" -> JsString("checked=") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ContEvolve(_) => JsObject(("name" -> JsString("ContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case NFContEvolve(_, _, _, _) => JsObject(("name" -> JsString("NFContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case ContEvolveProduct(_, _) => JsObject(("name" -> JsString("ContEvolveProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case AtomicODE(_, _) => JsObject(("name" -> JsString("AtomicODE")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case ODEProduct(_, _) => JsObject(("name" -> JsString("ODEProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case ODESystem(_, _, _) => JsObject(("name" -> JsString("NFODEProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)

@@ -2,10 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 
-import scala.Equals
-import scala.annotation.elidable
-import scala.annotation.elidable._
-import scala.collection.immutable.{Set, Seq, List}
+import scala.collection.immutable.Set
 
 /**
  * Created by smitsch on 2/19/15.
@@ -99,7 +96,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e)))
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case ode: ContEvolveProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
+    case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
@@ -116,13 +113,13 @@ class SubstitutionHelper(what: Term, repl: Term) {
    * @param p The ODE.
    * @return The substitution result.
    */
-  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: ContEvolveProgram):
-      ContEvolveProgram = p match {
-    case ContEvolveProduct(a, b) => ContEvolveProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case NFContEvolve(v, d@Derivative(_, x: Variable), e, h) => if (v.isEmpty) {
-      NFContEvolve(v, d, usubst(o++SetLattice(primed), u++SetLattice(primed), e), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
-    } else throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
-    case _: EmptyContEvolveProgram => p
+  private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
+      DifferentialProgram = p match {
+    case ODEProduct(a, b) => ODEProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
+    case ODESystem(d, a, h) if d.isEmpty => ODESystem(d, usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
+    case ODESystem(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
+    case AtomicODE(d@Derivative(_, x: Variable), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
+    case _: EmptyODE => p
     case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
   }

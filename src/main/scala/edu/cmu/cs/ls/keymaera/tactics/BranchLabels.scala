@@ -13,5 +13,8 @@ object BranchLabels {
   val equivLeftLbl = "Positive Equiv Case"
   val equivRightLbl = "Negative Equiv Case"
 
+  val axiomShowLbl = "Show axiom"
+  val axiomUseLbl = "Use axiom"
+
   val knowledgeSubclassContinue = "knowledge subclass continue"
 }

@@ -35,12 +35,10 @@ object ExpressionRecursor {
       case False()     => f(e)
       case e : NamedSymbol => f(e)
       case e : Number.NumberObj => f(e)
-      case NFContEvolve(vars: Seq[NamedSymbol], x: Term, theta: Term, formula: Formula) => {
-        val varsResult    = vars.map(v => ePartRec(v, f, join, partialStop)).toList
+      case AtomicODE(x: Term, theta: Term) => {
         val xResult       = ePartRec(x,f,join,partialStop)
         val thetaResult   = ePartRec(theta,f,join,partialStop)
-        val formulaResult = ePartRec(formula,f,join,partialStop)
-        join(varsResult ++ List(xResult, thetaResult, formulaResult))
+        join(List(xResult, thetaResult))
       }
     }
   }

@@ -180,13 +180,13 @@ object ArithmeticTacticsImpl {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
+    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
       case Equals(sort, f, g) =>
         // TODO check that axiom is of the expected form s=t <-> !(s != t)
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance: s=t <-> !(s!=t)
         val h = Not(NotEquals(sort, f, g))
@@ -198,7 +198,7 @@ object ArithmeticTacticsImpl {
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance: s=t <-> !(s!=t)
         val h = Equals(sort, f, g)
@@ -219,13 +219,13 @@ object ArithmeticTacticsImpl {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
+    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
       case LessThan(sort, f, g) =>
         // TODO check that axiom is of the expected form s<t <-> !(s >= t)
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance: s<t <-> !(s>=t)
         val h = Not(GreaterEqual(sort, f, g))
@@ -237,7 +237,7 @@ object ArithmeticTacticsImpl {
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance: s<t <-> !(s>=t)
         val h = LessThan(sort, f, g)
@@ -258,13 +258,13 @@ object ArithmeticTacticsImpl {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
+    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
       case LessEqual(sort, f, g) =>
         // TODO check that axiom is of the expected form s<=t <-> (s < t | s=t)
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance: s<=t <-> (s < t | s=t)
         val h = Or(LessThan(sort, f, g), Equals(sort, f, g))
@@ -276,7 +276,7 @@ object ArithmeticTacticsImpl {
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance: s<=t <-> (s < t | s=t)
         val h = LessEqual(sort, f, g)
@@ -297,12 +297,12 @@ object ArithmeticTacticsImpl {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
+    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
       case GreaterEqual(sort, f, g) =>
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance
         val h = LessEqual(sort, g, f)
@@ -313,7 +313,7 @@ object ArithmeticTacticsImpl {
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, g), SubstitutionPair(aG, f)))
+        val subst = List(SubstitutionPair(aF, g), SubstitutionPair(aG, f))
 
         // construct axiom instance
         val h = GreaterEqual(sort, g, f)
@@ -334,12 +334,12 @@ object ArithmeticTacticsImpl {
       case _ => false
     }
 
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, Substitution)] = frm match {
+    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
       case GreaterThan(sort, f, g) =>
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)))
+        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
 
         // construct axiom instance
         val h = LessThan(sort, g, f)
@@ -350,7 +350,7 @@ object ArithmeticTacticsImpl {
         // construct substitution
         val aF = Apply(Function("f", None, sort, sort), Anything)
         val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = Substitution(List(SubstitutionPair(aF, g), SubstitutionPair(aG, f)))
+        val subst = List(SubstitutionPair(aF, g), SubstitutionPair(aG, f))
 
         // construct axiom instance
         val h = GreaterThan(sort, g, f)

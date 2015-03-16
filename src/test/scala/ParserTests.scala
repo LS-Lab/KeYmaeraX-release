@@ -195,11 +195,11 @@ class ParserParenTests extends FlatSpec with Matchers {
       case BoxModality(pi, phi) => {
         require(phi.equals(True))
         pi match {
-          case ContEvolveProduct(l,r) => {
-            require(l.equals(NFContEvolve(Nil, Derivative(Real, x), y, True)), "found " + l.prettyString() + " instead.");
+          case ODESystem(_, ODEProduct(l,r), True) => {
+            require(l.equals(AtomicODE(Derivative(Real, x), y)), "found " + l.prettyString() + " instead.")
             r match {
-              case ContEvolveProduct(r1, r2:EmptyContEvolveProgram) => {
-                require(r1.equals(NFContEvolve(Nil, Derivative(Real, y), x, True)), "found " + r1.prettyString() + " of " + r1.getClass() + " instead")
+              case ODEProduct(r1, r2:EmptyODE) => {
+                require(r1.equals(AtomicODE(Derivative(Real, y), x)), "found " + r1.prettyString() + " of " + r1.getClass + " instead")
               } //ok
               case _ => fail()
             }

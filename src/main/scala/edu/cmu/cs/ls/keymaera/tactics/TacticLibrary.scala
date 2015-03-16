@@ -275,8 +275,8 @@ object TacticLibrary {
           f match {
             case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
             case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
-            case BoxModality(ode: ContEvolveProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
-            case DiamondModality(ode: ContEvolveProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
+            case BoxModality(ode: DifferentialProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
+            case DiamondModality(ode: DifferentialProgram, _) => applicable = BindingAssessment.catVars(ode).bv.exists(v => v.name == from && v.index == fromIdx)
             case BoxModality(Loop(a), _) => applicable = BindingAssessment.catVars(a).bv.exists(v => v.name == from && v.index == fromIdx)
             case DiamondModality(Loop(a), _) => applicable = BindingAssessment.catVars(a).bv.exists(v => v.name == from && v.index == fromIdx)
             case _ => applicable = false
@@ -342,11 +342,12 @@ object TacticLibrary {
 
   def diffInvariant = ODETactics.diffInvariantT
 
-  def diffCutT(h: Formula): PositionTactic = new PositionTactic("Differential cut with ") {
+  def diffCutT(h: Formula) = ODETactics.diffCutT(h)
+  @deprecated("Use diffCutT(h) instead.")
+  def diffCutRuleT(h: Formula): PositionTactic = new PositionTactic("Differential cut with ") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
       case Some(BoxModality(_: ContEvolve, _)) => true
-      case Some(BoxModality(_: NFContEvolve, _)) => true
-      case Some(BoxModality(_: ContEvolveProduct, _)) => true
+      case Some(BoxModality(_: ODESystem, _)) => true
       case _ => false
     }
 
@@ -415,7 +416,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(And(p, q))) =>
         // construct substitution
@@ -424,7 +425,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
         val g = And(FormulaDerivative(p), FormulaDerivative(q))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }  }
 
@@ -436,7 +437,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(Or(p, q))) =>
         // construct substitution
@@ -445,7 +446,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aP, p), new SubstitutionPair(aQ, q))
         val g = And(FormulaDerivative(p), FormulaDerivative(q))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -458,7 +459,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(Equals(Real, s, t))) =>
         // construct substitution
@@ -467,7 +468,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -480,7 +481,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(NotEquals(Real, s, t))) =>
         // construct substitution
@@ -489,7 +490,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = Equals(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -502,7 +503,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(GreaterEqual(Real, s, t))) =>
         // construct substitution
@@ -511,7 +512,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = GreaterEqual(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -524,7 +525,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(GreaterThan(Real, s, t))) =>
           // construct substitution
@@ -533,7 +534,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = GreaterEqual(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equiv(f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
       }
   }
@@ -546,7 +547,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(LessEqual(Real, s, t))) =>
         // construct substitution
@@ -555,7 +556,7 @@ object TacticLibrary {
         val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
         val g = LessEqual(Real, Derivative(Real, s), Derivative(Real, t))
         val axiomInstance = Equiv(f, g)
-        Some(ax, axiomInstance, Substitution(l), None, None)
+        Some(ax, axiomInstance, l, None, None)
       case _ => None
     }
   }
@@ -568,7 +569,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subFormula(in, pos.inExpr) match {
         case Some(f@FormulaDerivative(LessThan(Real, s, t))) =>
           // construct substitution
@@ -577,7 +578,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = LessEqual(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equiv(f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
       }
   }
@@ -590,7 +591,7 @@ object TacticLibrary {
      })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Neg(Real, s))) =>
           // construct substitution
@@ -598,7 +599,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s))
           val g = Neg(Real, Derivative(Real, s))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
     }
   }
@@ -613,7 +614,7 @@ object TacticLibrary {
      }
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Add(Real, s, t))) =>
           // construct substitution
@@ -622,7 +623,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Add(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => println("Not applicable deriveSumT to " + in.prettyString() + " at " + pos); None
     }
   }
@@ -635,7 +636,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Subtract(Real, s, t))) =>
           // construct substitution
@@ -644,7 +645,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Subtract(Real, Derivative(Real, s), Derivative(Real, t))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
       }
   }
@@ -657,7 +658,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Multiply(Real, s, t))) =>
           // construct substitution
@@ -666,7 +667,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Add(Real, Multiply(Real, Derivative(Real, s), t), Multiply(Real, s, Derivative(Real, t)))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
     }
   }
@@ -679,7 +680,7 @@ object TacticLibrary {
     })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, Divide(Real, s, t))) =>
           // construct substitution
@@ -688,7 +689,7 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aS, s), new SubstitutionPair(aT, t))
           val g = Divide(Real, Subtract(Real, Multiply(Real, Derivative(Real, s), t), Multiply(Real, s, Derivative(Real, t))), Exp(Real, t, Number(2)))
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
     }
   }
@@ -716,15 +717,15 @@ object TacticLibrary {
   }
 
   def deriveConstantT: PositionTactic = new AxiomTactic("const' derive constant", "const' derive constant") {
-     def applies(f: Formula) = ???
-     override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
-       case Some(Derivative(Real, Number(_, _))) => true
-       case Some(Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing))) => true
-       case _ => false
-     })
+    def applies(f: Formula) = ???
+    override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
+      case Some(Derivative(Real, Number(_, _))) => true
+      case Some(Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing))) => true
+      case _ => false
+    })
 
     override def constructInstanceAndSubst(in: Formula, ax: Formula, pos: Position): Option[(Formula, Formula,
-        Substitution, Option[PositionTactic], Option[PositionTactic])] =
+      List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] =
       Retrieve.subTerm(in, pos.inExpr) match {
         case Some(f@Derivative(Real, s@Number(_, _))) => true
           // construct substitution
@@ -732,40 +733,16 @@ object TacticLibrary {
           val l = List(new SubstitutionPair(aC, s))
           val g = Number(0)
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case Some(f@Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing))) => true
           // construct substitution
           val aC = Apply(Function("c", None, Unit, Real), Nothing)
           val l = List(new SubstitutionPair(aC, s))
           val g = Number(0)
           val axiomInstance = Equals(Real, f, g)
-          Some(ax, axiomInstance, Substitution(l), None, None)
+          Some(ax, axiomInstance, l, None, None)
         case _ => None
-    }
-  }
-
-  @deprecated("Use deriveConstantT() instead.")
-  def deriveConstantTRule: PositionTactic = new PositionTactic("Derive Constant") {
-    override def applies(s: Sequent, p: Position): Boolean = Retrieve.subTerm(s(p), p.inExpr) match {
-      case Some(Derivative(Real, Number(_, _))) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Retrieve.subTerm(node.sequent(p), p.inExpr) match {
-          case Some(f@Derivative(Real, num@Number(Real, n))) =>
-            val app = new ApplyRule(DeriveConstant(f)) {
-              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-            }
-            val eqPos = AntePosition(node.sequent.ante.length)
-            Some(app & equalityRewriting(eqPos, p) & hideT(p.topLevel) & hideT(eqPos))
-          case None => None
-        }
       }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
   }
 
   object Retrieve {

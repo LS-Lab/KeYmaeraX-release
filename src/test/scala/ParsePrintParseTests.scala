@@ -22,7 +22,7 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
       "[x'=y;]x>0" ::
       "[x'=y & x>0;]x>0" ::
       "[x'=y, y'=z & x>0;]x>0" ::
-      "[x'=y & x>2, y'=z, z'=3 & z>1 & z>2;]x>0" :: Nil
+      "[x'=y, y'=z, z'=3 & z>1 & z>2;]x>0" :: Nil
 
     for (e <- exprs) {
       val expected = parser.runParser(makeInput(e))

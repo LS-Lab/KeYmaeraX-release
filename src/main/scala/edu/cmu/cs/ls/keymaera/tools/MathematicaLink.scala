@@ -126,7 +126,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     }
   }
 
-  override def diffSol(diffSys: ContEvolveProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
+  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
   override def diffSol(diffSys: ContEvolve, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys.child, diffArg):_*)
@@ -151,19 +151,20 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   /**
-   * Converts a system of differential equations given as ContEvolveProgram into list of x'=theta
+   * Converts a system of differential equations given as DifferentialProgram into list of x'=theta
    * @param diffSys The system of differential equations
    * @param diffArg The name of the differential argument (dx/d diffArg = theta).
    * @return The differential equation system in list form.
    */
-  private def toDiffSys(diffSys: ContEvolveProgram, diffArg: Variable): List[(Variable, Term)] = {
+  private def toDiffSys(diffSys: DifferentialProgram, diffArg: Variable): List[(Variable, Term)] = {
     var result = List[(Variable, Term)]()
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case NFContEvolve(_, Derivative(_, x: Variable), theta, _) if x != diffArg => result = result :+ (x, theta); Left(None)
-        case NFContEvolve(_, Derivative(_, x: Variable), theta, _) if x == diffArg => Left(None)
-        case ContEvolveProduct(a, b) => Left(None)
-        case _: EmptyContEvolveProgram => Left(None)
+        case AtomicODE(Derivative(_, x: Variable), theta) if x != diffArg => result = result :+ (x, theta); Left(None)
+        case AtomicODE(Derivative(_, x: Variable), theta) if x == diffArg => Left(None)
+        case ODESystem(_, _, _) => Left(None)
+        case ODEProduct(_, _) => Left(None)
+        case _: EmptyODE => Left(None)
       }
     }, diffSys)
     result

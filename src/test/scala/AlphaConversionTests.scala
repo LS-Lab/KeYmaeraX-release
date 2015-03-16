@@ -320,7 +320,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       sucSequent("[t:=x;]<t:=1 ++ t:=t+1 ++ z:=t;>t>0".asFormula)))
   }
 
-  // (7) Modality(BoxModality(ContEvolveProgram | IncompleteSystem, _), phi)
+  // (7) Modality(BoxModality(DifferentialProgram | IncompleteSystem, _), phi)
 
   "Alpha-conversion rule on ODEs" should "be [y:=1;][t:=x;][t'=1;]x>0 with (x,t) on [y:=1;][x'=1;]x>0" in {
     val s = sucSequent("[y:=1;][x'=1;]x>0".asFormula)
@@ -404,13 +404,13 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   it should "be [t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0 with (x,t) on [$$x'=x+1 & x>0, y'=x & y<x$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1 & x>0, y'=x & y<x$$;]x>0".asFormula)
+    val s = sucSequent("[$$x'=x+1, y'=x $$ & x>0 & y<x;]x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0".asFormula)
+      sucSequent("[t:=x;][$$t'=t+1 ,y'=t$$ & t>0 & y<t;]t>0".asFormula)
     ))
   }
 
-  // (8) Modality(DiamondModality(ContEvolveProgram | IncompleteSystem, _), phi)
+  // (8) Modality(DiamondModality(DifferentialProgram | IncompleteSystem, _), phi)
 
   "Alpha-conversion rule on diamond ODE" should "be <t:=x;><t'=1;>t>0 with (x,t) on <x'=1;>x>0" in {
     val s = sucSequent("<x'=1;>x>0".asFormula)
@@ -441,9 +441,9 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   }
 
   it should "be <t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0 with (x,t) on <$$x'=x+1 & x>0, y'=x & y<x$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1 & x>0, y'=x & y<x$$;>x>0".asFormula)
+    val s = sucSequent("<$$x'=x+1, y'=x$$ & x>0 & y<x;>x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1 & t>0,y'=t & y<t$$;>t>0".asFormula)
+      sucSequent("[t:=x;]<$$t'=t+1,y'=t$$ & t>0 & y<t;>t>0".asFormula)
     ))
   }
 
@@ -622,10 +622,10 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val x = new Variable("x", None, Real)
     val z = new Variable("z", None, Real)
     AlphaConversionHelper.replaceFree("[z'=2+x;](x>0 & z>0)".asFormula)(x, CDot) should be (
-      BoxModality(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z), Add(Real, Number(2), CDot), True)),
+      BoxModality(ODESystem(ODEProduct(AtomicODE(Derivative(Real, z), Add(Real, Number(2), CDot))), True),
         And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
     AlphaConversionHelper.replaceFree("[z'=2+x;](x>0 & z>0)".asFormula)(z, CDot) should be (
-      BoxModality(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z), Add(Real, Number(2), x), True)),
+      BoxModality(ODESystem(ODEProduct(AtomicODE(Derivative(Real, z), Add(Real, Number(2), x))), True),
         And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
   }
 
@@ -633,12 +633,12 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val x = new Variable("x", None, Real)
     val z = new Variable("z", None, Real)
     AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(x, CDot) should be (
-      BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z),
-        Add(Real, Number(2), CDot), True))),
+      BoxModality(ODESystem(IncompleteSystem(ODEProduct(AtomicODE(Derivative(Real, z),
+        Add(Real, Number(2), CDot)))), True),
         And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
     AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(z, CDot) should be (
-      BoxModality(IncompleteSystem(ContEvolveProduct(NFContEvolve(Nil, Derivative(Real, z),
-        Add(Real, Number(2), x), True))),
+      BoxModality(ODESystem(IncompleteSystem(ODEProduct(AtomicODE(Derivative(Real, z),
+        Add(Real, Number(2), x)))), True),
         And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
   }
 

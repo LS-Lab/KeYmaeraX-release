@@ -79,8 +79,7 @@ class USubstTests extends FlatSpec with Matchers {
 
   it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs USubstTest in {
     val fml = GreaterEqual(Real, x, Number(0))
-    //@TODO val prem = Axioms.axioms("vacuous all quantifier")
-    val prem = Imply(p0, Forall(Seq(x), p0))
+    val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
     val s = Substitution(Seq(SubstitutionPair(p0, fml)))
     a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
@@ -90,8 +89,7 @@ class USubstTests extends FlatSpec with Matchers {
   
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs USubstTest in {
     val fml = GreaterEqual(Real, x, Number(0))
-    //@TODO val prem = Axioms.axioms("V vacuous")
-    val prem = Imply(p0, BoxModality(ap, p0)) //"p->[a;]p".asFormula
+    val prem = Axiom.axioms("V vacuous")
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, fml)
     val s = Substitution(Seq(SubstitutionPair(p0, fml),

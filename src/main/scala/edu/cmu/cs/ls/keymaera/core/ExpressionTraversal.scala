@@ -59,8 +59,8 @@ object ExpressionTraversal {
       else e match {
         case Forall(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
         case Exists(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case BoxModality(a, c) if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case DiamondModality(a, c) if(blacklist.map(a.writes.contains).foldLeft(false)(_||_)) =>  Left(Some(stop))
+        case BoxModality(a, c) if(blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_||_)) => Left(Some(stop))
+        case DiamondModality(a, c) if(blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_||_)) =>  Left(Some(stop))
         case _ =>
           if (p.isPrefixOf(t))
           // proceed
@@ -253,7 +253,7 @@ object ExpressionTraversal {
 
         // Programs
         case ProgramConstant(_, _) => matchZero(p, f, e)
-        case ContEvolveProgramConstant(_, _) => matchZero(p, f, e)
+        case DifferentialProgramConstant(_, _) => matchZero(p, f, e)
         case CDot => matchZero(p, f, e)
         case Nothing => matchZero(p, f, e)
         case Anything => matchZero(p, f, e)
@@ -267,11 +267,12 @@ object ExpressionTraversal {
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
         case Parallel(a, b) => matchTwo(p, Parallel.apply, f, a, b)
         case Loop(a) => matchOne(p, Loop.apply, f, a)
-        case NFContEvolve(v, x, t, h) => matchThree(p, NFContEvolve(v, _: Derivative, _: Term, _: Formula), f, x, t, h)
-        case ContEvolveProduct(a, b) => matchTwo(p, ContEvolveProduct.apply, f, a, b)
+        case AtomicODE(x, t) => matchTwo(p, AtomicODE.apply, f, x, t)
+        case ODEProduct(a, b) => matchTwo(p, ODEProduct.apply, f, a, b)
+        case ODESystem(v, a, h) => matchTwo(p, ODESystem(v, _: DifferentialProgram, _: Formula), f, a, h)
         case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s) //@todo eisegesis
         case CheckedContEvolveFragment(fragment) => matchOne(p, CheckedContEvolveFragment.apply, f, fragment) //@todo eisegesis
-        case _: EmptyContEvolveProgram => matchZero(p, f, e)
+        case _: EmptyODE => matchZero(p, f, e)
 
         case _ => failFTPG(e)
       }) match {

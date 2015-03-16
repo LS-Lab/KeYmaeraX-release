@@ -140,16 +140,11 @@ object CLParser {
     lazy val argApplyP : PackratParser[CLTerm] = {
       lazy val pattern = (ident ~ ("(\"" ~> notDoubleQoute <~ "\")"))
       log(pattern)("argument application") ^^ {
-        case name ~ formula => {
-          formulaParser(formula) match {
-            case Some(f) => ArgApplyC(name, f)
-            case None    => throw new Exception("failed to parse the formula.")
-          }
-        }
+        case name ~ formula => ArgApplyC(name, formulaParser(formula))
       }
     }
 
-    def formulaParser(s:String) : Option[Formula] = new KeYmaeraParser().parseBareFormulaUnquantified(s)
+    def formulaParser(s:String) : Formula = new KeYmaeraParser().parseBareFormulaUnquantified(s)
 
     lazy val posApplyP: PackratParser[CLTerm] = {
       lazy val pattern = (builtinP | argApplyP) ~ ("(" ~> ("""s|a""".r ~ numberP) <~ ")")
