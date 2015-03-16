@@ -448,11 +448,11 @@ object SyntacticDerivationInContext {
   //@todo when re-enabliong these applies lines, uncomment and re-run the relevant tests in SyntacticDerivationTests
 
   /*
-   * Axiom "const' derive constant".
+   * Axiom "c()' derive constant fn".
    *   c()' = 0
    * End.
    */
-  def ConstantFnDerivativeT = new TermAxiomTactic("const' derive constant","const' derive constant") {
+  def ConstantFnDerivativeT = new TermAxiomTactic("c()' derive constant fn","c()' derive constant fn") {
     override def applies(t: Term): Boolean = t match {
       case Derivative(dSort, Apply(Function(_, _, Unit, nSort), Nothing)) => dSort == nSort
       case _ => false
@@ -739,7 +739,7 @@ End.
     (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
     (SearchTacticsImpl.locateTerm(MonomialDerivativeT, inAnte = false) *)
 
-  def ConstantDerivativeT = new TermAxiomTactic("const' derive constant", "const' derive constant") {
+  def ConstantDerivativeT = new TermAxiomTactic("c()' derive constant fn", "c()' derive constant fn") {
     override def applies(term: Term): Boolean = term match {
       case Derivative(Real, Number(_, _)) => true
       case Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) => true

@@ -716,7 +716,7 @@ object TacticLibrary {
     }
   }
 
-  def deriveConstantT: PositionTactic = new AxiomTactic("const' derive constant", "const' derive constant") {
+  def deriveConstantT: PositionTactic = new AxiomTactic("c()' derive constant fn", "c()' derive constant fn") {
     def applies(f: Formula) = ???
     override def applies(s: Sequent,p:Position): Boolean = axiom.isDefined && (Retrieve.subTerm(s(p), p.inExpr) match {
       case Some(Derivative(Real, Number(_, _))) => true

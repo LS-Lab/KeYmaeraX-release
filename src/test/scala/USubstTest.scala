@@ -99,9 +99,9 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using \"const' derive constant\" for a substitution with free occurrences" taggedAs USubstTest in {
+  it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs USubstTest in {
     val aC = Apply(Function("c", None, Unit, Real), Nothing)
-    val prem = "(c())'=0".asFormula // axioms.axiom("const' derive constant")
+    val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x)'=0".asFormula
     val s = Substitution(Seq(SubstitutionPair(aC, "x".asTerm)))
     a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
@@ -109,9 +109,9 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
   
-  it should "clash when using \"const' derive constant\" for a substitution with free differential occurrences" taggedAs USubstTest in {
+  it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs USubstTest in {
     val aC = Apply(Function("c", None, Unit, Real), Nothing)
-    val prem = "(c())'=0".asFormula // axioms.axiom("const' derive constant")
+    val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x')'=0".asFormula
     val s = Substitution(Seq(SubstitutionPair(aC, "x'".asTerm)))
     a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
