@@ -100,8 +100,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
     result.openGoals()(0).sequent.succ should contain only "[x'=2;]x>0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
     result.openGoals()(1).sequent.succ should contain only "[x'=2 & true & x>0;]x>=0".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
   }
 
   it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in {
@@ -113,8 +115,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
     result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3,z'=4 & y>4;]x>1".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
     result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
   }
 
   it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in {
@@ -126,8 +130,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
     result.openGoals()(0).sequent.succ should contain only "[x'=2, y'=3;]x>1".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
     result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3 & (true&x>1);]x>0".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
   }
 
   it should "preserve existing evolution domain constraint" in {
@@ -139,8 +145,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
     result.openGoals()(0).sequent.succ should contain only "[x'=2 & x>=0 | y<z;]x>0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
     result.openGoals()(1).sequent.succ should contain only "[x'=2 & (x>=0 | y<z) & x>0;]x>=0".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
   }
 
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {

@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
+import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, /*diffCutT,*/ arithmeticT, default}
 import AlphaConversionHelper._
@@ -242,12 +242,13 @@ object ODETactics {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(ODESystem(_, _, _), _) =>
-          val succLength = node.sequent.succ.length
           val anteLength = node.sequent.ante.length
           Some(diffCutAxiomT(diffcut)(p) & onBranch(
-            (axiomUseLbl, debugT("diffcut show branch")),
-            (axiomShowLbl, debugT("diffcut use branch") & equalityRewriting(AntePosition(anteLength), p) &
-              hideT(AntePosition(anteLength)) & hideT(p)/*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
+            (axiomUseLbl,
+              /* use axiom: here we have to show that our cut was correct */ LabelBranch(cutShowLbl)),
+            (axiomShowLbl,
+              /* show axiom: here we continue with equiv rewriting so that desired result remains */
+              equivRewriting(AntePosition(anteLength), p) & LabelBranch(cutUseLbl) /*@TODO equalityRewriting(whereTheEquivalenceWentTo, p) apply the remaining diffcut equivalence to replace the original p */)
           ))
         case _ => None
       }
