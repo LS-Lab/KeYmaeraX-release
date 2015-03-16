@@ -58,21 +58,21 @@ object EqualityRewritingImpl {
     applicable
   }
 
-  protected[tactics] def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
+  def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
     override def applicable(node: ProofNode): Boolean = {
       val res = isEquality(node.sequent, eqPos, checkDisjoint) && (equalityApplicable(left = true, eqPos, p, node.sequent) || equalityApplicable(left = false, eqPos, p, node.sequent))
       res
     }
   }
 
-  protected[tactics] def equalityRewritingRight(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Right") {
+  def equalityRewritingRight(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Right") {
 
     override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos, checkDisjointness =  true) && equalityApplicable(left = false, eqPos, p, s)
 
     override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
   }
 
-  protected[tactics] def equalityRewritingLeft(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Left") {
+  def equalityRewritingLeft(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Left") {
 
     override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos, checkDisjointness = true) && equalityApplicable(left = true, eqPos, p, s)
 
@@ -80,7 +80,7 @@ object EqualityRewritingImpl {
   }
 
 
-  protected[tactics] def eqRewritePos(left: Boolean, eqPos: Position): Tactic = new ConstructionTactic("Apply Equality Left") {
+  def eqRewritePos(left: Boolean, eqPos: Position): Tactic = new ConstructionTactic("Apply Equality Left") {
     require(eqPos.isAnte && eqPos.inExpr == HereP, "Equalities for rewriting have to be in the antecedent")
 
     override def applicable(node: ProofNode): Boolean = eqPos.isAnte && eqPos.isTopLevel && (node.sequent(eqPos) match {
@@ -102,14 +102,14 @@ object EqualityRewritingImpl {
     }
   }
 
-  protected[tactics] def eqLeft(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Right to Left") {
+  def eqLeft(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Right to Left") {
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p, checkDisjointness = true) && findPosInExpr(left = true, s, p).isDefined
 
     override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(left = true, p)* else eqRewritePos(left = true, p)
   }
 
-  protected[tactics] def eqRight(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Left to Right") {
+  def eqRight(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Left to Right") {
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p, checkDisjointness = true) && findPosInExpr(left = false, s, p).isDefined
 
