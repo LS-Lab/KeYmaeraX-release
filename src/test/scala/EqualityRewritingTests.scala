@@ -50,4 +50,24 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     an [IllegalArgumentException] should be thrownBy
       new EqualityRewriting(AntePosition(0), SuccPosition(0, PosInExpr(1::1::Nil))).apply(s)
   }
+
+  "Equivalence rewriting" should "rewrite if lhs occurs in succedent" in {
+    val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: Nil, "x>=0".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>=0".asFormula
+  }
+
+  it should "rewrite if rhs occurs in succedent" in {
+    val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: Nil, "y>=0".asFormula :: Nil)
+    val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), SuccPosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>=0".asFormula
+  }
 }

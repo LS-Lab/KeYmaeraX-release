@@ -3,6 +3,10 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, PositionTactic, ApplyRule, Tactic}
+import PropositionalTacticsImpl._
+import BranchLabels._
+import SearchTacticsImpl.onBranch
+import TacticLibrary.debugT
 
 import scala.collection.immutable.Set
 
@@ -56,6 +60,36 @@ object EqualityRewritingImpl {
     val form = (if (p.isAnte) s.ante else s.succ)(p.getIndex)
     ExpressionTraversal.traverse(trav, form)
     applicable
+  }
+
+  /**
+   * Returns a new tactic for rewriting a formula in the succedent according to an equivalence appearing in the
+   * antecedent. Uses propositional tactics instead of builtin rules.
+   * @param eqPos The position where the equivalence appears in the antecedent.
+   * @param p The position where to rewrite in the succedent.
+   * @return The newly created tactic.
+   */
+  def equivRewriting(eqPos: Position, p: Position): Tactic =
+    new ConstructionTactic("Equivalence Rewriting") {
+    override def applicable(node: ProofNode): Boolean = eqPos.isAnte && eqPos.isTopLevel && !p.isAnte && p.isTopLevel &&
+      (node.sequent(eqPos) match {
+        case Equiv(_, _) => true
+        case _ => false
+    })
+
+    def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(eqPos) match {
+      case Equiv(a, b) if a == node.sequent(p) && !p.isAnte =>
+        Some(EquivLeftT(eqPos) & onBranch(
+          (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
+          (equivRightLbl, AndLeftT(eqPos) & hideT(p) & hideT(eqPos) & NotLeftT(eqPos))
+        ))
+      case Equiv(a, b) if b == node.sequent(p) && !p.isAnte =>
+        Some(EquivLeftT(eqPos) & onBranch(
+          (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
+          (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(eqPos) & hideT(eqPos))
+        ))
+      case _ => None
+    }
   }
 
   def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
