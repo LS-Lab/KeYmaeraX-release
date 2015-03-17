@@ -295,7 +295,7 @@ object NNFRewrite {
   // Double negation elimination
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def InCtxDoubleNegationElimination(position : Position) : Tactic = (new TacticInContextT(rewriteDoubleNegationEliminationT(position)) {
+  def InCtxDoubleNegationElimination: PositionTactic = new TacticInContextT(proofOfDoubleNegElim) {
     override def applies(f: Formula) = f match {
       case Not(Not(_)) => true
       case _ => false
@@ -305,7 +305,7 @@ object NNFRewrite {
       case Not(Not(phi)) => Some(phi, None)
       case _ => None
     }
-  })(position) ~ SearchTacticsImpl.locateSucc(ImplyRightT) ~ AxiomCloseT
+  }
 
   /*
    * Have: !(!f)
@@ -372,13 +372,13 @@ object NNFRewrite {
   // Context helper.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  abstract class TacticInContextT(tactic : Tactic)
+  abstract class TacticInContextT(tactic : PositionTactic)
     extends ContextualizeKnowledgeTactic("In Context: " + tactic.name) {
     def applies(f: Formula): Boolean
     override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
 
     override def apply(pos: Position): Tactic = super.apply(pos) &
-      onBranch("knowledge subclass continue", tactic)
+      onBranch("knowledge subclass continue", tactic(pos.topLevel))
   }
 
   def rewriteEquiv(original : Formula, replacement : Formula, proofOfEquiv : PositionTactic): PositionTactic = new PositionTactic("Rewrite for " + proofOfEquiv.name) {
