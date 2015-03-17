@@ -681,6 +681,7 @@ object TacticLibrary {
         case _ => None
     }
   }
+
   def deriveMonomialT: PositionTactic = new PositionTactic("Derive Monomial") {
     override def applies(s: Sequent,p:Position): Boolean = Retrieve.subTerm(s(p), p.inExpr) match {
       case Some(Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real,_)))) => true

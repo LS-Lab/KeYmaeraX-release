@@ -654,6 +654,7 @@ End.
           Some(axiomInstance, subst)
         }
         case Add(aSort, Multiply(mSort, Derivative(_, f), g), Multiply(_, _, _)) => {
+          //@TODO Need shape tests for _, _, _ arguments?
           val sort = aSort; assert(aSort == mSort)
 
           val aF = Apply(Function("f", None, sort, sort), Anything)
@@ -731,6 +732,37 @@ End.
     }
   }
 
+  def PowerDerivativeT = new TermAxiomTactic("^' derive power","^' derive power") {
+    override def applies(t: Term): Boolean = t match {
+      case Derivative(Real, Exp(Real, _, _)) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
+      term match {
+        case Derivative(Real, Add(Real, f, c)) => {
+          assert(c != Number(0), "not power 0");
+
+          val aF = Apply(Function("f", None, Real, Real), Anything)
+          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+
+          val right = Multiply(Real,
+            Multiply(Real, aC, Exp(Real, f, Subtract(Real, aC, Number(1)))),
+            Derivative(Real, aF))
+          val axiomInstance = Equals(Real, term, right)
+
+          val subst = List(
+            SubstitutionPair(aF, f),
+            SubstitutionPair(aC, c)
+          )
+
+          Some(axiomInstance, subst)
+        }
+        //@TODO case backwards
+      }
+    }
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof rule implementations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -767,6 +799,7 @@ End.
     }
   }
 
+  @deprecated("Use PowerDerivativeT instead")
   def MonomialDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
     override def applies(t:Term) = isMonomial(t)
 
