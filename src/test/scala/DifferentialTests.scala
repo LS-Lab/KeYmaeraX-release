@@ -44,28 +44,40 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x'=1 & x>2;](x>2 -> x>0)".asFormula))
 
     val diffWeaken = locateSucc(diffWeakenT)
-    getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x".asNamedSymbol :: DifferentialSymbol("x".asNamedSymbol) :: Nil, Nil, "x>2 -> x>0".asFormula :: Nil))
+    val result = helper.runTactic(diffWeaken, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 -> x>0".asFormula
   }
 
   it should "perform alpha renaming if necessary" in {
     val s = sucSequent("[y'=y & y>2 & z<0;]y>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[y'=y & y>2 & z<0;](y>2 & z<0 -> y>0)".asFormula))
+    val result = helper.runTactic(diffWeakenAx, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=y & y>2 & z<0;](y>2 & z<0 -> y>0)".asFormula
 
     val diffWeaken = locateSucc(diffWeakenT)
-    getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("y".asNamedSymbol :: DifferentialSymbol("y".asNamedSymbol) :: Nil, Nil, "y>2 & z<0 -> y>0".asFormula :: Nil))
+    val result2 = helper.runTactic(diffWeaken, new RootNode(s))
+    result2.openGoals() should have size 1
+    result2.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result2.openGoals().flatMap(_.sequent.succ) should contain only "y>2 & z<0 -> y>0".asFormula
   }
 
   it should "introduce true if there is no evolution domain constraint" in {
     val s = sucSequent("[x'=1;]x>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
-    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x'=1;](true -> x>0)".asFormula))
+    val result = helper.runTactic(diffWeakenAx, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=1;](true -> x>0)".asFormula
 
     val diffWeaken = locateSucc(diffWeakenT)
-    getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x".asNamedSymbol :: DifferentialSymbol("x".asNamedSymbol) :: Nil, Nil, "true -> x>0".asFormula :: Nil))
+    val result2 = helper.runTactic(diffWeaken, new RootNode(s))
+    result2.openGoals() should have size 1
+    result2.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result2.openGoals().flatMap(_.sequent.succ) should contain only "true -> x>0".asFormula
   }
 
   "differential weaken of system of ODEs" should "pull out evolution domain constraint" in {
@@ -74,8 +86,10 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x'=x, y'=1 & y>2 & z<0;](y>2 & z<0 -> y>0)".asFormula))
 
     val diffWeaken = locateSucc(diffWeakenT)
-    getProofSequent(diffWeaken, new RootNode(s)) should be (
-      sequent("x".asNamedSymbol :: DifferentialSymbol("x".asNamedSymbol) :: "y".asNamedSymbol :: DifferentialSymbol("y".asNamedSymbol) :: Nil, Nil, "y>2 & z<0 -> y>0".asFormula :: Nil))
+    val result = helper.runTactic(diffWeaken, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>2 & z<0 -> y>0".asFormula
   }
 
   it should "also work when the ODEs are interdependent" in {

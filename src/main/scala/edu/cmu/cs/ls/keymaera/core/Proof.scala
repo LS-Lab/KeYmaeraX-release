@@ -1859,8 +1859,9 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
     if (vars.intersect(v.toSet).nonEmpty)
       throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
         vars.intersect(v.toSet))
-    List(if (p.isAnte) Sequent(s.pref ++ v, s.ante.updated(p.index, phi), s.succ)
-         else Sequent(s.pref ++ v, s.ante, s.succ.updated(p.index, phi)))
+    // TODO append v to prefix for merge or existential quantifier handling
+    List(if (p.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(p.index, phi), s.succ)
+         else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.index, phi)))
   }
 }
 
@@ -1885,8 +1886,9 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
     if (vars.intersect(fn.toSet).nonEmpty)
       throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
         vars.intersect(fn.toSet))
-    List(if (p.isAnte) Sequent(s.pref ++ fn, s.ante.updated(p.index, phi), s.succ)
-    else Sequent(s.pref ++ fn, s.ante, s.succ.updated(p.index, phi)))
+    // TODO append v to prefix for merge or existential quantifier handling
+    List(if (p.isAnte) Sequent(s.pref /*++ fn*/, s.ante.updated(p.index, phi), s.succ)
+    else Sequent(s.pref /*++ fn*/, s.ante, s.succ.updated(p.index, phi)))
   }
 
   // TODO flat implementation, get rid of expression traversal

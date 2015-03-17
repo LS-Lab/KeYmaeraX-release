@@ -312,30 +312,37 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   "Quantifier skolemization" should "not introduce a new name if the quantified names are unique already" in {
     import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
     val tactic = locateSucc(skolemizeT)
-    getProofSequent(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula))) should be (
-      sequent("x".asNamedSymbol :: Nil, Nil, "x>0".asFormula :: Nil))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
   it should "introduce a new name if the quantified name is not unique" in {
     import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
     val tactic = locateSucc(skolemizeT)
-    getProofSequent(tactic, new RootNode(sequent(Nil, "x>2".asFormula :: Nil, "\\forall x. x>0".asFormula :: Nil))) should be (
-      sequent("x_0".asNamedSymbol :: Nil, "x>2".asFormula :: Nil, "x_0>0".asFormula :: Nil))
+    val result = helper.runTactic(tactic, new RootNode(sequent(Nil, "x>2".asFormula :: Nil, "\\forall x. x>0".asFormula :: Nil)))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x>2".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x_0>0".asFormula
   }
 
   it should "introduce a new name even if the quantified names are unique already, if forced to do so" in {
     import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeT
     val tactic = locateSucc(skolemizeT(forceUniquify = true))
-    getProofSequent(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula))) should be (
-      sequent("x_0".asNamedSymbol :: Nil, Nil, "x_0>0".asFormula :: Nil))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x_0>0".asFormula
   }
 
   it should "skolemize to a function symbol" in {
     import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeToFnT
     val tactic = locateSucc(skolemizeToFnT)
-    getProofSequent(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula))) should be (
-      sequent(edu.cmu.cs.ls.keymaera.core.Function("x", None, edu.cmu.cs.ls.keymaera.core.Unit, Real) :: Nil, Nil,
-        "x()>0".asFormula :: Nil))
+    val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula)))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x()>0".asFormula
   }
 
   "Quantifier instantiation" should "instantiate quantifier with given term" in {

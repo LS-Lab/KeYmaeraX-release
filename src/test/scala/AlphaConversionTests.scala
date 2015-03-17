@@ -569,16 +569,18 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
 
   "Alpha-conversion tactic" should "be [t:=x+1;][t_0:=t;][t_0'=1;]t_0>0 with (x,t) on [x:=x+1;][x'=1;]x>0" in {
     val s = sucSequent("[x:=x+1;][x'=1;]x>0".asFormula)
-    helper.runTactic(globalAlpha("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent("t".asNamedSymbol :: Nil, Nil, "[t:=t+1;][t'=1;]t>0".asFormula :: Nil)
-    ))
+    val result = helper.runTactic(globalAlpha("x", "t"), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[t:=t+1;][t'=1;]t>0".asFormula
   }
 
   it should "be [t:=x+1;][t_0:=t;][{t_0:=t_0+1;}*]t_0>0 with (x,t) on [x:=x+1;][{x:=x+1;}*]x>0" in {
     val s = sucSequent("[x:=x+1;][{x:=x+1;}*]x>0".asFormula)
-    helper.runTactic(globalAlpha("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sequent("t".asNamedSymbol :: Nil, Nil, "[t:=t+1;][{t:=t+1;}*]t>0".asFormula :: Nil)
-    ))
+    val result = helper.runTactic(globalAlpha("x", "t"), new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[t:=t+1;][{t:=t+1;}*]t>0".asFormula
   }
 
   /**
