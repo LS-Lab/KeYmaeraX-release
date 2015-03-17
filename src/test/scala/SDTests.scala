@@ -157,32 +157,32 @@ class SDTests extends TacticTestSuite {
 
   "monomial derivation" should "work outside of context" in {
     val node = helper.formulaToNode("(x^2)'=0".asFormula)
-    val tactic = SearchTacticsImpl.locateTerm(MonomialDerivativeT)
+    val tactic = SearchTacticsImpl.locateTerm(PowerDerivativeT)
     val result = helper.runTactic(tactic, node)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "2*x^1*x'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "2*x^(2-1)*x'=0".asFormula
   }
 
   it should "work inside of a non-binding context" in {
     val node = helper.formulaToNode("[a := 0;](x^2)'=0".asFormula)
-    val tactic = SearchTacticsImpl.locateTerm(MonomialDerivativeT)
+    val tactic = SearchTacticsImpl.locateTerm(PowerDerivativeT)
     val result = helper.runTactic(tactic, node)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[a := 0;]2*x^1*x'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[a := 0;]2*x^(2-1)*x'=0".asFormula
   }
 
   it should "work inside of a binding context" in {
     val node = helper.formulaToNode("[x := 0;](x^2)'=0".asFormula)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext)
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.PowerDerivativeInContext)
     val result = helper.runTactic(tactic, node)
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x := 0;]2*x^1*x'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x := 0;]2*x^(2-1)*x'=0".asFormula
   }
 
   "constant derivation" should "work" in {

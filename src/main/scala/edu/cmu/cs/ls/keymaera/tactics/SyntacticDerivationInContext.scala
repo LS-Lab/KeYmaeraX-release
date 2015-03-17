@@ -740,21 +740,20 @@ End.
 
     override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
       term match {
-        case Derivative(Real, Add(Real, f, c)) => {
-          assert(c != Number(0), "not power 0");
+        case Derivative(Real, Exp(Real, f, c)) => {
+          assert(c != Number(0), "not power 0")
 
           val aF = Apply(Function("f", None, Real, Real), Anything)
           val aC = Apply(Function("c", None, Unit, Real), Nothing)
 
           val right = Multiply(Real,
-            Multiply(Real, aC, Exp(Real, f, Subtract(Real, aC, Number(1)))),
-            Derivative(Real, aF))
+            Multiply(Real, c, Exp(Real, f, Subtract(Real, c, Number(1)))),
+            Derivative(Real, f))
           val axiomInstance = Equals(Real, term, right)
 
-          val subst = List(
-            SubstitutionPair(aF, f),
-            SubstitutionPair(aC, c)
-          )
+          val subst =
+            SubstitutionPair(aF, f) ::
+            SubstitutionPair(aC, c) :: Nil
 
           Some(axiomInstance, subst)
         }
@@ -769,7 +768,7 @@ End.
   //
   def SyntacticDerivationRulesT : Tactic =
     (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
-    (SearchTacticsImpl.locateTerm(MonomialDerivativeT, inAnte = false) *)
+    (SearchTacticsImpl.locateTerm(PowerDerivativeT, inAnte = false) *)
 
   def ConstantDerivativeT = new TermAxiomTactic("c()' derive constant fn", "c()' derive constant fn") {
     override def applies(term: Term): Boolean = term match {
@@ -798,65 +797,6 @@ End.
       }
     }
   }
-  
-  def MonomialDerivativeT = PowerDerivativeT
-
-  @deprecated("Use PowerDerivativeT instead")
-  def MonomialDerivativeRuleT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
-    override def applies(t:Term) = isMonomial(t)
-
-    /**
-     *
-     * @param p The position of a term.
-     * @return true iff the position exists in the sequent and is a monomial.
-     */
-    override def applies(s: Sequent, p: Position): Boolean = getApplicableTerm(s, p).isDefined
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val term = getApplicableTerm(node.sequent, p).getOrElse(throw new Exception("MonomialDerivative.applies is incorrect."))
-
-        val newHypothesisCutLocation = AntePosition(node.sequent.ante.length, HereP)
-
-        val buildMonomialEqualityHypothesis : Tactic = new ApplyRule(new DeriveMonomial(term)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        }
-
-        val equalityRewrite : Tactic = new ApplyRule(new EqualityRewriting(newHypothesisCutLocation, p)) {
-          override def applicable(node: ProofNode): Boolean = true //@todo?
-        }
-
-        //Build the equality, put it to work, and dispense after use. Also dispense of the current position, because we'll now have a new sequent.
-        Some(buildMonomialEqualityHypothesis & equalityRewrite & hideT(newHypothesisCutLocation) & hideT(p.topLevel))
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-
-    def getApplicableTerm(sequent : Sequent, position : Position) : Option[Term] = {
-      var foundTerm : Option[Term] = None
-
-      val fn = new ExpressionTraversalFunction {
-        override def preT(pos : PosInExpr, t : Term) = {
-          if(pos == position.inExpr && isMonomial(t)) {
-            foundTerm = Some(t)
-            Left(Some(ExpressionTraversal.stop))
-          }
-          else {
-            Left(None)
-          }
-        }
-      }
-      ExpressionTraversal.traverse(fn, sequent(position))
-      foundTerm
-    }
-
-    def isMonomial(term : Term) = term match {
-      case Derivative(Real, Exp(Real, base, Number(Real, n))) => true //copied from the rule itself.
-      case _ => false
-    }
-  }
-
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Atomize for Term Tactics @todo
@@ -981,7 +921,7 @@ End.
 
       termDerivativeTactics.foldLeft(false)((b, tat : TermAxiomTactic) => {
         tacticApplies(tat) || b
-      }) || findApplicablePositionForTermAxiom(s(p), MonomialDerivativeT).isDefined
+      }) || findApplicablePositionForTermAxiom(s(p), PowerDerivativeT).isDefined
     }
 
     /**
@@ -1152,7 +1092,7 @@ End.
       case _ => false
     }}
 
-    override def apply(p: Position): Tactic = MonomialDerivativeT(p) ~ ConstantDerivativeT(p)
+    override def apply(p: Position): Tactic = PowerDerivativeT(p) ~ ConstantDerivativeT(p)
   }
 
   def MonomialAndConstantInContextDerivationT = new PositionTactic("Derive monomial and context in context") {
@@ -1164,7 +1104,7 @@ End.
       }}
     }
 
-    override def apply(p: Position): Tactic =  SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext(p) ~ SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext(p)
+    override def apply(p: Position): Tactic =  SyntacticDerivativeProofRulesInContext.PowerDerivativeInContext(p) ~ SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext(p)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

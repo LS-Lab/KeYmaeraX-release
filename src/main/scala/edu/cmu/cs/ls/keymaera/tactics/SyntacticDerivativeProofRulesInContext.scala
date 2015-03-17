@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
@@ -9,6 +10,8 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 /**
  * Created by nfulton on 2/23/15.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 object SyntacticDerivativeProofRulesInContext {
   import SyntacticDerivativeTermAxiomsInContext._
@@ -18,8 +21,8 @@ object SyntacticDerivativeProofRulesInContext {
   // Proof rule implementations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def MonomialDerivativeInContext = new PositionTactic("Monomial Derivative in context") {
-    val theTactic : PositionTactic with ApplicableAtTerm = MonomialDerivativeT
+  def PowerDerivativeInContext = new PositionTactic("Power Derivative in context") {
+    val theTactic : PositionTactic with ApplicableAtTerm = PowerDerivativeT
 
     override def applies(s: Sequent, p: Position): Boolean = {
       getTermAtPosition(s(p), p.inExpr) match {
@@ -31,11 +34,11 @@ object SyntacticDerivativeProofRulesInContext {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
         case Some(term) => term match {
-          case Derivative(dSort, Exp(eSort, x, Number(nSort, n))) if n != 0 =>
-            val replacement = Multiply(eSort, Multiply(eSort, Number(nSort, n), Exp(eSort, x, Number(nSort, n - 1))), Derivative(dSort, x))
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, equivTactic(theTactic))
+          case Derivative(dSort, Exp(eSort, x, c@Number(nSort, n))) if n != BigDecimal(0) =>
+            val replacement = Multiply(eSort, Multiply(eSort, Number(nSort, n), Exp(eSort, x, Subtract(nSort, c, Number(1)))), Derivative(dSort, x))
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
             Some(contextTactic(p))
-          case Derivative(dSort, Exp(eSort, x, Number(nSort, n))) if n == 0 =>
+          case Derivative(dSort, Exp(eSort, x, Number(nSort, n))) if n == BigDecimal(0) =>
             Some(errorT(s"Exponent 0 not allowed, but $n == 0") & stopT)
           case _ => None
         }
@@ -60,7 +63,7 @@ object SyntacticDerivativeProofRulesInContext {
         case Some(term) => term match {
           case Derivative(dSort, Number(nsort, n)) => {
             val replacement = Number(nsort, 0)
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, equivTactic(theTactic))
+            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
             Some(contextTactic(p))
           }
           case _ => None
@@ -70,24 +73,6 @@ object SyntacticDerivativeProofRulesInContext {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
   }
-
-  private def equivTactic(prt : PositionTactic with ApplicableAtTerm) : PositionTactic with ApplicableAtTerm = new PositionTactic("Prove equiv using " + prt.name) with ApplicableAtTerm {
-    override def applies(t : Term) = prt.applies(t)
-
-    override def applies(s: Sequent, p: Position): Boolean = getTermAtPosition(s(p), p.inExpr) match {
-      case Some(x) => prt.applies(x)
-      case _ => false
-    }
-
-    import scala.language.postfixOps
-    override def apply(p: Position): Tactic =
-      debugT("This needs to close with a single term rewrite and axiom close.") &
-        ((SearchTacticsImpl.locateTerm(prt, inAnte = true) | SearchTacticsImpl.locateTerm(prt, inAnte = false))*) &
-      debugT("After Equiv") &
-      (AxiomCloseT | debugT(s"Prove equiv for derivative: Should never happen using ${prt.name}"))
-  }
-
-
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Copy-pasted, in case changes are necessary:
@@ -155,20 +140,20 @@ object SyntacticDerivativeProofRulesInContext {
 
         constructInstanceAndSubst(node.sequent(pos)) match {
           case Some((desiredResult, renameTactic)) =>
-            val (f, fPos) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
+            val (f, _) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
 
             val fInContext = TacticHelper.getFormula(node.sequent, pos.topLevel)
             val desiredResultInContext = replaceFormula(desiredResult, f, fInContext)
 
-            val forKAxiomInstance = Imply(desiredResultInContext, fInContext)
+            val congruenceAxiomInstance = Equiv(fInContext, desiredResultInContext)
             val axiomInstance = Equiv(f, desiredResult)
 
             val axiomInstPos = AntePosition(node.sequent.ante.length)
 
-            val axiomApplyTactic = assertPT(forKAxiomInstance, s"$getClass A.1")(axiomInstPos) &
-              ImplyLeftT(axiomInstPos) && (
-              hideT(SuccPosition(0)) /* desired result remains */,
-              AxiomCloseT ~ TacticLibrary.debugT("axiomclose failed here.")&assertT(0,0)
+            val axiomApplyTactic = assertPT(congruenceAxiomInstance, s"$getClass A.1")(axiomInstPos) &
+              EquivLeftT(axiomInstPos) & onBranch(
+                (equivLeftLbl, AndLeftT(axiomInstPos) & AxiomCloseT),
+                (equivRightLbl, hideT(pos.topLevel) & AndLeftT(axiomInstPos) & hideT(axiomInstPos) & NotLeftT(axiomInstPos))
               )
 
             val cont = renameTactic match {
@@ -178,18 +163,15 @@ object SyntacticDerivativeProofRulesInContext {
 
             val axiomPos = SuccPosition(node.sequent.succ.length)
 
-            val axiomInstanceTactic = (assertPT(forKAxiomInstance, s"$getClass A.2") & cohideT)(axiomPos) & (assertT(0,1) &
-              assertT(forKAxiomInstance, SuccPosition(0))  & kModalModusPonensT(SuccPosition(0)) &
-              abstractionT(SuccPosition(0)) & hideT(SuccPosition(0)) & skolemizeT(SuccPosition(0)) &
-              assertT(0, 1) & cutT(Some(axiomInstance)) & debugT("Did the equiv I just cut in make sense??") &
-              onBranch((cutUseLbl, debugT(s"Ready for equality rewriting at $fPos") &
-                (equalityRewriting(AntePosition(0), SuccPosition(0, fPos)) & hideT(AntePosition(0)) &
-                  hideT(pos.topLevel) & ImplyRightT(pos.topLevel) & AxiomCloseT) ~
-                  (hideT(AntePosition(0)) & LabelBranch("additional obligation"))), //for term stuff.
-                (cutShowLbl,
-                  hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))))
-
-            Some(cutT(Some(forKAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
+            val axiomInstanceTactic =
+              (assertPT(congruenceAxiomInstance, s"$getClass A.2") & cohideT)(axiomPos) & assertT(0,1) &
+                (boxCongruenceT*) & assertT(0,1) & cutT(Some(axiomInstance)) & onBranch(
+                (cutUseLbl, assertPT(axiomInstance, s"$getClass A.3")(AntePosition(0)) & (
+                  ((AxiomCloseT | locateAnte(Propositional) | locateSucc(Propositional))*) |
+                    debugT(s"$getClass: axiom close failed unexpectedly") & stopT)),
+                (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))
+              )
+            Some(cutT(Some(congruenceAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
           case None => None
         }
       }

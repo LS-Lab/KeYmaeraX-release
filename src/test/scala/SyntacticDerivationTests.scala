@@ -174,13 +174,13 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(x') + 1 + c^n = a^2 + 2".asFormula
   }
 
-  "DeriveMonomial" should "work" in {
+  "Power Derivative" should "work" in {
     val in = "1 + (x^2)' = 1 + 2*x*x'".asFormula
     val node = helper.formulaToNode(in)
-    val tactic = MonomialDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
+    val tactic = PowerDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
     val result = helper.runTactic(tactic, node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^1*x'=1+2*x*x'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^(2-1)*x'=1+2*x*x'".asFormula
   }
 
   "DeriveConstant" should "work" in {
