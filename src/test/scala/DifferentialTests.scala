@@ -105,6 +105,15 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals().flatMap(_.sequent.succ) should contain only "y>2 & z<0 -> y>0".asFormula
   }
 
+  it should "also work inside formulas" in {
+    val s = sucSequent("x>0 & [x'=1 & y>2;]y>0".asFormula)
+    val diffWeakenAx = diffWeakenAxiomT(SuccPosition(0, PosInExpr(1::Nil)))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (
+      sucSequent("x>0 & [x'=1 & y>2;](y>2 -> y>0)".asFormula))
+
+    // TODO tactic with abstraction etc.
+  }
+
   "differential cut" should "cut in a simple formula" in {
     import ODETactics.diffCutT
     val s = sucSequent("[x'=2;]x>=0".asFormula)

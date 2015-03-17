@@ -206,8 +206,6 @@ object ODETactics {
       case _ => false
     }
 
-    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && super.applies(s, p)
-
     override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
       case BoxModality(ode@ODESystem(_, c, h), p) =>
         // construct instance
