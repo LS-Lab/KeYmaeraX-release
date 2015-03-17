@@ -1944,6 +1944,7 @@ object DeriveMonomial {
 }
 
 //@TODO Inaccurate for n=0, because unlike the input, the result would be undefined for base=0.
+@deprecated("Use ^' derive power axiom instead")
 class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
   val Derivative(Real, Exp(Real, base, Number(Real, n))) = t
   override def apply(s: Sequent): List[Sequent] =
