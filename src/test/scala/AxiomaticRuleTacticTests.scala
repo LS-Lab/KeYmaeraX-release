@@ -41,4 +41,34 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "(x*y())'<=0 <-> x'*y()<=0".asFormula
   }
 
+  "Diamond congruence" should "congruence rewrite with primes" in {
+    val s = sucSequent("<x':=1;>(x*y())'<=0 <-> <x':=1;>x'*y()<=0".asFormula)
+    val tactic = AxiomaticRuleTactics.diamondCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "(x*y())'<=0 <-> x'*y()<=0".asFormula
+  }
+
+  "Box monotone" should "work" in {
+    val s = sequent(Nil, "[x:=1;]x>0".asFormula :: Nil, "[x:=1;]x>-1".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.boxMonotoneT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>-1".asFormula
+  }
+
+  "Diamond monotone" should "work" in {
+    val s = sequent(Nil, "<x:=1;>x>0".asFormula :: Nil, "<x:=1;>x>-1".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.diamondMonotoneT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>-1".asFormula
+  }
+
 }
