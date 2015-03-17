@@ -1293,6 +1293,20 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     s"Global substitution result ${usubst(p)} does not agree with local result " +
       s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)}")
 
+  /**
+   * Apply uniform substitution everywhere in the sequent.
+   */
+  def apply(s: Sequent): Sequent = {
+    try {
+      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
+    } catch {
+      case ex: IllegalArgumentException =>
+        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
+    }
+  }
+
+  // implementation of uniform substitution application
+      
   // uniform substitution on terms
   private[core] def usubst(t: Term): Term = {
     try {
@@ -1431,7 +1445,6 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
   }
 
   private def usubstODE(ode: DifferentialProgram, primed: SetLattice[NamedSymbol]): DifferentialProgram = ode match {
-    case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
     case ODESystem(d, a, h) if d.isEmpty =>
       require(admissible(primed, h), s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
       ODESystem(d, usubstODE(a, primed), usubst(h))
@@ -1439,6 +1452,7 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     case AtomicODE(dv: Derivative, t) =>
       require(admissible(primed, t), s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
       AtomicODE(dv, usubst(t))
+    case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
     case c: DifferentialProgramConstant if  subsDefs.exists(_.what == c) =>
@@ -1452,15 +1466,6 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     case _: EmptyODE => ode
   }
   
-  def apply(s: Sequent): Sequent = {
-    try {
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
-    }
-  }
-
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
    * @param U taboo list
