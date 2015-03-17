@@ -295,7 +295,7 @@ object NNFRewrite {
   // Double negation elimination
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def InCtxDoubleNegationElimination(position : Position) : Tactic = ((new TacticInContextT(rewriteDoubleNegationEliminationT(position)) {
+  def InCtxDoubleNegationElimination(position : Position) : Tactic = (new TacticInContextT(rewriteDoubleNegationEliminationT(position)) {
     override def applies(f: Formula) = f match {
       case Not(Not(_)) => true
       case _ => false
@@ -305,7 +305,7 @@ object NNFRewrite {
       case Not(Not(phi)) => Some(phi, None)
       case _ => None
     }
-  })(position) ~ SearchTacticsImpl.locateSucc(ImplyRightT) ~ AxiomCloseT)
+  })(position) ~ SearchTacticsImpl.locateSucc(ImplyRightT) ~ AxiomCloseT
 
   /*
    * Have: !(!f)
@@ -320,37 +320,12 @@ object NNFRewrite {
     override def apply(doubleNegatedPos: Position): Tactic = new ConstructionTactic("Double Negation Elimination") {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        //First construct an equality.
-        val nnf = formulaAtPosition(node.sequent, doubleNegatedPos).getOrElse(throw new Exception("Tactic is not applicable here."))
-        val f = nnf match {
+        val original = formulaAtPosition(node.sequent, doubleNegatedPos).getOrElse(throw new Exception("Tactic is not applicable here."))
+        val replacement = original match {
           case Not(Not(x)) => x
           case _ => throw new Exception("Tactic is not applicable here.")
         }
-        val equiv = Equiv(nnf, f)
-
-        //The succedent position of the cut-in formula
-        val cutAsObligationPos = SuccPosition(node.sequent.succ.length)
-        val cutAsAssumptionPos = AntePosition(node.sequent.ante.length)
-
-        def equalityRewrite = {
-          new ApplyRule(new EqualityRewriting(cutAsAssumptionPos, doubleNegatedPos)) {
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, doubleNegatedPos)
-          }
-        }
-
-        val topLevelPositionContainingDoubleNegation = if(doubleNegatedPos.isAnte) {
-          AntePosition(doubleNegatedPos.index)
-        }
-        else {
-          SuccPosition(doubleNegatedPos.index)
-        }
-
-        Some(
-          PropositionalTacticsImpl.cutT(Some(equiv)) & onBranch(
-            (BranchLabels.cutShowLbl, proofOfDoubleNegElim(cutAsObligationPos) ~ errorT("Expcted to be done with proof of doulbe neg elim equiv.")),
-            (BranchLabels.cutUseLbl, equalityRewrite & hideT(topLevelPositionContainingDoubleNegation) & hideT(cutAsAssumptionPos))
-          )
-        )
+        Some(rewriteEquiv(original, replacement, proofOfDoubleNegElim)(doubleNegatedPos))
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, doubleNegatedPos)
@@ -382,10 +357,10 @@ object NNFRewrite {
         }
 
         Some(
-          debugT("DNEV begin") ~ EquivRightT(initialEquivPosition) ~ (onBranch(
+          debugT("DNEV begin") ~ EquivRightT(initialEquivPosition) ~ onBranch(
             (BranchLabels.equivLeftLbl, debugT("DNEV left") ~ leftTactic ~ debugT("DNEV left complete")),
             (BranchLabels.equivRightLbl, debugT("DNEV right") ~ rightTactic ~ debugT("DNEV right Complete"))
-          ))
+          )
         )
       }
 
@@ -406,7 +381,7 @@ object NNFRewrite {
       onBranch("knowledge subclass continue", tactic)
   }
 
-  def rewriteEquiv(original : Formula, replacement : Formula, proofOfEquiv : PositionTactic) : PositionTactic = new PositionTactic("Rewrite for " + proofOfEquiv.name) {
+  def rewriteEquiv(original : Formula, replacement : Formula, proofOfEquiv : PositionTactic): PositionTactic = new PositionTactic("Rewrite for " + proofOfEquiv.name) {
     override def applies(s: Sequent, p: Position): Boolean = formulaAtPosition(s,p) match {
       case Some(formula) => formula.equals(original)
       case _ => false
