@@ -1275,8 +1275,6 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
 
   @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
 
-    import BindingAssessment._
-
   override def toString: String = "GlobSubst(" + subsDefs.mkString(", ") + ")"
 
   def apply(t: Term): Term = {
@@ -1463,7 +1461,11 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     }
   }
 
-  // check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates/program constants
+  /**
+   * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
+   * @param U taboo list
+   * @param occurrences of function and predicate symbols.
+   */
   private def admissible(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
     // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
     // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
@@ -1493,73 +1495,11 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
     subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.what)).forall(fn => !occurrences.contains(fn))
   }
 
-  private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
-  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
-  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
+  private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, StaticSemantics.signature(t))
+  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = admissible(U, StaticSemantics.signature(f))
+  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = admissible(U, StaticSemantics.signature(p))
 
-  private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
-    case Not(g) => fnPredPrgSymbolsOf(g)
-    case And(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Or(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Imply(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Equiv(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-
-    case Equals(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case NotEquals(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case GreaterEqual(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case GreaterThan(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case LessEqual(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case LessThan(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-
-    case ApplyPredicate(fn, theta) => Set(fn) ++ fnPredPrgSymbolsOf(theta)
-
-    case Forall(vars, phi) => fnPredPrgSymbolsOf(phi)
-    case Exists(vars, phi) => fnPredPrgSymbolsOf(phi)
-
-    case BoxModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
-    case DiamondModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
-
-    case True | False => Set()
-
-    //@todo eisegesis
-    case FormulaDerivative(x) => fnPredPrgSymbolsOf(x)
-  }
-
-  private def fnPredPrgSymbolsOf(t: Term): Set[NamedSymbol] = t match {
-    case Neg(s, l) => fnPredPrgSymbolsOf(l)
-    case Add(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Subtract(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Multiply(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Divide(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Exp(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Pair(dom, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Derivative(s, e) => fnPredPrgSymbolsOf(e)
-    case Apply(f, theta) => Set(f) ++ fnPredPrgSymbolsOf(theta)
-    case _: Variable => Set()
-    case CDot => Set(CDot)
-    case Nothing => Set()
-    case Anything => Set()
-    case Number(_, _) => Set()
-  }
-
-  private def fnPredPrgSymbolsOf(p: Program): Set[NamedSymbol] = p match {
-    case CheckedContEvolveFragment(c) => fnPredPrgSymbolsOf(c) //@todo eisegesis
-    case Assign(_, t) => fnPredPrgSymbolsOf(t)
-    case Test(phi) => fnPredPrgSymbolsOf(phi)
-    case AtomicODE(_, t) => fnPredPrgSymbolsOf(t)
-    case ODEProduct(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case ODESystem(_, a, h) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(h)
-    case IncompleteSystem(a) => fnPredPrgSymbolsOf(a)
-    case Sequence(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case Choice(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case Loop(a) => fnPredPrgSymbolsOf(a)
-    case c: DifferentialProgramConstant => Set(c)
-    case c: ProgramConstant => Set(c)
-    case NDetAssign(_) => Set()
-    case _: EmptyODE => Set()
-  }
-
-  // @TODO The following are the same cop&paste as in UniformSubstitution. Copy somewhere
+  //@TODO The following are the same cop&paste as in UniformSubstitution. Copy somewhere or keep here.
   /**
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    */
@@ -1944,15 +1884,14 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
     val fn = new ExpressionTraversalFunction {
       val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          //@TODO Do not use @deprecated .writes functions
           case BoxModality(prg, f) =>
-            val writes = BindingAssessment.catVars(prg).bv.s match {
+            val writes = StaticSemantics(prg).bv.s match {
               case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
               case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
             }
             Right(factory(writes, f))
           case DiamondModality(prg, f) =>
-            val writes = BindingAssessment.catVars(prg).bv.s match {
+            val writes = StaticSemantics(prg).bv.s match {
               case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
               case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
             }
@@ -1965,24 +1904,6 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
       case _ => throw new InapplicableRuleException("No abstraction possible for " + s(pos), this, s)
     }
   }
-}
-
-/*********************************************************************************
- * Rules for derivatives that are not currently expressible as axioms
- *********************************************************************************
- */
-object DeriveMonomial {
-  def apply(t: Term): Rule = new DeriveMonomial(t)
-}
-
-//@TODO Inaccurate for n=0, because unlike the input, the result would be undefined for base=0.
-@deprecated("Use ^' derive power axiom instead")
-class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
-  val Derivative(Real, Exp(Real, base, Number(Real, n))) = t
-  override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref,
-      IndexedSeq(Equals(Real, t, Multiply(Real, Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))), Derivative(Real, base)))),
-      IndexedSeq())))
 }
 
 // the following rules will turn into axioms
