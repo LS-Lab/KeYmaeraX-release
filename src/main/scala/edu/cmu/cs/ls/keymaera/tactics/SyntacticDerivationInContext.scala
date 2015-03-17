@@ -798,9 +798,11 @@ End.
       }
     }
   }
+  
+  def MonomialDerivativeT = PowerDerivativeT
 
   @deprecated("Use PowerDerivativeT instead")
-  def MonomialDerivativeT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
+  def MonomialDerivativeRuleT : PositionTactic with ApplicableAtTerm = new PositionTactic("Monomial Derivative") with ApplicableAtTerm {
     override def applies(t:Term) = isMonomial(t)
 
     /**
