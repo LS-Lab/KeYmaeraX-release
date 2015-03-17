@@ -13,7 +13,7 @@ abstract class CLTerm
   case class StrongSeqC(left : CLTerm, right : List[CLTerm])    extends CLTerm
   case class SeqC(left : CLTerm, right : CLTerm)                extends CLTerm
   case class OrC(left : CLTerm, right : CLTerm)                 extends CLTerm
-  case class BranchC(children : List[CLTerm])                   extends CLTerm
+  case class BranchC(children : List[OnLabelC])                   extends CLTerm
   case class KleeneC(child : CLTerm)                            extends CLTerm
   case class LabelC(name : String)                              extends CLTerm
   case class OnLabelC(label : String, term : CLTerm)            extends CLTerm //@todo add support for the more typical onBranch((), (), ...)
@@ -90,7 +90,17 @@ object CLInterpreter {
     }
     case SeqC(left,right) => construct(left) & construct(right)
     case OrC(left,right) => construct(left) | construct(right)
-    case BranchC(children) => ???
+    case BranchC(children) => {
+      if(children.length < 1) {
+        throw new CombinatorTypeError("BranchC needs at least one argument.")
+      }
+
+      val branches = children.map(child => {
+        (child.label, construct(child.term))
+      })
+
+      SearchTacticsImpl.onBranch(branches.head, branches.tail : _*)
+    }
     case KleeneC(child) => (construct(child) *)
     case LabelC(label) => LabelBranch(label)
     case OnLabelC(label, term) => SearchTacticsImpl.onBranch(label, construct(term))

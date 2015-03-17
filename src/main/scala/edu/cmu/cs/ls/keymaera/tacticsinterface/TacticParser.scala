@@ -48,7 +48,7 @@ object CLParser {
       weakSeqP   ::
       seqP       ::
       orP        ::
-      branchP    ::
+//      branchP    ::
       onLabelP   ::
       kleeneP    ::
       labelP     ::
@@ -116,17 +116,22 @@ object CLParser {
       }
     }
 
-    lazy val branchP: PackratParser[CLTerm] = {
-      lazy val pattern = BRANCH ~ ("(" ~> (cltermP ~ ",".?).* <~ ")")
-      log(pattern)("branch") ^^ {
-        case BRANCH ~ xs => BranchC(xs.map(p => p._1))
-      }
-    }
+    //@todo the paper uses divergent syntax. See onLabelP.
+//    lazy val branchP: PackratParser[CLTerm] = {
+//      lazy val pattern = BRANCH ~ ("(" ~> (onLabelP ~ ",".?).* <~ ")")
+//      log(pattern)("branch") ^^ {
+//        case BRANCH ~ xs => BranchC(xs.map(p => p._1))
+//      }
+//    }
 
     lazy val onLabelP: PackratParser[CLTerm] = {
-      lazy val pattern = ON_LABEL ~ "(" ~ ident ~ cltermP ~ ")"
+      lazy val labelsPattern = (("(" ~> ("\"" ~> notDoubleQoute <~ "\"") <~ ",") ~ cltermP <~ (")" ~ ",".?)).*
+      lazy val pattern = ON_LABEL ~ "(" ~ labelsPattern  ~ ")"
       log(pattern)("onLabel") ^^ {
-        case ON_LABEL ~ "(" ~ name ~ term ~ ")" => OnLabelC(name, term)
+        case ON_LABEL ~ "(" ~ namesAndTerms ~ ")" => {
+          val labels = namesAndTerms.map(nt => OnLabelC(nt._1, nt._2))
+          BranchC(labels)
+        }
       }
     }
 
