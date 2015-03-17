@@ -36,8 +36,8 @@ object SyntacticDerivationInContext {
   private def createSubstitution(frm: Formula, f: Formula, g: Formula,
                                  lhsFactory: (Formula, Formula) => Formula,
                                  rhsFactory: (Formula, Formula) => Formula) = {
-    val aF = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val aG = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+    val aF = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val aG = ApplyPredicate(Function("q", None, Real, Bool), Anything)
 
     uniformSubstT(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)),
       Map(Equiv(frm, rhsFactory(FormulaDerivative(f), FormulaDerivative(g))) ->
