@@ -471,7 +471,7 @@ object Axiom {
 
     (for(k <- res)
       yield (k.name -> k.formula)).toMap
-  }
+  } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   // lookup axiom named id
   final def apply(id: String): Rule = new Rule("Axiom " + id) {
@@ -481,6 +481,32 @@ object Axiom {
         case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
       }
     } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
+  }
+  
+  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+    val x = Variable("x", None, Real)
+    val aP0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val aPn = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val aQn = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+    val aC = Apply(Function("c", None, Unit, Real), Nothing)
+    val aF = Apply(Function("f", None, Real, Real), Anything)
+    val aG = Apply(Function("g", None, Real, Real), Anything)
+    val a = ProgramConstant("a")
+    val b = ProgramConstant("b")
+    // soundness-critical that these are for p() not for p(x) or p(?)
+    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
+    assert(axs("V vacuous") == Imply(aP0, Modality(BoxModality(a), aP0)), "V vacuous")
+    
+    assert(axs("[++] choice") == Equiv(Modality(BoxModality(Choice(a,b)), aPn), And(Modality(BoxModality(a), aPn), Modality(BoxModality(b), aPn))), "[++] choice")
+    assert(axs("[;] compose") == Equiv(Modality(BoxModality(Sequence(a,b)), aPn), Modality(BoxModality(a), Modality(BoxModality(b), aPn))), "[;] compose")
+    
+    assert(axs("c()' derive constant fn") == Equals(Real, Derivative(Real, aC), Number(0)), "c()' derive constant fn")
+    assert(axs("-' derive minus") == Equals(Real, Derivative(Real, Subtract(Real, aF, aG)), Subtract(Real, Derivative(Real, aF), Derivative(Real, aG))), "-' derive minus")
+    assert(axs("*' derive product") == Equals(Real, Derivative(Real, Multiply(Real, aF, aG)), Add(Real, Multiply(Real, Derivative(Real, aF), aG), Multiply(Real, aF, Derivative(Real, aG)))), "*' derive product")
+    assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
+    assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
+    true
   }
 }
 
