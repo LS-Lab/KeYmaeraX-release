@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, /*diffCutT,*/ arithmeticT, default}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, arithmeticT, abstractionT}
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
@@ -138,8 +138,9 @@ object ODETactics {
           var x = 0
 
           val cuts = flatSolution.foldLeft(diffWeakenT(p))((a, b) =>
-            debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & AndRightT(p) &&
-            (debugT(s"Prove Solution using DI at $p") & diffInvariantT(p), a))
+            debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & onBranch(
+              (cutShowLbl, debugT(s"Prove Solution using DI at $p") & diffInvariantT(p)),
+              (cutUseLbl, a)))
 
           Some(initialGhosts && cuts)
         }
