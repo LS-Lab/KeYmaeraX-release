@@ -71,8 +71,8 @@ object SyntacticDerivationInContext {
       case FormulaDerivative(Imply(p, q)) => {
         val g = FormulaDerivative(Or(Not(p), q))
 
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-        val aQ = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
 
         val usubst = uniformSubstT(List(SubstitutionPair(aP, p), SubstitutionPair(aQ, q)),
           Map(Equiv(f, FormulaDerivative(Or(Not(p), q))) ->
