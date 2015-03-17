@@ -549,36 +549,37 @@ object AxiomaticRule {
    */
   private def loadRuleFile() = {
     val x = Variable("x", None, Real)
-    val p = Function("p", None, Real, Bool)
-    val q = Function("q", None, Real, Bool)
-    val anyt = Anything
+    val px = ApplyPredicate(Function("p", None, Real, Bool), x)
+    val pny = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val qx = ApplyPredicate(Function("q", None, Real, Bool), x)
+    val qny = ApplyPredicate(Function("q", None, Real, Bool), Anything)
     val a = ProgramConstant("a")
     scala.collection.immutable.Map(
       ("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, x))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
       ("all congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, x), ApplyPredicate(q, x)))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), Equiv(ApplyPredicate(p, x), ApplyPredicate(q, x))))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), Equiv(px, qx)))))),
       ("all monotone",
-         (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, x)), IndexedSeq(ApplyPredicate(q, x))),
-          Sequent(Seq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x))), IndexedSeq(Forall(Seq(x), ApplyPredicate(q, x)))))),
+         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
+          Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
       ("[] monotone",
-        (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
-          Sequent(Seq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))), IndexedSeq(BoxModality(a, ApplyPredicate(q, anyt)))))),
+        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
+          Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
       ("<> monotone",
-        (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
-          Sequent(Seq(), IndexedSeq(DiamondModality(a, ApplyPredicate(p, anyt))), IndexedSeq(DiamondModality(a, ApplyPredicate(q, anyt)))))),
+        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
+          Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
       ("[] congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, ApplyPredicate(p, anyt)), BoxModality(a, ApplyPredicate(q, anyt))))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
       ("<> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, ApplyPredicate(p, anyt)), DiamondModality(a, ApplyPredicate(q, anyt)))))))
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny))))))
       /*
       ("Goedel", /* unsound for hybrid games */
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, anyt))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))))))
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
       */
     )
   }
