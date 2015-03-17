@@ -200,6 +200,8 @@ object ODETactics {
     }
   }
 
+  def diamondDiffWeakenAxiomT: PositionTactic = new ByDualityAxiomTactic(diffWeakenAxiomT.asInstanceOf[AxiomTactic])
+
   def diffWeakenAxiomT: PositionTactic = new AxiomTactic("DW differential weakening", "DW differential weakening") {
     def applies(f: Formula) = f match {
       case BoxModality(ODESystem(_, _, _), _) => true

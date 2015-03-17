@@ -3,7 +3,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
-import ODETactics.{diffWeakenT, diffWeakenAxiomT, diffSolution}
+import ODETactics.{diffWeakenT, diffWeakenAxiomT, diffSolution, diamondDiffWeakenAxiomT}
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
 import testHelper.ProofFactory._
@@ -37,7 +37,7 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler = null
   }
 
-  "differential weaken tactic" should "pull out evolution domain constraint" in {
+  "Box differential weaken tactic" should "pull out evolution domain constraint" in {
     val s = sucSequent("[x'=1 & x>2;]x>0".asFormula)
 
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
@@ -78,6 +78,32 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result2.openGoals() should have size 1
     result2.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result2.openGoals().flatMap(_.sequent.succ) should contain only "true -> x>0".asFormula
+  }
+
+  "Diamond differential weaken tactic" should "pull out evolution domain constraint" in {
+    val s = sucSequent("<x'=1 & x>2;>x>0".asFormula)
+
+    val diffWeakenAx = locateSucc(diamondDiffWeakenAxiomT)
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("<x'=1 & x>2;>(!(x>2 -> !x>0))".asFormula))
+
+//    val diffWeaken = locateSucc(diffWeakenT)
+//    val result = helper.runTactic(diffWeaken, new RootNode(s))
+//    result.openGoals() should have size 1
+//    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+//    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 -> x>0".asFormula
+  }
+
+  it should "work inside formula" in {
+    val s = sucSequent("x>0 & <x'=1 & x>2;>x>0".asFormula)
+
+    val diffWeakenAx = diamondDiffWeakenAxiomT(SuccPosition(0, PosInExpr(1::Nil)))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("x>0 & <x'=1 & x>2;>(!(x>2 -> !x>0))".asFormula))
+
+    //    val diffWeaken = locateSucc(diffWeakenT)
+    //    val result = helper.runTactic(diffWeaken, new RootNode(s))
+    //    result.openGoals() should have size 1
+    //    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    //    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 -> x>0".asFormula
   }
 
   "differential weaken of system of ODEs" should "pull out evolution domain constraint" in {
