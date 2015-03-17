@@ -1954,35 +1954,6 @@ class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
 
 // the following rules will turn into axioms
 
-//@TODO Removal suggested since better axiom DC differential cut exists.
-//@TODO ap: I don't see why this rule implementation should be sound.
-@deprecated("Use DC differential cut axiom instead")
-class DiffCut(p: Position, h: Formula) extends PositionRule("Differential Cut", p) {
-  require(!p.isAnte)
-  override def apply(s: Sequent): List[Sequent] = {
-    val prgFn = new ExpressionTraversalFunction {
-      override def postP(pos: PosInExpr, prg: Program) = prg match {
-        case ODESystem(d, a, hh) => Right(ODESystem(d, a, And(hh, h)))
-        case ContEvolve(f) => Right(ContEvolve(And(f, h)))
-        case _ => super.postP(pos, prg)
-      }
-    }
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case BoxModality(ev@ContEvolve(evolve), f) => Right(And(BoxModality(ev, h),
-          BoxModality(ContEvolve(And(evolve, h)), f)))
-        case BoxModality(ev@ODESystem(d, a, hh), f) => Right(And(BoxModality(ev, h),
-          BoxModality(ODESystem(d, a, And(hh, h)), f)))
-        case _ => ???
-      }
-    }
-    ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, fn), s(p)) match {
-      case Some(f) => List(s.updated(p, f))
-      case a => throw new IllegalStateException("Unexpected traversal result " + a)
-    }
-  }
-}
-
 /*********************************************************************************
  * Block Quantifier Decomposition
  *********************************************************************************

@@ -343,18 +343,6 @@ object TacticLibrary {
   def diffInvariant = ODETactics.diffInvariantT
 
   def diffCutT(h: Formula) = ODETactics.diffCutT(h)
-  @deprecated("Use diffCutT(h) instead.")
-  def diffCutRuleT(h: Formula): PositionTactic = new PositionTactic("Differential cut with ") {
-    override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
-      case Some(BoxModality(_: ContEvolve, _)) => true
-      case Some(BoxModality(_: ODESystem, _)) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ApplyRule(new DiffCut(p, h)) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
 
   def deriveFormulaT: PositionTactic = new PositionTactic("Derive Formula") {
     override def applies(s: Sequent, p: Position): Boolean = Retrieve.formula(s, p) match {
