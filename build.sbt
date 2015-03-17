@@ -4,6 +4,8 @@ libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.4"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.10" % "2.0" % "test"
 
+libraryDependencies += "org.pegdown" % "pegdown" % "1.5.0" % "test"      // (For Html Scalatest reports)
+
 libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test"
 
 /// mongodb driver
@@ -79,6 +81,8 @@ watchSources <++= baseDirectory map {
 parallelExecution in Test := false
 
 fork in Test := true
+
+testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/test-reports")
 
 ////////////////////////////////////////////////////////////////////////////////
 // Builds -- make sure you are using SBT 13.6+
