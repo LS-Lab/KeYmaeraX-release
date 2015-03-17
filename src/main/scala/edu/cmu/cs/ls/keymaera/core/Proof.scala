@@ -1375,7 +1375,10 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
         case Imply(l, r) => Imply(usubst(l), usubst(r))
         case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
-        case FormulaDerivative(g) => FormulaDerivative(usubst(g))
+        case der@FormulaDerivative(g) =>
+          require(admissible(SetLattice.top[NamedSymbol], g),
+            s"Substitution clash when substituting derivative ${der.prettyString()}")
+          FormulaDerivative(usubst(g))
 
         // binding cases add bound variables to u
         case Forall(vars, g) => require(admissible(SetLattice(vars), g),
