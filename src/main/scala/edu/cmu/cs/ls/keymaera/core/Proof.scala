@@ -796,8 +796,6 @@ object UniformSubstitutionRule {
 class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
-  import BindingAssessment._
-
   @unspecialized
   override def compose[A](g: (A) => _root_.edu.cmu.cs.ls.keymaera.core.Sequent): (A) => scala.List[_root_.edu.cmu.cs.ls.keymaera.core.Sequent] = super.compose(g)
 
@@ -810,14 +808,14 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
           case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
           case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
           // if ODE binds var, then rename with stored initial value
-          case BoxModality(ode: DifferentialProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+          case BoxModality(ode: DifferentialProgram, _) if StaticSemantics(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
-          case DiamondModality(ode: DifferentialProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+          case DiamondModality(ode: DifferentialProgram, _) if StaticSemantics(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
           // if loop binds var, then rename with stored initial value
-          case BoxModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
+          case BoxModality(Loop(a), _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
-          case DiamondModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
+          case DiamondModality(Loop(a), _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
             Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
 
           case _ => Left(Some(ExpressionTraversal.stop))
@@ -1113,12 +1111,11 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
  */
 @deprecated("Use [] congruence and <> congruence and all congruence rules instead")
 class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
-  import BindingAssessment.allNames
   override def apply(s: Sequent): List[Sequent] = {
     require(assumption.isAnte && assumption.inExpr == HereP)
     val (blacklist, fn) = s.ante(assumption.getIndex) match {
       case Equals(d, a, b) =>
-        (allNames(a) ++ allNames(b),
+        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
         new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
             if(e == a) Right(b)
@@ -1126,7 +1123,7 @@ class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRul
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })
       /*case ProgramEquals(a, b) =>
-        (allNames(a) ++ allNames(b),
+        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
         new ExpressionTraversalFunction {
           override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
             if(e == a) Right(b)
@@ -1134,7 +1131,7 @@ class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRul
             else throw new IllegalArgumentException("Equality Rewriting not applicable")
         })*/
       case Equiv(a, b) =>
-        (allNames(a) ++ allNames(b),
+        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
         new ExpressionTraversalFunction {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
             if (e == a) Right(b)
