@@ -1216,7 +1216,7 @@ object Axiom {
     } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
   }
   
-  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+  @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x", None, Real)
     val aP0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
     val aPn = ApplyPredicate(Function("p", None, Real, Bool), Anything)
@@ -1328,7 +1328,11 @@ object AxiomaticRule {
 // Lookup Lemma (different justifications: Axiom, Lemma with proof, Oracle Lemma)
 
 
-//@TODO Review
+/**
+ * Lookup a lemma that has been proved previously or by an external arithmetic tool.
+ * @author nfulton
+ *@TODO Review
+ */
 object LookupLemma {
   def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
   private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {

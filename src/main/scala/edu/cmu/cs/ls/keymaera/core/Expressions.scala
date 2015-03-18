@@ -1078,6 +1078,7 @@ object ContEvolve {
   }
 }
 //@TODO Remove
+@deprecated("Remove?")
 final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
@@ -1100,6 +1101,7 @@ object CheckedContEvolveFragment {
   }
 }
 //@TODO Not sure what this is. Remove?
+@deprecated("Remove?")
 final class CheckedContEvolveFragment(child:DifferentialProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: CheckedContEvolveFragment => x.child.equals(child)
@@ -1226,6 +1228,7 @@ final class ODESystem(val disturbance: Seq[NamedSymbol], val child: Differential
 }
 
 //@TODO What is this?
+@deprecated("Remove")
 object IncompleteSystem {
   def apply(system: DifferentialProgram) = new IncompleteSystem(system)
   def apply() = new IncompleteSystem(new EmptyODE)
@@ -1234,6 +1237,7 @@ object IncompleteSystem {
       case _                   => None
   }
 }
+@deprecated("Remove")
 final class IncompleteSystem(val system: DifferentialProgram) extends Expr(ProgramSort) with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case IncompleteSystem(s) => system == s
