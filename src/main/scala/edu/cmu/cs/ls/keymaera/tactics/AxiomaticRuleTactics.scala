@@ -26,7 +26,7 @@ object AxiomaticRuleTactics {
         val aX = ProgramConstant("a")
         val pX = Function("p", None, Real, Bool)
         val qX = Function("q", None, Real, Bool)
-        val s = Substitution(SubstitutionPair(aX, a) ::
+        val s = USubst(SubstitutionPair(aX, a) ::
           SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
           SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
         Some(new ApplyRule(AxiomaticRule("[] congruence", s)) {
@@ -53,7 +53,7 @@ object AxiomaticRuleTactics {
         val aX = ProgramConstant("a")
         val pX = Function("p", None, Real, Bool)
         val qX = Function("q", None, Real, Bool)
-        val s = Substitution(SubstitutionPair(aX, a) ::
+        val s = USubst(SubstitutionPair(aX, a) ::
           SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
           SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
         Some(new ApplyRule(AxiomaticRule("<> congruence", s)) {
@@ -84,7 +84,7 @@ object AxiomaticRuleTactics {
           val aX = ProgramConstant("a")
           val pX = Function("p", None, Real, Bool)
           val qX = Function("q", None, Real, Bool)
-          val s = Substitution(SubstitutionPair(aX, a) ::
+          val s = USubst(SubstitutionPair(aX, a) ::
             SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
             SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
           Some(new ApplyRule(AxiomaticRule("[] monotone", s)) {
@@ -117,7 +117,7 @@ object AxiomaticRuleTactics {
           val aX = ProgramConstant("a")
           val pX = Function("p", None, Real, Bool)
           val qX = Function("q", None, Real, Bool)
-          val s = Substitution(SubstitutionPair(aX, a) ::
+          val s = USubst(SubstitutionPair(aX, a) ::
             SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
             SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
           Some(new ApplyRule(AxiomaticRule("<> monotone", s)) {

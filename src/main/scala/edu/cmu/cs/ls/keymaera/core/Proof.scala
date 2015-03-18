@@ -733,9 +733,9 @@ class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRul
  *          - ProgramConstant/DifferentialProgramConstant
  *          - Derivative(...)
  * @param repl the expression to be used in place of what
- @TODO Turn into case class instead of having apply/unapply?
+ @TODO Check: Turned into case class instead of having apply/unapply for simplicity.
  */
-final class SubstitutionPair (val what: Expr, val repl: Expr) {
+final case class SubstitutionPair (val what: Expr, val repl: Expr) {
   applicable
   // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
   //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
@@ -759,62 +759,15 @@ final class SubstitutionPair (val what: Expr, val repl: Expr) {
       }, "Substitutable expression required, found " + what)
   }
 
-  override def toString: String = "(" + what.prettyString() + ", " + repl.prettyString() + ")"
+  override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
 }
-object SubstitutionPair {
+/*object SubstitutionPair {
   def apply(n: Expr, t: Expr): SubstitutionPair = new SubstitutionPair(n, t)
   def unapply(e: Any): Option[(Expr,Expr)] = e match {
     case x: SubstitutionPair => Some((x.what,x.repl))
     case _ => None
   }
-}
-
-/**
- * Global Uniform Substitution Rule.
- * Applies a given uniform substitution to the given original premise (origin).
- * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
- * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
- * @param substitution the uniform substitution to be applied to origin.
- * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
- */
-// uniform substitution
-// this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-object GlobalUniformSubstitution {
-  def apply(subst: USubst, origin: Sequent) : Rule = new GlobalUniformSubstitution(subst, origin)
-
-  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
-
-  private class GlobalUniformSubstitution(val subst: USubst, val origin: Sequent) extends Rule("Uniform Substitution") {
-    /**
-     * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
-     * require explicit rule applications)
-     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-     */
-    def apply(conclusion: Sequent): List[Sequent] = {
-      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
-      val substAtOrigin = subst(origin) //just for debugging.
-      if (subst(origin) == conclusion) {
-        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        List(origin)
-      } else {
-        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
-      }
-    }
-
-    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
-      //val subst = new OSubstitution(this.subst.l)
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-      (conclusion.pref == origin.pref // universal prefix is identical
-        && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
-        && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
-        && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
-    }
-  }
-}
-
-
+}*/
 
 /**
  * Uniform Substitution Rule.
@@ -826,40 +779,74 @@ object GlobalUniformSubstitution {
  */
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-object FastUniformSubstitution {
-  def apply(substitution: FastUSubst, origin: Sequent) : Rule = new FastUniformSubstitution(substitution, origin)
+object UniformSubstitutionRule {
+  def apply(subst: USubst, origin: Sequent) : Rule = new UniformSubstitutionRule(subst, origin)
 
-  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
+  @elidable(FINEST) private def log(msg: =>Any) = {} //println(msg)
 
-  private class FastUniformSubstitution(val subst: FastUSubst, val origin: Sequent) extends Rule("Uniform Substitution") {
+  private class UniformSubstitutionRule(val subst: USubst, val origin: Sequent) extends Rule("Uniform Substitution") {
     /**
-     * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+     * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
      * require explicit rule applications)
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
-      val substAtOrigin = subst(origin) //just for debugging.
       if (subst(origin) == conclusion) {
-        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         List(origin)
       } else {
-        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
       }
-    } 
-    
-    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
-      //val subst = new OSubstitution(this.subst.l)
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-      (conclusion.pref == origin.pref // universal prefix is identical
-        && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
-        && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
-        && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
     }
   }
 }
+
+
+
+// /**
+//  * Fast Uniform Substitution Rule.
+//  * Applies a given uniform substitution to the given original premise (origin).
+//  * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
+//  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
+//  * @param substitution the uniform substitution to be applied to origin.
+//  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+//  */
+// // uniform substitution
+// // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
+// object FastUniformSubstitutionRule {
+//   def apply(substitution: FastUSubst, origin: Sequent) : Rule = new FastUniformSubstitution(substitution, origin)
+//
+//   @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
+//
+//   private class FastUniformSubstitutionRule(val subst: FastUSubst, val origin: Sequent) extends Rule("Fast Uniform Substitution") {
+//     /**
+//      * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+//      * require explicit rule applications)
+//      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+//      */
+//     def apply(conclusion: Sequent): List[Sequent] = {
+//       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
+//       val substAtOrigin = subst(origin) //just for debugging.
+//       if (subst(origin) == conclusion) {
+//         assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+//         List(origin)
+//       } else {
+//         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+//         throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+//       }
+//     }
+//
+//     private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
+//       //val subst = new OSubstitution(this.subst.l)
+//       //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
+//       val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
+//       (conclusion.pref == origin.pref // universal prefix is identical
+//         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
+//         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
+//         && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
+//     }
+//   }
+// }
 
 // alpha conversion
 
@@ -1262,9 +1249,9 @@ object AxiomaticRule {
   val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
 
   // apply uniform substitution instance subst of "axiomatic" rule named id
-  final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
+  final def apply(id: String, subst: USubst): Rule = new AxiomaticRuleInstance(id, subst)
 
-  private final class AxiomaticRuleInstance(id: String, subst: Substitution) extends Rule("Axiomatic Rule " + id + " instance") {
+  private final class AxiomaticRuleInstance(val id: String, val subst: USubst) extends Rule("Axiomatic Rule " + id + " instance") {
     private val (rulepremise,ruleconclusion) = rules.get(id) match {
       case Some(pair) => pair
       case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)

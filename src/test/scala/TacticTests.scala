@@ -68,13 +68,13 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
    */
   def lazyPropositional = ((locate(indecisive(true, false, false, true)) | closeT)*)
 
-  def unsoundUniformSubstitution(assume : Formula, nonconclude : Formula, subst: Substitution,
+  def unsoundUniformSubstitution(assume : Formula, nonconclude : Formula, subst: USubst,
                                  checkAssumption: Boolean = true): ProvabilityStatus = {
     println(s"Premise    ${assume.prettyString()}")
     println(s"Nonclusion ${nonconclude.prettyString()}")
     println(s"Usubst     $subst")
     //@TODO prove(nonconclude) should be (Counterexample) OR: prove(Not(nonconclude)) should be (Satisfiable)
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(subst,
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(subst,
       Sequent(Nil, IndexedSeq(), IndexedSeq(assume))).apply(Sequent(Nil, IndexedSeq(), IndexedSeq(nonconclude)))
     //prove(nonconclude, TacticLibrary.uniformSubstT(subst, Map(assume -> nonconclude))) // would not get us the exceptions
     val nonconcstat = prove(nonconclude, TacticLibrary.default)
@@ -154,7 +154,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       GreaterThan(Real, Number(2), y))
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterThan(Real,CDot,y)))), checkAssumption = false) should not be Provable
+      USubst(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterThan(Real,CDot,y)))), checkAssumption = false) should not be Provable
   }
 
   it should "not apply unsoundly to [y:=5 x:=x^2]p(x+y)<->p(x^2+5) with y>=. for p(.)" taggedAs USTest in {
@@ -168,7 +168,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     // cannot yet prove assumption automatically
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(SubstitutionPair(ApplyPredicate(p1,CDot),
+      USubst(List(SubstitutionPair(ApplyPredicate(p1,CDot),
         GreaterEqual(Real,y,CDot)))), checkAssumption = false) should not be Provable
   }
 
@@ -182,7 +182,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       And(GreaterThan(Real,Add(Real,x,Number(1)),Number(0)),Exists(Seq(x),LessThan(Real,x,Add(Real,x,Number(1))))))
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
+      USubst(List(
       SubstitutionPair(ApplyPredicate(p1,CDot), And(GreaterThan(Real,CDot,Number(0)),Exists(Seq(x),LessThan(Real,x,CDot))))))) should not be Provable
   }
 
@@ -196,7 +196,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       GreaterThan(Real, Number(2), y))
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
+      USubst(List(
       SubstitutionPair(ApplyPredicate(p1,CDot), GreaterThan(Real,CDot,y)))), checkAssumption = false) should not be Provable
   }
 
@@ -210,7 +210,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
         GreaterEqual(Real,y, Add(Real,Exp(Real,x,Number(2)),Number(5))))
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterEqual(Real,y,CDot)))),
+      USubst(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterEqual(Real,y,CDot)))),
       checkAssumption = false) should not be Provable
   }
 
@@ -224,7 +224,7 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       And(GreaterThan(Real,Add(Real,x,Number(1)),Number(0)),Exists(Seq(x),LessThan(Real,x,Add(Real,x,Number(1))))))
 
     unsoundUniformSubstitution(assume, conclude,
-      Substitution(List(
+      USubst(List(
       new SubstitutionPair(ApplyPredicate(p1,CDot), And(GreaterThan(Real,CDot,Number(0)),Exists(Seq(x),LessThan(Real,x,CDot))))))) should not be (Provable)
   }
 

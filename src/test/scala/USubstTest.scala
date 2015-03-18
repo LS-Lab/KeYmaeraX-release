@@ -33,9 +33,9 @@ class USubstTests extends FlatSpec with Matchers {
       BoxModality("x:=f();".asProgram, ApplyPredicate(p1, "x".asTerm)),
       ApplyPredicate(p1, fn)) // axioms.axiom("[:=])
     val conc = "[x:=x+1;]x!=x <-> x+1!=x".asFormula
-    val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), NotEquals(Real, CDot, "x".asTerm)),
+    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), NotEquals(Real, CDot, "x".asTerm)),
       SubstitutionPair(fn, "x+1".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
@@ -46,9 +46,9 @@ class USubstTests extends FlatSpec with Matchers {
       BoxModality("x:=f();".asProgram, ApplyPredicate(p1, "x".asTerm)),
       ApplyPredicate(p1, fn)) // axioms.axiom("[:=])
     val conc = "[x:=0;]x=x <-> 0=x".asFormula
-    val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), Equals(Real, CDot, "x".asTerm)),
+    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), Equals(Real, CDot, "x".asTerm)),
       SubstitutionPair(fn, "0".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
@@ -63,7 +63,7 @@ class USubstTests extends FlatSpec with Matchers {
 
     val y = Variable("y", None, Real)
     val z = Variable("z", None, Real)
-    val s = Substitution(Seq(
+    val s = USubst(Seq(
       // [{y:=y+1++{z:=.+z}*}; z:=.+y*z]y>.
       SubstitutionPair(ApplyPredicate(p1, CDot), BoxModality(
         Sequence(
@@ -74,15 +74,15 @@ class USubstTests extends FlatSpec with Matchers {
           Assign(z, Add(Real, CDot, Multiply(Real, y, z)))),
         GreaterThan(Real, y, CDot))),
       SubstitutionPair(fn, "x^2".asTerm)))
-    UniformSubstitution(s, Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+    UniformSubstitutionRule(s, Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
   it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs USubstTest in {
     val fml = GreaterEqual(Real, x, Number(0))
     val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
-    val s = Substitution(Seq(SubstitutionPair(p0, fml)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+    val s = USubst(Seq(SubstitutionPair(p0, fml)))
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
     Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
@@ -92,9 +92,9 @@ class USubstTests extends FlatSpec with Matchers {
     val prem = Axiom.axioms("V vacuous")
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, fml)
-    val s = Substitution(Seq(SubstitutionPair(p0, fml),
+    val s = USubst(Seq(SubstitutionPair(p0, fml),
       SubstitutionPair(ap, prog)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
@@ -103,8 +103,8 @@ class USubstTests extends FlatSpec with Matchers {
     val aC = Apply(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x)'=0".asFormula
-    val s = Substitution(Seq(SubstitutionPair(aC, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+    val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
@@ -113,8 +113,8 @@ class USubstTests extends FlatSpec with Matchers {
     val aC = Apply(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x')'=0".asFormula
-    val s = Substitution(Seq(SubstitutionPair(aC, "x'".asTerm)))
-    a [SubstitutionClashException] should be thrownBy UniformSubstitution(s,
+    val s = USubst(Seq(SubstitutionPair(aC, "x'".asTerm)))
+    a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
   }
@@ -126,7 +126,7 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = GreaterEqual(Real, Exp(Real, Neg(Real, x), Number(2)), Number(0))
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, fml)
-    val s = Substitution(Seq(SubstitutionPair(ApplyPredicate(p1, Anything), fml),
+    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1, Anything), fml),
       SubstitutionPair(ap, prog)))
     AxiomaticRule("Goedel", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
@@ -136,7 +136,7 @@ class USubstTests extends FlatSpec with Matchers {
   ignore should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs USubstTest in {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
-    val s = Substitution(
+    val s = USubst(
       SubstitutionPair(ApplyPredicate(p1, Anything), fml) ::
       SubstitutionPair(ap, prog) :: Nil)
     AxiomaticRule("Goedel", s)(
@@ -149,7 +149,7 @@ class USubstTests extends FlatSpec with Matchers {
 
       val prog = "{y:=y+1++{z:=x+z;}*}; z:=x+y*z;".asProgram
       val q = Function("q", None, Real, Bool)
-      val s = Substitution(Seq(
+      val s = USubst(Seq(
         SubstitutionPair(ap, prog),
         SubstitutionPair(ApplyPredicate(pn, Anything), "(-x)^2>=y".asFormula),
         SubstitutionPair(ApplyPredicate(q, Anything), "x^2>=y".asFormula)
@@ -167,7 +167,7 @@ class USubstTests extends FlatSpec with Matchers {
         val concRhs = BoxModality(prog, prem2)
 
         val q = Function("q", None, Real, Bool)
-        val s = Substitution(Seq(
+        val s = USubst(Seq(
           SubstitutionPair(ap, prog),
           SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
           SubstitutionPair(ApplyPredicate(q, Anything), prem2)
@@ -186,7 +186,7 @@ class USubstTests extends FlatSpec with Matchers {
         val conc = Equiv(BoxModality(prog, prem1), BoxModality(prog, prem2))
 
         val q = Function("q", None, Real, Bool)
-        val s = Substitution(Seq(
+        val s = USubst(Seq(
           SubstitutionPair(ap, prog),
           SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
           SubstitutionPair(ApplyPredicate(q, Anything), prem2)
@@ -205,7 +205,7 @@ class USubstTests extends FlatSpec with Matchers {
         val conc = Equiv(DiamondModality(prog, prem1), DiamondModality(prog, prem2))
 
         val q = Function("q", None, Real, Bool)
-        val s = Substitution(Seq(
+        val s = USubst(Seq(
           SubstitutionPair(ap, prog),
           SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
           SubstitutionPair(ApplyPredicate(q, Anything), prem2)
@@ -224,7 +224,7 @@ class USubstTests extends FlatSpec with Matchers {
         val concRhs = DiamondModality(prog, prem2)
 
         val q = Function("q", None, Real, Bool)
-        val s = Substitution(Seq(
+        val s = USubst(Seq(
           SubstitutionPair(ap, prog),
           SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
           SubstitutionPair(ApplyPredicate(q, Anything), prem2)
@@ -241,7 +241,7 @@ class USubstTests extends FlatSpec with Matchers {
         val prog = rand.nextProgram(randomComplexity)
         val conc = BoxModality(prog, prem)
 
-        val s = Substitution(Seq(
+        val s = USubst(Seq(
           SubstitutionPair(ap, prog),
           SubstitutionPair(ApplyPredicate(pn, Anything), prem)
            ))

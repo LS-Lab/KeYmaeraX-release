@@ -304,7 +304,7 @@ object PropositionalTacticsImpl {
         case Some(frm) => frm
         case _ => f
       }
-      Some(new Tactics.ApplyRule(UniformSubstitution(Substitution(subst), Sequent(p.sequent.pref, ante, succ))) {
+      Some(new Tactics.ApplyRule(UniformSubstitutionRule(USubst(subst), Sequent(p.sequent.pref, ante, succ))) {
         override def applicable(node: ProofNode): Boolean = true
       })
     }

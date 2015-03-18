@@ -44,7 +44,7 @@ object TermTests {
     val b = Assign(x, Number(1))
     val p = GreaterThan(Real, x, Number(0))
     val substPairs = Seq(new SubstitutionPair(PredicateConstant("p"), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
-    val subst = Substitution(substPairs)
+    val subst = USubst(substPairs)
     Axiom.axioms.get("[++] choice") match {
       case Some(f) => (subst, Map((getTautology2, f)))
       case _ => throw new IllegalArgumentException("blub")

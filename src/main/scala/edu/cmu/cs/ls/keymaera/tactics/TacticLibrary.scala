@@ -168,6 +168,7 @@ object TacticLibrary {
     if(vars.isEmpty) f else Forall(vars.toList, f)
   }
 
+  @deprecated("Use [] monotone via boxMonotoneT or <> monotone via diamondMonotoneT or Goedel rule instead.")
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(_, _) => true

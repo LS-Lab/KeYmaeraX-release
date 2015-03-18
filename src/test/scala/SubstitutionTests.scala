@@ -41,7 +41,7 @@ class SubstitutionTests extends FlatSpec with Matchers {
     }
     NameCategorizer.maybeFreeVariables(axiom) should contain only x
 
-    val substitution = Substitution(List(
+    val substitution = USubst(List(
       SubstitutionPair(aT, "12345".asTerm),
       SubstitutionPair(aH, "true & 1=1".asFormula)
     ))

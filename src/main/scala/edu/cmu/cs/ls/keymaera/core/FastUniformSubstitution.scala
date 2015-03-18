@@ -18,10 +18,6 @@ import scala.collection.immutable.Set
 
 import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
-import scala.collection.immutable.HashMap
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaera.parser._
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
 
 import scala.collection.GenTraversableOnce
@@ -265,7 +261,7 @@ final case class FastUSubst(subsDefs: scala.collection.immutable.Seq[Substitutio
     // uniform substitution base cases
     case app@ApplyPredicate(_, Anything) if subsDefs.exists(sameHead(_, app)) =>
       val rFormula = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app)).repl.asInstanceOf[Formula]
-      Substitution(List()).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
+      FastUSubst(List()).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
     case app@ApplyPredicate(_, Anything) if !subsDefs.exists(sameHead(_, app)) => f
     case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
       val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
