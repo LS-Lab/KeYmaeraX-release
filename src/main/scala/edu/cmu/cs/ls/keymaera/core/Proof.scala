@@ -658,64 +658,6 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
   }
 }
 
-/************************************************************************
- * Other Proof Rules
- */
-
-/*********************************************************************************
- * Congruence Rewriting Proof Rule
- *********************************************************************************
- */
-
-// equality/equivalence rewriting
-//@TODO Review
-/**
- * Rewrites position ``p" according to assumption; for instance, if p="f" and assumption="f=g" then this
- * equality-rewrites p to g.
- * @param assumption The position of the equality (should be in the antecedent)
- * @param p The position of an occurance of the (l?)hs of assumption
- * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
- */
-@deprecated("Use [] congruence and <> congruence and all congruence rules instead")
-class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
-  import BindingAssessment.allNames
-  override def apply(s: Sequent): List[Sequent] = {
-    require(assumption.isAnte && assumption.inExpr == HereP)
-    val (blacklist, fn) = s.ante(assumption.getIndex) match {
-      case Equals(d, a, b) =>
-        (allNames(a) ++ allNames(b),
-        new ExpressionTraversalFunction {
-          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })
-      /*case ProgramEquals(a, b) =>
-        (allNames(a) ++ allNames(b),
-        new ExpressionTraversalFunction {
-          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })*/
-      case Equiv(a, b) =>
-        (allNames(a) ++ allNames(b),
-        new ExpressionTraversalFunction {
-          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
-            if (e == a) Right(b)
-            else if (e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-          }
-        })
-      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-    }
-    val trav = TraverseToPosition(p.inExpr, fn, blacklist)
-    ExpressionTraversal.traverse(trav, s(p)) match {
-      case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case a => throw new IllegalArgumentException("Equality Rewriting not applicable. Result is " + a + " " + a.getClass)
-    }
-  }
-}
 
 /*********************************************************************************
  * Uniform Substitution Proof Rule
@@ -1048,7 +990,12 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   }
 }
 
-// skolemize
+
+/*********************************************************************************
+ * Skolemization Proof Rule
+ *********************************************************************************
+ */
+
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
@@ -1114,8 +1061,13 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
 }
 
+/************************************************************************
+ * Other Proof Rules
+ */
+
   /**
    * @TODO Review. Might turn into axiom QuantifierAbstraction.
+   * @TODO Tactics should be perfectly fine using [] monotone or <> monotone instead.
    */
 @deprecated("Use [] monotone and <> monotone or Goedel rule instead.")
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
@@ -1145,13 +1097,68 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
   }
 }
 
-// the following rules will turn into axioms
+/*********************************************************************************
+ * Congruence Rewriting Proof Rule
+ *********************************************************************************
+ */
+
+// equality/equivalence rewriting
+//@TODO Review
+/**
+ * Rewrites position ``p" according to assumption; for instance, if p="f" and assumption="f=g" then this
+ * equality-rewrites p to g.
+ * @param assumption The position of the equality (should be in the antecedent)
+ * @param p The position of an occurance of the (l?)hs of assumption
+ * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
+ */
+@deprecated("Use [] congruence and <> congruence and all congruence rules instead")
+class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
+  import BindingAssessment.allNames
+  override def apply(s: Sequent): List[Sequent] = {
+    require(assumption.isAnte && assumption.inExpr == HereP)
+    val (blacklist, fn) = s.ante(assumption.getIndex) match {
+      case Equals(d, a, b) =>
+        (allNames(a) ++ allNames(b),
+        new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })
+      /*case ProgramEquals(a, b) =>
+        (allNames(a) ++ allNames(b),
+        new ExpressionTraversalFunction {
+          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })*/
+      case Equiv(a, b) =>
+        (allNames(a) ++ allNames(b),
+        new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
+            if (e == a) Right(b)
+            else if (e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+          }
+        })
+      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+    }
+    val trav = TraverseToPosition(p.inExpr, fn, blacklist)
+    ExpressionTraversal.traverse(trav, s(p)) match {
+      case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case a => throw new IllegalArgumentException("Equality Rewriting not applicable. Result is " + a + " " + a.getClass)
+    }
+  }
+}
 
 /*********************************************************************************
  * Block Quantifier Decomposition
  *********************************************************************************
  */
 
+//@NOTE Currently not used.
+//@TODO Can turn into axiom once list quantifiers are parsable.
 object DecomposeQuantifiers {
   def apply(p: Position): Rule = new DecomposeQuantifiers(p)
 }
