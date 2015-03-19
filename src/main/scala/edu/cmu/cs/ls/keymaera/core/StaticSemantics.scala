@@ -55,7 +55,30 @@ object StaticSemantics {
    */
   def apply(t: Term): SetLattice[NamedSymbol] = freeVars(t)
 
-  private def freeVars(t: Term): SetLattice[NamedSymbol] = {t match {
+  /**
+   * Compute the static semantics of formula f, i.e., its set of free and bound variables.
+   */
+  def apply(f: Formula): VCF = fmlVars(f)
+
+  /**
+   * Compute the static semantics of program a, i.e., its set of free and bound and must-bound variables.
+   */
+  def apply(a: Program): VCP = progVars(a)
+
+
+  /**
+   * The set FV(e) of free variables of expression e.
+   */
+  def freeVars(e: Expr): SetLattice[NamedSymbol] = e match {
+    case t: Term => freeVars(t)
+    case f: Formula => freeVars(f)
+    case a: Program => freeVars(a)
+  }
+
+  /**
+   * The set FV(t) of free variables of term t.
+   */
+  def freeVars(t: Term): SetLattice[NamedSymbol] = {t match {
     // base cases
     case x: Variable => SetLattice(x)
     case CDot => SetLattice(CDot)
@@ -75,11 +98,26 @@ object StaticSemantics {
     case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
+  
+  /**
+   * The set FV(f) of free variables of formula f.
+   */
+  def freeVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).fv
 
   /**
-   * Compute the static semantics of formula f, i.e., its set of free and bound variables.
+   * The set FV(a) of free variables of program a.
    */
-  def apply(f: Formula): VCF = fmlVars(f)
+  def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
+
+  /**
+   * The set BV(f) of bound variables of formula f.
+   */
+  def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).vv
+
+  /**
+   * The set BV(a) of bound variables of program a.
+   */
+  def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
 
   private def fmlVars(f: Formula): VCF = f match {
     // base cases
@@ -113,11 +151,6 @@ object StaticSemantics {
     case FormulaDerivative(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ vdf.fv.map[NamedSymbol](x=>DifferentialSymbol(x)), bv = vdf.bv) //@todo eisegesis
     case True | False => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
   }
-
-  /**
-   * Compute the static semantics of program a, i.e., its set of free and bound and must-bound variables.
-   */
-  def apply(a: Program): VCP = progVars(a)
 
   private def progVars(p: Program): VCP = { p match {
     // base cases
@@ -256,6 +289,9 @@ object SetLattice {
   def bottom[A] = new SetLattice(Right(Set.empty[A]))
   def top[A]: SetLattice[A] = new SetLattice[A](Left(null))
 }
+/**
+ * @TODO Documentation
+ */
 class SetLattice[A](val s: Either[Null, Set[A]]) {
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
     case Left(_) => other
