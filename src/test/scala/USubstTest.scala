@@ -121,8 +121,7 @@ class USubstTests extends FlatSpec with Matchers {
 
   // uniform substitution of rules
 
-  // TODO Goedel not yet in AxiomaticRule
-  ignore /*"Uniform substitution of rules"*/ should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
+  "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
     val fml = GreaterEqual(Real, Exp(Real, Neg(Real, x), Number(2)), Number(0))
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, fml)
@@ -132,8 +131,7 @@ class USubstTests extends FlatSpec with Matchers {
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
-  // TODO Goedel not yet in AxiomaticRule
-  ignore should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs USubstTest in {
+  it should "instantiate Goedel from (-x)^2>=0 (II)" taggedAs USubstTest in {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
     val s = USubst(
@@ -234,8 +232,7 @@ class USubstTests extends FlatSpec with Matchers {
       }
     }
 
-    // TODO Goedel not yet in AxiomaticRule
-    ignore should "instantiate random programs in Goedel" taggedAs USubstTest in {
+    it should "instantiate random programs in Goedel" taggedAs USubstTest in {
       for (i <- 1 to randomTrials) {
         val prem = "(-z1)^2>=0".asFormula
         val prog = rand.nextProgram(randomComplexity)

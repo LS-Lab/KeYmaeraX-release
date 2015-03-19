@@ -1308,12 +1308,10 @@ object AxiomaticRule {
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
       ("<> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny))))))
-      /*
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
       ("Goedel", /* unsound for hybrid games */
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
-      */
     )
   }
 
