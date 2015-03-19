@@ -18,6 +18,8 @@ import scala.collection.immutable.Set
 import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
 
+import StaticSemantics._
+
 /**
  * A Uniform Substitution with its application mechanism.
  * Implements application of uniform substitutions to terms, formulas, programs.
@@ -279,15 +281,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
       }).intersect(U) != SetLattice.bottom
 
-    def nameOf(symbol: Expr): NamedSymbol = symbol match {
-      case Derivative(_, v: Variable) => v // TODO check
-      case ApplyPredicate(fn, _) => fn
-      case Apply(fn, _) => fn
-      case s: NamedSymbol => s
-      case _ => throw new IllegalArgumentException(s"Unexpected ${symbol.prettyString()} in substitution pair")
-    }
-
-    subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.what)).forall(fn => !occurrences.contains(fn))
+    subsDefs.filter(intersectsU).flatMap(sigma => signature(sigma.what)).forall(fn => !occurrences.contains(fn))
   }
 
   /**

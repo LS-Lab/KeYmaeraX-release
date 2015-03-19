@@ -182,7 +182,13 @@ object StaticSemantics {
   }} ensuring(r => { val VCP(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) must be a subset of BV($p)")
 
   // signature of function, predicate, atomic program symbols
-  
+
+  def signature(e: Expr): Set[NamedSymbol] = e match {
+    case f: Formula => signature(f)
+    case t: Term => signature(t)
+    case p: Program => signature(p)
+  }
+
   /**
    * The signature of expression e.
    */
