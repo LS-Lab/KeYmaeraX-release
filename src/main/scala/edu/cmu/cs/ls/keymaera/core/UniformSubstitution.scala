@@ -262,12 +262,18 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
         case t: Term => sigma.what match {
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
-          // if ever extended with f(x,y,z): freeVariables(t) -- {x,y,z}
+          // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
+          case Apply(f: Function, CDot) =>
+            assert(t == sigma.repl)
+            StaticSemantics(t) -- Set(CDot)
           case _ => StaticSemantics(t)
         }
         case f: Formula => sigma.what match {
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
-          // if ever extended with p(x,y,z): freeVariables(f) -- {x,y,z}
+          // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
+          case ApplyPredicate(fn: Function, CDot) =>
+            assert(f == sigma.repl)
+            StaticSemantics(f).fv -- Set(CDot)
           case _ => StaticSemantics(f).fv
         }
         case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state

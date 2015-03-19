@@ -1126,6 +1126,15 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s(h) should be ("(x*x)' = x'*x + x*x'".asFormula)
   }
 
+  it should "work with CDot" in {
+    val f = Function("f", None, Real, Real)
+    val x = Variable("x", None, Real)
+    // f(x)' = 1
+    val h = Equals(Real, Derivative(Real, Apply(f, x)), Number(1))
+    val s = create(SubstitutionPair(Apply(f, CDot), Add(Real, "c()".asTerm, CDot)))
+    s(h) should be ("(c() + x)' = 1".asFormula)
+  }
+
   "Substitution of primed formulas" should "work" in {
     val f = Apply(Function("p", None, Real, Real), Anything)
     val g = Apply(Function("q", None, Real, Real), Anything)
@@ -1134,6 +1143,16 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
     s(h) should be ("(x=x)' <-> x'=x'".asFormula)
+  }
+
+  it should "work with CDot" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    // p(x)'
+    val h = Equiv(FormulaDerivative(ApplyPredicate(p, x)), True)
+
+    val s = create(SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, "c()".asTerm, CDot)))
+    s(h) should be ("(c()=x)' <-> true".asFormula)
   }
 
   ignore /*"Substitution of programs where not all branches write the same variables"*/ should "work too" in {
