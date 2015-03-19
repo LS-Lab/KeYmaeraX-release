@@ -112,7 +112,7 @@ object StaticSemantics {
   /**
    * The set BV(f) of bound variables of formula f.
    */
-  def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).vv
+  def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
 
   /**
    * The set BV(a) of bound variables of program a.
@@ -183,6 +183,15 @@ object StaticSemantics {
 
   // signature of function, predicate, atomic program symbols
   
+  /**
+   * The signature of expression e.
+   */
+  def signature(e: Expr): Set[NamedSymbol] = e match {
+    case t: Term => signature(t)
+    case f: Formula => signature(f)
+    case a: Program => signature(a)
+  }
+
   /**
    * The signature of a term, i.e., set of function symbols occurring in it.
    * Disregarding number literals.
@@ -265,6 +274,15 @@ object StaticSemantics {
     case Loop(a) => signature(a)
   }
   
+  /**
+   * Any symbols in expression e.
+   */
+  def signature(e: Expr): Set[NamedSymbol] = e match {
+    case t: Term => symbols(t)
+    case f: Formula => symbols(f)
+    case a: Program => symbols(a)
+  }
+
   /**
    * Any symbol occuring in term, whether variable or function
    */
