@@ -2,14 +2,25 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.goedelT
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeT
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.boxAssignT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.EquivRightT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyRightT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.NotRightT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.OrRightT
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{TacticHelper, debugT, globalAlphaRenamingT, arithmeticT, abstractionT}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{globalAlphaRenamingT, debugT, arithmeticT}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
@@ -20,6 +31,209 @@ import scala.collection.immutable.List
  * @author aplatzer
  */
 object ODETactics {
+
+  /**
+   * Creates a new tactic to solve ODEs in diamonds. The tactic introduces ghosts for initial values, asks Mathematica
+   * for a solution, and proves that the returned solution is indeed correct.
+   * @return The newly created tactic.
+   */
+  def diamondDiffSolveT: PositionTactic = new PositionTactic("<'> differential solution") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case DiamondModality(ODESystem(_, ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _: EmptyODE), _), _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new Tactic("") {
+      def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      def apply(tool: Tool, node: ProofNode) = {
+        val t = constructTactic(p)
+        t.scheduler = Tactics.MathematicaScheduler
+        t.continuation = continuation
+        t.dispatch(this, node)
+      }
+    }
+
+    private def constructTactic(p: Position) = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      private def primedSymbols(ode: DifferentialProgram) = {
+        var primedSymbols = Set[Variable]()
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+            case Derivative(_, ps: Variable) => primedSymbols += ps; Left(None)
+            case Derivative(_, _) => throw new IllegalArgumentException("Only derivatives of variables supported")
+            case _ => Left(None)
+          }
+        }, ode)
+        primedSymbols
+      }
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        def createTactic(ode: DifferentialProgram, solution: Term, time: Variable, iv: Map[Variable, Variable],
+                         diffEqPos: Position) = {
+          val primed = primedSymbols(ode)
+          val initialGhosts = primed.foldLeft(NilT)((a, b) =>
+            a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(skolemizeToFnT(_))(diffEqPos)))
+
+          def g(t: Term): Term = SubstitutionHelper.replaceFree(solution)(time, t)
+
+          // equiv of diamondDiffSolveAxiomT is going to appear after all the ghost equalities
+          val axiomInstPos = AntePosition(node.sequent.ante.length + primed.size)
+          val solve = diamondDiffSolveAxiomT(g)(p) & onBranch(
+            (axiomUseLbl, AndRightT(p) && (
+              arithmeticT | debugT("Solution not valid initially") & stopT,
+              cohideT(p) & assertT(0,1) & SyntacticDerivationInContext.SyntacticDerivationT(p) & diffEffectT(p))
+              & goedelT & boxDerivativeAssignT(p) & (arithmeticT | debugT("Solution not provable") & stopT)),
+            (axiomShowLbl, equivRewriting(axiomInstPos, p))
+          )
+
+          Some(initialGhosts & solve)
+        }
+
+        val diffEq = getFormula(node.sequent, p) match {
+          case DiamondModality(ode: DifferentialProgram, _) => ode
+          case _ => throw new IllegalStateException("Checked by applies to never happen")
+        }
+
+        val iv = primedSymbols(diffEq).map(v => v -> freshNamedSymbol(v, node.sequent(p))).toMap
+        // boxAssignT will increment the index twice (universal quantifier, skolemization) -> tell Mathematica
+        val ivm = iv.map(e =>  (e._1, Function(e._2.name, Some(e._2.index.get + 2), Unit, e._2.sort))).toMap
+
+        val time = Variable("t", None, Real)
+        val theSolution = tool match {
+          case x: Mathematica => x.diffSolver.diffSol(diffEq, time, ivm)
+          case _ => None
+        }
+
+        val diffEqPos = SuccPosition(p.index)
+        theSolution match {
+          case Some(Equals(_, _, s)) => createTactic(diffEq, s, time, iv, diffEqPos)
+          case _ => None
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns a tactic for diamond ODE solving. This tactic results in two open branches remaining: show that the
+   * solution is a solution; use the solution.
+   * @param g The symbolic solution of the ODE.
+   * @return The newly created tactic.
+   */
+  def diamondDiffSolveAxiomT(g: Term => Term): PositionTactic = new AxiomTactic("<'> differential solution", "<'> differential solution") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(ODESystem(_, ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _: EmptyODE), _), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, List[SubstitutionPair],
+      Option[PositionTactic], Option[PositionTactic])] = f match {
+      case DiamondModality(ODESystem(_, ODEProduct(AtomicODE(Derivative(Real, x: Variable), c), _: EmptyODE), h), p) =>
+        // (<x'=f(x)&H(x);>p(x) <-> \exists t . (t>=0 & (\forall s . ((0<=s&s=t) -> <x:=g(s);>H(x))) & <x:=g(t);>p(x))) <- (g(0)=x & [t'=1]g(t)'=f(g(t)))
+        val t = Variable("t", None, Real)
+        val s = Variable("s", None, Real)
+
+        val checkSol = And(
+          Equals(Real, g(Number(0)), x),
+          BoxModality(ODESystem(ODEProduct(AtomicODE(Derivative(Real, t), Number(1))), True),
+            Equals(Real, Derivative(Real, g(t)), SubstitutionHelper.replaceFree(c)(x, g(t))))
+        )
+        val equiv = Equiv(f, Exists(t::Nil, And(
+          GreaterEqual(Real, t, Number(0)),
+          And(
+            Forall(s::Nil, Imply(
+              And(LessEqual(Real, Number(0), s), LessEqual(Real, s, t)),
+              DiamondModality(Assign(x, g(s)), h)
+            )),
+            DiamondModality(Assign(x, g(t)), p)
+          )
+        )))
+
+        val axiomInstance = Imply(checkSol, equiv)
+
+        // construct substitution
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+        val aF = Apply(Function("f", None, Real, Real), CDot)
+        val aG = Apply(Function("g", None, Real, Real), CDot)
+        val l = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
+          SubstitutionPair(aH, SubstitutionHelper.replaceFree(h)(x, CDot)) ::
+          SubstitutionPair(aF, SubstitutionHelper.replaceFree(c)(x, CDot)) ::
+          SubstitutionPair(aG, g(CDot)) :: Nil
+
+        // rename to match axiom if necessary
+        val aX = Variable("x", None, Real)
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(_, Exists(_, _)) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
+          else (ax, None)
+
+        Some(axiom, axiomInstance, l, None, cont)
+      case _ => None
+    }
+  }
+
+  /**
+   * Creates a new tactic for the differential effect axiom.
+   * @return The newly created tactic
+   */
+  def diffEffectT: PositionTactic = new AxiomTactic("DE differential effect", "DE differential effect") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(ODESystem(_, ODEProduct(AtomicODE(Derivative(Real, _: Variable), _), _: EmptyODE), _), _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position): Option[(Formula, Formula, List[SubstitutionPair],
+      Option[PositionTactic], Option[PositionTactic])] = f match {
+      case BoxModality(ode@ODESystem(_, ODEProduct(AtomicODE(dx@Derivative(Real, x: Variable), t), _: EmptyODE), q), p) =>
+        // [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)
+        val axiomInstance = Equiv(f, BoxModality(ode, BoxModality(Assign(dx, t), p)))
+
+        // construct substitution
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), CDot)
+        val aF = Apply(Function("f", None, Real, Real), CDot)
+        val l = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
+          SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, CDot)) ::
+          SubstitutionPair(aF, SubstitutionHelper.replaceFree(t)(x, CDot)) :: Nil
+
+        // rename to match axiom if necessary
+        val aX = Variable("x", None, Real)
+        val alpha = new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(BoxModality(ODESystem(_, _, _), _), BoxModality(ODESystem(_, _, _), BoxModality(Assign(Derivative(_, _), _), _))) => true
+            case _ => false
+          }
+
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
+        }
+
+        val (axiom, cont) =
+          if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
+          else (ax, None)
+
+        Some(axiom, axiomInstance, l, None, cont)
+    }
+  }
 
   /**
    * Returns a tactic to use the solution of an ODE as a differential invariant.
@@ -68,7 +282,7 @@ object ODETactics {
           case Some(existingTime) => (existingTime, NilT, false)
           case None =>
             // HACK need some convention for internal names
-            val initialTime: Variable = TacticHelper.freshNamedSymbol(Variable("k4_t", None, Real), node.sequent)
+            val initialTime: Variable = freshNamedSymbol(Variable("k4_t", None, Real), node.sequent)
             // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
             val time = Variable(initialTime.name,
               initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
@@ -150,7 +364,7 @@ object ODETactics {
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
-        val iv = primedSymbols(diffEq).map(v => v -> TacticHelper.freshNamedSymbol(v, node.sequent(p))).toMap
+        val iv = primedSymbols(diffEq).map(v => v -> freshNamedSymbol(v, node.sequent(p))).toMap
         // boxAssignT will increment the index twice (universal quantifier, skolemization) -> tell Mathematica
         val ivm = iv.map(e =>  (e._1, Function(e._2.name, Some(e._2.index.get + 2), Unit, e._2.sort))).toMap
 

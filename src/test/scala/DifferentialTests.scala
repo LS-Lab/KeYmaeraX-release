@@ -349,4 +349,45 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val tactic = locateSucc(diffAuxiliaryT(Variable("x", None, Real), "0".asTerm, "1".asTerm))
     tactic.applicable(new RootNode(s)) shouldBe false
   }
+
+  "Diamond diff solve axiom tactic" should "split a single differential equation into a branch for proving the solution and a branch for using it" in {
+    val s = sucSequent("<x'=3*a()+z() & x>5;>x>0".asFormula)
+    // provide anything as solution for testing
+    val tactic = locateSucc(ODETactics.diamondDiffSolveAxiomT(_ => "c()".asTerm))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante shouldBe empty
+    result.openGoals()(0).sequent.succ should contain only "c()=x & [t'=1;]c()'=3*a()+z()".asFormula
+    result.openGoals()(1).sequent.ante should contain only
+      "<x'=3*a()+z() & x>5;>x>0 <-> \\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=c();>x>5) & <x:=c();>x>0))".asFormula
+    result.openGoals()(1).sequent.succ should contain only "<x'=3*a()+z() & x>5;>x>0".asFormula
+  }
+
+  "Diamond diff solve tactic" should "introduce initial value ghosts and ask Mathematica for a solution" in {
+    val s = sucSequent("<x'=5 & x>2;>x>0".asFormula)
+    val tactic = locateSucc(ODETactics.diamondDiffSolveT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x_2()=x".asFormula
+    result.openGoals()flatMap(_.sequent.succ) should contain only
+      "\\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=5*s+x_2();>x>2) & <x:=5*t+x_2();>x>0))".asFormula
+  }
+
+  "Differential effect" should "introduce a differential assignment" in {
+    val s = sucSequent("[x'=5 & x>2;]x>0".asFormula)
+    val tactic = locateSucc(ODETactics.diffEffectT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5 & x>2;][x':=5;]x>0".asFormula
+  }
+
+  it should "alpha rename if necessary" in {
+    val s = sucSequent("[y'=5 & y>2;]y>0".asFormula)
+    val tactic = locateSucc(ODETactics.diffEffectT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=5 & y>2;][y':=5;]y>0".asFormula
+  }
 }
