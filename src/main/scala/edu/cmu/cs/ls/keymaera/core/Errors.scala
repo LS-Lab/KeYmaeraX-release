@@ -25,19 +25,19 @@ class ProverException(msg: String) extends RuntimeException(msg) {
  */
 class CoreException(msg:String) extends ProverException(msg) {}
 
-class SubstitutionClashException(msg:String, s:Any/*Substitution*/, e:Expr, info:String = "") extends CoreException(msg + "\nSubstitution " + s + " applied to " + e.prettyString + " " + info) {
+class SubstitutionClashException(msg: => Any, s:Any/*Substitution*/, e:Expr, info: => Any = "") extends CoreException(msg + "\nSubstitution " + s + (if (e != null) " applied to " + e.prettyString + " " else "") + info) {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
-  def inContext(context: String) = new SubstitutionClashException(msg, s, e, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
+  def inContext(context: => Any) = new SubstitutionClashException(msg, s, e, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
 
-class SkolemClashException(msg:String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
+class SkolemClashException(msg: => Any, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 
-class InapplicableRuleException(msg:String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
+class InapplicableRuleException(msg: => Any, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
 }
 
-class UnknownOperatorException(msg:String, e:Expr) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
+class UnknownOperatorException(msg: => Any, e:Expr) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
   
-class TacticException(msg:String, node: ProofNode) extends ProverException(msg + "\nat " + node.sequent) {}
+class TacticException(msg: => Any, node: ProofNode) extends ProverException(msg + "\nat " + node.sequent) {}

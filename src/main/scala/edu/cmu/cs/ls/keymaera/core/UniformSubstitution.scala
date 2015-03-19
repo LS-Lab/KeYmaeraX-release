@@ -115,7 +115,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
-            s"Substitution clash when substituting derivative ${der.prettyString()}")
+            s"Substitution clash when substituting derivative ${der.prettyString()}: static semantics of $e = ${StaticSemantics(e)} is not empty")
           Derivative(Real, usubst(e))
       }
     } catch {
