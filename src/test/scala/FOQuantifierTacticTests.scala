@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Config, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{FOQuantifierTacticsImpl, Interpreter, Config, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
@@ -364,5 +364,29 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = locateAnte(instantiateT)
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x,y,z. x>y+z".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "x>y+z".asFormula :: Nil, Nil))
+  }
+
+  "Forall duality" should "turn a universal quantifier into a negated existential" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.forallDualT)
+    getProofSequent(tactic, new RootNode(sucSequent("\\forall x . x>y".asFormula))) should be (
+      sucSequent("!(\\exists x . (!x>y))".asFormula))
+  }
+
+  it should "turn a negated existential quantifier into a universal" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.forallDualT)
+    getProofSequent(tactic, new RootNode(sucSequent("!(\\exists x . (!x>y))".asFormula))) should be (
+      sucSequent("\\forall x . x>y".asFormula))
+  }
+
+  "Exists duality" should "turn an existential quantifier into a negated universal" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT)
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x . x>y".asFormula))) should be (
+      sucSequent("!(\\forall x . (!x>y))".asFormula))
+  }
+
+  it should "turn a negated universal quantifier into an existential" in {
+    val tactic = locateSucc(FOQuantifierTacticsImpl.existsDualT)
+    getProofSequent(tactic, new RootNode(sucSequent("!(\\forall x . (!x>y))".asFormula))) should be (
+      sucSequent("\\exists x . x>y".asFormula))
   }
 }

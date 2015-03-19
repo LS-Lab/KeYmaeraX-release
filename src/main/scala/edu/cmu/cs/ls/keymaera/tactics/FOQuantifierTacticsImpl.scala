@@ -18,8 +18,73 @@ import scala.collection.immutable.Seq
 
 /**
  * Implementation of first order quantifier tactics.
+ * @author Stefan Mitsch
  */
 object FOQuantifierTacticsImpl {
+
+  /**
+   * Creates a new tactic for the universal/existential duality axiom.
+   * @return The newly created tactic
+   */
+  def forallDualT: PositionTactic = new AxiomTactic("all dual", "all dual") {
+    override def applies(f: Formula): Boolean = f match {
+      case Forall(_, _) => true
+      case Not(Exists(_, Not(_))) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case Forall(v, p) =>
+        assert(v.size == 1, "Duality not supported for more than one variable")
+        // \forall x . p(x) <-> !(\exists x . (!p(x)))
+        val axiomInstance = Equiv(f, Not(Exists(v, Not(p))))
+
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
+
+        Some(axiomInstance, subst)
+      case Not(Exists(v, Not(p))) =>
+        // \forall x . p(x) <-> !(\exists x . (!p(x)))
+        val axiomInstance = Equiv(Forall(v, p), f)
+
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
+
+        Some(axiomInstance, subst)
+    }
+  }
+
+  /**
+   * Creates a new tactic for the universal/existential duality axiom.
+   * @return The newly created tactic
+   */
+  def existsDualT: PositionTactic = new AxiomTactic("exists dual", "exists dual") {
+    override def applies(f: Formula): Boolean = f match {
+      case Exists(_, _) => true
+      case Not(Forall(_, Not(_))) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case Exists(v, p) =>
+        assert(v.size == 1, "Duality not supported for more than one variable")
+        // \exists x . p(x) <-> !(\forall x . (!p(x)))
+        val axiomInstance = Equiv(f, Not(Forall(v, Not(p))))
+
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
+
+        Some(axiomInstance, subst)
+      case Not(Forall(v, Not(p))) =>
+        // \exists x . p(x) <-> !(\forall x . (!p(x)))
+        val axiomInstance = Equiv(Exists(v, p), f)
+
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
+
+        Some(axiomInstance, subst)
+    }
+  }
 
   def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
