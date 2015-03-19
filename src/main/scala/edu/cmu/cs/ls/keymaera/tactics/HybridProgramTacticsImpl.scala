@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import NNFRewrite.rewriteDoubleNegationEliminationT
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
@@ -34,6 +35,90 @@ object HybridProgramTacticsImpl {
   /*********************************************
    * Axiom Tactics
    *********************************************/
+
+  class ByDualityAxiomTactic(base: AxiomTactic) extends PositionTactic(base.name) {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case DiamondModality(prg, phi) => base.applies(BoxModality(prg, Not(phi)))
+      case BoxModality(prg, phi) => base.applies(DiamondModality(prg, Not(phi)))
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case DiamondModality(prg, phi) =>
+          Some(diamondDualityT(p) & base(p.first) & boxDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
+        case BoxModality(prg, phi) =>
+          Some(boxDualityT(p) & base(p.first) & diamondDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
+        case _ => None
+      }
+    }
+  }
+
+  def boxDualityT: PositionTactic = new AxiomTactic("[] dual", "[] dual") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(_, _) => true
+      case Not(DiamondModality(_, Not(_))) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case BoxModality(prg, phi) =>
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val subst =
+          SubstitutionPair(aA, prg) ::
+            SubstitutionPair(aP, phi) :: Nil
+
+        val axiomInstance = Equiv(f, Not(DiamondModality(prg, Not(phi))))
+
+        Some(axiomInstance, subst)
+      case Not(DiamondModality(prg, Not(phi))) =>
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val subst =
+          SubstitutionPair(aA, prg) ::
+            SubstitutionPair(aP, phi) :: Nil
+
+        val axiomInstance = Equiv(BoxModality(prg, phi), f)
+
+        Some(axiomInstance, subst)
+      case _ => None
+    }
+  }
+
+
+  def diamondDualityT: PositionTactic = new AxiomTactic("<> dual", "<> dual") {
+    override def applies(f: Formula): Boolean = f match {
+      case DiamondModality(_, _) => true
+      case Not(BoxModality(_, Not(_))) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case DiamondModality(prg, phi) =>
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val subst =
+          SubstitutionPair(aA, prg) ::
+          SubstitutionPair(aP, phi) :: Nil
+
+        val axiomInstance = Equiv(f, Not(BoxModality(prg, Not(phi))))
+
+        Some(axiomInstance, subst)
+      case Not(BoxModality(prg, Not(phi))) =>
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val subst =
+          SubstitutionPair(aA, prg) ::
+          SubstitutionPair(aP, phi) :: Nil
+
+        val axiomInstance = Equiv(DiamondModality(prg, phi), f)
+
+        Some(axiomInstance, subst)
+      case _ => None
+    }
+  }
 
   /**
    * Creates a new axiom tactic for differential box assignment [x := t;]

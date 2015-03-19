@@ -151,8 +151,8 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
-  def arithmeticT = repeatT(locateAnte(eqLeft(exhaustive = true))) & ArithmeticTacticsImpl.hideUnnecessaryLeftEqT ~
-    ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqLeft(exhaustive = true))) ~
+    ArithmeticTacticsImpl.hideUnnecessaryLeftEqT ~ ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
   /**
    * Quantifier elimination.
@@ -168,6 +168,7 @@ object TacticLibrary {
     if(vars.isEmpty) f else Forall(vars.toList, f)
   }
 
+  @deprecated("Use [] monotone via boxMonotoneT or <> monotone via diamondMonotoneT or Goedel rule instead.")
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(_, _) => true
@@ -682,28 +683,8 @@ object TacticLibrary {
     }
   }
 
-  def deriveMonomialT: PositionTactic = new PositionTactic("Derive Monomial") {
-    override def applies(s: Sequent,p:Position): Boolean = Retrieve.subTerm(s(p), p.inExpr) match {
-      case Some(Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real,_)))) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Retrieve.subTerm(node.sequent(p), p.inExpr) match {
-          case Some(f@Derivative(Real, Exp(Real, Variable(_,_,Real), Number(Real,_)))) =>
-            val app = new ApplyRule(DeriveMonomial(f)) {
-              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-            }
-            val eqPos = AntePosition(node.sequent.ante.length)
-            Some(app & equalityRewriting(eqPos, p, false) & hideT(p.topLevel) & hideT(eqPos))
-          case None => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
+  @deprecated
+  def deriveMonomialT: PositionTactic = ???
 
   def deriveConstantT: PositionTactic = new AxiomTactic("c()' derive constant fn", "c()' derive constant fn") {
     def applies(f: Formula) = ???

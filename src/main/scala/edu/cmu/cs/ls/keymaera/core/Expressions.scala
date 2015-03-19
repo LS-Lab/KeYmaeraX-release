@@ -26,12 +26,6 @@ import scala.collection.immutable
 //the pretty printer.
 
 /**
- * External functions imported in core but not used in proof check mode
- * @TODO ???
- */
-trait Annotable
-
-/**
  * Prover Core
  */
 
@@ -111,7 +105,7 @@ object TupleT {
  * Expression infrastructure
  *===========================
  */
-sealed abstract class Expr(val sort : Sort) extends Annotable {
+sealed abstract class Expr(val sort : Sort) {
   override def toString = super.toString() + " (" + prettyString() + ")"
   def prettyString() = new KeYmaeraPrettyPrinter().stringify(this)
 }
@@ -189,6 +183,7 @@ object Variable {
 }
 final class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
+@deprecated("Remove")
 object PredicateConstant {
   def apply(name : String, index: Option[Int] = None): PredicateConstant = new PredicateConstant(name, index)
   def unapply(e: Any): Option[(String, Option[Int])] = e match {
@@ -197,6 +192,7 @@ object PredicateConstant {
   }
 }
 //@TODO replace with just predicate functions, alias functions that happen to be of type ()=>bool
+@deprecated("Remove")
 final class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
 
 object ProgramConstant {
@@ -231,6 +227,7 @@ final class Function (name : String, index: Option[Int] = None, domain : Sort, s
    * backends.
    */
   var external : Boolean = false
+  @deprecated("Terrible state. Remove!")
   def markExternal() = {
     external = true
     this
@@ -751,6 +748,7 @@ object Exp {
     case _ => None
   }
 }
+//@TODO Rename to Power or Pow
 final class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
   //@TODO Exp does not make sense except on sort reals.
   override def equals(e: Any): Boolean = e match {
@@ -1078,6 +1076,7 @@ object ContEvolve {
   }
 }
 //@TODO Remove
+@deprecated("Remove?")
 final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: ContEvolve => x.child == child
@@ -1100,6 +1099,7 @@ object CheckedContEvolveFragment {
   }
 }
 //@TODO Not sure what this is. Remove?
+@deprecated("Remove?")
 final class CheckedContEvolveFragment(child:DifferentialProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case x: CheckedContEvolveFragment => x.child.equals(child)
@@ -1226,6 +1226,7 @@ final class ODESystem(val disturbance: Seq[NamedSymbol], val child: Differential
 }
 
 //@TODO What is this?
+@deprecated("Remove")
 object IncompleteSystem {
   def apply(system: DifferentialProgram) = new IncompleteSystem(system)
   def apply() = new IncompleteSystem(new EmptyODE)
@@ -1234,6 +1235,7 @@ object IncompleteSystem {
       case _                   => None
   }
 }
+@deprecated("Remove")
 final class IncompleteSystem(val system: DifferentialProgram) extends Expr(ProgramSort) with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case IncompleteSystem(s) => system == s

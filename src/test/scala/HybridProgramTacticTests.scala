@@ -812,4 +812,40 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     getProofSequent(tactic, new RootNode(sucSequent("<x:=2; x:=3;>x>0".asFormula))) should be (
       sucSequent("<x:=2;><x:=3;>x>0".asFormula))
   }
+
+  "Diamond duality" should "transform diamond into negated box" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.diamondDualityT)
+    getProofSequent(tactic, new RootNode(sucSequent("<x:=2; x:=3;>x>0".asFormula))) should be (
+      sucSequent("![x:=2; x:=3;](!x>0)".asFormula))
+  }
+
+  it should "transform diamond into negated box inside a formula" in {
+    val tactic = HybridProgramTacticsImpl.diamondDualityT(SuccPosition(0, PosInExpr(1::Nil)))
+    getProofSequent(tactic, new RootNode(sucSequent("v=5 & <x:=2; x:=3;>x>0".asFormula))) should be (
+      sucSequent("v=5 & ![x:=2; x:=3;](!x>0)".asFormula))
+  }
+
+  it should "transform negated box into diamond" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.diamondDualityT)
+    getProofSequent(tactic, new RootNode(sucSequent("![x:=2; x:=3;](!x>0)".asFormula))) should be (
+      sucSequent("<x:=2; x:=3;>x>0".asFormula))
+  }
+
+  "Box duality" should "transform box into negated diamond" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxDualityT)
+    getProofSequent(tactic, new RootNode(sucSequent("[x:=2; x:=3;]x>0".asFormula))) should be (
+      sucSequent("!<x:=2; x:=3;>(!x>0)".asFormula))
+  }
+
+  it should "transform box into negated diamond inside a formula" in {
+    val tactic = HybridProgramTacticsImpl.boxDualityT(SuccPosition(0, PosInExpr(1::Nil)))
+    getProofSequent(tactic, new RootNode(sucSequent("v=5 & [x:=2; x:=3;]x>0".asFormula))) should be (
+      sucSequent("v=5 & !<x:=2; x:=3;>(!x>0)".asFormula))
+  }
+
+  it should "transform negated diamond into box" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxDualityT)
+    getProofSequent(tactic, new RootNode(sucSequent("!<x:=2; x:=3;>(!x>0)".asFormula))) should be (
+      sucSequent("[x:=2; x:=3;]x>0".asFormula))
+  }
 }

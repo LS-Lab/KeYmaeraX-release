@@ -200,7 +200,7 @@ object SyntacticDerivativeTermAxiomsInContext {
   def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
     def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext ::
       ConstantFnDerivativeInContextT ::
-      SyntacticDerivativeProofRulesInContext.MonomialDerivativeInContext :: SubtractDerivativeInContextT ::
+      SyntacticDerivativeProofRulesInContext.PowerDerivativeInContext :: SubtractDerivativeInContextT ::
       AddDerivativeInContextT :: NegativeDerivativeInContextT :: MultiplyDerivativeInContextT ::
       DivideDerivativeInContextT :: Nil
 

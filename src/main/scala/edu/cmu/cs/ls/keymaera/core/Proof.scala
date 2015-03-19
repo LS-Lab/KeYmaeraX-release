@@ -449,143 +449,6 @@ object ContractionLeft {
 
 
 /*********************************************************************************
- * Lookup Axioms
- *********************************************************************************
- */
-
-object Axiom {
-  // immutable list of axioms
-  val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
-
-  //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
-  //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
-  private def loadAxiomFile: Map[String, Formula] = {
-    val parser = new KeYmaeraParser(false)
-    val alp = parser.ProofFileParser
-    val src = io.Source.fromFile("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp").mkString
-    val res = alp.runParser(src)
-
-    //Ensure that there are no doubly named axioms.
-    val distinctAxiomNames = res.map(k => k.name).distinct
-    assert(res.length == distinctAxiomNames.length)
-
-    (for(k <- res)
-      yield (k.name -> k.formula)).toMap
-  } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
-
-  // lookup axiom named id
-  final def apply(id: String): Rule = new Rule("Axiom " + id) {
-    def apply(s: Sequent): List[Sequent] = {
-      axioms.get(id) match {
-        case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
-        case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
-      }
-    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
-  }
-  
-  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
-    val x = Variable("x", None, Real)
-    val aP0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val aPn = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-    val aQn = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-    val aC = Apply(Function("c", None, Unit, Real), Nothing)
-    val aF = Apply(Function("f", None, Real, Real), Anything)
-    val aG = Apply(Function("g", None, Real, Real), Anything)
-    val a = ProgramConstant("a")
-    val b = ProgramConstant("b")
-    // soundness-critical that these are for p() not for p(x) or p(?)
-    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
-    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
-    assert(axs("V vacuous") == Imply(aP0, Modality(BoxModality(a), aP0)), "V vacuous")
-    
-    assert(axs("[++] choice") == Equiv(Modality(BoxModality(Choice(a,b)), aPn), And(Modality(BoxModality(a), aPn), Modality(BoxModality(b), aPn))), "[++] choice")
-    assert(axs("[;] compose") == Equiv(Modality(BoxModality(Sequence(a,b)), aPn), Modality(BoxModality(a), Modality(BoxModality(b), aPn))), "[;] compose")
-    
-    assert(axs("c()' derive constant fn") == Equals(Real, Derivative(Real, aC), Number(0)), "c()' derive constant fn")
-    assert(axs("-' derive minus") == Equals(Real, Derivative(Real, Subtract(Real, aF, aG)), Subtract(Real, Derivative(Real, aF), Derivative(Real, aG))), "-' derive minus")
-    assert(axs("*' derive product") == Equals(Real, Derivative(Real, Multiply(Real, aF, aG)), Add(Real, Multiply(Real, Derivative(Real, aF), aG), Multiply(Real, aF, Derivative(Real, aG)))), "*' derive product")
-    assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
-    assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
-    true
-  }
-}
-
-/**
- * Apply a uniform substitution instance of an axiomatic proof rule.
- * @author aplatzer
- * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
- */
-object AxiomaticRule {
-  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
-  val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
-
-  // apply uniform substitution instance subst of "axiomatic" rule named id
-  final def apply(id: String, subst: Substitution): Rule = new AxiomaticRuleInstance(id, subst)
-
-  private final class AxiomaticRuleInstance(id: String, subst: Substitution) extends Rule("Axiomatic Rule " + id + " instance") {
-    private val (rulepremise,ruleconclusion) = rules.get(id) match {
-      case Some(pair) => pair
-      case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
-    }
-
-    /**
-     * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
-     * Leads to same substitution instance of axiomatic rule's premise.
-     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-     */
-    def apply(conclusion: Sequent): List[Sequent] = {
-      if (subst(ruleconclusion) == conclusion) {
-        List(subst(rulepremise))
-      } else {
-        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
-      }
-    }
-  }
-
-  /**
-   * KeYmaera Axiomatic Proof Rules.
-   * @note Soundness-critical: Only return locally sound proof rules.
-   * @author aplatzer
-   */
-  private def loadRuleFile() = {
-    val x = Variable("x", None, Real)
-    val p = Function("p", None, Real, Bool)
-    val q = Function("q", None, Real, Bool)
-    val anyt = Anything
-    val a = ProgramConstant("a")
-    scala.collection.immutable.Map(
-      ("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, x))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x)))))),
-      ("all congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, x), ApplyPredicate(q, x)))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), Equiv(ApplyPredicate(p, x), ApplyPredicate(q, x))))))),
-      ("all monotone",
-         (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, x)), IndexedSeq(ApplyPredicate(q, x))),
-          Sequent(Seq(), IndexedSeq(Forall(Seq(x), ApplyPredicate(p, x))), IndexedSeq(Forall(Seq(x), ApplyPredicate(q, x)))))),
-      ("[] monotone",
-        (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
-          Sequent(Seq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))), IndexedSeq(BoxModality(a, ApplyPredicate(q, anyt)))))),
-      ("<> monotone",
-        (Sequent(Seq(), IndexedSeq(ApplyPredicate(p, anyt)), IndexedSeq(ApplyPredicate(q, anyt))),
-          Sequent(Seq(), IndexedSeq(DiamondModality(a, ApplyPredicate(p, anyt))), IndexedSeq(DiamondModality(a, ApplyPredicate(q, anyt)))))),
-      ("[] congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, ApplyPredicate(p, anyt)), BoxModality(a, ApplyPredicate(q, anyt))))))),
-      ("<> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(p, anyt), ApplyPredicate(q, anyt)))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, ApplyPredicate(p, anyt)), DiamondModality(a, ApplyPredicate(q, anyt)))))))
-      /*
-      ("Goedel", /* unsound for hybrid games */
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(ApplyPredicate(p, anyt))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, ApplyPredicate(p, anyt))))))
-      */
-    )
-  }
-
-}
-
-/*********************************************************************************
  * Sequent Proof Rules for identity/closing and cut
  *********************************************************************************
  */
@@ -795,63 +658,6 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
   }
 }
 
-/************************************************************************
- * Other Proof Rules
- */
-
-/*********************************************************************************
- * Congruence Rewriting Proof Rule
- *********************************************************************************
- */
-
-// equality/equivalence rewriting
-//@TODO Review
-/**
- * Rewrites position ``p" according to assumption; for instance, if p="f" and assumption="f=g" then this
- * equality-rewrites p to g.
- * @param assumption The position of the equality (should be in the antecedent)
- * @param p The position of an occurance of the (l?)hs of assumption
- * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
- */
-class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
-  import BindingAssessment.allNames
-  override def apply(s: Sequent): List[Sequent] = {
-    require(assumption.isAnte && assumption.inExpr == HereP)
-    val (blacklist, fn) = s.ante(assumption.getIndex) match {
-      case Equals(d, a, b) =>
-        (allNames(a) ++ allNames(b),
-        new ExpressionTraversalFunction {
-          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })
-      /*case ProgramEquals(a, b) =>
-        (allNames(a) ++ allNames(b),
-        new ExpressionTraversalFunction {
-          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })*/
-      case Equiv(a, b) =>
-        (allNames(a) ++ allNames(b),
-        new ExpressionTraversalFunction {
-          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
-            if (e == a) Right(b)
-            else if (e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-          }
-        })
-      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-    }
-    val trav = TraverseToPosition(p.inExpr, fn, blacklist)
-    ExpressionTraversal.traverse(trav, s(p)) match {
-      case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case a => throw new IllegalArgumentException("Equality Rewriting not applicable. Result is " + a + " " + a.getClass)
-    }
-  }
-}
 
 /*********************************************************************************
  * Uniform Substitution Proof Rule
@@ -869,8 +675,9 @@ class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRul
  *          - ProgramConstant/DifferentialProgramConstant
  *          - Derivative(...)
  * @param repl the expression to be used in place of what
+ @TODO Check: Turned into case class instead of having apply/unapply for simplicity.
  */
-sealed class SubstitutionPair (val what: Expr, val repl: Expr) {
+final case class SubstitutionPair (val what: Expr, val repl: Expr) {
   applicable
   // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
   //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
@@ -894,689 +701,15 @@ sealed class SubstitutionPair (val what: Expr, val repl: Expr) {
       }, "Substitutable expression required, found " + what)
   }
 
-  override def toString: String = "(" + what.prettyString() + ", " + repl.prettyString() + ")"
+  override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
 }
-object SubstitutionPair {
+/*object SubstitutionPair {
   def apply(n: Expr, t: Expr): SubstitutionPair = new SubstitutionPair(n, t)
   def unapply(e: Any): Option[(Expr,Expr)] = e match {
     case x: SubstitutionPair => Some((x.what,x.repl))
     case _ => None
   }
-}
-
-@deprecated("Use StaticSemantics instead")
-object BindingAssessment {
-  import StaticSemantics._
-  /**
-   * Categorizes the names of formula f into free variables FV and bound variables BV.
-   * @param f The formula to categorize.
-   * @return The names in f categorized into free and bound names.
-   */
-  @deprecated("Use StaticSemantics(f) instead")
-  def catVars(f: Formula) = StaticSemantics(f)
-  
-  /**
-   * The set of all (may) free variables whose value t depends on (syntactically).
-   */
-  @deprecated("Use StaticSemantics(t) or StaticSemantics.freeVars(t) instead")
-  def freeVariables(t: Term): SetLattice[NamedSymbol] = StaticSemantics(t)
-
-  @deprecated("Use StaticSemantics(p) instead")
-  def catVars(p: Program) = StaticSemantics(p)
-
-  def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
-    case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
-    case ODEProduct(a, b) => primedVariables(a) ++ primedVariables(b)
-    case ODESystem(_, child, _) => primedVariables(child)
-    case IncompleteSystem(a) => primedVariables(a)
-    case AtomicODE(Derivative(_, x: Variable), _) => Set(x)
-    case _: EmptyODE => Set.empty
-    case _: DifferentialProgramConstant => Set.empty
-  }
-
-  @deprecated("Use StaticSemantics.symbols(t) instead.")
-  def allNames(t: Term): Set[NamedSymbol] = StaticSemantics.symbols(t)
-
-  @deprecated("Use StaticSemantics.symbols(f) instead.")
-  def allNames(f: Formula): Set[NamedSymbol] = StaticSemantics.symbols(f)
-
-  @deprecated("Use StaticSemantics.symbols(p) instead.")
-  def allNames(p: Program): Set[NamedSymbol] = StaticSemantics.symbols(p)
-
-  def allNamesExceptAt(s: Sequent, p: Position) = {
-    val fs = if (p.isAnte) s.ante.slice(0, p.index) ++ s.ante.slice(p.index + 1, s.ante.length) ++ s.succ
-             else s.ante ++ s.succ.slice(0, p.index) ++ s.succ.slice(p.index + 1, s.ante.length)
-    fs.flatMap(BindingAssessment.allNames).toSet
-  }
-}
-
-/**
- * A Uniform Substitution.
- * Implementation of applying uniform substitutions to terms, formulas, programs.
- * Fast application explicit construction computing bound variables on the fly.
- * Used for UniformSubstitution rule.
- * @author aplatzer
- * @author Stefan Mitsch
- * @TODO Rename to FastSubstitution
- */
-final case class Substitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
-  applicable
-
-  import BindingAssessment._
-
-  /**
-   * Records the result of uniform substitution in a program.
-   * @param o The ignore set.
-   * @param u The taboo set.
-   * @param p The program.
-   */
-  private[core] sealed case class USR(o: SetLattice[NamedSymbol],
-                        u: SetLattice[NamedSymbol],
-                        p: Program)
-
-  /**
-   * @param rarg the argument in the substitution.
-   * @param instArg the argument to instantiate rarg with in the occurrence.
-   */
-  private def instantiate(rarg: Term, instArg: Term) = new Substitution(List(new SubstitutionPair(rarg, instArg)))
-
-  // unique left hand sides in l
-  @elidable(ASSERTION) def applicable = {
-    // check that we never replace n by something and then again replacing the same n by something
-    val lefts = subsDefs.map(sp=>sp.what).toList
-    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
-    // check that we never replace p(x) by something and also p(t) by something
-    val lambdaNames = subsDefs.map(sp=>sp.what match {
-      case ApplyPredicate(p:Function, _:Variable) => List(p)
-      case Apply(f:Function, _:Variable) => List(f)
-      case _ => Nil
-      }).fold(Nil)((a,b)=>a++b)
-      //@TODO check that we never replace p(x) by something and also p(t) by something
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
-  }
-  
-  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
-  
-
-  override def toString: String = "Subst(" + subsDefs.mkString(", ") + ")"
-
-  // uniform substitution on terms
-  def apply(t: Term): Term = {
-    try {
-      usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
-    }
-  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(t),
-    s"Local substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)} " +
-      s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(t)}")
-
-  def apply(f: Formula): Formula = {
-    log("\tSubstituting " + f.prettyString + " using " + this)
-    try {
-      val res = usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)
-      log("\tSubstituted  " + res.prettyString)
-      res
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
-    }
-  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(f),
-      s"Local substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)} " +
-        s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(f)}")
-
-  def apply(s: Sequent): Sequent = {
-    try {
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
-    }
-  }
-
-  // uniform substitution on programs
-  def apply(p: Program): Program = {
-    try {
-      usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
-    }
-  } ensuring (_ == new GlobalSubstitution(subsDefs).usubst(p),
-    s"Local substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)} " +
-      s"does not agree with global result ${new GlobalSubstitution(subsDefs).usubst(p)}")
-
-  private def substDiff(s: Seq[SubstitutionPair], names: SetLattice[NamedSymbol]) =
-    new Substitution(s.filter(_.what match { case en: NamedSymbol => !names.contains(en) case _ => true }))
-
-  /**
-   * Check whether the function in right matches with the function in left, i.e. they have the same head.
-   */
-  def sameHead(left: SubstitutionPair, right: Expr) = left.what match {
-    case Apply(lf, CDot | Anything | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
-    case ApplyPredicate(lf, CDot | Anything | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
-    case _ => false
-  }
-
-  /**
-   * Get the unique element in c to which pred applies.
-   * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
-   */
-  private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
-    require(c.count(pred) == 1)
-    c.filter(pred).head
-  }
-
-  /**
-   * @param u the set of taboo symbols that would clash substitutions if they occurred since they have been bound outside.
-   */
-  private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
-    def subst(t: Term) = subsDefs.find(_.what == t).get.repl.asInstanceOf[Term]
-    t match {
-      // homomorphic cases
-      case Neg(s, e) => Neg(s, usubst(o, u, e))
-      case Add(s, l, r) => Add(s, usubst(o, u, l), usubst(o, u, r))
-      case Subtract(s, l, r) => Subtract(s, usubst(o, u, l), usubst(o, u, r))
-      case Multiply(s, l, r) => Multiply(s, usubst(o, u, l), usubst(o, u, r))
-      case Divide(s, l, r) => Divide(s, usubst(o, u, l), usubst(o, u, r))
-      case Exp(s, l, r) => Exp(s, usubst(o, u, l), usubst(o, u, r))
-      // TODO not mentioned in substitution
-      case Pair(dom, l, r) => Pair(dom, usubst(o, u, l), usubst(o, u, r)) // @todo eisegesis
-      // uniform substitution base cases
-      case x: Variable => require(!subsDefs.exists(_.what == x), s"Substitution of variables not supported: $x"); x
-      // TODO not mentioned in substitution
-      case CDot if !subsDefs.exists(_.what == CDot) || o.contains(CDot) => CDot //@todo eisegesis
-      case CDot if  substDiff(subsDefs, o).subsDefs.exists(_.what == CDot) => //@todo eisegesis
-        require((SetLattice[NamedSymbol](CDot) ++ freeVariables(subst(CDot))).intersect(u).isEmpty,
-          s"Substitution clash: ({CDot} ∪ ${freeVariables(subst(CDot))}) ∩ $u is not empty")
-        subst(CDot)
-      case dx@Derivative(s, e) => //@todo eisegesis
-        // TODO what is our requirement here?
-        freeVariables(usubst(o, u, e)).intersect(u).isEmpty
-        Derivative(s, usubst(o, u, e))
-      case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
-        val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-        val (rArg, rTerm) =
-          (subs.what match { case Apply(_, v: NamedSymbol) => v
-                          case _ => throw new IllegalArgumentException(
-                            s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
-           subs.repl match { case t: Term => t
-                          case _ => throw new IllegalArgumentException(
-                            s"Can only substitute terms for ${app.prettyString()}")}
-          )
-        val restrictedU = theta match { case CDot => u case Anything => SetLattice.bottom[NamedSymbol] case _ => u-rArg }
-        require(freeVariables(rTerm).intersect(restrictedU).isEmpty,
-          s"Substitution clash: ${freeVariables(subs.repl.asInstanceOf[Term])} ∩ $u is not empty")
-        instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rTerm)
-      case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(o, u, theta))
-      case Anything => Anything
-      case Nothing => Nothing
-      case x: Atom => x
-      case _ => throw new UnknownOperatorException("Not implemented yet", t)
-    }
-  }
-
-  private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], f: Formula): Formula = f match {
-      // homomorphic cases
-    case Not(g) => Not(usubst(o, u, g))
-    case And(l, r) => And(usubst(o, u, l), usubst(o, u, r))
-    case Or(l, r) => Or(usubst(o, u, l), usubst(o, u, r))
-    case Imply(l, r) => Imply(usubst(o, u, l), usubst(o, u, r))
-    case Equiv(l, r) => Equiv(usubst(o, u, l), usubst(o, u, r))
-
-    case Equals(d, l, r) => Equals(d, usubst(o, u, l), usubst(o, u, r))
-    case NotEquals(d, l, r) => NotEquals(d, usubst(o, u, l), usubst(o, u, r))
-    case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(o, u, l), usubst(o, u, r))
-    case GreaterThan(d, l, r) => GreaterThan(d, usubst(o, u, l), usubst(o, u, r))
-    case LessEqual(d, l, r) => LessEqual(d, usubst(o, u, l), usubst(o, u, r))
-    case LessThan(d, l, r) => LessThan(d, usubst(o, u, l), usubst(o, u, r))
-
-    // binding cases add bound variables to u
-    case Forall(vars, g) => Forall(vars, usubst(o ++ vars, u ++ vars, g))
-    case Exists(vars, g) => Exists(vars, usubst(o ++ vars, u ++ vars, g))
-
-    case BoxModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); BoxModality(sp, usubst(q, v, g))
-    case DiamondModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); DiamondModality(sp, usubst(q, v, g))
-
-    // uniform substitution base cases
-    case app@ApplyPredicate(_, Anything) if subsDefs.exists(sameHead(_, app)) =>
-      val rFormula = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app)).repl.asInstanceOf[Formula]
-      Substitution(List()).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
-    case app@ApplyPredicate(_, Anything) if !subsDefs.exists(sameHead(_, app)) => f
-    case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
-      val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-      val (rArg, rFormula) = (
-        subs.what match { case ApplyPredicate(_, v: NamedSymbol) => v
-                       case _ => throw new IllegalArgumentException(
-                         s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=$theta not supported")},
-        subs.repl match { case f: Formula => f
-                       case _ => throw new IllegalArgumentException(
-                         s"Can only substitute formulas for ${app.prettyString()}")}
-        )
-      val restrictedU = theta match { case CDot => u case Anything => SetLattice.bottom[NamedSymbol] case _ => u-rArg }
-      require(catVars(rFormula).fv.intersect(restrictedU).isEmpty,
-        s"Substitution clash: ${catVars(rFormula).fv} ∩ $restrictedU is not empty")
-      instantiate(rArg, usubst(o, u, theta)).usubst(SetLattice.bottom, SetLattice.bottom, rFormula)
-    case app@ApplyPredicate(p, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(p, usubst(o, u, theta))
-    case FormulaDerivative(g) => FormulaDerivative(usubst(o, u, g))
-    case x: Atom => x
-    case _ => throw new UnknownOperatorException("Not implemented yet", f)
-  }
-
-  /**
-   *  uniform substitution on a program p with the set of bound variables u
-   *  return only the result components of the private case class USR
-   *  used for testing only, may need a better solution
-   */
-  private def usubstComps(o: Set[NamedSymbol], u: Set[NamedSymbol], p: Program) = {
-    val r = usubst(SetLattice(o), SetLattice(u), p); (r.o, r.u, r.p)
-  }
-
-  /**
-   *
-   */
-  private[core] def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = { p match {
-    case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
-    case Assign(d@Derivative(_, x: Variable), e) => USR(o+DifferentialSymbol(x), u+DifferentialSymbol(x), Assign(d, usubst(o, u, e))) //@todo eisegesis
-    case NDetAssign(x: Variable) => USR(o+x, u+x, p)
-    case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
-    case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
-    case Choice(a, b) =>
-      val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
-      // TODO remove when proof of uniform substitution is done
-      require(((q == SetLattice.bottom && v == SetLattice.top) || q == v)
-        && ((r == SetLattice.bottom && w == SetLattice.top) || r == w),
-        s"Programs where not all branches write the same variables are not yet supported: q=$q ==? v=$v, r=$r ==? w=$w")
-      USR(q.intersect(r), v++w, Choice(as, bs))
-    case Loop(a) =>
-      val USR(q, v, _) = usubst(o, u, a)
-      val USR(r, w, as) = usubst(o, v, a)
-      // TODO remove when proof of uniform substitution is done
-      require((r == SetLattice.bottom && w == SetLattice.top) || r == w,
-        s"Programs where loop does not write all variables on all branches are not yet supported: r=$r ==? w=$w")
-      USR(o, w, Loop(as)) ensuring (
-        o.subsetOf(q), s"Non-monotonic o: $o not subset of $q") ensuring(
-        q == r, s"Unstable O: $q not equal to $r") ensuring(
-        u.subsetOf(v), s"Non-monotonic u: $u not subset of $v") ensuring(
-        v == w, s"Unstable U: $v not equal to $w") ensuring (
-        usubst(r, w, a).o == r, s"Unstable O: ${usubst(r, w, a).o} not equal to $r") ensuring(
-        usubst(r, w, a).u == w, s"Unstable U: ${usubst(r, w, a).u} not equal to $w")
-
-    //@TODO check implementation
-    case a: ProgramConstant if  subsDefs.exists(_.what == p) =>
-      val sigmaP = subsDefs.find(_.what == p).get.repl.asInstanceOf[Program]
-      // programs don't have a side condition, since their meaning does not depend on state
-      USR(o++catVars(sigmaP).mbv, u++catVars(sigmaP).bv, sigmaP)
-    case a: ProgramConstant if !subsDefs.exists(_.what == p) => USR(o++catVars(a).mbv, u++catVars(a).bv, p)
-    case _ => throw new UnknownOperatorException("Not implemented yet", p)
-  }} ensuring (r => { val USR(q, v, _) = r; q.subsetOf(v) }, s"Result O not a subset of result U")
-
-  /**
-   * Substitution in (systems of) differential equations.
-   * @param o The ignore list.
-   * @param u The taboo list.
-   * @param primed The primed names (all primed names in the ODE system).
-   * @param p The ODE.
-   * @return The substitution result.
-   */
-  private def usubstODE(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
-    DifferentialProgram = {
-    val primedPrimed : Set[NamedSymbol] = primed.map(DifferentialSymbol(_)) //primed is a list of "Variable"s that are primed; this is the list of the acutally primed variables.
-    p match {
-      case ODEProduct(a, b) => ODEProduct(usubstODE(o, u, primed, a), usubstODE(o, u, primed, b))
-      case ODESystem(d, a, h) if d.isEmpty => ODESystem(d, usubstODE(o, u, primed, a), usubst(o ++ SetLattice(primed), u ++ SetLattice(primed), h))
-      case ODESystem(d, a, h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
-      case AtomicODE(d@Derivative(_, x: Variable), e) =>
-        AtomicODE(d, usubst(o ++ SetLattice(primed) ++ SetLattice(primedPrimed),
-          u ++ SetLattice(primed) ++ SetLattice(primedPrimed), e)) //@todo for something like x' := y' +1 we'll need to add primedPrimed to the back lists as well.
-      case _: EmptyODE => p
-      case IncompleteSystem(s) => IncompleteSystem(usubstODE(o, u, primed, s))
-      case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(o, u, primed, s))
-      case a: DifferentialProgramConstant if subsDefs.exists(_.what == p) =>
-        val repl = subsDefs.find(_.what == p).get.repl
-        repl match {
-          case replODE: DifferentialProgram => replODE
-          case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
-            s"continuous program constants: $repl not allowed for $a")
-        }
-      case a: DifferentialProgramConstant if !subsDefs.exists(_.what == p) => p
-    }
-  }
-}
-
-/**
- * A Uniform Substitution.
- * Implementation of applying uniform substitutions to terms, formulas, programs.
- * Global version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
- * Used for UniformSubstitution rule.
- * @author aplatzer
- * @see GlobalUniformSubstitution
- * @TODO Rename to Substitution. Or USubst?
- */
-final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
-  applicable()
-
-  // unique left hand sides in l
-  @elidable(ASSERTION) def applicable() = {
-    // check that we never replace n by something and then again replacing the same n by something
-    val lefts = subsDefs.map(_.what).toList
-    require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
-    // check that we never replace p(x) by something and also p(t) by something
-    val lambdaNames = subsDefs.map(_.what match {
-      case ApplyPredicate(p: Function, _: Variable) => List(p)
-      case Apply(f: Function, _: Variable) => List(f)
-      case _ => Nil
-    }).fold(Nil)((a,b) => a++b)
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
-  }
-
-  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
-
-    import BindingAssessment._
-
-  override def toString: String = "GlobSubst(" + subsDefs.mkString(", ") + ")"
-
-  def apply(t: Term): Term = {
-    usubst(t)
-  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t),
-    s"Global substitution result ${usubst(t)} does not agree with local result " +
-      s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)}")
-  def apply(f: Formula): Formula = {
-    usubst(f)
-  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f),
-    s"Global substitution result ${usubst(f)} does not agree with local result " +
-      s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)}")
-  def apply(p: Program): Program = {
-    usubst(p)
-  } ensuring(_ == new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p,
-    s"Global substitution result ${usubst(p)} does not agree with local result " +
-      s"${new Substitution(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)}")
-
-  // uniform substitution on terms
-  private[core] def usubst(t: Term): Term = {
-    try {
-      t match {
-        // uniform substitution base cases
-        case x: Variable => require(!subsDefs.exists(_.what == x), s"Substitution of variables not supported: $x"); x
-        case xp@Derivative(Real, x: Variable) => require(!subsDefs.exists(_.what == xp),
-          s"Substitution of differential symbols not supported: $xp"); xp
-        case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
-          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-          val (rArg, rTerm) =
-            (subs.what match { case Apply(_, v: NamedSymbol) => v
-                            case _ => throw new IllegalArgumentException(
-                              s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
-             subs.repl match { case t: Term => t
-                            case _ => throw new IllegalArgumentException(
-                              s"Can only substitute terms for ${app.prettyString()}")}
-            )
-          GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
-        case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(theta))
-        case Anything => Anything // TODO check
-        case Nothing => Nothing // TODO check
-        case CDot if !subsDefs.exists(_.what == CDot) => CDot // TODO check (should be case x = sigma x for variable x)
-        case CDot if  subsDefs.exists(_.what == CDot) => // TODO check (should be case x = sigma x for variable x)
-          subsDefs.find(_.what == CDot).get.repl match {
-            case t: Term => t
-            case _ => throw new IllegalArgumentException("Can only substitute terms for .")
-          }
-        case n@Number(_, _) => n
-        //@TODO any way of ensuring for the following that top-level(t)==top-level(\result)
-         // homomorphic cases
-        case Neg(s, e) => Neg(s, usubst(e))
-        case Add(s, l, r) => Add(s, usubst(l), usubst(r))
-        case Subtract(s, l, r) => Subtract(s, usubst(l), usubst(r))
-        case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
-        case Divide(s, l, r) => Divide(s, usubst(l), usubst(r))
-        case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
-        case der@Derivative(Real, e) =>
-          require(admissible(SetLattice.top[NamedSymbol], e),
-            s"Substitution clash when substituting derivative ${der.prettyString()}")
-          Derivative(Real, usubst(e))
-      }
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
-    }
-  }
-
-  private[core] def usubst(f: Formula): Formula = {
-    log(s"Substituting ${f.prettyString()} using $this")
-    try {
-      f match {
-        case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
-          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
-          val (rArg, rFormula) = (
-            subs.what match { case ApplyPredicate(_, v: NamedSymbol) => v
-                           case _ => throw new IllegalArgumentException(
-                            s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=${theta.prettyString()} not supported")},
-            subs.repl match { case f: Formula => f
-                           case _ => throw new IllegalArgumentException(
-                             s"Can only substitute formulas for ${app.prettyString()}")
-            })
-          GlobalSubstitution(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
-        case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
-        case True | False => f
-
-        //@TODO any way of ensuring for the following that  top-level(f)==top-level(\result)
-        case Equals(d, l, r) => Equals(d, usubst(l), usubst(r))
-        case NotEquals(d, l, r) => NotEquals(d, usubst(l), usubst(r))
-        case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(l), usubst(r))
-        case GreaterThan(d, l, r) => GreaterThan(d, usubst(l), usubst(r))
-        case LessEqual(d, l, r) => LessEqual(d, usubst(l), usubst(r))
-        case LessThan(d, l, r) => LessThan(d, usubst(l), usubst(r))
-
-        // homomorphic cases
-        case Not(g) => Not(usubst(g))
-        case And(l, r) => And(usubst(l), usubst(r))
-        case Or(l, r) => Or(usubst(l), usubst(r))
-        case Imply(l, r) => Imply(usubst(l), usubst(r))
-        case Equiv(l, r) => Equiv(usubst(l), usubst(r))
-
-        case der@FormulaDerivative(g) =>
-          require(admissible(SetLattice.top[NamedSymbol], g),
-            s"Substitution clash when substituting derivative ${der.prettyString()}")
-          FormulaDerivative(usubst(g))
-
-        // binding cases add bound variables to u
-        case Forall(vars, g) => require(admissible(SetLattice(vars), g),
-          s"Substitution clash: {x}=$vars when substituting forall ${g.prettyString()}")
-            Forall(vars, usubst(g))
-        case Exists(vars, g) => require(admissible(SetLattice(vars), g),
-          s"Substitution clash: {x}=$vars when substituting exists ${g.prettyString()}")
-            Exists(vars, usubst(g))
-
-        case BoxModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(p)).bv} when substituting [${p.prettyString()}]${g.prettyString()}")
-            BoxModality(usubst(p), usubst(g))
-        case DiamondModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(p)).bv} when substituting <${p.prettyString()}>${g.prettyString()}")
-            DiamondModality(usubst(p), usubst(g))
-      }
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
-    }
-  }
-
-  // uniform substitution on programs
-  private[core] def usubst(p: Program): Program = {
-    try {
-      p match {
-        case a: ProgramConstant if subsDefs.exists(_.what == a) =>
-          subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
-        case a: ProgramConstant if !subsDefs.exists(_.what == a) => a
-        case Assign(x: Variable, e) => Assign(x, usubst(e))
-        case Assign(xp@Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
-        case NDetAssign(x: Variable) => NDetAssign(x)
-        case Test(f) => Test(usubst(f))
-        case ode: DifferentialProgram =>
-          // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
-          require(admissible(StaticSemantics(ode).bv, ode),
-            s"Substitution clash in ODE: {x}=${StaticSemantics(ode).bv} when substituting ${ode.prettyString()}")
-          usubstODE(ode, StaticSemantics(ode).bv)
-        case Choice(a, b) => Choice(usubst(a), usubst(b))
-        case Sequence(a, b) => require(admissible(StaticSemantics(usubst(a)).bv, b),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
-          Sequence(usubst(a), usubst(b))
-        case Loop(a) => require(admissible(StaticSemantics(usubst(a)).bv, a),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} *")
-          Loop(usubst(a))
-      }
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
-    }
-  }
-
-  private def usubstODE(ode: DifferentialProgram, primed: SetLattice[NamedSymbol]): DifferentialProgram = ode match {
-    case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
-    case ODESystem(d, a, h) if d.isEmpty =>
-      require(admissible(primed, h), s"Substitution clash in ODE: {x}=$primed clash with ${h.prettyString()}")
-      ODESystem(d, usubstODE(a, primed), usubst(h))
-    case ODESystem(d, a , h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
-    case AtomicODE(dv: Derivative, t) =>
-      require(admissible(primed, t), s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
-      AtomicODE(dv, usubst(t))
-    case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
-    case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
-    case c: DifferentialProgramConstant if  subsDefs.exists(_.what == c) =>
-      val repl = subsDefs.find(_.what == c).get.repl
-      repl match {
-        case replODE: DifferentialProgram => replODE
-        case _ => throw new IllegalArgumentException("Can only substitute continuous programs for " +
-          s"continuous program constants: $repl not allowed for $c")
-      }
-    case c: DifferentialProgramConstant if !subsDefs.exists(_.what == c) => c
-    case _: EmptyODE => ode
-  }
-  
-  def apply(s: Sequent): Sequent = {
-    try {
-      Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
-    } catch {
-      case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
-    }
-  }
-
-  // check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates/program constants
-  private def admissible(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
-    // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
-    // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
-    // occurs in theta (or phi or alpha)
-    def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
-        case t: Term => sigma.what match {
-          case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
-          // if ever extended with f(x,y,z): freeVariables(t) -- {x,y,z}
-          case _ => StaticSemantics(t)
-        }
-        case f: Formula => sigma.what match {
-          case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
-          // if ever extended with p(x,y,z): freeVariables(f) -- {x,y,z}
-          case _ => StaticSemantics(f).fv
-        }
-        case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
-      }).intersect(U) != SetLattice.bottom
-
-    def nameOf(symbol: Expr): NamedSymbol = symbol match {
-      case Derivative(_, v: Variable) => v // TODO check
-      case ApplyPredicate(fn, _) => fn
-      case Apply(fn, _) => fn
-      case s: NamedSymbol => s
-      case _ => throw new IllegalArgumentException(s"Unexpected ${symbol.prettyString()} in substitution pair")
-    }
-
-    subsDefs.filter(sigma => intersectsU(sigma)).map(sigma => nameOf(sigma.what)).forall(fn => !occurrences.contains(fn))
-  }
-
-  private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, fnPredPrgSymbolsOf(t))
-  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = admissible(U, fnPredPrgSymbolsOf(f))
-  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = admissible(U, fnPredPrgSymbolsOf(p))
-
-  private def fnPredPrgSymbolsOf(f: Formula): Set[NamedSymbol] = f match {
-    case Not(g) => fnPredPrgSymbolsOf(g)
-    case And(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Or(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Imply(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Equiv(l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-
-    case Equals(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case NotEquals(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case GreaterEqual(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case GreaterThan(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case LessEqual(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case LessThan(d, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-
-    case ApplyPredicate(fn, theta) => Set(fn) ++ fnPredPrgSymbolsOf(theta)
-
-    case Forall(vars, phi) => fnPredPrgSymbolsOf(phi)
-    case Exists(vars, phi) => fnPredPrgSymbolsOf(phi)
-
-    case BoxModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
-    case DiamondModality(p, phi) => fnPredPrgSymbolsOf(p) ++ fnPredPrgSymbolsOf(phi)
-
-    case True | False => Set()
-
-    //@todo eisegesis
-    case FormulaDerivative(x) => fnPredPrgSymbolsOf(x)
-  }
-
-  private def fnPredPrgSymbolsOf(t: Term): Set[NamedSymbol] = t match {
-    case Neg(s, l) => fnPredPrgSymbolsOf(l)
-    case Add(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Subtract(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Multiply(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Divide(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Exp(s, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Pair(dom, l, r) => fnPredPrgSymbolsOf(l) ++ fnPredPrgSymbolsOf(r)
-    case Derivative(s, e) => fnPredPrgSymbolsOf(e)
-    case Apply(f, theta) => Set(f) ++ fnPredPrgSymbolsOf(theta)
-    case _: Variable => Set()
-    case CDot => Set(CDot)
-    case Nothing => Set()
-    case Anything => Set()
-    case Number(_, _) => Set()
-  }
-
-  private def fnPredPrgSymbolsOf(p: Program): Set[NamedSymbol] = p match {
-    case CheckedContEvolveFragment(c) => fnPredPrgSymbolsOf(c) //@todo eisegesis
-    case Assign(_, t) => fnPredPrgSymbolsOf(t)
-    case Test(phi) => fnPredPrgSymbolsOf(phi)
-    case AtomicODE(_, t) => fnPredPrgSymbolsOf(t)
-    case ODEProduct(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case ODESystem(_, a, h) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(h)
-    case IncompleteSystem(a) => fnPredPrgSymbolsOf(a)
-    case Sequence(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case Choice(a, b) => fnPredPrgSymbolsOf(a) ++ fnPredPrgSymbolsOf(b)
-    case Loop(a) => fnPredPrgSymbolsOf(a)
-    case c: DifferentialProgramConstant => Set(c)
-    case c: ProgramConstant => Set(c)
-    case NDetAssign(_) => Set()
-    case _: EmptyODE => Set()
-  }
-
-  // @TODO The following are the same cop&paste as in UniformSubstitution. Copy somewhere
-  /**
-   * Check whether the function in right matches with the function in left, i.e. they have the same head.
-   */
-  def sameHead(left: SubstitutionPair, right: Expr) = left.what match {
-    case Apply(lf, CDot | Anything | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
-    case ApplyPredicate(lf, CDot | Anything | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
-    case _ => false
-  }
-
-  /**
-   * Get the unique element in c to which pred applies.
-   * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
-   */
-  private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
-    require(c.count(pred) == 1)
-    c.filter(pred).head
-  }
-}
+}*/
 
 /**
  * Uniform Substitution Rule.
@@ -1588,93 +721,80 @@ final case class GlobalSubstitution(subsDefs: scala.collection.immutable.Seq[Sub
  */
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-object UniformSubstitution {
-  def apply(substitution: Substitution, origin: Sequent) : Rule = new UniformSubstitution(substitution, origin)
+object UniformSubstitutionRule {
+  def apply(subst: USubst, origin: Sequent) : Rule = new UniformSubstitutionRule(subst, origin)
 
-  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
+  @elidable(FINEST) private def log(msg: =>Any) = {} //println(msg)
 
-  private class UniformSubstitution(subst: Substitution, origin: Sequent) extends Rule("Uniform Substitution") {
+  private class UniformSubstitutionRule(val subst: USubst, val origin: Sequent) extends Rule("Uniform Substitution") {
     /**
-     * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+     * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
      * require explicit rule applications)
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
-      val substAtOrigin = subst(origin) //just for debugging.
       if (subst(origin) == conclusion) {
-        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         List(origin)
       } else {
-        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
         throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
       }
-    } 
-    
-    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
-      //val subst = new OSubstitution(this.subst.l)
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-      (conclusion.pref == origin.pref // universal prefix is identical
-        && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
-        && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
-        && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
     }
   }
 }
 
-/**
- * Global Uniform Substitution Rule.
- * Applies a given uniform substitution to the given original premise (origin).
- * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
- * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
- * @param substitution the uniform substitution to be applied to origin.
- * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
- */
-// uniform substitution
-// this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-object GlobalUniformSubstitution {
-  def apply(subst: GlobalSubstitution, origin: Sequent) : Rule = new GlobalUniformSubstitution(subst, origin)
 
-  @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
 
-  private class GlobalUniformSubstitution(subst: GlobalSubstitution, origin: Sequent) extends Rule("Uniform Substitution") {
-    /**
-     * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
-     * require explicit rule applications)
-     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-     */
-    def apply(conclusion: Sequent): List[Sequent] = {
-      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
-      val substAtOrigin = subst(origin) //just for debugging.
-      if (subst(origin) == conclusion) {
-        assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        List(origin)
-      } else {
-        assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
-      }
-    }
-
-    private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
-      //val subst = new OSubstitution(this.subst.l)
-      //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
-      val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-      (conclusion.pref == origin.pref // universal prefix is identical
-        && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
-        && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
-        && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
-    }
-  }
-}
+// /**
+//  * Fast Uniform Substitution Rule.
+//  * Applies a given uniform substitution to the given original premise (origin).
+//  * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
+//  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
+//  * @param substitution the uniform substitution to be applied to origin.
+//  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+//  */
+// // uniform substitution
+// // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
+// object FastUniformSubstitutionRule {
+//   def apply(substitution: FastUSubst, origin: Sequent) : Rule = new FastUniformSubstitution(substitution, origin)
+//
+//   @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
+//
+//   private class FastUniformSubstitutionRule(val subst: FastUSubst, val origin: Sequent) extends Rule("Fast Uniform Substitution") {
+//     /**
+//      * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
+//      * require explicit rule applications)
+//      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+//      */
+//     def apply(conclusion: Sequent): List[Sequent] = {
+//       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
+//       val substAtOrigin = subst(origin) //just for debugging.
+//       if (subst(origin) == conclusion) {
+//         assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+//         List(origin)
+//       } else {
+//         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
+//         throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+//       }
+//     }
+//
+//     private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
+//       //val subst = new OSubstitution(this.subst.l)
+//       //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
+//       val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
+//       (conclusion.pref == origin.pref // universal prefix is identical
+//         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
+//         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
+//         && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
+//     }
+//   }
+// }
 
 // alpha conversion
 
 /*@TODO Replace by flat implementation*/
 class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
-
-  import BindingAssessment._
 
   @unspecialized
   override def compose[A](g: (A) => _root_.edu.cmu.cs.ls.keymaera.core.Sequent): (A) => scala.List[_root_.edu.cmu.cs.ls.keymaera.core.Sequent] = super.compose(g)
@@ -1688,14 +808,14 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
           case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
           case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => Right(apply(f))
           // if ODE binds var, then rename with stored initial value
-          case BoxModality(ode: DifferentialProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+          case BoxModality(ode: DifferentialProgram, _) if StaticSemantics(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
-          case DiamondModality(ode: DifferentialProgram, _) if catVars(ode).bv.exists(v => v.name == name && v.index == idx) =>
+          case DiamondModality(ode: DifferentialProgram, _) if StaticSemantics(ode).bv.exists(v => v.name == name && v.index == idx) =>
             Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
           // if loop binds var, then rename with stored initial value
-          case BoxModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
+          case BoxModality(Loop(a), _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
             Right(BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
-          case DiamondModality(Loop(a), _) if catVars(a).bv.exists(v => v.name == name && v.index == idx) =>
+          case DiamondModality(Loop(a), _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
             Right(DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f)))
 
           case _ => Left(Some(ExpressionTraversal.stop))
@@ -1868,7 +988,12 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
   }
 }
 
-// skolemize
+
+/*********************************************************************************
+ * Skolemization Proof Rule
+ *********************************************************************************
+ */
+
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
@@ -1934,8 +1059,13 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
 }
 
+/************************************************************************
+ * Other Proof Rules
+ */
+
   /**
    * @TODO Review. Might turn into axiom QuantifierAbstraction.
+   * @TODO Tactics should be perfectly fine using [] monotone or <> monotone instead.
    */
 @deprecated("Use [] monotone and <> monotone or Goedel rule instead.")
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
@@ -1943,15 +1073,14 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
     val fn = new ExpressionTraversalFunction {
       val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          //@TODO Do not use @deprecated .writes functions
           case BoxModality(prg, f) =>
-            val writes = BindingAssessment.catVars(prg).bv.s match {
+            val writes = StaticSemantics(prg).bv.s match {
               case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
               case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
             }
             Right(factory(writes, f))
           case DiamondModality(prg, f) =>
-            val writes = BindingAssessment.catVars(prg).bv.s match {
+            val writes = StaticSemantics(prg).bv.s match {
               case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
               case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
             }
@@ -1967,30 +1096,66 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
 }
 
 /*********************************************************************************
- * Rules for derivatives that are not currently expressible as axioms
+ * Congruence Rewriting Proof Rule
  *********************************************************************************
  */
-object DeriveMonomial {
-  def apply(t: Term): Rule = new DeriveMonomial(t)
-}
 
-//@TODO Inaccurate for n=0, because unlike the input, the result would be undefined for base=0.
-@deprecated("Use ^' derive power axiom instead")
-class DeriveMonomial(t: Term) extends Rule("Derive Monomial") {
-  val Derivative(Real, Exp(Real, base, Number(Real, n))) = t
-  override def apply(s: Sequent): List[Sequent] =
-    List(s.glue(Sequent(s.pref,
-      IndexedSeq(Equals(Real, t, Multiply(Real, Multiply(Real, Number(n), Exp(Real, base, Number(n - 1))), Derivative(Real, base)))),
-      IndexedSeq())))
+// equality/equivalence rewriting
+//@TODO Review
+/**
+ * Rewrites position ``p" according to assumption; for instance, if p="f" and assumption="f=g" then this
+ * equality-rewrites p to g.
+ * @param assumption The position of the equality (should be in the antecedent)
+ * @param p The position of an occurance of the (l?)hs of assumption
+ * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
+ */
+@deprecated("Use [] congruence and <> congruence and all congruence rules instead")
+class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
+  override def apply(s: Sequent): List[Sequent] = {
+    require(assumption.isAnte && assumption.inExpr == HereP)
+    val (blacklist, fn) = s.ante(assumption.getIndex) match {
+      case Equals(d, a, b) =>
+        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
+        new ExpressionTraversalFunction {
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })
+      /*case ProgramEquals(a, b) =>
+        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
+        new ExpressionTraversalFunction {
+          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
+            if(e == a) Right(b)
+            else if(e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+        })*/
+      case Equiv(a, b) =>
+        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
+        new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
+            if (e == a) Right(b)
+            else if (e == b) Right(a)
+            else throw new IllegalArgumentException("Equality Rewriting not applicable")
+          }
+        })
+      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
+    }
+    val trav = TraverseToPosition(p.inExpr, fn, blacklist)
+    ExpressionTraversal.traverse(trav, s(p)) match {
+      case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
+      case a => throw new IllegalArgumentException("Equality Rewriting not applicable. Result is " + a + " " + a.getClass)
+    }
+  }
 }
-
-// the following rules will turn into axioms
 
 /*********************************************************************************
  * Block Quantifier Decomposition
  *********************************************************************************
  */
 
+//@NOTE Currently not used.
+//@TODO Can turn into axiom once list quantifiers are parsable.
 object DecomposeQuantifiers {
   def apply(p: Position): Rule = new DecomposeQuantifiers(p)
 }
@@ -2016,6 +1181,144 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
   }
 }
 
+/*********************************************************************************
+ * Lookup Axioms
+ *********************************************************************************
+ */
+
+object Axiom {
+  // immutable list of axioms
+  val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
+
+  //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
+  //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+  private def loadAxiomFile: Map[String, Formula] = {
+    val parser = new KeYmaeraParser(false)
+    val alp = parser.ProofFileParser
+    val src = io.Source.fromFile("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp").mkString
+    val res = alp.runParser(src)
+
+    //Ensure that there are no doubly named axioms.
+    val distinctAxiomNames = res.map(k => k.name).distinct
+    assert(res.length == distinctAxiomNames.length)
+
+    (for(k <- res)
+      yield (k.name -> k.formula)).toMap
+  } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
+
+  // lookup axiom named id
+  final def apply(id: String): Rule = new Rule("Axiom " + id) {
+    def apply(s: Sequent): List[Sequent] = {
+      axioms.get(id) match {
+        case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
+        case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
+      }
+    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
+  }
+  
+  @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+    val x = Variable("x", None, Real)
+    val aP0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val aPn = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val aQn = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+    val aC = Apply(Function("c", None, Unit, Real), Nothing)
+    val aF = Apply(Function("f", None, Real, Real), Anything)
+    val aG = Apply(Function("g", None, Real, Real), Anything)
+    val a = ProgramConstant("a")
+    val b = ProgramConstant("b")
+    // soundness-critical that these are for p() not for p(x) or p(?)
+    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
+    assert(axs("V vacuous") == Imply(aP0, Modality(BoxModality(a), aP0)), "V vacuous")
+    
+    assert(axs("[++] choice") == Equiv(Modality(BoxModality(Choice(a,b)), aPn), And(Modality(BoxModality(a), aPn), Modality(BoxModality(b), aPn))), "[++] choice")
+    assert(axs("[;] compose") == Equiv(Modality(BoxModality(Sequence(a,b)), aPn), Modality(BoxModality(a), Modality(BoxModality(b), aPn))), "[;] compose")
+    
+    assert(axs("c()' derive constant fn") == Equals(Real, Derivative(Real, aC), Number(0)), "c()' derive constant fn")
+    assert(axs("-' derive minus") == Equals(Real, Derivative(Real, Subtract(Real, aF, aG)), Subtract(Real, Derivative(Real, aF), Derivative(Real, aG))), "-' derive minus")
+    assert(axs("*' derive product") == Equals(Real, Derivative(Real, Multiply(Real, aF, aG)), Add(Real, Multiply(Real, Derivative(Real, aF), aG), Multiply(Real, aF, Derivative(Real, aG)))), "*' derive product")
+    assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
+    assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
+    true
+  }
+}
+
+/**
+ * Apply a uniform substitution instance of an axiomatic proof rule.
+ * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ */
+object AxiomaticRule {
+  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
+  val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
+
+  // apply uniform substitution instance subst of "axiomatic" rule named id
+  final def apply(id: String, subst: USubst): Rule = new AxiomaticRuleInstance(id, subst)
+
+  private final class AxiomaticRuleInstance(val id: String, val subst: USubst) extends Rule("Axiomatic Rule " + id + " instance") {
+    private val (rulepremise,ruleconclusion) = rules.get(id) match {
+      case Some(pair) => pair
+      case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
+    }
+
+    /**
+     * check that conclusion is indeed the indicated substitution instance from the axiomatic rule's conclusion.
+     * Leads to same substitution instance of axiomatic rule's premise.
+     * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
+     */
+    def apply(conclusion: Sequent): List[Sequent] = {
+      if (subst(ruleconclusion) == conclusion) {
+        List(subst(rulepremise))
+      } else {
+        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
+      }
+    }
+  }
+
+  /**
+   * KeYmaera Axiomatic Proof Rules.
+   * @note Soundness-critical: Only return locally sound proof rules.
+   * @author aplatzer
+   */
+  private def loadRuleFile() = {
+    val x = Variable("x", None, Real)
+    val px = ApplyPredicate(Function("p", None, Real, Bool), x)
+    val pny = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val qx = ApplyPredicate(Function("q", None, Real, Bool), x)
+    val qny = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+    val a = ProgramConstant("a")
+    scala.collection.immutable.Map(
+      ("all generalization",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
+      ("all congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), Equiv(px, qx)))))),
+      ("all monotone",
+         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
+          Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+      ("[] monotone",
+        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
+          Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
+      ("<> monotone",
+        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
+          Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
+      ("[] congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
+      ("<> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny))))))
+      /*
+      ("Goedel", /* unsound for hybrid games */
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
+      */
+    )
+  }
+
+}
+
 
 /*********************************************************************************
  * Lemma Mechanism Rules
@@ -2025,7 +1328,11 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
 // Lookup Lemma (different justifications: Axiom, Lemma with proof, Oracle Lemma)
 
 
-//@TODO Review
+/**
+ * Lookup a lemma that has been proved previously or by an external arithmetic tool.
+ * @author nfulton
+ *@TODO Review
+ */
 object LookupLemma {
   def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
   private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {

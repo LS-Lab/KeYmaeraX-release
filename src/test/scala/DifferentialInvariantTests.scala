@@ -81,7 +81,7 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
 
-  it should "simplest example with a test" in {
+  ignore should "simplest example with a test" in {
     val f = "[x'=1 & z>0;]z>=0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)

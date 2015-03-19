@@ -38,7 +38,7 @@ object SearchTacticsImpl {
         def appliesInExpr(p: PosInExpr) = posT.applies(s, AntePosition(idx, p))
         findPosInExpr(appliesInExpr, anteF) match {
           case Some(posInExpr) => return Some(AntePosition(idx, posInExpr))
-          case None => println(s"No applicable position found for ${posT.name} in $anteF")//
+          case None => println(s"No applicable position found for ${posT.name} in $anteF at $idx in ante")//
         }
       }
       None
@@ -47,7 +47,7 @@ object SearchTacticsImpl {
         def appliesInExpr(p: PosInExpr) = posT.applies(s, SuccPosition(idx, p))
         findPosInExpr(appliesInExpr, succF) match {
           case Some(posInExpr) => return Some(SuccPosition(idx, posInExpr))
-          case None => println(s"No applicable position found for ${posT.name} in $succF")//
+          case None => println(s"No applicable position found for ${posT.name} in $succF at $idx in succ")//
         }
       }
       None

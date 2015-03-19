@@ -118,6 +118,9 @@ object EqualityRewritingImpl {
     require(eqPos.isAnte && eqPos.inExpr == HereP, "Equalities for rewriting have to be in the antecedent")
 
     override def applicable(node: ProofNode): Boolean = eqPos.isAnte && eqPos.isTopLevel && (node.sequent(eqPos) match {
+      // HACK prevent endless rewriting. replace with principled term weights
+      case Equals(_, Number(_, _), _) if left => false
+      case Equals(_, _, Number(_, _)) if !left => false
       case Equals(_, _, _) => findPosInExpr(left, node.sequent, eqPos).isDefined
       case ProgramEquals(_, _) => findPosInExpr(left, node.sequent, eqPos).isDefined
       case Equiv(_, _) => findPosInExpr(left, node.sequent, eqPos).isDefined
