@@ -64,8 +64,8 @@ object AxiomaticRuleTactics {
   }
 
   /**
-   * Creates a new tactic for box monotone. Expects a sequent with a sole formula in the succedent, of
-   * the form [a]p -> [a]q.
+   * Creates a new tactic for box monotone. Expects a sequent with a sole formula in the antecedent of the form [a]p
+   * and a sole formula in the succedent of the form [a]q.
    * @return The newly created tactic.
    */
   def boxMonotoneT: Tactic = new ConstructionTactic("[] monotone") { outer =>
@@ -97,8 +97,8 @@ object AxiomaticRuleTactics {
   }
 
   /**
-   * Creates a new tactic for box monotone. Expects a sequent with a sole formula in the succedent, of
-   * the form < a >p -> < a >q.
+   * Creates a new tactic for box monotone. Expects a sequent with a sole formula in the antecedent of the form < a >p
+   * and a sole formula in the succedent of the form < a >q.
    * @return The newly created tactic.
    */
   def diamondMonotoneT: Tactic = new ConstructionTactic("<> monotone") { outer =>
@@ -126,6 +126,29 @@ object AxiomaticRuleTactics {
         case _ => None
       }
       case _ => None
+    }
+  }
+
+  /**
+   * Creates a new tactic for Goedel. Expects a sequent with a sole formula in the succedent of the form [a]p.
+   * @return The newly created tactic.
+   */
+  def goedelT: Tactic = new ConstructionTactic("Goedel") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ(0) match {
+          case BoxModality(_, _) => true
+          case _ => false
+        })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+      case BoxModality(a, p) =>
+        val aX = ProgramConstant("a")
+        val pX = Function("p", None, Real, Bool)
+        val s = USubst(SubstitutionPair(aX, a) ::
+          SubstitutionPair(ApplyPredicate(pX, Anything), p) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("Goedel", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
     }
   }
 }

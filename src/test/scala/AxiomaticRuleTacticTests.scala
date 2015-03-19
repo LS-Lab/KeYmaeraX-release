@@ -71,4 +71,14 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>-1".asFormula
   }
 
+  "Goedel" should "work" in {
+    val s = sucSequent("[x:=1;]x>0".asFormula)
+    val tactic = AxiomaticRuleTactics.goedelT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
+  }
+
 }
