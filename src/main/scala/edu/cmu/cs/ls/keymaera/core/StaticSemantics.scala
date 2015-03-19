@@ -183,12 +183,6 @@ object StaticSemantics {
 
   // signature of function, predicate, atomic program symbols
 
-  def signature(e: Expr): Set[NamedSymbol] = e match {
-    case f: Formula => signature(f)
-    case t: Term => signature(t)
-    case p: Program => signature(p)
-  }
-
   /**
    * The signature of expression e.
    */
@@ -283,7 +277,7 @@ object StaticSemantics {
   /**
    * Any symbols in expression e.
    */
-  def signature(e: Expr): Set[NamedSymbol] = e match {
+  def symbols(e: Expr): Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
