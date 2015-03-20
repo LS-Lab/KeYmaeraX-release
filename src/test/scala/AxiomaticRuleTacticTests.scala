@@ -91,7 +91,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
-  it should "alpha rename" in {
+  it should "alpha rename simple" in {
     val s = sucSequent("\\forall y . y>0".asFormula)
     val tactic = AxiomaticRuleTactics.forallGeneralizationT
 
@@ -99,6 +99,16 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "y>0".asFormula
+  }
+
+  it should "alpha rename complicated" in {
+    val s = sucSequent("\\forall y . x>0".asFormula)
+    val tactic = AxiomaticRuleTactics.forallGeneralizationT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
   "Forall congruence" should "work" in {
@@ -119,6 +129,16 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "y>5 <-> y>0".asFormula
+  }
+
+  it should "alpha rename complicated" in {
+    val s = sucSequent("(\\forall x. [x:=2;]x>1) <-> (\\forall x. [x:=2;]x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.forallCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]x>1 <-> [x:=2;]x>0".asFormula
   }
 
   "Exists congruence" should "work" in {

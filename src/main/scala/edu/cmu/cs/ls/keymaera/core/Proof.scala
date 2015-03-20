@@ -1281,13 +1281,13 @@ object AxiomaticRule {
    * @author aplatzer
    */
   private def loadRuleFile() = {
-    val x = Variable("x", None, Real)
-    val px = ApplyPredicate(Function("p", None, Real, Bool), x)
-    val pny = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-    val qx = ApplyPredicate(Function("q", None, Real, Bool), x)
-    val qny = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-    val a = ProgramConstant("a")
-    val fny = ApplyPredicate(Function("F", None, Real, Bool), Anything)
+    val x = Variable("x_", None, Real)
+    val px = ApplyPredicate(Function("p_", None, Real, Bool), x)
+    val pny = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+    val qx = ApplyPredicate(Function("q_", None, Real, Bool), x)
+    val qny = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
+    val a = ProgramConstant("a_")
+    val fny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
     scala.collection.immutable.Map(
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),

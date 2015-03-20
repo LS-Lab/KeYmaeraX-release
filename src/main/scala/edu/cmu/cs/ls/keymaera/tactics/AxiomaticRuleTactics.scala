@@ -1,9 +1,11 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper.replace
+import edu.cmu.cs.ls.keymaera.tactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.globalAlphaRenamingT
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.NilT
+
 
 /**
  * Created by smitsch on 3/16/15.
@@ -40,9 +42,9 @@ object AxiomaticRuleTactics {
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
       case Equiv(BoxModality(a, p), BoxModality(b, q)) if a == b =>
-        val aX = ProgramConstant("a")
-        val pX = Function("p", None, Real, Bool)
-        val qX = Function("q", None, Real, Bool)
+        val aX = ProgramConstant("a_")
+        val pX = Function("p_", None, Real, Bool)
+        val qX = Function("q_", None, Real, Bool)
         val s = USubst(SubstitutionPair(aX, a) ::
           SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
           SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
@@ -67,9 +69,9 @@ object AxiomaticRuleTactics {
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
       case Equiv(DiamondModality(a, p), DiamondModality(b, q)) if a == b =>
-        val aX = ProgramConstant("a")
-        val pX = Function("p", None, Real, Bool)
-        val qX = Function("q", None, Real, Bool)
+        val aX = ProgramConstant("a_")
+        val pX = Function("p_", None, Real, Bool)
+        val qX = Function("q_", None, Real, Bool)
         val s = USubst(SubstitutionPair(aX, a) ::
           SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
           SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
@@ -98,9 +100,9 @@ object AxiomaticRuleTactics {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.ante(0) match {
       case BoxModality(a, p) => node.sequent.succ(0) match {
         case BoxModality(b, q) =>
-          val aX = ProgramConstant("a")
-          val pX = Function("p", None, Real, Bool)
-          val qX = Function("q", None, Real, Bool)
+          val aX = ProgramConstant("a_")
+          val pX = Function("p_", None, Real, Bool)
+          val qX = Function("q_", None, Real, Bool)
           val s = USubst(SubstitutionPair(aX, a) ::
             SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
             SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
@@ -131,9 +133,9 @@ object AxiomaticRuleTactics {
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.ante(0) match {
       case DiamondModality(a, p) => node.sequent.succ(0) match {
         case DiamondModality(b, q) =>
-          val aX = ProgramConstant("a")
-          val pX = Function("p", None, Real, Bool)
-          val qX = Function("q", None, Real, Bool)
+          val aX = ProgramConstant("a_")
+          val pX = Function("p_", None, Real, Bool)
+          val qX = Function("q_", None, Real, Bool)
           val s = USubst(SubstitutionPair(aX, a) ::
             SubstitutionPair(ApplyPredicate(pX, Anything), p) ::
             SubstitutionPair(ApplyPredicate(qX, Anything), q) :: Nil)
@@ -159,8 +161,8 @@ object AxiomaticRuleTactics {
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
       case BoxModality(a, p) =>
-        val aX = ProgramConstant("a")
-        val pX = Function("p", None, Real, Bool)
+        val aX = ProgramConstant("a_")
+        val pX = Function("p_", None, Real, Bool)
         val s = USubst(SubstitutionPair(aX, a) ::
           SubstitutionPair(ApplyPredicate(pX, Anything), p) :: Nil)
         Some(new ApplyRule(AxiomaticRule("Goedel", s)) {
@@ -188,18 +190,15 @@ object AxiomaticRuleTactics {
           case v: Variable => v
           case _ => throw new UnsupportedOperationException("forall generalization only supported for variables")
         }
-        val pX = Function("p", None, Real, Bool)
-        val s = USubst(SubstitutionPair(ApplyPredicate(pX, CDot), SubstitutionHelper.replaceFree(p)(x, CDot)) :: Nil)
+        val pX = Function("p_", None, Real, Bool)
+        val aX = Variable("x_", None, Real)
+        val s = USubst(SubstitutionPair(ApplyPredicate(pX, CDot), replaceFree(replace(p)(x, aX))(aX, CDot)) :: Nil)
 
-        val aX = Variable("x", None, Real)
-        val (renToRule, renFromRule) =
-          if (x.name != aX.name || x.index != aX.index) (globalAlphaRenamingT(x.name, x.index, aX.name, aX.index),
-            globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
-          else (NilT, NilT)
         Some(
-          renToRule & new ApplyRule(AxiomaticRule("all generalization", s)) {
+          globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
+          new ApplyRule(AxiomaticRule("all generalization", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & renFromRule
+          } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
         )
     }
   }
@@ -223,21 +222,19 @@ object AxiomaticRuleTactics {
           case v: Variable => v
           case _ => throw new UnsupportedOperationException("forall congruence only supported for variables")
         }
-        val pX = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val qX = ApplyPredicate(Function("q", None, Real, Bool), CDot)
-        val s = USubst(
-          SubstitutionPair(pX, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
-          SubstitutionPair(qX, SubstitutionHelper.replaceFree(q)(x, CDot)) :: Nil)
+        val pX = ApplyPredicate(Function("p_", None, Real, Bool), CDot)
+        val qX = ApplyPredicate(Function("q_", None, Real, Bool), CDot)
 
-        val aX = Variable("x", None, Real)
-        val (renToRule, renFromRule) =
-          if (x.name != aX.name || x.index != aX.index) (globalAlphaRenamingT(x.name, x.index, aX.name, aX.index),
-            globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
-          else (NilT, NilT)
+        val aX = Variable("x_", None, Real)
+        val s = USubst(
+          SubstitutionPair(pX, replaceFree(replace(p)(x, aX))(aX, CDot)) ::
+          SubstitutionPair(qX, replaceFree(replace(q)(x, aX))(aX, CDot)) :: Nil)
+
         Some(
-          renToRule & new ApplyRule(AxiomaticRule("all congruence", s)) {
+          globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
+          new ApplyRule(AxiomaticRule("all congruence", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & renFromRule
+          } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
         )
     }
   }
@@ -261,21 +258,18 @@ object AxiomaticRuleTactics {
           case v: Variable => v
           case _ => throw new UnsupportedOperationException("exists congruence only supported for variables")
         }
-        val pX = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val qX = ApplyPredicate(Function("q", None, Real, Bool), CDot)
+        val pX = ApplyPredicate(Function("p_", None, Real, Bool), CDot)
+        val qX = ApplyPredicate(Function("q_", None, Real, Bool), CDot)
+        val aX = Variable("x_", None, Real)
         val s = USubst(
-          SubstitutionPair(pX, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
-            SubstitutionPair(qX, SubstitutionHelper.replaceFree(q)(x, CDot)) :: Nil)
+          SubstitutionPair(pX, replaceFree(replace(p)(x, aX))(aX, CDot)) ::
+          SubstitutionPair(qX, replaceFree(replace(q)(x, aX))(aX, CDot)) :: Nil)
 
-        val aX = Variable("x", None, Real)
-        val (renToRule, renFromRule) =
-          if (x.name != aX.name || x.index != aX.index) (globalAlphaRenamingT(x.name, x.index, aX.name, aX.index),
-            globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
-          else (NilT, NilT)
         Some(
-          renToRule & new ApplyRule(AxiomaticRule("exists congruence", s)) {
+          globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
+          new ApplyRule(AxiomaticRule("exists congruence", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & renFromRule
+          } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
         )
     }
   }
@@ -294,8 +288,8 @@ object AxiomaticRuleTactics {
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
       case Equiv(Not(p), Not(q)) =>
-        val pX = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val qX = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+        val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+        val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
         val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: Nil)
         Some(new ApplyRule(AxiomaticRule("! congruence", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
@@ -355,9 +349,9 @@ object AxiomaticRuleTactics {
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
       case Equiv(BinRel(lf, p), BinRel(rf, q)) if lf == rf =>
-        val fX = ApplyPredicate(Function("F", None, Real, Bool), Anything)
-        val pX = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val qX = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+        val fX = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
+        val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+        val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
         val s = USubst(SubstitutionPair(fX, lf) :: SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: Nil)
         Some(new ApplyRule(AxiomaticRule(ruleName, s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
