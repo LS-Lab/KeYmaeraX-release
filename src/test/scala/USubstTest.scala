@@ -24,8 +24,11 @@ class USubstTests extends FlatSpec with Matchers {
   val x = Variable("x", None, Real)
   val p0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
   val p1 = Function("p", None, Real, Bool)
+  val p1_ = Function("p_", None, Real, Bool)
   val pn = Function("p", None, Real, Bool)
+  val pn_ = Function("p_", None, Real, Bool)
   val ap = ProgramConstant("a")
+  val ap_ = ProgramConstant("a_")
 
   "Uniform substitution" should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
     val fn = Apply(Function("f", None, Unit, Real), Nothing)
@@ -125,8 +128,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = GreaterEqual(Real, Exp(Real, Neg(Real, x), Number(2)), Number(0))
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, fml)
-    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1, Anything), fml),
-      SubstitutionPair(ap, prog)))
+    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1_, Anything), fml),
+      SubstitutionPair(ap_, prog)))
     AxiomaticRule("Goedel", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -135,8 +138,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(p1, Anything), fml) ::
-      SubstitutionPair(ap, prog) :: Nil)
+      SubstitutionPair(ApplyPredicate(p1_, Anything), fml) ::
+      SubstitutionPair(ap_, prog) :: Nil)
     AxiomaticRule("Goedel", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -146,11 +149,11 @@ class USubstTests extends FlatSpec with Matchers {
       val conc = "[{y:=y+1++{z:=x+z;}*}; z:=x+y*z;](-x)^2>=y <-> [{y:=y+1++{z:=x+z;}*}; z:=x+y*z;]x^2>=y".asFormula
 
       val prog = "{y:=y+1++{z:=x+z;}*}; z:=x+y*z;".asProgram
-      val q = Function("q", None, Real, Bool)
+      val q_ = Function("q_", None, Real, Bool)
       val s = USubst(Seq(
-        SubstitutionPair(ap, prog),
-        SubstitutionPair(ApplyPredicate(pn, Anything), "(-x)^2>=y".asFormula),
-        SubstitutionPair(ApplyPredicate(q, Anything), "x^2>=y".asFormula)
+        SubstitutionPair(ap_, prog),
+        SubstitutionPair(ApplyPredicate(pn_, Anything), "(-x)^2>=y".asFormula),
+        SubstitutionPair(ApplyPredicate(q_, Anything), "x^2>=y".asFormula)
          ))
         AxiomaticRule("[] congruence", s)(
           Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
@@ -164,11 +167,11 @@ class USubstTests extends FlatSpec with Matchers {
         val concLhs = BoxModality(prog, prem1)
         val concRhs = BoxModality(prog, prem2)
 
-        val q = Function("q", None, Real, Bool)
+        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
-          SubstitutionPair(ap, prog),
-          SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q, Anything), prem2)
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
+          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
            ))
           AxiomaticRule("[] monotone", s)(Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only
             Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
@@ -183,11 +186,11 @@ class USubstTests extends FlatSpec with Matchers {
         val prog = rand.nextProgram(randomComplexity)
         val conc = Equiv(BoxModality(prog, prem1), BoxModality(prog, prem2))
 
-        val q = Function("q", None, Real, Bool)
+        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
-          SubstitutionPair(ap, prog),
-          SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q, Anything), prem2)
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
+          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
            ))
           AxiomaticRule("[] congruence", s)(
             Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
@@ -202,11 +205,11 @@ class USubstTests extends FlatSpec with Matchers {
         val prog = rand.nextProgram(randomComplexity)
         val conc = Equiv(DiamondModality(prog, prem1), DiamondModality(prog, prem2))
 
-        val q = Function("q", None, Real, Bool)
+        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
-          SubstitutionPair(ap, prog),
-          SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q, Anything), prem2)
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
+          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
            ))
           AxiomaticRule("<> congruence", s)(
             Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
@@ -221,11 +224,11 @@ class USubstTests extends FlatSpec with Matchers {
         val concLhs = DiamondModality(prog, prem1)
         val concRhs = DiamondModality(prog, prem2)
 
-        val q = Function("q", None, Real, Bool)
+        val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
-          SubstitutionPair(ap, prog),
-          SubstitutionPair(ApplyPredicate(pn, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q, Anything), prem2)
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
+          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
            ))
           AxiomaticRule("<> monotone", s)(
             Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
@@ -239,8 +242,8 @@ class USubstTests extends FlatSpec with Matchers {
         val conc = BoxModality(prog, prem)
 
         val s = USubst(Seq(
-          SubstitutionPair(ap, prog),
-          SubstitutionPair(ApplyPredicate(pn, Anything), prem)
+          SubstitutionPair(ap_, prog),
+          SubstitutionPair(ApplyPredicate(pn_, Anything), prem)
            ))
           AxiomaticRule("Goedel", s)(
             Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
