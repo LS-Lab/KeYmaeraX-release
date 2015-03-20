@@ -151,4 +151,31 @@ object AxiomaticRuleTactics {
         })
     }
   }
+
+  /**
+   * Creates a new tactic for universal generalization. Expects a sequent with a sole formula in the succedent of the
+   * form \forall x. p(x).
+   * @return The newly created tactic.
+   */
+  def forallGeneralizationT: Tactic = new ConstructionTactic("all generalization") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ(0) match {
+        case Forall(_, _) => true
+        case _ => false
+      })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+      case Forall(vars, p) =>
+        assert(vars.length == 1, "forall generalization only supported for one variable")
+        val x = vars(0) match {
+          case v: Variable => v
+          case _ => throw new UnsupportedOperationException("forall generalization only supported for variables")
+        }
+        val pX = Function("p", None, Real, Bool)
+        val s = USubst(SubstitutionPair(ApplyPredicate(pX, CDot), SubstitutionHelper.replaceFree(p)(x, CDot)) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("all generalization", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
 }
