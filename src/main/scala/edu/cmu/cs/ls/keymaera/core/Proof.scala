@@ -1287,6 +1287,7 @@ object AxiomaticRule {
     val qx = ApplyPredicate(Function("q", None, Real, Bool), x)
     val qny = ApplyPredicate(Function("q", None, Real, Bool), Anything)
     val a = ProgramConstant("a")
+    val fny = ApplyPredicate(Function("F", None, Real, Bool), Anything)
     scala.collection.immutable.Map(
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
@@ -1311,7 +1312,11 @@ object AxiomaticRule {
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
       ("Goedel", /* unsound for hybrid games */
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny))))),
+      // Derived axiomatic rules
+        ("-> congruence",
+          (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fny, pny), Imply(fny, qny))))))
     )
   }
 

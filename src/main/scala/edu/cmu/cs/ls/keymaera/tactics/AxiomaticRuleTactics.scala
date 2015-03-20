@@ -208,4 +208,28 @@ object AxiomaticRuleTactics {
         })
     }
   }
+
+  /**
+   * Creates a new tactic for -> congruence. Expects a sequent with a sole formula in the succedent of the
+   * form (F -> p) <-> (F -> q).
+   * @return The newly created tactic.
+   */
+  def implyCongruenceT: Tactic = new ConstructionTactic("all congruence") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ(0) match {
+        case Equiv(Imply(lf, _), Imply(rf, _)) => lf == rf
+        case _ => false
+      })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+      case Equiv(Imply(lf, p), Imply(rf, q)) if lf == rf =>
+        val fX = ApplyPredicate(Function("F", None, Real, Bool), Anything)
+        val pX = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val qX = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+        val s = USubst(SubstitutionPair(fX, lf) :: SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("-> congruence", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
 }
