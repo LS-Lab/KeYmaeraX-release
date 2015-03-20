@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
@@ -609,19 +610,19 @@ object HybridProgramTacticsImpl {
         val anteLength = node.sequent.ante.length
 
         def createTactic(m: Formula, pred: Formula, v: Variable, t: Variable) = Some(
-          cutT(Some(Equiv(m, replace(pred)(v, t)))) &
+          cutEquivInContext(Equiv(m, replace(pred)(v, t)), p) &
             onBranch(
               (cutShowLbl,
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
-                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: Nil))) &
+                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, p.inExpr.second)) &
                   EquivRightT(SuccPosition(0)) & AxiomCloseT),
-              (cutUseLbl, equalityRewriting(AntePosition(anteLength), p) &
-                hideT(AntePosition(anteLength)) & hideT(p))
+              (cutUseLbl, equalityRewriting(AntePosition(anteLength), p.topLevel) &
+                hideT(AntePosition(anteLength)) & hideT(p.topLevel))
             )
         )
 
-        node.sequent(p) match {
+        getFormula(node.sequent, p) match {
           case b@BoxModality(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
           case d@DiamondModality(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
         }

@@ -419,7 +419,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     tactic.applicable(new RootNode(sucSequent("[y:=z;][{y:=z+1;}*]y>0".asFormula))) shouldBe false
   }
 
-  "v2vBoxAssignT" should "work on box ODEs" in {
+  "v2vAssignT" should "work on box ODEs" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateSucc(v2vAssignT)
     getProofSequent(tactic, new RootNode(sucSequent("[y:=z;][y'=2;]y>0".asFormula))) should be (sucSequent("[z'=2;]z>0".asFormula))
@@ -462,6 +462,13 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tactic = locateSucc(v2vAssignT)
     getProofSequent(tactic, new RootNode(sucSequent("<y:=z;><y'=2;>y>0".asFormula))) should be (
       sucSequent("<z'=2;>z>0".asFormula))
+  }
+
+  it should "work on diamond ODEs inside formulas" in {
+    import HybridProgramTacticsImpl.v2vAssignT
+    val tactic = v2vAssignT(SuccPosition(0, PosInExpr(1::Nil)))
+    getProofSequent(tactic, new RootNode(sucSequent("x>y & <y:=z;><y'=2;>y>0".asFormula))) should be (
+      sucSequent("x>y & <z'=2;>z>0".asFormula))
   }
 
   it should "work on diamond loops" in {
