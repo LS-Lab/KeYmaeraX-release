@@ -1298,6 +1298,9 @@ object AxiomaticRule {
       ("all monotone",
          (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+      ("exists congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
       ("[] monotone",
         (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
           Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
@@ -1314,9 +1317,21 @@ object AxiomaticRule {
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny))))),
       // Derived axiomatic rules
-        ("-> congruence",
-          (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fny, pny), Imply(fny, qny))))))
+      ("-> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fny, pny), Imply(fny, qny)))))),
+      ("<-> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fny, pny), Equiv(fny, qny)))))),
+      ("& congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fny, pny), And(fny, qny)))))),
+      ("| congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fny, pny), Or(fny, qny)))))),
+      ("! congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny))))))
     )
   }
 

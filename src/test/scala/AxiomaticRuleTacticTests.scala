@@ -101,9 +101,59 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>5 <-> x>0".asFormula
   }
 
+  "Exists congruence" should "work" in {
+    val s = sucSequent("(\\exists x. x>5) <-> (\\exists x . x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.existsCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>5 <-> x>0".asFormula
+  }
+
   "Imply congruence" should "work" in {
     val s = sucSequent("(x>5 -> x>2) <-> (x>5 -> x>0)".asFormula)
     val tactic = AxiomaticRuleTactics.implyCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 <-> x>0".asFormula
+  }
+
+  "Equiv congruence" should "work" in {
+    val s = sucSequent("(x>5 <-> x>2) <-> (x>5 <-> x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.equivCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 <-> x>0".asFormula
+  }
+
+  "And congruence" should "work" in {
+    val s = sucSequent("(x>5 & x>2) <-> (x>5 & x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.andCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 <-> x>0".asFormula
+  }
+
+  "Or congruence" should "work" in {
+    val s = sucSequent("(x>5 | x>2) <-> (x>5 | x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.orCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 <-> x>0".asFormula
+  }
+
+  "Not congruence" should "work" in {
+    val s = sucSequent("(!x>2) <-> (!x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.notCongruenceT
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
