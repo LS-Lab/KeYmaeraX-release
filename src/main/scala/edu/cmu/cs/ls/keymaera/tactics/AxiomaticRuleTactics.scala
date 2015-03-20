@@ -2,12 +2,29 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.globalAlphaRenamingT
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.NilT
 
 /**
  * Created by smitsch on 3/16/15.
  * @author Stefan Mitsch
  */
 object AxiomaticRuleTactics {
+
+  /**
+   * Creates a new tactic for congruence rewriting.
+   * @return The newly created tactic.
+   */
+  def congruenceT: Tactic =
+    boxCongruenceT |
+    diamondCongruenceT |
+    forallCongruenceT |
+    existsCongruenceT |
+    equivCongruenceT |
+    implyCongruenceT |
+    andCongruenceT |
+    orCongruenceT |
+    notCongruenceT
 
   /**
    * Creates a new tactic for box congruence rewriting. Expects a sequent with a sole formula in the succedent, of
@@ -173,9 +190,17 @@ object AxiomaticRuleTactics {
         }
         val pX = Function("p", None, Real, Bool)
         val s = USubst(SubstitutionPair(ApplyPredicate(pX, CDot), SubstitutionHelper.replaceFree(p)(x, CDot)) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("all generalization", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+
+        val aX = Variable("x", None, Real)
+        val (renToRule, renFromRule) =
+          if (x.name != aX.name || x.index != aX.index) (globalAlphaRenamingT(x.name, x.index, aX.name, aX.index),
+            globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+          else (NilT, NilT)
+        Some(
+          renToRule & new ApplyRule(AxiomaticRule("all generalization", s)) {
+            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+          } & renFromRule
+        )
     }
   }
 
@@ -203,9 +228,17 @@ object AxiomaticRuleTactics {
         val s = USubst(
           SubstitutionPair(pX, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
           SubstitutionPair(qX, SubstitutionHelper.replaceFree(q)(x, CDot)) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("all congruence", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+
+        val aX = Variable("x", None, Real)
+        val (renToRule, renFromRule) =
+          if (x.name != aX.name || x.index != aX.index) (globalAlphaRenamingT(x.name, x.index, aX.name, aX.index),
+            globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+          else (NilT, NilT)
+        Some(
+          renToRule & new ApplyRule(AxiomaticRule("all congruence", s)) {
+            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+          } & renFromRule
+        )
     }
   }
 
@@ -233,9 +266,17 @@ object AxiomaticRuleTactics {
         val s = USubst(
           SubstitutionPair(pX, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
             SubstitutionPair(qX, SubstitutionHelper.replaceFree(q)(x, CDot)) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("exists congruence", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+
+        val aX = Variable("x", None, Real)
+        val (renToRule, renFromRule) =
+          if (x.name != aX.name || x.index != aX.index) (globalAlphaRenamingT(x.name, x.index, aX.name, aX.index),
+            globalAlphaRenamingT(aX.name, aX.index, x.name, x.index))
+          else (NilT, NilT)
+        Some(
+          renToRule & new ApplyRule(AxiomaticRule("exists congruence", s)) {
+            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+          } & renFromRule
+        )
     }
   }
 

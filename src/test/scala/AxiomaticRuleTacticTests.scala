@@ -91,6 +91,16 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
+  it should "alpha rename" in {
+    val s = sucSequent("\\forall y . y>0".asFormula)
+    val tactic = AxiomaticRuleTactics.forallGeneralizationT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>0".asFormula
+  }
+
   "Forall congruence" should "work" in {
     val s = sucSequent("(\\forall x. x>5) <-> (\\forall x . x>0)".asFormula)
     val tactic = AxiomaticRuleTactics.forallCongruenceT
@@ -101,6 +111,16 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>5 <-> x>0".asFormula
   }
 
+  it should "alpha rename" in {
+    val s = sucSequent("(\\forall y. y>5) <-> (\\forall y. y>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.forallCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>5 <-> y>0".asFormula
+  }
+
   "Exists congruence" should "work" in {
     val s = sucSequent("(\\exists x. x>5) <-> (\\exists x . x>0)".asFormula)
     val tactic = AxiomaticRuleTactics.existsCongruenceT
@@ -109,6 +129,16 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>5 <-> x>0".asFormula
+  }
+
+  "Exists congruence" should "alpha rename" in {
+    val s = sucSequent("(\\exists y. y>5) <-> (\\exists y. y>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.existsCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>5 <-> y>0".asFormula
   }
 
   "Imply congruence" should "work" in {
