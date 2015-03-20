@@ -91,4 +91,13 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
+  "Forall congruence" should "work" in {
+    val s = sucSequent("(\\forall x. x>5) <-> (\\forall x . x>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.forallCongruenceT
+
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>5 <-> x>0".asFormula
+  }
 }

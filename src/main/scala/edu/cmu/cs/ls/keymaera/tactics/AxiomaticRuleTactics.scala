@@ -178,4 +178,34 @@ object AxiomaticRuleTactics {
         })
     }
   }
+
+  /**
+   * Creates a new tactic for universal congruence. Expects a sequent with a sole formula in the succedent of the
+   * form \forall x. p(x) <-> \forall x. q(x).
+   * @return The newly created tactic.
+   */
+  def forallCongruenceT: Tactic = new ConstructionTactic("all congruence") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ(0) match {
+        case Equiv(Forall(lvars, _), Forall(rvars, _)) => lvars == rvars
+        case _ => false
+      })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+      case Equiv(Forall(lvars, p), Forall(rvars, q)) if lvars == rvars =>
+        assert(lvars.length == 1, "forall generalization only supported for one variable")
+        val x = lvars(0) match {
+          case v: Variable => v
+          case _ => throw new UnsupportedOperationException("forall generalization only supported for variables")
+        }
+        val pX = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        val qX = ApplyPredicate(Function("q", None, Real, Bool), CDot)
+        val s = USubst(
+          SubstitutionPair(pX, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
+          SubstitutionPair(qX, SubstitutionHelper.replaceFree(q)(x, CDot)) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("all congruence", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
 }
