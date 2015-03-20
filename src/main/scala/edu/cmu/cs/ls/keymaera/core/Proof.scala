@@ -1293,7 +1293,7 @@ object AxiomaticRule {
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
       ("all congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), Equiv(px, qx)))))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
       ("all monotone",
          (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
