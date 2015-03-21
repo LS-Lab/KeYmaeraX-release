@@ -26,8 +26,23 @@ import BindingAssessment.allNames
 object TacticLibrary {
 
   object TacticHelper {
+    def isFormula(s: Sequent, p: Position): Boolean = {
+      if (p.isTopLevel) {
+        if (p.isAnte) p.index < s.ante.length else p.index < s.succ.length
+      } else {
+        var f: Formula = null
+        ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+            f = e
+            Left(Some(ExpressionTraversal.stop))
+          }
+        }), if (p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex))
+        f != null
+      }
+    }
+
     def getFormula(s: Sequent, p: Position): Formula = {
-      if (p.inExpr == HereP) {
+      if (p.isTopLevel) {
         if(p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex)
       } else {
         var f: Formula = null
@@ -111,9 +126,21 @@ object TacticLibrary {
     }
   }
 
-  def debugAtT(s: => Any) = new PositionTactic("Debug") {
+  def debugAtT(s: => Any): PositionTactic = new PositionTactic("Debug") {
     def applies(s: Sequent, p: Position): Boolean = true
-    def apply(p: Position): Tactic = debugT(s"$s at $p")
+    def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        if (TacticHelper.isFormula(node.sequent, p)) {
+          Some(debugT(s"$s at $p: ${TacticHelper.getFormula(node.sequent, p)}"))
+        } else {
+          val parentPos =
+            if (p.isAnte) AntePosition(p.index, PosInExpr(p.inExpr.pos.init))
+            else SuccPosition(p.index, PosInExpr(p.inExpr.pos.init))
+          Some(debugT(s"$s at $p is invalid") & debugAtT(s"looking for valid formula")(parentPos))
+        }
+      }
+    }
   }
 
   /*******************************************************************
