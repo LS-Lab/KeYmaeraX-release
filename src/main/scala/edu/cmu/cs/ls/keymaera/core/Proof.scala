@@ -1244,7 +1244,9 @@ object Axiom {
 }
 
 /**
- * Apply a uniform substitution instance of an axiomatic proof rule.
+ * Apply a uniform substitution instance of an axiomatic proof rule,
+ * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
+ * Axiomatic proof rules are employed after forming their uniform substitution instances.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
@@ -1286,9 +1288,15 @@ object AxiomaticRule {
     val pny = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
     val qx = ApplyPredicate(Function("q_", None, Real, Bool), x)
     val qny = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
+    val fny = Apply(Function("f_", None, Real, Real), Anything)
+    val gny = Apply(Function("g_", None, Real, Real), Anything)
+    val ctxt = Function("ctx_", None, Real, Real)
     val a = ProgramConstant("a_")
-    val fny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
+    val fmlfny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
     scala.collection.immutable.Map(
+      ("term congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(fny, gny))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Apply(ctxt, fny), Apply(ctxt, gny)))))),
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
@@ -1319,16 +1327,16 @@ object AxiomaticRule {
       // Derived axiomatic rules
       ("-> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fny, pny), Imply(fny, qny)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fmlny, pny), Imply(fmlny, qny)))))),
       ("<-> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fny, pny), Equiv(fny, qny)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fmlny, pny), Equiv(fmlny, qny)))))),
       ("& congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fny, pny), And(fny, qny)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fmlny, pny), And(fmlny, qny)))))),
       ("| congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fny, pny), Or(fny, qny)))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fmlny, pny), Or(fmlny, qny)))))),
       ("! congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny))))))
