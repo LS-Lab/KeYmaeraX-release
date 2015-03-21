@@ -489,6 +489,13 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     tactic.applicable(new RootNode(sucSequent("<y:=z;>[?y>0;]y>0".asFormula))) shouldBe false
   }
 
+  it should "work inside formulas" in {
+    import HybridProgramTacticsImpl.v2vAssignT
+    val tactic = v2vAssignT(SuccPosition(0, PosInExpr(1::0::Nil)))
+    getProofSequent(tactic, new RootNode(sucSequent("x=y & (<y:=z;><y'=2;>y>0 | y>0)".asFormula))) should be (
+      sucSequent("x=y & (<z'=2;>z>0 | y>0)".asFormula))
+  }
+
   "Discrete ghost" should "introduce assignment to fresh variable" in {
     val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
     val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, new Variable("y", None, Real)))

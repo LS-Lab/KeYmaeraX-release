@@ -615,7 +615,7 @@ object HybridProgramTacticsImpl {
               (cutShowLbl,
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
-                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, p.inExpr.second)) &
+                alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
                   EquivRightT(SuccPosition(0)) & AxiomCloseT),
               (cutUseLbl, equalityRewriting(AntePosition(anteLength), p.topLevel) &
                 hideT(AntePosition(anteLength)) & hideT(p.topLevel))
