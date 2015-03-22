@@ -1295,10 +1295,10 @@ object AxiomaticRule {
     val a = ProgramConstant("a_")
     val fmlfny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
     scala.collection.immutable.Map(
-      ("term congruence",
+      ("CT term congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(fny, gny))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Apply(ctxt, fny), Apply(ctxt, gny)))))),
-      ("term formula congruence",
+      ("CQ equation congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(fny, gny))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(ctxf, fny), ApplyPredicate(ctxf, gny)))))),
       ("all generalization",
