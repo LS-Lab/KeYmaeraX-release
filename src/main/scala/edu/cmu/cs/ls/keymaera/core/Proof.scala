@@ -1063,7 +1063,7 @@ class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos
  * @param p The position of an occurance of the (l?)hs of assumption
  * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
  */
-@deprecated("Use [] congruence and <> congruence and all congruence rules instead")
+@deprecated("Use CT, CQ, CE congruence rules instead")
 class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
   override def apply(s: Sequent): List[Sequent] = {
     require(assumption.isAnte && assumption.inExpr == HereP)
