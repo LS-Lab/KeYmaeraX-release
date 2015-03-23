@@ -21,6 +21,51 @@ import scala.annotation.elidable._
 import StaticSemantics._
 
 /**
+ * Representation of a substitution replacing n with t.
+ *
+ * @param what the expression to be replaced. what can have one of the following forms:
+ *          - CDot
+ *          - Nothing/Anything
+ *          - ApplyPredicate(p:Function, CDot/Nothing/Anything)
+ *          - Apply(f:Function, CDot/Nothing/Anything)
+ *          - ProgramConstant/DifferentialProgramConstant
+ *          - Derivative(...)
+ *          - ApplyPredicational(p:Function, CDotFormula)
+ *          - CDotFormula
+ * @param repl the expression to be used in place of what
+ @TODO Check: Turned into case class instead of having apply/unapply for simplicity.
+ */
+final case class SubstitutionPair (val what: Expr, val repl: Expr) {
+  applicable
+  // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
+  //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
+  
+  @elidable(ASSERTION) def applicable = {
+    // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
+    if(false) { //@todo Nathan suppressed this for now...
+      if (what == repl) println("INFO: Unnecessary identity substitution " + what + " by equal " + repl + "\n(non-critical, just indicates a possible tactics inefficiency)")
+    }
+    require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
+    require(what match {
+      case CDot => true
+      case Anything => true
+      case _:ProgramConstant => true
+      case _:DifferentialProgramConstant => true
+      case Derivative(_, _:Variable) => true
+      case Apply(_:Function, CDot | Nothing | Anything) => true
+      case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
+      case Nothing => repl == Nothing
+      case CDotFormula => true
+      case ApplyPredicational(_:Function, CDotFormula) => true
+      case _ => false
+      }, "Substitutable expression required, found " + what)
+  }
+
+  override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
+}
+
+
+/**
  * A Uniform Substitution with its application mechanism.
  * Implements application of uniform substitutions to terms, formulas, programs.
  * "Global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
@@ -37,11 +82,13 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
     // check that we never replace p(x) by something and also p(t) by something
     val lambdaNames = subsDefs.map(_.what match {
-      case ApplyPredicate(p: Function, _: Variable) => List(p)
-      case Apply(f: Function, _: Variable) => List(f)
+      case ApplyPredicate(p: Function, _) => List(p)
+      case Apply(f: Function, _) => List(f)
+      case ApplyPredicational(p: Function, _) => List(p)
       case _ => Nil
     }).fold(Nil)((a,b) => a++b)
-    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + subsDefs)
+    require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
+    //@TODO??? require(lambdaNames.size == subsDefs.size, "projected all replaced top-level names " + lambdaNames + " from " + this)
   }
 
   @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
@@ -79,9 +126,9 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   // implementation of uniform substitution application
       
   // uniform substitution on terms
-  private[core] def usubst(t: Term): Term = {
+  private[core] def usubst(term: Term): Term = {
     try {
-      t match {
+      term match {
         // uniform substitution base cases
         case x: Variable => require(!subsDefs.exists(_.what == x), s"Substitution of variables not supported: $x"); x
         case xp@Derivative(Real, x: Variable) => require(!subsDefs.exists(_.what == xp),
@@ -122,14 +169,14 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this, term, term.prettyString()).initCause(ex)
     }
   }
 
-  private[core] def usubst(f: Formula): Formula = {
-    log(s"Substituting ${f.prettyString()} using $this")
+  private[core] def usubst(formula: Formula): Formula = {
+    log(s"Substituting ${formula.prettyString()} using $this")
     try {
-      f match {
+      formula match {
         case app@ApplyPredicate(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rFormula) = (
@@ -142,7 +189,21 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
             })
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
-        case True | False => f
+        case app@ApplyPredicational(_, fml) if subsDefs.exists(sameHead(_, app)) =>
+          require(admissible(SetLattice.top[NamedSymbol], fml),
+            s"Substitution clash when substituting predicational ${app.prettyString()}")
+          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
+          val (rArg, rFormula) = (
+            subs.what match { case ApplyPredicational(_, v: NamedSymbol) => v
+                           case _ => throw new IllegalArgumentException(
+                            s"Substitution of p(fml)=${app.prettyString()} for arbitrary fml=${fml.prettyString()} not supported")},
+            subs.repl match { case f: Formula => f
+                           case _ => throw new IllegalArgumentException(
+                             s"Can only substitute formulas for ${app.prettyString()}")
+            })
+          USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(rFormula)
+        case app@ApplyPredicational(q, fml) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicational(q, usubst(fml))
+        case True | False => formula
 
         //@TODO any way of ensuring for the following that  top-level(f)==top-level(\result)
         case Equals(d, l, r) => Equals(d, usubst(l), usubst(r))
@@ -181,14 +242,14 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this, formula, formula.prettyString()).initCause(ex)
     }
   }
 
   // uniform substitution on programs
-  private[core] def usubst(p: Program): Program = {
+  private[core] def usubst(program: Program): Program = {
     try {
-      p match {
+      program match {
         case a: ProgramConstant if subsDefs.exists(_.what == a) =>
           subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
         case a: ProgramConstant if !subsDefs.exists(_.what == a) => a
@@ -211,7 +272,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this, program, program.toString()).initCause(ex)
     }
   }
 
@@ -276,6 +337,10 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           case ApplyPredicate(fn: Function, CDot) =>
             assert(f == sigma.repl)
             StaticSemantics(f).fv -- Set(CDot)
+          case ApplyPredicational(fn: Function, CDotFormula) =>
+            assert(f == sigma.repl)
+            assert(!StaticSemantics(f).fv.contains(CDotFormula), "CDotFormula never gathered as a free variable")
+            StaticSemantics(f).fv
           case _ => StaticSemantics(f).fv
         }
         case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
@@ -286,10 +351,12 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
 
   /**
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
+   * @TODO Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
   def sameHead(left: SubstitutionPair, right: Expr) = left.what match {
     case Apply(lf, CDot | Anything | Nothing) => right match { case Apply(rf, _) => lf == rf case _ => false }
     case ApplyPredicate(lf, CDot | Anything | Nothing) => right match { case ApplyPredicate(rf, _) => lf == rf case _ => false }
+    case ApplyPredicational(lf, CDotFormula) => right match { case ApplyPredicational(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 

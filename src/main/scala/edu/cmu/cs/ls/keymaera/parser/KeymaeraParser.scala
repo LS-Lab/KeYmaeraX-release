@@ -225,7 +225,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
             Function(n, idx, identsToSorts(argsorts), identToSort(rsort))
           }
           if(isExternal) {
-            result.markExternal()
+            throw new UnsupportedOperationException("external functions not yet supported")
+            //result.markExternal()
           }
           result
         }

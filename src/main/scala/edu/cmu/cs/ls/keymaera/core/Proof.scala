@@ -665,53 +665,6 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
  */
 
 /**
- * Representation of a substitution replacing n with t.
- *
- * @param what the expression to be replaced. what can have one of the following forms:
- *          - CDot
- *          - Nothing/Anything
- *          - ApplyPredicate(p:Function, CDot/Nothing/Anything)
- *          - Apply(f:Function, CDot/Nothing/Anything)
- *          - ProgramConstant/DifferentialProgramConstant
- *          - Derivative(...)
- * @param repl the expression to be used in place of what
- @TODO Check: Turned into case class instead of having apply/unapply for simplicity.
- */
-final case class SubstitutionPair (val what: Expr, val repl: Expr) {
-  applicable
-  // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
-  //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
-  
-  @elidable(ASSERTION) def applicable = {
-    // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
-    if(false) { //@todo Nathan suppressed this for now...
-      if (what == repl) println("INFO: Unnecessary identity substitution " + what + " by equal " + repl + "\n(non-critical, just indicates a possible tactics inefficiency)")
-    }
-    require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
-    require(what match {
-      case CDot => true
-      case Anything => true
-      case _:ProgramConstant => true
-      case _:DifferentialProgramConstant => true
-      case Derivative(_, _:Variable) => true
-      case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
-      case Apply(_:Function, CDot | Nothing | Anything) => true
-      case Nothing => repl == Nothing
-      case _ => false
-      }, "Substitutable expression required, found " + what)
-  }
-
-  override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
-}
-/*object SubstitutionPair {
-  def apply(n: Expr, t: Expr): SubstitutionPair = new SubstitutionPair(n, t)
-  def unapply(e: Any): Option[(Expr,Expr)] = e match {
-    case x: SubstitutionPair => Some((x.what,x.repl))
-    case _ => None
-  }
-}*/
-
-/**
  * Uniform Substitution Rule.
  * Applies a given uniform substitution to the given original premise (origin).
  * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
@@ -1292,15 +1245,19 @@ object AxiomaticRule {
     val gny = Apply(Function("g_", None, Real, Real), Anything)
     val ctxt = Function("ctx_", None, Real, Real)
     val ctxf = Function("ctx_", None, Real, Bool)
+    val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis  should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     val a = ProgramConstant("a_")
-    val fmlfny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
+    val fmlny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
     scala.collection.immutable.Map(
       ("CT term congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(fny, gny))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Apply(ctxt, fny), Apply(ctxt, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Apply(ctxt, fny), Apply(ctxt, gny)))))),
       ("CQ equation congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(fny, gny))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(ctxf, fny), ApplyPredicate(ctxf, gny)))))),
+      ("CE equivalence congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicational(context, pny), ApplyPredicational(context, qny)))))),
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),

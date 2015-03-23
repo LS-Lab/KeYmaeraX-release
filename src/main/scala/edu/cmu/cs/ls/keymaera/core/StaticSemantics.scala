@@ -128,6 +128,8 @@ object StaticSemantics {
     case LessEqual(d, l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
     case LessThan(d, l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
     case ApplyPredicate(p, arg) => VCF(fv = freeVars(arg), bv = SetLattice.bottom)
+    case ApplyPredicational(p, arg) => VCF(fv = SetLattice.top, bv = SetLattice.bottom)
+    case CDotFormula => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
 
     // homomorphic cases
     case Not(g) => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
@@ -201,7 +203,7 @@ object StaticSemantics {
     // base cases
     case Apply(f, arg) => Set(f) ++ signature(arg)
     case x: Variable => Set.empty
-    case CDot => Set.empty
+    case CDot => Set.empty  //@TODO assert !isInstanceOf[Function](CDot)
     case nd: DifferentialSymbol => Set.empty
     // homomorphic cases
     case Neg(s, e) => signature(e)
@@ -224,6 +226,8 @@ object StaticSemantics {
   def signature(f: Formula): Set[NamedSymbol] = f match {
     // base cases
     case ApplyPredicate(p, arg) => Set(p) ++ signature(arg)
+    case ApplyPredicational(p, arg) => Set(p) ++ signature(arg)
+    case CDotFormula => Set(CDotFormula)  //@TODO eisegesis
     case True | False => Set.empty
     // pseudo-homomorphic cases
     case Equals(d, l, r) => signature(l) ++ signature(r)

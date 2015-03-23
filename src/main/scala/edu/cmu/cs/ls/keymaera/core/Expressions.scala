@@ -31,7 +31,7 @@ import scala.collection.immutable
 
 object HashFn {
   /**
-   * Next free prime is 281
+   * Next free prime is 283
    * @param prime
    * @param a
    * @return
@@ -163,6 +163,7 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
 object Anything extends NamedSymbol("\\anything", None, Unit, Real) with Atom with Term
 object Nothing extends NamedSymbol("\\nothing", None, Unit, Unit) with Atom with Term
 object CDot extends NamedSymbol("\\cdot", None, Unit, Real) with Atom with Term
+object CDotFormula extends NamedSymbol("\\mathvisiblespace", None, Unit, Bool) with Atom with Formula
 
 object DifferentialSymbol {
   def apply(symbol : NamedSymbol): DifferentialSymbol = new DifferentialSymbol(symbol)
@@ -225,14 +226,27 @@ final class Function (name : String, index: Option[Int] = None, domain : Sort, s
    * A function is marked as external by using the external input during
    * function delcaration. External functions are passed as bare names to QE
    * backends.
+   * @TODO If we need this at all, let's turn it into a new type of NamedSymbols. ExternalFunction or something stateless
    */
-  var external : Boolean = false
+  val external : Boolean = false
+  /*var external : Boolean = false
   @deprecated("Terrible state. Remove!")
   def markExternal() = {
     external = true
     this
+  }*/
+}
+
+/*
+object Predicational {
+  def apply(name : String, index: Option[Int] = None, domain: Sort, sort : Sort): Predicational = new Predicational(name, index, domain, sort)
+  def unapply(e: Any): Option[(String, Option[Int], Sort, Sort)] = e match {
+    case x: Predicational => Some((x.name, x.index, x.domain, x.sort))
+    case _ => None
   }
 }
+final class Predicational (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort) {}
+  */
 
 /**
  * Constant, Variable and Function Expressions
@@ -335,13 +349,41 @@ final class ApplyPredicate(val function : Function, child : Term)
   applicable
 
   @elidable(ASSERTION) override def applicable = super.applicable; require(function.sort == Bool,
-    "Sort mismatch in if then else condition: "  + function.sort + " is not Bool")
+    "Sort mismatch in apply predicate: "  + function.sort + " is not Bool")
 
   override def equals(e: Any): Boolean = e match {
     case ApplyPredicate(f, t) => f == function && t == child
     case _ => false
   }
   override def hashCode: Int = hash(13, function, child)
+}
+
+/*
+ * Predicational application
+ */
+object ApplyPredicational {
+  def apply(function: Function, child: Formula): ApplyPredicational = new ApplyPredicational(function, child)
+  def unapply(e: Any): Option[(Function, Formula)] = e match {
+    case x: ApplyPredicational => x.child match {
+      case f: Formula => Some((x.function, f))
+      case _ => None
+    }
+    case _ => None
+  }
+}
+final class ApplyPredicational(val function : Function, child : Formula)
+  extends Unary(Bool, function.domain, child) with Formula {
+  applicable
+
+  @elidable(ASSERTION) override def applicable = super.applicable; require(function.sort == Bool,
+    "Sort mismatch in predicational apply: "  + function.sort + " is not Bool")
+
+  override def equals(e: Any): Boolean = e match {
+    //@TODO commute?
+    case ApplyPredicational(fct, fml) => fct == function && fml == child
+    case _ => false
+  }
+  override def hashCode: Int = hash(281, function, child)
 }
 
 /* combine subexpressions into a vector */
