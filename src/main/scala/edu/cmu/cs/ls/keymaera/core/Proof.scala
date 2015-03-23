@@ -1248,6 +1248,7 @@ object AxiomaticRule {
     val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis  should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     val a = ProgramConstant("a_")
     val fmlny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
+    
     scala.collection.immutable.Map(
       ("CT term congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
