@@ -1019,6 +1019,7 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
   /**
    * @TODO Review. Might turn into axiom QuantifierAbstraction.
    * @TODO Tactics should be perfectly fine using [] monotone or <> monotone instead.
+   * @TODO Replace by a tactics combining (V)  \forall x.p(x)->[a]\forall x.p(x)  with (mon) [a]\forall x.p(x)->[a]p(x) where \forall x is the universal closure with respect to all variables bound by a so that V becomes applicable.
    */
 @deprecated("Use [] monotone and <> monotone or Goedel rule instead.")
 class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
