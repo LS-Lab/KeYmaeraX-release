@@ -378,6 +378,10 @@ object Tactics {
       continuation(this, Success, Seq(node))
     }
   }
+  def NilPT = new PositionTactic("Nil") {
+    def applies(s: Sequent, p: Position): Boolean = true
+    def apply(p: Position): Tactic = NilT
+  }
 
   /**
    * Stop tactics execution.
