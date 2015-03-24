@@ -166,9 +166,9 @@ object FOQuantifierTacticsImpl {
           val aT = Apply(Function("t", None, Unit, Real), Nothing)
           val aP = Function("p", None, Real, Bool)
           val l = List(SubstitutionPair(aT, instance), SubstitutionPair(ApplyPredicate(aP, CDot),
-            forall(replace(qf)(quantified, CDot))))
+            forall(SubstitutionHelper.replaceFree(qf)(quantified, CDot))))
           // construct axiom instance: \forall x. p(x) -> p(t)
-          val g = replace(qf)(quantified, instance)
+          val g = SubstitutionHelper.replaceFree(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
           Some(axiomInstance, l, (quantified, aX), (instance, aT))
         case Forall(x, qf) if !x.contains(quantified) => None
@@ -194,14 +194,16 @@ object FOQuantifierTacticsImpl {
                 // val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
                 // val hideSllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
                 def alpha(p: Position, q: Variable) = alphaRenamingT(q.name, q.index, "$" + aX.name, aX.index)(p)
-                def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
-                  case Imply (aa, b) =>
-                    val aTName = aT match { case x: Variable => x case Apply(fn, _) => fn }
-                    Imply(decompose(replace (aa)(v, Variable ("$" + aX.name, aX.index, aX.sort) )),
-                    if(atTrans) replace(b)(aTName, inst) else b)
+                def repl(f: Formula, v: Variable):Formula = f match {
+                  case Imply(Forall(vars, aa), b) =>
+                    val rv = Variable("$" + aX.name, aX.index, aX.sort)
+                    Imply(
+                      decompose(
+                        Forall(vars.map(qv => if (qv == v) rv else qv), SubstitutionHelper.replaceFree(aa)(v, rv))),
+                      b)
                   case _ => throw new IllegalArgumentException("...")
                 }
-                val replMap = Map(repl(axiomInstance, quant, atTrans = false) -> repl(a, aX))
+                val replMap = Map(repl(axiomInstance, quant) -> repl(a, aX))
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
                   alpha(SuccPosition(0, HereP.first), quant) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
