@@ -14,6 +14,11 @@ class RandomFormula(val rand : Random = new Random()) {
 
   def nextProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size)
 
+  def nextDotTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size, true)
+
+  def nextDotFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size, true)
+
+  def nextDotProgram(size : Int) = nextP(nextNames("z", size / 3 + 1), size, true)
 
 
   def unfoldRight[A, B](seed: B)(f: B => Option[(A,B)]): List[A] = f(seed) match {

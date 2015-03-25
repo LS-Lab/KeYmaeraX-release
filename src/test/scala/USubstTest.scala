@@ -302,4 +302,40 @@ class USubstTests extends FlatSpec with Matchers {
       )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
      }
   
+   it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs USubstTest in {
+       val term1 = "z^2*y".asTerm
+       val term2 = "-(-z)^2*-y+0".asTerm
+       val fml = Equals(Real, term1, term2)
+       val context = rand.nextDotFormula(randomComplexity)
+       val s = USubst(
+         SubstitutionPair(Apply(f1_, Anything), term1) ::
+         SubstitutionPair(Apply(g1_, Anything), term2) ::
+         SubstitutionPair(ApplyPredicate(ctxf, CDot), context) :: Nil)
+       AxiomaticRule("CQ equation congruence", s)(
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, term1), applyDotContext(context, term2))))
+         ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+  }
+  
+  it should "instantiate CE from z^2*y>=5 <-> -(-z)^2*-y+0>=5 in random contexts" taggedAs USubstTest in {
+      val fml1 = "z^2*y>=5".asFormula
+      val fml2 = "-(-z)^2*-y+0>=5".asFormula
+      val fml = Equiv(fml1, fml2)
+      val context = rand.nextDotFormula(randomComplexity)
+      val s = USubst(
+        SubstitutionPair(Apply(pn_, Anything), fml1) ::
+        SubstitutionPair(Apply(qn_, Anything), fml2) ::
+        SubstitutionPair(ApplyPredicate(ctxf, CDot), context) :: Nil)
+      AxiomaticRule("CE equivalence congruence", s)(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
+        ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+ }
+
+  def applyDotContext(context: Formula, arg: Term) : Formula =
+    USubst(SubstitutionPair(CDot, arg) :: Nil)(context)
+  
+  def applyDotContext(context: Formula, arg: Formula) : Formula = {
+    val mycontext = Function("dottingC__", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC__", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
+
+    USubst(SubstitutionPair(ApplyPredicational(mycontext, CDotFormula), arg) :: Nil)(ApplyPredicational(mycontext, arg))
+  }
 }
