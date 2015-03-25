@@ -193,22 +193,29 @@ object FOQuantifierTacticsImpl {
                 // // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 // val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
                 // val hideSllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
-                def alpha(p: Position, q: Variable) = alphaRenamingT(q.name, q.index, "$" + aX.name, aX.index)(p)
                 def repl(f: Formula, v: Variable):Formula = f match {
                   case Imply(Forall(vars, aa), b) =>
-                    val rv = Variable("$" + aX.name, aX.index, aX.sort)
                     Imply(
                       decompose(
-                        Forall(vars.map(qv => if (qv == v) rv else qv), SubstitutionHelper.replaceFree(aa)(v, rv))),
+                        Forall(vars.map(qv => if (qv == v) quantified else qv), SubstitutionHelper.replaceFree(aa)(v, quantified))),
                       b)
                   case _ => throw new IllegalArgumentException("...")
                 }
-                val replMap = Map(repl(axiomInstance, quant) -> repl(a, aX))
+
+                val (renAxiom, alpha) =
+                  if (quantified.name != aX.name || quantified.index != aX.index)
+                    (repl(a, aX), alphaRenamingT(aX.name, aX.index, quantified.name, quantified.index)(AntePosition(0, HereP.first)))
+                  else (a, NilT)
+
+                val axInstance = axiomInstance match {
+                  case Imply(lhs, rhs) => Imply(decompose(lhs), rhs)
+                }
+
+                val replMap = Map(axInstance -> renAxiom)
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
-                  alpha(SuccPosition(0, HereP.first), quant) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) &
-                    (axiomT(axiomName) & alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT))
+                    (axiomT(axiomName) & alpha & AxiomCloseT))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
             }
