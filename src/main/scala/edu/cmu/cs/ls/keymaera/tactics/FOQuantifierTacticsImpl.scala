@@ -4,9 +4,10 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.v2vAssignT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import TacticLibrary.alphaRenamingT
@@ -126,9 +127,35 @@ object FOQuantifierTacticsImpl {
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(_, _) => Some(instantiateUniversalQuanT(quantified, instance)(pos))
-        case Exists(_, _) => Some(instantiateExistentialQuanT(quantified, instance)(pos))
+        case Forall(_, _) =>
+          Some(withStuttering(node.sequent, instantiateUniversalQuanT(quantified, instance)(pos)))
+        case Exists(_, _) =>
+          Some(withStuttering(node.sequent, instantiateExistentialQuanT(quantified, instance)(pos)))
         case _ => None
+      }
+
+      private def withStuttering(s: Sequent, around: Tactic): Tactic = {
+        var stutteringAt: Option[PosInExpr] = None
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case BoxModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case BoxModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case DiamondModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case DiamondModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case _ => Left(None)
+          }
+        }, getFormula(s, pos))
+
+        stutteringAt match {
+          case Some(p) =>
+            val freshQuantified = freshNamedSymbol(quantified, s)
+            val pPos = if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p)
+            val assignPos = if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail))
+            alphaRenamingT(quantified.name, quantified.index, freshQuantified.name, freshQuantified.index)(pPos) & TacticLibrary.debugT("Foo") &
+              around & v2vAssignT(assignPos)
+          case None => around
+        }
+
       }
     }
   }

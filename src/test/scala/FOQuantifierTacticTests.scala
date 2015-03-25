@@ -97,9 +97,15 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "instantiate more complicated ODE modality" in {
-    val tactic = locateAnte(instantiateUniversalQuanT(Variable("y", None, Real), "z".asTerm))
+    val tactic = locateAnte(instantiateT(Variable("y", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. [y'=x & y>2;]y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[z'=x & z>2;]z>0".asFormula :: Nil, Nil))
+  }
+
+  it should "instantiate even if ODE modality follows in some subformula" in {
+    val tactic = locateAnte(instantiateT(Variable("y", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. (y=0 -> [y'=x & y>2;]y>0)".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "z=0 -> [z'=x & z>2;]z>0".asFormula :: Nil, Nil))
   }
 
   it should "instantiate assignment irrespective of what follows" in {
