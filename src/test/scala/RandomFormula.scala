@@ -29,54 +29,56 @@ class RandomFormula(val rand : Random = new Random()) {
       //Some(("x" + (rand.alphanumeric take 5).fold("")((s:String,t:String)=>s+t), n-1))
   }.to[IndexedSeq]
   
-  def nextF(vars : IndexedSeq[Variable], n : Int) : Formula = {
+  def nextF(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Formula = {
 	  require(n>=0)
 	  if (n == 0 || rand.nextInt(10)<1) return True
-      val r = rand.nextInt(120)
+      val r = rand.nextInt(if (dots) 150 else 120/*+1*/)
       r match {
         case 0 => False
         case 1 => True
-        case it if 2 until 10 contains it => Equals(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 10 until 20 contains it => Not(nextF(vars, n-1))
-        case it if 20 until 30 contains it => And(nextF(vars, n-1), nextF(vars, n-1))
-        case it if 30 until 40 contains it => Or(nextF(vars, n-1), nextF(vars, n-1))
-        case it if 40 until 50 contains it => Imply(nextF(vars, n-1), nextF(vars, n-1))
-        case it if 50 until 55 contains it => Equiv(nextF(vars, n-1), nextF(vars, n-1))
+        case it if 2 until 10 contains it => Equals(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 10 until 20 contains it => Not(nextF(vars, n-1, dots))
+        case it if 20 until 30 contains it => And(nextF(vars, n-1, dots), nextF(vars, n-1, dots))
+        case it if 30 until 40 contains it => Or(nextF(vars, n-1, dots), nextF(vars, n-1, dots))
+        case it if 40 until 50 contains it => Imply(nextF(vars, n-1, dots), nextF(vars, n-1, dots))
+        case it if 50 until 55 contains it => Equiv(nextF(vars, n-1, dots), nextF(vars, n-1, dots))
 		//@TODO Should randomly add quantifiers for longer seqs.
-        case it if 55 until 60 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
-        case it if 60 until 65 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1))
-        case it if 65 until 70 contains it => NotEquals(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 70 until 80 contains it => GreaterEqual(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 80 until 90 contains it => LessEqual(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 90 until 100 contains it => GreaterThan(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 100 until 110 contains it => LessThan(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 110 until 115 contains it => BoxModality(nextP(vars, n-1), nextF(vars, n-1))
-        case it if 115 until 120 contains it => DiamondModality(nextP(vars, n-1), nextF(vars, n-1))
-		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
+        case it if 55 until 60 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
+        case it if 60 until 65 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
+        case it if 65 until 70 contains it => NotEquals(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 70 until 80 contains it => GreaterEqual(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 80 until 90 contains it => LessEqual(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 90 until 100 contains it => GreaterThan(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 100 until 110 contains it => LessThan(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 110 until 115 contains it => BoxModality(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
+        case it if 115 until 120 contains it => DiamondModality(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
+		    case it if 120 until 150 contains it => CDotFormula
+        case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
       }
   }
 
-  def nextT(vars : IndexedSeq[Variable], n : Int) : Term = {
+  def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = {
       require(n>=0)
       if (n == 0 || rand.nextInt(10)<1) return Number(BigDecimal(0))
       // TODO IfThenElseTerm not yet supported
-      val r = rand.nextInt(60/*+1*/)
-	  r match {
+      val r = rand.nextInt(if (dots) 100 else 60/*+1*/)
+	    r match {
         case 0 => Number(BigDecimal(0))
-		case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
+		    case it if 1 until 10 contains it => if (rand.nextBoolean()) Number(BigDecimal(rand.nextInt(100))) else Number(BigDecimal(-rand.nextInt(100)))
         case it if 10 until 20 contains it => vars(rand.nextInt(vars.length))
-        case it if 20 until 30 contains it => Add(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 30 until 40 contains it => Subtract(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 40 until 50 contains it => Multiply(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 50 until 55 contains it => Divide(Real, nextT(vars, n-1), nextT(vars, n-1))
-        case it if 55 until 60 contains it => Exp(Real, nextT(vars, n-1), Number(BigDecimal(rand.nextInt(6))))
+        case it if 20 until 30 contains it => Add(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 30 until 40 contains it => Subtract(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 40 until 50 contains it => Multiply(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 50 until 55 contains it => Divide(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
+        case it if 55 until 60 contains it => Exp(Real, nextT(vars, n-1, dots), Number(BigDecimal(rand.nextInt(6))))
+        case it if 61 until 100 contains it => CDot
         // TODO IfThenElseTerm not yet supported
 //        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
-		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
-        }
+		    case _ => throw new IllegalStateException("random number generator range for term generation produces the right range " + r)
+      }
     }
 
-    def nextP(vars : IndexedSeq[Variable], n : Int) : Program = {
+    def nextP(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Program = {
   	  require(n>=0)
   	  if (n == 0 || rand.nextInt(10)<1) return Test(True)
         val r = rand.nextInt(80)
@@ -84,14 +86,25 @@ class RandomFormula(val rand : Random = new Random()) {
           case 0 => Test(False)
           case 1 => Test(True)
           case it if 2 until 10 contains it => val v = vars(rand.nextInt(vars.length)); Assign(v, v)
-          case it if 10 until 20 contains it => Test(nextF(vars, n-1))
-          case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1))
+          case it if 10 until 20 contains it => Test(nextF(vars, n-1, dots))
+          case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dots))
           case it if 30 until 40 contains it => NDetAssign(vars(rand.nextInt(vars.length)))
-          case it if 40 until 50 contains it => Test(True)//@TODO replace by ODE
-          case it if 50 until 60 contains it => Choice(nextP(vars, n-1), nextP(vars, n-1))
-          case it if 60 until 70 contains it => Sequence(nextP(vars, n-1), nextP(vars, n-1))
-          case it if 70 until 80 contains it => Loop(nextP(vars, n-1))
-  		case _ => throw new IllegalStateException("random number generator range for formula generation produces the right range " + r)
+          case it if 40 until 50 contains it => ODESystem(Seq(), nextODE(vars, n, dots), nextF(vars, n-1, dots))
+          case it if 50 until 60 contains it => Choice(nextP(vars, n-1, dots), nextP(vars, n-1, dots))
+          case it if 60 until 70 contains it => Sequence(nextP(vars, n-1, dots), nextP(vars, n-1, dots))
+          case it if 70 until 80 contains it => Loop(nextP(vars, n-1, dots))
+      		case _ => throw new IllegalStateException("random number generator range for program generation produces the right range " + r)
+        }
+    }
+
+    def nextODE(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : DifferentialProgram = {
+      if (n == 0 || rand.nextInt(10)<1) return new EmptyODE()
+      val r = rand.nextInt(20)
+        r match {
+          case 0 => new EmptyODE()
+          case it if 1 until 10 contains it => AtomicODE(Derivative(Real, vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots))
+          case it if 10 until 20 contains it => ODEProduct(nextODE(vars, n-1, dots), nextODE(vars, n-1, dots))
+          case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
         }
     }
 }
