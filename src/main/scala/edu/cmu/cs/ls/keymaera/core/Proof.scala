@@ -621,6 +621,7 @@ class ImplyLeft(p: Position) extends PositionRule("Imply Left", p) {
   require(p.isAnte && p.inExpr == HereP, "Imply Left is only applicable to top-level formulas in the antecedent not to: " + p)
   def apply(s: Sequent): List[Sequent] = {
     val Imply(a,b) = s(p)
+    //@TODO Surprising that both positions change.
     List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
          s.updated(p, Sequent(s.pref, IndexedSeq(b), IndexedSeq())))
   }
