@@ -59,9 +59,9 @@ angular.module('formula', ['ngSanitize'])
                   "Assign" ,
                   "NDetAssign" ,
                   "Test" ,
-                  "ContEvolveProduct",
-                  "NFContEvolve",
-                  "ContEvolve" ,
+                  "NFODEProduct" ,
+                  "ODEProduct" ,
+                  "AtomicODE" ,
                   // Atoms
                   "ProgramConstant" ,
                   "ContEvolveProgramConstant",
@@ -252,25 +252,26 @@ angular.module('formula', ['ngSanitize'])
                             content = left + " &#8746; " + right;
                             break;
 
-                        case "ContEvolve":
-                            content = parensIfNeeded(json, c[0], depth + 1);
-                            break;
-
-                        case "NFContEvolve":
+                        case "AtomicODE":
                             var x = parensIfNeeded(json, c[0], depth + 1);
                             var theta = parensIfNeeded(json, c[1], depth + 1);
-                            var h = parensIfNeeded(json, c[2], depth + 1);
-                            content = x + " = " + theta + " &amp; " + h;
+                            content = x + " = " + theta;
                             break;
 
-                        case "ContEvolveProduct":
+                        case "ODEProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            if (c[1].name != "EmptyContEvolveProgram") {
+                            if (c[1].name != "EmptyODE") {
                               content = left + ", " + right;
                             } else {
                               content = left;
                             }
+                            break;
+
+                        case "NFODEProduct":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            content = left + " &amp; " + right + ";";
                             break;
 
                         case "formuladerivative":
