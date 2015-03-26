@@ -151,7 +151,7 @@ object FOQuantifierTacticsImpl {
             val freshQuantified = freshNamedSymbol(quantified, s)
             val pPos = if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p)
             val assignPos = if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail))
-            alphaRenamingT(quantified.name, quantified.index, freshQuantified.name, freshQuantified.index)(pPos) & TacticLibrary.debugT("Foo") &
+            alphaRenamingT(quantified.name, quantified.index, freshQuantified.name, freshQuantified.index)(pPos) &
               around & v2vAssignT(assignPos)
           case None => around
         }
