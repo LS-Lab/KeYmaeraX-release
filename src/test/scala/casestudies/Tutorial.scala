@@ -49,7 +49,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   def la(t: PositionTactic) = locateAnte(t)
 
   "Example 1" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example1.key")
+    val file = new File("examples/tutorials/sttt/example1.key")
     val s = parseToSequent(file)
 
     val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
@@ -58,7 +58,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 1a" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example1a.key")
+    val file = new File("examples/tutorials/sttt/example1a.key")
     val s = parseToSequent(file)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
@@ -67,7 +67,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 2" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example2.key")
+    val file = new File("examples/tutorials/sttt/example2.key")
     val s = parseToSequent(file)
 
     val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(wipeContextInductionT(Some("v>=0".asFormula))) & onBranch(
@@ -88,7 +88,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning
   ignore /*"Example 3a"*/ should "Example 3a be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example3a.key")
+    val file = new File("examples/tutorials/sttt/example3a.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxChoiceT) & ls(AndRightT) &&
@@ -114,7 +114,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
   ignore /*"Example 4a"*/ should "Example 4a be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example4a.key")
+    val file = new File("examples/tutorials/sttt/example4a.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT)
@@ -131,7 +131,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
   ignore /*"Example 4b"*/ should "Example 4b be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example4b.key")
+    val file = new File("examples/tutorials/sttt/example4b.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT)
@@ -148,7 +148,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
   ignore /*"Example 4c"*/ should "Example 4c be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example4c.key")
+    val file = new File("examples/tutorials/sttt/example4c.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxChoiceT) & ls(AndRightT) &
@@ -166,7 +166,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 5 with simple control" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example5_simplectrl.key")
+    val file = new File("examples/tutorials/sttt/example5_simplectrl.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
@@ -184,7 +184,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 5" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example5.key")
+    val file = new File("examples/tutorials/sttt/example5.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
@@ -208,7 +208,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 6" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example6.key")
+    val file = new File("examples/tutorials/sttt/example6.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
@@ -233,7 +233,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 7" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example7.key")
+    val file = new File("examples/tutorials/sttt/example7.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
@@ -261,7 +261,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   // Example 8
 
   "Example 9a" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example9a.key")
+    val file = new File("examples/tutorials/sttt/example9a.key")
     val s = parseToSequent(file)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffInvariant)
@@ -270,7 +270,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 9b" should "be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example9b.key")
+    val file = new File("examples/tutorials/sttt/example9b.key")
     val s = parseToSequent(file)
 
     val plant = debugT("Plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT) &
@@ -300,7 +300,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO needs better assignment tactic (when ODE is not first statement in subsequent modality, like in [w:=0;][c:=0; v'=w, w'=5;]1>0)
   ignore /* "Example 10"*/ should "Example 10 be provable" in {
-    val file = new File("examples/dev/t/casestudies/tutorial/example10.key")
+    val file = new File("examples/tutorials/sttt/example10.key")
     val s = parseToSequent(file)
 
     // TODO

@@ -46,7 +46,7 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "LICS 4a" should "be provable" in {
 
-    val file = new File("examples/dev/t/casestudies/lics/lics-4a.key")
+    val file = new File("examples/tutorials/lics/lics-4a.key")
     val s = parseToSequent(file)
 
 
