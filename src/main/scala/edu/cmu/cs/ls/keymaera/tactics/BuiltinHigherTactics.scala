@@ -69,10 +69,11 @@ object BuiltinHigherTactics {
       | locateSuccAnte(stepAt(beta = false, simplifyProg = true, quantifiers = true))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true))
       | locateSucc(genInductionT(invGenerator))
-      | locateAnte(eqLeft(exhaustive = false))
+      | locateSucc(diffSolutionT)
       | locateSucc(diffInvariantSystemT)
+      | locateAnte(eqLeft(exhaustive = false))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))
-    ) ~ arithmeticT
+    ) ~ arithmeticNoHideT
   }
 
   /**

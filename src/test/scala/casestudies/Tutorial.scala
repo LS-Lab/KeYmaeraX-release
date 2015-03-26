@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateAnte
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, BranchLabels, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{Generate, Interpreter, BranchLabels, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -201,10 +201,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
           debugT("Case 3") & ls(boxAssignT)
           )
         ) & plant & ls(AndRightT) & (AxiomCloseT | arithmeticT)
-      )
+        )
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically" in {
+    val file = new File("examples/tutorials/sttt/example5.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 6" should "be provable" in {

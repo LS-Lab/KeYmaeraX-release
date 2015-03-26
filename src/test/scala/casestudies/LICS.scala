@@ -45,10 +45,8 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   def la(t: PositionTactic) = locateAnte(t)
 
   "LICS 4a" should "be provable" in {
-
     val file = new File("examples/tutorials/lics/lics-4a.key")
     val s = parseToSequent(file)
-
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
@@ -57,14 +55,19 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
       ls(wipeContextInductionT(Some("v^2<=2*b*(m-x)".asFormula))) & onBranch(
       (indInitLbl, debugT("Base Case") & AxiomCloseT),
       (indUseCaseLbl, debugT("Use Case") & ls(ImplyRightT) & arithmeticT),
-      (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-        debugT("Case 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT),
-        debugT("Case 2") & ls(boxAssignT)
-        ) & plant & (AxiomCloseT | arithmeticT)
-        )
+      (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) &&
+        (debugT("Case 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT),
+         debugT("Case 2") & ls(boxAssignT)) &
+       plant & (AxiomCloseT | arithmeticT))
     )
-    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
 
-//    helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true), new RootNode(s)) shouldBe 'closed
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically" in {
+    val file = new File("examples/tutorials/lics/lics-4a.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true), new RootNode(s)) shouldBe 'closed
   }
 }

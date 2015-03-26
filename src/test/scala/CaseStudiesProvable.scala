@@ -40,35 +40,35 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     val file = new File("examples/dev/t/tactics/AxiomClose.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   "DecomposeQuant" should "be provable" in {
     val file = new File("examples/dev/t/tactics/DecomposeQuant.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   "EqualityRewriting" should "be provable" in {
     val file = new File("examples/dev/t/tactics/EqualityRewriting.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   "ETCS-essentials-noloop" should "be provable" in {
     val file = new File("examples/dev/t/tactics/ETCS-essentials-noloop.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   "ETCS-essentials" should "be provable" in {
     val file = new File("examples/dev/t/tactics/ETCS-essentials.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true), new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true), new RootNode(s)) shouldBe 'closed
   }
 
   "Stuttering" should "be provable" in {
@@ -170,14 +170,14 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     val file = new File("examples/dev/t/tactics/Saturable.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   ignore should "prove SimpleDiff" in {
     val file = new File("examples/dev/t/tactics/SimpleDiff.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)).isClosed() should be (true)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   "Simple car" should "be provable" in {
@@ -187,7 +187,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
     import Tactics.NilT
 
-    val file = new File("examples/dev/t/casestudies/tutorial/simplecar.key")
+    val file = new File("examples/tutorials/sttt/simplecar.key")
     val s = parseToSequent(file)
 
     val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolutionT) & arithmeticT
