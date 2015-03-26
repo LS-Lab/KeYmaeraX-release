@@ -269,6 +269,14 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       
     }
 
+    case IfThen(cond, thenT) => {
+      "if (" + prettyPrinter(cond) + ") then {" + prettyPrinter(thenT) + "} fi"
+    }
+
+    case IfThenElse(cond, thenT, elseT) => {
+      "if (" + prettyPrinter(cond) + ") then {" + prettyPrinter(thenT) + "} else " + prettyPrinter(elseT) + " fi"
+    }
+
     case CheckedContEvolveFragment(child) => {
       child match {
         //@todo well this is awkward.
@@ -400,6 +408,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Assign.getClass.getCanonicalName ::
       NDetAssign.getClass.getCanonicalName ::
       Test.getClass.getCanonicalName ::
+      IfThen.getClass.getCanonicalName ::
+      IfThenElse.getClass.getCanonicalName ::
       EmptyODE.getClass.getCanonicalName ::
       IncompleteSystem.getClass.getCanonicalName ::
       ODEProduct.getClass.getCanonicalName ::

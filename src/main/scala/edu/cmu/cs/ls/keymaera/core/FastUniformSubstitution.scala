@@ -300,6 +300,7 @@ final case class FastUSubst(subsDefs: scala.collection.immutable.Seq[Substitutio
     case Assign(d@Derivative(_, x: Variable), e) => USR(o+DifferentialSymbol(x), u+DifferentialSymbol(x), Assign(d, usubst(o, u, e))) //@todo eisegesis
     case NDetAssign(x: Variable) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
+    case IfThen(cond, thenT) => USR(o, u, IfThen(usubst(o,u , cond), thenT)) //@todo eisegesis
     case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubstODE(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
     case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
     case Choice(a, b) =>

@@ -235,6 +235,19 @@ angular.module('formula', ['ngSanitize'])
                             content = " ? " + left;
                             break;
 
+                         case "IfThen":
+                            var left = parseFormulaHelper(c[0], depth+1)
+                            var right = parseFormulaHelper(c[1], depth+1)
+                            content = "if (" + left + ") then {" + right + "} fi"
+                            break;
+
+                        case "IfThenElse":
+                            var condT = parseFormulaHelper(c[0], depth+1)
+                            var thenT = parseFormulaHelper(c[1], depth+1)
+                            var elseT = parseFormulaHelper(c[2], depth+1)
+                            content = "if " + condT + " then {" + thenT + "} else {" + elseT + "} fi"
+                            break;
+
                         case "Loop":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "{" + left + "}<sup>*</sup>";
@@ -259,8 +272,18 @@ angular.module('formula', ['ngSanitize'])
                             break;
 
                         case "ODEProduct":
-                            var left = parensIfNeeded(json, c[0], depth + 1);
-                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            var left = parseFormulaHelper(c[0], depth + 1)
+                            var right = parseFormulaHelper(c[1], depth + 1)
+                            content = left + ", " + right
+                            break;
+
+                        case "EmptyODE":
+                            content = ""
+                            break;
+
+                        case "ContEvolveProduct":
+                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var right = parseFormulaHelper(c[1], depth + 1);
                             if (c[1].name != "EmptyODE") {
                               content = left + ", " + right;
                             } else {
@@ -271,7 +294,7 @@ angular.module('formula', ['ngSanitize'])
                         case "NFODEProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + " &amp; " + right + ";";
+                            content = left + " &amp; " + right;
                             break;
 
                         case "formuladerivative":

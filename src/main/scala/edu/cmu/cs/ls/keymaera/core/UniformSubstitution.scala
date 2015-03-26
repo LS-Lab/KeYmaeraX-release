@@ -257,6 +257,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Assign(xp@Derivative(_, x: Variable), e) => Assign(xp, usubst(e))
         case NDetAssign(x: Variable) => NDetAssign(x)
         case Test(f) => Test(usubst(f))
+        case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))
         case ode: DifferentialProgram =>
           // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
           require(admissible(StaticSemantics(ode).bv, ode),

@@ -366,7 +366,7 @@ class GetProofTreeRequest(db : DBAbstraction, userId : String, proofId : String,
 
 class GetProofHistoryRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   override def getResultingResponses(): List[Response] = {
-    val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).map(_.get).
+    val steps = db.getProofSteps(proofId).map(step => db.getDispatchedTactics(step)).filter(_.isDefined).map(_.get).
       map(step => step -> db.getTactic(step.tacticsId).getOrElse(
         throw new IllegalStateException(s"Proof refers to unknown tactic ${step.tacticsId}")))
     if (steps.nonEmpty) {

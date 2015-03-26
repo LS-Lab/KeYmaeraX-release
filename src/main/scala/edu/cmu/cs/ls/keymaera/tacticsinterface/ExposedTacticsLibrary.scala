@@ -33,7 +33,6 @@ object ExposedTacticsLibrary {
   def ODESolve   : Tactic = TacticLibrary.locate(TacticLibrary.diffSolutionT)
   def Test       : Tactic = TacticLibrary.locate(TacticLibrary.boxTestT)
   def AndLeft    : Tactic = TacticLibrary.locate(TacticLibrary.AndLeftT)
-
   //Tactics with input
   def Loop(inv : Option[Formula]) : Tactic = TacticLibrary.locate(TacticLibrary.inductionT(inv))
 

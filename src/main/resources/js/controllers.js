@@ -288,14 +288,19 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
                      dataType: 'json',
                      contentType: 'application/json',
                      success: function(data) {
-                         //Update the models list -- this should result in the view being updated?
-                         while (Models.getModels().length != 0) {
-                            Models.getModels().shift()
+                         if(data.errorThrown) {
+                            alert("Model creation failed. Are you sure your model parses correctly?") //@todo show parse error.
                          }
-                         $http.get("models/users/" + $cookies.userId).success(function(data) {
-                             Models.addModels(data);
-                             $route.reload();
-                         });
+                         else {
+                            //Update the models list -- this should result in the view being updated?
+                            while (Models.getModels().length != 0) {
+                               Models.getModels().shift()
+                            }
+                            $http.get("models/users/" + $cookies.userId).success(function(data) {
+                                Models.addModels(data);
+                                $route.reload();
+                            });
+                         }
                      },
                      error: this.ajaxErrorHandler
                });
