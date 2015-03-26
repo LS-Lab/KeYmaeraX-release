@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.core.{RootNode, Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaera.core.{PosInExpr, RootNode, Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics.{AxiomaticRuleTactics, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
@@ -209,5 +209,32 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 <-> x>0".asFormula
+  }
+
+  "CE equivalence congruence" should "prove" in {
+    val s = sucSequent("(a=1 & x>0) <-> (a=1 & y>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0 <-> y>0".asFormula
+  }
+
+  it should "prove in a universally quantified context" in {
+    val s = sucSequent("(\\forall z. x>0) <-> (\\forall z. y>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0 <-> y>0".asFormula
+  }
+
+  it should "prove in a universally quantified context even if quantified name occurs in predicate" in {
+    val s = sucSequent("(\\forall x. x>0) <-> (\\forall x. y>0)".asFormula)
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0 <-> y>0".asFormula
   }
 }

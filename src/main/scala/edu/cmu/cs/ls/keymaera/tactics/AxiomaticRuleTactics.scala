@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaera.tactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.globalAlphaRenamingT
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 
 
 /**
@@ -12,6 +13,33 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.globalAlphaRenamingT
  * @author Stefan Mitsch
  */
 object AxiomaticRuleTactics {
+
+  /**
+   * Creates a new tactic for CE equivalence congruence rewriting.
+   * @return The newly created tactic.
+   */
+  def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE equivalence congruence") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ(0) match {
+        case Equiv(p, q) => p.extractContext(inEqPos)._1 == q.extractContext(inEqPos)._1
+        case _ => false
+      })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+      case Equiv(lhs, rhs) =>
+        val (ctxP, p) = lhs.extractContext(inEqPos)
+        val (ctxQ, q) = rhs.extractContext(inEqPos)
+        assert(ctxP == ctxQ)
+
+        val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+        val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
+        val cX = ApplyPredicational(Function("ctx_", None, Bool, Bool), CDotFormula)
+        val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("CE equivalence congruence", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
 
   /**
    * Creates a new tactic for congruence rewriting.
