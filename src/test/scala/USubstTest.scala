@@ -27,6 +27,8 @@ class USubstTests extends FlatSpec with Matchers {
   val p1_ = Function("p_", None, Real, Bool)
   val pn = Function("p", None, Real, Bool)
   val pn_ = Function("p_", None, Real, Bool)
+  val qn = Function("q", None, Real, Bool)
+  val qn_ = Function("q_", None, Real, Bool)
   val ap = ProgramConstant("a")
   val ap_ = ProgramConstant("a_")
   //val f1 = Function("f", None, Real, Real)
@@ -275,7 +277,7 @@ class USubstTests extends FlatSpec with Matchers {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equals(Real, term1, term2)
-        val prog = "y:=y-1".asProgram
+        val prog = "y:=y-1;".asProgram
         val s = USubst(
           SubstitutionPair(Apply(f1_, Anything), term1) ::
           SubstitutionPair(Apply(g1_, Anything), term2) ::
@@ -316,9 +318,9 @@ class USubstTests extends FlatSpec with Matchers {
          ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
-  it should "instantiate CE from z^2*y>=5 <-> -(-z)^2*-y+0>=5 in random contexts" taggedAs USubstTest in {
+  it should "instantiate CE from z^2*y>=5 <-> (-z)^2*-y+0<=-5 in random contexts" taggedAs USubstTest in {
       val fml1 = "z^2*y>=5".asFormula
-      val fml2 = "-(-z)^2*-y+0>=5".asFormula
+      val fml2 = "(-z)^2*-y+0<=-5".asFormula
       val fml = Equiv(fml1, fml2)
       val context = rand.nextDotFormula(randomComplexity)
       val s = USubst(
