@@ -59,9 +59,9 @@ angular.module('formula', ['ngSanitize'])
                   "Assign" ,
                   "NDetAssign" ,
                   "Test" ,
-                  "ContEvolveProduct",
-                  "NFContEvolve",
-                  "ContEvolve" ,
+                  "NFODEProduct" ,
+                  "ODEProduct" ,
+                  "AtomicODE" ,
                   // Atoms
                   "ProgramConstant" ,
                   "ContEvolveProgramConstant",
@@ -265,27 +265,10 @@ angular.module('formula', ['ngSanitize'])
                             content = left + " &#8746; " + right;
                             break;
 
-                        case "ContEvolve":
-                            content = parensIfNeeded(json, c[0], depth + 1);
-                            break;
-
-                        case "NFContEvolve":
+                        case "AtomicODE":
                             var x = parensIfNeeded(json, c[0], depth + 1);
                             var theta = parensIfNeeded(json, c[1], depth + 1);
-                            var h = parensIfNeeded(json, c[2], depth + 1);
-                            content = x + " = " + theta + " &amp; " + h;
-                            break;
-
-                        case "NFODEProduct":
-                            var left = parseFormulaHelper(c[0], depth + 1)
-                            var right = parseFormulaHelper(c[1], depth + 1)
-                            content = left + ", " + right
-                            break;
-
-                        case "AtomicODE":
-                            var derivative = parseFormulaHelper(c[0], depth + 1)
-                            var term = parseFormulaHelper(c[1], depth + 1)
-                            content = derivative + " = " + term
+                            content = x + " = " + theta;
                             break;
 
                         case "ODEProduct":
@@ -299,13 +282,19 @@ angular.module('formula', ['ngSanitize'])
                             break;
 
                         case "ContEvolveProduct":
-                            var left = parensIfNeeded(json, c[0], depth + 1);
-                            var right = parensIfNeeded(json, c[1], depth + 1);
-                            if (c[1].name != "EmptyContEvolveProgram") {
+                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var right = parseFormulaHelper(c[1], depth + 1);
+                            if (c[1].name != "EmptyODE") {
                               content = left + ", " + right;
                             } else {
                               content = left;
                             }
+                            break;
+
+                        case "NFODEProduct":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            content = left + " &amp; " + right;
                             break;
 
                         case "formuladerivative":

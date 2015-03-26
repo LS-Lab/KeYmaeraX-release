@@ -46,7 +46,9 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                   "Assign" ,
                   "NDetAssign" ,
                   "Test" ,
-                  "ContEvolve" ,
+                  "NFODEProduct" ,
+                  "ODEProduct" ,
+                  "AtomicODE" ,
                   // Atoms
                   "ProgramConstant" ,
                   "ContEvolveProgramConstant",
@@ -237,25 +239,26 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                             content = left + " \\cup " + right;
                             break;
 
-                        case "ContEvolve":
-                            content = parensIfNeeded(json, c[0], depth + 1);
-                            break;
-
-                        case "NFContEvolve":
+                        case "AtomicODE":
                             var x = parensIfNeeded(json, c[0], depth + 1);
                             var theta = parensIfNeeded(json, c[1], depth + 1);
-                            var h = parensIfNeeded(json, c[2], depth + 1);
-                            content = x + " = " + theta + " ~\\&~ " + h;
+                            content = x + " = " + theta;
                             break;
 
-                        case "ContEvolveProduct":
+                        case "ODEProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            if (c[1].name != "EmptyContEvolveProgram") {
+                            if (c[1].name != "EmptyODE") {
                               content = left + ", " + right;
                             } else {
                               content = left;
                             }
+                            break;
+
+                        case "NFODEProduct":
+                            var left = parensIfNeeded(json, c[0], depth + 1);
+                            var right = parensIfNeeded(json, c[1], depth + 1);
+                            content = left + " ~\\&~ " + right + ";";
                             break;
 
                         case "formuladerivative":

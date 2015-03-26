@@ -182,6 +182,13 @@ object TacticLibrary {
     ArithmeticTacticsImpl.hideUnnecessaryLeftEqT ~ ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
   /**
+   * Tactic for arithmetic without hide.
+   * @return The tactic.
+   */
+  def arithmeticNoHideT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqLeft(exhaustive = true))) ~
+     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+
+  /**
    * Quantifier elimination.
    */
   def quantifierEliminationT(toolId: String) = ArithmeticTacticsImpl.quantifierEliminationT(toolId)
