@@ -113,6 +113,8 @@ object JSONConverter {
           case Sequence(_, _) => JsObject(("name" -> JsString("Sequence")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Choice(_, _) => JsObject(("name" -> JsString("Choice")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Test(_) => JsObject(("name" -> JsString("Test")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case IfThen(_,_) => JsObject(("name" -> JsString("IfThen")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case IfThenElse(_,_,_) => JsObject(("name" -> JsString("IfThenElse")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Loop(_) => JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case _: EmptyODE => JsObject("name" -> JsString("EmptyODE") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case CheckedContEvolveFragment(_) => JsObject("name" -> JsString("checked=") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
@@ -120,6 +122,8 @@ object JSONConverter {
           case AtomicODE(_, _) => JsObject(("name" -> JsString("AtomicODE")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ODEProduct(_, _) => JsObject(("name" -> JsString("ODEProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ODESystem(_, _, _) => JsObject(("name" -> JsString("NFODEProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case AtomicODE(_, _) => JsObject(("name" -> JsString("AtomicODE")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
+          case EmptyODE() => JsObject(("name" -> JsString("EmptyODE")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
         }
         jsonStack.push(jsonStack.pop() :+ o)
         Left(None)

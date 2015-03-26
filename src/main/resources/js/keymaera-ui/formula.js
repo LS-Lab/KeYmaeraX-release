@@ -235,6 +235,19 @@ angular.module('formula', ['ngSanitize'])
                             content = " ? " + left;
                             break;
 
+                         case "IfThen":
+                            var left = parseFormulaHelper(c[0], depth+1)
+                            var right = parseFormulaHelper(c[1], depth+1)
+                            content = "if (" + left + ") then {" + right + "} fi"
+                            break;
+
+                        case "IfThenElse":
+                            var condT = parseFormulaHelper(c[0], depth+1)
+                            var thenT = parseFormulaHelper(c[1], depth+1)
+                            var elseT = parseFormulaHelper(c[2], depth+1)
+                            content = "if " + condT + " then {" + thenT + "} else {" + elseT + "} fi"
+                            break;
+
                         case "Loop":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             content = "{" + left + "}<sup>*</sup>";
@@ -261,6 +274,28 @@ angular.module('formula', ['ngSanitize'])
                             var theta = parensIfNeeded(json, c[1], depth + 1);
                             var h = parensIfNeeded(json, c[2], depth + 1);
                             content = x + " = " + theta + " &amp; " + h;
+                            break;
+
+                        case "NFODEProduct":
+                            var left = parseFormulaHelper(c[0], depth + 1)
+                            var right = parseFormulaHelper(c[1], depth + 1)
+                            content = left + ", " + right
+                            break;
+
+                        case "AtomicODE":
+                            var derivative = parseFormulaHelper(c[0], depth + 1)
+                            var term = parseFormulaHelper(c[1], depth + 1)
+                            content = derivative + " = " + term
+                            break;
+
+                        case "ODEProduct":
+                            var left = parseFormulaHelper(c[0], depth + 1)
+                            var right = parseFormulaHelper(c[1], depth + 1)
+                            content = left + ", " + right
+                            break;
+
+                        case "EmptyODE":
+                            content = ""
                             break;
 
                         case "ContEvolveProduct":

@@ -164,6 +164,8 @@ object StaticSemantics {
     case AtomicODE(Derivative(_, x: Variable), e) =>
       VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](DifferentialSymbol(x)))
     case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
+    case IfThen(cond, thenT) => val vThen = progVars(thenT); val vCond = VCP(fv = apply(cond).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom);
+                                VCP(fv = vCond.fv ++ vThen.fv, bv = vCond.bv ++ vThen.bv, mbv = vCond.mbv ++ vThen.mbv) //@todo eisegesis
     // combinator cases
     case Choice(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
@@ -266,6 +268,7 @@ object StaticSemantics {
     case Assign(Derivative(_, x : NamedSymbol), e) => signature(e)
     case NDetAssign(x: Variable) => Set.empty
     case Test(f) => signature(f)
+    case IfThen(cond, thenT) => signature(thenT) ++ signature(cond)
     case AtomicODE(Derivative(_, x: Variable), e) => signature(e)
     case ODESystem(vars, a, h) => signature(a) ++ signature(h)
     case ODEProduct(a, b) => signature(a) ++ signature(b)
