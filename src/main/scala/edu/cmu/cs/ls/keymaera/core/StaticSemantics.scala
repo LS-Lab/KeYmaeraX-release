@@ -95,7 +95,7 @@ object StaticSemantics {
     // special cases
     case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
     case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>DifferentialSymbol(x))
-    case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
+    case _: NumberObj | Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
   

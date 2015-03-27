@@ -919,7 +919,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case x: Variable => Set(x)
     case CDot => Set(CDot)
     case nd: DifferentialSymbol => Set(nd)
-    case True | False | _: NumberObj | Nothing | Anything => Set.empty
+    case _: NumberObj | Nothing | Anything => Set.empty
   }
 
   private def allNames(p: Program): Set[NamedSymbol] = p match {

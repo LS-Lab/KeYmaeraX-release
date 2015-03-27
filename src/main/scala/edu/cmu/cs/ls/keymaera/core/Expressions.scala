@@ -256,13 +256,13 @@ final class Predicational (name : String, index: Option[Int] = None, domain : So
 /* The * in nondet. assignments */
 // class Random(sort : Sort) extends Atom(sort) /* SOONISH BUT NOT NOW */
 
-object True extends Expr(Bool) with Formula with Term with Atom {
+object True extends Expr(Bool) with Formula with Atom {
   def unapply(e: Any): Boolean = e.isInstanceOf[True.type]
 //  def unapply(e: Any): Option[Any] = {
 //    if(e.isInstanceOf[True.type]) Some("") else None
 //  }
 }
-object False extends Expr(Bool) with Formula with Term with Atom {
+object False extends Expr(Bool) with Formula with Atom {
   def unapply(e: Any): Boolean = e.isInstanceOf[False.type]
 }
 
