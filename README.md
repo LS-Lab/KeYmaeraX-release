@@ -142,9 +142,13 @@ The full test suite can be run by
     sbt test
 
 Selectively running individual test cases within sbt:
-sbt> test-only TacticTests
+
+    sbt
+    test-only *USubst*
+    test-only -- -n "USubstTest"
+
 Or, on a more fine-grained level within a class use
-vobject MyTest extends Tag("MyTest")
+object MyTest extends Tag("MyTest")
 
     object MyTest extends Tag("MyTest")
     it should "do something useful" taggedAs(MyTest) in {....}

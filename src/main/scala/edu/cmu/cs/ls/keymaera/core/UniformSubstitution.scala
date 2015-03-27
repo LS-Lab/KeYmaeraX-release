@@ -50,7 +50,7 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
      case _: Term => repl.isInstanceOf[Term]
      case _: Formula => repl.isInstanceOf[Formula]
      case _: Program => repl.isInstanceOf[Program]
-    }, "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this)
+    }, "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + kindOf(what) + " ~> " + kindOf(repl))
     require(what match {
       case CDot => true
       case Anything => true
@@ -65,6 +65,12 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
       case _ => false
       }, "Substitutable expression required, found " + what + " in " + this)
   }
+  
+  @elidable(ASSERTION) private def kindOf(e: Expr) = e match {
+     case _: Term => "Term"
+     case _: Formula => "Formula"
+     case _: Program => "Program"
+    }
 
   override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
 }
