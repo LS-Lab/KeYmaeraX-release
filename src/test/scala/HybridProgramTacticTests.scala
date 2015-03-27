@@ -862,4 +862,28 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     getProofSequent(tactic, new RootNode(sucSequent("!<x:=2; x:=3;>(!x>0)".asFormula))) should be (
       sucSequent("[x:=2; x:=3;]x>0".asFormula))
   }
+
+  "Box sequence generalization" should "split a box" in {
+    val tactic = HybridProgramTacticsImpl.boxSeqGenT("true".asFormula)(SuccPosition(0))
+    val s = sequent(Nil, "x=0".asFormula::Nil, "([x:=-1; x:=x+1;]x=1)".asFormula::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals().head.sequent.ante should contain only "true".asFormula
+    result.openGoals().head.sequent.succ should contain only "[x:=x+1;]x=1".asFormula
+    result.openGoals()(1).sequent.ante should contain only "x=0".asFormula
+    result.openGoals()(1).sequent.succ should contain only "[x:=-1;]true".asFormula
+  }
+
+  it should "split a box when there is context around" in {
+    val tactic = HybridProgramTacticsImpl.boxSeqGenT("true".asFormula)(SuccPosition(1))
+    val s = sequent(Nil, "x=0".asFormula::"z=1".asFormula::Nil, "a=b".asFormula::"([x:=-1; x:=x+1;]x=1)".asFormula::"c=d".asFormula::Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals().head.sequent.ante should contain only "true".asFormula
+    result.openGoals().head.sequent.succ should contain only "[x:=x+1;]x=1".asFormula
+    result.openGoals()(1).sequent.ante should contain only ("x=0".asFormula, "z=1".asFormula)
+    result.openGoals()(1).sequent.succ should contain only ("[x:=-1;]true".asFormula, "a=b".asFormula, "c=d".asFormula)
+  }
 }

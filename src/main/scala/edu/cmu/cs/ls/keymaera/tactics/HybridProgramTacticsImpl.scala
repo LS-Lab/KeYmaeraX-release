@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
@@ -85,6 +86,31 @@ object HybridProgramTacticsImpl {
 
         Some(axiomInstance, subst)
       case _ => None
+    }
+  }
+
+  def boxSeqGenT(q: Formula): PositionTactic = new PositionTactic("[;] generalize") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case BoxModality(Sequence(_, _), _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case BoxModality(Sequence(a, b), phi) => true
+        Some(boxSeqT(p) & cutT(Some(BoxModality(a, q))) & onBranch(
+          // boxSeqT will move its result into last succ, cut later moves one behind
+          (cutShowLbl, hideT(SuccPosition(node.sequent.succ.length - 1))),
+          (cutUseLbl,
+            // cut shows up at last ante
+            (0 until node.sequent.ante.length).foldRight(NilT)((i, t) => t & hideT(AntePosition(i))) &
+            // boxSeqT will move programs into last succ
+            (0 until node.sequent.succ.length - 1).foldRight(NilT)((i, t) => t & hideT(SuccPosition(i))) &
+            boxMonotoneT
+            )
+        ))
+      }
     }
   }
 
@@ -746,7 +772,7 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for test [?H].
    * @return The new tactic.
    */
-  protected[tactics] def boxTestT: PositionTactic = new AxiomTactic("[?] test", "[?] test") {
+  def boxTestT: PositionTactic = new AxiomTactic("[?] test", "[?] test") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Test(_), _) => true
       case _ => false
