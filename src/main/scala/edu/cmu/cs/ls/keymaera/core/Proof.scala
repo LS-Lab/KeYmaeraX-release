@@ -981,6 +981,7 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
  * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization" for functions
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
  */
+@deprecated("Replace by tactics performing uniform substitution c()~>z after a Skolemize that introduced variable z")
 class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
 
