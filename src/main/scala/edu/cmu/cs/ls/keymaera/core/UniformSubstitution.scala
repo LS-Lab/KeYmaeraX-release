@@ -47,6 +47,11 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
     }
     require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
     require(what match {
+     case _: Term => repl.isInstanceOf[Term]
+     case _: Formula => repl.isInstanceOf[Formula]
+     case _: Program => repl.isInstanceOf[Program]
+    }, "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this)
+    require(what match {
       case CDot => true
       case Anything => true
       case _:ProgramConstant => true
@@ -58,7 +63,7 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
       case CDotFormula => true
       case ApplyPredicational(_:Function, CDotFormula) => true
       case _ => false
-      }, "Substitutable expression required, found " + what)
+      }, "Substitutable expression required, found " + what + " in " + this)
   }
 
   override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
@@ -324,27 +329,31 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
     // occurs in theta (or phi or alpha)
     def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
-        case t: Term => sigma.what match {
+        case replt: Term => sigma.what match {
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
           case Apply(f: Function, CDot) =>
-            assert(t == sigma.repl)
-            StaticSemantics(t) -- Set(CDot)
-          case _ => StaticSemantics(t)
+            assert(replt == sigma.repl)
+            StaticSemantics(replt) -- Set(CDot)
+          case _: Term => StaticSemantics(replt)
         }
-        case f: Formula => sigma.what match {
+        case replf: Formula => sigma.what match {
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
-          case ApplyPredicate(fn: Function, CDot) =>
-            assert(f == sigma.repl)
-            StaticSemantics(f).fv -- Set(CDot)
-          case ApplyPredicational(fn: Function, CDotFormula) =>
-            assert(f == sigma.repl)
-            assert(!StaticSemantics(f).fv.contains(CDotFormula), "CDotFormula never gathered as a free variable")
-            StaticSemantics(f).fv
-          case _ => StaticSemantics(f).fv
+          case ApplyPredicate(p: Function, CDot) =>
+            assert(replf == sigma.repl)
+            assert(!StaticSemantics(replf).fv.contains(CDot), "CDot is no variable")
+            StaticSemantics(replf).fv // equals StaticSemantics(replf).fv -- Set(CDot)
+          case ApplyPredicational(ctx: Function, CDotFormula) =>
+            assert(replf == sigma.repl)
+            assert(!StaticSemantics(replf).fv.contains(CDotFormula), "CDotFormula is no variable")
+            StaticSemantics(replf).fv
+          case _: Formula => StaticSemantics(replf).fv
         }
-        case p: Program => SetLattice.bottom[NamedSymbol] // programs are always admissible, since their meaning doesn't depend on state
+        case replp: Program => sigma.what match {
+          case _: ProgramConstant | _: DifferentialProgramConstant => SetLattice.bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
+          case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
+        }
       }).intersect(U) != SetLattice.bottom
 
     subsDefs.filter(intersectsU).flatMap(sigma => signature(sigma.what)).forall(fn => !occurrences.contains(fn))
