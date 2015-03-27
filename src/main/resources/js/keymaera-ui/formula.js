@@ -272,23 +272,13 @@ angular.module('formula', ['ngSanitize'])
                             break;
 
                         case "ODEProduct":
-                            var left = parseFormulaHelper(c[0], depth + 1)
-                            var right = parseFormulaHelper(c[1], depth + 1)
-                            content = left + ", " + right
+                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var right = parseFormulaHelper(c[1], depth + 1);
+                            content = left + ", " + right;
                             break;
 
                         case "EmptyODE":
                             content = ""
-                            break;
-
-                        case "ContEvolveProduct":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
-                            if (c[1].name != "EmptyODE") {
-                              content = left + ", " + right;
-                            } else {
-                              content = left;
-                            }
                             break;
 
                         case "NFODEProduct":
