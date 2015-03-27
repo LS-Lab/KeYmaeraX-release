@@ -73,7 +73,7 @@ object BuiltinHigherTactics {
       | locateSucc(diffInvariantSystemT)
       | locateAnte(eqLeft(exhaustive = false))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))
-    ) ~ arithmeticNoHideT
+    ) ~ arithmeticT
   }
 
   /**

@@ -113,41 +113,6 @@ object ArithmeticTacticsImpl {
   }
 
   /**
-   * Tactic to hide unnecessary equations in the antecedent.
-   * @return The tactic.
-   */
-  protected[tactics] def hideUnnecessaryLeftEqT: Tactic = new ConstructionTactic("Hide Equations") {
-
-    import BindingAssessment.allNames
-
-    def collectEquations(s: Sequent): Seq[(Int, Term, Term)] =
-      (for (i <- 0 until s.ante.length)
-      yield s.ante(i) match {
-          case Equals(_, a, b) if allNames(a).intersect(allNames(b)).isEmpty => Some((i, a, b))
-          case _ => None
-        }
-        ).flatten
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      val eqS: Seq[(Int, Term, Term)] = collectEquations(node.sequent)
-      val s = node.sequent
-      val anteNames = for (i <- 0 until s.ante.length)
-      yield (i, NameCategorizer.freeVariables(s.ante(i)))
-
-      val succNames = s.succ.flatMap(NameCategorizer.freeVariables)
-
-      val res = (for ((i, l, r) <- eqS)
-      yield if (succNames.contains(l)
-          || anteNames.filter((j: (Int, Set[NamedSymbol])) => i != j._1).map(_._2).flatten.contains(l)) None
-        else Some(i)
-        ).flatten.sortWith((i: Int, j: Int) => i > j)
-      if (res.isEmpty) Some(NilT) else Some(res.map((i: Int) => hideT(AntePosition(i))).reduce(seqT))
-    }
-
-    override def applicable(node: ProofNode): Boolean = true
-  }
-
-  /**
    * Turns a sequent into a form suitable for quantifier elimination.
    * @param s The sequent.
    * @return The desequentialized form.

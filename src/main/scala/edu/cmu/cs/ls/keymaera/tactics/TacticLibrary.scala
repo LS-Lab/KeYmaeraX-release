@@ -178,15 +178,21 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
-  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqLeft(exhaustive = true))) ~
-    ArithmeticTacticsImpl.hideUnnecessaryLeftEqT ~ ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqThenHideIfChanged)) ~
+    ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
-  /**
-   * Tactic for arithmetic without hide.
-   * @return The tactic.
-   */
-  def arithmeticNoHideT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqLeft(exhaustive = true))) ~
-     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+  private def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
+    override def applies(s: Sequent, p: Position): Boolean = eqLeft(exhaustive = true).applies(s, p)
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val eq = eqLeft(exhaustive = true)(p)
+        eq.continuation = onChange(node, hideT(p))
+        Some(eq)
+      }
+    }
+  }
 
   /**
    * Quantifier elimination.
