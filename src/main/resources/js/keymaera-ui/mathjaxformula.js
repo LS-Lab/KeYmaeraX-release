@@ -258,7 +258,7 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                         case "NFODEProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + " ~\\&~ " + right + ";";
+                            content = left + " ~\\&~ " + right;
                             break;
 
                         case "formuladerivative":
