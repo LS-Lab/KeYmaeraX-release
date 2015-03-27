@@ -550,18 +550,24 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 // TODO not yet used, but could be used to report an error in running the tactic
             }
         });
-        (function poll(){
-           setTimeout(function() {
-                $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
-                        .success(function(data) {
-                    if (data.tacticInstStatus == 'Running') {
-                      poll();
-                    } else {
-                        $scope.defer.resolve(data.tacticInstStatus)
-                    }
-                })
-          }, 1000);
-        })();
+        if(!$scope.watchedTactics) {
+            $scope.watchedTactics = [];
+        }
+        if(!$scope.watchedTactics[tId]) {
+            $scope.watchedTactics[tId] = true;
+            (function poll(){
+               setTimeout(function() {
+                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTactics/' + tId)
+                            .success(function(data) {
+                        if (data.tacticInstStatus == 'Running' || data.errorThrown) {
+                          poll();
+                        } else {
+                            $scope.defer.resolve(data.tacticInstStatus)
+                        }
+                    })
+              }, 1000);
+            })();
+        }
     });
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -673,25 +679,30 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.defer = $q.defer();
         $scope.defer.promise.then(function (tacticResult) {
             if (tacticResult == 'Finished') {
-                $scope.fetchAgenda($cookies.userId, $scope.proofId);
-                $scope.fetchAgenda($cookies.userId, $scope.proofId);
                 $scope.fetchAgenda($cookies.userId, $scope.proofId)
             } else {
                 // TODO not yet used, but could be used to report an error in running the tactic
             }
         });
-        (function poll(){
-           setTimeout(function() {
-                $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
-                        .success(function(data) {
-                    if (data.status == 'Running') {
-                      poll();
-                    } else {
-                        $scope.defer.resolve(data.status)
-                    }
-                })
-          }, 1000);
-        })();
+        if(!$scope.watchedTerms) {
+            $scope.watchedTerms = [];
+        }
+        if(!$scope.watchedTerms[tId]) {
+            (function poll(){
+               setTimeout(function() {
+                    $http.get('proofs/user/' + $cookies.userId + '/' + $scope.proofId + '/dispatchedTerm/' + tId)
+                         .success(function(data) {
+                            if (data.status == 'Running' || data.errorThrown) { //Errors might be thrown if the term isn't created yet...
+                                poll();
+                            } else {
+                                $scope.defer.resolve(data.status)
+                            }
+                         })
+                         .error(function(data) { poll(); })
+              }, 1000);
+            })();
+            $scope.watchedTerms[tId] = true;
+        }
     });
 
     $scope.refreshTree = function() {

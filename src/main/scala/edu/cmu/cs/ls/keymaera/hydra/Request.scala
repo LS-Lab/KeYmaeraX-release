@@ -285,9 +285,13 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
     db.updateDispatchedTactics(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running))
 
-    KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
-      Some(tacticCompleted(db)), input, automation)
-
+    new Thread(new Runnable() {
+      override def run(): Unit = {
+        KeYmaeraInterface.runTactic(proofId, nodeId, tacticId, formulaId, tId,
+          Some(tacticCompleted(db)), input, automation)
+      }
+    }).start()
+    
     new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running)) :: Nil
   }
@@ -311,7 +315,10 @@ class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, no
       val dispatchedTerm = new DispatchedCLTermPOJO(termId, proofId, nodeId, clTerm, Some(DispatchedTacticStatus.Running))
       db.updateDispatchedCLTerm(dispatchedTerm)
       //Run the tactic.
-      KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
+      new Thread(new Runnable() {
+        override def run(): Unit = KeYmaeraInterface.runTerm(termId, proofId, nodeId, clTerm, Some(completionContinuation(db)))
+      }).start()
+
       //Construct the response to this request.
       new DispatchedCLTermResponse(dispatchedTerm):: Nil
     }
@@ -329,18 +336,28 @@ class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, no
 
 class GetDispatchedTacticRequest(db : DBAbstraction, userId : String, proofId : String, tId : String) extends Request {
   def getResultingResponses() = {
-    db.getDispatchedTactics(tId) match {
-      case Some(d) => new DispatchedTacticResponse(d) :: Nil
-      case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched tactic with ID: " + tId)) :: Nil
+    try {
+      db.getDispatchedTactics(tId) match {
+        case Some(d) => new DispatchedTacticResponse(d) :: Nil
+        case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched tactic with ID: " + tId)) :: Nil
+      }
+    }
+    catch {
+      case e:Exception => new ErrorResponse(e) :: Nil //@todo indicate tactic is running?
     }
   }
 }
 
 class GetDispatchedTermRequest(db : DBAbstraction, userId : String, proofId : String, termId : String) extends Request {
   def getResultingResponses() = {
-    db.getDispatchedCLTerm(termId) match {
-      case Some(d) => new DispatchedCLTermResponse(d) :: Nil
-      case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched term with ID: " + termId)) :: Nil
+    try {
+      db.getDispatchedCLTerm(termId) match {
+        case Some(d) => new DispatchedCLTermResponse(d) :: Nil
+        case _ => new ErrorResponse(new IllegalArgumentException("Cannot find dispatched term with ID: " + termId)) :: Nil
+      }
+    }
+    catch {
+      case e:Exception => new ErrorResponse(e) :: Nil //@todo indicate term is running?
     }
   }
 }
