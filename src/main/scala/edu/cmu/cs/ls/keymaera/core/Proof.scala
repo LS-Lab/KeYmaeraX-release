@@ -988,6 +988,11 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
  *      p(x)
  *  ---------------all generalize
  *  \forall x. p(x)
+ * @TODO Or replace by AxiomaticRule with context padding using uniform substitution
+ *  Gamma |- p(c()), Delta
+ *  --------------- when c\not\in signature(Gamma,Delta)
+ *  Gamma |- \forall x. p(x), Delta
+ * And derive Skolemize from that by US.
  */
 @deprecated("Replace by tactics performing uniform substitution c()~>z after a Skolemize that introduced variable z")
 class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
