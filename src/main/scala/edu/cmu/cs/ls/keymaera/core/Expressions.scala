@@ -163,7 +163,7 @@ abstract class NamedSymbol(val name : String, val index: Option[Int], val domain
 object Anything extends NamedSymbol("\\anything", None, Unit, Real) with Atom with Term
 object Nothing extends NamedSymbol("\\nothing", None, Unit, Unit) with Atom with Term
 object CDot extends NamedSymbol("\\cdot", None, Unit, Real) with Atom with Term
-object CDotFormula extends NamedSymbol("\\mathvisiblespace", None, Unit, Bool) with Atom with Formula
+object CDotFormula extends NamedSymbol("\\textvisiblespace", None, Unit, Bool) with Atom with Formula
 
 object DifferentialSymbol {
   def apply(symbol : NamedSymbol): DifferentialSymbol = new DifferentialSymbol(symbol)

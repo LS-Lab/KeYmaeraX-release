@@ -52,25 +52,32 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(wipeContextInductionT(Some("v^2<=2*g()*(H-h) & h>=0".asFormula))) & onBranch(
       (indInitLbl, debugT("Base Case") & ls(AndRightT) &&
         (AxiomCloseT,
-         AxiomCloseT)),
+          AxiomCloseT)),
       (indUseCaseLbl, debugT("Use Case") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) &&
-         (AxiomCloseT,
+        (AxiomCloseT,
           arithmeticT)),
       (indStepLbl, debugT("Step") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(boxSeqT) &
         ls(diffSolution(None)) & debugT("open goal")
         & ls(ImplyRightT) & (la(AndLeftT)*) &
         ls(boxChoiceT) & ls(AndRightT) &&
-          (ls(boxTestT)  & ls(ImplyRightT) & ls(AndRightT) &&
-             (arithmeticT,
-              AxiomCloseT),
-           ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) & ls(AndRightT) &&
-             (arithmeticNoHideT,
+        (ls(boxTestT) & ls(ImplyRightT) & ls(AndRightT) &&
+          (arithmeticT,
+            AxiomCloseT),
+          ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) & ls(AndRightT) &&
+            (arithmeticNoHideT,
               AxiomCloseT)
           )
         )
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically" in {
+    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
   }
 
 }

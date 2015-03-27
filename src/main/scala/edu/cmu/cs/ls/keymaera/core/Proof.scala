@@ -954,7 +954,10 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
  * @TODO Could replace by uniform substitution rule application mechanism for rule "all generalization"
- * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
+ * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
+ *      p(x)
+ *  ---------------all generalize
+ *  \forall x. p(x)
  */
 class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
@@ -980,7 +983,18 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
  * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization" for functions
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
+ *      p(c())
+ *  ---------------US c()~>x
+ *      p(x)
+ *  ---------------all generalize
+ *  \forall x. p(x)
+ * @TODO Or replace by AxiomaticRule with context padding using uniform substitution
+ *  Gamma |- p(c()), Delta
+ *  --------------- when c\not\in signature(Gamma,Delta)
+ *  Gamma |- \forall x. p(x), Delta
+ * And derive Skolemize from that by US.
  */
+@deprecated("Replace by tactics performing uniform substitution c()~>z after a Skolemize that introduced variable z")
 class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
 
