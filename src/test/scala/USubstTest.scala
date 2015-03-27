@@ -324,8 +324,8 @@ class USubstTests extends FlatSpec with Matchers {
       val fml = Equiv(fml1, fml2)
       val context = rand.nextDotFormula(randomComplexity)
       val s = USubst(
-        SubstitutionPair(Apply(pn_, Anything), fml1) ::
-        SubstitutionPair(Apply(qn_, Anything), fml2) ::
+        SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
+        SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
         SubstitutionPair(ApplyPredicate(ctxf, CDot), context) :: Nil)
       AxiomaticRule("CE equivalence congruence", s)(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))

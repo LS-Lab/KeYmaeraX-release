@@ -244,7 +244,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of [a ++ b]p" should "throw a clash exception when a, b, and p are substituted simultaneously" in {
     val s = FastUSubst(List(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
       SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram),
-      SubstitutionPair(Apply(Function("p", None, Unit, Bool), Nothing), "x*y>5".asFormula)))
+      SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), "x*y>5".asFormula)))
     a [SubstitutionClashException] should be thrownBy
       s(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")), ApplyPredicate(Function("p", None, Unit, Bool), Nothing)))
     // TODO USUbst case
