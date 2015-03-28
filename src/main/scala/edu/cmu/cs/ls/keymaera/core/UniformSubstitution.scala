@@ -73,6 +73,46 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
      case _: Program => "Program"
     }
 
+  /**
+   * The (new) free variables of this substitution (without CDot/CDotFormula arguments).
+   * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
+   * @return essentially freeVars(repl) except for special handling of Anything arguments.
+   */
+  def freeVars : SetLattice[NamedSymbol] = (repl match {
+        case replt: Term => what match {
+          //case CDot => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
+          case Apply(f: Function, Anything) => SetLattice.bottom[NamedSymbol] // Anything locally binds all variables
+          // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
+          case Apply(f: Function, CDot) =>
+            assert(replt == repl)
+            assert(!StaticSemantics(replt).contains(CDot) || StaticSemantics(replt)==SetLattice.top, "CDot is no variable")
+            if ((StaticSemantics(replt) -- Set(CDot)).contains(CDot)) println("Completeness warning: removal of CDot from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(CDot)) + " leading to unnecessary clashes")
+            StaticSemantics(replt) -- Set(CDot)  // since CDot shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+          case _: Term => StaticSemantics(replt)
+        }
+        case replf: Formula => what match {
+          //case CDotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
+          case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol] // Anything locally binds all variables
+          // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
+          case ApplyPredicate(p: Function, CDot) =>
+            assert(replf == repl)
+            assert(!StaticSemantics(replf).fv.contains(CDot) || StaticSemantics(replf).fv==SetLattice.top, "CDot is no variable")
+            if ((StaticSemantics(replf).fv -- Set(CDot)).contains(CDot)) println("Completeness warning: removal of CDot from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(CDot)) + " leading to unnecessary clashes")
+            StaticSemantics(replf).fv  -- Set(CDot) // since CDot shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
+          case ApplyPredicational(ctx: Function, CDotFormula) =>
+            assert(replf == repl)
+            assert(!StaticSemantics(replf).fv.contains(CDotFormula) || StaticSemantics(replf).fv==SetLattice.top, "CDotFormula is no variable")
+            if ((StaticSemantics(replf).fv -- Set(CDotFormula)).contains(CDotFormula)) println("Completeness warning: removal of CDotFormula from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(CDotFormula)) + " leading to unnecessary clashes")
+            //@TODO Change to return SetLattice.bottom
+            StaticSemantics(replf).fv  -- Set(CDotFormula) // since CDotFormula shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
+          case _: Formula => StaticSemantics(replf).fv
+        }
+        case replp: Program => what match {
+          case _: ProgramConstant | _: DifferentialProgramConstant => SetLattice.bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
+          case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
+        }
+      })
+
   override def toString: String = "(" + what.prettyString() + "~>" + repl.prettyString() + ")"
 }
 
@@ -106,6 +146,9 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
 
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
+  /**
+   * Cross-check with FastUSubst
+   */
   private val nocheck: Boolean = true
   def apply(t: Term): Term = {
     usubst(t)
@@ -335,43 +378,15 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
 
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
-   * @param U taboo list
-   * @param occurrences of function and predicate symbols.
+   * @param U taboo list of variables
+   * @param occurrences the function and predicate symbols occurring in the expression of interest.
    */
   private def admissible(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
-    // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
-    // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
-    // occurs in theta (or phi or alpha)
-    def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
-        case replt: Term => sigma.what match {
-          //case CDot => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
-          // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
-          case Apply(f: Function, CDot) =>
-            assert(replt == sigma.repl)
-            assert(!StaticSemantics(replt).contains(CDot) || StaticSemantics(replt)==SetLattice.top, "CDot is no variable")
-            StaticSemantics(replt) -- Set(CDot)
-          case _: Term => StaticSemantics(replt)
-        }
-        case replf: Formula => sigma.what match {
-          //case CDotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
-          // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
-          case ApplyPredicate(p: Function, CDot) =>
-            assert(replf == sigma.repl)
-            assert(!StaticSemantics(replf).fv.contains(CDot) || StaticSemantics(replf).fv==SetLattice.top, "CDot is no variable")
-            StaticSemantics(replf).fv // equals StaticSemantics(replf).fv -- Set(CDot)
-          case ApplyPredicational(ctx: Function, CDotFormula) =>
-            assert(replf == sigma.repl)
-            assert(!StaticSemantics(replf).fv.contains(CDotFormula) || StaticSemantics(replf).fv==SetLattice.top, "CDotFormula is no variable")
-            StaticSemantics(replf).fv
-          case _: Formula => StaticSemantics(replf).fv
-        }
-        case replp: Program => sigma.what match {
-          case _: ProgramConstant | _: DifferentialProgramConstant => SetLattice.bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
-          case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
-        }
-      }).intersect(U) != SetLattice.bottom
+      // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
+      // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
+      // occurs in theta (or phi or alpha)
+      def intersectsU(sigma: SubstitutionPair): Boolean =
+        sigma.freeVars.intersect(U) != SetLattice.bottom
 
     subsDefs.filter(intersectsU).flatMap(sigma => signature(sigma.what)).forall(fn => !occurrences.contains(fn))
   }
