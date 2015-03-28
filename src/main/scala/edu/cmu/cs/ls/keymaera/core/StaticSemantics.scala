@@ -391,6 +391,10 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
     case Left(_) => "top"
     case Right(ts) => ts.toString()
   }
+  def prettyString = s match {
+    case Left(_) => "top"
+    case Right(ts) => "{" + ts.mkString(",") + "}"
+  }
   override def equals(other: Any): Boolean = other match {
     case ls: SetLattice[A] => s match {
       case Left(_) => ls.s.isLeft

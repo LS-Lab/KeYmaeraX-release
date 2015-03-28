@@ -133,6 +133,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
     }
 
+    case ApplyPredicational(predicational,child) => prettyPrinter(predicational) + "{" + prettyPrinter(child) + "}"
+
     case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN, None) + symbolTable.SCOLON
     case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     

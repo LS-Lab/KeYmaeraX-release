@@ -66,6 +66,7 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
       }, "Substitutable expression required, found " + what + " in " + this)
   }
   
+  //@TODO Isn't there a better way of doing this?
   @elidable(ASSERTION) private def kindOf(e: Expr) = e match {
      case _: Term => "Term"
      case _: Formula => "Formula"
@@ -99,26 +100,26 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       case _ => Nil
     }).fold(Nil)((a,b) => a++b)
     require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
-    //@TODO??? require(lambdaNames.size == subsDefs.size, "projected all replaced top-level names " + lambdaNames + " from " + this)
   }
 
   @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
 
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
+  private val nocheck: Boolean = true
   def apply(t: Term): Term = {
     usubst(t)
-  } ensuring(_ == new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t),
+  } ensuring(nocheck || _ == new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t),
     s"USubst result ${usubst(t)} does not agree with fast result " +
       s"${new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)}")
   def apply(f: Formula): Formula = {
     usubst(f)
-  } ensuring(_ == new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f),
+  } ensuring(nocheck || _ == new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f),
     s"USubst result ${usubst(f)} does not agree with fast result " +
       s"${new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)}")
   def apply(p: Program): Program = {
     usubst(p)
-  } ensuring(_ == new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p,
+  } ensuring(nocheck || _ == new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p,
     s"USubst result ${usubst(p)} does not agree with fast result " +
       s"${new FastUSubst(subsDefs).usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)}")
 
@@ -162,7 +163,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case CDot if  subsDefs.exists(_.what == CDot) => // TODO check (should be case x = sigma x for variable x)
           subsDefs.find(_.what == CDot).get.repl match {
             case t: Term => t
-            case _ => throw new IllegalArgumentException("Can only substitute terms for .")
+            case _ => throw new IllegalArgumentException("Can only substitute terms for (.)")
           }
         case n@Number(_, _) => n
         //@TODO any way of ensuring for the following that top-level(t)==top-level(\result)
@@ -175,7 +176,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
-            s"Substitution clash when substituting derivative ${der.prettyString()}: static semantics of $e = ${StaticSemantics(e)} is not empty")
+            s"Substitution clash when substituting ${this} in derivative ${der.prettyString()}: FV($e) = {StaticSemantics($e).prettyString()} is not empty")
           Derivative(Real, usubst(e))
       }
     } catch {
@@ -202,7 +203,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
         case app@ApplyPredicational(_, fml) if subsDefs.exists(sameHead(_, app)) =>
           require(admissible(SetLattice.top[NamedSymbol], fml),
-            s"Substitution clash when substituting predicational ${app.prettyString()}")
+            s"Substitution clash when substituting ${this} in predicational ${app.prettyString()}: FV($fml) = {StaticSemantics($fml).fv.prettyString()} is not empty")
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rFormula) = (
             subs.what match { case ApplyPredicational(_, v: NamedSymbol) => v
@@ -233,22 +234,22 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
 
         case der@FormulaDerivative(g) =>
           require(admissible(SetLattice.top[NamedSymbol], g),
-            s"Substitution clash when substituting derivative ${der.prettyString()}")
+            s"Substitution clash when substituting ${this} in derivative ${der.prettyString()}: FV($g) = {StaticSemantics(ge).fv.prettyString()} is not empty")
           FormulaDerivative(usubst(g))
 
         // binding cases add bound variables to u
         case Forall(vars, g) => require(admissible(SetLattice(vars), g),
-          s"Substitution clash: {x}=$vars when substituting forall ${g.prettyString()}")
+          s"Substitution clash: ${this} not {" + vars.mkString(",") + "}-admissible for {$g.prettyString()} when substituting in {$formula.prettyString()}")
             Forall(vars, usubst(g))
         case Exists(vars, g) => require(admissible(SetLattice(vars), g),
-          s"Substitution clash: {x}=$vars when substituting exists ${g.prettyString()}")
+          s"Substitution clash: ${this} not {" + vars.mkString(",") + "}-admissible for {$g.prettyString()} when substituting in {$formula.prettyString()}")
             Exists(vars, usubst(g))
 
         case BoxModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(p)).bv} when substituting [${p.prettyString()}]${g.prettyString()}")
+          s"Substitution clash: ${this} not {StaticSemantics(usubst($p)).bv.prettyString}-admissible for {$g.prettyString()} when substituting in ${formula.prettyString()}")
             BoxModality(usubst(p), usubst(g))
         case DiamondModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(p)).bv} when substituting <${p.prettyString()}>${g.prettyString()}")
+          s"Substitution clash: ${this} not {StaticSemantics(usubst($p)).bv.prettyString}-admissible for {$g.prettyString()} when substituting in ${formula.prettyString()}")
             DiamondModality(usubst(p), usubst(g))
       }
     } catch {
@@ -272,14 +273,14 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case ode: DifferentialProgram =>
           // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
           require(admissible(StaticSemantics(ode).bv, ode),
-            s"Substitution clash in ODE: {x}=${StaticSemantics(ode).bv} when substituting ${ode.prettyString()}")
+          s"Substitution clash: ${this} not {StaticSemantics($ode).bv.prettyString}-admissible when substituting in ${program.prettyString()}")
           usubstODE(ode, StaticSemantics(ode).bv)
         case Choice(a, b) => Choice(usubst(a), usubst(b))
         case Sequence(a, b) => require(admissible(StaticSemantics(usubst(a)).bv, b),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} ; ${b.prettyString()}")
+          s"Substitution clash: ${this} not {StaticSemantics(usubst($a)).bv.prettyString}-admissible for {$b.prettyString()} when substituting in ${program.prettyString()}")
           Sequence(usubst(a), usubst(b))
         case Loop(a) => require(admissible(StaticSemantics(usubst(a)).bv, a),
-          s"Substitution clash: BV(sigma a)=${StaticSemantics(usubst(a)).bv} when substituting ${a.prettyString()} *")
+          s"Substitution clash: ${this} not {StaticSemantics(usubst($a)).bv.prettyString}-admissible for {$a.prettyString()} when substituting in ${program.prettyString()}")
           Loop(usubst(a))
       }
     } catch {
@@ -294,7 +295,8 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       ODESystem(d, usubstODE(a, primed), usubst(h))
     case ODESystem(d, a , h) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", ode)
     case AtomicODE(dv: Derivative, t) =>
-      require(admissible(primed, t), s"Substitution clash in ODE: {x}=$primed clash with ${t.prettyString()}")
+      require(admissible(primed, t),
+      s"Substitution clash: ${this} not {$primed}-admissible for {$t.prettyString()} when substituting in ${ode.prettyString()}")
       AtomicODE(dv, usubst(t))
     case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
     case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
@@ -381,7 +383,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
    * Protests if that element is not unique because pred applies to more than one element in c or if there is none.
    */
   private def uniqueElementOf[E](c: Iterable[E], pred: E => Boolean): E = {
-    require(c.count(pred) == 1)
+    require(c.count(pred) == 1, "unique element expected in {$c.mkString}")
     c.filter(pred).head
   }
 }
