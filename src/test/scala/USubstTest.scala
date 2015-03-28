@@ -8,6 +8,7 @@ import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
 object USubstTest extends Tag("USubstTest")
+object OptimisticTest extends Tag("OptimisticTest")
 
 /**
  * @author aplatzer
@@ -367,7 +368,7 @@ class USubstTests extends FlatSpec with Matchers {
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
-        it should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs USubstTest in {
+        it should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs OptimisticTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
               val fml = Equals(Real, term1, term2)
@@ -381,6 +382,37 @@ class USubstTests extends FlatSpec with Matchers {
                 Forall(Seq(y),  LessEqual(Real, term2, Number(5)))
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
+
+            it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs USubstTest in {
+              val term1 = "y+z".asTerm
+              val term2 = "z+y".asTerm
+                val fml = Equals(Real, term1, term2)
+                val prog = "x:=x-1;".asProgram
+                val s = USubst(
+                  SubstitutionPair(Apply(f1_, Anything), term1) ::
+                  SubstitutionPair(Apply(g1_, Anything), term2) ::
+                  SubstitutionPair(ApplyPredicate(ctxf, CDot), Modality(BoxModality(prog), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+                AxiomaticRule("CQ equation congruence", s)(
+                  Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Modality(BoxModality(prog), GreaterEqual(Real, term1, Number(0))),
+                  Modality(BoxModality(prog), GreaterEqual(Real, term2, Number(0)))
+                  )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+              }
+
+  it should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs OptimisticTest in {
+    val term1 = "y+z".asTerm
+    val term2 = "z+y".asTerm
+      val fml = Equals(Real, term1, term2)
+      val prog = "y:=y-1;".asProgram
+      val s = USubst(
+        SubstitutionPair(Apply(f1_, Anything), term1) ::
+        SubstitutionPair(Apply(g1_, Anything), term2) ::
+        SubstitutionPair(ApplyPredicate(ctxf, CDot), Modality(BoxModality(prog), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+      AxiomaticRule("CQ equation congruence", s)(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Modality(BoxModality(prog), GreaterEqual(Real, term1, Number(0))),
+        Modality(BoxModality(prog), GreaterEqual(Real, term2, Number(0)))
+        )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+    }
+
 
   it should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs USubstTest in {
         val term1 = "z^2*y".asTerm
@@ -396,7 +428,7 @@ class USubstTests extends FlatSpec with Matchers {
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-      it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs USubstTest in {
+      it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs OptimisticTest in {
           val term1 = "z^2*y".asTerm
           val term2 = "-(-z)^2*-y+0".asTerm
           val fml = Equals(Real, term1, term2)
@@ -411,7 +443,7 @@ class USubstTests extends FlatSpec with Matchers {
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
   
-    it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs USubstTest in {
+    it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs OptimisticTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equals(Real, term1, term2)
@@ -485,7 +517,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   
-  it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs USubstTest in {
+  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs OptimisticTest in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equals(Real, term1, term2)
