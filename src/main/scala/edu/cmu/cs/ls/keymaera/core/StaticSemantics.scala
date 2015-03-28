@@ -316,6 +316,7 @@ object SetLattice {
 }
 /**
  * @TODO Documentation
+ * And s should be private for abstraction purposes.
  */
 class SetLattice[A](val s: Either[Null, Set[A]]) {
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
@@ -390,6 +391,11 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
   override def toString = s match {
     case Left(_) => "top"
     case Right(ts) => ts.toString()
+  }
+  //@TODO Move into pretty printer and also pretty print the elements of ts.
+  def prettyString = s match {
+    case Left(_) => "top"
+    case Right(ts) => "{" + ts.mkString(",") + "}"
   }
   override def equals(other: Any): Boolean = other match {
     case ls: SetLattice[A] => s match {
