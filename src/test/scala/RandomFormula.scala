@@ -37,7 +37,7 @@ class RandomFormula(val rand : Random = new Random()) {
   
   def nextF(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Formula = {
 	  require(n>=0)
-	  if (n == 0 || rand.nextFloat()<=shortProbability) return True
+	  if (n == 0 || rand.nextFloat()<=shortProbability) return return if (dots && rand.nextInt(100)>=70) CDotFormula else True
       val r = rand.nextInt(if (dots) 240 else 230/*+1*/)
       r match {
         case 0 => False
@@ -64,7 +64,7 @@ class RandomFormula(val rand : Random = new Random()) {
 
   def nextT(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : Term = {
       require(n>=0)
-      if (n == 0 || rand.nextFloat()<=shortProbability) return Number(BigDecimal(0))
+      if (n == 0 || rand.nextFloat()<=shortProbability) return if (dots && rand.nextInt(100)>=50) CDot else Number(BigDecimal(0))
       // TODO IfThenElseTerm not yet supported
       val r = rand.nextInt(if (dots) 70 else 60/*+1*/)
 	    r match {
