@@ -178,6 +178,7 @@ class USubstTests extends FlatSpec with Matchers {
         val prog = rand.nextProgram(randomComplexity)
         val concLhs = BoxModality(prog, prem1)
         val concRhs = BoxModality(prog, prem2)
+        println("Random context " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
@@ -197,6 +198,7 @@ class USubstTests extends FlatSpec with Matchers {
         val prem = Equiv(prem1, prem2)
         val prog = rand.nextProgram(randomComplexity)
         val conc = Equiv(BoxModality(prog, prem1), BoxModality(prog, prem2))
+        println("Random context " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
@@ -216,6 +218,7 @@ class USubstTests extends FlatSpec with Matchers {
         val prem = Equiv(prem1, prem2)
         val prog = rand.nextProgram(randomComplexity)
         val conc = Equiv(DiamondModality(prog, prem1), DiamondModality(prog, prem2))
+        println("Random context " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
@@ -235,6 +238,7 @@ class USubstTests extends FlatSpec with Matchers {
         val prog = rand.nextProgram(randomComplexity)
         val concLhs = DiamondModality(prog, prem1)
         val concRhs = DiamondModality(prog, prem2)
+        println("Random context " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
@@ -252,6 +256,7 @@ class USubstTests extends FlatSpec with Matchers {
         val prem = "(-z1)^2>=0".asFormula
         val prog = rand.nextProgram(randomComplexity)
         val conc = BoxModality(prog, prem)
+        println("Random context " + prog.prettyString)
 
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
@@ -296,6 +301,7 @@ class USubstTests extends FlatSpec with Matchers {
           val term2 = "z+y".asTerm
           val fml = Equals(Real, term1, term2)
           val context = rand.nextDotTerm(randomComplexity)
+          println("Random context " + context.prettyString)
           val s = USubst(
             SubstitutionPair(Apply(f1_, Anything), term1) ::
             SubstitutionPair(Apply(g1_, Anything), term2) ::
@@ -312,6 +318,7 @@ class USubstTests extends FlatSpec with Matchers {
           val term2 = "z2*z3+z1".asTerm
           val fml = Equals(Real, term1, term2)
           val context = rand.nextDotTerm(randomComplexity)
+          println("Random context " + context.prettyString)
           val s = USubst(
             SubstitutionPair(Apply(f1_, Anything), term1) ::
             SubstitutionPair(Apply(g1_, Anything), term2) ::
@@ -328,6 +335,7 @@ class USubstTests extends FlatSpec with Matchers {
           val term2 = "z2-z4/z1".asTerm
           val fml = Equals(Real, term1, term2)
           val context = rand.nextDotTerm(randomComplexity)
+          println("Random context " + context.prettyString)
           val s = USubst(
             SubstitutionPair(Apply(f1_, Anything), term1) ::
             SubstitutionPair(Apply(g1_, Anything), term2) ::
@@ -538,6 +546,7 @@ class USubstTests extends FlatSpec with Matchers {
        val term2 = "-(-z)^2*-y+0".asTerm
        val fml = Equals(Real, term1, term2)
        val context = rand.nextDotFormula(randomComplexity)
+       println("Random context " + context.prettyString)
        val s = USubst(
          SubstitutionPair(Apply(f1_, Anything), term1) ::
          SubstitutionPair(Apply(g1_, Anything), term2) ::
@@ -552,6 +561,7 @@ class USubstTests extends FlatSpec with Matchers {
       val fml2 = "(-z)^2*-y+0<=-5".asFormula
       val fml = Equiv(fml1, fml2)
       val context = rand.nextDotFormula(randomComplexity)
+      println("Random context " + context.prettyString)
       val s = USubst(
         SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
         SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
