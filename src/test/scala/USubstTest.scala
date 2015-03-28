@@ -17,7 +17,7 @@ object OptimisticTest extends Tag("OptimisticTest")
 
 class USubstTests extends FlatSpec with Matchers {
 
-  val randomTrials = 40*10*10
+  val randomTrials = 40*1000
   val randomComplexity = 20
   val rand = new RandomFormula()
 
@@ -475,7 +475,7 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
-    AxiomaticRule("CE equivalence congruence", s)(
+    AxiomaticRule("CE congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -489,7 +489,7 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
-    AxiomaticRule("CE equivalence congruence", s)(
+    AxiomaticRule("CE congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -504,7 +504,7 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
-    AxiomaticRule("CE equivalence congruence", s)(
+    AxiomaticRule("CE congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Modality(BoxModality(prog), fml1), Modality(BoxModality(prog), fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -519,7 +519,7 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
-    AxiomaticRule("CE equivalence congruence", s)(
+    AxiomaticRule("CE congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Modality(BoxModality(prog), fml1), Modality(BoxModality(prog), fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
@@ -566,7 +566,7 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
         SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
         SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
-      AxiomaticRule("CE equivalence congruence", s)(
+      AxiomaticRule("CE congruence", s)(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
         ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
  }

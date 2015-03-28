@@ -1268,13 +1268,14 @@ object AxiomaticRule {
     val fmlny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
     
     scala.collection.immutable.Map(
+      /* @deprecated/@derived("Could use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
       ("CT term congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Apply(ctxt, fny), Apply(ctxt, gny)))))),
       ("CQ equation congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(ctxf, fny), ApplyPredicate(ctxf, gny)))))),
-      ("CE equivalence congruence",
+      ("CE congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicational(context, pny), ApplyPredicational(context, qny)))))),
       ("all generalization",
@@ -1295,6 +1296,8 @@ object AxiomaticRule {
       ("<> monotone",
         (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
           Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
+      //@deprecated("Use [] monotone twice or just use CE equivalence congruence")
+      //@TODO likewise for the other congruence rules.
       ("[] congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
@@ -1304,6 +1307,7 @@ object AxiomaticRule {
       ("Goedel", /* unsound for hybrid games */
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny))))),
+      //@deprecated Use "CE equivalence congruence" instead of all these congruence rules.
       // Derived axiomatic rules
       ("-> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
