@@ -344,7 +344,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     // occurs in theta (or phi or alpha)
     def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
         case replt: Term => sigma.what match {
-          case CDot => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
+          //case CDot => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
           case Apply(f: Function, CDot) =>
@@ -354,7 +354,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           case _: Term => StaticSemantics(replt)
         }
         case replf: Formula => sigma.what match {
-          case CDotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
+          //case CDotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case ApplyPredicate(p: Function, CDot) =>
