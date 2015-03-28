@@ -401,6 +401,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       FormulaDerivative.getClass.getCanonicalName ::
       PredicateConstant.getClass.getCanonicalName ::
       ApplyPredicate.getClass.getCanonicalName ::
+      ApplyPredicational.getClass.getCanonicalName :: //@TODO Check
       CDotFormula.getClass.getCanonicalName :: //@TODO Check
       True.getClass.getCanonicalName ::
       False.getClass.getCanonicalName ::
@@ -486,6 +487,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case ApplyPredicate(function,child) => false
     
     case Assign(l,r) => false
+    case NDetAssign(l) => false //@TODO check
 
     case Forall(_,_) => true
     case Exists(_,_) => true

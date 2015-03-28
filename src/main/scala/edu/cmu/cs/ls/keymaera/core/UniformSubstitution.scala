@@ -163,7 +163,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case CDot if  subsDefs.exists(_.what == CDot) => // TODO check (should be case x = sigma x for variable x)
           subsDefs.find(_.what == CDot).get.repl match {
             case t: Term => t
-            case _ => throw new IllegalArgumentException("Can only substitute terms for (.)")
+            case _ => throw new IllegalArgumentException("Can only substitute terms for " + CDot)
           }
         case n@Number(_, _) => n
         //@TODO any way of ensuring for the following that top-level(t)==top-level(\result)
@@ -215,6 +215,12 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
             })
           USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(rFormula)
         case app@ApplyPredicational(q, fml) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicational(q, usubst(fml))
+        case CDotFormula if !subsDefs.exists(_.what == CDotFormula) => CDotFormula // TODO check (should be case x = sigma x for variable x)
+        case CDotFormula if  subsDefs.exists(_.what == CDotFormula) => // TODO check (should be case x = sigma x for variable x)
+          subsDefs.find(_.what == CDotFormula).get.repl match {
+            case f: Formula => f
+            case _ => throw new IllegalArgumentException("Can only substitute formulas for " + CDotFormula)
+          }
         case True | False => formula
 
         //@TODO any way of ensuring for the following that  top-level(f)==top-level(\result)
@@ -338,14 +344,17 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     // occurs in theta (or phi or alpha)
     def intersectsU(sigma: SubstitutionPair): Boolean = (sigma.repl match {
         case replt: Term => sigma.what match {
+          //case CDot => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
           case Apply(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
           case Apply(f: Function, CDot) =>
             assert(replt == sigma.repl)
+            assert(!StaticSemantics(replt).contains(CDot) || StaticSemantics(replt)==SetLattice.top, "CDot is no variable")
             StaticSemantics(replt) -- Set(CDot)
           case _: Term => StaticSemantics(replt)
         }
         case replf: Formula => sigma.what match {
+          //case CDotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
           case ApplyPredicate(_, Anything) => SetLattice.bottom[NamedSymbol]
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case ApplyPredicate(p: Function, CDot) =>

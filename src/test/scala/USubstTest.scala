@@ -293,13 +293,14 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
-    val context = Modality(BoxModality(Assign(x, Number(5))), CDotFormula)
+    val prog = "x:=5;".asProgram
+    val context = Modality(BoxModality(prog), CDotFormula)
     val s = USubst(
       SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE equivalence congruence", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Modality(BoxModality(prog), fml1), Modality(BoxModality(prog), fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -307,13 +308,14 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
-    val context = Modality(BoxModality(ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)), CDotFormula)
+    val prog = "x'=5;".asProgram  //ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)
+    val context = Modality(BoxModality(prog), CDotFormula)
     val s = USubst(
       SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE equivalence congruence", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Modality(BoxModality(prog), fml1), Modality(BoxModality(prog), fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -331,7 +333,22 @@ class USubstTests extends FlatSpec with Matchers {
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-    it should "instantiate CQ from z^2*y=-(-z)^2*-y+0" taggedAs USubstTest in {
+      it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs USubstTest in {
+          val term1 = "z^2*y".asTerm
+          val term2 = "-(-z)^2*-y+0".asTerm
+          val fml = Equals(Real, term1, term2)
+          val y = Variable("y", None, Real)
+          val s = USubst(
+            SubstitutionPair(Apply(f1_, Anything), term1) ::
+            SubstitutionPair(Apply(g1_, Anything), term2) ::
+            SubstitutionPair(ApplyPredicate(ctxf, CDot), Forall(Seq(y), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+          AxiomaticRule("CQ equation congruence", s)(
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(Real, term1, Number(0))),
+            Forall(Seq(y), GreaterEqual(Real, term2, Number(0)))
+            )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+        }
+  
+    it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs USubstTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equals(Real, term1, term2)
@@ -384,7 +401,7 @@ class USubstTests extends FlatSpec with Matchers {
       val s = USubst(
         SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
         SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
-        SubstitutionPair(ApplyPredicate(ctxf, CDot), context) :: Nil)
+        SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
       AxiomaticRule("CE equivalence congruence", s)(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
         ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
