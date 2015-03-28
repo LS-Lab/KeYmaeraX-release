@@ -246,10 +246,10 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
             Exists(vars, usubst(g))
 
         case BoxModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          s"Substitution clash: ${this} not {StaticSemantics(usubst($p)).bv.prettyString}-admissible for {$g.prettyString()} when substituting in ${formula.prettyString()}")
+          "Substitution clash:" + this + " not " + StaticSemantics(usubst(p)).bv.prettyString() + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             BoxModality(usubst(p), usubst(g))
         case DiamondModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          s"Substitution clash: ${this} not {StaticSemantics(usubst($p)).bv.prettyString}-admissible for {$g.prettyString()} when substituting in ${formula.prettyString()}")
+          "Substitution clash:" + this + " not " +  StaticSemantics(usubst(p)).bv.prettyString() + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             DiamondModality(usubst(p), usubst(g))
       }
     } catch {
@@ -350,11 +350,11 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case ApplyPredicate(p: Function, CDot) =>
             assert(replf == sigma.repl)
-            assert(!StaticSemantics(replf).fv.contains(CDot), "CDot is no variable")
+            assert(!StaticSemantics(replf).fv.contains(CDot) || StaticSemantics(replf).fv==SetLattice.top, "CDot is no variable")
             StaticSemantics(replf).fv // equals StaticSemantics(replf).fv -- Set(CDot)
           case ApplyPredicational(ctx: Function, CDotFormula) =>
             assert(replf == sigma.repl)
-            assert(!StaticSemantics(replf).fv.contains(CDotFormula), "CDotFormula is no variable")
+            assert(!StaticSemantics(replf).fv.contains(CDotFormula) || StaticSemantics(replf).fv==SetLattice.top, "CDotFormula is no variable")
             StaticSemantics(replf).fv
           case _: Formula => StaticSemantics(replf).fv
         }
