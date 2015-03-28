@@ -267,8 +267,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     val context = Forall(Seq(x), CDotFormula)
     val s = USubst(
-      SubstitutionPair(Apply(pn_, Anything), fml1) ::
-      SubstitutionPair(Apply(qn_, Anything), fml2) ::
+      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
+      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE equivalence congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
@@ -281,8 +281,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     val context = Forall(Seq(x), CDotFormula)
     val s = USubst(
-      SubstitutionPair(Apply(pn_, Anything), fml1) ::
-      SubstitutionPair(Apply(qn_, Anything), fml2) ::
+      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
+      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE equivalence congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
@@ -295,8 +295,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     val context = Modality(BoxModality(Assign(x, Number(5))), CDotFormula)
     val s = USubst(
-      SubstitutionPair(Apply(pn_, Anything), fml1) ::
-      SubstitutionPair(Apply(qn_, Anything), fml2) ::
+      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
+      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE equivalence congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
@@ -309,8 +309,8 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = Equiv(fml1, fml2)
     val context = Modality(BoxModality(ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)), CDotFormula)
     val s = USubst(
-      SubstitutionPair(Apply(pn_, Anything), fml1) ::
-      SubstitutionPair(Apply(qn_, Anything), fml2) ::
+      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
+      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE equivalence congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))

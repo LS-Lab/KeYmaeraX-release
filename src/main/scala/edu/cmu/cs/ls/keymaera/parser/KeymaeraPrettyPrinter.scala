@@ -222,6 +222,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case CDot => "•"
     case Anything => "?"
     case Nothing => ""
+    case CDotFormula => "_"
 
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
@@ -400,6 +401,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       FormulaDerivative.getClass.getCanonicalName ::
       PredicateConstant.getClass.getCanonicalName ::
       ApplyPredicate.getClass.getCanonicalName ::
+      CDotFormula.getClass.getCanonicalName :: //@TODO Check
       True.getClass.getCanonicalName ::
       False.getClass.getCanonicalName ::
       //Programs.

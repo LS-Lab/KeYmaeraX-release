@@ -142,18 +142,18 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     try {
       term match {
         // uniform substitution base cases
-        case x: Variable => require(!subsDefs.exists(_.what == x), s"Substitution of variables not supported: $x"); x
+        case x: Variable => require(!subsDefs.exists(_.what == x), "Substitution of variables not supported: " + x); x
         case xp@Derivative(Real, x: Variable) => require(!subsDefs.exists(_.what == xp),
-          s"Substitution of differential symbols not supported: $xp"); xp
+          "Substitution of differential symbols not supported: " + xp); xp
         case app@Apply(_, theta) if subsDefs.exists(sameHead(_, app)) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rTerm) =
             (subs.what match { case Apply(_, v: NamedSymbol) => v
                             case _ => throw new IllegalArgumentException(
-                              s"Substitution of f(theta)=${app.prettyString()} for arbitrary theta=$theta not supported") },
+                              "Substitution of f(" + theta.prettyString() + ")=" + app.prettyString() + " not supported for arbitrary argument " + theta) },
              subs.repl match { case t: Term => t
                             case _ => throw new IllegalArgumentException(
-                              s"Can only substitute terms for ${app.prettyString()}")}
+                              "Can only substitute terms for " + app.prettyString())}
             )
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
         case app@Apply(g, theta) if !subsDefs.exists(sameHead(_, app)) => Apply(g, usubst(theta))
@@ -176,7 +176,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
-            s"Substitution clash when substituting ${this} in derivative ${der.prettyString()}: FV($e) = {StaticSemantics($e).prettyString()} is not empty")
+            "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")
           Derivative(Real, usubst(e))
       }
     } catch {
@@ -203,7 +203,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case app@ApplyPredicate(q, theta) if !subsDefs.exists(sameHead(_, app)) => ApplyPredicate(q, usubst(theta))
         case app@ApplyPredicational(_, fml) if subsDefs.exists(sameHead(_, app)) =>
           require(admissible(SetLattice.top[NamedSymbol], fml),
-            s"Substitution clash when substituting ${this} in predicational ${app.prettyString()}: FV($fml) = {StaticSemantics($fml).fv.prettyString()} is not empty")
+            "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " FV(" + fml + ") = " + StaticSemantics(fml).fv.prettyString + " is not empty")
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sameHead(_, app))
           val (rArg, rFormula) = (
             subs.what match { case ApplyPredicational(_, v: NamedSymbol) => v
@@ -234,22 +234,22 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
 
         case der@FormulaDerivative(g) =>
           require(admissible(SetLattice.top[NamedSymbol], g),
-            s"Substitution clash when substituting ${this} in derivative ${der.prettyString()}: FV($g) = {StaticSemantics(ge).fv.prettyString()} is not empty")
+            "Substitution clash when substituting " + this + " in derivative " +  der.prettyString() + ": FV(" + g + ") = " + StaticSemantics(g).fv.prettyString + " is not empty")
           FormulaDerivative(usubst(g))
 
         // binding cases add bound variables to u
         case Forall(vars, g) => require(admissible(SetLattice(vars), g),
-          s"Substitution clash: ${this} not {" + vars.mkString(",") + "}-admissible for {$g.prettyString()} when substituting in {$formula.prettyString()}")
+          "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             Forall(vars, usubst(g))
         case Exists(vars, g) => require(admissible(SetLattice(vars), g),
-          s"Substitution clash: ${this} not {" + vars.mkString(",") + "}-admissible for {$g.prettyString()} when substituting in {$formula.prettyString()}")
+          "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             Exists(vars, usubst(g))
 
         case BoxModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          "Substitution clash:" + this + " not " + StaticSemantics(usubst(p)).bv.prettyString() + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
+          "Substitution clash:" + this + " not " + StaticSemantics(usubst(p)).bv.prettyString + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             BoxModality(usubst(p), usubst(g))
         case DiamondModality(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          "Substitution clash:" + this + " not " +  StaticSemantics(usubst(p)).bv.prettyString() + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
+          "Substitution clash:" + this + " not " +  StaticSemantics(usubst(p)).bv.prettyString + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             DiamondModality(usubst(p), usubst(g))
       }
     } catch {
@@ -273,14 +273,14 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case ode: DifferentialProgram =>
           // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
           require(admissible(StaticSemantics(ode).bv, ode),
-          s"Substitution clash: ${this} not {StaticSemantics($ode).bv.prettyString}-admissible when substituting in ${program.prettyString()}")
+          "Substitution clash: " + this + " not " + StaticSemantics(ode).bv.prettyString + "-admissible when substituting in " + program.prettyString)
           usubstODE(ode, StaticSemantics(ode).bv)
         case Choice(a, b) => Choice(usubst(a), usubst(b))
         case Sequence(a, b) => require(admissible(StaticSemantics(usubst(a)).bv, b),
-          s"Substitution clash: ${this} not {StaticSemantics(usubst($a)).bv.prettyString}-admissible for {$b.prettyString()} when substituting in ${program.prettyString()}")
+          "Substitution clash: " + this + " not " + StaticSemantics(usubst(a)).bv.prettyString + "-admissible for " + b.prettyString() + " when substituting in " + program.prettyString())
           Sequence(usubst(a), usubst(b))
         case Loop(a) => require(admissible(StaticSemantics(usubst(a)).bv, a),
-          s"Substitution clash: ${this} not {StaticSemantics(usubst($a)).bv.prettyString}-admissible for {$a.prettyString()} when substituting in ${program.prettyString()}")
+          "Substitution clash: " + this + " not " + StaticSemantics(usubst(a)).bv.prettyString + "-admissible for " + a.prettyString() + " when substituting in " + program.prettyString())
           Loop(usubst(a))
       }
     } catch {
