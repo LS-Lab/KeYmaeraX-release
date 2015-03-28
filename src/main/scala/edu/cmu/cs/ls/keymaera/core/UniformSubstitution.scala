@@ -130,7 +130,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, s.toString()).initCause(ex)
     }
   }
 
@@ -180,7 +180,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, term, term.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, term.prettyString()).initCause(ex)
     }
   }
 
@@ -253,7 +253,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, formula, formula.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, formula.prettyString()).initCause(ex)
     }
   }
 
@@ -284,7 +284,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, program, program.toString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, program.toString()).initCause(ex)
     }
   }
 

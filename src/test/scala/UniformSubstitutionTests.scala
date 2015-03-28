@@ -26,7 +26,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     } catch {
       // distinguish between IllegalArgumentExceptions thrown by the test framework and those thrown by usubst itself
       case ex: IllegalArgumentException if ex.getMessage != "Can't find a private method named: usubst" =>
-        throw new SubstitutionClashException(ex.getMessage, t, t).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, t.toString, t.prettyString()).initCause(ex)
     }
   }
 
@@ -37,7 +37,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     } catch {
       // distinguish between IllegalArgumentExceptions thrown by the test framework and those thrown by usubst itself
       case ex: IllegalArgumentException if ex.getMessage != "Can't find a private method named: usubst" =>
-        throw new SubstitutionClashException(ex.getMessage, f, f).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, f.toString, f.prettyString()).initCause(ex)
     }
   }
 
@@ -48,7 +48,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     } catch {
       // distinguish between IllegalArgumentExceptions thrown by the test framework and those thrown by usubst itself
       case ex: IllegalArgumentException if ex.getMessage != "Can't find a private method named: usubstComps" =>
-        throw new SubstitutionClashException(ex.getMessage, p, p).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, p.toString, p.prettyString()).initCause(ex)
     }
   }
 
