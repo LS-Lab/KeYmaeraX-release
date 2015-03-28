@@ -352,7 +352,22 @@ class USubstTests extends FlatSpec with Matchers {
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
         
-        it should "instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs USubstTest in {
+        it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs USubstTest in {
+              val term1 = "y+z".asTerm
+              val term2 = "z+y".asTerm
+              val fml = Equals(Real, term1, term2)
+              val y = Variable("x", None, Real)
+              val s = USubst(
+                SubstitutionPair(Apply(f1_, Anything), term1) ::
+                SubstitutionPair(Apply(g1_, Anything), term2) ::
+                SubstitutionPair(ApplyPredicate(ctxf, CDot), Forall(Seq(y),  LessEqual(Real, CDot, Number(5)))) :: Nil)
+              AxiomaticRule("CQ equation congruence", s)(
+                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(Real, term1, Number(5))),
+                Forall(Seq(y),  LessEqual(Real, term2, Number(5)))
+                )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+            }
+
+        it should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs USubstTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
               val fml = Equals(Real, term1, term2)
