@@ -8,7 +8,7 @@ import scala.collection.immutable._
  * @author aplatzer
  */
 class RandomFormula(val rand : Random = new Random()) {
-  private def shortProbability = 0.02
+  private def shortProbability = 0.10
   def nextTerm(size : Int) = nextT(nextNames("z", size / 3 + 1), size)
 
   def nextFormula(size : Int) = nextF(nextNames("z", size / 3 + 1), size)

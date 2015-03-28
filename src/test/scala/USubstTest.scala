@@ -17,7 +17,7 @@ object OptimisticTest extends Tag("OptimisticTest")
 
 class USubstTests extends FlatSpec with Matchers {
 
-  val randomTrials = 40
+  val randomTrials = 40*10*10
   val randomComplexity = 20
   val rand = new RandomFormula()
 
