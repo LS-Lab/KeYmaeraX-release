@@ -1294,6 +1294,7 @@ object AxiomaticRule {
       ("all congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
+      //@deprecated("Use CE instead.")
       ("exists congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
@@ -1302,6 +1303,7 @@ object AxiomaticRule {
       ("[] congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
+          //@deprecated("Use CE instead.")
       ("<> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
@@ -1310,15 +1312,19 @@ object AxiomaticRule {
       ("-> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fmlny, pny), Imply(fmlny, qny)))))),
+          //@deprecated("Use CE instead.")
       ("<-> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fmlny, pny), Equiv(fmlny, qny)))))),
+          //@deprecated("Use CE instead.")
       ("& congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fmlny, pny), And(fmlny, qny)))))),
+          //@deprecated("Use CE instead.")
       ("| congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fmlny, pny), Or(fmlny, qny)))))),
+          //@deprecated("Use CE instead.")
       ("! congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny)))))),
