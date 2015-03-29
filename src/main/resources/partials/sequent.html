@@ -3,7 +3,7 @@
     <div class="row k4-flexrow">
         <div class="col-md-1 k4-sequent-index k4-flexcell">
             <div class="k4-valign-table">
-                <div class="k4-valign-cell">a:{{$index}}</div>
+                <div class="k4-valign-cell">-{{sequent.ante.length - $index}}</div> <!-- ante pos -->
             </div>
         </div>
         <!--<td><k4-formula formula="f.formula" highlight="true"></k4-formula></td>-->
@@ -56,7 +56,7 @@
     <div class="row k4-flexrow">
         <div class="col-md-1 k4-sequent-index k4-flexcell">
             <div class="k4-valign-table">
-                <div class="k4-valign-cell">s:{{$index}}</div>
+                <div class="k4-valign-cell">{{$index + 1}}</div> <!-- succ position number -->
             </div>
         </div>
         <div class="col-md-11 k4-formula k4-flexcell" ng-if="!readOnly">

@@ -178,8 +178,10 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
-  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqLeft(exhaustive = true))) ~
-    ArithmeticTacticsImpl.hideUnnecessaryLeftEqT ~ ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+//  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqLeft(exhaustive = true))) ~
+//    ArithmeticTacticsImpl.hideUnnecessaryLeftEqT ~ ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+
+  def arithmeticT = arithmeticNoHideT
 
   /**
    * Tactic for arithmetic without hide.

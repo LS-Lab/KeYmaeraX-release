@@ -762,7 +762,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //This is not precedence.reduce(_|_) because some things need trailing ;
     //This list should contain precedence in order, with all elements which
     //require a trailing ; removed. These will be captured by sequenceP.
-    lazy val parser = choiceP | sequenceP | ifThenElseP | ifThenP | whileP | closureP | groupP
+    lazy val parser = choiceP | sequenceP | ifThenElseP | ifThenP | whileP | closureP | groupPseq | groupP
 
     //@todo do we need to make the program variables into predicates so that they
     //can be assigned to and such? Actually, I think that the stuff in ProgramVariables
@@ -789,7 +789,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
-      groupP      ::
+      groupPseq :: groupP      ::
       Nil
 
     //@todo after some refactoring this is now only used with normalFormEvolutionSystemP, with the actual system filtered out.
@@ -994,8 +994,18 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     
     lazy val groupP:SubprogramParser = {
     lazy val pattern = "{" ~> parser <~ "}"
-      log(pattern)("Subterm Grouping") ^^ {
+      log(pattern)("Subprogram Grouping") ^^ {
         case  p => p
+      }
+    }
+
+    /**
+     * So that you can type { a; b; } c as well as {a; b }; c
+     */
+    lazy val groupPseq:SubprogramParser = {
+      lazy val pattern = ("{" ~> parser <~ "}") ~ parser
+      log(pattern)("Stermprogram grouping without semicolon") ^^ {
+        case p ~ q => Sequence(p,q)
       }
     }
     

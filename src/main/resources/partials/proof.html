@@ -8,9 +8,7 @@
                 <div class="list-group">
                     <a href="" ng-class="{'list-group-item active k4-overflow-box': selectedTask == task,'list-group-item k4-overflow-box':selectedTask !== task}" ng-repeat="task in agenda" ng-click="setSelected(task)">
                         <div class="row list-group-item-heading">
-                            <div class="col-md-10">Goal
-                                <span ng-if="task.nodeId.length <= 7"> {{task.nodeId}}</span>
-                                <span ng-if="task.nodeId.length > 7"> {{task.nodeId.substring(0,2) + ".." + task.nodeId.substring(task.nodeId.length-4)}}</span>
+                            <div class="col-md-10"><span>{{task.goalLabel}}</span>
                             </div>
                             <div ng-if="defer" class="col-md-2" cg-busy="defer"></div>
                         </div>
@@ -50,7 +48,7 @@
     </div>
 
     <div class="col-md-7" id="sequent" ng-if="selectedTask">
-        <h4>Goal {{selectedTask.nodeId.substring(0,5) + ".." + selectedTask.nodeId.substring(selectedTask.nodeId.length-5)}}</h4>
+        <h4>{{selectedTask.goalLabel}}</h4>
         <div class="row">
             <div class="col-md-1">
                 <!-- reserve space for context menu of sequent -->

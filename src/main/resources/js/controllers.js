@@ -497,6 +497,24 @@ keymaeraProofControllers.controller('TaskListCtrl',
     $scope.fetchAgenda = function(userId, proofId) {
         $http.get('proofs/user/' + userId + "/" + proofId + '/agenda').success(function(data) {
             $scope.agenda = data;
+            //Create a goalLabel for each task.
+            for(var i = 0; i < $scope.agenda.length; i++) {
+                var task = $scope.agenda[i];
+                for(var j = 0; j < task.proofNode.infos.length; j++) {
+                    var info = task.proofNode.infos[j];
+                    if(info.key == "branchLabel") {
+                        task.goalLabel = info.value
+                    }
+                }
+                if(!task.goalLabel) { //If we did not find a pre-defined branch label, just use the nodeId.
+                    if(task.nodeId.length < 7) {
+                        task.goalLabel = "Unlabeled Goal " //+ task.nodeId
+                    }
+                    else {
+                        task.goalLabel = "Unlabeled Goal " //+ task.nodeId.substring(0,2) + ".." + task.nodeId.substring(task.nodeId.length-4)
+                    }
+                }
+            }
             if ($scope.agenda.length > 0) {
                 // TODO should only update the view automatically if user did not navigate somewhere else manually
                 $scope.setSelected($scope.agenda[0]);

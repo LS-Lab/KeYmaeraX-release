@@ -853,7 +853,7 @@ object ODETactics {
               debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
                 diffInvariantSystemTailT(p) &&
                 debugT("About to NNF rewrite") & NNFRewrite(p) && debugT("Finished NNF rewrite") &
-                SyntacticDerivationInContext.SyntacticDerivationT(p) && debugT("Done with syntactic derivation") &
+                SyntacticDerivationInContext.SyntacticDerivationT(p) ~ debugT("Done with syntactic derivation") &
                 finishingTouch ~ debugT("Finished result")
             ))
           }

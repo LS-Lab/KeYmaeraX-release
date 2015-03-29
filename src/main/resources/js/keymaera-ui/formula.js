@@ -117,7 +117,7 @@ angular.module('formula', ['ngSanitize'])
                         case "imply":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + " → " + (depth === 0 ? "<br/>" : "") + right;
+                            content = left + (depth === 0 ? "<br/>" : "") + "→" + (depth === 0 ? "<br/>" : "") + right;
                             break;
 
                         case "equiv":
@@ -256,13 +256,13 @@ angular.module('formula', ['ngSanitize'])
                         case "Sequence":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + "; " + right;
+                            content = left + ";<br/>" + right;
                             break;
 
                         case "Choice":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + " &#8746; " + right;
+                            content = left + " <br/>&#8746;<br/> " + right;
                             break;
 
                         case "AtomicODE":
@@ -272,9 +272,13 @@ angular.module('formula', ['ngSanitize'])
                             break;
 
                         case "ODEProduct":
-                            var left = parseFormulaHelper(c[0], depth + 1)
-                            var right = parseFormulaHelper(c[1], depth + 1)
-                            content = left + ", " + right
+                            var left = parseFormulaHelper(c[0], depth + 1);
+                            var right = parseFormulaHelper(c[1], depth + 1);
+                            if (c[1].name != "EmptyODE") {
+                              content = left + ", " + right;
+                            } else {
+                              content = left;
+                            }
                             break;
 
                         case "EmptyODE":

@@ -291,7 +291,7 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
           Some(tacticCompleted(db)), input, automation)
       }
     }).start()
-    
+
     new DispatchedTacticResponse(new DispatchedTacticPOJO(tId, proofId, nodeId, formulaId, tacticId, input, automation,
       DispatchedTacticStatus.Running)) :: Nil
   }
