@@ -1281,21 +1281,22 @@ object AxiomaticRule {
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
-      ("all congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
       ("all monotone",
          (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
-      ("exists congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
       ("[] monotone",
         (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
           Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
       ("<> monotone",
         (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
           Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
+      //@deprecated("Use CE instead.")
+      ("all congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
+      ("exists congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
       //@deprecated("Use [] monotone twice or just use CE equivalence congruence")
       //@TODO likewise for the other congruence rules.
       ("[] congruence",
@@ -1304,9 +1305,6 @@ object AxiomaticRule {
       ("<> congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
-      ("Goedel", /* unsound for hybrid games */
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny))))),
       //@deprecated Use "CE equivalence congruence" instead of all these congruence rules.
       // Derived axiomatic rules
       ("-> congruence",
@@ -1323,7 +1321,11 @@ object AxiomaticRule {
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fmlny, pny), Or(fmlny, qny)))))),
       ("! congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny))))))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny)))))),
+      /* UNSOUND FOR HYBRID GAMES */
+      ("Goedel", /* unsound for hybrid games */
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
     )
   }
 
