@@ -153,6 +153,15 @@ object AlphaConversionHelper {
     }
 
   /**
+   * Replaces only bound occurrences of o with n in f.
+   * @param f The formula.
+   * @param o The original term to replace.
+   * @param n The new replacement term.
+   * @return The formula where bound occurrences of o are replaced with n.
+   */
+  def replaceBound(f: Formula)(o: Term, n: Term): Formula = SubstitutionHelper.replaceFree(replace(f)(o, n))(n, o)
+
+  /**
    * Replace the old term o by a new named term n in formula f.
    * @param f The formula.
    * @param o The old term.
