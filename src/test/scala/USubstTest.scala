@@ -307,7 +307,7 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(Apply(g1_, Anything), term2) ::
             SubstitutionPair(Apply(ctxt, CDot), context) :: Nil)
           AxiomaticRule("CT term congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, applyDotContext(context, term1), applyDotContext(context, term2))))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, contextapp(context, term1), contextapp(context, term2))))
             ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
@@ -324,7 +324,7 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(Apply(g1_, Anything), term2) ::
             SubstitutionPair(Apply(ctxt, CDot), context) :: Nil)
           AxiomaticRule("CT term congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, applyDotContext(context, term1), applyDotContext(context, term2))))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, contextapp(context, term1), contextapp(context, term2))))
             ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
@@ -341,7 +341,7 @@ class USubstTests extends FlatSpec with Matchers {
             SubstitutionPair(Apply(g1_, Anything), term2) ::
             SubstitutionPair(Apply(ctxt, CDot), context) :: Nil)
           AxiomaticRule("CT term congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, applyDotContext(context, term1), applyDotContext(context, term2))))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, contextapp(context, term1), contextapp(context, term2))))
             ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
@@ -476,7 +476,7 @@ class USubstTests extends FlatSpec with Matchers {
       SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
       SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
     AxiomaticRule("CE congruence", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -552,7 +552,7 @@ class USubstTests extends FlatSpec with Matchers {
          SubstitutionPair(Apply(g1_, Anything), term2) ::
          SubstitutionPair(ApplyPredicate(ctxf, CDot), context) :: Nil)
        AxiomaticRule("CQ equation congruence", s)(
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, term1), applyDotContext(context, term2))))
+         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
          ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
@@ -567,17 +567,18 @@ class USubstTests extends FlatSpec with Matchers {
         SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
         SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
       AxiomaticRule("CE congruence", s)(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(applyDotContext(context, fml1), applyDotContext(context, fml2))))
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
         ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
  }
 
- def applyDotContext(context: Term, arg: Term) : Term =
+ // apply given context to the given argument
+  def contextapp(context: Term, arg: Term) : Term =
    USubst(SubstitutionPair(CDot, arg) :: Nil)(context)
 
-  def applyDotContext(context: Formula, arg: Term) : Formula =
+  def contextapp(context: Formula, arg: Term) : Formula =
     USubst(SubstitutionPair(CDot, arg) :: Nil)(context)
   
-  def applyDotContext(context: Formula, arg: Formula) : Formula = {
+  def contextapp(context: Formula, arg: Formula) : Formula = {
     val mycontext = Function("dottingC__", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC__", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
 
     USubst(SubstitutionPair(ApplyPredicational(mycontext, CDotFormula), context) :: Nil)(ApplyPredicational(mycontext, arg))
