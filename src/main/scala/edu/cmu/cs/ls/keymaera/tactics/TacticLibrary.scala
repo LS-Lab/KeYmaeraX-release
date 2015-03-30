@@ -7,7 +7,13 @@ import scala.collection.immutable.List
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import AxiomaticRuleTactics.boxMonotoneT
+import FOQuantifierTacticsImpl.instantiateT
+import PropositionalTacticsImpl.ImplyLeftT
+import SearchTacticsImpl.{lastAnte,lastSucc,onBranch}
+import HybridProgramTacticsImpl.boxVacuousT
+import BranchLabels._
 
 import BuiltinHigherTactics._
 import BindingAssessment.allNames
@@ -209,12 +215,37 @@ object TacticLibrary {
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case BoxModality(_, _) => true
-      case DiamondModality(_, _) => true
       case _ => false
     })
 
-    override def apply(p: Position): Tactic = new ApplyRule(new AbstractionRule(p)) {
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case b@BoxModality(prg, phi) =>
+          val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).s match {
+            case Right(s) => s.to[scala.collection.immutable.Seq]
+            case Left(_) => throw new IllegalArgumentException("Cannot handle non-concrete programs")
+          }
+          val qPhi = if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi) else Forall(vars, phi)
+
+          if (!p.isAnte) {
+            Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
+              (cutUseLbl, lastAnte(ImplyLeftT) &&(
+                hideT(p) /* result */,
+                (0 until node.sequent.ante.length).map(i => hideT(AntePosition(i))).foldRight(NilT)((t, result) => result & t) &
+                  (p.index + 1 until node.sequent.succ.length).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
+                  (0 until p.index).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
+                  assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & boxMonotoneT &
+                  assertT(1,1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & lastAnte(instantiateT) &
+                  (AxiomCloseT | debugT("Cut use: Axiom close failed unexpectedly") & stopT)
+                )),
+              (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
+                (AxiomCloseT | debugT("Cut show: Axiom close failed unexpectedly") & stopT))
+            ))
+          } else {
+            ???
+          }
+      }
     }
   }
 
@@ -350,7 +381,7 @@ object TacticLibrary {
 
       private def initialValueTactic(formulas: IndexedSeq[Formula], factory: (Int, PosInExpr) => Position) = {
         (0 to formulas.length-1).map(i => {
-          val pos = factory(i, HereP); abstractionT(pos) & hideT(pos) & skolemizeT(pos)
+          val pos = factory(i, HereP); abstractionT(pos) & (skolemizeT(pos) | NilT)
         }).foldLeft(Tactics.NilT)((a, b) => a & b)
       }
     }

@@ -382,7 +382,6 @@ object HybridProgramTacticsImpl {
         case _ => /* false requires substitution of variables */ true
       })
 
-      import FOQuantifierTacticsImpl.skolemizeT
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
@@ -672,7 +671,7 @@ object HybridProgramTacticsImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
           case b@BoxModality(Assign(v: Variable, t: Variable), _) if v == t => Some(
-            abstractionT(p) & hideT(p) & skolemizeT(p))
+            abstractionT(p) & skolemizeT(p))
           case _ => throw new IllegalArgumentException("Checked by applicable to not happen")
       }
     }
@@ -1150,7 +1149,7 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) &
-        (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
+        (LabelBranch("Close Next"), abstractionT(cutSPos) & cont)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
         case Some(f) =>
@@ -1168,7 +1167,7 @@ object HybridProgramTacticsImpl {
           }
           val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
           val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
-            hideT(cutSPos) & LabelBranch(indUseCaseLbl)
+            LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
@@ -1221,7 +1220,7 @@ object HybridProgramTacticsImpl {
       }
 
       def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) &
-        (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & cont)
+        (LabelBranch("Close Next"), abstractionT(cutSPos) & wipeContext(cutSPos, cutSPos) & cont)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
         case Some(f) =>
           val cutAPos = AntePosition(node.sequent.ante.length)
@@ -1240,7 +1239,7 @@ object HybridProgramTacticsImpl {
           }
 
           val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
-            hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
+            wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
