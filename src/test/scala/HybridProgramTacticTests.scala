@@ -886,4 +886,22 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals()(1).sequent.ante should contain only ("x=0".asFormula, "z=1".asFormula)
     result.openGoals()(1).sequent.succ should contain only ("[x:=-1;]true".asFormula, "a=b".asFormula, "c=d".asFormula)
   }
+
+  "V vacuous" should "should remove box on a simple predicate" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxVacuousT)
+    val s = sucSequent("[x:=2;]y>0".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>0".asFormula
+  }
+
+  it should "should remove box on a universally quantified predicate" in {
+    val tactic = locateSucc(HybridProgramTacticsImpl.boxVacuousT)
+    val s = sucSequent("[x:=2;](\\forall x. x>0)".asFormula)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall x. x>0".asFormula
+  }
 }

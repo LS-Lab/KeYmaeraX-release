@@ -769,6 +769,26 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for V vacuous.
+   * @return The new tactic.
+   */
+  def boxVacuousT: PositionTactic = new AxiomTactic("V vacuous", "V vacuous") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(_, _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case BoxModality(prg, phi) =>
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val subst = SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
+        val axiomInstance = Imply(phi, f)
+        Some(axiomInstance, subst)
+    }
+  }
+
+  /**
    * Creates a new axiom tactic for test [?H].
    * @return The new tactic.
    */
