@@ -5,14 +5,16 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT}
+import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT, locate}
 import BuiltinHigherTactics.stepAt
-import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT}
+import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, AxiomCloseT}
 import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
 import AxiomaticRuleTactics.goedelT
+import TacticLibrary.TacticHelper.getFormula
 
-import scala.collection.immutable.{List, Set, Seq}
+import scala.collection.immutable.List
+import scala.language.postfixOps
 
 /**
  * Implementation of arithmetic tactics.
@@ -328,7 +330,6 @@ object ArithmeticTacticsImpl {
 
 
   def NegateGreaterThanT = new PositionTactic("> negate") {
-    import TacticLibrary.TacticHelper.getFormula
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case GreaterThan(_, _, _) => true
       case Not(LessEqual(_, _, _)) => true
@@ -349,7 +350,6 @@ object ArithmeticTacticsImpl {
   }
 
   def NegateLessEqualsT = new PositionTactic("<= negate") {
-    import TacticLibrary.TacticHelper.getFormula
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case LessEqual(_, _, _) => true
       case Not(GreaterThan(_, _, _)) => true
@@ -383,11 +383,6 @@ object ArithmeticTacticsImpl {
     val Rel = new Unapplyer(rel)
     val Neg = new Unapplyer(neg)
 
-    import TacticLibrary.TacticHelper.getFormula
-    import TacticLibrary.locate
-    import PropositionalTacticsImpl.{kModalModusPonensT, NotT, ImplyT}
-    import FOQuantifierTacticsImpl.skolemizeT
-    import TacticLibrary.abstractionT
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
         case Rel(_, _, _) => true
         case Not(Neg(_, _, _)) => true
@@ -396,9 +391,6 @@ object ArithmeticTacticsImpl {
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node: ProofNode) = applies(node.sequent, p)
-
-      import PropositionalTacticsImpl.{cutT, AxiomCloseT}
-      import scala.language.postfixOps
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         def prepareKMP = new ConstructionTactic("Prepare KMP") {

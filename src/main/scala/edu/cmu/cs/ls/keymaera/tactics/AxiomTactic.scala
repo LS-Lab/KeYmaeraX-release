@@ -302,7 +302,7 @@ abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic
     override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      import TacticLibrary.{abstractionT,skolemizeT,cutT,equalityRewriting}
+      import TacticLibrary.cutT
       import scala.language.postfixOps
       constructInstanceAndSubst(getFormula(node.sequent, pos)) match {
         case Some((desiredResult, renameTactic)) =>
