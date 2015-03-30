@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
-import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
+import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyLeftT
@@ -642,7 +642,7 @@ object HybridProgramTacticsImpl {
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
                 alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
                   EquivRightT(SuccPosition(0)) & AxiomCloseT),
-              (cutUseLbl, equalityRewriting(AntePosition(anteLength), p.topLevel) &
+              (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel) &
                 hideT(AntePosition(anteLength)) & hideT(p.topLevel))
             )
         )
