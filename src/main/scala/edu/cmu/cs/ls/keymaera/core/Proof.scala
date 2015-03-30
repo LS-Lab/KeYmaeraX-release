@@ -1056,43 +1056,6 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 
 }
 
-/************************************************************************
- * Other Proof Rules
- */
-
-  /**
-   * @TODO Review. Might turn into axiom QuantifierAbstraction.
-   * @TODO Tactics should be perfectly fine using [] monotone or <> monotone instead.
-   * @TODO Replace by a tactics combining (V)  \forall x.p(x)->[a]\forall x.p(x)  with (mon) [a]\forall x.p(x)->[a]p(x) where \forall x is the universal closure with respect to all variables bound by a so that V becomes applicable.
-   */
-@deprecated("Use [] monotone and <> monotone or Goedel rule instead.")
-class AbstractionRule(pos: Position) extends PositionRule("AbstractionRule", pos) {
-  override def apply(s: Sequent): List[Sequent] = {
-    val fn = new ExpressionTraversalFunction {
-      val factory: (Seq[NamedSymbol], Formula) => Quantifier = if (pos.isAnte) Exists.apply else Forall.apply
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case BoxModality(prg, f) =>
-            val writes = StaticSemantics(prg).bv.s match {
-              case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
-              case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
-            }
-            Right(factory(writes, f))
-          case DiamondModality(prg, f) =>
-            val writes = StaticSemantics(prg).bv.s match {
-              case Left(_) => throw new IllegalArgumentException(s"Program $prg potentially writes all variables")
-              case Right(v) => scala.collection.immutable.Seq(v.toSeq: _*)
-            }
-            Right(factory(writes, f))
-          case _ => throw new InapplicableRuleException("The abstraction rule is not applicable to " + e, AbstractionRule.this, s)
-      }
-    }
-    ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
-      case Some(x: Formula) => if(pos.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case _ => throw new InapplicableRuleException("No abstraction possible for " + s(pos), this, s)
-    }
-  }
-}
-
 /*********************************************************************************
  * Congruence Rewriting Proof Rule
  *********************************************************************************
