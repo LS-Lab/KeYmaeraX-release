@@ -10,6 +10,7 @@ import BuiltinHigherTactics.stepAt
 import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT}
 import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
+import AxiomaticRuleTactics.goedelT
 
 import scala.collection.immutable.{List, Set, Seq}
 
@@ -431,10 +432,8 @@ object ArithmeticTacticsImpl {
           val ps0 = SuccPosition(0)
 
           cohideT(ps) & assertT(0, 1) & TacticLibrary.propositional & (
-            ((prepareKMP & debugT("Prepared KMP") & kModalModusPonensT(ps0) & abstractionT(ps0) & hideT(ps0) &
-              skolemizeT(ps0) & ImplyT(ps0) & TacticLibrary.propositional)*)
-              | TacticLibrary.propositional) & debugT("AFTER K/PROP") &
-            locate(baseTactic) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
+            ((prepareKMP & kModalModusPonensT(ps0) & goedelT & TacticLibrary.propositional)*)
+            | TacticLibrary.propositional) & locate(baseTactic) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
         }
 
         val pa = AntePosition(node.sequent.ante.length)
