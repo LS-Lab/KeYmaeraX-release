@@ -57,22 +57,29 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /**
-   * Extracts a subformula from its context and returns both.
-   * @param pos The position pointing to the subformula.
-   * @return A tuple (p(.), f) of context p(.) and subformula f, where p(f) is equivalent to fml.
+   * Extracts a sub-expression from its context and returns both.
+   * @param pos The position pointing to the expression.
+   * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
    */
-  def extractContext(pos: PosInExpr): (Context, Formula) = {
-    var fInContext: Option[Formula] = None
+  def extractContext(pos: PosInExpr): (Context, Expr) = {
+    var eInCtx: Option[Expr] = None
     ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
         if (p == pos) {
-          fInContext = Some(e)
+          eInCtx = Some(e)
           Right(CDotFormula)
         } else {
           Left(None)
         }
+      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+        if (p == pos) {
+          eInCtx = Some(e)
+          Right(CDot)
+        } else {
+          Left(None)
+        }
     }), fml) match {
-      case Some(f) => (new Context(f), fInContext.get)
+      case Some(f) => (new Context(f), eInCtx.get)
       case None => ???
     }
   }

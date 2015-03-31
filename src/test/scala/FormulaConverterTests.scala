@@ -39,4 +39,11 @@ class FormulaConverterTests extends FlatSpec with Matchers {
        "x=y".asFormula)
     result._1(result._2) shouldBe f
   }
+
+  it should "extract context for terms" in {
+    val f = "a=b & x=y".asFormula
+    val result = f.extractContext(PosInExpr(1::0::Nil))
+    result shouldBe (new Context(And("a=b".asFormula, Equals(Real, CDot, "y".asTerm))), "x".asTerm)
+    result._1(result._2) shouldBe f
+  }
 }
