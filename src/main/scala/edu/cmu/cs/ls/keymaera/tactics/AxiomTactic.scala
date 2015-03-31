@@ -57,15 +57,15 @@ object AxiomTactic {
    * Creates a new tactic to show an axiom by lookup.
    * @param axiomName The name of the axiom.
    * @param subst A function fml => subst to create the substitution from the current axiom form fml (an equivalence or equality).
-   * @param alpha A tactic to perform alpha renaming after substitution.
-   * @param axiomInstance A function axiom => axiomInstance to generate the axiom instance from the axiom
-   *                      form as in the axiom file (not yet alpha renamed).
+   * @param alpha A function fml => alpha to create tactic for alpha renaming after substitution from the current axiom form fml.
+   * @param axiomInstance A function (fml, axiom) => axiomInstance to generate the axiom instance from the axiom
+   *                      form as in the axiom file and the current form fml as in the sequent.
    * @return The new tactic.
    */
   def axiomLookupBaseT(axiomName: String,
                        subst: Formula => List[SubstitutionPair],
-                       alpha: PositionTactic,
-                       axiomInstance: Formula => Formula): PositionTactic = new PositionTactic(axiomName) {
+                       alpha: Formula => PositionTactic,
+                       axiomInstance: (Formula, Formula) => Formula): PositionTactic = new PositionTactic(axiomName) {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Equiv(_, _) => true
       case _ => false
@@ -78,9 +78,9 @@ object AxiomTactic {
           val axiom = Axiom.axioms.get(axiomName) match { case Some(ax) => ax }
 
           Some(
-            uniformSubstT(subst(fml), Map(fml -> axiomInstance(axiom))) &
-              assertT(0, 1) & lastSucc(assertPT(axiomInstance(axiom), "Unexpected uniform substitution result")) &
-              lastSucc(alpha) & AxiomTactic.axiomT(axiomName) &
+            uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
+              assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
+              lastSucc(alpha(fml)) & AxiomTactic.axiomT(axiomName) &
               assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &
               lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomCloseT
           )

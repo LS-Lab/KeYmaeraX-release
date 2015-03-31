@@ -58,6 +58,7 @@ object HybridProgramTacticsImpl {
     def g(f: Formula): Formula = f match {
       case BoxModality(prg, phi) => Equiv(f, Not(DiamondModality(prg, Not(phi))))
       case Not(DiamondModality(prg, Not(phi))) => Equiv(BoxModality(prg, phi), f)
+      case _ => False
     }
 
     uncoverAxiomT("[] dual", g, _ => boxDualityBaseT)
@@ -75,7 +76,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
 
-    axiomLookupBaseT("[] dual", subst, NilPT, f => f)
+    axiomLookupBaseT("[] dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
   def boxSeqGenT(q: Formula): PositionTactic = new PositionTactic("[;] generalize") {
@@ -107,6 +108,7 @@ object HybridProgramTacticsImpl {
     def g(f: Formula): Formula = f match {
       case DiamondModality(prg, phi) => Equiv(f, Not(BoxModality(prg, Not(phi))))
       case Not(BoxModality(prg, Not(phi))) => Equiv(DiamondModality(prg, phi), f)
+      case _ => False
     }
 
     uncoverAxiomT("<> dual", g, _ => diamondDualityBaseT)
@@ -124,75 +126,39 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
 
-    axiomLookupBaseT("<> dual", subst, NilPT, f => f)
+    axiomLookupBaseT("<> dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
-   * Creates a new axiom tactic for differential box assignment [x := t;]
-   *  [v':=t;]p(v') <-> p(t)
-   * @return The axiom tactic.
-   * @author Stefan Mitsch
-   */
-  def boxDerivativeAssignT = new PositionTactic("[':=] differential assign") {
-    def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case BoxModality(Assign(Derivative(_, _: Variable), _), _) => true
-      case _ => false
-    }
-
-    def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val innerMost = innerMostPos(node.sequent(p))
-        val pos = if (p.isAnte) AntePosition(p.index, innerMost) else SuccPosition(p.index, innerMost)
-        if (pos.isTopLevel) Some(boxDerivativeAssignTopLevelT(pos))
-        else Some(boxDerivativeAssignInContextT(pos))
-      }
-    }
-
-    private def innerMostPos(f: Formula): PosInExpr = f match {
-      case BoxModality(Assign(Derivative(_, _: Variable), _),
-        b@BoxModality(Assign(Derivative(_, _: Variable), _), _)) => innerMostPos(b).second
-      case _ => PosInExpr()
-    }
-  }
-
-  /**
-   * Creates a new axiom tactic for differential box assignment [x := t;], applicable only on top level positions and
-   * without nested derivative assignments
+   * Creates a new axiom tactic for differential box assignment [x := t;].
    *  [v':=t;]p(v') <-> p(t)
    * @author Nathan Fulton
    * @author Stefan Mitsch
    * @return The axiom tactic.
    *
    */
-  def boxDerivativeAssignTopLevelT = new AxiomTactic("[':=] differential assign", "[':=] differential assign") {
-    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && super.applies(s, p)
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Derivative(vSort,v:Variable), _), phi) => phi match {
-        case BoxModality(Assign(_: Derivative, _), _) => false
-        case _ => true
-      }
-      case _ => false
+  def boxDerivativeAssignT: PositionTactic = {
+    def g(f: Formula): Formula = f match {
+      case BoxModality(Assign(d@Derivative(_, _: Variable), t), p) =>
+        Equiv(f, SubstitutionHelper.replaceFree(p)(d, t))
+      case _ => False
     }
 
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p) =>
-        val g  = SubstitutionHelper.replaceFree(p)(d, t)
-        val axiomInstance = Equiv(f, g)
-
-        // substitution
+    uncoverAxiomT("[':=] differential assign", g, f => boxDerivativeAssignBaseT)
+  }
+  /** Base tactic for box derivative assignment */
+  private def boxDerivativeAssignBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
         val aT = Apply(Function("t", None, Unit, vSort), Nothing)
         val aP = ApplyPredicate(Function("p", None, vSort, Bool), CDot) //(p(t)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(d, CDot)) :: Nil
+    }
 
-        val subst = List(
-          SubstitutionPair(aT, t),
-          SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(d, CDot))
-        )
-
-        // alpha renaming
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
         val aV = Variable("v", None, vSort)
-        val alpha = new PositionTactic("Alpha") {
+        new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(Derivative(_), _), _), _) => true
             case _ => false
@@ -200,143 +166,21 @@ object HybridProgramTacticsImpl {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-
-        val (alphaAxiom, cont) = {
-          if (v.name == aV.name && v.index == aV.index) (axiom, None)
-          else (replace(axiom)(aV, v), Some(alpha))
-        }
-
-        Some(alphaAxiom, axiomInstance, subst, None, cont)
-      case _ => throw new Exception("Tactic was not applicable")
-    }
-  }
-
-  /**
-   * Creates a new axiom tactic for differential box assignment [v':=t;]p(v') <-> p(t), in some context
-   * @return The new tactic
-   * @author Stefan Mitsch
-   */
-  def boxDerivativeAssignInContextT = new DerivativeAxiomInContextTactic("[':=] differential assign", "[':=] differential assign") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isTopLevel && super.applies(s, p)
-    override def applies(f: Formula) = f match {
-      case BoxModality(Assign(Derivative(_, _), _), _) => true
-      case _ => false
     }
 
-    import PropositionalTacticsImpl.uniformSubstT
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula) = f match {
-      case b@BoxModality(Assign(dv@Derivative(sort, v: Variable), t), phi) =>
-        val aV = Variable("v", None, Real)
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-
-        val desiredResult = SubstitutionHelper.replaceFree(phi)(dv, t)
-
-        val usubst = uniformSubstT(List(SubstitutionPair(aT, t),
-          SubstitutionPair(aP, SubstitutionHelper.replaceFree(phi)(dv, CDot))),
-          Map(Equiv(b, desiredResult) -> replace(axiom)(aV, v)))
-
-        val alpha = assertT(0, 1) & (
-          if (v.name != aV.name || v.index != aV.index) globalAlphaRenamingT(v.name, v.index, aV.name, aV.index)
-          else NilT)
-
-        Some(desiredResult, Some(usubst & alpha))
-      case _ => None
-    }
-  }
-
-
-  def boxDerivativeAssignTold: PositionTactic = new AxiomTactic("[':=] differential assign equational", "[':=] differential assign equational") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Derivative(_,Variable(_)),_),_) => true
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
+        val aV = Variable("v", None, vSort)
+        if (v.name == aV.name && v.index == aV.index) axiom
+        else replace(axiom)(aV, v)
     }
 
-    /**
-     * [v' := t;]p(v') <-> \forall v_newIndex . (v'=t -> p(v'))
-     *
-     * This methods constructs the axiom before the renaming, axiom instance, substitution to be performed and a tactic
-     * that performs the renaming.
-     *
-     * An axiom tactic performs the following steps (Hilbert style):
-     * 1. Guess axiom
-     * 2. Rename bound variables to match the instance we want
-     * 3. Perform Uniform substitution to instantiate the axiom
-     *
-     * Axioms usually have the form ax = OP(a, b). The constructed instance either has the form OP(f, g) or OP(g, f).
-     * Here, f is an input to this function and g is derived from the axiom to be used. The output of this function
-     * should be 4 things:
-     * 1. The form of the axiom before apply the tactic provided in 4
-     * 2. The instance of the axiom eventually to be used in the proof
-     * 3. The substitution to turn 2 into 1
-     * 4. A tactic to turn the result of 3 into the actual axiom
-     *
-     * In the long run all this should be computed by unification.
-     *
-     * @param f the formula that should be rewritten using the axiom
-     * @param axiom the axiom to be used
-     * @return (Axiom before executing the given position tactic;
-     *         the instance of the axiom,
-     *         the uniform substitution that transforms the first into the second axiom (Hilbert style);
-     *         an optional position tactic that transforms the first
-     *         argument into the actual axiom (usually alpha renaming)).
-     * @see #constructInstanceAndSubst(Formula)
-     */
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, List[SubstitutionPair],
-        Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(Assign(dv@Derivative(sort, v: Variable), t), p) => {
-        // Construct the axiom substitution.
-        val axiomV = Variable("v", None, sort)
-        val axiomDV = Derivative(sort, axiomV)
-        val axiomT = Apply(Function("t", None, Unit, sort), Nothing)
-        val axiomP = Function("p", None, sort, Bool)
-        // substitution in axiom = [v' := t;]p(v') <-> \forall v . (v'=t -> p(v'))
-        val substitution = List(
-            new SubstitutionPair(axiomDV, dv),
-            new SubstitutionPair(axiomT, t),
-            new SubstitutionPair(ApplyPredicate(axiomP, CDot), SubstitutionHelper.replaceFree(p)(dv, CDot))
-          )
-
-        //construct the RHS of the axiom instance: \forall v . (v'=t -> p(v'))
-        val fv = TacticHelper.freshNamedSymbol(v, f)
-        val dfv = Derivative(Real, fv)
-        val g = Forall(Seq(fv), Imply(Equals(Real, dfv, t), replaceFree(p)(dv, dfv)))
-
-        val axiomInstance = Equiv(f, g)
-
-        // Construct the axiom, but ensure the naming is correct.
-        def alpha(left: Boolean) = new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(Derivative(_, _), _), _), Forall(_, _)) => true
-            case _ => false
-          }
-
-          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              if(left)
-                Some(alphaRenamingT(v.name, v.index, axiomV.name, axiomV.index)(p.first)
-                  & alphaRenamingT(fv.name, fv.index, axiomV.name, axiomV.index)(p.second))
-              else
-                Some(alphaRenamingT(fv.name, fv.index, axiomV.name, axiomV.index)(p.second))
-
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-          }
-        }
-
-        val Equiv(left, right) = axiom
-        val (alphaAxiom, cont) = {
-          if (v.name == axiomV.name && v.index == axiomV.index)
-            (Equiv(left, replaceFree(right)(axiomV, fv)), Some(alpha(left = false)))
-          else (Equiv(replaceFree(left)(axiomV, v, None), replaceFree(right)(axiomV, fv)), Some(alpha(left = true)))
-        }
-
-        Some(alphaAxiom, axiomInstance, substitution, None, cont)
-      }
-    }
+    axiomLookupBaseT("[':=] differential assign", subst, alpha, axiomInstance)
   }
 
   /**
@@ -501,7 +345,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(f)(t, CDot)) :: Nil
     }
 
-    val alpha: PositionTactic = {
+    def alpha(fml: Formula): PositionTactic = {
       val aV = Variable("v", None, Real)
       new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
@@ -518,7 +362,7 @@ object HybridProgramTacticsImpl {
       }
     }
 
-    def axiomInstance(axiom: Formula): Formula = {
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
       val Equiv(left, right) = axiom
       val aV = Variable("v", None, Real)
       Equiv(replace(left)(aV, v), right)
@@ -555,7 +399,7 @@ object HybridProgramTacticsImpl {
     }
 
     val aV = Variable("v", None, Real)
-    val alpha: PositionTactic = {
+    def alpha(fml: Formula): PositionTactic = {
       new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Equiv(BoxModality(Assign(_, _), _), _) => true
@@ -571,7 +415,7 @@ object HybridProgramTacticsImpl {
       }
     }
 
-    def axiomInstance(axiom: Formula): Formula = {
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
       val Equiv(left, right) = axiom
       Equiv(replace(left)(aV, v), right)
     }
