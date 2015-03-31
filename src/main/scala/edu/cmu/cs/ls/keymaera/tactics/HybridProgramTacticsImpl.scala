@@ -54,36 +54,28 @@ object HybridProgramTacticsImpl {
     }
   }
 
-  def boxDualityT: PositionTactic = new AxiomTactic("[] dual", "[] dual") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(_, _) => true
-      case Not(DiamondModality(_, Not(_))) => true
-      case _ => false
+  def boxDualityT: PositionTactic = {
+    def g(f: Formula): Formula = f match {
+      case BoxModality(prg, phi) => Equiv(f, Not(DiamondModality(prg, Not(phi))))
+      case Not(DiamondModality(prg, Not(phi))) => Equiv(BoxModality(prg, phi), f)
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BoxModality(prg, phi) =>
+    uncoverAxiomT("[] dual", g, _ => boxDualityBaseT)
+  }
+  /* Base tactic for boxDualityT */
+  private def boxDualityBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BoxModality(prg, phi), _) =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val subst =
-          SubstitutionPair(aA, prg) ::
-            SubstitutionPair(aP, phi) :: Nil
-
-        val axiomInstance = Equiv(f, Not(DiamondModality(prg, Not(phi))))
-
-        Some(axiomInstance, subst)
-      case Not(DiamondModality(prg, Not(phi))) =>
+        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
+      case Equiv(Not(DiamondModality(prg, Not(phi))), _) =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val subst =
-          SubstitutionPair(aA, prg) ::
-            SubstitutionPair(aP, phi) :: Nil
-
-        val axiomInstance = Equiv(BoxModality(prg, phi), f)
-
-        Some(axiomInstance, subst)
-      case _ => None
+        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
+
+    axiomLookupBaseT("[] dual", subst, NilPT, f => f)
   }
 
   def boxSeqGenT(q: Formula): PositionTactic = new PositionTactic("[;] generalize") {
