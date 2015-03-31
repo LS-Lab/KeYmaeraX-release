@@ -111,37 +111,28 @@ object HybridProgramTacticsImpl {
     }
   }
 
-
-  def diamondDualityT: PositionTactic = new AxiomTactic("<> dual", "<> dual") {
-    override def applies(f: Formula): Boolean = f match {
-      case DiamondModality(_, _) => true
-      case Not(BoxModality(_, Not(_))) => true
-      case _ => false
+  def diamondDualityT: PositionTactic = {
+    def g(f: Formula): Formula = f match {
+      case DiamondModality(prg, phi) => Equiv(f, Not(BoxModality(prg, Not(phi))))
+      case Not(BoxModality(prg, Not(phi))) => Equiv(DiamondModality(prg, phi), f)
     }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case DiamondModality(prg, phi) =>
+    uncoverAxiomT("<> dual", g, _ => diamondDualityBaseT)
+  }
+  /* Base tactic for diamondDualityT */
+  private def diamondDualityBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(DiamondModality(prg, phi), _) =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val subst =
-          SubstitutionPair(aA, prg) ::
-          SubstitutionPair(aP, phi) :: Nil
-
-        val axiomInstance = Equiv(f, Not(BoxModality(prg, Not(phi))))
-
-        Some(axiomInstance, subst)
-      case Not(BoxModality(prg, Not(phi))) =>
+        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
+      case Equiv(Not(BoxModality(prg, Not(phi))), _) =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val subst =
-          SubstitutionPair(aA, prg) ::
-          SubstitutionPair(aP, phi) :: Nil
-
-        val axiomInstance = Equiv(DiamondModality(prg, phi), f)
-
-        Some(axiomInstance, subst)
-      case _ => None
+        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
+
+    axiomLookupBaseT("<> dual", subst, NilPT, f => f)
   }
 
   /**
