@@ -98,18 +98,18 @@ object HybridProgramTacticsImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case BoxModality(Sequence(a, b), phi) => true
-        Some(boxSeqT(p) & cutT(Some(BoxModality(a, q))) & onBranch(
-          // boxSeqT will move its result into last succ, cut later moves one behind
-          (cutShowLbl, hideT(SuccPosition(node.sequent.succ.length - 1))),
-          (cutUseLbl,
-            // cut shows up at last ante
-            (0 until node.sequent.ante.length).foldRight(NilT)((i, t) => t & hideT(AntePosition(i))) &
-            // boxSeqT will move programs into last succ
-            (0 until node.sequent.succ.length - 1).foldRight(NilT)((i, t) => t & hideT(SuccPosition(i))) &
-            boxMonotoneT
-            )
-        ))
+        case BoxModality(Sequence(a, b), phi) =>
+          Some(boxSeqT(p) & cutT(Some(BoxModality(a, q))) & onBranch(
+            // boxSeqT will move its result into last succ, cut later moves one behind
+            (cutShowLbl, hideT(SuccPosition(node.sequent.succ.length - 1))),
+            (cutUseLbl,
+              // cut shows up at last ante
+              (0 until node.sequent.ante.length).foldRight(NilT)((i, t) => t & hideT(AntePosition(i))) &
+              // boxSeqT will move programs into last succ
+              (0 until node.sequent.succ.length - 1).foldRight(NilT)((i, t) => t & hideT(SuccPosition(i))) &
+              boxMonotoneT
+              )
+          ))
       }
     }
   }
