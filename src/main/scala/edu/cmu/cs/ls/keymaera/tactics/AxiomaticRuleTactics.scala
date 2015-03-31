@@ -18,14 +18,14 @@ object AxiomaticRuleTactics {
    * Creates a new tactic for CE equivalence congruence rewriting.
    * @return The newly created tactic.
    */
-  def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE equivalence congruence") { outer =>
+  def equivalenceCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CE congruence") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
+      (node.sequent.succ.head match {
         case Equiv(p, q) => p.extractContext(inEqPos)._1 == q.extractContext(inEqPos)._1
         case _ => false
       })
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
       case Equiv(lhs, rhs) =>
         val (ctxP, p) = lhs.extractContext(inEqPos)
         val (ctxQ, q) = rhs.extractContext(inEqPos)
@@ -34,8 +34,8 @@ object AxiomaticRuleTactics {
         val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
         val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
         val cX = ApplyPredicational(Function("ctx_", None, Bool, Bool), CDotFormula)
-        val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("CE equivalence congruence", s)) {
+        val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("CE congruence", s)) {
           override def applicable(node: ProofNode): Boolean = outer.applicable(node)
         })
     }
