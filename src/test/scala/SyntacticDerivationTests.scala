@@ -127,7 +127,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only innerFormula
   }
 
-  def innerOuterTest(innerFormula:Formula, outerFormula:Formula, axTactic:TermAxiomTactic) = {
+  def innerOuterTest(innerFormula:Formula, outerFormula:Formula, axTactic:PositionTactic with ApplicableAtTerm) = {
     //first one direction.
     val node = helper.formulaToNode(outerFormula)
     val tactic = axTactic(SuccPosition(0, PosInExpr(0 :: Nil)))
@@ -166,8 +166,10 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val pos = SuccPosition(0, PosInExpr(0 :: Nil))
 //    val tactic = TermSyntacticDerivationT(pos)
     val tactic = TacticLibrary.ClosureT(TermSyntacticDerivationT)(pos)
-    helper.runTactic(tactic,node)
-    require(containsOpenGoal(node, helper.parseFormula("n*m + (a'+b') + 1 + c^n = a^2 + 2"))) //again, nonsense...
+    val result = helper.runTactic(tactic,node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + (a'+b') + 1 + c^n = a^2 + 2".asFormula //again, nonsense...
   }
 
   it should "work for -y" in {

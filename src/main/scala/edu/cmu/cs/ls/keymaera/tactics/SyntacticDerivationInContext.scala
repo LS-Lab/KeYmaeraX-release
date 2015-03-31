@@ -567,46 +567,74 @@ object SyntacticDerivationInContext {
    *  (s + t)' = (s') + (t')
    * End.
    */
-  def AddDerivativeT = new TermAxiomTactic("+' derive sum","+' derive sum") {
+  def AddDerivativeT = new PositionTactic("+' derive sum") with ApplicableAtTerm {
+    override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
     override def applies(t: Term): Boolean = t match {
-      case Derivative(sort, Add(sort2, _, _)) => sort == sort2
+      case Derivative(sort, Add(sort2, _, _)) => true
+      //      case Add(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
+        case t@Derivative(sort, Add(sort2, f, g)) =>
+          val r = Add(sort, Derivative(sort, f), Derivative(sort, g))
+          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
+
+          Some(cutEqualsInContext(Equals(sort, t, r), p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
+              equationCongruenceT(termCtxPos) & lastSucc(AddDerivativeBaseT)),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+          ))
+      }
+    }
+  }
+
+  def AddDerivativeBaseT = new PositionTactic("+' derive sum") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Equals(_, Derivative(sort, Add(sort2, _, _)), _) => sort == sort2
 //      case Add(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
     }
 
-    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
-      term match {
-        case Derivative(dSort, Add(aSort, f, g)) => {
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case fml@Equals(_, Derivative(dSort, Add(aSort, f, g)), _) => {
           val sort = aSort; assert(dSort == aSort)
 
           val aF = Apply(Function("f", None, sort, sort), Anything)
           val aG = Apply(Function("g", None, sort, sort), Anything)
+          val subst = SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
 
-          val right = Add(sort, Derivative(sort, f), Derivative(sort, g))
-          val axiomInstance = Equals(sort, term, right)
+          val axiom = Axiom.axioms.get("+' derive sum") match { case Some(f) => f }
 
-          val subst = List(
-            SubstitutionPair(aF, f),
-            SubstitutionPair(aG, g)
-          )
-
-          Some(axiomInstance, subst)
+          // return tactic
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("+' derive sum") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
         }
-        case Add(aSort, Derivative(fSort, f), Derivative(gSort, g)) => {
+        case fml@Equals(_, Add(aSort, Derivative(fSort, f), Derivative(gSort, g)), _) => {
           val sort = aSort; assert(aSort == fSort && aSort == gSort)
 
           val aF = Apply(Function("f", None, sort, sort), Anything)
           val aG = Apply(Function("g", None, sort, sort), Anything)
+          val subst = SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
 
-          val left = Derivative(sort, Add(sort, f, g))
-          val axiomInstance = Equals(sort, left, term)
+          val axiom = Axiom.axioms.get("+' derive sum") match { case Some(f) => f }
 
-          val subst = List(
-            SubstitutionPair(aF, f),
-            SubstitutionPair(aG, g)
-          )
-
-          Some(axiomInstance, subst)
+          // return tactic
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("+' derive sum") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
         }
       }
     }

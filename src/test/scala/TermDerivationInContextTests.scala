@@ -54,7 +54,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val orig = helper.parseFormula("[x':=1;](1+1)'=0");
     val expected = helper.parseFormula("[x':=1;]1'+1'=0");
     val position = PosInExpr(1 :: 0 :: Nil)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.AddDerivativeInContextT)
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.AddDerivativeT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node, true)
     containsOnlyExactlyOpenGoal(node, expected) shouldBe true
@@ -64,7 +64,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val orig = helper.parseFormula("[x':=1;](x+1)'=0");
     val expected = helper.parseFormula("[x':=1;]x'+1'=0");
     val position = PosInExpr(1 :: 0 :: Nil)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.AddDerivativeInContextT)
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.AddDerivativeT)
     val node = helper.formulaToNode(orig)
     helper.runTactic(tactic, node, true)
     containsOnlyExactlyOpenGoal(node, expected) shouldBe true

@@ -114,33 +114,6 @@ object SyntacticDerivativeTermAxiomsInContext {
     }
   }
 
-  def AddDerivativeInContextT = new PositionTactic("Add Derivative in context") {
-    val theTactic = AddDerivativeT
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getTermAtPosition(s(p), p.inExpr) match {
-        case Some(term) => theTactic.applies(term)
-        case None => false
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
-        case Some(term) => term match {
-          case Derivative(dSort, Add(stSort, s, t)) => {
-            val replacement = Add(dSort, Derivative(stSort, s), Derivative(stSort, t))
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
-
-            Some(contextTactic(p))
-          }
-          case _ => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
   def SubtractDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
     val theTactic = SubtractDerivativeT
 
@@ -173,7 +146,7 @@ object SyntacticDerivativeTermAxiomsInContext {
     def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext ::
       ConstantFnDerivativeInContextT ::
       SyntacticDerivativeProofRulesInContext.PowerDerivativeInContext :: SubtractDerivativeInContextT ::
-      AddDerivativeInContextT :: NegativeDerivativeT :: MultiplyDerivativeInContextT ::
+      AddDerivativeT :: NegativeDerivativeT :: MultiplyDerivativeInContextT ::
       DivideDerivativeInContextT :: Nil
 
     def applicableTactic(s : Sequent, p : Position) = {
