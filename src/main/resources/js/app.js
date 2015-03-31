@@ -61,6 +61,10 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/proof.html',
         controller: 'ProofCtrl'
       }).
+      when('/prooftree/:proofId', {
+        templateUrl: 'partials/prooftree-hacms.html',
+        controller: 'HACMSTreeCtrl'
+      }).
       when('/dev', {
         templateUrl: 'partials/dev.html',
         controller: 'DevCtrl'

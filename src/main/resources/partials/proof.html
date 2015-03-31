@@ -34,15 +34,16 @@
             </tab>
             <tab ng-click="fetchHistory()">
                 <tab-heading>
-                    <i class="fa fa-sitemap"></i> Overview
+                    <i class="fa fa-tasks"></i> Overview
                 </tab-heading>
-                <!--<div ng-include="'partials/nodes-renderer.html'"></div>-->
+
                 <div ng-include="'partials/proofhistory.html'"></div>
             </tab>
             <!--<tab>-->
                 <!--<tab-heading>-->
-                    <!--<i class="fa fa-tasks"></i> Progress-->
+                    <!--<i class="fa fa-sitemap"></i> Proof Tree-->
                 <!--</tab-heading>-->
+                <!--<div ng-include="'partials/nodes-renderer.html'"></div>-->
             <!--</tab>-->
         </tabset>
     </div>
@@ -72,4 +73,6 @@
         </div>
     </div>
 
+
+    <div ng-bind-html="hacmstree" bgcolor="grey"></div>
 </div>

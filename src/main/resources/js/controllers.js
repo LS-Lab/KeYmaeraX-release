@@ -490,8 +490,42 @@ keymaeraProofControllers.controller('ProofCtrl',
     $scope.$emit('routeLoaded', {theview: 'proofs/:proofId'});
   });
 
+keymaeraProofControllers.controller('HACMSTreeCtrl',
+  function($scope, $http, $cookies, $routeParams) {
+    $scope.proofId = $routeParams.proofId;
+
+$scope.treeContents = "asdf"
+    { //grab tree data.
+        var uri = "/proofs/user/" + $cookies.userId + "/" + $routeParams.proofId + "/tree/"
+        $http.get(uri)
+            .success(function(data) {
+                $scope.treeContents = printNode(data);
+            })
+            .error(function() {
+                alert("error encountered while trying to retrieve the tree.")
+            })
+    }
+
+
+    var printNode = function(n) {
+        if(n === null) {
+            return "Could not load proof tree."
+        }
+        var childrenResults;
+        if(n.children.length > 0) {
+            childrenResults = "<ol>" + n.children.map(printNode) + "</ol>"
+        }
+        else {
+            childrenResults = ""
+        }
+        return "<li>" + n.label + childrenResults + "</li>"
+    };
+
+    $scope.$emit('routeLoaded', {theview: '/prooftree/:proofId'})
+  });
+
 keymaeraProofControllers.controller('TaskListCtrl',
-  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $modal, Agenda, Tactics) {
+  function($rootScope, $scope, $http, $cookies, $routeParams, $q, $modal, $sce, Agenda, Tactics) {
     $scope.proofId = $routeParams.proofId;
 
     $scope.fetchAgenda = function(userId, proofId) {
@@ -732,7 +766,27 @@ keymaeraProofControllers.controller('TaskListCtrl',
 
 //        $http.get(uri)
 //            .success(function(data) {
-//                $scope.treedata = data;
+//                    var printNode = function(n) {
+//                        if(n === null) {
+//                            return "Could not load proof tree."
+//                        }
+//                        var childrenResults;
+//                        if(n.children.length > 0) {
+//                            childrenResults = "<ol>" + n.children.map(printNode) + "</ol>"
+//                        }
+//                        else {
+//                            childrenResults = ""
+//                        }
+//                        return "<li>" + n.label + childrenResults + "</li>"
+//                    };
+//                    $scope.treedata = data
+//
+//                    var perNode = ""
+//                    for(var i =0; i<data.length; i++) {
+//                        perNode += printNode(data[i])
+//                    };
+//
+//                    $scope.hacmstree = $sce.trustAsHtml("<ol>" + perNode + "</ol>") //Security!!!
 //            })
 //            .error(function() {
 //                alert("error encountered while trying to retrieve the tree.")

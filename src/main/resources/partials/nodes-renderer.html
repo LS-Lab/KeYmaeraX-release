@@ -1,35 +1,37 @@
-<script type="text/ng-template" id="nodes_renderer.html">
-    <div ng-class="{'tree-node-selected tree-node-content': selectedTask.nodeId == node.id, 'tree-node tree-node-content': selectedTask.nodeId !== node.id}">
-        <a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" ng-click="toggle(this)">
-            <span class="fa" ng-class="{'fa-chevron-right': collapsed, 'fa-chevron-down': !collapsed}"></span>
-        </a>
-        <span ng-class="{'btn btn-danger btn-xs': node.label == 'Open Goal', 'btn btn-success btn-xs': node.label !== 'Open Goal'}" ng-if="!node.children || node.children.length <= 0">
-            <span class="fa fa-leaf"></span>
-        </span>
+<!--<script type="text/ng-template" id="nodes_renderer.html">-->
+    <!--<div ng-class="{'tree-node-selected tree-node-content': selectedTask.nodeId == node.id, 'tree-node tree-node-content': selectedTask.nodeId !== node.id}">-->
+        <!--<a class="btn btn-inverse btn-xs" ng-if="node.children && node.children.length > 0" ng-click="toggle(this)">-->
+            <!--<span class="fa" ng-class="{'fa-chevron-right': collapsed, 'fa-chevron-down': !collapsed}"></span>-->
+        <!--</a>-->
+        <!--<span ng-class="{'btn btn-danger btn-xs': node.label == 'Open Goal', 'btn btn-success btn-xs': node.label !== 'Open Goal'}" ng-if="!node.children || node.children.length <= 0">-->
+            <!--<span class="fa fa-leaf"></span>-->
+        <!--</span>-->
 
-        <span ng-show="!node.editing" >
-            <a href="" ng-click="click(node)"><span>{{node.label}}</span></a>
-            <a href="" class="btn btn-xs pull-right" ng-click="editLabel(node)"><i class="fa fa-pencil"></i></a>
-        </span>
-        <span class="group-title" ng-show="node.editing">
-            <form class="form-inline" role="form">
-                <span class="form-group">
-                    <label class="sr-only" for="nodeLabel">Proof Node Label</label>
-                    <input type="text" id="nodeLabel" class="form-control input-sm" placeholder="{{ node.label }}" ng-model="node.label">
-                </span>
-                <a href="" class="btn btn-default btn-xs" type="submit" ng-click="saveLabel(node)">Save</a>
-                <a href="" class="btn btn-default btn-xs" type="submit" ng-click="cancelEditing(node)">Cancel</a>
-            </form>
-        </span>
-    </div>
-    <ol ui-tree-nodes="" ng-model="node.children" ng-class="{hidden: collapsed}">
-        <li ng-repeat="node in node.children" ui-tree-node ng-include="'nodes_renderer.html'" data-nodrag>
-        </li>
-    </ol>
-</script>
+        <!--<span ng-show="!node.editing" >-->
+            <!--<a href="" ng-click="click(node)"><span>{{node.label}}</span></a>-->
+            <!--<a href="" class="btn btn-xs pull-right" ng-click="editLabel(node)"><i class="fa fa-pencil"></i></a>-->
+        <!--</span>-->
+        <!--<span class="group-title" ng-show="node.editing">-->
+            <!--<form class="form-inline" role="form">-->
+                <!--<span class="form-group">-->
+                    <!--<label class="sr-only" for="nodeLabel">Proof Node Label</label>-->
+                    <!--<input type="text" id="nodeLabel" class="form-control input-sm" placeholder="{{ node.label }}" ng-model="node.label">-->
+                <!--</span>-->
+                <!--<a href="" class="btn btn-default btn-xs" type="submit" ng-click="saveLabel(node)">Save</a>-->
+                <!--<a href="" class="btn btn-default btn-xs" type="submit" ng-click="cancelEditing(node)">Cancel</a>-->
+            <!--</form>-->
+        <!--</span>-->
+    <!--</div>-->
+    <!--<ol ui-tree-nodes="" ng-model="node.children" ng-class="{hidden: collapsed}">-->
+        <!--<li ng-repeat="node in node.children" ui-tree-node ng-include="'nodes_renderer.html'" data-nodrag>-->
+        <!--</li>-->
+    <!--</ol>-->
+<!--</script>-->
 
-<div ui-tree id="proofTree" nodrag>
-    <ol ui-tree-nodes ng-model="treedata" nodrag>
-        <li ng-repeat="node in treedata" ui-tree-node ng-include="'nodes_renderer.html'" data-nodrag></li>
-    </ol>
-</div>
+<!--<div ui-tree id="proofTree" nodrag>-->
+    <!--<ol ui-tree-nodes ng-model="treedata" nodrag>-->
+        <!--<li ng-repeat="node in treedata" ui-tree-node ng-include="'nodes_renderer.html'" data-nodrag></li>-->
+    <!--</ol>-->
+<!--</div>-->
+
+<div ng-bind-html="hacmstree"></div>
