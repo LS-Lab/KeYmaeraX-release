@@ -186,12 +186,14 @@ class SDTests extends TacticTestSuite {
   }
 
   "constant derivation" should "work" in {
-    val f = helper.parseFormula("[x := 0;] (2)'=0")
+    val f = "[x := 0;] (2)'=0".asFormula
     val node = helper.formulaToNode(f)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext)
+    val tactic = SearchTacticsImpl.locateTerm(ConstantDerivativeT)
     helper.runTactic(tactic, node)
     containsOpenGoal(node, helper.parseFormula("[x := 0;]0=0")) shouldBe true
     node.openGoals().length shouldBe 1
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x := 0;] 0=0".asFormula
   }
 
   "Failure scenarios from dsolve" should "be fixed for the failure case from x'=v,v'=a (using multiplyderivative)" in {

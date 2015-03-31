@@ -458,27 +458,73 @@ object SyntacticDerivationInContext {
    *   c()' = 0
    * End.
    */
-  def ConstantFnDerivativeT = new TermAxiomTactic("c()' derive constant fn","c()' derive constant fn") {
+  def ConstantDerivativeT = new PositionTactic("c()' derive constant fn") with ApplicableAtTerm {
+    override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
     override def applies(t: Term): Boolean = t match {
-      case Derivative(dSort, Apply(Function(_, _, Unit, nSort), Nothing)) => dSort == nSort
+      case Derivative(Real, Number(_, _)) => true
+      case Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) => true
       case _ => false
     }
 
-    override def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
-      t match {
-        case Derivative(dSort, s@Apply(Function(n, i, Unit, nSort), Nothing)) if dSort == nSort => {
-          val sort = nSort
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
+        case t@Derivative(Real, Number(_, _)) =>
+          val r = Number(0)
+          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          val aS = Apply(Function("c", None, Unit, sort), Nothing)
+          Some(cutEqualsInContext(Equals(Real, t, r), p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
+              equationCongruenceT(termCtxPos) & lastSucc(ConstantDerivativeBaseT)),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+          ))
+        case t@Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) =>
+          val r = Number(0)
+          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          val subst = List(SubstitutionPair(aS, s))
+          Some(cutEqualsInContext(Equals(Real, t, r), p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
+              equationCongruenceT(termCtxPos) & lastSucc(ConstantDerivativeBaseT)),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+          ))
+      }
+    }
+  }
 
-          val right = Number(0)
-          val axiomInstance = Equals(sort, t, right)
+  def ConstantDerivativeBaseT = new PositionTactic("c()' derive constant fn") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Equals(_, Derivative(Real, Number(_, _)), _) => true
+      case Equals(_, Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)), _) => true
+      case _ => false
+    }
 
-          Some(axiomInstance, subst)
-        }
-        case _ => None
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case fml@Equals(_, Derivative(Real, s@Number(_, _)), _) =>
+          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+          val subst = List(SubstitutionPair(aC, s))
+          val axiom = Axiom.axioms.get("c()' derive constant fn") match { case Some(ax) => ax }
+
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
+        case fml@Equals(_, Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing)), _) =>
+          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+          val subst = List(SubstitutionPair(aC, s))
+          val axiom = Axiom.axioms.get("c()' derive constant fn") match { case Some(ax) => ax }
+
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
       }
     }
   }
@@ -704,40 +750,11 @@ object SyntacticDerivationInContext {
     (SearchTacticsImpl.locateTerm(ConstantDerivativeT, inAnte = false) *) ~
     (SearchTacticsImpl.locateTerm(PowerDerivativeT, inAnte = false) *)
 
-  def ConstantDerivativeT = new TermAxiomTactic("c()' derive constant fn", "c()' derive constant fn") {
-    override def applies(term: Term): Boolean = term match {
-      case Derivative(Real, Number(_, _)) => true
-      case Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) => true
-      case _ => false
-    }
-
-    override def constructInstanceAndSubst(term: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
-      term match {
-        case f@Derivative(Real, s@Number(_, _)) =>
-          // construct substitution
-          val aC = Apply(Function("c", None, Unit, Real), Nothing)
-          val l = List(new SubstitutionPair(aC, s))
-          val g = Number(0)
-          val axiomInstance = Equals(Real, f, g)
-          Some(axiomInstance, l)
-        case f@Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing)) =>
-          // construct substitution
-          val aC = Apply(Function("c", None, Unit, Real), Nothing)
-          val l = List(new SubstitutionPair(aC, s))
-          val g = Number(0)
-          val axiomInstance = Equals(Real, f, g)
-          Some(axiomInstance, l)
-        case _ => None
-      }
-    }
-  }
-
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Atomize for Term Tactics @todo
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //@todo So that when this gets refactored we're not stuck changing a bunch of stuff.
-  def ConstantFnDerivativeAtomizeT = ConstantFnDerivativeT
   def NegativeDerivativeAtomizeT = NegativeDerivativeT
   def AddDerivativeAtomizeT      = AddDerivativeT
   def SubtractDerivativeAtomizeT = SubtractDerivativeT
@@ -755,7 +772,6 @@ object SyntacticDerivationInContext {
    */
   val termDerivativeTactics : List[PositionTactic with ApplicableAtTerm] =
     NegativeDerivativeAtomizeT ::
-      ConstantFnDerivativeAtomizeT ::
       AddDerivativeAtomizeT ::
       SubtractDerivativeAtomizeT ::
       MultiplyDerivativeAtomizeT ::
@@ -1038,7 +1054,7 @@ object SyntacticDerivationInContext {
       }}
     }
 
-    override def apply(p: Position): Tactic =  PowerDerivativeT(p) ~ SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext(p)
+    override def apply(p: Position): Tactic =  PowerDerivativeT(p) ~ ConstantDerivativeT(p)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

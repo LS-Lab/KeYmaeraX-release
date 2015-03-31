@@ -18,36 +18,6 @@ object SyntacticDerivativeProofRulesInContext {
   import TacticLibrary._
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Proof rule implementations.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  def ConstantDerivativeInContext = new PositionTactic("Constant Derivative in context") {
-    val theTactic : PositionTactic with ApplicableAtTerm = ConstantDerivativeT
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getTermAtPosition(s(p), p.inExpr) match {
-        case Some(term) => theTactic.applies(term)
-        case None => false
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
-        case Some(term) => term match {
-          case Derivative(dSort, Number(nsort, n)) => {
-            val replacement = Number(nsort, 0)
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
-            Some(contextTactic(p))
-          }
-          case _ => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Copy-pasted, in case changes are necessary:
 
   /**
