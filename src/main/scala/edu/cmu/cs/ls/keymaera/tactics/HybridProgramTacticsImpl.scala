@@ -552,7 +552,7 @@ object HybridProgramTacticsImpl {
 
     uncoverAxiomT(name, axiomInstance, f => substitutionAssignBaseT(name, mod))
   }
-
+  /** Base tactic for substitution assignment */
   private def substitutionAssignBaseT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
     val BDModality = new ModalityUnapplyer(mod)
 
@@ -595,20 +595,22 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for V vacuous.
    * @return The new tactic.
    */
-  def boxVacuousT: PositionTactic = new AxiomTactic("V vacuous", "V vacuous") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(_, _) => true
-      case _ => false
+  def boxVacuousT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BoxModality(prg, phi) => Imply(phi, fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BoxModality(prg, phi) =>
+    uncoverAxiomT("V vacuous", axiomInstance, _ => boxVacuousBaseT)
+  }
+  /** Base tactic for box vacuous */
+  private def boxVacuousBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(_, BoxModality(prg, phi)) =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-        val subst = SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
-        val axiomInstance = Imply(phi, f)
-        Some(axiomInstance, subst)
+        SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
+    axiomLookupBaseT("V vacuous", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
