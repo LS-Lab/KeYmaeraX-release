@@ -518,7 +518,7 @@ object HybridProgramTacticsImpl {
         SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(f)(t, CDot)) :: Nil
     }
 
-    def alpha: PositionTactic = {
+    val alpha: PositionTactic = {
       val aV = Variable("v", None, Real)
       new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
@@ -549,33 +549,31 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  def nonAbbrvDiscreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new AxiomTactic("[:=] vacuous assign", "[:=] vacuous assign") {
-    override def applies(f: Formula): Boolean = true
-
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = {
-      // TODO check that axiom is of the expected form [v:=t]p <-> p
-      // construct substitution
-      val aT = Apply(Function("t", None, Unit, Real), Nothing)
-      val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-      val l = List(new SubstitutionPair(aT, t), new SubstitutionPair(aP, f))
-
-      // check specified name, or construct a new name for the ghost variable if None
-      val v = ghost match {
-        case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
-        case None => t match {
-          case v: Variable => TacticHelper.freshNamedSymbol(v, f)
-          case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
-        }
+  def nonAbbrvDiscreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = {
+    def ghostV(f: Formula): Variable = ghost match {
+      case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
+      case None => t match {
+        case v: Variable => TacticHelper.freshNamedSymbol(v, f)
+        case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
       }
+    }
 
-      // construct axiom instance: [v:=t]p(v) <-> p(t)
-      val g = BoxModality(Assign(v, t), f)
-      val axiomInstance = Equiv(g, f)
+    def g(f: Formula) = Equiv(BoxModality(Assign(ghostV(f), t), f), f)
 
-      // rename to match axiom if necessary
-      val aV = Variable("v", None, Real)
-      val alpha = new PositionTactic("Alpha") {
+    uncoverAxiomT("[:=] vacuous assign", g, f => nonAbbrvDiscreteGhostBaseT(ghostV(f), t))
+  }
+  /** Base tactic for nonAbbrvDiscreteGhost */
+  private def nonAbbrvDiscreteGhostBaseT(v: Variable, t: Term): PositionTactic = {
+    def subst(fml: Formula) = fml match {
+      case Equiv(g, f) =>
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, f) :: Nil
+    }
+
+    val aV = Variable("v", None, Real)
+    val alpha: PositionTactic = {
+      new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Equiv(BoxModality(Assign(_, _), _), _) => true
           case _ => false
@@ -588,12 +586,14 @@ object HybridProgramTacticsImpl {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
       }
-      val Equiv(left, right) = axiom
-      val (ax, cont) = (Equiv(replace(left)(aV, v), right), Some(alpha))
-
-      // return tactic
-      Some(ax, axiomInstance, l, None, cont)
     }
+
+    def axiomInstance(axiom: Formula): Formula = {
+      val Equiv(left, right) = axiom
+      Equiv(replace(left)(aV, v), right)
+    }
+
+    axiomLookupBaseT("[:=] vacuous assign", subst, alpha, axiomInstance)
   }
 
   /**
