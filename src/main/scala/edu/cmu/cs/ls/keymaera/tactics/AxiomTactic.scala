@@ -56,9 +56,10 @@ object AxiomTactic {
   /**
    * Creates a new tactic to show an axiom by lookup.
    * @param axiomName The name of the axiom.
-   * @param subst A function to create the substitution from the current  (an equivalence or equality).
+   * @param subst A function fml => subst to create the substitution from the current axiom form fml (an equivalence or equality).
    * @param alpha A tactic to perform alpha renaming after substitution.
-   * @param axiomInstance The axiom instance (not yet alpha renamed).
+   * @param axiomInstance A function axiom => axiomInstance to generate the axiom instance from the axiom
+   *                      form as in the axiom file (not yet alpha renamed).
    * @return The new tactic.
    */
   def axiomLookupBaseT(axiomName: String,
@@ -78,8 +79,10 @@ object AxiomTactic {
 
           Some(
             uniformSubstT(subst(fml), Map(fml -> axiomInstance(axiom))) &
-              assertT(0, 1) & lastSucc(alpha) & AxiomTactic.axiomT(axiomName) &
-              assertT(1, 1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) & AxiomCloseT
+              assertT(0, 1) & lastSucc(assertPT(axiomInstance(axiom), "Unexpected uniform substitution result")) &
+              lastSucc(alpha) & AxiomTactic.axiomT(axiomName) &
+              assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &
+              lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomCloseT
           )
       }
     }
