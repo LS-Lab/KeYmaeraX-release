@@ -272,10 +272,10 @@ object HybridProgramTacticsImpl {
         Equiv(fml, g)
       case _ => False
     }
-    uncoverAxiomT("[:=] assign equational", axiomInstance, f => boxAssignWithoutAlphaBaseT(newV, checkNewV))
+    uncoverAxiomT("[:=] assign equational", axiomInstance, f => boxAssignWithoutAlphaBaseT(newV))
   }
   /** Base tactic for box assign without alpha */
-  private def boxAssignWithoutAlphaBaseT(newV: Variable, checkNewV: Boolean = true): PositionTactic = {
+  private def boxAssignWithoutAlphaBaseT(newV: Variable): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
@@ -520,50 +520,53 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  private def substitutionAssignT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = new AxiomTactic(name, name) {
+  private def substitutionAssignT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
     val BDModality = new ModalityUnapplyer(mod)
 
-    override def applies(f: Formula): Boolean = f match {
-      case BDModality(Assign(v: Variable, t: Term), pred) => pred match {
-        // loop and ODE are probably a little too strict here, but we have v2vBoxAssignT to handle those
-        case BoxModality(_: DifferentialProgram, _) => t match {
-          case tv: Variable => v == tv
-          case _ => false
+    def axiomInstance(fml: Formula) = fml match {
+      case BDModality(Assign(v: Variable, t: Term), pred) =>
+        val g = SubstitutionHelper.replaceFree(pred)(v, t)
+        val instance = Equiv(fml, g)
+        pred match {
+          // loop and ODE are probably a little too strict here, but we have v2vBoxAssignT to handle those
+          case BoxModality(_: DifferentialProgram, _) => t match {
+            case tv: Variable if v == tv => instance
+            case _ => False
+          }
+          case BoxModality(_: Loop, _) => t match {
+            case tv: Variable if v == tv => instance
+            case _ => False
+          }
+          case DiamondModality(_: DifferentialProgram, _) => t match {
+            case tv: Variable if v == tv => instance
+            case _ => False
+          }
+          case DiamondModality(_: Loop, _) => t match {
+            case tv: Variable if v == tv => instance
+            case _ => False
+          }
+          case _ => instance
         }
-        case BoxModality(_: Loop, _) => t match {
-          case tv: Variable => v == tv
-          case _ => false
-        }
-        case DiamondModality(_: DifferentialProgram, _) => t match {
-          case tv: Variable => v == tv
-          case _ => false
-        }
-        case DiamondModality(_: Loop, _) => t match {
-          case tv: Variable => v == tv
-          case _ => false
-        }
-        case _ => true
-      }
-      case _ => false
+      case _ => False
     }
 
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BDModality(Assign(v: Variable, t: Term), p) =>
-        // TODO check that axiom is of the expected form <v:=t>p(v) <-> p(t))
-        // construct substitution
+    uncoverAxiomT(name, axiomInstance, f => substitutionAssignBaseT(name, mod))
+  }
+
+  private def substitutionAssignBaseT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
+    val BDModality = new ModalityUnapplyer(mod)
+
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BDModality(Assign(v: Variable, t: Term), p), _) =>
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
         val aP = Function("p", None, Real, Bool)
-        val l = List(SubstitutionPair(aT, t), SubstitutionPair(ApplyPredicate(aP, CDot),
-          SubstitutionHelper.replaceFree(p)(v, CDot)))
+        SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+    }
 
-        // construct axiom instance: <v:=t>p(v) <-> p(t)
-        val g = SubstitutionHelper.replaceFree(p)(v, t)
-        val axiomInstance = Equiv(f, g)
-
-        // rename to match axiom if necessary
-        val aV = Variable("v", None, Real)
-        def alpha = new PositionTactic("Alpha") {
+    val aV = Variable("v", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(BDModality(Assign(v: Variable, _: Term), _), _) =>
+        new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BDModality(Assign(_, _), _), _) => true
             case _ => false
@@ -571,24 +574,21 @@ object HybridProgramTacticsImpl {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~ globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~
+                   globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-
-        val Equiv(lhs, rhs) = axiom
-        val (ax, cont) = {
-          val lhsrepl = if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs
-          val thealpha = if (v.name != aV.name || v.index != None) Some(alpha) else None
-
-          (Equiv(lhsrepl, rhs), thealpha)
-        }
-
-        // return tactic
-        Some(ax, axiomInstance, l, None, cont)
-      case _ => None
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(BDModality(Assign(v: Variable, _: Term), _), _) =>
+        val Equiv(lhs, rhs) = axiom
+        Equiv(if (v.name != aV.name || v.index != None) replace(lhs)(aV, v) else lhs, rhs)
+    }
+
+    axiomLookupBaseT(name, subst, alpha, axiomInstance)
   }
 
   /**
