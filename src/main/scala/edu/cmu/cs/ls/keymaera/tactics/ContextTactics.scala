@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{AxiomCloseT,Impl
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{lastSucc,lastAnte}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, ConstructionTactic, Tactic, stopT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{cutT,debugT,alphaRenamingT}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula,freshNamedSymbol}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula,freshNamedSymbol,getTerm}
 
 
 /**
@@ -54,13 +54,7 @@ object ContextTactics {
     }
   }
 
-
-  /**
-   * @todo delete this.
-   */
-  def peelT(context: Formula, f: Expr, e : Expr, p:Position, pt:PositionTactic)(x : Position) = ???
-
-  def peelT(context: Formula, f: Formula, g: Formula, counterPart: Position, baseT: PositionTactic): PositionTactic = new PositionTactic("Peel") {
+  def peelT(context: Formula, f: Expr, g: Expr, counterPart: Position, baseT: PositionTactic): PositionTactic = new PositionTactic("Peel") {
     override def applies(s: Sequent, p: Position): Boolean = true
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
@@ -70,7 +64,8 @@ object ContextTactics {
         // TODO use once uniform substitution of CDotFormula is fixed
         //        assert(context.instantiateContext(f) == node.sequent(p), s"Context $context with formula $f, which is\n   ${context.instantiateContext(f)}\n not found at position $p\n   ${node.sequent(p)}")
         //        assert(context.instantiateContext(g) == node.sequent(counterPart), s"Context $context with formula $g, which is\n   ${context.instantiateContext(g)}\n not found at position $counterPart\n   ${node.sequent(counterPart)}")
-        if (!signature(context).contains(CDotFormula)) Some(AxiomCloseT | debugT(s"Unexpected peeling result: ${node.sequent} did not close by axiom") & stopT)
+        if (!signature(context).contains(CDotFormula) && !signature(context).contains(CDot))
+          Some(AxiomCloseT | debugT(s"Unexpected peeling result: ${node.sequent} did not close by axiom") & stopT)
         else context match {
           case CDotFormula => Some(debugT(s"Finished peeling, now calling base tactic ${baseT.name}") & baseT(p))
           case Not(phi) => Some(NotLeftT(counterPart) & NotRightT(p) & lastSucc(peelT(phi, f, g, AntePosition(node.sequent.ante.length - 1), baseT)))
@@ -85,19 +80,65 @@ object ContextTactics {
           case Forall(vars, phi) =>
             // HACK guess skolem name
             val (v, newV) = vars.head match { case v: Variable => (v, freshNamedSymbol(v, node.sequent)) }
+            val newF = f match { case fml: Formula => replaceBound(fml)(v, newV) case _ => f }
+            val newG = g match { case fml: Formula => replaceBound(fml)(v, newV) case _ => g }
             Some(skolemizeT(p) & alphaRenamingT(v.name, v.index, newV.name, newV.index)(counterPart) &
               // alpha renaming changes the position from counterPart to last ante
               lastAnte(instantiateT(newV, newV)) &
-              peelT(phi, replaceBound(f)(v, newV), replaceBound(g)(v, newV), AntePosition(node.sequent.ante.length - 1), baseT)(p))
+              peelT(phi, newF, newG, AntePosition(node.sequent.ante.length - 1), baseT)(p))
           case Exists(vars, phi) =>
             // HACK guess skolem name
             val (v, newV) = vars.head match { case v: Variable => (v, freshNamedSymbol(v, node.sequent)) }
+            val newF = f match { case fml: Formula => replaceBound(fml)(v, newV) case _ => f }
+            val newG = g match { case fml: Formula => replaceBound(fml)(v, newV) case _ => g }
             Some(skolemizeT(counterPart) & alphaRenamingT(v.name, v.index, newV.name, newV.index)(p) &
               // alpha renaming changes the position from p to last succ
               lastSucc(instantiateT(newV, newV)) &
-              peelT(phi, replaceBound(f)(v, newV), replaceBound(g)(v, newV), AntePosition(node.sequent.ante.length - 1), baseT)(p))
+              peelT(phi, newF, newG, AntePosition(node.sequent.ante.length - 1), baseT)(p))
         }
       }
+    }
+  }
+
+  /**
+   * Creates a tactic to cut in an equality f = g in context, i.e., C[f] <-> C[g]. Expects either the left-hand side
+   * of the equality to be present or the right-hand side to be present at position ctx.
+   * @param f The desired equality.
+   * @param ctx Points to the position in the context.
+   * @return The newly created tactic.
+   */
+  def cutEqualsInContext(f: Formula, ctx: Position): Tactic = cutEqualsInContext(_ => f, ctx)
+  def cutEqualsInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
+    def applicable(pn: ProofNode): Boolean = g(pn) match {
+      case Equals(_, lhs, rhs) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
+      case _ => false
+    }
+
+    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
+      case Equals(sort, lhs, rhs) if getTerm(p.sequent, ctx) == lhs =>
+        val lhsInCtx = p.sequent(ctx.topLevel)
+        val rhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
+          override def preT(pos: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+            if (t == lhs) Right(rhs)
+            else Left(Some(ExpressionTraversal.stop))
+        }), lhsInCtx) match {
+          case Some(f) => f
+          case None => throw new IllegalArgumentException(s"Did not find $lhs at position $ctx")
+        }
+        val equivOfEqualsInCtx = Equiv(lhsInCtx, rhsInCtx)
+        Some(cutT(Some(equivOfEqualsInCtx)))
+      case Equals(sort, lhs, rhs) if getTerm(p.sequent, ctx) == rhs =>
+        val rhsInCtx = p.sequent(ctx.topLevel)
+        val lhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
+          override def preT(pos: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+            if (t == rhs) Right(lhs)
+            else Left(Some(ExpressionTraversal.stop))
+        }), rhsInCtx) match {
+          case Some(f) => f
+          case None => throw new IllegalArgumentException(s"Did not find $rhs at position $ctx")
+        }
+        val equivOfEqualsInCtx = Equiv(lhsInCtx, rhsInCtx)
+        Some(cutT(Some(equivOfEqualsInCtx)))
     }
   }
 
