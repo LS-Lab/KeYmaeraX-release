@@ -265,30 +265,29 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  private def boxAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic =
-      new AxiomTactic("[:=] assign equational", "[:=] assign equational") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Assign(Variable(_, _,_), _), _) => !checkNewV || !allNames(f).contains(newV)
-      case _ => false
+  private def boxAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BoxModality(Assign(v: Variable, t), p) if !checkNewV || !allNames(fml).contains(newV) =>
+        val g = Forall(Seq(newV), Imply(Equals(Real, newV, t), SubstitutionHelper.replaceFree(p)(v, newV)))
+        Equiv(fml, g)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(Assign(v: Variable, t), p) =>
-        // TODO check that axiom is of the expected form [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
-        // construct substitution
+    uncoverAxiomT("[:=] assign equational", axiomInstance, f => boxAssignWithoutAlphaBaseT(newV, checkNewV))
+  }
+  /** Base tactic for box assign without alpha */
+  private def boxAssignWithoutAlphaBaseT(newV: Variable, checkNewV: Boolean = true): PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
         val aT = Apply(Function("t", None, Unit, Real), Nothing)
         val aP = Function("p", None, Real, Bool)
-        val l = List(SubstitutionPair(aT, t),
-          SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)))
+        SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+    }
 
-        // construct axiom instance: [v:=t]p(v) <-> \forall v_tIdx . (v_tIdx=t -> p(v_tIdx))
-        val g = Forall(Seq(newV), Imply(Equals(Real, newV,t), SubstitutionHelper.replaceFree(p)(v, newV)))
-        val axiomInstance = Equiv(f, g)
-
-        // rename to match axiom if necessary
-        val aV = Variable("v", None, Real)
-        def alpha(left: Boolean) = new PositionTactic("Alpha") {
+    val aV = Variable("v", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
+        val left = v.name != aV.name || v.index != aV.index
+        new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
             case _ => false
@@ -305,16 +304,16 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-        val Equiv(left, right) = axiom
-        val (ax, cont) =
-          if (v.name == aV.name && v.index == aV.index)
-            (Equiv(left, replaceFree(right)(aV, newV)), Some(alpha(left = false)))
-          else (Equiv(replaceFree(left)(aV, v, None), replaceFree(right)(aV, newV)), Some(alpha(left = true)))
-
-        // return tactic
-        Some(ax, axiomInstance, l, None, cont)
-      case _ => None
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
+        val Equiv(left, right) = axiom
+        if (v.name == aV.name && v.index == aV.index) Equiv(left, replaceFree(right)(aV, newV))
+        else Equiv(replaceFree(left)(aV, v, None), replaceFree(right)(aV, newV))
+    }
+
+    axiomLookupBaseT("[:=] assign equational", subst, alpha, axiomInstance)
   }
 
   /**
