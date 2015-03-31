@@ -9,8 +9,8 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{locateAnte, locateSucc,
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
-import AxiomaticRuleTactics.{boxCongruenceT,equivalenceCongruenceT}
-import ContextTactics.cutEquivInContext
+import AxiomaticRuleTactics.{boxCongruenceT,equivalenceCongruenceT,boxMonotoneT,diamondMonotoneT}
+import ContextTactics.{cutEquivInContext,cutImplyInContext}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 object AxiomTactic {
@@ -25,7 +25,8 @@ object AxiomTactic {
   }
 
   /**
-   * Creates a new tactic that uses equivalence and equation congruence to uncover an axiom inside a context.
+   * Creates a new tactic that uses equivalence congruence or equation congruence or monotone to uncover an axiom inside
+   * a context.
    * @param axiomName The name of the axiom.
    * @param axiomInstance The axiom instance that should be used in context (an equivalence or equality).
    * @param baseT The base tactic to show the axiom instance once uncovered.
@@ -36,6 +37,7 @@ object AxiomTactic {
                     baseT: Formula => PositionTactic): PositionTactic = new PositionTactic(axiomName) {
     override def applies(s: Sequent, p: Position): Boolean = axiomInstance(getFormula(s, p)) match {
       case Equiv(lhs, rhs) => getFormula(s, p) == lhs || getFormula(s, p) == rhs
+      case Imply(lhs, rhs) => getFormula(s, p) == rhs
       case _ => false
     }
 
@@ -43,10 +45,24 @@ object AxiomTactic {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
           axiomInstance(getFormula(node.sequent, p)) match {
-        case Equiv(f, g) =>
-          Some(cutEquivInContext(Equiv(f, g), p) & onBranch(
+        case inst@Equiv(f, g) =>
+          Some(cutEquivInContext(inst, p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & lastSucc(baseT(getFormula(node.sequent, p)))),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+          ))
+        case inst@Imply(f, g) if !p.isAnte =>
+          val paLast = AntePosition(node.sequent.ante.length)
+          Some(cutImplyInContext(inst, p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
+              assertT(1,1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
+              cutT(Some(inst)) & onBranch(
+                (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
+                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+              )),
+            (cutUseLbl, ImplyLeftT(paLast) && (
+              (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel),
+              AxiomCloseT /*& LabelBranch(axiomUseLbl), AxiomCloseT(paLast, p) | LabelBranch(axiomShowLbl)*/)
+              )
           ))
         case Equals(sort, lhs, rhs) => ???
       }
@@ -68,22 +84,23 @@ object AxiomTactic {
                        axiomInstance: (Formula, Formula) => Formula): PositionTactic = new PositionTactic(axiomName) {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Equiv(_, _) => true
+      case Imply(_, _) => true
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case fml@Equiv(f, g) =>
-          val axiom = Axiom.axioms.get(axiomName) match { case Some(ax) => ax }
+      val axiom = Axiom.axioms.get(axiomName) match { case Some(ax) => ax }
 
-          Some(
-            uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
-              assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
-              lastSucc(alpha(fml)) & AxiomTactic.axiomT(axiomName) &
-              assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &
-              lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomCloseT
-          )
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val fml = getFormula(node.sequent, p)
+        Some(
+          uniformSubstT(subst(fml), Map(fml -> axiomInstance(fml, axiom))) &
+            assertT(0, 1) & lastSucc(assertPT(axiomInstance(fml, axiom), "Unexpected uniform substitution result")) &
+            lastSucc(alpha(fml)) & AxiomTactic.axiomT(axiomName) &
+            assertT(1, 1) & lastAnte(assertPT(axiom, "Unexpected axiom form in antecedent")) &
+            lastSucc(assertPT(axiom, "Unexpected axiom form in succedent")) & AxiomCloseT
+        )
       }
     }
   }

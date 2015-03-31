@@ -183,4 +183,34 @@ object ContextTactics {
         Some(cutT(Some(equivInCtx)))
     }
   }
+
+  /**
+   * Creates a tactic to cut in an implication p->q in context, i.e., C[p] -> C[q]. Expects the right-hand side
+   * of the implication to be present at position ctx.
+   * @param f The desired implication.
+   * @param ctx Points to the position in the context.
+   * @return The newly created tactic.
+   */
+  def cutImplyInContext(f: Formula, ctx: Position): Tactic = cutImplyInContext(_ => f, ctx)
+  def cutImplyInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
+    def applicable(pn: ProofNode): Boolean = g(pn) match {
+      case Imply(lhs, rhs) => getFormula(pn.sequent, ctx) == rhs
+      case _ => false
+    }
+
+    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
+      case Imply(lhs, rhs) if getFormula(p.sequent, ctx) == rhs =>
+        val rhsInCtx = p.sequent(ctx.topLevel)
+        val lhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
+          override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
+            if (f == rhs) Right(lhs)
+            else Left(Some(ExpressionTraversal.stop))
+        }), rhsInCtx) match {
+          case Some(f) => f
+          case None => throw new IllegalArgumentException(s"Did not find $rhs at position $ctx")
+        }
+        val implyInCtx = Imply(lhsInCtx, rhsInCtx)
+        Some(cutT(Some(implyInCtx)))
+    }
+  }
 }
