@@ -1,36 +1,23 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics._
-import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 
 /**
  * Breaking stuff up.
  * Created by nfulton on 2/14/15.
  */
 object SyntacticDerivativeTermAxiomsInContext {
-  import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
-
-  ///////////////1///////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Section 3: Term axioms in context. This should be used for the master rewrites.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-  import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // The top-level tactic implementations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
-    def tactics : List[PositionTactic] = ConstantDerivativeT ::
+    def tactics : List[PositionTactic] =
+      ConstantDerivativeT ::
       PowerDerivativeT ::
       SubtractDerivativeT ::
       AddDerivativeT ::
@@ -46,10 +33,9 @@ object SyntacticDerivativeTermAxiomsInContext {
     //@todo this is wrong b/c what if we're applying in ^A -> [pi;](^^x > 0)' where ^^ is the term pos and ^ the formula pos?
     //@todo still not quite right I think.
     override def applies(s: Sequent, p: Position): Boolean = applicableTactic(s,p) match {
-      case Some(_) => {
+      case Some(_) =>
         //make sure that we're actually within a box context!
         SyntacticDerivationInContext.formulaContainsModality(s(p)).isDefined
-      }
       case None => false
     }
 
@@ -63,210 +49,11 @@ object SyntacticDerivativeTermAxiomsInContext {
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Implementation of term-level rewrites.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  /**
-   *
-   * @param name The name of the tactic.
-   * @param termToFind The term that will be replaced
-   * @param replacementTerm The term which will replace termToFind
-   * @param termTactic A tactic stating that termToFind <-> replacementTerm
-   */
-  class TermTacticInContextTactic(name : String, termToFind : Term, replacementTerm : Term, termTactic : TermAxiomTactic)
-    extends ContextualizeKnowledgeForTermTactic(name) //replaced with PropositionalInContextTactic.
-  {
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])] = {
-      val replacementPositionOption = findApplicablePositionForTermAxiom(f, termTactic)
-
-      replacementPositionOption match {
-        case Some((replacementPosition, _)) =>
-          val (smallest, _) = smallestFormulaContainingTerm(f, replacementPosition)
-          val desiredResult = replaceTerm(replacementTerm, termToFind, smallest)
-          Some(desiredResult, None)
-        case None => None
-      }
-    }
-
-    override def apply(pos : Position) = {
-      def knowledgeContinuationTactic : Tactic = SearchTacticsImpl.onBranch(
-        (BranchLabels.knowledgeSubclassContinue, locateSucc(EquivRightT) & onBranch(
-          (BranchLabels.equivLeftLbl, locateTerm(termTactic, inAnte = true) & (AxiomCloseT | debugT("Should never happen") & stopT)),
-          (BranchLabels.equivRightLbl, locateTerm(termTactic, inAnte = false) & (AxiomCloseT | debugT("Should never happen") & stopT))
-        )),
-        ("additional obligation", debugT("Ever called?") & (locateSucc(ImplyRightT) & locateTerm(termTactic, inAnte = false)) ~ AxiomCloseT)
-      )
-
-      super.apply(pos) & knowledgeContinuationTactic
-    }
-  }
-
-  /**
-   * Be very careful re-using this for other purposes...
-   */
-  abstract class ContextualizeKnowledgeForTermTactic(name: String) extends PositionTactic(name) {
-    override def applies(s: Sequent, p: Position): Boolean = getTerm(s(p), p.inExpr) match {
-      case Some(_) => true
-      case _ => false
-    }
-
-    /**
-     * This method constructs the desired result before the renaming.
-     *
-     * @param f the formula that should be rewritten
-     * @return Desired result before executing the renaming
-     */
-    def constructInstanceAndSubst(f: Formula): Option[(Formula, Option[Tactic])]
-
-    //@TODO Add contract that applies()=>\result fine
-    override def apply(pos: Position): Tactic = new ConstructionTactic(this.name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
-
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import TacticLibrary.cutT
-
-        constructInstanceAndSubst(node.sequent(pos)) match {
-          case Some((desiredResult, renameTactic)) =>
-            val (f, _) = smallestFormulaContainingTerm(node.sequent(pos), pos.inExpr)
-
-            val fInContext = TacticHelper.getFormula(node.sequent, pos.topLevel)
-            val desiredResultInContext = replaceFormula(desiredResult, f, fInContext)
-
-            val congruenceAxiomInstance = Equiv(fInContext, desiredResultInContext)
-            val axiomInstance = Equiv(f, desiredResult)
-
-            val axiomInstPos = AntePosition(node.sequent.ante.length)
-
-            val axiomApplyTactic = assertPT(congruenceAxiomInstance, s"$getClass A.1")(axiomInstPos) &
-              EquivLeftT(axiomInstPos) & onBranch(
-                (equivLeftLbl, AndLeftT(axiomInstPos) & AxiomCloseT),
-                (equivRightLbl, hideT(pos.topLevel) & AndLeftT(axiomInstPos) & hideT(axiomInstPos) & NotLeftT(axiomInstPos))
-              )
-
-            val cont = renameTactic match {
-              case Some(t) => assertT(0, 1) & t
-              case None => NilT
-            }
-
-            val axiomPos = SuccPosition(node.sequent.succ.length)
-
-            val axiomInstanceTactic = (assertPT(congruenceAxiomInstance, s"$getClass A.2") & cohideT)(axiomPos) &
-              (assertT(0,1) & assertT(congruenceAxiomInstance, SuccPosition(0)) &
-               assertT(0,1) &
-               (boxCongruenceT*) & assertT(0,1) & cutT(Some(axiomInstance)) & onBranch(
-                (cutUseLbl, assertPT(axiomInstance, s"$getClass A.2")(AntePosition(0)) &
-                  (((AxiomCloseT | locateAnte(Propositional) | locateSucc(Propositional))*) |
-                    debugT(s"$getClass: axiom close failed unexpectedly") & stopT)),
-                (cutShowLbl, hideT(SuccPosition(0)) & cont & LabelBranch(BranchLabels.knowledgeSubclassContinue))
-              ))
-
-            Some(cutT(Some(congruenceAxiomInstance)) & onBranch((cutUseLbl, axiomApplyTactic), (cutShowLbl, axiomInstanceTactic)))
-          case None => None
-        }
-      }
-    }
-
-  }
-
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Some tactics which could be generally useful, and it might make sense to move into the TacticsLibrary.
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  /**
-   * Converts the last two formulas in a sequent into an implication. So to show f |- g, you can now just show |- f -> g.
-   * This is useful for proof rules which only apply the implications.
-   */
-  def sequentToImplication : Tactic = (new PositionTactic("Convert sequent to identical implication.") {
-    override def applies(s: Sequent, p: Position): Boolean = true
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val originalAntePos = AntePosition(node.sequent.ante.length - 1)
-        val originalSuccPos = SuccPosition(node.sequent.succ.length - 1)
-        val cutF = Imply(node.sequent(originalAntePos), node.sequent(originalSuccPos))
-        val useCutPos = AntePosition(node.sequent.ante.length)
-
-        Some(cutT(Some(cutF)) & onBranch(
-          (BranchLabels.cutShowLbl, hideT(originalAntePos) & hideT(originalSuccPos)),
-          (BranchLabels.cutUseLbl, (ImplyLeftT(useCutPos) & (closeT, closeT)))
-        ))
-      }
-
-      override def applicable(node: ProofNode): Boolean = true
-
-    }
-  })(SuccPosition(0))
-
-  /*
-   * After running this you will have two results. The first is the ????? should only be one?
-   */
-  def implyToEquiv : PositionTactic = new PositionTactic("Translate implication to equivalence") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Imply(_,_) => true
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val (left,right) = node.sequent(p) match {
-          case Imply(l,r) => (l,r)
-          case _ => ???
-        }
-        val cutF = Equiv(left,right)
-
-        val newAntePos = AntePosition(node.sequent.ante.length)
-        Some(
-          cutT(Some(cutF)) & onBranch(
-            (BranchLabels.cutShowLbl, hideT(p)),
-            (BranchLabels.cutUseLbl, locateAnte(EquivLeftT) & onBranch(
-              (BranchLabels.equivLeftLbl, locateAnte(AndLeftT) & locateSucc(ImplyRightT) & AxiomCloseT ~ debugT("Should have closed!")),
-              (BranchLabels.equivRightLbl, AndLeftT(newAntePos) & (locateAnte(NotLeftT) *) & locateSucc(ImplyRightT) & AxiomCloseT ~ debugT("Should have closed!"))
-            ))
-          )
-        )
-
-
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-
-  /**
-   * @todo check this implementation.
-   * @param original The original expression
-   * @param termToReplace The position to replace.
-   * @param replacement The term to insert at position p
-   * @return [replacement / termToReplace] original
-   */
-  def replaceTerm(replacement : Term, termToReplace : Term, original : Formula) : Formula = {
-    val fn = new ExpressionTraversalFunction {
-      override def preT(posInExpr : PosInExpr, term : Term) = if(term.equals(termToReplace)) Right(replacement) else Left(None)
-    }
-    ExpressionTraversal.traverse(fn, original).get
-  }
-
-  def replaceFormula(replacement : Formula, f : Formula, original : Formula) : Formula = {
-    val fn = new ExpressionTraversalFunction {
-      override def preF(posInExpr : PosInExpr, formula : Formula) = {
-        if(f.equals(formula)) {
-          Right(replacement)
-        } else {
-          Left(None)
-        }
-      }
-    }
-    ExpressionTraversal.traverse(fn, original).get
-  }
-
-  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Term positional helpers.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def getFormula(f : Formula, pos : PosInExpr) : Option[Formula] = {
-    var formula : Option[Formula] = None;
+    var formula : Option[Formula] = None
     val fn = new ExpressionTraversalFunction {
       override def preF(p : PosInExpr, f:Formula) = {if(p == pos) {
         formula = Some(f)
@@ -280,7 +67,7 @@ object SyntacticDerivativeTermAxiomsInContext {
   }
 
   def getTerm(f : Formula, pos : PosInExpr) : Option[Term] = {
-    var term : Option[Term] = None;
+    var term : Option[Term] = None
     val fn = new ExpressionTraversalFunction {
       override def preT(pos : PosInExpr, t:Term) = {term = Some(t); Left(Some(ExpressionTraversal.stop))}
     }

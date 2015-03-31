@@ -25,34 +25,6 @@ class AxiomTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.KeYmaeraScheduler = null
   }
 
-  "Term axiom tactic" should "use axiom instance and substitution constructed by subclasses" in {
-    def termAxiomT: PositionTactic = new TermAxiomTactic("+' derive sum", "+' derive sum") {
-      override def applies(t: Term) = t match {
-        case Derivative(sort, Add(sort2, _, _)) => sort == sort2
-        case _ => false
-      }
-
-      override def constructInstanceAndSubst(e: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = e match {
-        case Derivative(sort, Add(sort2, s, t)) if sort == sort2 =>
-          // expected axiom instance
-          val expected = Add(sort, Derivative(sort, s), Derivative(sort, t))
-          val axiomInstance = Equals(sort, e, expected)
-          // prepare substitution
-          val aS = Apply(Function("f", None, Real, Real), Anything)
-          val aT = Apply(Function("g", None, Real, Real), Anything)
-          val subsDefs = List(SubstitutionPair(aS, s), SubstitutionPair(aT, t))
-          // bundle result
-          Some(axiomInstance, subsDefs)
-        case _ => None
-      }
-    }
-
-    val tactic = termAxiomT(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
-    getProofSequent(tactic, new RootNode(sucSequent("[z:=2;](x+y)'>=0".asFormula))) should be (
-      sucSequent("[z:=2;]x'+y'>=0".asFormula)
-    )
-  }
-
   "Derivative axiom in context tactic"  should "use provided renaming tactic" in {
     def dacT: PositionTactic = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
       override def applies(f: Formula) = f match {
