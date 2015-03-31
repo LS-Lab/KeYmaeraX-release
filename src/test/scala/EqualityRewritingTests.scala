@@ -70,4 +70,44 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>=0".asFormula
   }
+
+  it should "rewrite if lhs occurs in antecedent" in {
+    val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: "x>=0".asFormula :: Nil, Nil)
+    val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), AntePosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "y>=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
+  it should "rewrite if lhs occurs in antecedent before assumption" in {
+    val s = sequent(Nil, "x>=0".asFormula :: "x>=0 <-> y>=0".asFormula :: Nil, Nil)
+    val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(1), AntePosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "y>=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
+  it should "rewrite if rhs occurs in antecedent" in {
+    val s = sequent(Nil, "x>=0 <-> y>=0".asFormula :: "y>=0".asFormula :: Nil, Nil)
+    val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(0), AntePosition(1))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x>=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
+
+  it should "rewrite if rhs occurs in antecedent before assumption" in {
+    val s = sequent(Nil, "y>=0".asFormula :: "x>=0 <-> y>=0".asFormula :: Nil, Nil)
+    val tactic = EqualityRewritingImpl.equivRewriting(AntePosition(1), AntePosition(0))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "x>=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) shouldBe empty
+  }
 }

@@ -1,11 +1,11 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{FOQuantifierTacticsImpl, Interpreter, Config, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{FOQuantifierTacticsImpl, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte,alphaRenamingT}
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
   instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT}
 
@@ -84,10 +84,28 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "[y:=z;][y:=2;]y>0".asFormula :: Nil, Nil))
   }
 
+  it should "instantiate assignment modality 2" in {
+    val tactic = locateAnte(instantiateUniversalQuanT(Variable("y", None, Real), "z+1".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. [y:=y+1;]y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[y:=z+1+1;]y>0".asFormula :: Nil, Nil))
+  }
+
   it should "instantiate ODE modality" in {
     val tactic = locateAnte(instantiateUniversalQuanT(Variable("x", None, Real), "z".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. [y'=x;]y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "[y'=z;]y>0".asFormula :: Nil, Nil))
+  }
+
+  it should "instantiate more complicated ODE modality" in {
+    val tactic = locateAnte(instantiateT(Variable("y", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. [y'=x & y>2;]y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[z'=x & z>2;]z>0".asFormula :: Nil, Nil))
+  }
+
+  it should "instantiate even if ODE modality follows in some subformula" in {
+    val tactic = locateAnte(instantiateT(Variable("y", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. (y=0 -> [y'=x & y>2;]y>0)".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "z=0 -> [z'=x & z>2;]z>0".asFormula :: Nil, Nil))
   }
 
   it should "instantiate assignment irrespective of what follows" in {

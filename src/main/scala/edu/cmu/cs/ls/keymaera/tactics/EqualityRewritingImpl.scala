@@ -5,8 +5,8 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, PositionTactic, ApplyRule, Tactic}
 import PropositionalTacticsImpl._
 import BranchLabels._
-import SearchTacticsImpl.onBranch
-import TacticLibrary.debugT
+import SearchTacticsImpl.{lastAnte,onBranch}
+import TacticLibrary.TacticHelper.getTerm
 
 import scala.collection.immutable.Set
 
@@ -71,7 +71,7 @@ object EqualityRewritingImpl {
    */
   def equivRewriting(eqPos: Position, p: Position): Tactic =
     new ConstructionTactic("Equivalence Rewriting") {
-    override def applicable(node: ProofNode): Boolean = eqPos.isAnte && eqPos.isTopLevel && !p.isAnte && p.isTopLevel &&
+    override def applicable(node: ProofNode): Boolean = eqPos.isAnte && eqPos.isTopLevel && p.isTopLevel &&
       (node.sequent(eqPos) match {
         case Equiv(_, _) => true
         case _ => false
@@ -83,10 +83,24 @@ object EqualityRewritingImpl {
           (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
           (equivRightLbl, AndLeftT(eqPos) & hideT(p) & hideT(eqPos) & NotLeftT(eqPos))
         ))
+      case Equiv(a, b) if a == node.sequent(p) && p.isAnte =>
+        Some(EquivLeftT(eqPos) & onBranch(
+          (equivLeftLbl, AndLeftT(eqPos) &
+            (if (p.index < eqPos.index) hideT(AntePosition(node.sequent.ante.length - 1)) & hideT(p)
+             else hideT(AntePosition(node.sequent.ante.length - 1)) & hideT(AntePosition(p.index - 1)))),
+          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT)
+        ))
       case Equiv(a, b) if b == node.sequent(p) && !p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
           (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
           (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(eqPos) & hideT(eqPos))
+        ))
+      case Equiv(a, b) if b == node.sequent(p) && p.isAnte =>
+        Some(EquivLeftT(eqPos) & onBranch(
+          (equivLeftLbl, AndLeftT(eqPos) &
+            (if (p.index < eqPos.index) hideT(AntePosition(node.sequent.ante.length)) & hideT(p)
+             else hideT(AntePosition(node.sequent.ante.length)) & hideT(AntePosition(p.index - 1)))),
+          (equivRightLbl, AndLeftT(eqPos) & lastAnte(NotLeftT) & lastAnte(NotLeftT) & AxiomCloseT)
         ))
       case _ => None
     }

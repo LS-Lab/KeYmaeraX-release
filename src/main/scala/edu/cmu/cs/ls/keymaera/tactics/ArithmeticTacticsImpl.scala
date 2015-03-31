@@ -5,13 +5,16 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT}
+import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT, locate}
 import BuiltinHigherTactics.stepAt
-import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT}
+import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, AxiomCloseT}
 import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
+import AxiomaticRuleTactics.goedelT
+import TacticLibrary.TacticHelper.getFormula
 
-import scala.collection.immutable.{List, Set, Seq}
+import scala.collection.immutable.List
+import scala.language.postfixOps
 
 /**
  * Implementation of arithmetic tactics.
@@ -110,41 +113,6 @@ object ArithmeticTacticsImpl {
       t.continuation = continuation
       t.dispatch(this, node)
     }
-  }
-
-  /**
-   * Tactic to hide unnecessary equations in the antecedent.
-   * @return The tactic.
-   */
-  protected[tactics] def hideUnnecessaryLeftEqT: Tactic = new ConstructionTactic("Hide Equations") {
-
-    import BindingAssessment.allNames
-
-    def collectEquations(s: Sequent): Seq[(Int, Term, Term)] =
-      (for (i <- 0 until s.ante.length)
-      yield s.ante(i) match {
-          case Equals(_, a, b) if allNames(a).intersect(allNames(b)).isEmpty => Some((i, a, b))
-          case _ => None
-        }
-        ).flatten
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      val eqS: Seq[(Int, Term, Term)] = collectEquations(node.sequent)
-      val s = node.sequent
-      val anteNames = for (i <- 0 until s.ante.length)
-      yield (i, NameCategorizer.freeVariables(s.ante(i)))
-
-      val succNames = s.succ.flatMap(NameCategorizer.freeVariables)
-
-      val res = (for ((i, l, r) <- eqS)
-      yield if (succNames.contains(l)
-          || anteNames.filter((j: (Int, Set[NamedSymbol])) => i != j._1).map(_._2).flatten.contains(l)) None
-        else Some(i)
-        ).flatten.sortWith((i: Int, j: Int) => i > j)
-      if (res.isEmpty) Some(NilT) else Some(res.map((i: Int) => hideT(AntePosition(i))).reduce(seqT))
-    }
-
-    override def applicable(node: ProofNode): Boolean = true
   }
 
   /**
@@ -362,7 +330,6 @@ object ArithmeticTacticsImpl {
 
 
   def NegateGreaterThanT = new PositionTactic("> negate") {
-    import TacticLibrary.TacticHelper.getFormula
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case GreaterThan(_, _, _) => true
       case Not(LessEqual(_, _, _)) => true
@@ -383,7 +350,6 @@ object ArithmeticTacticsImpl {
   }
 
   def NegateLessEqualsT = new PositionTactic("<= negate") {
-    import TacticLibrary.TacticHelper.getFormula
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case LessEqual(_, _, _) => true
       case Not(GreaterThan(_, _, _)) => true
@@ -417,11 +383,6 @@ object ArithmeticTacticsImpl {
     val Rel = new Unapplyer(rel)
     val Neg = new Unapplyer(neg)
 
-    import TacticLibrary.TacticHelper.getFormula
-    import TacticLibrary.locate
-    import PropositionalTacticsImpl.{kModalModusPonensT, NotT, ImplyT}
-    import FOQuantifierTacticsImpl.skolemizeT
-    import TacticLibrary.abstractionT
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
         case Rel(_, _, _) => true
         case Not(Neg(_, _, _)) => true
@@ -430,9 +391,6 @@ object ArithmeticTacticsImpl {
 
     override def apply(p: Position) = new ConstructionTactic(name) {
       override def applicable(node: ProofNode) = applies(node.sequent, p)
-
-      import PropositionalTacticsImpl.{cutT, AxiomCloseT}
-      import scala.language.postfixOps
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         def prepareKMP = new ConstructionTactic("Prepare KMP") {
@@ -466,10 +424,8 @@ object ArithmeticTacticsImpl {
           val ps0 = SuccPosition(0)
 
           cohideT(ps) & assertT(0, 1) & TacticLibrary.propositional & (
-            ((prepareKMP & debugT("Prepared KMP") & kModalModusPonensT(ps0) & abstractionT(ps0) & hideT(ps0) &
-              skolemizeT(ps0) & ImplyT(ps0) & TacticLibrary.propositional)*)
-              | TacticLibrary.propositional) & debugT("AFTER K/PROP") &
-            locate(baseTactic) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
+            ((prepareKMP & kModalModusPonensT(ps0) & goedelT & TacticLibrary.propositional)*)
+            | TacticLibrary.propositional) & locate(baseTactic) & locate(NotT) & (AxiomCloseT | debugT("BAD 1") & stopT)
         }
 
         val pa = AntePosition(node.sequent.ante.length)

@@ -26,7 +26,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     } catch {
       // distinguish between IllegalArgumentExceptions thrown by the test framework and those thrown by usubst itself
       case ex: IllegalArgumentException if ex.getMessage != "Can't find a private method named: usubst" =>
-        throw new SubstitutionClashException(ex.getMessage, t, t).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, t.toString, t.prettyString()).initCause(ex)
     }
   }
 
@@ -37,7 +37,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     } catch {
       // distinguish between IllegalArgumentExceptions thrown by the test framework and those thrown by usubst itself
       case ex: IllegalArgumentException if ex.getMessage != "Can't find a private method named: usubst" =>
-        throw new SubstitutionClashException(ex.getMessage, f, f).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, f.toString, f.prettyString()).initCause(ex)
     }
   }
 
@@ -48,7 +48,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     } catch {
       // distinguish between IllegalArgumentExceptions thrown by the test framework and those thrown by usubst itself
       case ex: IllegalArgumentException if ex.getMessage != "Can't find a private method named: usubstComps" =>
-        throw new SubstitutionClashException(ex.getMessage, p, p).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, p.toString, p.prettyString()).initCause(ex)
     }
   }
 
@@ -244,7 +244,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of [a ++ b]p" should "throw a clash exception when a, b, and p are substituted simultaneously" in {
     val s = FastUSubst(List(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
       SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram),
-      SubstitutionPair(Apply(Function("p", None, Unit, Bool), Nothing), "x*y>5".asFormula)))
+      SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), "x*y>5".asFormula)))
     a [SubstitutionClashException] should be thrownBy
       s(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")), ApplyPredicate(Function("p", None, Unit, Bool), Nothing)))
     // TODO USUbst case

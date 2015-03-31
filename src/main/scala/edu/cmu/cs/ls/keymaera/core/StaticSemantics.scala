@@ -95,7 +95,7 @@ object StaticSemantics {
     // special cases
     case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
     case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>DifferentialSymbol(x))
-    case True | False | _: NumberObj | Nothing | Anything => SetLattice.bottom
+    case _: NumberObj | Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
   
@@ -316,6 +316,7 @@ object SetLattice {
 }
 /**
  * @TODO Documentation
+ * And s should be private for abstraction purposes.
  */
 class SetLattice[A](val s: Either[Null, Set[A]]) {
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
@@ -390,6 +391,11 @@ class SetLattice[A](val s: Either[Null, Set[A]]) {
   override def toString = s match {
     case Left(_) => "top"
     case Right(ts) => ts.toString()
+  }
+  //@TODO Move into pretty printer and also pretty print the elements of ts.
+  def prettyString = s match {
+    case Left(_) => "top"
+    case Right(ts) => "{" + ts.mkString(",") + "}"
   }
   override def equals(other: Any): Boolean = other match {
     case ls: SetLattice[A] => s match {

@@ -51,8 +51,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
       case d: Derivative if d == what => repl
-      case Derivative(s, e) if e == what => Derivative(s, repl)
-      case Derivative(_, e) if e != what => t
+      case d: Derivative if d != what => d
       case app@Apply(fn, theta) if !u.contains(fn) && app == what => repl
       case app@Apply(fn, theta) if  u.contains(fn) || app != what => Apply(fn, usubst(o, u, theta))
       case Nothing => Nothing
@@ -123,5 +122,6 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case _: EmptyODE => p
     case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
     case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
+    case _: DifferentialProgramConstant => p
   }
 }

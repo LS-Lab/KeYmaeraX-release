@@ -64,7 +64,7 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
           (arithmeticT,
             AxiomCloseT),
           ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT) & ls(AndRightT) &&
-            (arithmeticNoHideT,
+            (arithmeticT,
               AxiomCloseT)
           )
         )

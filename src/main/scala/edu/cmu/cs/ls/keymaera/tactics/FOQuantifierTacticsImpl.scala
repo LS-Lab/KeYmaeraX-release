@@ -4,9 +4,10 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.v2vAssignT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import TacticLibrary.alphaRenamingT
@@ -126,9 +127,35 @@ object FOQuantifierTacticsImpl {
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(_, _) => Some(instantiateUniversalQuanT(quantified, instance)(pos))
-        case Exists(_, _) => Some(instantiateExistentialQuanT(quantified, instance)(pos))
+        case Forall(_, _) =>
+          Some(withStuttering(node.sequent, instantiateUniversalQuanT(quantified, instance)(pos)))
+        case Exists(_, _) =>
+          Some(withStuttering(node.sequent, instantiateExistentialQuanT(quantified, instance)(pos)))
         case _ => None
+      }
+
+      private def withStuttering(s: Sequent, around: Tactic): Tactic = {
+        var stutteringAt: Option[PosInExpr] = None
+        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+            case BoxModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case BoxModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case DiamondModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case DiamondModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case _ => Left(None)
+          }
+        }, getFormula(s, pos))
+
+        stutteringAt match {
+          case Some(p) =>
+            val freshQuantified = freshNamedSymbol(quantified, s)
+            val pPos = if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p)
+            val assignPos = if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail))
+            alphaRenamingT(quantified.name, quantified.index, freshQuantified.name, freshQuantified.index)(pPos) &
+              around & v2vAssignT(assignPos)
+          case None => around
+        }
+
       }
     }
   }
@@ -166,9 +193,9 @@ object FOQuantifierTacticsImpl {
           val aT = Apply(Function("t", None, Unit, Real), Nothing)
           val aP = Function("p", None, Real, Bool)
           val l = List(SubstitutionPair(aT, instance), SubstitutionPair(ApplyPredicate(aP, CDot),
-            forall(replace(qf)(quantified, CDot))))
+            forall(SubstitutionHelper.replaceFree(qf)(quantified, CDot))))
           // construct axiom instance: \forall x. p(x) -> p(t)
-          val g = replace(qf)(quantified, instance)
+          val g = SubstitutionHelper.replaceFree(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
           Some(axiomInstance, l, (quantified, aX), (instance, aT))
         case Forall(x, qf) if !x.contains(quantified) => None
@@ -193,20 +220,29 @@ object FOQuantifierTacticsImpl {
                 // // this will hide all the formulas in the current succedent (the only remaining one will be the one we cut in)
                 // val hideAllSuccButLast = for (i <- node.sequent.succ.length - 1 to 0 by -1) yield hideT(SuccPosition(i))
                 // val hideSllAnteAllSuccButLast = (hideAllAnte ++ hideAllSuccButLast).reduce(seqT)
-                def alpha(p: Position, q: Variable) = alphaRenamingT(q.name, q.index, "$" + aX.name, aX.index)(p)
-                def repl(f: Formula, v: Variable, atTrans: Boolean = true):Formula = f match {
-                  case Imply (aa, b) =>
-                    val aTName = aT match { case x: Variable => x case Apply(fn, _) => fn }
-                    Imply(decompose(replace (aa)(v, Variable ("$" + aX.name, aX.index, aX.sort) )),
-                    if(atTrans) replace(b)(aTName, inst) else b)
+                def repl(f: Formula, v: Variable):Formula = f match {
+                  case Imply(Forall(vars, aa), b) =>
+                    Imply(
+                      decompose(
+                        Forall(vars.map(qv => if (qv == v) quantified else qv), SubstitutionHelper.replaceFree(aa)(v, quantified))),
+                      b)
                   case _ => throw new IllegalArgumentException("...")
                 }
-                val replMap = Map(repl(axiomInstance, quant, atTrans = false) -> repl(a, aX))
+
+                val (renAxiom, alpha) =
+                  if (quantified.name != aX.name || quantified.index != aX.index)
+                    (repl(a, aX), alphaRenamingT(aX.name, aX.index, quantified.name, quantified.index)(AntePosition(0, HereP.first)))
+                  else (a, NilT)
+
+                val axInstance = axiomInstance match {
+                  case Imply(lhs, rhs) => Imply(decompose(lhs), rhs)
+                }
+
+                val replMap = Map(axInstance -> renAxiom)
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
-                  alpha(SuccPosition(0, HereP.first), quant) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
                   (uniformSubstT(subst, replMap) &
-                    (axiomT(axiomName) & alpha(AntePosition(0, HereP.first), aX) & AxiomCloseT))
+                    (axiomT(axiomName) & alpha & AxiomCloseT))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
             }

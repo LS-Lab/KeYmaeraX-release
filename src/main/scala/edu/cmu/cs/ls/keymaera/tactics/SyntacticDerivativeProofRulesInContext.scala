@@ -136,7 +136,7 @@ object SyntacticDerivativeProofRulesInContext {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import TacticLibrary.{abstractionT,skolemizeT,cutT,equalityRewriting}
+        import TacticLibrary.cutT
 
         constructInstanceAndSubst(node.sequent(pos)) match {
           case Some((desiredResult, renameTactic)) =>

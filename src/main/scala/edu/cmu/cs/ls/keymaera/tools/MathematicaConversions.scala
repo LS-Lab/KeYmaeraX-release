@@ -201,8 +201,9 @@ object MathematicaToKeYmaera {
   }
 
   def convertRuleList(e: MExpr): Formula = {
-    e.args().map(_.args().map(r => convertRule(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
-      .reduceLeft((lhs, rhs) => Or(lhs, rhs))
+    val convertedRules = e.args().map(_.args().map(r => convertRule(r)).reduceLeft((lhs, rhs) => And(lhs, rhs)))
+    if (convertedRules.isEmpty) False
+    else convertedRules.reduceLeft((lhs, rhs) => Or(lhs, rhs))
   }
 
   def convertRule(e: MExpr): Formula = {

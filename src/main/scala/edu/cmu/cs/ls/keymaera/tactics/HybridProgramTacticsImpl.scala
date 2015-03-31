@@ -3,8 +3,9 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
-import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equalityRewriting
+import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyLeftT
@@ -85,6 +86,31 @@ object HybridProgramTacticsImpl {
 
         Some(axiomInstance, subst)
       case _ => None
+    }
+  }
+
+  def boxSeqGenT(q: Formula): PositionTactic = new PositionTactic("[;] generalize") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case BoxModality(Sequence(_, _), _) => true
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case BoxModality(Sequence(a, b), phi) => true
+        Some(boxSeqT(p) & cutT(Some(BoxModality(a, q))) & onBranch(
+          // boxSeqT will move its result into last succ, cut later moves one behind
+          (cutShowLbl, hideT(SuccPosition(node.sequent.succ.length - 1))),
+          (cutUseLbl,
+            // cut shows up at last ante
+            (0 until node.sequent.ante.length).foldRight(NilT)((i, t) => t & hideT(AntePosition(i))) &
+            // boxSeqT will move programs into last succ
+            (0 until node.sequent.succ.length - 1).foldRight(NilT)((i, t) => t & hideT(SuccPosition(i))) &
+            boxMonotoneT
+            )
+        ))
+      }
     }
   }
 
@@ -356,7 +382,6 @@ object HybridProgramTacticsImpl {
         case _ => /* false requires substitution of variables */ true
       })
 
-      import FOQuantifierTacticsImpl.skolemizeT
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
@@ -617,7 +642,7 @@ object HybridProgramTacticsImpl {
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
                 alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
                   EquivRightT(SuccPosition(0)) & AxiomCloseT),
-              (cutUseLbl, equalityRewriting(AntePosition(anteLength), p.topLevel) &
+              (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel) &
                 hideT(AntePosition(anteLength)) & hideT(p.topLevel))
             )
         )
@@ -646,7 +671,7 @@ object HybridProgramTacticsImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
           case b@BoxModality(Assign(v: Variable, t: Variable), _) if v == t => Some(
-            abstractionT(p) & hideT(p) & skolemizeT(p))
+            abstractionT(p) & skolemizeT(p))
           case _ => throw new IllegalArgumentException("Checked by applicable to not happen")
       }
     }
@@ -743,10 +768,30 @@ object HybridProgramTacticsImpl {
   }
 
   /**
+   * Creates a new axiom tactic for V vacuous.
+   * @return The new tactic.
+   */
+  def boxVacuousT: PositionTactic = new AxiomTactic("V vacuous", "V vacuous") {
+    override def applies(f: Formula): Boolean = f match {
+      case BoxModality(_, _) => true
+      case _ => false
+    }
+
+    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+      case BoxModality(prg, phi) =>
+        val aA = ProgramConstant("a")
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val subst = SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
+        val axiomInstance = Imply(phi, f)
+        Some(axiomInstance, subst)
+    }
+  }
+
+  /**
    * Creates a new axiom tactic for test [?H].
    * @return The new tactic.
    */
-  protected[tactics] def boxTestT: PositionTactic = new AxiomTactic("[?] test", "[?] test") {
+  def boxTestT: PositionTactic = new AxiomTactic("[?] test", "[?] test") {
     override def applies(f: Formula): Boolean = f match {
       case BoxModality(Test(_), _) => true
       case _ => false
@@ -1104,7 +1149,7 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) &
-        (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & cont)
+        (LabelBranch("Close Next"), abstractionT(cutSPos) & cont)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
         case Some(f) =>
@@ -1122,7 +1167,7 @@ object HybridProgramTacticsImpl {
           }
           val cutSPos = SuccPosition(node.sequent.succ.length - 1, HereP)
           val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
-            hideT(cutSPos) & LabelBranch(indUseCaseLbl)
+            LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &
@@ -1175,7 +1220,7 @@ object HybridProgramTacticsImpl {
       }
 
       def ind(cutSPos: Position, cont: Tactic) = boxInductionT(cutSPos) & AndRightT(cutSPos) &
-        (LabelBranch("Close Next"), abstractionT(cutSPos) & hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & cont)
+        (LabelBranch("Close Next"), abstractionT(cutSPos) & wipeContext(cutSPos, cutSPos) & cont)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = inv match {
         case Some(f) =>
           val cutAPos = AntePosition(node.sequent.ante.length)
@@ -1194,7 +1239,7 @@ object HybridProgramTacticsImpl {
           }
 
           val useCase = prepareKMP & hideT(cutAPos) & kModalModusPonensT(cutSPos) & abstractionT(cutSPos) &
-            hideT(cutSPos) & wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
+            wipeContext(cutSPos, cutSPos) & LabelBranch(indUseCaseLbl)
           val branch1Tactic = ImplyLeftT(cutAPos) & (hideT(p) & LabelBranch(indInitLbl), useCase)
           val branch2Tactic = hideT(p) &
             ImplyRightT(cutSPos) &

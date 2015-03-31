@@ -142,16 +142,19 @@ The full test suite can be run by
     sbt test
 
 Selectively running individual test cases within sbt:
-sbt> test-only TacticTests
-Or, on a more fine-grained level within a class use
-vobject MyTest extends Tag("MyTest")
+
+    sbt
+    sbt>  test-only *USubst*
+
+Or, run on a more fine-grained level within a class use
+object MyTest extends Tag("MyTest")
 
     object MyTest extends Tag("MyTest")
     it should "do something useful" taggedAs(MyTest) in {....}
     it should "do anything useful" taggedAs(MyTest) in {....}
     it should "do more good" taggedAs(MoreTest) in {....}
 
-Then in sbt interactive moe run   
+Then in sbt interactive mode run   
 
     sbt>  test-only -- -n "MyTest MoreTest"
 

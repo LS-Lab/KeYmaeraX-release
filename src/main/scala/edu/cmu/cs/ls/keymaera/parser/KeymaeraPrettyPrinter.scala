@@ -133,6 +133,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
     }
 
+    case ApplyPredicational(predicational,child) => prettyPrinter(predicational) + "{" + prettyPrinter(child) + "}"
+
     case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN, None) + symbolTable.SCOLON
     case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     
@@ -220,6 +222,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case CDot => "•"
     case Anything => "?"
     case Nothing => ""
+    case CDotFormula => "_"
 
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
@@ -398,6 +401,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       FormulaDerivative.getClass.getCanonicalName ::
       PredicateConstant.getClass.getCanonicalName ::
       ApplyPredicate.getClass.getCanonicalName ::
+      ApplyPredicational.getClass.getCanonicalName :: //@TODO Check
+      CDotFormula.getClass.getCanonicalName :: //@TODO Check
       True.getClass.getCanonicalName ::
       False.getClass.getCanonicalName ::
       //Programs.
@@ -450,9 +455,11 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case False => true
     case True => true
     case CDot => true
+    case CDotFormula => true
     case PredicateConstant(name,_) => true
     case ProgramConstant(name, _) => true
     case Variable(name, _,_) => true
+    case _: EmptyODE  => true
     case AtomicODE(_, _) => true
     case ODEProduct(_, _) => false
     case ODESystem(_, a, _) => isAtomic(a)
@@ -482,6 +489,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case ApplyPredicate(function,child) => false
     
     case Assign(l,r) => false
+    case NDetAssign(l) => false //@TODO check
 
     case Forall(_,_) => true
     case Exists(_,_) => true

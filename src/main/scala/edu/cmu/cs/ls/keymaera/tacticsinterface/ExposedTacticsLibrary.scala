@@ -47,7 +47,6 @@ object ExposedTacticsLibrary {
   def OrRightT                    : PositionTactic = TacticLibrary.OrRightT
   def ArithmeticT                 : Tactic         = TacticLibrary.arithmeticT
   def AxiomCloseT                 : Tactic         = TacticLibrary.AxiomCloseT
-  def FullArithmetic              : Tactic         = TacticLibrary.arithmeticNoHideT
 }
 
 /*

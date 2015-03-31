@@ -285,16 +285,6 @@ angular.module('formula', ['ngSanitize'])
                             content = ""
                             break;
 
-                        case "ContEvolveProduct":
-                            var left = parseFormulaHelper(c[0], depth + 1);
-                            var right = parseFormulaHelper(c[1], depth + 1);
-                            if (c[1].name != "EmptyODE") {
-                              content = left + ", " + right;
-                            } else {
-                              content = left;
-                            }
-                            break;
-
                         case "NFODEProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);

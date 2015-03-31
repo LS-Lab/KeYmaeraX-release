@@ -408,7 +408,7 @@ object ODETactics {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(ODESystem(_, _, _), _) =>
-          Some(diffWeakenAxiomT(p) & TacticLibrary.abstractionT(p) & hideT(p) & debugT("Skolemize in DiffWeaken") & skolemizeT(p))
+          Some(diffWeakenAxiomT(p) & TacticLibrary.abstractionT(p) & debugT("Skolemize in DiffWeaken") & skolemizeT(p))
         case _ => None
       }
     }

@@ -125,7 +125,7 @@ final case class FastUSubst(subsDefs: scala.collection.immutable.Seq[Substitutio
       usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, t, t.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, t.prettyString()).initCause(ex)
     }
   } ensuring (_ == new USubst(subsDefs).usubst(t),
     s"Fast substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], t)} " +
@@ -139,7 +139,7 @@ final case class FastUSubst(subsDefs: scala.collection.immutable.Seq[Substitutio
       res
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, f, f.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, f.prettyString()).initCause(ex)
     }
   } ensuring (_ == new USubst(subsDefs).usubst(f),
       s"Fast substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], f)} " +
@@ -150,7 +150,7 @@ final case class FastUSubst(subsDefs: scala.collection.immutable.Seq[Substitutio
       Sequent(s.pref, s.ante.map(apply), s.succ.map(apply))
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, null, s.toString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, s.toString()).initCause(ex)
     }
   }
 
@@ -160,7 +160,7 @@ final case class FastUSubst(subsDefs: scala.collection.immutable.Seq[Substitutio
       usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p).p
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this, p, p.toString()).initCause(ex)
+        throw new SubstitutionClashException(ex.getMessage, this.toString, p.toString()).initCause(ex)
     }
   } ensuring (_ == new USubst(subsDefs).usubst(p),
     s"Fast substitution result ${usubst(SetLattice.bottom[NamedSymbol], SetLattice.bottom[NamedSymbol], p)} " +

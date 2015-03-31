@@ -710,7 +710,7 @@ object Tactics {
      * Sequential composition of PositionTactics applied at the same position.
      */
     def &(pt: PositionTactic) = new PositionTactic("Seq(" + this.name + ", " + pt.name) {
-      override def applies(s: Sequent, p: Position): Boolean = this.applies(s, p)
+      override def applies(s: Sequent, p: Position): Boolean = PositionTactic.this.applies(s, p)
 
       //@TODO Unfortunately, this crucially relies on stable positions
       override def apply(p: Position): Tactic = PositionTactic.this.apply(p) & pt.apply(p)
