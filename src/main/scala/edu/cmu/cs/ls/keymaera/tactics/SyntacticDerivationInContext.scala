@@ -1070,8 +1070,6 @@ object SyntacticDerivationInContext {
 //  }
 
 
-  import SyntacticDerivativeProofRulesInContext._
-
   /**
    * @todo this is just brokwn. Needs to apply at position, not everywhere... But that's an interface change, so for the moment I'll leave as-is.
    */
