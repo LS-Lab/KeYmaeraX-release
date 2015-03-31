@@ -237,4 +237,13 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>0 <-> y>0".asFormula
   }
+
+  "CQ equation congruence" should "prove" in {
+    val s = sucSequent("a>0 <-> c>0".asFormula)
+    val tactic = AxiomaticRuleTactics.equationCongruenceT(PosInExpr(0::Nil))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "a=c".asFormula
+  }
 }

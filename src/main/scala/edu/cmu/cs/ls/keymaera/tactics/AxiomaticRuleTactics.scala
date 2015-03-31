@@ -42,6 +42,33 @@ object AxiomaticRuleTactics {
   }
 
   /**
+   * Creates a new tactic for CQ equation congruence rewriting.
+   * @return The newly created tactic.
+   */
+  def equationCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CQ equation congruence") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
+      (node.sequent.succ.head match {
+        case Equiv(p, q) => p.extractContext(inEqPos)._1 == q.extractContext(inEqPos)._1
+        case _ => false
+      })
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
+      case Equiv(lhs, rhs) =>
+        val (ctxP, f) = lhs.extractContext(inEqPos)
+        val (ctxQ, g) = rhs.extractContext(inEqPos)
+        assert(ctxP == ctxQ)
+
+        val fX = Apply(Function("f_", None, Real, Real), Anything)
+        val gX = Apply(Function("g_", None, Real, Real), Anything)
+        val cX = ApplyPredicate(Function("ctx_", None, Real, Bool), CDot)
+        val s = USubst(SubstitutionPair(fX, f) :: SubstitutionPair(gX, g) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("CQ equation congruence", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+    }
+  }
+
+  /**
    * Creates a new tactic for congruence rewriting.
    * @return The newly created tactic.
    */
