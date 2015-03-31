@@ -56,98 +56,12 @@ object SyntacticDerivativeTermAxiomsInContext {
     }
   }
 
-  def DivideDerivativeInContextT = new PositionTactic("Divide Derivative in context") {
-    val theTactic = DivideDerivativeT
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getTermAtPosition(s(p), p.inExpr) match {
-        case Some(term) => theTactic.applies(term)
-        case None => false
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
-        case Some(term) => term match {
-          case Derivative(dSort, Divide(stSort, s, t)) => {
-            val ds = Derivative(stSort, s)
-            val dt = Derivative(stSort, t)
-            val replacement = Divide(dSort,  Subtract(stSort, Multiply(stSort, ds, t), Multiply(stSort, s, dt)), Exp(stSort, t, Number(2)))
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
-
-            Some(contextTactic(p))
-          }
-          case _ => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-  def MultiplyDerivativeInContextT = new PositionTactic("Multiply Derivative in context") {
-    val theTactic = MultiplyDerivativeT
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getTermAtPosition(s(p), p.inExpr) match {
-        case Some(term) => theTactic.applies(term)
-        case None => false
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
-        case Some(term) => term match {
-          case Derivative(dSort, Multiply(stSort, s, t)) => {
-            val ds = Derivative(stSort, s)
-            val dt = Derivative(stSort, t)
-            val replacement = Add(dSort,  Multiply(stSort, ds, t), Multiply(stSort, s, dt))
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
-
-            Some(contextTactic(p))
-          }
-          case _ => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-  def SubtractDerivativeInContextT = new PositionTactic("Subtract Derivative in context") {
-    val theTactic = SubtractDerivativeT
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getTermAtPosition(s(p), p.inExpr) match {
-        case Some(term) => theTactic.applies(term)
-        case None => false
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
-        case Some(term) => term match {
-          case Derivative(dSort, Subtract(stSort, s, t)) => {
-            val replacement = Subtract(dSort, Derivative(stSort, s), Derivative(stSort, t))
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
-
-            Some(contextTactic(p))
-          }
-          case _ => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
-
   def SyntacticDerivativeInContextT = new PositionTactic("Top-level tactic for contextual syntactic derivation of terms.") {
     def tactics : List[PositionTactic] = SyntacticDerivativeProofRulesInContext.ConstantDerivativeInContext ::
       ConstantFnDerivativeInContextT ::
-      SyntacticDerivativeProofRulesInContext.PowerDerivativeInContext :: SubtractDerivativeInContextT ::
-      AddDerivativeT :: NegativeDerivativeT :: MultiplyDerivativeInContextT ::
-      DivideDerivativeInContextT :: Nil
+      PowerDerivativeT :: SubtractDerivativeT ::
+      AddDerivativeT :: NegativeDerivativeT :: MultiplyDerivativeT ::
+      DivideDerivativeT :: Nil
 
     def applicableTactic(s : Sequent, p : Position) = {
       val l = tactics.filter(_.applies(s,p))

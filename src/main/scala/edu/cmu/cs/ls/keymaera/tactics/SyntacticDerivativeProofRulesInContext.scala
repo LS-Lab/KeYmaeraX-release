@@ -21,33 +21,6 @@ object SyntacticDerivativeProofRulesInContext {
   // Proof rule implementations.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def PowerDerivativeInContext = new PositionTactic("Power Derivative in context") {
-    val theTactic : PositionTactic with ApplicableAtTerm = PowerDerivativeT
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      getTermAtPosition(s(p), p.inExpr) match {
-        case Some(term) => theTactic.applies(term)
-        case None => false
-      }
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-      override def constructTactic(tool : Tool, node : ProofNode): Option[Tactic] = getTermAtPosition(node.sequent(p), p.inExpr) match {
-        case Some(term) => term match {
-          case Derivative(dSort, Exp(eSort, x, c@Number(nSort, n))) if n != BigDecimal(0) =>
-            val replacement = Multiply(eSort, Multiply(eSort, Number(nSort, n), Exp(eSort, x, Subtract(nSort, c, Number(1)))), Derivative(dSort, x))
-            val contextTactic = new TermTacticInContextTactic("The actual term axiom in context tactic for " + this.name, term, replacement, theTactic)
-            Some(contextTactic(p))
-          case Derivative(dSort, Exp(eSort, x, Number(nSort, n))) if n == BigDecimal(0) =>
-            Some(errorT(s"Exponent 0 not allowed, but $n == 0") & stopT)
-          case _ => None
-        }
-      }
-
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
-  }
-
   def ConstantDerivativeInContext = new PositionTactic("Constant Derivative in context") {
     val theTactic : PositionTactic with ApplicableAtTerm = ConstantDerivativeT
 

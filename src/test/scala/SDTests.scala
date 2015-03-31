@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core.{RootNode, SuccPosition, PosInExpr}
-import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivativeProofRulesInContext, SearchTacticsImpl}
+import edu.cmu.cs.ls.keymaera.tactics.{SyntacticDerivationInContext, SyntacticDerivativeProofRulesInContext, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
@@ -177,7 +177,7 @@ class SDTests extends TacticTestSuite {
 
   it should "work inside of a binding context" in {
     val node = helper.formulaToNode("[x := 0;](x^2)'=0".asFormula)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeProofRulesInContext.PowerDerivativeInContext)
+    val tactic = SearchTacticsImpl.locateTerm(PowerDerivativeT)
     val result = helper.runTactic(tactic, node)
 
     result.openGoals() should have size 1
