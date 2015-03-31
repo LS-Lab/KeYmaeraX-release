@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{boxMonotoneT,equivalenceCongruenceT}
+import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,
@@ -494,76 +495,53 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  def discreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = new PositionTactic("[:=] assign") {
-    override def applies(s: Sequent, p: Position): Boolean = true
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        val f = getFormula(node.sequent, p)
-        // check specified name, or construct a new name for the ghost variable if None
-        val v = ghost match {
-          case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
-          case None => t match {
-            case v: Variable => TacticHelper.freshNamedSymbol(v, f)
-            case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
-          }
-        }
-        val g = BoxModality(Assign(v, t), SubstitutionHelper.replaceFree(f)(t, v))
-
-        Some(cutEquivInContext(Equiv(g, f), p) & onBranch(
-          (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & lastSucc(discreteGhostBaseT(v, t))),
-          (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
-        ))
+  def discreteGhostT(ghost: Option[Variable], t: Term): PositionTactic = {
+    // check specified name, or construct a new name for the ghost variable if None
+    def ghostV(f: Formula): Variable = ghost match {
+      case Some(gv) => require(gv == t || (!allNames(f).contains(gv))); gv
+      case None => t match {
+        case v: Variable => TacticHelper.freshNamedSymbol(v, f)
+        case _ => throw new IllegalArgumentException("Only variables allowed when ghost name should be auto-provided")
       }
     }
+
+    def g(f: Formula) = Equiv(BoxModality(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f))), f)
+
+    uncoverAxiomT("[:=] assign", g, f => discreteGhostBaseT(ghostV(f), t))
   }
-
-  def discreteGhostBaseT(v: Variable, t: Term): PositionTactic = new PositionTactic("[:=] assign") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Equiv(_, _) => true
-      case _ => false
+  /** Base tactic for discrete ghost. */
+  private def discreteGhostBaseT(v: Variable, t: Term): PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(g, f) =>
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aP = Function("p", None, Real, Bool)
+        SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(f)(t, CDot)) :: Nil
     }
 
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case fml@Equiv(g, f) =>
-          // construct substitution
-          val aT = Apply(Function("t", None, Unit, Real), Nothing)
-          val aP = Function("p", None, Real, Bool)
-          val subst = SubstitutionPair(aT, t) ::
-            SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(f)(t, CDot)) :: Nil
+    def alpha: PositionTactic = {
+      val aV = Variable("v", None, Real)
+      new PositionTactic("Alpha") {
+        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+          case Equiv(BoxModality(Assign(_, _), _), _) => true
+          case _ => false
+        }
 
-          val aV = Variable("v", None, Real)
-          // rename to match axiom if necessary
-          val alpha = new PositionTactic("Alpha") {
-            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(BoxModality(Assign(_, _), _), _) => true
-              case _ => false
-            }
+        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+            Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
-
-              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-            }
-          }
-
-          val axiom = Axiom.axioms.get("[:=] assign") match { case Some(ax) => ax }
-
-          val Equiv(left, right) = axiom
-          val axiomAfterAlpha = Equiv(replace(left)(aV, v), right)
-
-          Some(
-            uniformSubstT(subst, Map(fml -> axiomAfterAlpha)) &
-              assertT(0, 1) &
-              lastSucc(alpha) &
-              AxiomTactic.axiomT("[:=] assign") & assertT(1, 1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) & AxiomCloseT
-          )
+          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        }
       }
     }
+
+    def axiomInstance(axiom: Formula): Formula = {
+      val Equiv(left, right) = axiom
+      val aV = Variable("v", None, Real)
+      Equiv(replace(left)(aV, v), right)
+    }
+
+    axiomLookupBaseT("[:=] assign", subst, alpha, axiomInstance)
   }
 
   /**

@@ -497,67 +497,48 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Discrete ghost" should "introduce assignment to fresh variable" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, new Variable("y", None, Real)))
-
+    val tactic = locateSucc(discreteGhostT(None, new Variable("y", None, Real)))
     getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
       sucSequent("[y_0:=y;]y_0>0".asFormula))
   }
 
   it should "assign term t to fresh variable" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(new Variable("z", None, Real)),
+    val tactic = locateSucc(discreteGhostT(Some(new Variable("z", None, Real)),
       "y+1".asTerm))
     getProofSequent(tactic, new RootNode(sucSequent("y+1>0".asFormula))) should be (
       sucSequent("[z:=y+1;]z>0".asFormula))
   }
 
   it should "allow arbitrary terms t when a ghost name is specified" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(Variable("z", None, Real)),
-      "x+5".asTerm))
+    val tactic = locateSucc(discreteGhostT(Some(Variable("z", None, Real)), "x+5".asTerm))
     getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
       sucSequent("[z:=x+5;]y>0".asFormula))
   }
 
   it should "not allow arbitrary terms t when no ghost name is specified" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, "x+5".asTerm))
-    // would like to expect exception, but cannot because of Scheduler
-    getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
-      sucSequent("y>0".asFormula))
+    val tactic = locateSucc(discreteGhostT(None, "x+5".asTerm))
+    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(sucSequent("y>0".asFormula)))
   }
 
   it should "use same variable if asked to do so" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(new Variable("y", None, Real)),
-      new Variable("y", None, Real)))
+    val tactic = locateSucc(discreteGhostT(Some(new Variable("y", None, Real)), new Variable("y", None, Real)))
     getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
       sucSequent("[y:=y;]y>0".asFormula))
   }
 
   it should "use specified fresh variable" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(new Variable("z", None, Real)),
-      new Variable("y", None, Real)))
+    val tactic = locateSucc(discreteGhostT(Some(new Variable("z", None, Real)), new Variable("y", None, Real)))
     getProofSequent(tactic, new RootNode(sucSequent("y>0".asFormula))) should be (
       sucSequent("[z:=y;]z>0".asFormula))
   }
 
   it should "not accept variables present in f" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(Some(new Variable("z", None, Real)),
-      new Variable("y", None, Real)))
-    // would like to test, but cannot because of Scheduler
-    //    an [IllegalArgumentException] should be thrownBy
-    //      helper.runTactic(tactic, new RootNode(sucSequent("y>z+1".asFormula)))
-    getProofSequent(tactic, new RootNode(sucSequent("y>z+1".asFormula))) should be (
-      sucSequent("y>z+1".asFormula))
+    val tactic = locateSucc(discreteGhostT(Some(new Variable("z", None, Real)), new Variable("y", None, Real)))
+    an [IllegalArgumentException] should be thrownBy helper.runTactic(tactic, new RootNode(sucSequent("y>z+1".asFormula)))
   }
 
   it should "work on assignments" in {
-    val tacticFactory = PrivateMethod[PositionTactic]('discreteGhostT)
-    val tactic = locateSucc(HybridProgramTacticsImpl invokePrivate tacticFactory(None, Variable("y", None, Real)))
+    val tactic = locateSucc(discreteGhostT(None, Variable("y", None, Real)))
     getProofSequent(tactic, new RootNode(sucSequent("[y:=2;]y>0".asFormula))) should be (
       sucSequent("[y_0:=y;][y:=2;]y>0".asFormula))
   }
