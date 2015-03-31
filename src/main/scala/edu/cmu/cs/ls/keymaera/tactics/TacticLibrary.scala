@@ -33,13 +33,20 @@ object TacticLibrary {
       if (p.isTopLevel) {
         if (p.isAnte) p.index < s.ante.length else p.index < s.succ.length
       } else {
+        isFormula(s(p), p.inExpr)
+      }
+    }
+
+    def isFormula(fml: Formula, p: PosInExpr): Boolean = {
+      if (p == HereP) true
+      else {
         var f: Formula = null
-        ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
+        ExpressionTraversal.traverse(TraverseToPosition(p, new ExpressionTraversalFunction {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
             f = e
             Left(Some(ExpressionTraversal.stop))
           }
-        }), if (p.isAnte) s.ante(p.getIndex) else s.succ(p.getIndex))
+        }), fml)
         f != null
       }
     }

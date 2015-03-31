@@ -104,13 +104,27 @@ class SyntacticDerivationTests extends TacticTestSuite {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   "syntactic derivation of negation" should "work on x,y" in {
-    val outerFormula = helper.parseFormula(" (-(x+x))' = 0")
-    val innerFormula = helper.parseFormula(" -((x+x)') = 0")
+    val outerFormula = " (-(x+x))' = 0".asFormula
+    val innerFormula = " -((x+x)') = 0".asFormula
 
     val node = helper.formulaToNode(outerFormula)
     val tactic = NegativeDerivativeT(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic,node, true)
-    require(containsOpenGoal(node, innerFormula))
+    val result = helper.runTactic(tactic,node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only innerFormula
+  }
+
+  it should "work in context" in {
+    val outerFormula = "a=b & (-(x+x))' = 0 -> c>d".asFormula
+    val innerFormula = "a=b & -((x+x)') = 0 -> c>d".asFormula
+
+    val node = helper.formulaToNode(outerFormula)
+    val tactic = NegativeDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: 0 :: Nil)))
+    val result = helper.runTactic(tactic,node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only innerFormula
   }
 
   def innerOuterTest(innerFormula:Formula, outerFormula:Formula, axTactic:TermAxiomTactic) = {

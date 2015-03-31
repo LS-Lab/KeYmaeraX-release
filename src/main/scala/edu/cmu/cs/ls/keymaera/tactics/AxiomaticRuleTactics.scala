@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaera.tactics.SubstitutionHelper.replaceFree
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic}
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic, NilT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.globalAlphaRenamingT
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 
@@ -31,13 +31,15 @@ object AxiomaticRuleTactics {
         val (ctxQ, q) = rhs.extractContext(inEqPos)
         assert(ctxP == ctxQ)
 
-        val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
-        val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
-        val cX = ApplyPredicational(Function("ctx_", None, Bool, Bool), CDotFormula)
-        val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("CE congruence", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
+        if (ctxP.isFormulaContext) {
+          val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+          val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
+          val cX = ApplyPredicational(Function("ctx_", None, Bool, Bool), CDotFormula)
+          val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
+          Some(new ApplyRule(AxiomaticRule("CE congruence", s)) {
+            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+          })
+        } else Some(NilT)
     }
   }
 

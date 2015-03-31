@@ -1,17 +1,12 @@
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
-
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import SyntacticDerivationInContext._
 import edu.cmu.cs.ls.keymaera.core._
-import scala.Equals
+import testHelper.StringConverter._
+
 
 /**
  * Created by nfulton on 2/13/15.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 class TermDerivationInContextTests extends TacticTestSuite {
 
@@ -77,23 +72,21 @@ class TermDerivationInContextTests extends TacticTestSuite {
 
 
   "neg" should "replace" in {
-    val orig = helper.parseFormula("[x':=1;](-1)'=0");
-    val expected = helper.parseFormula("[x':=1;]-(1')=0");
-    val position = PosInExpr(1 :: 0 :: Nil)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.NegativeDerivativeInContextT)
-    val node = helper.formulaToNode(orig)
-    helper.runTactic(tactic, node)
-    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.NegativeDerivativeT)
+    val node = helper.formulaToNode("[x':=1;](-1)'=0".asFormula)
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]-(1')=0".asFormula
   }
 
   it should "replace in context" in {
-    val orig = helper.parseFormula("[x':=1;](-x)'=0");
-    val expected = helper.parseFormula("[x':=1;]-(x')=0");
-    val position = PosInExpr(1 :: 0 :: Nil)
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivativeTermAxiomsInContext.NegativeDerivativeInContextT)
-    val node = helper.formulaToNode(orig)
-    helper.runTactic(tactic, node)
-    containsOnlyExactlyOpenGoal(node, expected) shouldBe true
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.NegativeDerivativeT)
+    val node = helper.formulaToNode("a=b & [x':=1;](-x)'=0".asFormula)
+    val result = helper.runTactic(tactic, node)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "a=b & [x':=1;]-(x')=0".asFormula
   }
 
   "multiply" should "replace" in {

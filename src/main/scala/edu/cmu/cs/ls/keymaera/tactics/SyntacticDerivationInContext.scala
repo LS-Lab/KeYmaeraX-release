@@ -4,11 +4,17 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{equivalenceCongruenceT,equationCongruenceT}
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.{cutEquivInContext,cutEqualsInContext}
+import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{hideT,AxiomCloseT}
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{onBranch,lastAnte,lastSucc,locateTerm}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula,getTerm}
 
 import scala.collection.immutable.List
 
@@ -477,43 +483,80 @@ object SyntacticDerivationInContext {
     }
   }
 
+  def findParentFormulaPos(f: Formula, p: PosInExpr): PosInExpr = {
+    if (TacticHelper.isFormula(f, p)) p
+    else findParentFormulaPos(f, PosInExpr(p.pos.init))
+  }
+
   /*
    * Axiom "-' derive neg".
    *   (-s)' = -(s')
    * End.
    */
-  def NegativeDerivativeT = new TermAxiomTactic("-' derive neg","-' derive neg") {
+  def NegativeDerivativeT = new PositionTactic("-' derive neg") with ApplicableAtTerm {
+    override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
     override def applies(t: Term): Boolean = t match {
       case Derivative(_,Neg(_,_)) => true
-//      case Neg(_,Derivative(_,_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
+      //      case Neg(_,Derivative(_,_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
       case _ => false
     }
 
-    override def constructInstanceAndSubst(t: Term, ax: Formula, pos: Position): Option[(Formula, List[SubstitutionPair])] = {
-      t match {
-        case Derivative(dSort, Neg(nSort, s)) => {
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
+        case t@Derivative(dSort, Neg(nSort, s)) =>
+          val r = Neg(nSort, Derivative(dSort, s))
+          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
+
+          Some(cutEqualsInContext(Equals(nSort, t, r), p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
+              equationCongruenceT(termCtxPos) & lastSucc(NegativeDerivativeBaseT)),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+          ))
+      }
+    }
+  }
+
+  def NegativeDerivativeBaseT = new PositionTactic("-' derive neg") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Equals(_, Derivative(_,Neg(_,_)), _) => true
+      //      case Neg(_,Derivative(_,_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
+      case _ => false
+    }
+
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case fml@Equals(_, t@Derivative(dSort, Neg(nSort, s)), _) => {
           val sort = nSort; assert(nSort == dSort)
 
           val aF = Apply(Function("f", None, sort, sort), Anything)
-
           val subst = List(SubstitutionPair(aF, s))
+          val axiom = Axiom.axioms.get("-' derive neg") match { case Some(f) => f }
 
-          val right = Neg(sort, Derivative(sort, s))
-          val axiomInstance = Equals(sort, t, right)
-
-          Some(axiomInstance, subst)
+          // return tactic
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
         }
-        case Neg(nSort, Derivative(dSort, s)) => {
+        case fml@Equals(_, Neg(nSort, Derivative(dSort, s)), _) => {
           val sort = nSort; assert(nSort == dSort)
 
           val aF = Apply(Function("f", None, sort, sort), Anything)
-
           val subst = List(SubstitutionPair(aF, s))
+          val axiom = Axiom.axioms.get("-' derive neg") match { case Some(f) => f }
 
-          val left = Derivative(sort, Neg(sort, s))
-          val axiomInstance = Equals(sort, left, t)
-
-          Some(axiomInstance, subst)
+          // return tactic
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
         }
       }
     }
@@ -819,7 +862,7 @@ End.
   /**
    * This list of *all* the atomizing TermAxiomTactics is used in the implementation of wrapper tactics.
    */
-  val termDerivativeTactics : List[TermAxiomTactic] =
+  val termDerivativeTactics : List[PositionTactic with ApplicableAtTerm] =
     NegativeDerivativeAtomizeT ::
       ConstantFnDerivativeAtomizeT ::
       AddDerivativeAtomizeT ::
@@ -914,12 +957,12 @@ End.
 
     //@todo move this into SyntacticDerivationT I guess...
     def appliesRegardlessOfContext(s: Sequent, p: Position): Boolean = {
-      def tacticApplies(tactic : TermAxiomTactic) = findApplicablePositionForTermAxiom(s(p), tactic) match {
+      def tacticApplies(tactic : ApplicableAtTerm) = findApplicablePositionForTermAxiom(s(p), tactic) match {
         case Some(_) => true
         case None => false
       }
 
-      termDerivativeTactics.foldLeft(false)((b, tat : TermAxiomTactic) => {
+      termDerivativeTactics.foldLeft(false)((b, tat : PositionTactic with ApplicableAtTerm) => {
         tacticApplies(tat) || b
       }) || findApplicablePositionForTermAxiom(s(p), PowerDerivativeT).isDefined
     }
@@ -933,14 +976,14 @@ End.
         /**
          * Returns a list of positions, together with the first applicable tactic at each position.
          */
-        def firstApplicableTacticForEachPosition(seq : IndexedSeq[Formula]) : Seq[(TermAxiomTactic, Int, PosInExpr)] = {
+        def firstApplicableTacticForEachPosition(seq : IndexedSeq[Formula]) : Seq[(PositionTactic with ApplicableAtTerm, Int, PosInExpr)] = {
           seq.zipWithIndex.map(p => {
             val formula = p._1
             val index: Int = p._2
 
-            val tacticAndPos : Option[(TermAxiomTactic, PosInExpr)] = {
+            val tacticAndPos : Option[(PositionTactic with ApplicableAtTerm, PosInExpr)] = {
               //Check each of the tactics to determine if any apply.
-              def findApplicablePosInFormula(tactic : TermAxiomTactic) : Option[PosInExpr] = {
+              def findApplicablePosInFormula(tactic : ApplicableAtTerm) : Option[PosInExpr] = {
                 findApplicablePositionForTermAxiom(formula, tactic) match {
                   case Some((posInExpr, term)) => Some(posInExpr)
                   case None => None
@@ -961,7 +1004,7 @@ End.
             }
 
             tacticAndPos match {
-              case Some((tactic:TermAxiomTactic, posInExpr:PosInExpr)) => Some(tactic, index, posInExpr)
+              case Some((tactic:PositionTactic with ApplicableAtTerm, posInExpr:PosInExpr)) => Some(tactic, index, posInExpr)
               case None => None
             }
           }).filter(_.isDefined).map(_.get)
