@@ -858,26 +858,27 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   private def seqT[T: Manifest](name: String, mod: T => Option[(Program, Formula)],
-                                factory: (Program, Formula) => Formula): PositionTactic = new AxiomTactic(name, name) {
+                                factory: (Program, Formula) => Formula): PositionTactic = {
     val BDModality = new ModalityUnapplyer(mod)
-    override def applies(f: Formula): Boolean = f match {
-      case BDModality(Sequence(_, _), _) => true
-      case _ => false
-    }
 
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BDModality(Sequence(a, b), p) =>
-        // construct substitution
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BDModality(Sequence(a, b), p) => Equiv(fml, factory(a, factory(b, p)))
+      case _ => False
+    }
+    uncoverAxiomT(name, axiomInstance, _ => seqBaseT(name, mod))
+  }
+  /** Base tactic for seqT */
+  private def seqBaseT[T: Manifest](name: String, mod: T => Option[(Program, Formula)]): PositionTactic = {
+    val BDModality = new ModalityUnapplyer(mod)
+
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BDModality(Sequence(a, b), p), _) =>
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aB, b), SubstitutionPair(aP, p))
-        // construct axiom instance
-        val g = factory(a, factory(b, p))
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
     }
+    axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
