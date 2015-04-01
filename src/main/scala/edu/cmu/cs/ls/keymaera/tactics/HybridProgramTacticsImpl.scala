@@ -617,24 +617,22 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for test [?H].
    * @return The new tactic.
    */
-  def boxTestT: PositionTactic = new AxiomTactic("[?] test", "[?] test") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Test(_), _) => true
-      case _ => false
+  def boxTestT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BoxModality(Test(h), p) => Equiv(fml, Imply(h, p))
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BoxModality(Test(h), p) =>
+    uncoverAxiomT("[?] test", axiomInstance, _ => boxTestBaseT)
+  }
+  /** Base tactic for boxTestT */
+  private def boxTestBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BoxModality(Test(h), p), _) =>
         // construct substitution
         val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
         val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
-        // construct axiom instance: [?H]p <-> (H -> p).
-        val g = Imply(h, p)
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
     }
+    axiomLookupBaseT("[?] test", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
@@ -642,24 +640,22 @@ object HybridProgramTacticsImpl {
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  def diamondTestT: PositionTactic = new AxiomTactic("<?> test", "<?> test") {
-    override def applies(f: Formula): Boolean = f match {
-      case DiamondModality(Test(_), _) => true
-      case _ => false
+  def diamondTestT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case DiamondModality(Test(h), p) => Equiv(fml, And(h, p))
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case DiamondModality(Test(h), p) =>
+    uncoverAxiomT("<?> test", axiomInstance, _ => diamondTestBaseT)
+  }
+  /** Base tactic for diamondTestT */
+  private def diamondTestBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(DiamondModality(Test(h), p), _) =>
         // construct substitution
         val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
         val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-        val l = List(new SubstitutionPair(aH, h), new SubstitutionPair(aP, p))
-        // construct axiom instance: <?H>p <-> (H & p).
-        val g = And(h, p)
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
     }
+    axiomLookupBaseT("<?> test", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
@@ -677,9 +673,6 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-        import FOQuantifierTacticsImpl.skolemizeT
-
         val f = node.sequent(p)
         // construct a new name for renaming in ODE
         val newV = f match {
