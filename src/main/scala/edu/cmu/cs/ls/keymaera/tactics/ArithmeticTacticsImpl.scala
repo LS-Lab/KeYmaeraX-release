@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{axiomLookupBaseT,uncoverAxiomT}
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
@@ -27,8 +28,7 @@ object ArithmeticTacticsImpl {
    * @return The tactic.
    */
   protected[tactics] def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
-    def qeApplicable(s: Sequent): Boolean =
-      (s.ante ++ s.succ).foldLeft(true)((acc: Boolean, f: Formula) => acc && qeApplicable(f))
+    def qeApplicable(s: Sequent): Boolean = (s.ante ++ s.succ).forall(qeApplicable)
 
     def qeApplicable(f: Formula): Boolean = {
       var qeAble = true
@@ -76,7 +76,7 @@ object ArithmeticTacticsImpl {
                   // reinstantiate quantifiers
                   val pos = AntePosition(node.sequent.ante.length)
                   def reInst(f: Formula): Option[Tactic] = f match {
-                    case Forall(v, g) => {
+                    case Forall(v, g) =>
                       val resG = reInst(g)
                       if (v.isEmpty) resG
                       else {
@@ -86,14 +86,13 @@ object ArithmeticTacticsImpl {
                         })
                         val tac = (for (n <- vars) yield instantiateT(n, n)(pos)).reduce(seqT)
                         resG match {
-                          case Some(t) => Some(tac & t)
+                          case Some(tt) => Some(tac & tt)
                           case None => Some(tac)
                         }
                       }
-                    }
                     case _ => None
                   }
-                  val contTactic = ((closeT | locateSucc(stepAt(true, false, true)) | locateAnte(stepAt(true, false, true, true))) *)
+                  val contTactic = (closeT | locateSucc(stepAt(true, false, true)) | locateAnte(stepAt(true, false, true, true)))*
                   def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
                   //Really simple because this is just checking that the thing we believe to be true is actually true.
                   val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
@@ -141,195 +140,136 @@ object ArithmeticTacticsImpl {
    * Creates a new axiom tactic for negating equality: s=t <-> !(s!=t)
    * @return The axiom tactic.
    */
-  def NegateEqualsT = new AxiomTactic("= negate", "= negate") {
-    override def applies(f: Formula): Boolean = f match {
-      case Equals(_, _, _) => true
-      case Not(NotEquals(_, _, _)) => true
-      case _ => false
+  def NegateEqualsT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: s=t <-> !(s!=t)
+      case Equals(sort, f, g) => Equiv(fml, Not(NotEquals(sort, f, g)))
+      case Not(NotEquals(sort, f, g)) => Equiv(Equals(sort, f, g), fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
-      case Equals(sort, f, g) =>
-        // TODO check that axiom is of the expected form s=t <-> !(s != t)
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance: s=t <-> !(s!=t)
-        val h = Not(NotEquals(sort, f, g))
-        val axiomInstance = Equiv(frm, h)
-
-        Some(axiomInstance, subst)
-      case Not(NotEquals(sort, f, g)) =>
-        // TODO check that axiom is of the expected form s=t <-> !(s != t)
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance: s=t <-> !(s!=t)
-        val h = Equals(sort, f, g)
-        val axiomInstance = Equiv(h, frm)
-
-        Some(axiomInstance, subst)
+    uncoverAxiomT("= negate", axiomInstance, _ => NegateEqualsBaseT)
+  }
+  /** Base tactic for negate equals */
+  private def NegateEqualsBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (sort, f, g) = fml match {
+        case Equiv(Equals(s, ff, gg), _) => (s, ff, gg)
+        case Not(NotEquals(s, ff, gg)) => (s, ff, gg)
+      }
+      // TODO check that axiom is of the expected form s=t <-> !(s != t)
+      val aF = Apply(Function("f", None, sort, sort), Anything)
+      val aG = Apply(Function("g", None, sort, sort), Anything)
+      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
+    axiomLookupBaseT("= negate", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new axiom tactic for negating equality: s=t <-> !(s!=t)
    * @return The axiom tactic.
    */
-  def NegateLessThanT = new AxiomTactic("< negate", "< negate") {
-    override def applies(f: Formula): Boolean = f match {
-      case LessThan(_, _, _) => true
-      case Not(GreaterEqual(_, _, _)) => true
-      case _ => false
+  def NegateLessThanT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: s<t <-> !(s>=t)
+      case LessThan(sort, f, g) => Equiv(fml, Not(GreaterEqual(sort, f, g)))
+      case Not(GreaterEqual(sort, f, g)) => Equiv(LessThan(sort, f, g), fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
-      case LessThan(sort, f, g) =>
-        // TODO check that axiom is of the expected form s<t <-> !(s >= t)
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance: s<t <-> !(s>=t)
-        val h = Not(GreaterEqual(sort, f, g))
-        val axiomInstance = Equiv(frm, h)
-
-        Some(axiomInstance, subst)
-      case Not(GreaterEqual(sort, f, g)) =>
-        // TODO check that axiom is of the expected form s<t <-> !(s >= t)
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance: s<t <-> !(s>=t)
-        val h = LessThan(sort, f, g)
-        val axiomInstance = Equiv(h, frm)
-
-        Some(axiomInstance, subst)
+    uncoverAxiomT("< negate", axiomInstance, _ => NegateLessThanBaseT)
+  }
+  /** Base tactic for negate less than */
+  def NegateLessThanBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (sort, f, g) = fml match {
+        case Equiv(LessThan(s, ff, gg), _) => (s, ff, gg)
+        case Equiv(Not(GreaterEqual(s, ff, gg)), _) => (s, ff, gg)
+      }
+      val aF = Apply(Function("f", None, sort, sort), Anything)
+      val aG = Apply(Function("g", None, sort, sort), Anything)
+      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
+    axiomLookupBaseT("< negate", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new axiom tactic for splitting <=: s<=t <-> s < t | s=t
    * @return The axiom tactic.
    */
-  def LessEqualSplitT = new AxiomTactic("<=", "<=") {
-    override def applies(f: Formula): Boolean = f match {
-      case LessEqual(_, _, _) => true
-      case Or(LessThan(sort, s, t), Equals(sort2, s2, t2)) => sort == sort2 && s == s2 && t == t2
-      case _ => false
+  def LessEqualSplitT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: s<=t <-> (s < t | s=t)
+      case LessEqual(sort, f, g) => Equiv(fml, Or(LessThan(sort, f, g), Equals(sort, f, g)))
+      case Or(LessThan(sort, f, g), Equals(sort2, f2, g2)) if sort == sort2 && f == f2 && g == g2 => Equiv(LessEqual(sort, f, g), fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
-      case LessEqual(sort, f, g) =>
-        // TODO check that axiom is of the expected form s<=t <-> (s < t | s=t)
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance: s<=t <-> (s < t | s=t)
-        val h = Or(LessThan(sort, f, g), Equals(sort, f, g))
-        val axiomInstance = Equiv(frm, h)
-
-        Some(axiomInstance, subst)
-      case Or(LessThan(sort, f, g), Equals(sort2, f2, g2)) if sort == sort2 && f == f2 && g == g2 =>
-        // TODO check that axiom is of the expected form s<=t <-> (s < t | s=t)
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance: s<=t <-> (s < t | s=t)
-        val h = LessEqual(sort, f, g)
-        val axiomInstance = Equiv(h, frm)
-
-        Some(axiomInstance, subst)
+    uncoverAxiomT("<=", axiomInstance, _ => LessEqualSplitBaseT)
+  }
+  /** Base tactic for less equal split  */
+  private def LessEqualSplitBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (sort, f, g) = fml match {
+        case Equiv(LessEqual(s, ff, gg), _) => (s, ff, gg)
+        case Equiv(Or(LessThan(s, ff, gg), Equals(s2, f2, g2)), _) if s == s2 && ff == f2 && gg == g2 => (s, ff, gg)
+      }
+      val aF = Apply(Function("f", None, sort, sort), Anything)
+      val aG = Apply(Function("g", None, sort, sort), Anything)
+      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
+    axiomLookupBaseT("<=", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new axiom tactic for flipping >=
    * @return The axiom tactic.
    */
-  def GreaterEqualFlipT = new AxiomTactic(">= flip", ">= flip") {
-    override def applies(f: Formula): Boolean = f match {
-      case GreaterEqual(_, _, _) => true
-      case LessEqual(_, _, _) => true
-      case _ => false
+  def GreaterEqualFlipT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case GreaterEqual(sort, f, g) => Equiv(fml, LessEqual(sort, g, f))
+      case LessEqual(sort, f, g) => Equiv(GreaterEqual(sort, g, f), fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
-      case GreaterEqual(sort, f, g) =>
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance
-        val h = LessEqual(sort, g, f)
-        val axiomInstance = Equiv(frm, h)
-
-        Some(axiomInstance, subst)
-      case LessEqual(sort, f, g) =>
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, g), SubstitutionPair(aG, f))
-
-        // construct axiom instance
-        val h = GreaterEqual(sort, g, f)
-        val axiomInstance = Equiv(h, frm)
-
-        Some(axiomInstance, subst)
+    uncoverAxiomT(">= flip", axiomInstance, _ => GreaterEqualFlipBaseT)
+  }
+  /** Base tactic for greater equal flip */
+  def GreaterEqualFlipBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (sort, f, g) = fml match {
+        case Equiv(GreaterEqual(s, ff, gg), _) => (s, ff, gg)
+        case Equiv(LessEqual(s, ff, gg), _) => (s, ff, gg)
+      }
+      val aF = Apply(Function("f", None, sort, sort), Anything)
+      val aG = Apply(Function("g", None, sort, sort), Anything)
+      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
+    axiomLookupBaseT(">= flip", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new axiom tactic for flipping >
    * @return The axiom tactic.
    */
-  def GreaterThanFlipT = new AxiomTactic("> flip", "> flip") {
-    override def applies(f: Formula): Boolean = f match {
-      case GreaterThan(_, _, _) => true
-      case LessThan(_, _, _) => true
-      case _ => false
+  def GreaterThanFlipT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case GreaterThan(sort, f, g) => Equiv(fml, LessThan(sort, g, f))
+      case LessThan(sort, f, g) => Equiv(GreaterThan(sort, g, f), fml)
     }
-
-    override def constructInstanceAndSubst(frm: Formula): Option[(Formula, List[SubstitutionPair])] = frm match {
-      case GreaterThan(sort, f, g) =>
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, f), SubstitutionPair(aG, g))
-
-        // construct axiom instance
-        val h = LessThan(sort, g, f)
-        val axiomInstance = Equiv(frm, h)
-
-        Some(axiomInstance, subst)
-      case LessThan(sort, f, g) =>
-        // construct substitution
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
-        val subst = List(SubstitutionPair(aF, g), SubstitutionPair(aG, f))
-
-        // construct axiom instance
-        val h = GreaterThan(sort, g, f)
-        val axiomInstance = Equiv(h, frm)
-
-        Some(axiomInstance, subst)
+    uncoverAxiomT("> flip", axiomInstance, _ => GreaterThanFlipBaseT)
+  }
+  /** Base tactic for greater than flip */
+  private def GreaterThanFlipBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (sort, f, g) = fml match {
+        case Equiv(GreaterThan(s, ff, gg), _) => (s, ff, gg)
+        case Equiv(LessThan(s, ff, gg), _) => (s, ff, gg)
+      }
+      val aF = Apply(Function("f", None, sort, sort), Anything)
+      val aG = Apply(Function("g", None, sort, sort), Anything)
+      SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
+    axiomLookupBaseT("> flip", subst, _ => NilPT, (f, ax) => ax)
   }
 
-
-  def NegateGreaterThanT = new PositionTactic("> negate") {
+  def NegateGreaterThanT: PositionTactic = new PositionTactic("> negate") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case GreaterThan(_, _, _) => true
       case Not(LessEqual(_, _, _)) => true
@@ -349,7 +289,7 @@ object ArithmeticTacticsImpl {
     }
   }
 
-  def NegateLessEqualsT = new PositionTactic("<= negate") {
+  def NegateLessEqualsT: PositionTactic = new PositionTactic("<= negate") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case LessEqual(_, _, _) => true
       case Not(GreaterThan(_, _, _)) => true
