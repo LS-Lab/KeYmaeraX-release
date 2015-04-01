@@ -885,25 +885,24 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box induction [*] I induction
    * @return The new tactic.
    */
-  protected[tactics] def boxInductionT: PositionTactic = new AxiomTactic("I induction", "I induction") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Loop(_), _) => true
-      case _ => false
+  def boxInductionT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
+      case BoxModality(Loop(a), p) => Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BoxModality(Loop(a), p) =>
-        // construct substitution
+    uncoverAxiomT("I induction", axiomInstance, _ => boxInductionBaseT)
+  }
+  /** Base tactic for box induction */
+  private def boxInductionBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(And(p, BoxModality(Loop(a), Imply(_, BoxModality(_, _)))), _) =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aP, p))
-        // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
-        val g = And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p))))
-        val axiomInstance = Imply(g, f)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: Nil
     }
 
+    axiomLookupBaseT("I induction", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**

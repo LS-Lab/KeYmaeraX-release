@@ -604,7 +604,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Induction tactic" should "rename all bound variables" in {
-    import HybridProgramTacticsImpl.inductionT
     val tactic = locateSucc(inductionT(Some("x*y>5".asFormula)))
     val result = getProofSequent(tactic, new RootNode(
       sequent(Nil,
