@@ -3,13 +3,12 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
-import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{boxMonotoneT,equivalenceCongruenceT}
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,
-  hideT,uniformSubstT,kModalModusPonensT, cohideT}
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{lastAnte,lastSucc}
+  hideT,kModalModusPonensT}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import BindingAssessment.allNames
 
@@ -35,10 +34,10 @@ object HybridProgramTacticsImpl {
    * Axiom Tactics
    *********************************************/
 
-  class ByDualityAxiomTactic(base: AxiomTactic) extends PositionTactic(base.name) {
+  class ByDualityAxiomTactic(base: PositionTactic) extends PositionTactic(base.name) {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case DiamondModality(prg, phi) => base.applies(BoxModality(prg, Not(phi)))
-      case BoxModality(prg, phi) => base.applies(DiamondModality(prg, Not(phi)))
+      case DiamondModality(prg, phi) => base.applies(s.updated(p, BoxModality(prg, Not(phi))), p)
+      case BoxModality(prg, phi) => base.applies(s.updated(p, DiamondModality(prg, Not(phi))), p)
       case _ => false
     }
 
@@ -1029,11 +1028,11 @@ object HybridProgramTacticsImpl {
             val anteExcepts = except.filter(_.isInstanceOf[AntePosition]).map(_.index).toSet
             val anteHidePos = node.sequent.ante.zipWithIndex.collect {
               case (f,i) if allNames(f).intersect(vars.toSet).nonEmpty => i }.toSet -- anteExcepts
-            val anteHides = anteHidePos.toList.sorted.reverse.map(i => hideT(AntePosition(i)))
+            val anteHides = anteHidePos.toList.sorted.reverseMap(i => hideT(AntePosition(i)))
             val succExcepts = except.filter(_.isInstanceOf[SuccPosition]).map(_.index).toSet
             val succHidePos = node.sequent.succ.zipWithIndex.collect {
               case (f,i) if allNames(f).intersect(vars.toSet).nonEmpty => i }.toSet -- succExcepts
-            val succHides = succHidePos.toList.sorted.reverse.map(i => hideT(SuccPosition(i)))
+            val succHides = succHidePos.toList.sorted.reverseMap(i => hideT(SuccPosition(i)))
             val bvFromPosCorr = succHidePos.count(_ < bvFromPos.index)
             Some((anteHides ++ succHides).foldLeft(NilT)((t, i) => t & i) &
               skolemizeT(SuccPosition(bvFromPos.index - bvFromPosCorr)))
