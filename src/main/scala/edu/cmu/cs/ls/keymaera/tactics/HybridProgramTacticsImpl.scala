@@ -910,25 +910,24 @@ object HybridProgramTacticsImpl {
    * Creates a new axiom tactic for box choice [++].
    * @return The new tactic.
    */
-  def boxChoiceT: PositionTactic = new AxiomTactic("[++] choice", "[++] choice") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(Choice(_, _), _) => true
-      case _ => false
+  def boxChoiceT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
+      case BoxModality(Choice(a, b), p) => Equiv(fml, And(BoxModality(a, p), BoxModality(b, p)))
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BoxModality(Choice(a, b), p) =>
-        // construct substitution
+    uncoverAxiomT("[++] choice", axiomInstance, _ => boxChoiceBaseT)
+  }
+  /** Base tactic for box choice */
+  private def boxChoiceBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BoxModality(Choice(a, b), p), _) =>
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
-        // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
-        val g = And(BoxModality(a, p), BoxModality(b, p))
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
     }
+    axiomLookupBaseT("[++] choice", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
@@ -936,25 +935,24 @@ object HybridProgramTacticsImpl {
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  def diamondChoiceT: PositionTactic = new AxiomTactic("<++> choice", "<++> choice") {
-    override def applies(f: Formula): Boolean = f match {
-      case DiamondModality(Choice(_, _), _) => true
-      case _ => false
+  def diamondChoiceT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: < a ++ b >p <-> <a>p | <b>p.
+      case DiamondModality(Choice(a, b), p) => Equiv(fml, Or(DiamondModality(a, p), DiamondModality(b, p)))
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case DiamondModality(Choice(a, b), p) =>
-        // construct substitution
+    uncoverAxiomT("<++> choice", axiomInstance, _ => diamondChoiceBaseT)
+  }
+  /** Base tactic for diamond choice */
+  private def diamondChoiceBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(DiamondModality(Choice(a, b), p), _) =>
         val aA = ProgramConstant("a")
         val aB = ProgramConstant("b")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val l = List(new SubstitutionPair(aA, a), new SubstitutionPair(aB, b), new SubstitutionPair(aP, p))
-        // construct axiom instance: < a ++ b >p <-> <a>p | <b>p.
-        val g = Or(DiamondModality(a, p), DiamondModality(b, p))
-        val axiomInstance = Equiv(f, g)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
     }
+    axiomLookupBaseT("<++> choice", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
