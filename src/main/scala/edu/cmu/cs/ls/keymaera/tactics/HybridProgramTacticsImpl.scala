@@ -684,14 +684,14 @@ object HybridProgramTacticsImpl {
           case BoxModality(NDetAssign(v: Variable), BoxModality(prg: Loop, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vAssignT(p)
+              boxNDetAssignWithoutAlphaT(p) & skolemizeT(p) & v2vAssignT(p)
           )
           case BoxModality(NDetAssign(v: Variable), BoxModality(prg: DifferentialProgram, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlpha(p) & skolemizeT(p) & v2vAssignT(p)
+              boxNDetAssignWithoutAlphaT(p) & skolemizeT(p) & v2vAssignT(p)
           )
-          case _ => Some(boxNDetAssignWithoutAlpha(p) & skolemizeT(p))
+          case _ => Some(boxNDetAssignWithoutAlphaT(p) & skolemizeT(p))
         }
       }
     }
@@ -702,26 +702,26 @@ object HybridProgramTacticsImpl {
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  private def boxNDetAssignWithoutAlpha: PositionTactic = new AxiomTactic("[:*] assign nondet", "[:*] assign nondet") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(NDetAssign(_), _) => true
-      case _ => false
+  private def boxNDetAssignWithoutAlphaT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
+      case BoxModality(NDetAssign(v: Variable), p) => Equiv(fml, Forall(Seq(v), p))
+      case _ => False
     }
-    
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, List[SubstitutionPair],
-        Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(NDetAssign(x), p) if Variable.unapply(x).isDefined =>
-        val v = x.asInstanceOf[Variable]
-        // construct substitution
+    uncoverAxiomT("[:*] assign nondet", axiomInstance, _ => boxNDetAssignWithoutAlphaBaseT)
+  }
+  /** Base tactic for box nondeterministic assignment without alpha renaming */
+  private def boxNDetAssignWithoutAlphaBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
         val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(x, CDot)))
-        // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
-        val g = Forall(Seq(v), p)
-        val axiomInstance = Equiv(f, g)
+        SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+    }
 
-        // alpha renaming
-        val aV = Variable("v", None, Real)
-        val alpha = new PositionTactic("Alpha") {
+    val aV = Variable("v", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
+        new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(BoxModality(NDetAssign(_), _), Forall(_, _)) => true
             case _ => false
@@ -734,13 +734,15 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-        // rename to match axiom if necessary
-        val (ax, cont) =
-          if (v.name != aV.name || v.index != None) (replaceFree(axiom)(aV, v, None), Some(alpha))
-          else (axiom, None)
-        Some(ax, axiomInstance, l, None, cont)
-      case _ => None
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
+        if (v.name != aV.name || v.index != None) replaceFree(axiom)(aV, v, None)
+        else axiom
+    }
+
+    axiomLookupBaseT("[:*] assign nondet", subst, alpha, axiomInstance)
   }
 
   /**
@@ -772,14 +774,14 @@ object HybridProgramTacticsImpl {
           case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: Loop, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              diamondNDetAssignWithoutAlpha(p)
+              diamondNDetAssignWithoutAlphaT(p)
           )
           case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: DifferentialProgram, _))
             if BindingAssessment.catVars(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              diamondNDetAssignWithoutAlpha(p)
+              diamondNDetAssignWithoutAlphaT(p)
           )
-          case _ => Some(diamondNDetAssignWithoutAlpha(p))
+          case _ => Some(diamondNDetAssignWithoutAlphaT(p))
         }
       }
     }
@@ -790,26 +792,26 @@ object HybridProgramTacticsImpl {
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  private def diamondNDetAssignWithoutAlpha: PositionTactic = new AxiomTactic("<:*> assign nondet", "<:*> assign nondet") {
-    override def applies(f: Formula): Boolean = f match {
-      case DiamondModality(NDetAssign(_), _) => true
-      case _ => false
+  private def diamondNDetAssignWithoutAlphaT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // construct axiom instance: <v:=*>p(v) <-> \exists v. p(v).
+      case DiamondModality(NDetAssign(v: Variable), p) => Equiv(fml, Exists(Seq(v), p))
+      case _ => False
+    }
+    uncoverAxiomT("<:*> assign nondet", axiomInstance, _ => diamondNDetAssignWithoutAlphaBaseT)
+  }
+  /** Base tactic for diamond nondeterministic assignment without alpha renaming */
+  private def diamondNDetAssignWithoutAlphaBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
+        val aP = Function("p", None, Real, Bool)
+        SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
     }
 
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula): Option[(Formula, Formula, List[SubstitutionPair],
-      Option[PositionTactic], Option[PositionTactic])] = f match {
-      case DiamondModality(NDetAssign(x), p) if Variable.unapply(x).isDefined =>
-        val v = x.asInstanceOf[Variable]
-        // construct substitution
-        val aP = Function("p", None, Real, Bool)
-        val l = List(new SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(x, CDot)))
-        // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
-        val g = Exists(Seq(v), p)
-        val axiomInstance = Equiv(f, g)
-
-        // alpha renaming
-        val aV = Variable("v", None, Real)
-        val alpha = new PositionTactic("Alpha") {
+    val aV = Variable("v", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
+        new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
             case Equiv(DiamondModality(NDetAssign(_), _), Exists(_, _)) => true
             case _ => false
@@ -822,13 +824,15 @@ object HybridProgramTacticsImpl {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
         }
-        // rename to match axiom if necessary
-        val (ax, cont) =
-          if (v.name != aV.name || v.index != None) (replaceFree(axiom)(aV, v, None), Some(alpha))
-          else (axiom, None)
-        Some(ax, axiomInstance, l, None, cont)
-      case _ => None
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
+        if (v.name != aV.name || v.index != None) replaceFree(axiom)(aV, v, None)
+        else axiom
+    }
+
+    axiomLookupBaseT("<:*> assign nondet", subst, alpha, axiomInstance)
   }
 
   /**
