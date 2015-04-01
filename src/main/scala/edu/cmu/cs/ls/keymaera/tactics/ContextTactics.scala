@@ -194,11 +194,23 @@ object ContextTactics {
   def cutImplyInContext(f: Formula, ctx: Position): Tactic = cutImplyInContext(_ => f, ctx)
   def cutImplyInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
     def applicable(pn: ProofNode): Boolean = g(pn) match {
-      case Imply(lhs, rhs) => getFormula(pn.sequent, ctx) == rhs
+      case Imply(lhs, rhs) => getFormula(pn.sequent, ctx) == lhs || getFormula(pn.sequent, ctx) == rhs
       case _ => false
     }
 
     override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
+      case Imply(lhs, rhs) if getFormula(p.sequent, ctx) == lhs =>
+        val lhsInCtx = p.sequent(ctx.topLevel)
+        val rhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
+          override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
+            if (f == lhs) Right(rhs)
+            else Left(Some(ExpressionTraversal.stop))
+        }), lhsInCtx) match {
+          case Some(f) => f
+          case None => throw new IllegalArgumentException(s"Did not find $lhs at position $ctx")
+        }
+        val implyInCtx = Imply(lhsInCtx, rhsInCtx)
+        Some(cutT(Some(implyInCtx)))
       case Imply(lhs, rhs) if getFormula(p.sequent, ctx) == rhs =>
         val rhsInCtx = p.sequent(ctx.topLevel)
         val lhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {

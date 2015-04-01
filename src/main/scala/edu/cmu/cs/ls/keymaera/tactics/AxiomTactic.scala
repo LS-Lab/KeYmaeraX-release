@@ -37,7 +37,7 @@ object AxiomTactic {
                     baseT: Formula => PositionTactic): PositionTactic = new PositionTactic(axiomName) {
     override def applies(s: Sequent, p: Position): Boolean = axiomInstance(getFormula(s, p)) match {
       case Equiv(lhs, rhs) => getFormula(s, p) == lhs || getFormula(s, p) == rhs
-      case Imply(lhs, rhs) => getFormula(s, p) == rhs
+      case Imply(lhs, rhs) => getFormula(s, p) == lhs || getFormula(s, p) == rhs
       case _ => false
     }
 
@@ -50,8 +50,7 @@ object AxiomTactic {
             (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & lastSucc(baseT(getFormula(node.sequent, p)))),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
           ))
-        case inst@Imply(f, g) if !p.isAnte =>
-          val paLast = AntePosition(node.sequent.ante.length)
+        case inst@Imply(f, g) if  p.isAnte =>
           Some(cutImplyInContext(inst, p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
               assertT(1,1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
@@ -59,7 +58,19 @@ object AxiomTactic {
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
                 (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
               )),
-            (cutUseLbl, ImplyLeftT(paLast) && (
+            (cutUseLbl, lastAnte(ImplyLeftT) && (
+              AxiomCloseT /*& LabelBranch(axiomUseLbl), AxiomCloseT(paLast, p) | LabelBranch(axiomShowLbl)*/,
+              (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel)))
+          ))
+        case inst@Imply(f, g) if !p.isAnte =>
+          Some(cutImplyInContext(inst, p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
+              assertT(1,1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
+              cutT(Some(inst)) & onBranch(
+                (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
+                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+              )),
+            (cutUseLbl, lastAnte(ImplyLeftT) && (
               (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel),
               AxiomCloseT /*& LabelBranch(axiomUseLbl), AxiomCloseT(paLast, p) | LabelBranch(axiomShowLbl)*/)
               )
