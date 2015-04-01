@@ -250,11 +250,11 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "\\exists y. [x:=y+1;]x>0".asFormula :: Nil, Nil))
   }
 
-//  it should "work inside formulas" in {
-//    val tactic = existentialGenT(Variable("z", None, Real), "x".asTerm)(AntePosition(0, PosInExpr(1::Nil)))
-//    getProofSequent(tactic, new RootNode(sequent(Nil, "y>0 & x=5".asFormula :: Nil, Nil))) should be (
-//      sequent(Nil, "y>0".asFormula :: "\\exists z. z=5".asFormula :: Nil, Nil))
-//  }
+  it should "work in context of boxes" in {
+    val tactic = existentialGenT(Variable("z", None, Real), "x".asTerm)(AntePosition(0, PosInExpr(1::Nil)))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "[x:=5;]x=5".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[x:=5;](\\exists z. z=5)".asFormula :: Nil, Nil))
+  }
 
   // TODO AlphaConversionHelper replaces variable bound by quantifier -> might be needed by some tactics (check before fixing)
   ignore should "not replace bound occurrences of t with x" in {
@@ -271,6 +271,14 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "\\forall y. x>0".asFormula :: Nil, Nil))
   }
 
+  it should "introduce universal quantifier in context" in {
+    val tactic = vacuousUniversalQuanT(Some(Variable("y", None, Real)))
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1::Nil))), new RootNode(sucSequent("[y:=5;]x>0".asFormula))) should be (
+      sucSequent("[y:=5;](\\forall y. x>0)".asFormula))
+    getProofSequent(tactic(AntePosition(0, PosInExpr(1::Nil))), new RootNode(sequent(Nil, "[y:=5;]x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[y:=5;](\\forall y. x>0)".asFormula :: Nil, Nil))
+  }
+
   it should "not introduce universal quantifier if variable occurs in p" in {
     val tactic = locateSucc(vacuousUniversalQuanT(Some(Variable("x", None, Real))))
     tactic.applicable(new RootNode(sucSequent("x>0".asFormula))) shouldBe false
@@ -282,6 +290,14 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sucSequent("x>0".asFormula))
     getProofSequent(locateAnte(tactic), new RootNode(sequent(Nil, "\\forall y. x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "remove vacuous universal quantifier in context" in {
+    val tactic = vacuousUniversalQuanT(None)
+    getProofSequent(tactic(SuccPosition(0, PosInExpr(1::Nil))), new RootNode(sucSequent("[x:=5;](\\forall y. x>0)".asFormula))) should be (
+      sucSequent("[x:=5;]x>0".asFormula))
+    getProofSequent(tactic(AntePosition(0, PosInExpr(1::Nil))), new RootNode(sequent(Nil, "[x:=5;](\\forall y. x>0)".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[x:=5;]x>0".asFormula :: Nil, Nil))
   }
 
   it should "not be applicable if more than one quantified variable occurs" in {

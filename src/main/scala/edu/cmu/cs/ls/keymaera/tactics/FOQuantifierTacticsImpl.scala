@@ -2,7 +2,9 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.core.BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.v2vAssignT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
@@ -27,64 +29,56 @@ object FOQuantifierTacticsImpl {
    * Creates a new tactic for the universal/existential duality axiom.
    * @return The newly created tactic
    */
-  def forallDualT: PositionTactic = new AxiomTactic("all dual", "all dual") {
-    override def applies(f: Formula): Boolean = f match {
-      case Forall(_, _) => true
-      case Not(Exists(_, Not(_))) => true
-      case _ => false
-    }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+  def forallDualT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // \forall x . p(x) <-> !(\exists x . (!p(x)))
       case Forall(v, p) =>
         assert(v.size == 1, "Duality not supported for more than one variable")
-        // \forall x . p(x) <-> !(\exists x . (!p(x)))
-        val axiomInstance = Equiv(f, Not(Exists(v, Not(p))))
-
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
-
-        Some(axiomInstance, subst)
-      case Not(Exists(v, Not(p))) =>
-        // \forall x . p(x) <-> !(\exists x . (!p(x)))
-        val axiomInstance = Equiv(Forall(v, p), f)
-
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
-
-        Some(axiomInstance, subst)
+        Equiv(fml, Not(Exists(v, Not(p))))
+      case Not(Exists(v, Not(p))) => Equiv(Forall(v, p), fml)
+      case _ => False
     }
+    uncoverAxiomT("all dual", axiomInstance, _ => forallDualBaseT)
+  }
+  /** Base tactic for forall duality */
+  private def forallDualBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (p, v) = fml match {
+        case Equiv(Forall(vv, pp), _) => (pp, vv)
+        case Equiv(Not(Exists(vv, Not(pp))), _) => (pp, vv)
+      }
+      val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], CDot)) :: Nil
+    }
+    axiomLookupBaseT("all dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
    * Creates a new tactic for the universal/existential duality axiom.
    * @return The newly created tactic
    */
-  def existsDualT: PositionTactic = new AxiomTactic("exists dual", "exists dual") {
-    override def applies(f: Formula): Boolean = f match {
-      case Exists(_, _) => true
-      case Not(Forall(_, Not(_))) => true
-      case _ => false
-    }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
+  def existsDualT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      // \exists x . p(x) <-> !(\forall x . (!p(x)))
       case Exists(v, p) =>
         assert(v.size == 1, "Duality not supported for more than one variable")
-        // \exists x . p(x) <-> !(\forall x . (!p(x)))
-        val axiomInstance = Equiv(f, Not(Forall(v, Not(p))))
-
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
-
-        Some(axiomInstance, subst)
-      case Not(Forall(v, Not(p))) =>
-        // \exists x . p(x) <-> !(\forall x . (!p(x)))
-        val axiomInstance = Equiv(Exists(v, p), f)
-
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val subst = SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v(0).asInstanceOf[Variable], CDot)) :: Nil
-
-        Some(axiomInstance, subst)
+        Equiv(fml, Not(Forall(v, Not(p))))
+      case Not(Forall(v, Not(p))) => Equiv(Exists(v, p), fml)
+      case _ => False
     }
+    uncoverAxiomT("exists dual", axiomInstance, _ => existsDualBaseT)
+  }
+  /** Base tactic for exists duality */
+  private def existsDualBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val (p, v) = fml match {
+        case Equiv(Exists(vv, pp), _) => (pp, vv)
+        case Equiv(Not(Forall(vv, Not(pp))), _) => (pp, vv)
+      }
+      val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], CDot)) :: Nil
+    }
+    axiomLookupBaseT("exists dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
   def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
@@ -315,25 +309,23 @@ object FOQuantifierTacticsImpl {
    * @param t The term to generalize.
    * @return The tactic.
    */
-  def existentialGenT(x: Variable, t: Term) = new AxiomTactic("exists generalize", "exists generalize") {
-    override def applies(f: Formula): Boolean = true
+  def existentialGenT(x: Variable, t: Term): PositionTactic = {
+    // construct axiom instance: p(t) -> \exists x. p(x)
+    def axiomInstance(fml: Formula): Formula = Imply(fml, Exists(x :: Nil, SubstitutionHelper.replaceFree(fml)(t, x)))
+    uncoverAxiomT("exists generalize", axiomInstance, _ => existentialGenBaseT(x, t))
+  }
+  /** Base tactic for existential generalization */
+  private def existentialGenBaseT(x: Variable, t: Term): PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(p, Exists(_, _)) =>
+        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(t, CDot)) :: Nil
+    }
 
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = {
-      import AlphaConversionHelper.replaceFree
-
-      // construct substitution
-      val aT = Apply(Function("t", None, Unit, Real), Nothing)
-      val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-      val l = List(SubstitutionPair(aT, t), SubstitutionPair(aP, SubstitutionHelper.replaceFree(f)(t, CDot)))
-
-      // construct axiom instance: p(t) -> \exists x. p(x)
-      val g = Exists(x :: Nil, SubstitutionHelper.replaceFree(f)(t, x))
-      val axiomInstance = Imply(f, g)
-
-      // rename to match axiom if necessary
-      val aX = Variable("x", None, Real)
-      val alpha = new PositionTactic("Alpha") {
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = {
+      new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Imply(_, Exists(_, _)) => true
           case _ => false
@@ -346,14 +338,19 @@ object FOQuantifierTacticsImpl {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
       }
-      val Imply(left, right) = axiom
-      val (ax, cont) =
-        if (x.name != aX.name || x.index != aX.index) (Imply(left, replaceFree(right)(aX, x)), Some(alpha))
-        else (Imply(left, right), None)
-
-      Some(ax, axiomInstance, l, None, cont)
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val Imply(left, right) = axiom
+      if (x.name != aX.name || x.index != aX.index) Imply(left, replaceFree(right)(aX, x))
+      else Imply(left, right)
+    }
+
+    axiomLookupBaseT("exists generalize", subst, alpha, axiomInstance)
   }
+
+  def vacuousUniversalQuanT(x: Option[Variable]) = vacuousQuantificationT(x, "vacuous all quantifier", Forall.apply)
+  def vacuousExistentialQuanT(x: Option[Variable]) = vacuousQuantificationT(x, "vacuous exists quantifier", Exists.apply)
 
   /**
    * Base class for vacuous quantifier elimination/introduction tactics.
@@ -361,26 +358,41 @@ object FOQuantifierTacticsImpl {
    * @param axiomName The name of the axiom.
    * @param quantFactory Creates the quantifier.
    */
-  class VacuousQuantificationTactic(x: Option[Variable], axiomName: String,
-                                            quantFactory: (Seq[NamedSymbol], Formula) => Quantifier)
-      extends AxiomTactic(axiomName, axiomName) {
-    override def applies(f: Formula): Boolean = x match {
-      case Some(v) => !BindingAssessment.allNames(f).contains(v)
-      case None => f match {
-        case q: Quantifier => q.variables.size == 1 && BindingAssessment.allNames(q.child.asInstanceOf[Formula]).
-          intersect(q.variables.toSet).isEmpty
-        case _ => false
+  def vacuousQuantificationT(x: Option[Variable], axiomName: String,
+                             quantFactory: (Seq[NamedSymbol], Formula) => Quantifier): PositionTactic = {
+
+    def axiomInstance(fml: Formula): Formula = x match {
+      case Some(v) if !allNames(fml).contains(v) => Equiv(fml, quantFactory(v :: Nil, fml))
+      case _ => fml match {
+        case q: Quantifier if q.variables.size == 1 && allNames(q.child.asInstanceOf[Formula]).intersect(q.variables.toSet).isEmpty =>
+          Equiv(q.child.asInstanceOf[Formula], fml)
+        case _ => False
+      }
+    }
+    uncoverAxiomT(axiomName, axiomInstance, _ => vacuousQuantificationBaseT(x, axiomName, quantFactory))
+  }
+
+  private def vacuousQuantificationBaseT(x: Option[Variable], axiomName: String,
+                                         quantFactory: (Seq[NamedSymbol], Formula) => Quantifier): PositionTactic = {
+
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(p, _) =>
+        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        SubstitutionPair(aP, p) :: Nil
+    }
+
+    def v(fml: Formula) = x match {
+      case Some(vv) => vv
+      case None => fml match {
+        case Equiv(_, q: Quantifier) =>
+          require(q.variables.size == 1 && q.variables.head.isInstanceOf[Variable])
+          q.variables.head.asInstanceOf[Variable]
       }
     }
 
-    private def constructSubstAndAlphaRename(axiom: Formula, f: Formula, axiomInstance: Formula, v: Variable) = {
-      // construct substitution
-      val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-      val l = List(SubstitutionPair(aP, f))
-
-      // rename to match axiom if necessary
-      val aX = Variable("x", None, Real)
-      val alpha = new PositionTactic("Alpha") {
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = {
+      new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
           case Equiv(_, _: Quantifier) => true
           case _ => false
@@ -388,42 +400,21 @@ object FOQuantifierTacticsImpl {
 
         override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
           override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(alphaRenamingT(v.name, v.index, aX.name, aX.index)(p.second))
+            Some(alphaRenamingT(v(fml).name, v(fml).index, aX.name, aX.index)(p.second))
 
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         }
       }
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
       val Equiv(left, right) = axiom
-      val (ax, cont) =
-        if (v.name == aX.name && v.index == aX.index) (Equiv(left, right), None)
-        else (Equiv(left, replaceFree(right)(aX, v)), Some(alpha))
-
-      Some(ax, axiomInstance, l, None, cont)
+      if (v(fml).name == aX.name && v(fml).index == aX.index) Equiv(left, right)
+      else Equiv(left, replaceFree(right)(aX, v(fml)))
     }
 
-    override def constructInstanceAndSubst(f: Formula, axiom: Formula):
-        Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = x match {
-      case Some(v) =>
-        import AlphaConversionHelper.replaceFree
-        require(!BindingAssessment.allNames(f).contains(v))
-        // construct axiom instance: p <-> \exists/\forall x. p
-        constructSubstAndAlphaRename(axiom, f, Equiv(f, quantFactory(v :: Nil, f)), v)
-      case None => f match {
-        case q: Quantifier =>
-          require(q.variables.size == 1 && q.variables.head.isInstanceOf[Variable])
-          val v = q.variables.head.asInstanceOf[Variable]
-          // construct axiom instance: p <-> \exists/\forall x. p
-          constructSubstAndAlphaRename(axiom, q.child.asInstanceOf[Formula],
-            Equiv(q.child.asInstanceOf[Formula], f), v)
-        case _ => None
-      }
-    }
+    axiomLookupBaseT(axiomName, subst, alpha, axiomInstance)
   }
-
-  def vacuousUniversalQuanT(x: Option[Variable]) = new VacuousQuantificationTactic(x,
-    "vacuous all quantifier", Forall.apply)
-  def vacuousExistentialQuanT(x: Option[Variable]) = new VacuousQuantificationTactic(x,
-    "vacuous exists quantifier", Exists.apply)
 
   /**
    * Creates a tactic to decompose quantifiers.
