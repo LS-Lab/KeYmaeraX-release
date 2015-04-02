@@ -323,6 +323,7 @@ object SetLattice {
  * @tparam A Type of elements in the set
  */
 class SetLattice[A](val s: Either[Set[A], Set[A]]) {
+  def isTop = s.isLeft
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
     case Left(ts) => other.s match {
       case Left(os) => new SetLattice(Left(ts ++ os)) /* (top except ts) /\ (top except os) == (top except ts++os) */

@@ -85,7 +85,7 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
           case Apply(f: Function, CDot) =>
             assert(replt == repl)
-            assert(!StaticSemantics(replt).contains(CDot) || StaticSemantics(replt)==SetLattice.top, "CDot is no variable")
+            assert(!StaticSemantics(replt).contains(CDot) || StaticSemantics(replt).isTop, "CDot is no variable")
             if ((StaticSemantics(replt) -- Set(CDot)).contains(CDot)) println("COMPLETENESS WARNING: removal of CDot from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(CDot)) + " leading to unnecessary clashes")
             StaticSemantics(replt) -- Set(CDot)  // since CDot shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
           case _: Term => StaticSemantics(replt)
@@ -96,12 +96,12 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case ApplyPredicate(p: Function, CDot) =>
             assert(replf == repl)
-            assert(!StaticSemantics(replf).fv.contains(CDot) || StaticSemantics(replf).fv==SetLattice.top, "CDot is no variable")
+            assert(!StaticSemantics(replf).fv.contains(CDot) || StaticSemantics(replf).fv.isTop, "CDot is no variable")
             if ((StaticSemantics(replf).fv -- Set(CDot)).contains(CDot)) println("COMPLETENESS WARNING: removal of CDot from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(CDot)) + " leading to unnecessary clashes")
             StaticSemantics(replf).fv  -- Set(CDot) // since CDot shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
           case ApplyPredicational(ctx: Function, CDotFormula) =>
             assert(replf == repl)
-            assert(!StaticSemantics(replf).fv.contains(CDotFormula) || StaticSemantics(replf).fv==SetLattice.top, "CDotFormula is no variable")
+            assert(!StaticSemantics(replf).fv.contains(CDotFormula) || StaticSemantics(replf).fv.isTop, "CDotFormula is no variable")
             if ((StaticSemantics(replf).fv -- Set(CDotFormula)).contains(CDotFormula)) println("COMPLETENESS WARNING: removal of CDotFormula from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(CDotFormula)) + " leading to unnecessary clashes")
             SetLattice.bottom // predicationals are not function nor predicate symbols
             // StaticSemantics(replf).fv  -- Set(CDotFormula) // since CDotFormula shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
