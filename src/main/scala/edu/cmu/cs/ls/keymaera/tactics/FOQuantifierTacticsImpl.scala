@@ -129,26 +129,24 @@ object FOQuantifierTacticsImpl {
       }
 
       private def withStuttering(s: Sequent, around: Tactic): Tactic = {
-        var stutteringAt: Option[PosInExpr] = None
+        var stutteringAt: Set[PosInExpr] = Set.empty[PosInExpr]
         ExpressionTraversal.traverse(new ExpressionTraversalFunction {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-            case BoxModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
-            case BoxModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
-            case DiamondModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
-            case DiamondModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt = Some(p); Left(Some(ExpressionTraversal.stop))
+            case BoxModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
+            case BoxModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
+            case DiamondModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
+            case DiamondModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
             case _ => Left(None)
           }
         }, getFormula(s, pos))
 
-        stutteringAt match {
-          case Some(p) =>
-            val freshQuantified = freshNamedSymbol(quantified, s)
-            val pPos = if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p)
-            val assignPos = if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail))
-            alphaRenamingT(quantified.name, quantified.index, freshQuantified.name, freshQuantified.index)(pPos) &
-              around & v2vAssignT(assignPos)
-          case None => around
-        }
+        if (stutteringAt.nonEmpty) {
+          val pPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p))
+          val assignPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail)))
+          val alpha = pPos.foldRight(NilT)((p, r) => r & alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(p))
+          val v2v = assignPos.foldRight(NilT)((p, r) => r & v2vAssignT(p))
+          alpha & around & v2v
+        } else around
 
       }
     }
@@ -235,8 +233,7 @@ object FOQuantifierTacticsImpl {
                 val replMap = Map(axInstance -> renAxiom)
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
                   decomposeQuanT(SuccPosition(0, HereP.first)) ~
-                  (uniformSubstT(subst, replMap) &
-                    (axiomT(axiomName) & alpha & AxiomCloseT))
+                  (uniformSubstT(subst, replMap) & (axiomT(axiomName) & alpha & AxiomCloseT))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
               case None => println("Giving up " + this.name); None
             }
