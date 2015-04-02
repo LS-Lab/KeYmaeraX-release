@@ -194,6 +194,7 @@ object ContextTactics {
   def cutImplyInContext(f: Formula, ctx: Position): Tactic = cutImplyInContext(_ => f, ctx)
   def cutImplyInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
     def applicable(pn: ProofNode): Boolean = g(pn) match {
+      case Imply(_, Equiv(lhs, rhs)) => getFormula(pn.sequent, ctx) == lhs || getFormula(pn.sequent, ctx) == rhs
       case Imply(lhs, rhs) => getFormula(pn.sequent, ctx) == lhs || getFormula(pn.sequent, ctx) == rhs
       case _ => false
     }

@@ -43,39 +43,69 @@ object AxiomTactic {
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-          axiomInstance(getFormula(node.sequent, p)) match {
-        case inst@Equiv(f, g) =>
-          Some(cutEquivInContext(inst, p) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & lastSucc(baseT(getFormula(node.sequent, p)))),
-            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
-          ))
-        case inst@Imply(f, g) if  p.isAnte =>
-          Some(cutImplyInContext(inst, p) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
-              assertT(1,1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
-              cutT(Some(inst)) & onBranch(
+        axiomInstance(getFormula(node.sequent, p)) match {
+          case inst@Equiv(f, g) =>
+            Some(cutEquivInContext(inst, p) & onBranch(
+              (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & lastSucc(baseT(getFormula(node.sequent, p)))),
+              (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+            ))
+          case inst@Imply(f, g) if p.isAnte =>
+            Some(cutImplyInContext(inst, p) & onBranch(
+              (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
+                assertT(1, 1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
+                cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
                 (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
               )),
-            (cutUseLbl, lastAnte(ImplyLeftT) && (
-              AxiomCloseT /*& LabelBranch(axiomUseLbl), AxiomCloseT(paLast, p) | LabelBranch(axiomShowLbl)*/,
-              (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel)))
-          ))
-        case inst@Imply(f, g) if !p.isAnte =>
-          Some(cutImplyInContext(inst, p) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
-              assertT(1,1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
-              cutT(Some(inst)) & onBranch(
+              (cutUseLbl, lastAnte(ImplyLeftT) &&(
+                AxiomCloseT,
+                (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel)))
+            ))
+          case inst@Imply(f, g) if !p.isAnte =>
+            Some(cutImplyInContext(inst, p) & onBranch(
+              (cutShowLbl, lastSucc(cohideT) & lastSucc(ImplyRightT) & (boxMonotoneT | diamondMonotoneT | NilT) &
+                assertT(1, 1) & lastAnte(assertPT(f, "Unexpected formula in ante")) & lastSucc(assertPT(g, "Unexpected formula in succ")) &
+                cutT(Some(inst)) & onBranch(
                 (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
                 (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
               )),
-            (cutUseLbl, lastAnte(ImplyLeftT) && (
-              (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel),
-              AxiomCloseT /*& LabelBranch(axiomUseLbl), AxiomCloseT(paLast, p) | LabelBranch(axiomShowLbl)*/)
-              )
+              (cutUseLbl, lastAnte(ImplyLeftT) &&(
+                (assertPT(node.sequent(p), "hiding original instance") & hideT)(p.topLevel),
+                AxiomCloseT)
+                )
+            ))
+          case Equals(sort, lhs, rhs) => ???
+        }
+    }
+  }
+
+  def uncoverConditionalAxiomT(axiomName: String,
+                               axiomInstance: Formula => Formula,
+                               condT: Formula => PositionTactic,
+                               baseT: Formula => PositionTactic): PositionTactic = new PositionTactic(axiomName) {
+    // TODO generalize to non-toplevel positions
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (axiomInstance(getFormula(s, p)) match {
+      case Imply(_, Equiv (lhs, rhs)) => getFormula(s, p) == lhs || getFormula(s, p) == rhs
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = axiomInstance(getFormula(node.sequent, p)) match {
+        case inst@Imply(cond, equiv@Equiv(lhs, rhs)) =>
+          Some(cutT(Some(equiv))/*cutEquivInContext(equiv, p)*/ & onBranch(
+            (cutShowLbl, lastSucc(cohideT) & /* only works because top-level */ cutT(Some(cond)) & onBranch(
+              (cutShowLbl, lastSucc(cohideT) & lastSucc(condT(getFormula(node.sequent, p)))),
+              (cutUseLbl, cutT(Some(inst)) & onBranch(
+                (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getFormula(node.sequent, p)))),
+                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+              ))
+              )),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel) & LabelBranch(cutUseLbl))
           ))
-        case Equals(sort, lhs, rhs) => ???
       }
     }
   }
@@ -100,9 +130,12 @@ object AxiomTactic {
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      val axiom = Axiom.axioms.get(axiomName) match { case Some(ax) => ax }
+      val axiom = Axiom.axioms.get(axiomName) match {
+        case Some(ax) => ax
+      }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val fml = getFormula(node.sequent, p)
         Some(
@@ -116,7 +149,6 @@ object AxiomTactic {
     }
   }
 }
-
 // axiom wrapper shell
 // TODO: Use findPosInExpr to find a position that matches the left side of the axiom and cut in the resulting instance
 // we start with just using findPos to get a top level position
