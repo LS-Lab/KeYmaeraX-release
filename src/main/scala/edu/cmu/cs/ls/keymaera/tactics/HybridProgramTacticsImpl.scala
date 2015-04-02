@@ -157,19 +157,21 @@ object HybridProgramTacticsImpl {
     def alpha(fml: Formula): PositionTactic = fml match {
       case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
         val aV = Variable("v", None, vSort)
-        new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(Derivative(_), _), _), _) => true
-            case _ => false
-          }
+        if (v.name != aV.name || v.index != aV.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(BoxModality(Assign(Derivative(_), _), _), _) => true
+              case _ => false
+            }
 
-          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
           }
-        }
+        } else NilPT
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
@@ -345,19 +347,21 @@ object HybridProgramTacticsImpl {
 
     def alpha(fml: Formula): PositionTactic = {
       val aV = Variable("v", None, Real)
-      new PositionTactic("Alpha") {
-        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-          case Equiv(BoxModality(Assign(_, _), _), _) => true
-          case _ => false
-        }
+      if (v.name != aV.name || v.index != aV.index) {
+        new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(BoxModality(Assign(_, _), _), _) => true
+            case _ => false
+          }
 
-        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
         }
-      }
+      } else NilPT
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
@@ -398,19 +402,21 @@ object HybridProgramTacticsImpl {
 
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = {
-      new PositionTactic("Alpha") {
-        override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-          case Equiv(BoxModality(Assign(_, _), _), _) => true
-          case _ => false
-        }
+      if (v.name != aV.name || v.index != aV.index) {
+        new PositionTactic("Alpha") {
+          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+            case Equiv(BoxModality(Assign(_, _), _), _) => true
+            case _ => false
+          }
 
-        override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-          override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-            Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          }
         }
-      }
+      } else NilPT
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
@@ -464,9 +470,8 @@ object HybridProgramTacticsImpl {
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>
                 PropositionalTacticsImpl.cohideT(SuccPosition(succLength)) & assertT(0, 1) &
                 alphaRenamingT(t.name, t.index, v.name, v.index)(SuccPosition(0, PosInExpr(1 :: p.inExpr.pos))) &
-                  EquivRightT(SuccPosition(0)) & AxiomCloseT),
-              (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel) &
-                hideT(AntePosition(anteLength)) & hideT(p.topLevel))
+                  EquivRightT(SuccPosition(0)) & (AxiomCloseT | debugT("v2vAssign: Axiom close failed unexpectedly") & stopT)),
+              (cutUseLbl, equivRewriting(AntePosition(anteLength), p.topLevel))
             )
         )
 
@@ -565,20 +570,22 @@ object HybridProgramTacticsImpl {
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
       case Equiv(BDModality(Assign(v: Variable, _: Term), _), _) =>
-        new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BDModality(Assign(_, _), _), _) => true
-            case _ => false
-          }
+        if (v.name != aV.name || v.index != aV.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(BDModality(Assign(_, _), _), _) => true
+              case _ => false
+            }
 
-          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~
-                   globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(alphaRenamingT(v.name, v.index, aV.name, aV.index)(p) ~
+                  globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
           }
-        }
+        } else NilPT
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
@@ -720,19 +727,21 @@ object HybridProgramTacticsImpl {
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
       case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
-        new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(NDetAssign(_), _), Forall(_, _)) => true
-            case _ => false
-          }
+        if (v.name != aV.name || v.index != aV.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(BoxModality(NDetAssign(_), _), Forall(_, _)) => true
+              case _ => false
+            }
 
-          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
           }
-        }
+        } else NilPT
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
@@ -810,19 +819,21 @@ object HybridProgramTacticsImpl {
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
       case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
-        new PositionTactic("Alpha") {
-          override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(DiamondModality(NDetAssign(_), _), Exists(_, _)) => true
-            case _ => false
-          }
+        if (v.name != aV.name || v.index != aV.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(DiamondModality(NDetAssign(_), _), Exists(_, _)) => true
+              case _ => false
+            }
 
-          override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-            override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(v.name, v.index, aV.name, aV.index))
 
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
           }
-        }
+        } else NilPT
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
