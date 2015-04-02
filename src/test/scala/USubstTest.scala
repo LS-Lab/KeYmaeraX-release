@@ -17,7 +17,7 @@ object OptimisticTest extends Tag("OptimisticTest")
 
 class USubstTests extends FlatSpec with Matchers {
 
-  val randomTrials = 40*1000
+  val randomTrials = 40*10
   val randomComplexity = 20
   val rand = new RandomFormula()
 
@@ -376,7 +376,7 @@ class USubstTests extends FlatSpec with Matchers {
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
-        it should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs OptimisticTest in {
+        ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs OptimisticTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
               val fml = Equals(Real, term1, term2)
@@ -406,7 +406,7 @@ class USubstTests extends FlatSpec with Matchers {
                   )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
               }
 
-  it should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs OptimisticTest in {
+  ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs OptimisticTest in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
       val fml = Equals(Real, term1, term2)
@@ -436,7 +436,7 @@ class USubstTests extends FlatSpec with Matchers {
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
-      it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs OptimisticTest in {
+      ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs OptimisticTest in {
           val term1 = "z^2*y".asTerm
           val term2 = "-(-z)^2*-y+0".asTerm
           val fml = Equals(Real, term1, term2)
@@ -451,7 +451,7 @@ class USubstTests extends FlatSpec with Matchers {
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
   
-    it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs OptimisticTest in {
+    ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs OptimisticTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
         val fml = Equals(Real, term1, term2)
@@ -525,7 +525,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
 
   
-  it should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs OptimisticTest in {
+  ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs OptimisticTest in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
     val fml = Equals(Real, term1, term2)
