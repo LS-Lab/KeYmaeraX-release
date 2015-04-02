@@ -124,8 +124,8 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
-  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
-    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
+  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "),\n " +
+    ante.map(_.prettyString()).mkString(",\n ") + "\n\n==>\n\n " + succ.map(_.prettyString()).mkString(",\n ") + "}]"
 }
 
 
