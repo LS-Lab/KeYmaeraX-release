@@ -25,7 +25,7 @@ class ProverException(msg: String) extends RuntimeException(msg) {
  */
 class CoreException(msg:String) extends ProverException(msg) {}
 
-class SubstitutionClashException(msg: String, s: String/*Substitution*/, info: String = "") extends CoreException(msg + "\nSubstitution " + s + info) {
+class SubstitutionClashException(msg: String, s: String/*Substitution*/, info: String = "") extends CoreException(msg + "\nSubstitution " + s + " (details: " + info + ")") {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
