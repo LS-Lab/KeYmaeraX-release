@@ -928,15 +928,10 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
       // (needed for skolemization and renaming of quantified parts inside a formula)
       case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => rename(f)
       case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => rename(f)
-      // if ODE binds var, then rename with stored initial value
-      case BoxModality(ode: DifferentialProgram, _) if StaticSemantics(ode).bv.exists(v => v.name == name && v.index == idx) =>
+      // if program may bind var, then rename with stored initial value
+      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
         BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
-      case DiamondModality(ode: DifferentialProgram, _) if StaticSemantics(ode).bv.exists(v => v.name == name && v.index == idx) =>
-        DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
-      // if loop binds var, then rename with stored initial value
-      case BoxModality(Loop(a), _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
-        BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
-      case DiamondModality(Loop(a), _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
+      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
         DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
       case _ => f
     } else f match {

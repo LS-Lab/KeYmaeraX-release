@@ -406,6 +406,12 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "[{z:=z+1;}*;]z>0 & [z'=1;]z>0".asFormula :: Nil, Nil))
   }
 
+  it should "instantiate when stuttering obligation is not indicated by first program in modality" in {
+    val tactic = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. [?x>1;x'=1;]x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "[?z>1;z'=1;]z>0".asFormula :: Nil, Nil))
+  }
+
   "Forall duality" should "turn a universal quantifier into a negated existential" in {
     val tactic = locateSucc(FOQuantifierTacticsImpl.forallDualT)
     getProofSequent(tactic, new RootNode(sucSequent("\\forall x . x>y".asFormula))) should be (

@@ -121,21 +121,19 @@ object FOQuantifierTacticsImpl {
     override def apply(pos: Position): Tactic = new ConstructionTactic("Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(_, _) =>
-          Some(withStuttering(node.sequent, instantiateUniversalQuanT(quantified, instance)(pos)))
-        case Exists(_, _) =>
-          Some(withStuttering(node.sequent, instantiateExistentialQuanT(quantified, instance)(pos)))
+        case Forall(vars, _) =>
+          Some(withStuttering(node.sequent, vars.length > 1, instantiateUniversalQuanT(quantified, instance)(pos)))
+        case Exists(vars, _) =>
+          Some(withStuttering(node.sequent, vars.length > 1, instantiateExistentialQuanT(quantified, instance)(pos)))
         case _ => None
       }
 
-      private def withStuttering(s: Sequent, around: Tactic): Tactic = {
+      private def withStuttering(s: Sequent, quantStillPresentAfterAround: Boolean, around: Tactic): Tactic = {
         var stutteringAt: Set[PosInExpr] = Set.empty[PosInExpr]
         ExpressionTraversal.traverse(new ExpressionTraversalFunction {
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-            case BoxModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
-            case BoxModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
-            case DiamondModality(prg@Loop(_), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
-            case DiamondModality(prg@ODESystem(_, _, _), _) if StaticSemantics(prg).bv.contains(quantified) => stutteringAt += p; Left(None)
+            case BoxModality(prg, _) if StaticSemantics(prg).bv.contains(quantified) && !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+            case DiamondModality(prg, _) if StaticSemantics(prg).bv.contains(quantified) && !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
             case _ => Left(None)
           }
         }, getFormula(s, pos))
@@ -144,7 +142,11 @@ object FOQuantifierTacticsImpl {
           val pPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p))
           val assignPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail)))
           val alpha = pPos.foldRight(NilT)((p, r) => r & alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(p))
-          val v2v = assignPos.foldRight(NilT)((p, r) => r & v2vAssignT(p))
+          val v2v =
+            if (quantStillPresentAfterAround) assignPos.foldRight(NilT)((p, r) => r & v2vAssignT(
+              if (p.isAnte) new AntePosition(p.index, PosInExpr(0 :: p.inExpr.pos))
+              else new SuccPosition(p.index, PosInExpr(0 :: p.inExpr.pos))))
+            else assignPos.foldRight(NilT)((p, r) => r & v2vAssignT(p))
           alpha & around & v2v
         } else around
 

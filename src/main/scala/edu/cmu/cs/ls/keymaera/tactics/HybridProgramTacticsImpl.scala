@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
+import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
@@ -36,8 +37,8 @@ object HybridProgramTacticsImpl {
 
   class ByDualityAxiomTactic(base: PositionTactic) extends PositionTactic(base.name) {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case DiamondModality(prg, phi) => base.applies(s.updated(p, BoxModality(prg, Not(phi))), p)
-      case BoxModality(prg, phi) => base.applies(s.updated(p, DiamondModality(prg, Not(phi))), p)
+      case f@DiamondModality(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, BoxModality(prg, Not(phi)), p.inExpr)), p)
+      case f@BoxModality(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, DiamondModality(prg, Not(phi)), p.inExpr)), p)
       case _ => false
     }
 
@@ -49,6 +50,17 @@ object HybridProgramTacticsImpl {
         case BoxModality(prg, phi) =>
           Some(boxDualityT(p) & base(p.first) & diamondDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
         case _ => None
+      }
+    }
+
+    def replaceAtPos(fml: Formula, repl: Formula, where: PosInExpr): Formula = {
+      ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+          if (p == where) Right(repl)
+          else Left(Some(ExpressionTraversal.stop))
+        }
+      }), fml) match {
+        case Some(f) => f
       }
     }
   }
@@ -436,18 +448,8 @@ object HybridProgramTacticsImpl {
   def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
     import NameCategorizer.freeVariables
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case BoxModality(Assign(_: Variable, v: Variable), pred) => checkNested(pred, v)
-      case DiamondModality(Assign(_: Variable, v: Variable), pred) => checkNested(pred, v)
-      case _ => false
-    }
-
-    private def checkNested(f: Formula, v: Variable) = f match {
-      case BoxModality(_: DifferentialProgram, _) => !freeVariables(f).contains(v)
-      case BoxModality(_: Loop, _) => !freeVariables(f).contains(v)
-      case DiamondModality(_: DifferentialProgram, _) => !freeVariables(f).contains(v)
-      case DiamondModality(_: Loop, _) => !freeVariables(f).contains(v)
-      // prevent application on anything else. otherwise, assignT has the surprising effect of handling multiple
-      // assignments at once
+      case BoxModality(Assign(_: Variable, v: Variable), pred) => !freeVariables(pred).contains(v)
+      case DiamondModality(Assign(_: Variable, v: Variable), pred) => !freeVariables(pred).contains(v)
       case _ => false
     }
 
@@ -626,6 +628,7 @@ object HybridProgramTacticsImpl {
   def boxTestT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case BoxModality(Test(h), p) => Equiv(fml, Imply(h, p))
+      case _ => False
     }
     uncoverAxiomT("[?] test", axiomInstance, _ => boxTestBaseT)
   }

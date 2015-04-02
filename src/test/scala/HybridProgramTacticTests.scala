@@ -448,16 +448,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
       sucSequent("[{z:=z+2;}*;]z>0".asFormula))
   }
 
-  it should "not work on anything else in boxes" in {
-    import HybridProgramTacticsImpl.v2vAssignT
-    val tactic = locateSucc(v2vAssignT)
-    tactic.applicable(new RootNode(sucSequent("[y:=z;]y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("[y:=z;][y:=3;]y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("[y:=z;][?y>0;]y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("[y:=z;]<y:=3;>y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("[y:=z;]<?y>0;>y>0".asFormula))) shouldBe false
-  }
-
   it should "work on diamond ODEs" in {
     import HybridProgramTacticsImpl.v2vAssignT
     val tactic = locateSucc(v2vAssignT)
@@ -478,16 +468,6 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val tactic = locateSucc(v2vAssignT)
     getProofSequent(tactic, new RootNode(s)) should be (
       sucSequent("<{z:=z+2;}*;>z>0".asFormula))
-  }
-
-  it should "not work on anything else in diamonds" in {
-    import HybridProgramTacticsImpl.v2vAssignT
-    val tactic = locateSucc(v2vAssignT)
-    tactic.applicable(new RootNode(sucSequent("<y:=z;>y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("<y:=z;><y:=3;>y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("<y:=z;><?y>0;>y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("<y:=z;>[y:=3;]y>0".asFormula))) shouldBe false
-    tactic.applicable(new RootNode(sucSequent("<y:=z;>[?y>0;]y>0".asFormula))) shouldBe false
   }
 
   it should "work inside formulas" in {
