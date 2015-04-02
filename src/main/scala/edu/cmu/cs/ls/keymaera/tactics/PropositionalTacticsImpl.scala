@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
@@ -261,25 +262,23 @@ object PropositionalTacticsImpl {
       })
   }
 
-  def kModalModusPonensT = new AxiomTactic("K modal modus ponens", "K modal modus ponens") {
-    override def applies(f: Formula): Boolean = f match {
-      case Imply(BoxModality(a, _), BoxModality(b, _)) => a == b
-      case _ => false
+  def kModalModusPonensT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case Imply(BoxModality(a, p), BoxModality(b, q)) if a == b => Imply(BoxModality(a, Imply(p, q)), fml)
+      case _ => False
     }
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case Imply(BoxModality(a, p), BoxModality(b, q)) if a == b =>
-        // construct substitution
+    uncoverAxiomT("K modal modus ponens", axiomInstance, _ => kModalModusPonensBaseT)
+  }
+  /** Base tactic for k modal modus ponens */
+  private def kModalModusPonensBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(_, Imply(BoxModality(a, p), BoxModality(b, q))) if a == b =>
         val aA = ProgramConstant("a")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-        val l = List(SubstitutionPair(aA, a), SubstitutionPair(aP, p), SubstitutionPair(aQ, q))
-        // construct axiom instance: [a](p->q) -> (([a]p) -> ([a]q))
-        val g = BoxModality(a, Imply(p, q))
-        val axiomInstance = Imply(g, f)
-        Some(axiomInstance, l)
-      case _ => None
+        SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: Nil
     }
+    axiomLookupBaseT("K modal modus ponens", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /**
