@@ -84,8 +84,8 @@ object TacticLibrary {
       }
 
     def freshIndexInFormula(name: String, f: Formula) =
-      if (allNames(f).exists(_.name == name)) {
-        val vars = allNames(f).map(n => (n.name, n.index)).filter(_._1 == name)
+      if (symbols(f).exists(_.name == name)) {
+        val vars = symbols(f).map(n => (n.name, n.index)).filter(_._1 == name)
         require(vars.size > 0)
         val maxIdx: Option[Int] = vars.map(_._2).foldLeft(None: Option[Int])((acc: Option[Int], i: Option[Int]) =>
           acc match {
@@ -101,7 +101,19 @@ object TacticLibrary {
         }
       } else None
 
-    def names(s: Sequent) = s.ante.flatMap(allNames) ++ s.succ.flatMap(allNames)
+    def symbols(f: Formula): Set[NamedSymbol] = {
+      var symbols = Set[NamedSymbol]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
+          case v: Variable => symbols += v; Left(None)
+          case Apply(fn: Function, _) => symbols += fn; Left(None)
+          case _ => Left(None)
+        }
+      }, f)
+      symbols
+    }
+
+    def names(s: Sequent) = s.ante.flatMap(symbols) ++ s.succ.flatMap(symbols)
 
     def freshIndexInSequent(name: String, s: Sequent) =
       if (names(s).exists(_.name == name))
@@ -109,7 +121,7 @@ object TacticLibrary {
       else None
 
     def freshNamedSymbol[T <: NamedSymbol](t: T, f: Formula): T =
-      if (allNames(f).exists(_.name == t.name)) t match {
+      if (symbols(f).exists(_.name == t.name)) t match {
         case Variable(vName, _, vSort) => Variable(vName, freshIndexInFormula(vName, f), vSort).asInstanceOf[T]
         case Function(fName, _, fDomain, fSort) => Function(fName, freshIndexInFormula(fName, f), fDomain, fSort).asInstanceOf[T]
         case _ => ???
@@ -242,7 +254,7 @@ object TacticLibrary {
                 (0 until node.sequent.ante.length).map(i => hideT(AntePosition(i))).foldRight(NilT)((t, result) => result & t) &
                   (p.index + 1 until node.sequent.succ.length).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
                   (0 until p.index).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & boxMonotoneT &
+                  assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
                   assertT(1,1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & lastAnte(instantiateT) &
                   (AxiomCloseT | debugT("Cut use: Axiom close failed unexpectedly") & stopT)
                 )),
