@@ -25,6 +25,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, fr
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
+import scala.collection.mutable
 
 /**
  * Created by smitsch on 1/9/15.
@@ -642,41 +643,31 @@ object ODETactics {
       [c;]p <- p & [$$c$$;]p'
     End.
   */
-  def diffInvariantSystemIntroT = new AxiomTactic("DI System Marker Intro", "DI System Marker Intro") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(ODESystem(_, _, _), _) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && super.applies(s, p)
-
-    override def constructInstanceAndSubst(f: Formula): Option[(Formula, List[SubstitutionPair])] = f match {
-      case BoxModality(ODESystem(d, c, h), p) => {
+  def diffInvariantSystemIntroT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BoxModality(ODESystem(d, c, h), p) =>
         //[c&H]p <- (p & [{c}&H](H->p')
-
-        //construct instance
         val g = Imply(h,
           And(p,
-          BoxModality(
-            ODESystem(d, IncompleteSystem(c), h), FormulaDerivative(p)
-          )
-        ))
-        val axiomInstance = Imply(g, f)
-
-        //construct substitution.
+            BoxModality(
+              ODESystem(d, IncompleteSystem(c), h), FormulaDerivative(p)
+            )
+          ))
+        Imply(g, fml)
+      case _ => False
+    }
+    uncoverAxiomT("DI System Marker Intro", axiomInstance, _ => diffInvariantSystemIntroBaseT)
+  }
+  /** Base tactic for diff invariant system intro */
+  private def diffInvariantSystemIntroBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(Imply(_, And(_, BoxModality(ODESystem(d, IncompleteSystem(c), h), FormulaDerivative(p)))), _) =>
         val aC = DifferentialProgramConstant("c")
         val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
         val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-        val subst = List(
-          SubstitutionPair(aC, c),
-          SubstitutionPair(aP, p),
-          SubstitutionPair(aH, h)
-        )
-
-        Some(axiomInstance, subst)
-      }
-      case _ => None
+        SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) :: Nil
     }
+    axiomLookupBaseT("DI System Marker Intro", subst, _ => NilPT, (f, ax) => ax)
   }
 
   /*
@@ -684,7 +675,7 @@ object ODETactics {
       [$$x'=f(x), c$$ & H(x);]p(x) <- [$$c, x'$=$f(x)$$ & H(x);][x' := f(x);]p(x)
     End.
    */
-  def diffInvariantSystemHeadT = new AxiomTactic("DI System Head Test", "DI System Head Test") {
+  def diffInvariantSystemHeadT: PositionTactic = new AxiomTactic("DI System Head Test", "DI System Head Test") {
     override def applies(f: Formula): Boolean = {
       f match {
 //        case BoxModality(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
@@ -765,44 +756,36 @@ object ODETactics {
       [$$x' =` f(x), c$$ & H(x);]p(x) <- p(X)
     End.
   */
-  def diffInvariantSystemTailT = new AxiomTactic("DI System Complete", "DI System Complete") {
-    override def applies(f: Formula): Boolean = f match {
-      case BoxModality(ODESystem(_, IncompleteSystem(cp : ODEProduct), _), _) => cp.normalize() match {
-        case ODEProduct(CheckedContEvolveFragment(_), _) => true
-        case _ => false
+  def diffInvariantSystemTailT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BoxModality(ODESystem(vars, IncompleteSystem(cp : ODEProduct), h), p) => cp.normalize() match {
+          case ODEProduct(CheckedContEvolveFragment(AtomicODE(Derivative(Real, x: Variable), t)), c) => Imply(p, fml)
+          case _ => False
+        }
+      case _ => False
       }
-      case _ => false
+
+    uncoverAxiomT("DI System Complete", axiomInstance, _ => diffInvariantSystemTailBaseT)
+  }
+
+  private def diffInvariantSystemTailBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(_, BoxModality(ODESystem(vars, IncompleteSystem(cp: ODEProduct), h), p)) => cp.normalize() match {
+        case ODEProduct(CheckedContEvolveFragment(AtomicODE(Derivative(Real, x: Variable), t)), c) =>
+          val aT = Apply(Function("f", None, Real, Real), Anything)
+          val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+          val aC = DifferentialProgramConstant("c")
+          val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+          SubstitutionPair(aT, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) :: Nil
+      }
     }
 
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && super.applies(s, p)
-
-    override def constructInstanceAndSubst(f: Formula, ax: Formula, pos: Position):
-    Option[(Formula, Formula, List[SubstitutionPair], Option[PositionTactic], Option[PositionTactic])] = f match {
-      case BoxModality(ODESystem(vars, IncompleteSystem(cp : ODEProduct), h), p) => {
-        cp.normalize() match {
-          case ODEProduct(CheckedContEvolveFragment(AtomicODE(Derivative(Real, x: Variable), t)), c) => {
-            //construct instance
-            val instance = Imply(p, f)
-
-            //construct substitution.
-            val aT = Apply(Function("f", None, Real, Real), Anything)
-
-            val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-
-            val aC = DifferentialProgramConstant("c")
-
-            val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-
-            val subst = List(
-              new SubstitutionPair(aT, t),
-              new SubstitutionPair(aC,c),
-              new SubstitutionPair(aP, p),
-              new SubstitutionPair(aH, h)
-            )
-
-            // alpha renaming if necessary
-            val aX = Variable("x", None, Real)
-            val alpha = new PositionTactic("Alpha") {
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Imply(_, BoxModality(ODESystem(vars, IncompleteSystem(cp: ODEProduct), h), p)) => cp.normalize() match {
+        case ODEProduct(CheckedContEvolveFragment(AtomicODE(Derivative(Real, x: Variable), t)), c) =>
+          if (x.name != aX.name || x.index != aX.index) {
+            new PositionTactic("Alpha") {
               override def applies(s: Sequent, p: Position): Boolean = s(p) match {
                 case Imply(_, BoxModality(ODESystem(_, IncompleteSystem(_), _), _)) => true
                 case _ => false
@@ -815,18 +798,19 @@ object ODETactics {
                 override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
               }
             }
-
-            val (axiom, cont) =
-              if (x.name != aX.name || x.index != aX.index) (replace(ax)(aX, x), Some(alpha))
-              else (ax, None)
-
-            Some(axiom, instance, subst, None, cont)
-          }
-          case _ => None
-        }
+          } else NilPT
       }
-      case _ => None
     }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Imply(_, BoxModality(ODESystem(vars, IncompleteSystem(cp: ODEProduct), h), p)) => cp.normalize() match {
+        case ODEProduct(CheckedContEvolveFragment(AtomicODE(Derivative(Real, x: Variable), t)), c) =>
+          if (x.name != aX.name || x.index != aX.index) replace(axiom)(aX, x)
+          else axiom
+      }
+    }
+
+    axiomLookupBaseT("DI System Complete", subst, alpha, axiomInstance)
   }
 
   /**
