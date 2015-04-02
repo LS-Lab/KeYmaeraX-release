@@ -312,10 +312,9 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     a [SubstitutionClashException] should be thrownBy s("{x:=x+y;}*".asProgram)
   }
 
-  "Uniform substitution of (x,1) |-> {x:=1 ++ x:=x+1 ++ z:=x}*;" should "be {x:=1 ++ x:=x+1 ++ z:=x}*" in {
+  "Uniform substitution of (x,1) |-> {x:=1 ++ x:=x+1 ++ z:=x}*;" should "clash" in {
     val s = create(SubstitutionPair("x()".asTerm, "1".asTerm))
-    // TODO not yet supported
-    an [IllegalArgumentException] should be thrownBy s("{x:=1 ++ x:=x()+1 ++ z:=x()}*".asProgram) //should be ("{x:=1 ++ x:=x+1 ++ z:=x}*".asProgram)
+    a [SubstitutionClashException] should be thrownBy s("{x:=1 ++ x:=x()+1 ++ z:=x()}*".asProgram)
   }
 
   // ?\psi
@@ -602,9 +601,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Uniform substitution of (x,t) |-> [x:=1 ++ x:=x+1 ++ z:=x;]x>0" should "be [x:=1 ++ x:=t+1 ++ z:=t;]x>0" in {
-    val s = create(SubstitutionPair("x()".asTerm, "t".asTerm))
-    // TODO not yet supported, hence exception
-    an [IllegalArgumentException] should be thrownBy s("[x:=1 ++ x:=x()+1 ++ z:=x()]x()>0".asFormula)// should be ("[x:=1 ++ x:=t+1 ++ z:=t;]x>0".asFormula)
+    val s = USubst(SubstitutionPair("x()".asTerm, "t".asTerm) :: Nil)
+    s("[x:=1 ++ x:=x()+1 ++ z:=x()]x>0".asFormula) should be ("[x:=1 ++ x:=t+1 ++ z:=t;]x>0".asFormula)
   }
 
   // <\alpha>\phi
@@ -922,11 +920,11 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
     val s = create(SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, Number(0))))
 
-    val f = BoxModality(Assign("x".asTerm, "0".asTerm), ApplyPredicate(p, "x".asTerm))
+    val f = BoxModality("x:=0;".asProgram, ApplyPredicate(p, "x".asTerm))
     s(f) should be ("[x:=0;]x>0".asFormula)
 
     val g = BoxModality(ProgramConstant("a"), ApplyPredicate(p, "x".asTerm))
-    a [SubstitutionClashException] should be thrownBy s(g)
+    s(g) shouldBe BoxModality(ProgramConstant("a"), "x>0".asFormula)
   }
 
   "Substitution of wildcard predicate p(?)" should "work" in {
@@ -963,7 +961,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s(h) should be ("[x:=0;]v>x+2".asFormula)
 
     val g = BoxModality(ProgramConstant("a"), GreaterThan(Real, "v".asTerm, Apply(f, "x".asTerm)))
-    a [SubstitutionClashException] should be thrownBy s(g)
+    s(g) shouldBe BoxModality(ProgramConstant("a"), "v>x+2".asFormula)
   }
 
   "Substitution of wildcard function f(?)" should "work" in {
