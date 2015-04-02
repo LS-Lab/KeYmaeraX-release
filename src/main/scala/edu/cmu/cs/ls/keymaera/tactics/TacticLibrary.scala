@@ -200,18 +200,21 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
-  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqThenHideIfChanged)) ~
+  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
   private def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
     override def applies(s: Sequent, p: Position): Boolean = eqLeft(exhaustive = true).applies(s, p)
 
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+    override def apply(p: Position): Tactic = new Tactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+
+      override def apply(tool: Tool, node: ProofNode) = {
         val eq = eqLeft(exhaustive = true)(p)
-        eq.continuation = onChange(node, hideT(p))
-        Some(eq)
+        val hide = SearchTacticsImpl.locateAnte(assertPT(node.sequent(p), "Wrong position when hiding EQ") & hideT, _ == node.sequent(p))
+        hide.continuation = continuation
+        eq.continuation = onChangeAndOnNoChange(node, onChange(node, hide), continuation)
+        eq.dispatch(this, node)
       }
     }
   }
