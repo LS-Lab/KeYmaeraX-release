@@ -65,46 +65,46 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //"The axiom-based differential invariant tactic"
-  ignore should "work when there IS a test condition (no tests when there is none..." in {
-    val f = helper.parseFormula("[x'=1 & true;]z>=0")
-    f match {
-      case BoxModality(ODESystem(_, _, _), _) => ()
-      case _ => fail("parsed into wrong form.")
-    }
-    val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
-
-    helper.runTactic(tactic,node)
-    helper.report(node)
-    val expected = helper.parseFormula("[x'=1 & true;](true->[(x'):=1;](z>=0)')")
-    require(containsOpenGoal(node,expected))
-  }
-
-
-  ignore should "simplest example with a test" in {
-    val f = "[x'=1 & z>0;]z>=0".asFormula
-    val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
-
-    tactic.applicable(node) shouldBe true
-    val result = helper.runTactic(tactic, node)
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "(z>0 -> z>=0) & [x'=1 & z>0;][(x'):=1;](z>=0)'".asFormula
-  }
-
-  // TODO alpha renaming not yet correct
-  ignore should "alpha rename in simplest example with a test" in {
-    val f = "[y'=1 & z>0;]z>=0".asFormula
-    val node = helper.formulaToNode(f)
-    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
-
-    tactic.applicable(node) shouldBe true
-    val result = helper.runTactic(tactic, node)
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "(z>0 -> z>=0) & [y'=1 & z>0;][(y'):=1;](z>=0)'".asFormula
-  }
+//  ignore should "work when there IS a test condition (no tests when there is none..." in {
+//    val f = helper.parseFormula("[x'=1 & true;]z>=0")
+//    f match {
+//      case BoxModality(ODESystem(_, _, _), _) => ()
+//      case _ => fail("parsed into wrong form.")
+//    }
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
+//
+//    helper.runTactic(tactic,node)
+//    helper.report(node)
+//    val expected = helper.parseFormula("[x'=1 & true;](true->[(x'):=1;](z>=0)')")
+//    require(containsOpenGoal(node,expected))
+//  }
+//
+//
+//  ignore should "simplest example with a test" in {
+//    val f = "[x'=1 & z>0;]z>=0".asFormula
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
+//
+//    tactic.applicable(node) shouldBe true
+//    val result = helper.runTactic(tactic, node)
+//    result.openGoals() should have size 1
+//    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+//    result.openGoals().flatMap(_.sequent.succ) should contain only "(z>0 -> z>=0) & [x'=1 & z>0;][(x'):=1;](z>=0)'".asFormula
+//  }
+//
+//  // TODO alpha renaming not yet correct
+//  ignore should "alpha rename in simplest example with a test" in {
+//    val f = "[y'=1 & z>0;]z>=0".asFormula
+//    val node = helper.formulaToNode(f)
+//    val tactic = helper.positionTacticToTactic(ODETactics.diffInvariantNormalFormT)
+//
+//    tactic.applicable(node) shouldBe true
+//    val result = helper.runTactic(tactic, node)
+//    result.openGoals() should have size 1
+//    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+//    result.openGoals().flatMap(_.sequent.succ) should contain only "(z>0 -> z>=0) & [y'=1 & z>0;][(y'):=1;](z>=0)'".asFormula
+//  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Diff invariant system introduction'

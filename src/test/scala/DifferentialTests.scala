@@ -50,6 +50,13 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>2 -> x>0".asFormula
   }
 
+  it should "pull out evolution domain constraint in some context" in {
+    val s = sucSequent("[x:=0;][x'=1 & x>2;]x>0".asFormula)
+
+    val diffWeakenAx = diffWeakenAxiomT(SuccPosition(0, PosInExpr(1::Nil)))
+    getProofSequent(diffWeakenAx, new RootNode(s)) should be (sucSequent("[x:=0;][x'=1 & x>2;](x>2 -> x>0)".asFormula))
+  }
+
   it should "perform alpha renaming if necessary" in {
     val s = sucSequent("[y'=y & y>2 & z<0;]y>0".asFormula)
     val diffWeakenAx = locateSucc(diffWeakenAxiomT)
@@ -148,11 +155,26 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2;]x>0".asFormula
-    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+    result.openGoals()(0).sequent.succ should contain only "[x'=2 & true & x>0;]x>=0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2 & true & x>0;]x>=0".asFormula
-    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.succ should contain only "[x'=2;]x>0".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+  }
+
+  it should "retain context for showing condition" in {
+    import ODETactics.diffCutT
+    val s = sequent(Nil, "x>0".asFormula::Nil, "y<0".asFormula :: "[x'=2;]x>=0".asFormula :: "z=0".asFormula :: Nil)
+    val tactic = locateSucc(diffCutT("x>0".asFormula))
+    val result = helper.runTactic(tactic, new RootNode(s))
+
+    result.openGoals() should have size 2
+    result.openGoals()(0).sequent.ante should contain only "x>0".asFormula
+    result.openGoals()(0).sequent.succ should contain only ("y<0".asFormula, "[x'=2 & true & x>0;]x>=0".asFormula, "z=0".asFormula)
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.ante should contain only "x>0".asFormula
+    result.openGoals()(1).sequent.succ should contain only ("y<0".asFormula, "[x'=2;]x>0".asFormula, "z=0".asFormula)
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "cut formula into evolution domain constraint of rightmost ODE in ODEProduct" in {
@@ -163,11 +185,11 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3,z'=4 & y>4;]x>1".asFormula
-    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+    result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3,z'=4 & (y>4&x>1);]x>0".asFormula
-    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3,z'=4 & y>4;]x>1".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "cut formula into rightmost ODE in ODEProduct, even if constraint empty" in {
@@ -178,11 +200,11 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2, y'=3;]x>1".asFormula
-    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+    result.openGoals()(0).sequent.succ should contain only "[x'=2,y'=3 & (true&x>1);]x>0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2,y'=3 & (true&x>1);]x>0".asFormula
-    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.succ should contain only "[x'=2, y'=3;]x>1".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   it should "preserve existing evolution domain constraint" in {
@@ -193,11 +215,11 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
     result.openGoals() should have size 2
     result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "[x'=2 & x>=0 | y<z;]x>0".asFormula
-    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
+    result.openGoals()(0).sequent.succ should contain only "[x'=2 & (x>=0 | y<z) & x>0;]x>=0".asFormula
+    result.openGoals()(0).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
     result.openGoals()(1).sequent.ante shouldBe empty
-    result.openGoals()(1).sequent.succ should contain only "[x'=2 & (x>=0 | y<z) & x>0;]x>=0".asFormula
-    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutUseLbl)
+    result.openGoals()(1).sequent.succ should contain only "[x'=2 & x>=0 | y<z;]x>0".asFormula
+    result.openGoals()(1).tacticInfo.infos.get("branchLabel") shouldBe Some(BranchLabels.cutShowLbl)
   }
 
   "differential solution tactic" should "use Mathematica to find solution if None is provided" in {
@@ -350,28 +372,28 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     tactic.applicable(new RootNode(s)) shouldBe false
   }
 
-  "Diamond diff solve axiom tactic" should "split a single differential equation into a branch for proving the solution and a branch for using it" in {
-    val s = sucSequent("<x'=3*a()+z() & x>5;>x>0".asFormula)
-    // provide anything as solution for testing
-    val tactic = locateSucc(ODETactics.diamondDiffSolveAxiomT(_ => "c()".asTerm))
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 2
-    result.openGoals()(0).sequent.ante shouldBe empty
-    result.openGoals()(0).sequent.succ should contain only "c()=x & [t'=1;]c()'=3*a()+z()".asFormula
-    result.openGoals()(1).sequent.ante should contain only
-      "<x'=3*a()+z() & x>5;>x>0 <-> \\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=c();>x>5) & <x:=c();>x>0))".asFormula
-    result.openGoals()(1).sequent.succ should contain only "<x'=3*a()+z() & x>5;>x>0".asFormula
-  }
-
-  "Diamond diff solve tactic" should "introduce initial value ghosts and ask Mathematica for a solution" in {
-    val s = sucSequent("<x'=5 & x>2;>x>0".asFormula)
-    val tactic = locateSucc(ODETactics.diamondDiffSolveT)
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only "x_2()=x".asFormula
-    result.openGoals()flatMap(_.sequent.succ) should contain only
-      "\\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=5*s+x_2();>x>2) & <x:=5*t+x_2();>x>0))".asFormula
-  }
+//  "Diamond diff solve axiom tactic" should "split a single differential equation into a branch for proving the solution and a branch for using it" in {
+//    val s = sucSequent("<x'=3*a()+z() & x>5;>x>0".asFormula)
+//    // provide anything as solution for testing
+//    val tactic = locateSucc(ODETactics.diamondDiffSolveAxiomT(_ => "c()".asTerm))
+//    val result = helper.runTactic(tactic, new RootNode(s))
+//    result.openGoals() should have size 2
+//    result.openGoals()(0).sequent.ante shouldBe empty
+//    result.openGoals()(0).sequent.succ should contain only "c()=x & [t'=1;]c()'=3*a()+z()".asFormula
+//    result.openGoals()(1).sequent.ante should contain only
+//      "<x'=3*a()+z() & x>5;>x>0 <-> \\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=c();>x>5) & <x:=c();>x>0))".asFormula
+//    result.openGoals()(1).sequent.succ should contain only "<x'=3*a()+z() & x>5;>x>0".asFormula
+//  }
+//
+//  "Diamond diff solve tactic" should "introduce initial value ghosts and ask Mathematica for a solution" in {
+//    val s = sucSequent("<x'=5 & x>2;>x>0".asFormula)
+//    val tactic = locateSucc(ODETactics.diamondDiffSolveT)
+//    val result = helper.runTactic(tactic, new RootNode(s))
+//    result.openGoals() should have size 1
+//    result.openGoals().flatMap(_.sequent.ante) should contain only "x_2()=x".asFormula
+//    result.openGoals()flatMap(_.sequent.succ) should contain only
+//      "\\exists t. (t>=0 & (\\forall s. (0<=s&s<=t -> <x:=5*s+x_2();>x>2) & <x:=5*t+x_2();>x>0))".asFormula
+//  }
 
   "Differential effect" should "introduce a differential assignment" in {
     val s = sucSequent("[x'=5 & x>2;]x>0".asFormula)
@@ -380,6 +402,15 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=5 & x>2;][x':=5;]x>0".asFormula
+  }
+
+  it should "introduce a differential assignment in context" in {
+    val s = sucSequent("[x:=0;][x'=5 & x>2;]x>0".asFormula)
+    val tactic = ODETactics.diffEffectT(SuccPosition(0, PosInExpr(1::Nil)))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x:=0;][x'=5 & x>2;][x':=5;]x>0".asFormula
   }
 
   it should "alpha rename if necessary" in {
