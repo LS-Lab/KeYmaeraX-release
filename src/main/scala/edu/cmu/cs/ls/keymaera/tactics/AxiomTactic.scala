@@ -159,6 +159,7 @@ object AxiomTactic {
  * @param name The name of the tactic.
  * @param axiomName The name of the axiom.
  */
+@deprecated("Use uncoverAxiomT, uncoverConditionalAxiomT and axiomLookupBaseT instead", since="")
 abstract class AxiomTactic(name: String, axiomName: String) extends PositionTactic(name) {
   //@todo a java.lang.ExceptionInInitializerError is thrown
   require(Axiom.axioms != null, "the list of axioms should be defined.")
