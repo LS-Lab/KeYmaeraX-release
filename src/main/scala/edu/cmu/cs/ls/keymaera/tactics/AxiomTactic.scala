@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{locateAnte, locateSucc, lastAnte, lastSucc, onBranch}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.debugT
@@ -87,8 +88,8 @@ object AxiomTactic {
                                baseT: Formula => PositionTactic): PositionTactic = new PositionTactic(axiomName) {
     // TODO generalize to non-toplevel positions
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (axiomInstance(getFormula(s, p)) match {
-      case Imply(_, Equiv (lhs, rhs)) => getFormula(s, p) == lhs || getFormula(s, p) == rhs
-      case _ => false
+        case Imply(_, Equiv (lhs, rhs)) => getFormula(s, p) == lhs || getFormula(s, p) == rhs
+        case _ => false
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
@@ -105,6 +106,35 @@ object AxiomTactic {
                 (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
               ))
               )),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel) & LabelBranch(cutUseLbl))
+          ))
+      }
+    }
+  }
+
+  def uncoverConditionalTermAxiomT(axiomName: String,
+                                   axiomInstance: Term => Formula,
+                                   condT: Term => PositionTactic,
+                                   baseT: Term => PositionTactic): PositionTactic = new PositionTactic(axiomName) {
+    override def applies(s: Sequent, p: Position): Boolean = axiomInstance(getTerm(s, p)) match {
+      case Imply(_, Equiv (lhs, rhs)) => s(p) == lhs || s(p) == rhs
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = axiomInstance(getTerm(node.sequent, p)) match {
+        case inst@Imply(cond, equiv@Equiv(lhs, rhs)) =>
+          Some(cutT(Some(equiv))/*cutEquivInContext(equiv, p)*/ & onBranch(
+            (cutShowLbl, hideT(p.topLevel) & /* only works because top-level */ cutT(Some(cond)) & onBranch(
+              (cutShowLbl, /* hide second-to-last */ hideT(SuccPosition(node.sequent.succ.length - 1)) &
+                lastSucc(condT(getTerm(node.sequent, p)))),
+              (cutUseLbl, cutT(Some(inst)) & onBranch(
+                (cutShowLbl, lastSucc(cohideT) & lastSucc(baseT(getTerm(node.sequent, p)))),
+                (cutUseLbl, lastAnte(ImplyLeftT) & AxiomCloseT)
+              ))
+            )),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel) & LabelBranch(cutUseLbl))
           ))
       }

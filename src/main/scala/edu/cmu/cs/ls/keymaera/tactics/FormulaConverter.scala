@@ -12,6 +12,29 @@ object FormulaConverter {
   implicit def FormulaToFormulaConverter(f: Formula): FormulaConverter = new FormulaConverter(f)
 }
 class FormulaConverter(val fml: Formula) {
+
+  /**
+   * Indicates whether or not the expr at position pos is a formula.
+   * @param pos The position in this converter's formula.
+   * @return True, if the expr at pos is a formula; false otherwise.
+   */
+  def isFormulaAt(pos: PosInExpr): Boolean = {
+    if (pos.pos.isEmpty) true
+    else {
+      var fAtPos: Option[Formula] = None
+      ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+          fAtPos = Some(e)
+          Left(Some(ExpressionTraversal.stop))
+        }
+      }), fml)
+      fAtPos match {
+        case Some(_) => true
+        case None => false
+      }
+    }
+  }
+
   /**
    * Returns the subformula of fml at position pos.
    * @param pos The position pointing to the subformula.
@@ -30,6 +53,28 @@ class FormulaConverter(val fml: Formula) {
       fAtPos match {
         case Some(f) => f
         case None => throw new IllegalArgumentException(s"Formula $fml at position $pos is not a formula")
+      }
+    }
+  }
+
+  /**
+   * Indicates whether or not the expr at position pos is a term.
+   * @param pos The position in this converter's formula.
+   * @return True, if the expr at pos is a term; false otherwise.
+   */
+  def isTermAt(pos: PosInExpr): Boolean = {
+    if (pos.pos.isEmpty) false
+    else {
+      var tAtPos: Option[Term] = None
+      ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          tAtPos = Some(e)
+          Left(Some(ExpressionTraversal.stop))
+        }
+      }), fml)
+      tAtPos match {
+        case Some(_) => true
+        case None => false
       }
     }
   }
