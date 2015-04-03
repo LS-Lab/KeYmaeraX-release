@@ -101,87 +101,38 @@ object ContextTactics {
   }
 
   /**
-   * Creates a tactic to cut in an equality f = g in context, i.e., C[f] <-> C[g]. Expects either the left-hand side
-   * of the equality to be present or the right-hand side to be present at position ctx.
-   * @param f The desired equality.
-   * @param ctx Points to the position in the context.
-   * @return The newly created tactic.
+   * Replaces either the left-hand side or the right-hand side of eq at position where in formula fml, and returns an
+   * equivalence of both formulas.
+   * @param fml The formula to replace in.
+   * @param eq The equality/equivalence (depending on occurrence in fml, either replaces left with right or vice versa)
+   * @param where Where to replace in fml.
+   * @return If lhs replaced by rhs: equivalence fml <-> fml after the replacement;
+   *         if rhs replaced by lhs: equivalence fml after the replacement <-> fml.
    */
-  def cutEqualsInContext(f: Formula, ctx: Position): Tactic = cutEqualsInContext(_ => f, ctx)
-  def cutEqualsInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
-    def applicable(pn: ProofNode): Boolean = g(pn) match {
-      case Equals(_, lhs, rhs) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
-      case _ => false
-    }
-
-    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
-      case Equals(sort, lhs, rhs) if getTerm(p.sequent, ctx) == lhs =>
-        val lhsInCtx = p.sequent(ctx.topLevel)
-        val rhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
-          override def preT(pos: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-            if (t == lhs) Right(rhs)
-            else Left(Some(ExpressionTraversal.stop))
-        }), lhsInCtx) match {
-          case Some(f) => f
-          case None => throw new IllegalArgumentException(s"Did not find $lhs at position $ctx")
-        }
-        val equivOfEqualsInCtx = Equiv(lhsInCtx, rhsInCtx)
-        Some(cutT(Some(equivOfEqualsInCtx)))
-      case Equals(sort, lhs, rhs) if getTerm(p.sequent, ctx) == rhs =>
-        val rhsInCtx = p.sequent(ctx.topLevel)
-        val lhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
-          override def preT(pos: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
-            if (t == rhs) Right(lhs)
-            else Left(Some(ExpressionTraversal.stop))
-        }), rhsInCtx) match {
-          case Some(f) => f
-          case None => throw new IllegalArgumentException(s"Did not find $rhs at position $ctx")
-        }
-        val equivOfEqualsInCtx = Equiv(lhsInCtx, rhsInCtx)
-        Some(cutT(Some(equivOfEqualsInCtx)))
-    }
+  def replaceInContext(fml: Formula, eq: Formula, where: PosInExpr): Formula = eq match {
+    case Equals(_, lhs, rhs) if fml.termAt(where) == lhs => Equiv(fml, fml.replaceAt(lhs, where, rhs))
+    case Equals(_, lhs, rhs) if fml.termAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
+    case Equiv(lhs, rhs) if fml.subFormulaAt(where) == lhs => Equiv(fml, fml.replaceAt(lhs, where, rhs))
+    case Equiv(lhs, rhs) if fml.subFormulaAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
   }
 
   /**
-   * Creates a tactic to cut in an equivalence p<->q in context, i.e., C[p] <-> C[q]. Expects either the left-hand side
-   * of the equivalence to be present or the right-hand side to be present at position ctx.
-   * @param f The desired equivalence.
+   * Creates a tactic to cut in an equality f = g or equivalence f <-> g in context, i.e., C[f] <-> C[g]. Expects either
+   * the left-hand side or the right-hand side of the equality/equivalence to be present at position ctx.
+   * @param f The desired equality/equivalence.
    * @param ctx Points to the position in the context.
    * @return The newly created tactic.
    */
-  def cutEquivInContext(f: Formula, ctx: Position): Tactic = cutEquivInContext(_ => f, ctx)
-  def cutEquivInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
+  def cutInContext(f: Formula, ctx: Position): Tactic = cutInContext(_ => f, ctx)
+  def cutInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
     def applicable(pn: ProofNode): Boolean = g(pn) match {
+      case Equals(_, lhs, rhs) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
       case Equiv(lhs, rhs) => val f = getFormula(pn.sequent, ctx); f == lhs || f == rhs
       case _ => false
     }
 
-    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] = g(p) match {
-      case Equiv(lhs, rhs) if getFormula(p.sequent, ctx) == lhs =>
-        val lhsInCtx = p.sequent(ctx.topLevel)
-        val rhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
-          override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
-            if (f == lhs) Right(rhs)
-            else Left(Some(ExpressionTraversal.stop))
-        }), lhsInCtx) match {
-          case Some(f) => f
-          case None => throw new IllegalArgumentException(s"Did not find $lhs at position $ctx")
-        }
-        val equivInCtx = Equiv(lhsInCtx, rhsInCtx)
-        Some(cutT(Some(equivInCtx)))
-      case Equiv(lhs, rhs) if getFormula(p.sequent, ctx) == rhs =>
-        val rhsInCtx = p.sequent(ctx.topLevel)
-        val lhsInCtx = ExpressionTraversal.traverse(TraverseToPosition(ctx.inExpr, new ExpressionTraversalFunction {
-          override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
-            if (f == rhs) Right(lhs)
-            else Left(Some(ExpressionTraversal.stop))
-        }), rhsInCtx) match {
-          case Some(f) => f
-          case None => throw new IllegalArgumentException(s"Did not find $rhs at position $ctx")
-        }
-        val equivInCtx = Equiv(lhsInCtx, rhsInCtx)
-        Some(cutT(Some(equivInCtx)))
-    }
+    override def constructTactic(tool: Tool, p: ProofNode): Option[Tactic] =
+      Some(cutT(Some(replaceInContext(p.sequent(ctx), g(p), ctx.inExpr))))
   }
 
   /**

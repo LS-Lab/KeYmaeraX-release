@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import NNFRewrite.rewriteDoubleNegationEliminationT
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.boxMonotoneT
 import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBaseT}
-import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutEquivInContext
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{AndRightT,AxiomCloseT,ImplyLeftT,ImplyRightT,cutT,
   hideT,kModalModusPonensT}
@@ -466,7 +466,7 @@ object HybridProgramTacticsImpl {
         val anteLength = node.sequent.ante.length
 
         def createTactic(m: Formula, pred: Formula, v: Variable, t: Variable) = Some(
-          cutEquivInContext(Equiv(m, replace(pred)(v, t)), p) &
+          cutInContext(Equiv(m, replace(pred)(v, t)), p) &
             onBranch(
               (cutShowLbl,
                 // TODO does not work in mixed settings such as <x:=t>[x'=2] and [x:=t]<x'=2>

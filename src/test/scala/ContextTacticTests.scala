@@ -43,7 +43,7 @@ class ContextTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   "Cut equivalence in context" should "cut in an equivalence in context if lhs is present" in {
     val s = sucSequent("(x>5 | y<2 & z=3 -> \\forall x. \\exists y. <?y>5;>[x:=1;](x<=1 & x>=1))".asFormula)
-    val tactic = ContextTactics.cutEquivInContext("(x<=1 & x>=1) <-> x=1".asFormula, SuccPosition(0, PosInExpr(1::0::0::1::1::Nil)))
+    val tactic = ContextTactics.cutInContext("(x<=1 & x>=1) <-> x=1".asFormula, SuccPosition(0, PosInExpr(1::0::0::1::1::Nil)))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 2
@@ -62,7 +62,7 @@ class ContextTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   "Cut equivalence in context" should "cut in an equivalence in context if rhs is present" in {
     val s = sucSequent("(x>5 | y<2 & z=3 -> \\forall x. \\exists y. <?y>5;>[x:=1;](x<=1 & x>=1))".asFormula)
-    val tactic = ContextTactics.cutEquivInContext("x=1 <-> (x<=1 & x>=1)".asFormula, SuccPosition(0, PosInExpr(1::0::0::1::1::Nil)))
+    val tactic = ContextTactics.cutInContext("x=1 <-> (x<=1 & x>=1)".asFormula, SuccPosition(0, PosInExpr(1::0::0::1::1::Nil)))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 2

@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
 import AxiomaticRuleTactics.{boxCongruenceT,equivalenceCongruenceT,boxMonotoneT,diamondMonotoneT}
-import ContextTactics.{cutEquivInContext,cutImplyInContext}
+import ContextTactics.{cutInContext,cutImplyInContext}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 object AxiomTactic {
@@ -47,7 +47,7 @@ object AxiomTactic {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
         axiomInstance(getFormula(node.sequent, p)) match {
           case inst@Equiv(f, g) =>
-            Some(cutEquivInContext(inst, p) & onBranch(
+            Some(cutInContext(inst, p) & onBranch(
               (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(p.inExpr) & lastSucc(baseT(getFormula(node.sequent, p)))),
               (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
             ))

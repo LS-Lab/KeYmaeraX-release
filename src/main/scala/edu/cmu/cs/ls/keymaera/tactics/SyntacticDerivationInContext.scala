@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, Expressio
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{equivalenceCongruenceT,equationCongruenceT}
-import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.{cutEquivInContext,cutEqualsInContext}
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
@@ -474,7 +474,7 @@ object SyntacticDerivationInContext {
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutEqualsInContext(Equals(Real, t, r), p) & onBranch(
+          Some(cutInContext(Equals(Real, t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(ConstantDerivativeBaseT)),
@@ -485,7 +485,7 @@ object SyntacticDerivationInContext {
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutEqualsInContext(Equals(Real, t, r), p) & onBranch(
+          Some(cutInContext(Equals(Real, t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(ConstantDerivativeBaseT)),
@@ -555,7 +555,7 @@ object SyntacticDerivationInContext {
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutEqualsInContext(Equals(nSort, t, r), p) & onBranch(
+          Some(cutInContext(Equals(nSort, t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(NegativeDerivativeBaseT)),
@@ -673,7 +673,7 @@ object SyntacticDerivationInContext {
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutEqualsInContext(Equals(sort, t, r), p) & onBranch(
+          Some(cutInContext(Equals(sort, t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(BinaryDerivativeBaseT(axiomName, bin))),
