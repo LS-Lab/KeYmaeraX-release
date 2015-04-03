@@ -2,10 +2,14 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.ContextualizeKnowledgeTactic
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.equivalenceCongruenceT
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutInContext
+import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.cohideT
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.lastSucc
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
 
@@ -392,25 +396,10 @@ object NNFRewrite {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         //First construct an equality.
         val equiv = Equiv(original, replacement)
-
-        //The succedent position of the cut-in formula
-        val cutAsObligationPos = SuccPosition(node.sequent.succ.length)
-        val cutAsAssumptionPos = AntePosition(node.sequent.ante.length)
-
-        def equalityRewrite = {
-          new ApplyRule(new EqualityRewriting(cutAsAssumptionPos, targetPosition)) {
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, targetPosition)
-          }
-        }
-
-        val topLevelPositionContainingOriginalFormula = targetPosition.topLevel
-
-        Some(
-          PropositionalTacticsImpl.cutT(Some(equiv)) & onBranch(
-            (BranchLabels.cutShowLbl, debugT("Building a proof of equiv out of " + proofOfEquiv.name + " at pos: " + cutAsObligationPos) & proofOfEquiv(cutAsObligationPos) ~ errorT("Expected cut show to close with tactic: " + proofOfEquiv.name + " at position: " + cutAsObligationPos)),
-            (BranchLabels.cutUseLbl, equalityRewrite & hideT(topLevelPositionContainingOriginalFormula) & hideT(cutAsAssumptionPos))
-          )
-        //@todo
+        Some(cutInContext(equiv, targetPosition) & onBranch(
+          (cutShowLbl, lastSucc(cohideT) & equivalenceCongruenceT(targetPosition.inExpr) &
+            assertT(0,1) & lastSucc(assertPT(equiv)) & lastSucc(proofOfEquiv)),
+          (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), targetPosition.topLevel)))
         )
       }
 
