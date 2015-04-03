@@ -1058,60 +1058,6 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
 }
 
 /*********************************************************************************
- * Congruence Rewriting Proof Rule
- *********************************************************************************
- */
-
-// equality/equivalence rewriting
-//@TODO Review
-/**
- * Rewrites position ``p" according to assumption; for instance, if p="f" and assumption="f=g" then this
- * equality-rewrites p to g.
- * @param assumption The position of the equality (should be in the antecedent)
- * @param p The position of an occurance of the (l?)hs of assumption
- * @TODO replace by congruence rule derived from two uses of rule "monotone" via tactic or by a flat rule implementation
- */
-@deprecated("Use CT, CQ, CE congruence rules instead")
-class EqualityRewriting(assumption: Position, p: Position) extends AssumptionRule("Equality Rewriting", assumption, p) {
-  override def apply(s: Sequent): List[Sequent] = {
-    require(assumption.isAnte && assumption.inExpr == HereP)
-    val (blacklist, fn) = s.ante(assumption.getIndex) match {
-      case Equals(d, a, b) =>
-        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
-        new ExpressionTraversalFunction {
-          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })
-      /*case ProgramEquals(a, b) =>
-        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
-        new ExpressionTraversalFunction {
-          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program]  =
-            if(e == a) Right(b)
-            else if(e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-        })*/
-      case Equiv(a, b) =>
-        (StaticSemantics.symbols(a) ++ StaticSemantics.symbols(b),
-        new ExpressionTraversalFunction {
-          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula]  = {
-            if (e == a) Right(b)
-            else if (e == b) Right(a)
-            else throw new IllegalArgumentException("Equality Rewriting not applicable")
-          }
-        })
-      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-    }
-    val trav = TraverseToPosition(p.inExpr, fn, blacklist)
-    ExpressionTraversal.traverse(trav, s(p)) match {
-      case Some(x: Formula) => if(p.isAnte) List(Sequent(s.pref, s.ante :+ x, s.succ)) else List(Sequent(s.pref, s.ante, s.succ :+ x))
-      case a => throw new IllegalArgumentException("Equality Rewriting not applicable. Result is " + a + " " + a.getClass)
-    }
-  }
-}
-
-/*********************************************************************************
  * Block Quantifier Decomposition
  *********************************************************************************
  */
