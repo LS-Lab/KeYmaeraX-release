@@ -134,12 +134,12 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
                    * e.g. in v^2-d^2 <= 2*b*(m-z) 0::0 refers to v^2, 0::0::0 to v, 0::0::1 to 2, 0::1::0 to d
                    *                              1::1::0 to m, 1::1::1 to z, 1::0 to 2*b
                    */
-                  (/* v_2 */equalityRewriting(AntePosition(9), SuccPosition(0, PosInExpr(0::0::0::Nil))) & hideT(SuccPosition(0)) &
-                    /* d_1 */equalityRewriting(AntePosition(16), SuccPosition(0, PosInExpr(0::1::0::Nil))) & hideT(SuccPosition(0)) &
-                    /* m_1 */equalityRewriting(AntePosition(14), SuccPosition(0, PosInExpr(1::1::0::Nil))) & hideT(SuccPosition(0)) &
-                    /* z_2 */ equalityRewriting(AntePosition(10), SuccPosition(0, PosInExpr(1::1::1::Nil))) & hideT(SuccPosition(0)) &
+                  (/* v_2 */eqLeft(exhaustive=true)(AntePosition(9)) &
+                    /* d_1 */eqLeft(exhaustive=true)(AntePosition(16)) &
+                    /* m_1 */eqLeft(exhaustive=true)(AntePosition(14)) &
+                    /* z_2 */ eqLeft(exhaustive=true)(AntePosition(10)) &
                     AxiomCloseT(AntePosition(5), SuccPosition(0)),
-                   equalityRewriting(AntePosition(16), SuccPosition(0, PosInExpr(0::Nil))) & hideT(SuccPosition(0)) &
+                   eqLeft(exhaustive=true)(AntePosition(16)) &
                      AxiomCloseT(AntePosition(6), SuccPosition(0))
                   ),
                 debugT("choice 2.2") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &

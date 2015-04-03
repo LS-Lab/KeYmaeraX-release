@@ -65,12 +65,9 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
 
     initInputTactic[Option[Formula]]("dl.cut", "TacticLibrary.cutT", TacticKind.InputTactic, TacticLibrary.cutT)
     initInputTactic("dl.qe", "TacticLibrary.quantifierEliminationT", TacticKind.InputTactic, TacticLibrary.quantifierEliminationT _)
-    initInputTactic("dl.equalityRewriting", "TacticLibrary.equalityRewriting", TacticKind.InputTactic, TacticLibrary.equalityRewriting _)
     initInputTactic[Position,Position]("dl.axiomClose", "TacticLibrary.AxiomCloseT", TacticKind.InputTactic, TacticLibrary.AxiomCloseT)
 //    initInputTactic("dl.axiom", "TacticLibrary.axiomT", TacticKind.InputTactic, TacticLibrary.axiomT)
     initInputPositionTactic[Option[Formula]]("dl.induction", "TacticLibrary.inductionT", TacticKind.PositionTactic, TacticLibrary.inductionT)
-    initInputPositionTactic[Position]("dl.equalityRewritingLeft", "TacticLibrary.equalityRewritingLeft", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingLeft)
-    initInputPositionTactic[Position]("dl.equalityRewritingRight", "TacticLibrary.equalityRewritingRight", TacticKind.InputPositionTactic, TacticLibrary.equalityRewritingRight)
     initInputPositionTactic[Formula]("dl.diffcut", "TacticLibrary.diffCutT", TacticKind.InputPositionTactic, TacticLibrary.diffCutT)
     initInputPositionTactic[Variable,Term]("dl.instantiate", "TacticLibrary.instantiateQuanT", TacticKind.PositionTactic, TacticLibrary.instantiateQuanT)
   }

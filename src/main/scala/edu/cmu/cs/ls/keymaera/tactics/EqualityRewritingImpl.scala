@@ -2,10 +2,14 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, PositionTactic, ApplyRule, Tactic}
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.replaceInContext
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateAnte
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, PositionTactic, Tactic, NilPT, NilT}
 import PropositionalTacticsImpl._
 import BranchLabels._
 import SearchTacticsImpl.{lastAnte,onBranch}
+import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverConditionalAxiomT,uncoverConditionalTermAxiomT,axiomLookupBaseT}
 import TacticLibrary.TacticHelper.getTerm
 
 import scala.collection.immutable.Set
@@ -14,54 +18,6 @@ import scala.collection.immutable.Set
  * Implementation of equality rewriting.
  */
 object EqualityRewritingImpl {
-  // exhaustive equality rewriting
-  // check variable disjointness between left and right side
-  protected[tactics] def isEquality(s: Sequent, p: Position, checkDisjointness: Boolean = false): Boolean = {
-    import BindingAssessment.allNames
-    p.isAnte && p.inExpr == HereP && (s.ante(p.getIndex) match {
-      case Equals(_, a, b) => if (checkDisjointness) allNames(a).intersect(allNames(b)).isEmpty else true
-      case ProgramEquals(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
-      case Equiv(a, b) => /*if (checkDisjointness) variables(a).intersect(variables(b)).isEmpty else*/ true
-      case _ => false
-    })
-  }
-
-  private def equalityApplicable(left: Boolean, eqPos: Position, p: Position, s: Sequent): Boolean = {
-    import BindingAssessment.allNames
-    var applicable = false
-    val (blacklist, f) = s.ante(eqPos.getIndex) match {
-      case Equals(_, a, b) => val search = if(left) a else b
-        (allNames(a) ++ allNames(b),
-          new ExpressionTraversalFunction {
-            override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-              if (e == search) applicable = true
-              Left(Some(new StopTraversal {}))
-            }
-          })
-      case ProgramEquals(a, b) => val search = if(left) a else b
-        (allNames(a) ++ allNames(b),
-          new ExpressionTraversalFunction {
-            override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = {
-              if (e == search) applicable = true
-              Left(Some(new StopTraversal {}))
-            }
-          })
-      case Equiv(a, b) => val search = if(left) a else b
-        (allNames(a) ++ allNames(b),
-          new ExpressionTraversalFunction {
-            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-              if (e == search) applicable = true
-              Left(Some(new StopTraversal {}))
-            }
-          })
-      case _ => throw new IllegalArgumentException("Equality Rewriting not applicable")
-    }
-    val trav = TraverseToPosition(p.inExpr, f, blacklist)
-    val form = (if (p.isAnte) s.ante else s.succ)(p.getIndex)
-    ExpressionTraversal.traverse(trav, form)
-    applicable
-  }
-
   /**
    * Returns a new tactic for rewriting a formula in the succedent according to an equivalence appearing in the
    * antecedent. Uses propositional tactics instead of builtin rules.
@@ -106,139 +62,140 @@ object EqualityRewritingImpl {
     }
   }
 
-  def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true): Tactic = new ApplyRule(new EqualityRewriting(eqPos, p)) {
-    override def applicable(node: ProofNode): Boolean = {
-      val res = isEquality(node.sequent, eqPos, checkDisjoint) && (equalityApplicable(left = true, eqPos, p, node.sequent) || equalityApplicable(left = false, eqPos, p, node.sequent))
-      res
-    }
-  }
-
-  def equalityRewritingRight(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Right") {
-
-    override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos, checkDisjointness =  true) && equalityApplicable(left = false, eqPos, p, s)
-
-    override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
-  }
-
-  def equalityRewritingLeft(eqPos: Position): PositionTactic = new PositionTactic("Equality Rewriting Left") {
-
-    override def applies(s: Sequent, p: Position): Boolean = isEquality(s, eqPos, checkDisjointness = true) && equalityApplicable(left = true, eqPos, p, s)
-
-    override def apply(p: Position): Tactic = equalityRewriting(eqPos, p)
-  }
-
-
-  def eqRewritePos(left: Boolean, eqPos: Position): Tactic = new ConstructionTactic("Apply Equality Left") {
-    require(eqPos.isAnte && eqPos.inExpr == HereP, "Equalities for rewriting have to be in the antecedent")
-
-    override def applicable(node: ProofNode): Boolean = eqPos.isAnte && eqPos.isTopLevel && (node.sequent(eqPos) match {
-      // HACK prevent endless rewriting. replace with principled term weights
-      case Equals(_, Number(_, _), _) if left => false
-      case Equals(_, _, Number(_, _)) if !left => false
-      case Equals(_, _, _) => findPosInExpr(left, node.sequent, eqPos).isDefined
-      case ProgramEquals(_, _) => findPosInExpr(left, node.sequent, eqPos).isDefined
-      case Equiv(_, _) => findPosInExpr(left, node.sequent, eqPos).isDefined
+  def constFormulaCongruenceT(eqPos: Position, left: Boolean, exhaustive: Boolean = true): PositionTactic = new PositionTactic("const formula congruence") {
+    override def applies(s: Sequent, p: Position): Boolean = eqPos.isAnte && eqPos.isTopLevel && (s(eqPos) match {
+      case Equals(_, lhs, rhs) if !exhaustive &&  left => getTerm(s, p) == lhs
+      case Equals(_, lhs, rhs) if !exhaustive && !left => getTerm(s, p) == rhs
+      case Equals(_, lhs, rhs) if  exhaustive => true
       case _ => false
     })
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      import PropositionalTacticsImpl.hideT
-      findPosInExpr(left, node.sequent, eqPos) match {
-        case Some(p) =>
-          val t = equalityRewriting(eqPos, p)
-          val hide = hideT(p.topLevel)
-          Some(t & hide)
-        case None => None
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(eqPos) match {
+        case Equals(_, lhs, rhs) =>
+          if (exhaustive) {
+            def axiomInstance(f: Formula): Formula = {
+              val cond = node.sequent(eqPos)
+              if (left) Imply(cond, Equiv(node.sequent(p), SubstitutionHelper.replaceFree(node.sequent(p))(lhs, rhs)))
+              else      Imply(cond, Equiv(node.sequent(p), SubstitutionHelper.replaceFree(node.sequent(p))(rhs, lhs)))
+            }
+            Some(uncoverConditionalAxiomT("const formula congruence", axiomInstance, _ => constFormulaCongruenceCondT,
+              _ => constFormulaCongruenceBaseT(left, p.inExpr, exhaustive))(p))
+          } else {
+            def axiomInstance(t: Term): Formula = {
+              val cond = node.sequent(eqPos)
+              if (exhaustive && left) Imply(cond, Equiv(node.sequent(p), SubstitutionHelper.replaceFree(node.sequent(p))(lhs, rhs)))
+              if (exhaustive && !left) Imply(cond, Equiv(node.sequent(p), SubstitutionHelper.replaceFree(node.sequent(p))(rhs, lhs)))
+              else Imply(cond, replaceInContext(node.sequent(p), node.sequent(eqPos), p.inExpr))
+            }
+            Some(uncoverConditionalTermAxiomT("const formula congruence", axiomInstance, _ => constFormulaCongruenceCondT,
+              _ => constFormulaCongruenceBaseT(left, p.inExpr, exhaustive))(p))
+          }
+      }
+    }
+  }
+  /** Shows condition in const formula congruence */
+  private def constFormulaCongruenceCondT: PositionTactic = new PositionTactic("const formula congruence cond") {
+    override def applies(s: Sequent, p: Position): Boolean = true
+    override def apply(p: Position): Tactic = AxiomCloseT
+  }
+  /** Base tactic for const formula congruence */
+  private def constFormulaCongruenceBaseT(isLeft: Boolean, where: PosInExpr, exhaustive: Boolean): PositionTactic = new PositionTactic("const formula congruence base") {
+    override def applies(s: Sequent, p: Position): Boolean = true
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        def subst(fml: Formula): List[SubstitutionPair] = fml match {
+          case Imply(Equals(_, s, t), Equiv(lhs, rhs)) =>
+            val aS = Apply(Function("s", None, Unit, Real), Nothing)
+            val aT = Apply(Function("t", None, Unit, Real), Nothing)
+            val aCtx = ApplyPredicate(Function("ctxF_", None, Real, Bool), CDot)
+
+            if (exhaustive) {
+              val substF = if (isLeft) lhs else rhs
+              SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) ::
+                SubstitutionPair(aCtx, SubstitutionHelper.replaceFree(substF)(if (isLeft) s else t, CDot)) :: Nil
+            } else {
+              // does not check whether substituting is admissible! use with caution, tactic will result in substitution clashes
+              val ctx = if (isLeft) lhs.replaceAt(s, where, CDot) else rhs.replaceAt(t, where, CDot)
+              SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: SubstitutionPair(aCtx, ctx) :: Nil
+            }
+        }
+        Some(axiomLookupBaseT("const formula congruence", subst, _ => NilPT, (f, ax) => ax)(p))
       }
     }
   }
 
-  def eqLeft(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Right to Left") {
+  /**
+   * Creates a new tactic to rewrite an equality.
+   * @param name The name of the tactic.
+   * @param left If true: rewrite right to left; if false: rewrite left to right
+   * @param exhaustive Indicates whether to rewrite exhaustively.
+   * @return The new tactic.
+   */
+  private def eqPos(name: String, left: Boolean, exhaustive: Boolean): PositionTactic = new PositionTactic(name) {
     import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p, checkDisjointness = true) && findPosInExpr(left = true, s, p).isDefined
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (s(p) match {
+      case Equals(_, lhs, rhs) =>
+        val what = if (left) lhs else rhs
+        val repl = if (left) rhs else lhs
+        // prevent endless self rewriting -> compute dependencies first to figure out what to rewrite when
+        (what.isInstanceOf[Variable] || what.isInstanceOf[Apply]) &&
+        StaticSemantics.symbols(what).intersect(StaticSemantics.symbols(repl)).isEmpty &&
+          positionsOf(what, s).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).nonEmpty
+      case _ => false
+    })
 
-    override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(left = true, p)* else eqRewritePos(left = true, p)
-  }
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case eq@Equals(_, lhs, rhs) =>
+          val what = if (left) lhs else rhs
+          val repl = if (left) rhs else lhs
+          assert(what.isInstanceOf[Variable] || what.isInstanceOf[Apply])
+          // positions are not stable, so we need to search over and over again (we even need to search eqPos, since it
+          // may shift)
+          val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index)
+          if (exhaustive) {
+            Some(constFormulaCongruenceT(p, left=left, exhaustive=false)(occurrences.head) &
+              (locateAnte(eqPos(name, left, exhaustive), _ == eq) | NilT))
+          } else {
+            Some(constFormulaCongruenceT(p, left=left, exhaustive=false)(occurrences.head))
+          }
+      }
+    }
 
-  def eqRight(exhaustive: Boolean): PositionTactic = new PositionTactic("Find Equality and Apply Left to Right") {
-    import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && isEquality(s, p, checkDisjointness = true) && findPosInExpr(left = false, s, p).isDefined
-
-    override def apply(p: Position): Tactic = if(exhaustive) eqRewritePos(left = false, p)* else eqRewritePos(left = false, p)
-  }
-
-  private def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], search: Expr, ignore: Position): Option[Position] =
-    findPosInExpr(s, blacklist, search == _, Some(ignore))
-
-  private def findPosInExpr(s: Sequent, blacklist: Set[NamedSymbol], test: (Expr => Boolean), filterPos: Option[Position]): Option[Position] = {
-    var posInExpr: PosInExpr = null
-    val f = new ExpressionTraversalFunction {
-      val stop = new StopTraversal {}
-
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if (test(e)) {
-        posInExpr = p
-        Left(Some(stop))
-      } else {
-        e match {
-          case Forall(v, phi) if blacklist.map(v.contains).foldLeft(false)(_ || _) => Left(Some(stop))
-          case Exists(v, phi) if blacklist.map(v.contains).foldLeft(false)(_ || _) => Left(Some(stop))
-          case BoxModality(a, c) if blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_ || _) => Left(Some(stop))
-          case DiamondModality(a, c) if blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_ || _) => Left(Some(stop))
-          case _ => Left(None)
+    def positionsOf(t: Term, fml: Formula): Set[PosInExpr] = {
+      var positions: Set[PosInExpr] = Set.empty
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          if (e == t && !positions.exists(_.isPrefixOf(p))) positions += p
+          Left(None)
         }
-      }
-
-      override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = if (test(e)) {
-        posInExpr = p
-        Left(Some(stop))
-      } else Left(None)
-
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        if (test(e)) {
-          posInExpr = p
-          Left(Some(stop))
-        } else Left(None)
-      }
-
-
-      override def preG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = if (test(e)) {
-        posInExpr = p
-        Left(Some(stop))
-      } else Left(None)
-
+      }, fml)
+      positions
     }
-    val ignore = filterPos match {
-      case Some(p) => p
-      case None => null
+
+    def positionsOf(t: Term, s: Sequent): Set[Position] = {
+      val ante = s.ante.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => AntePosition(i, p)) })
+      val succ = s.succ.zipWithIndex.flatMap({ case (f, i) => positionsOf(t, f).map(p => SuccPosition(i, p)) })
+      (ante ++ succ).toSet
     }
-    for(i <- 0 until s.ante.length) {
-      if(ignore == null || !ignore.isAnte || ignore.getIndex != i) {
-        ExpressionTraversal.traverse(f, s.ante(i))
-        if (posInExpr != null) {
-          return Some(AntePosition(i, posInExpr))
-        }
-      }
-    }
-    for(i <- 0 until s.succ.length) {
-      if(ignore == null || ignore.isAnte || ignore.getIndex != i) {
-        ExpressionTraversal.traverse(f, s.succ(i))
-        if (posInExpr != null) {
-          return Some(SuccPosition(i, posInExpr))
-        }
-      }
-    }
-    None
   }
 
-  private def findPosInExpr(left: Boolean, s: Sequent, eqPos: Position): Option[Position] = {
-    val eq = s.ante(eqPos.getIndex)
-    val blacklist = BindingAssessment.allNames(eq)
-    val search: Expr = eq match {
-      case Equals(_, a, b) => if(left) a else b
-      case ProgramEquals(a, b) => if(left) a else b
-      case Equiv(a, b) => if(left) a else b
-      case _ => throw new IllegalArgumentException("Equality Rewriting does not work for " + eq)
-    }
-    findPosInExpr(s, blacklist, search, eqPos)
-  }
+  /**
+   * Creates a new tactic to rewrite occurrences of the left-hand side of an equality into the right-hand side.
+   * @param exhaustive True: apply exhaustively; false: apply only once at the first occurrence found.
+   * @return The new tactic.
+   */
+  def eqLeft(exhaustive: Boolean): PositionTactic = eqPos("Find Left and Apply Right to Left", left=true, exhaustive=exhaustive)
+  /**
+   * Creates a new tactic to rewrite occurrences of the right-hand side of an equality into the left-hand side.
+   * @param exhaustive True: apply exhaustively; false: apply only once at the first occurrence found.
+   * @return The new tactic.
+   */
+  def eqRight(exhaustive: Boolean): PositionTactic = eqPos("Find Right and Apply Left to Right", left=false, exhaustive=exhaustive)
 }

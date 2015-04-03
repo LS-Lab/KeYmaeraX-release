@@ -321,12 +321,7 @@ object TacticLibrary {
    * Equality Rewriting Tactics
    *********************************************/
 
-  def equalityRewriting(eqPos: Position, p: Position, checkDisjoint: Boolean = true) =
-    EqualityRewritingImpl.equalityRewriting(eqPos, p, checkDisjoint)
-  def equalityRewritingLeft(eqPos: Position) = EqualityRewritingImpl.equalityRewritingLeft(eqPos)
-  def equalityRewritingRight(eqPos: Position) = EqualityRewritingImpl.equalityRewritingRight(eqPos)
   def eqLeft(exhaustive: Boolean) = EqualityRewritingImpl.eqLeft(exhaustive)
-  def eqRight(exhaustive: Boolean) = EqualityRewritingImpl.eqRight(exhaustive)
 
   /*********************************************
    * First-Order Quantifier Tactics
