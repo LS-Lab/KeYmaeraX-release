@@ -57,6 +57,59 @@ class FormulaConverter(val fml: Formula) {
   }
 
   /**
+   * Replaces the term at position where with the term repl.
+   * @param where Where to replace.
+   * @param repl The replacement.
+   * @return This converter's formula with repl at position where.
+   */
+  def replaceAt(where: PosInExpr, repl: Term): Formula = replaceAt(termAt(where), where, repl)
+
+  /**
+   * Replaces the term what at position where with the term repl. Checks that what is indeed present at position where.
+   * @param what What to replace.
+   * @param where Where to replace.
+   * @param repl The replacement.
+   * @return This converter's formula with repl at position where.
+   */
+  def replaceAt(what: Term, where: PosInExpr, repl: Term): Formula = {
+    ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+      override def preT(pos: PosInExpr, t: Term): Either[Option[StopTraversal], Term] =
+        if (t == what) Right(repl)
+        else Left(Some(ExpressionTraversal.stop))
+    }), fml) match {
+      case Some(f) => f
+      case None => throw new IllegalArgumentException(s"Did not find $what at position $where")
+    }
+  }
+
+  /**
+   * Replaces the formula at position where with the formula repl.
+   * @param where Where to replace.
+   * @param repl The replacement.
+   * @return This converter's formula with repl at position where.
+   */
+  def replaceAt(where: PosInExpr, repl: Formula): Formula = replaceAt(subFormulaAt(where), where, repl)
+
+  /**
+   * Replaces the formula what at position where with the formula repl. Checks that what is indeed present at position
+   * where.
+   * @param what What to replace.
+   * @param where Where to replace.
+   * @param repl The replacement.
+   * @return This converter's formula with repl at position where.
+   */
+  def replaceAt(what: Formula, where: PosInExpr, repl: Formula): Formula = {
+    ExpressionTraversal.traverse(TraverseToPosition(where, new ExpressionTraversalFunction {
+      override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] =
+        if (f == what) Right(repl)
+        else Left(Some(ExpressionTraversal.stop))
+    }), fml) match {
+      case Some(f) => f
+      case None => throw new IllegalArgumentException(s"Did not find $what at position $where")
+    }
+  }
+
+  /**
    * Extracts a sub-expression from its context and returns both.
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
