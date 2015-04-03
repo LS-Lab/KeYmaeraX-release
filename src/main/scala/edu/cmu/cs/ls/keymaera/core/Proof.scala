@@ -745,9 +745,15 @@ object UniformSubstitutionRule {
 //   }
 // }
 
-// alpha conversion
-
-/*@TODO Replace by flat implementation*/
+/**
+ * Performs alpha conversion from a symbol name_idx to a symbol target_tIdx.
+ * @param name The name to replace.
+ * @param idx The index to replace.
+ * @param target The target name.
+ * @param tIdx The target index.
+ * @param pos The position where to perform alpha conversion. If Some(p), p must point to a position that binds
+ *            name_idx (either a quantifier or a box/diamond modality).
+ */
 class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
