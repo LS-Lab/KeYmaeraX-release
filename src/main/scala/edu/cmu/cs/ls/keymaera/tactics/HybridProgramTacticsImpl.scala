@@ -652,6 +652,7 @@ object HybridProgramTacticsImpl {
   def diamondTestT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case DiamondModality(Test(h), p) => Equiv(fml, And(h, p))
+      case _ => False
     }
     uncoverAxiomT("<?> test", axiomInstance, _ => diamondTestBaseT)
   }
