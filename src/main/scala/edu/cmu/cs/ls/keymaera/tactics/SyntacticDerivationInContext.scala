@@ -156,6 +156,68 @@ object SyntacticDerivationInContext {
   }
 
   /*
+   * Axiom "exists' derive forall".
+   *   (\exists x. p(x))' <-> (\forall x. (p(x)'))
+   * End.
+   */
+  def ExistsDerivativeT: PositionTactic with ApplicableAtFormula = new PositionTactic("exists' derive exists") with ApplicableAtFormula {
+    def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(Exists(_, _)) => true
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        def axiomInstance(fml: Formula): Formula = fml match {
+          case FormulaDerivative(Exists(vars, phi)) => Equiv(fml, Forall(vars, FormulaDerivative(phi)))
+          case _ => False
+        }
+        Some(uncoverAxiomT("exists' derive exists", axiomInstance, _ => ExistsDerivativeBaseT)(p))
+      }
+    }
+  }
+  /** Base tactic for exists derivative */
+  private def ExistsDerivativeBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(FormulaDerivative(Exists(vars, p)), _) =>
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: Nil
+    }
+
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(FormulaDerivative(Exists(vars, p)), _) =>
+        assert(vars.length == 1, "Only quantifiers over single variable supported")
+        if (vars.head.name != aX.name || vars.head.index != aX.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(FormulaDerivative(Exists(_, _)), _) => true
+              case _ => false
+            }
+
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(vars.head.name, vars.head.index, aX.name, aX.index))
+
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+          }
+        } else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(FormulaDerivative(Exists(vars, p)), _) =>
+        assert(vars.length == 1, "Only quantifiers over single variable supported")
+        if (vars.head.name != aX.name || vars.head.index != aX.index) replace(axiom)(aX, vars.head.asInstanceOf[Variable])
+        else axiom
+    }
+    axiomLookupBaseT("exists' derive exists", subst, alpha, axiomInstance)
+  }
+
+  /*
    * Axiom "&' derive and".
    *   (p & q)' <-> ((p') & (q'))
    * End.
@@ -725,6 +787,7 @@ object SyntacticDerivationInContext {
     NotEqualsDerivativeT    ::
     ImplyDerivativeT        ::
     ForallDerivativeT       ::
+    ExistsDerivativeT       ::
     Nil
 
   /**
