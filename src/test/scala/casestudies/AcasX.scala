@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.ODETactics._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{debugT, arithmeticT, arithmeticNoHidingT, ImplyRightT, AndLeftT, hideT, AndRightT,
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
