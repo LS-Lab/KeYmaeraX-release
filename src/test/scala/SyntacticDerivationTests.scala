@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import testHelper.StringConverter._
@@ -68,9 +69,8 @@ class SyntacticDerivationTests extends TacticTestSuite {
     node2.openGoals().flatMap(_.sequent.succ) shouldBe node2.openGoals().flatMap(_.sequent.succ)
   }
 
-  def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : DerivativeAxiomInContextTactic, atomizePosTactic : PositionTactic, aggregatePosTactic : PositionTactic) = {
+  def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : PositionTactic with ApplicableAtFormula) = {
     val tactic = axTactic(SuccPosition(0, PosInExpr(1::Nil)))
-    val atomizeTactic = atomizePosTactic(SuccPosition(0, PosInExpr(1::Nil)))
 
     val node = helper.formulaToNode(s"[x:=2;]($sNoParen $innerOp $tNoParen)'".asFormula)
     val node2 = helper.formulaToNode(s"[x:=2;]($sNoParen $innerOp $tNoParen)'".asFormula)
@@ -78,34 +78,30 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node, mustApply = true)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only s"[x:=2;](($sNoParen)' $outerOp ($tNoParen)')".asFormula
-
-    val result2 = helper.runTactic(atomizeTactic, node2, mustApply = true)
-    result2.openGoals().flatMap(_.sequent.ante) shouldBe result.openGoals().flatMap(_.sequent.ante)
-    result2.openGoals().flatMap(_.sequent.succ) shouldBe result.openGoals().flatMap(_.sequent.succ)
   }
 
   import SyntacticDerivationInContext._
 
   "=" should "work on x,y" in {
-    testTermOperation("x", "y", "=", "=", EqualsDerivativeT, EqualsDerivativeAtomizeT, EqualsDerivativeAggregateT)
+    testTermOperation("x", "y", "=", "=", EqualsDerivativeT)
   }
   ">=" should "work on x,y" in {
-    testTermOperation("x", "y", ">=",">=", GreaterEqualDerivativeT, GreaterEqualDerivativeAtomizeT, GreaterEqualDerivativeAggregateT)
+    testTermOperation("x", "y", ">=",">=", GreaterEqualDerivativeT)
   }
   "<=" should "work on x,y" in {
-    testTermOperation("x", "y", "<=","<=", LessEqualDerivativeT, LessEqualDerivativeAtomizeT, LessEqualDerivativeAggregateT)
+    testTermOperation("x", "y", "<=","<=", LessEqualDerivativeT)
   }
 
   //These axioms don't follow the above pattern, so we need something slightly modified.
 
   ">" should "work on x,y" in {
-    testTermOperation("x", "y", ">",">=", GreaterThanDerivativeT, GreaterThanDerivativeAtomizeT, GreaterThanDerivativeAggregateT)
+    testTermOperation("x", "y", ">",">=", GreaterThanDerivativeT)
   }
   "<" should "work on x,y" in {
-    testTermOperation("x", "y", "<", "<=", LessThanDerivativeT, LessThanDerivativeAtomizeT, LessThanDerivativeAggregateT)
+    testTermOperation("x", "y", "<", "<=", LessThanDerivativeT)
   }
   "!=" should "work on x,y" in {
-    testTermOperation("x", "y", "!=", "=", NotEqualsDerivativeT, NotEqualsDerivativeAtomizeT, NotEqualsDerivativeAggregateT)
+    testTermOperation("x", "y", "!=", "=", NotEqualsDerivativeT)
   }
 
 

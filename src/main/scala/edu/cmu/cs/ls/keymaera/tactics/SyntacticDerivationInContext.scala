@@ -253,63 +253,14 @@ object SyntacticDerivationInContext {
 
   // @TODO A lot of things are missing from the axiom file...
 
-  private def createSubstitution(frm: Formula, f: Term, g: Term, sort: Sort,
-                                 lhsFactory: (Sort, Term, Term) => BinaryRelation,
-                                 rhsFactory: (Sort, Term, Term) => BinaryRelation) = {
-    val aF = Apply(Function("f", None, sort, sort), Anything)
-    val aG = Apply(Function("g", None, sort, sort), Anything)
-
-    uniformSubstT(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)),
-      Map(Equiv(frm, rhsFactory(sort, Derivative(sort, f), Derivative(sort, g))) ->
-        Equiv(FormulaDerivative(lhsFactory(sort, aF, aG)),
-          rhsFactory(sort, Derivative(sort, aF), Derivative(sort, aG)))))
-  }
-
   /*
    * Axiom "=' derive =".
    *   (s = t)' <-> ((s') = (t'))
    * End.
    */
-  def EqualsDerivativeT = new DerivativeAxiomInContextTactic("=' derive =", "=' derive =") {
-    override def applies(f: Formula): Boolean = {
-      f match {
-        case FormulaDerivative(Equals(eqSort, s, t)) => true
-        //      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-        case _ => false
-      }
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-    /**
-     * This method constructs the desired result before the renaming.
-     *
-     * @param f the formula that should be rewritten
-     * @return Desired result before executing the renaming
-     */
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(Equals(eqSort, s, t)) =>
-        val usubst = createSubstitution(f, s, t, eqSort, Equals.apply, Equals.apply)
-        Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
-      case _ => None
-    }
-  }
-
-  def EqualsDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case FormulaDerivative(Equals(eqSort, s, t)) => true
-    }
-    override def apply(p: Position): Tactic = EqualsDerivativeT(p)
-  }
-
-  def EqualsDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-    }
-    override def apply(p: Position): Tactic = EqualsDerivativeT(p)
-  }
+  def EqualsDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryRelationDerivativeT("=' derive =", Equals.unapply, deriveEquals)
+  private def deriveEquals(s: Sort, f: Term, g: Term) = Equals(s, Derivative(f.sort, f), Derivative(g.sort, g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -318,39 +269,9 @@ object SyntacticDerivationInContext {
    *   (s >= t)' <-> ((s') >= (t'))
    * End.
    */
-  def GreaterEqualDerivativeT = new DerivativeAxiomInContextTactic(">=' derive >=", ">=' derive >=") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(GreaterEqual(eqSort, s, t)) => true
-//      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(GreaterEqual(eqSort, s, t)) =>
-        val usubst = createSubstitution(f, s, t, eqSort, GreaterEqual.apply, GreaterEqual.apply)
-        Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
-      case _ => None
-    }
-  }
-
-  def GreaterEqualDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case FormulaDerivative(GreaterEqual(eqSort, s, t)) => true
-    }
-    override def apply(p: Position): Tactic = GreaterEqualDerivativeT(p)
-  }
-
-  def GreaterEqualDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-    }
-    override def apply(p: Position): Tactic = GreaterEqualDerivativeT(p)
-  }
+  def GreaterEqualDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryRelationDerivativeT(">=' derive >=", GreaterEqual.unapply, deriveGreaterEqual)
+  private def deriveGreaterEqual(s: Sort, f: Term, g: Term) = GreaterEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -359,38 +280,9 @@ object SyntacticDerivationInContext {
    *   (s > t)' <-> ((s') >= (t'))
    * End.
    */
-  def GreaterThanDerivativeT = new DerivativeAxiomInContextTactic(">' derive >", ">' derive >") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(GreaterThan(eqSort, s, t)) => true
-//      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(GreaterThan(eqSort, s, t)) =>
-        val usubst = createSubstitution(f, s, t, eqSort, GreaterThan.apply, GreaterEqual.apply)
-        Some(GreaterEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
-      case _ => None
-    }
-  }
-
-  def GreaterThanDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case FormulaDerivative(GreaterThan(eqSort, s, t)) => true
-    }
-    override def apply(p: Position): Tactic = GreaterThanDerivativeT(p)
-  }
-
-  def GreaterThanDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case GreaterEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-    }
-    override def apply(p: Position): Tactic = GreaterThanDerivativeT(p)
-  }
+  def GreaterThanDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryRelationDerivativeT(">' derive >", GreaterThan.unapply, deriveGreaterThan)
+  private def deriveGreaterThan(s: Sort, f: Term, g: Term) = GreaterEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -399,37 +291,9 @@ object SyntacticDerivationInContext {
    *   (s <= t)' <-> ((s') <= (t'))
    * End.
    */
-  def LessEqualDerivativeT = new DerivativeAxiomInContextTactic("<=' derive <=", "<=' derive <=") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(LessEqual(eqSort, s, t)) => true
-//      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-    override def constructInstanceAndSubst(f : Formula) = f match {
-      case FormulaDerivative(LessEqual(eqSort, s, t)) =>
-        val usubst = createSubstitution(f, s, t, eqSort, LessEqual.apply, LessEqual.apply)
-        Some(LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
-    }
-  }
-
-  def LessEqualDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case FormulaDerivative(LessEqual(eqSort, s, t)) => true
-    }
-    override def apply(p: Position): Tactic = LessEqualDerivativeT(p)
-  }
-
-  def LessEqualDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-    }
-    override def apply(p: Position): Tactic = LessEqualDerivativeT(p)
-  }
+  def LessEqualDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryRelationDerivativeT("<=' derive <=", LessEqual.unapply, deriveLessEqual)
+  private def deriveLessEqual(s: Sort, f: Term, g: Term) = LessEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -438,38 +302,9 @@ object SyntacticDerivationInContext {
    *   (s < t)' <-> ((s') <= (t'))
    * End.
    */
-  def LessThanDerivativeT = new DerivativeAxiomInContextTactic("<' derive <", "<' derive <") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(LessThan(eqSort, s, t)) => true
-//      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => {println(this.getClass() + " is not applicable to: " + f); false}
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(LessThan(eqSort, s, t)) =>
-        val usubst = createSubstitution(f, s, t, eqSort, LessThan.apply, LessEqual.apply)
-        Some( LessEqual(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
-      case _ => None
-    }
-  }
-
-  def LessThanDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case FormulaDerivative(LessThan(eqSort, s, t)) => true
-    }
-    override def apply(p: Position): Tactic = LessThanDerivativeT(p)
-  }
-
-  def LessThanDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case LessEqual(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-    }
-    override def apply(p: Position): Tactic = LessThanDerivativeT(p)
-  }
+  def LessThanDerivativeT : PositionTactic with ApplicableAtFormula =
+    BinaryRelationDerivativeT("<' derive <", LessThan.unapply, deriveLessThan)
+  private def deriveLessThan(s: Sort, f: Term, g: Term) = LessEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -478,36 +313,69 @@ object SyntacticDerivationInContext {
    *   (s != t)' <-> ((s') = (t'))
    * End.
    */
-  def NotEqualsDerivativeT = new DerivativeAxiomInContextTactic("!=' derive !=", "!=' derive !=") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(NotEquals(eqSort, s, t)) => true
-//      case NotEquals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
-      case _ => false
-    }
+  def NotEqualsDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryRelationDerivativeT("!=' derive !=", NotEquals.unapply, deriveNotEquals)
+  private def deriveNotEquals(s: Sort, f: Term, g: Term) = Equals(s, Derivative(f.sort, f), Derivative(g.sort, g))
 
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(NotEquals(eqSort, s, t)) =>
-        val usubst = createSubstitution(f, s, t, eqSort, NotEquals.apply, Equals.apply)
-        Some(Equals(eqSort, Derivative(s.sort, s), Derivative(t.sort, t)), Some(usubst))
+  /**
+   * Unapplies binary relations <, <=, =, !=, >=, >
+   * @param m The unapply method, one of <, <=, =, !=, >=, or >.unapply
+   * @tparam T The manifest (implicit by m).
+   */
+  class BinaryRelationUnapplyer[T: Manifest](m: T => Option[(Sort, Term, Term)]) {
+    def unapply(a: Any): Option[(Sort, Term, Term)] = {
+      if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
     }
   }
 
-  def NotEqualsDerivativeAtomizeT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case FormulaDerivative(NotEquals(eqSort, s, t)) => true
-    }
-    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
-  }
+  /**
+   * Base tactic for deriving binary relations <, <=, =, !=, >=, >.
+   * @param axiomName The name of the axiom.
+   * @param bin The unapply method of the relation.
+   * @param derive A method to perform the syntactic derivation of the relation.
+   * @tparam T The manifest (implicit by bin).
+   * @return The tactic.
+   */
+  def BinaryRelationDerivativeT[T: Manifest](axiomName: String,
+                                             bin: T => Option[(Sort, Term, Term)],
+                                             derive: (Sort, Term, Term) => Formula) =
+    new PositionTactic(axiomName) with ApplicableAtFormula {
+      val BRUnapplier = new BinaryRelationUnapplyer(bin)
 
-  def NotEqualsDerivativeAggregateT = new PositionTactic("=' derive = Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Equals(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+      override def applies(f: Formula): Boolean = f match {
+        case FormulaDerivative(BRUnapplier(eqSort, s, t)) => true
+        //      case BRDUnapplier(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
+        case _ => false
+      }
+
+      override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && applies(getFormula(s, p))
+
+      override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+        override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+        override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+          def axiomInstance(fml: Formula): Formula = fml match {
+            case FormulaDerivative(BRUnapplier(eqSort, s, t)) =>
+              Equiv(fml, derive(eqSort, s, t))
+            case _ => False
+          }
+          Some(uncoverAxiomT(axiomName, axiomInstance, _ => BinaryRelationDerivativeBaseT(axiomName, bin))(p))
+        }
+      }
     }
-    override def apply(p: Position): Tactic = NotEqualsDerivativeT(p)
+  /** Base tactic for binary relation derivative */
+  private def BinaryRelationDerivativeBaseT[T: Manifest](axiomName: String,
+                                                         bin: T => Option[(Sort, Term, Term)]): PositionTactic = {
+    val BRUnapplier = new BinaryRelationUnapplyer(bin)
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(FormulaDerivative(BRUnapplier(sort, s, t)), _) =>
+        val aF = Apply(Function("f", None, sort, sort), Anything)
+        val aG = Apply(Function("g", None, sort, sort), Anything)
+        SubstitutionPair(aF, s) :: SubstitutionPair(aG, t) :: Nil
+
+    }
+    axiomLookupBaseT(axiomName, subst, _ => NilPT, (f, ax) => ax)
   }
 
 
