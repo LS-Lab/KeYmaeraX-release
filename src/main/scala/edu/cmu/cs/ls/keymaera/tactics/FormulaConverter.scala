@@ -40,8 +40,8 @@ class FormulaConverter(val fml: Formula) {
    * @param pos The position pointing to the subformula.
    * @return The subformula.
    */
-  def subFormulaAt(pos: PosInExpr): Formula = {
-    if (pos.pos.isEmpty) fml
+  def subFormulaAt(pos: PosInExpr): Option[Formula] = {
+    if (pos.pos.isEmpty) Some(fml)
     else {
       var fAtPos: Option[Formula] = None
       ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
@@ -50,10 +50,7 @@ class FormulaConverter(val fml: Formula) {
           Left(Some(ExpressionTraversal.stop))
         }
       }), fml)
-      fAtPos match {
-        case Some(f) => f
-        case None => throw new IllegalArgumentException(s"Formula $fml at position $pos is not a formula")
-      }
+      fAtPos
     }
   }
 
@@ -133,7 +130,10 @@ class FormulaConverter(val fml: Formula) {
    * @param repl The replacement.
    * @return This converter's formula with repl at position where.
    */
-  def replaceAt(where: PosInExpr, repl: Formula): Formula = replaceAt(subFormulaAt(where), where, repl)
+  def replaceAt(where: PosInExpr, repl: Formula): Formula = subFormulaAt(where) match {
+    case Some(f) => replaceAt(f, where, repl)
+    case None => fml
+  }
 
   /**
    * Replaces the formula what at position where with the formula repl. Checks that what is indeed present at position

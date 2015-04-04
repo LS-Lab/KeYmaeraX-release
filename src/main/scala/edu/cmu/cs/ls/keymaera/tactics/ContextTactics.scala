@@ -112,8 +112,8 @@ object ContextTactics {
   def replaceInContext(fml: Formula, eq: Formula, where: PosInExpr): Formula = eq match {
     case Equals(_, lhs, rhs) if fml.termAt(where) == lhs => Equiv(fml, fml.replaceAt(lhs, where, rhs))
     case Equals(_, lhs, rhs) if fml.termAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
-    case Equiv(lhs, rhs) if fml.subFormulaAt(where) == lhs => Equiv(fml, fml.replaceAt(lhs, where, rhs))
-    case Equiv(lhs, rhs) if fml.subFormulaAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
+    case Equiv(lhs, rhs) if fml.subFormulaAt(where) == Some(lhs) => Equiv(fml, fml.replaceAt(lhs, where, rhs))
+    case Equiv(lhs, rhs) if fml.subFormulaAt(where) == Some(rhs) => Equiv(fml.replaceAt(rhs, where, lhs), fml)
   }
 
   /**

@@ -1,13 +1,15 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 
 /**
  * Breaking stuff up.
  * Created by nfulton on 2/14/15.
+ * @author Nathan Fulton
+ * @author Stefan Mitsch
  */
 object SyntacticDerivativeTermAxiomsInContext {
 
@@ -52,51 +54,10 @@ object SyntacticDerivativeTermAxiomsInContext {
   // Term positional helpers.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def getFormula(f : Formula, pos : PosInExpr) : Option[Formula] = {
-    var formula : Option[Formula] = None
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p : PosInExpr, f:Formula) = {if(p == pos) {
-        formula = Some(f)
-        Left(Some(ExpressionTraversal.stop))
-      } else {
-        Left(None)
-      }}
-    }
-    ExpressionTraversal.traverse(fn, f)
-    formula
-  }
-
-  def getTerm(f : Formula, pos : PosInExpr) : Option[Term] = {
-    var term : Option[Term] = None
-    val fn = new ExpressionTraversalFunction {
-      override def preT(pos : PosInExpr, t:Term) = {term = Some(t); Left(Some(ExpressionTraversal.stop))}
-    }
-    ExpressionTraversal.traverse(fn, f)
-    term
-  }
-
   def smallestFormulaContainingTerm(f : Formula, pos : PosInExpr) : (Formula, PosInExpr) = {
-    getFormula(f, pos) match {
+    f.subFormulaAt(pos) match {
       case Some(formula) => (formula, pos) //base case.
       case None => smallestFormulaContainingTerm(f, PosInExpr(pos.pos.init))
     }
   }
-
-  def getTermAtPosition(f : Formula, pos : PosInExpr) : Option[Term] = {
-    var retVal : Option[Term] = None
-    val fn = new ExpressionTraversalFunction() {
-      override def preT(p : PosInExpr, t : Term) = {
-        if(pos.equals(p)) {
-          retVal = Some(t)
-          Left(Some(ExpressionTraversal.stop))
-        }
-        else {
-          Left(None)
-        }
-      }
-    }
-    ExpressionTraversal.traverse(fn, f)
-    retVal
-  }
-
 }
