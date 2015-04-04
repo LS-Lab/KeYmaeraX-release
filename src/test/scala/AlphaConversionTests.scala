@@ -721,4 +721,9 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     AlphaConversionHelper.replaceFree("[x:=2;]x+1>0".asFormula)("x+1".asTerm, "y".asTerm, None) should be (
       "[x:=2;]y>0".asFormula)
   }
+
+  it should "replace names in universal quantifier" in {
+    AlphaConversionHelper.replace("\\forall x. x>0".asFormula)("x".asTerm, "y".asTerm) should be (
+      "\\forall y. y>0".asFormula)
+  }
 }

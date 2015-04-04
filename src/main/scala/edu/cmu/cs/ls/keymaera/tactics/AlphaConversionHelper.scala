@@ -171,6 +171,16 @@ object AlphaConversionHelper {
   def replace(f: Formula)(o: Term, n: Term): Formula =
     ExpressionTraversal.traverse(
       new ExpressionTraversalFunction {
+        override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+          if (o.isInstanceOf[NamedSymbol] && n.isInstanceOf[NamedSymbol]) {
+            e match {
+              case Forall(vars, phi) => Right(Forall(vars.map(v => if (v == o) n.asInstanceOf[NamedSymbol] else v), replace(phi)(o, n)))
+              case Exists(vars, phi) => Right(Exists(vars.map(v => if (v == o) n.asInstanceOf[NamedSymbol] else v), replace(phi)(o, n)))
+              case _ => Left(None)
+            }
+          } else {
+            Left(None)
+        }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
           case t: Term if t == o => Right(n)
           case _ => Left(None)
