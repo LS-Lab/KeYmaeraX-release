@@ -66,16 +66,18 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       "      )) & ( hp>0&rp>0&rv>=0&a>0 )").asFormula
 //    val invariant = "w=42".asFormula
 
+    val arith = arithmeticT
+
     val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(wipeContextInductionT(Some(invariant))) & onBranch(
-      (indInitLbl, debugT("Base case") & arithmeticT),
+      (indInitLbl, debugT("Base case") & arith),
       (indUseCaseLbl, debugT("Use case") & ls(ImplyRightT) & (la(AndLeftT)*) & ls(AndRightT) &&(
         la(instantiateT(Variable("t", None, Real), Number(0))) &
           la(instantiateT(Variable("ro", None, Real), Number(0))) &
           la(instantiateT(Variable("ho", None, Real), Number(0))) & la(ImplyLeftT) && (
-            arithmeticT,
-            arithmeticT
+            arith,
+            arith
           ),
-        arithmeticT
+        arith
         )),
       (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & onBranch(
         (cutShowLbl, debugT("Generalization Holds") &
@@ -83,7 +85,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
           debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & AxiomCloseT,
           debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
             ls(AndRightT) & /* both branches are the same */
-            ls(substitutionBoxAssignT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & arithmeticT
+            ls(substitutionBoxAssignT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & arith
           )),
         (cutUseLbl, debugT("Generalization Strong Enough") &
           /* remove when HACK ?rv()=rv etc. is removed from model */ ((ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT))*) &
@@ -106,56 +108,56 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               // CUT 1: (0 <= t_0+k4_t_5 & t_0+k4_t_5 < Max(0, w*(dhf-dhd))/a) | t_0+k4_t_5 >= Max(0, w*(dhf-dhd))/a
               cutT(Some("(0 <= t_0+k4_t_5 & t_0+k4_t_5 < w*(dhf-dhd)/a) | (0 <= t_0+k4_t_5 & t_0+k4_t_5 >= w*(dhf-dhd)/a)".asFormula)) & onBranch(
                 (cutShowLbl, debugT("Show Cut") & lastAnte(hideT) & hideT(SuccPosition(1)) & hideT(SuccPosition(0)) &
-                  ls(OrRightT) & lastAnte(OrLeftT) & (la(AndLeftT)*) & (ls(AndRightT)*) & (arithmeticT | debugT("Should be closed") & Tactics.stopT)),
+                  ls(OrRightT) & lastAnte(OrLeftT) & (la(AndLeftT)*) & (ls(AndRightT)*) & (arith | debugT("Should be closed") & Tactics.stopT)),
                 (cutUseLbl, debugT("Use Cut") & /* OrLeftT on formula of CUT 1 */ lastAnte(OrLeftT) && (
                     // goal 110
                     instantiateT(Variable("ho", None, Real), "w*a/2*(t_0+k4_t_5)^2 + dhd*(t_0+k4_t_5)".asTerm)(AntePosition(18)) & debugT("Did we instantiate?") &
                       // OrLeftT on ???
                       ((AxiomCloseT | l(NonBranchingPropositionalT))*) & debugT("Implication at same pos as instantiate?") & ImplyLeftT(AntePosition(18)) && (
-                        (ls(OrRightT)*) & lastSucc(hideT) & (ls(AndRightT)*) & (AxiomCloseT | arithmeticT | debugT("Shouldn't get here")),
+                        (ls(OrRightT)*) & lastSucc(hideT) & (ls(AndRightT)*) & (AxiomCloseT | arith | debugT("Shouldn't get here")),
                         OrLeftT(AntePosition(17)) && (
                           debugT("Goal 124") & lastAnte(OrLeftT) && (
-                            hideT(SuccPosition(0)) & (arithmeticT | debugT("This should close") & Tactics.stopT),
+                            hideT(SuccPosition(0)) & (arith | debugT("This should close") & Tactics.stopT),
                             debugT("Goal 135") & lastSucc(hideT) & lastSucc(hideT) & (la(AndLeftT)*) & OrLeftT(AntePosition(15)) && (
-                              debugT("Goal 146") & OrLeftT(AntePosition(8)) && (debugT("Goal 146-1") & arithmeticT, debugT("Goal 146-2") & arithmeticT),
-                              debugT("Goal 148") & OrLeftT(AntePosition(8)) && (debugT("Goal 148-1") & arithmeticT, debugT("Goal 148-2") & arithmeticT)
+                              debugT("Goal 146") & OrLeftT(AntePosition(8)) && (debugT("Goal 146-1") & arith, debugT("Goal 146-2") & arith),
+                              debugT("Goal 148") & OrLeftT(AntePosition(8)) && (debugT("Goal 148-1") & arith, debugT("Goal 148-2") & arith)
                               )
                             ),
                           debugT("Goal 125") & lastAnte(OrLeftT) && (
-                            debugT("Goal 280") & arithmeticT,
-                            debugT("Goal 281") & (la(AndLeftT)*) & debugT("HERE") & /* TODO open goal */ Tactics.stopT & OrLeftT(AntePosition(20)) && (
-                              OrLeftT(AntePosition(8)) && (debugT("Goal 283") & arithmeticT, debugT("Goal 285") & arithmeticT),
-                              OrLeftT(AntePosition(8)) && (debugT("Goal 283-1") & arithmeticT, debugT("Goal 285-1") & arithmeticT)
-                              )
+                            debugT("Goal 280") & arith,
+                            debugT("Goal 281") & (la(AndLeftT)*) & (la(OrLeftT)*) & arith/*OrLeftT(AntePosition(20)) && (
+                              OrLeftT(AntePosition(8)) && (debugT("Goal 283") & arith, debugT("Goal 285") & arith),
+                              OrLeftT(AntePosition(8)) && (debugT("Goal 283-1") & arith, debugT("Goal 285-1") & arith)
+                              )*/
                             )
                           )
                       ),
                     // goal 111
                     // we don't have Max, so instead of instantiating ho with dhf*(t_0+k4_t_5) - w*(Max(0, w*(dhf-dhd))^2/(2*a) we first cut
                     cutT(Some("w*(dhf-dhd) > 0 | w*(dhf-dhd) <= 0".asFormula)) & onBranch(
-                      (cutShowLbl, lastSucc(cohideT) & arithmeticT),
+                      (cutShowLbl, lastSucc(cohideT) & arith),
                       (cutUseLbl, lastAnte(OrLeftT) && (
-                        /* w*(dhf-dhd_3) >= 0 */ instantiateT(Variable("ho", None, Real), "dhf*(t_0+k4_t_5) - w*(w*(dhf-dhd))^2/(2*a)".asTerm)(AntePosition(18)) &
+                        /* w*(dhf-dhd_3) > 0 */ instantiateT(Variable("ho", None, Real), "dhf*(t_0+k4_t_5) - w*(w*(dhf-dhd))^2/(2*a)".asTerm)(AntePosition(18)) &
                         debugT("Goal 120-1") & lastAnte(ImplyLeftT) && (
-                          debugT("This should be easy to close") /* TODO open goal */,
+                          debugT("Goal 122") & (la(AndLeftT)*) & (ls(OrRightT)*) & (ls(AndRightT)*) & (AxiomCloseT | arith),
                           debugT("Goal 123") & OrLeftT(AntePosition(17)) && (
                             OrLeftT(AntePosition(15)) && (
-                              OrLeftT(AntePosition(8)) && (debugT("Goal 123-1") & arithmeticT, debugT("Goal 123-2") & arithmeticT),
+                              OrLeftT(AntePosition(8)) && (debugT("Goal 123-1") & arith, debugT("Goal 123-2") & arith),
                               debugT("Goal 153") & lastAnte(OrLeftT) && (
-                                debugT("Goal 154") & arithmeticT,
+                                debugT("Goal 154") & arith,
                                 debugT("Goal 155") & OrLeftT(AntePosition(8)) && (
-                                  debugT("Goal 165") & arithmeticT,
-                                  debugT("Goal 166") & arithmeticT
+                                  debugT("Goal 165") & arith,
+                                  debugT("Goal 166") & arith
                                   )
                                 )
                               ),
                             debugT("Goal 127") & lastAnte(OrLeftT) && (
-                              debugT("Goal 194") & arithmeticT,
-                              debugT("Goal 195") & hideT(SuccPosition(0)) & debugT("Goal 209") & (la(AndLeftT)*) & debugT("WHERE?") & OrLeftT(AntePosition(19)) && (
-                                debugT("Goal 214") /* TODO open goal */,
+                              debugT("Goal 194") & arith,
+                              debugT("Goal 195") & hideT(SuccPosition(0)) & debugT("Goal 209") & (la(AndLeftT)*) & OrLeftT(AntePosition(19)) && (
+                                debugT("Goal 214") & hideT(AntePosition(15)) & (la(AndLeftT)*) & debugT("Goal 217")/* TODO open goal with counterexamples */ /*& (la(OrLeftT)*) & (la(AndLeftT)*) & debugT("WTF?")*/ & arith,
                                 debugT("Goal 215") & OrLeftT(AntePosition(15)) && (
-                                  debugT("Goal 215-1") & OrLeftT(AntePosition(8)) && (debugT("Goal 215-11") & arithmeticT, debugT("Goal 215-12") & arithmeticT),
-                                  debugT("Goal 215-2") & OrLeftT(AntePosition(8)) && (debugT("Goal 215-21") & arithmeticT, debugT("Goal 215-22") & arithmeticT))
+                                  debugT("Goal 215-1") & OrLeftT(AntePosition(8)) && (debugT("Goal 215-11") & arith, debugT("Goal 215-12") & arith),
+                                  debugT("Goal 215-2") & OrLeftT(AntePosition(8)) && (debugT("Goal 215-21") & arith, debugT("Goal 215-22") & arith))
                                 )
                               )
                             )
@@ -168,7 +170,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                   )
               )
             ),
-            arithmeticT
+            arith
           )
           )
         ))
