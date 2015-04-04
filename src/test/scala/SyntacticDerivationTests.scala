@@ -30,21 +30,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
   }
 
-  it should "agree on atomization" in {
-    val f = " [x:=2;](1=1 & 2=2)' ".asFormula
-
-    val tactic1 = SyntacticDerivationInContext.AndDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
-    val node1 = helper.runTactic(tactic1, helper.formulaToNode(f), mustApply = true)
-
-    val tactic2 = SyntacticDerivationInContext.AndDerivativeAtomizeT(SuccPosition(0, PosInExpr(1::Nil)))
-    val node2 = helper.runTactic(tactic2, helper.formulaToNode(f), mustApply = true)
-
-    node1.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node1.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
-    node2.openGoals().flatMap(_.sequent.ante) shouldBe node2.openGoals().flatMap(_.sequent.ante)
-    node2.openGoals().flatMap(_.sequent.succ) shouldBe node2.openGoals().flatMap(_.sequent.succ)
-  }
-
   "OrDerivativeT tactics" should "atomize" in {
     val f = helper.parseFormula( "[x:=2;](1=1 | 2=2)' ")
     val tactic = SyntacticDerivationInContext.OrDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
@@ -52,21 +37,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
     node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
-  }
-
-  it should "agree on atomization" in {
-    val f = " [x:=2;](1=1 | 2=2)' ".asFormula
-
-    val tactic1 = SyntacticDerivationInContext.OrDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
-    val node1 = helper.runTactic(tactic1, helper.formulaToNode(f), mustApply = true)
-
-    val tactic2 = SyntacticDerivationInContext.OrDerivativeAtomizeT(SuccPosition(0, PosInExpr(1::Nil)))
-    val node2 = helper.runTactic(tactic2, helper.formulaToNode(f), mustApply = true)
-
-    node1.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    node1.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;]((1=1)' & (2=2)')".asFormula
-    node2.openGoals().flatMap(_.sequent.ante) shouldBe node2.openGoals().flatMap(_.sequent.ante)
-    node2.openGoals().flatMap(_.sequent.succ) shouldBe node2.openGoals().flatMap(_.sequent.succ)
   }
 
   def testTermOperation(sNoParen : String, tNoParen : String, innerOp : String, outerOp: String, axTactic : PositionTactic with ApplicableAtFormula) = {

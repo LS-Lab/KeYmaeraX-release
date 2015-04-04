@@ -10,9 +10,8 @@ import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBase
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{equivalenceCongruenceT,equationCongruenceT}
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
-import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{hideT,AxiomCloseT}
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{onBranch,lastAnte,lastSucc,locateTerm}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
@@ -41,57 +40,14 @@ object SyntacticDerivationInContext {
   // Section 1: "Derivatives" of Formulas
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  private def createSubstitution(frm: Formula, f: Formula, g: Formula,
-                                 lhsFactory: (Formula, Formula) => Formula,
-                                 rhsFactory: (Formula, Formula) => Formula) = {
-    val aF = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-    val aG = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-
-    uniformSubstT(List(SubstitutionPair(aF, f), SubstitutionPair(aG, g)),
-      Map(Equiv(frm, rhsFactory(FormulaDerivative(f), FormulaDerivative(g))) ->
-        Equiv(FormulaDerivative(lhsFactory(aF, aG)),
-          rhsFactory(FormulaDerivative(aF), FormulaDerivative(aG)))))
-  }
-
   /*
- * Axiom "->' derive imply".
- *   (p -> q)' <-> (!p | q)'
- * End.
- */
-  def ImplyDerivativeT = new DerivativeAxiomInContextTactic("->' derive imply", "->' derive imply") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Imply(_,_))              => true
-      //      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-    /**
-     * This method constructs the desired result before the renaming.
-     *
-     * @param f the formula that should be rewritten
-     * @return Desired result before executing the renaming
-     */
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(Imply(p, q)) => {
-        val g = FormulaDerivative(Or(Not(p), q))
-
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-
-        val usubst = uniformSubstT(List(SubstitutionPair(aP, p), SubstitutionPair(aQ, q)),
-          Map(Equiv(f, FormulaDerivative(Or(Not(p), q))) ->
-            Equiv(FormulaDerivative(Imply(aP, aQ)),
-              FormulaDerivative(Or(Not(aP), aQ)))))
-
-        Some(g, Some(usubst))
-      }
-      case _ => None
-    }
-  }
+   * Axiom "->' derive imply".
+   *   (p -> q)' <-> (!p | q)'
+   * End.
+   */
+  def ImplyDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryFormulaDerivativeT("->' derive imply", Imply.unapply, deriveImply)
+  private def deriveImply(p: Formula, q: Formula) = FormulaDerivative(Or(Not(p), q))
 
   /*
    * Axiom "forall' derive forall".
@@ -106,15 +62,12 @@ object SyntacticDerivationInContext {
 
     override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
 
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        def axiomInstance(fml: Formula): Formula = fml match {
-          case FormulaDerivative(Forall(vars, phi)) => Equiv(fml, Forall(vars, FormulaDerivative(phi)))
-          case _ => False
-        }
-        Some(uncoverAxiomT("forall' derive forall", axiomInstance, _ => ForallDerivativeBaseT)(p))
+    override def apply(p: Position): Tactic = {
+      def axiomInstance(fml: Formula): Formula = fml match {
+        case FormulaDerivative(Forall(vars, phi)) => Equiv(fml, Forall(vars, FormulaDerivative(phi)))
+        case _ => False
       }
+      uncoverAxiomT("forall' derive forall", axiomInstance, _ => ForallDerivativeBaseT)(p)
     }
   }
   /** Base tactic for forall derivative */
@@ -160,44 +113,9 @@ object SyntacticDerivationInContext {
    *   (p & q)' <-> ((p') & (q'))
    * End.
    */
-  def AndDerivativeT = new DerivativeAxiomInContextTactic("&' derive and", "&' derive and") {
-    override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(And(_,_))              => true
-//      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
-      case _ => false
-    }
-
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
-
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(And(p,q)) =>
-        val usubst = createSubstitution(f, p, q, And.apply, And.apply)
-        Some(And(FormulaDerivative(p), FormulaDerivative(q)), Some(usubst))
-      case _ => None
-    }
-  }
-
-  def AndDerivativeAtomizeT = new PositionTactic("&' derive and Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && p.inExpr == HereP && (s(p) match {
-        case FormulaDerivative(And(_,_)) => true
-        case _ => false
-      })
-    }
-
-    override def apply(p: Position): Tactic = AndDerivativeT(p)
-  }
-
-  def AndDerivativeAggregateT = new PositionTactic("&' derive and Aggregate") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
-      case _                                               => false
-    })
-
-    override def apply(p: Position): Tactic = AndDerivativeT(p)
-  }
+  def AndDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryFormulaDerivativeT("&' derive and", And.unapply, deriveAnd)
+  private def deriveAnd(p: Formula, q: Formula) = And(FormulaDerivative(p), FormulaDerivative(q))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -206,47 +124,54 @@ object SyntacticDerivationInContext {
    *   (p | q)' <-> ((p') & (q'))
    * End.
    */
-  def OrDerivativeT = new DerivativeAxiomInContextTactic("|' derive or","|' derive or") {
+  def OrDerivativeT: PositionTactic with ApplicableAtFormula =
+    BinaryFormulaDerivativeT("|' derive or", Or.unapply, deriveOr)
+  private def deriveOr(p: Formula, q: Formula) = And(FormulaDerivative(p), FormulaDerivative(q))
+
+  /**
+   * Unapplies binary formula &, |, ->, <->
+   * @param m The unapply method, one of &, |, ->, <->.unapply
+   * @tparam T The manifest (implicit by m).
+   */
+  class BinaryFormulaUnapplyer[T: Manifest](m: T => Option[(Formula, Formula)]) {
+    def unapply(a: Any): Option[(Formula, Formula)] = {
+      if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
+    }
+  }
+
+  def BinaryFormulaDerivativeT[T: Manifest](axiomName: String,
+                                            bin: T => Option[(Formula, Formula)],
+                                            derive: (Formula, Formula) => Formula) =
+      new PositionTactic(axiomName) with ApplicableAtFormula {
+    val BFUnapplier = new BinaryFormulaUnapplyer(bin)
+
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Or(_,_)) => true
-//      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
+      case FormulaDerivative(BFUnapplier(_,_)) => true
+      //      case BFUnapplier(FormulaDerivative(_), FormulaDerivative(_)) => true
       case _ => false
     }
 
-    override def applies(s: Sequent, p: Position): Boolean = {
-      !p.isAnte && super.applies(s, p)
-    }
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && applies(getFormula(s, p))
 
-    /**
-     * This method constructs the desired result before the renaming.
-     *
-     * @param f the formula that should be rewritten
-     * @return Desired result before executing the renaming
-     */
-    override def constructInstanceAndSubst(f: Formula) = f match {
-      case FormulaDerivative(Or(p,q)) =>
-        val usubst = createSubstitution(f, p, q, Or.apply, And.apply)
-        Some(And(FormulaDerivative(p), FormulaDerivative(q)), Some(usubst))
-      case _ => None
+    override def apply(pos: Position): Tactic = {
+      def axiomInstance(fml: Formula): Formula = fml match {
+        case FormulaDerivative(BFUnapplier(p, q)) => Equiv(fml, derive(p, q))
+        case _ => False
+      }
+      uncoverAxiomT(axiomName, axiomInstance, _ => BinaryFormulaDerivativeBaseT(axiomName, bin))(pos)
     }
   }
 
-  def OrDerivativeAtomizeT = new PositionTactic("|' derive or\",\"|' derive or Atomize") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case FormulaDerivative(Or(_,_)) => true
-      case _ => false
-    })
-
-    override def apply(p: Position): Tactic = OrDerivativeT(p)
-  }
-
-  def OrDerivativeAggregateT = new PositionTactic("|' derive or\",\"|' derive or Aggregate") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case And(FormulaDerivative(_), FormulaDerivative(_)) => true
-      case _ => false
-    })
-
-    override def apply(p: Position): Tactic = OrDerivativeT(p)
+  private def BinaryFormulaDerivativeBaseT[T: Manifest](axiomName: String,
+                                                        bin: T => Option[(Formula, Formula)]) = {
+    val BFUnapplier = new BinaryFormulaUnapplyer(bin)
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(FormulaDerivative(BFUnapplier(p, q)), _) =>
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: Nil
+    }
+    axiomLookupBaseT(axiomName, subst, _ => NilPT, (f, ax) => ax)
   }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
