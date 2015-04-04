@@ -783,6 +783,8 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case Imply(l, r) => Imply(rename(l), rename(r))
     case Equiv(l, r) => Equiv(rename(l), rename(r))
 
+    case FormulaDerivative(g) => FormulaDerivative(rename(g))
+
     case Equals(d, l, r) => Equals(d, rename(l), rename(r))
     case NotEquals(d, l, r) => NotEquals(d, rename(l), rename(r))
     case GreaterEqual(d, l, r) => GreaterEqual(d, rename(l), rename(r))
