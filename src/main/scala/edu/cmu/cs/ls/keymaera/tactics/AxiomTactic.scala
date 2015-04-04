@@ -7,6 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{locateAnte, locateSucc, lastAnte, lastSucc, onBranch}
+import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.debugT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
@@ -313,7 +314,7 @@ abstract class AxiomTactic(name: String, axiomName: String) extends PositionTact
  * "knowledge subclass continue" branch (e.g., by axiom lookup or propositional tactics).
  * @param name The name of the tactic.
  */
-abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic(name) {
+abstract class ContextualizeKnowledgeTactic(name: String) extends PositionTactic(name) with ApplicableAtFormula {
   def applies(f: Formula): Boolean
   override def applies(s: Sequent, p: Position): Boolean =
     !p.isTopLevel && inContextOfModality(s, parentPosition(p)) && applies(getFormula(s, p))

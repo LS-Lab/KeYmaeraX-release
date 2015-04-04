@@ -4,7 +4,9 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{equivalenceCongruenceT,equationCongruenceT}
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
@@ -89,6 +91,68 @@ object SyntacticDerivationInContext {
       }
       case _ => None
     }
+  }
+
+  /*
+   * Axiom "forall' derive forall".
+   *   (\forall x. p(x))' <-> (\forall x. (p(x)'))
+   * End.
+   */
+  def ForallDerivativeT: PositionTactic with ApplicableAtFormula = new PositionTactic("forall' derive forall") with ApplicableAtFormula {
+    def applies(f: Formula): Boolean = f match {
+      case FormulaDerivative(Forall(_, _)) => true
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = applies(getFormula(s, p))
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        def axiomInstance(fml: Formula): Formula = fml match {
+          case FormulaDerivative(Forall(vars, phi)) => Equiv(fml, Forall(vars, FormulaDerivative(phi)))
+          case _ => False
+        }
+        Some(uncoverAxiomT("forall' derive forall", axiomInstance, _ => ForallDerivativeBaseT)(p))
+      }
+    }
+  }
+  /** Base tactic for forall derivative */
+  private def ForallDerivativeBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Equiv(FormulaDerivative(Forall(vars, p)), _) =>
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        SubstitutionPair(aP, p) :: Nil
+    }
+
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Equiv(FormulaDerivative(Forall(vars, p)), _) =>
+        assert(vars.length == 1, "Only quantifiers over single variable supported")
+        if (vars.head.name != aX.name || vars.head.index != aX.index) {
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+              case Equiv(FormulaDerivative(Forall(_, _)), _) => true
+              case _ => false
+            }
+
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(vars.head.name, vars.head.index, aX.name, aX.index))
+
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+          }
+        } else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Equiv(FormulaDerivative(Forall(vars, p)), _) =>
+        assert(vars.length == 1, "Only quantifiers over single variable supported")
+        if (vars.head.name != aX.name || vars.head.index != aX.index) replace(axiom)(aX, vars.head.asInstanceOf[Variable])
+        else axiom
+    }
+    axiomLookupBaseT("forall' derive forall", subst, alpha, axiomInstance)
   }
 
   /*
@@ -741,6 +805,9 @@ object SyntacticDerivationInContext {
   trait ApplicableAtTerm {
     def applies(t : Term) : Boolean
   }
+  trait ApplicableAtFormula {
+    def applies(f : Formula) : Boolean
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proof rule implementations
@@ -779,7 +846,7 @@ object SyntacticDerivationInContext {
       ConstantDerivativeAtomizeT ::
       Nil
 
-  val formulaDerivativeTactics : List[DerivativeAxiomInContextTactic] =
+  val formulaDerivativeTactics : List[PositionTactic with ApplicableAtFormula] =
     AndDerivativeT          ::
     OrDerivativeT           ::
     EqualsDerivativeT       ::
@@ -788,7 +855,8 @@ object SyntacticDerivationInContext {
     LessEqualDerivativeT    ::
     LessThanDerivativeT     ::
     NotEqualsDerivativeT    ::
-    ImplyDerivativeT      ::
+    ImplyDerivativeT        ::
+    ForallDerivativeT       ::
     Nil
 
   /**
@@ -980,7 +1048,7 @@ object SyntacticDerivationInContext {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
 
-    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : DerivativeAxiomInContextTactic) : Option[(PosInExpr, Formula)] = {
+    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : PositionTactic with ApplicableAtFormula) : Option[(PosInExpr, Formula)] = {
       val traversal = new ExpressionTraversalFunction {
         var mPosition : Option[PosInExpr] = None
         var mFormula : Option[Formula]    = None

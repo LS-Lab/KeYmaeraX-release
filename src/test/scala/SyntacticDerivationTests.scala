@@ -9,6 +9,16 @@ import testHelper.StringConverter._
  * @author Stefan Mitsch
  */
 class SyntacticDerivationTests extends TacticTestSuite {
+  "ForallDerivativeT tactics" should "atomize" in {
+    val f = "[x:=2;](\\forall s. s>0)'".asFormula
+
+    val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0, PosInExpr(1::Nil)))
+
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
+    node.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](\\forall s. (s>0)')".asFormula
+  }
+
   "AndDerivativeT tactics" should "atomize" in {
     val f = "[x:=2;](1=1 & 2=2)'".asFormula
 
