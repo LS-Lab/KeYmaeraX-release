@@ -643,6 +643,7 @@ object ODETactics {
       [c;]p <- p & [$$c$$;]p'
     End.
   */
+  @deprecated("Use axiom DI instead")
   def diffInvariantSystemIntroT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case BoxModality(ODESystem(d, c, h), p) =>
@@ -675,6 +676,7 @@ object ODETactics {
       [$$x'=f(x), c$$ & H(x);]p(x) <- [$$c, x'$=$f(x)$$ & H(x);][x' := f(x);]p(x)
     End.
    */
+  @deprecated("Use axiom DE instead")
   def diffInvariantSystemHeadT: PositionTactic = new PositionTactic("DI System Head Test") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (getFormula(s, p) match {
       //        case BoxModality(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
@@ -757,6 +759,7 @@ object ODETactics {
       [$$x' =` f(x), c$$ & H(x);]p(x) <- p(X)
     End.
   */
+  @deprecated("Use V alias quantifier abstraction instead")
   def diffInvariantSystemTailT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case BoxModality(ODESystem(vars, IncompleteSystem(cp : ODEProduct), h), p) => cp.normalize() match {
