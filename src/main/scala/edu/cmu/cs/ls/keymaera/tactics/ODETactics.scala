@@ -786,6 +786,7 @@ object ODETactics {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (getFormula(s, p) match {
       //        case BoxModality(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
       case BoxModality(ODESystem(_, cp: ODEProduct, _),_) => cp.normalize() match {
+        //@TODO Why restrict to ODEProduct? AtomicODE should also be fine, right?
         case ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _) => true
         case _ => false
       }
@@ -796,6 +797,7 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case f@BoxModality(ODESystem(vars, a, h), phi) => a match {
+          //@TODO If it's an AtomicODE right away, shouldn't the same thing work, too?
           case cp: ODEProduct => cp.normalize() match {
             case ODEProduct(AtomicODE(d@Derivative(Real, x: Variable), t: Term), c: DifferentialProgram) =>
               val g = BoxModality(
