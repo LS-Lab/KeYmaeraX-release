@@ -638,12 +638,39 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // DI for Systems of Differential Equations
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  def diffInvariantAxiomT: PositionTactic = {
+    def axiomInstance(fml: Formula): Formula = fml match {
+      case BoxModality(ode@ODESystem(d, c, h), p) =>
+        //[c&H]p <- (p & [{c}&H](H->p')
+        val g = Imply(h,
+          And(p,
+            BoxModality(
+              ode, FormulaDerivative(p)
+            )
+          ))
+        Imply(g, fml)
+      case _ => False
+    }
+    uncoverAxiomT("DI differential invariant", axiomInstance, _ => diffInvariantAxiomBaseT)
+  }
+  /** Base tactic for diff invariant */
+  private def diffInvariantAxiomBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = fml match {
+      case Imply(Imply(_, And(_, BoxModality(ODESystem(d, c, h), FormulaDerivative(p)))), _) =>
+        val aC = DifferentialProgramConstant("c")
+        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+        val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+        SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) :: Nil
+    }
+    axiomLookupBaseT("DI differential invariant", subst, _ => NilPT, (f, ax) => ax)
+  }
+
   /*
     Axiom "DI System Marker Intro".
       [c;]p <- p & [$$c$$;]p'
     End.
   */
-  @deprecated("Use axiom DI instead")
+  @deprecated("Use axiom DI instead, e.g., via diffInvariantAxiomT")
   def diffInvariantSystemIntroT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case BoxModality(ODESystem(d, c, h), p) =>
@@ -754,6 +781,83 @@ object ODETactics {
     axiomLookupBaseT("DI System Head Test", _ => subst, _ => alpha, axiomInstance)
   }
 
+
+  def differentialEffectSystemT: PositionTactic = new PositionTactic("DE differential effect (system)") {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (getFormula(s, p) match {
+      //        case BoxModality(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
+      case BoxModality(ODESystem(_, cp: ODEProduct, _),_) => cp.normalize() match {
+        case ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _) => true
+        case _ => false
+      }
+      case f => println("Does not apply to: " + f.prettyString()); false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case f@BoxModality(ODESystem(vars, a, h), phi) => a match {
+          case cp: ODEProduct => cp.normalize() match {
+            case ODEProduct(AtomicODE(d@Derivative(Real, x: Variable), t: Term), c: DifferentialProgram) =>
+              val g = BoxModality(
+                ODESystem(vars,
+                    ODEProduct(
+                      c,
+                      ODEProduct(AtomicODE(d, t))
+                    )
+                  , h),
+                BoxModality(Assign(d, t), phi)
+              )
+              val instance = Equiv(g, f)
+
+              //construct substitution
+              val aF = Apply(Function("f", None, Real, Real), Anything)
+              val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+              val aC = DifferentialProgramConstant("c")
+              val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+
+              val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, phi) ::
+                SubstitutionPair(aH, h) :: Nil
+
+              // alpha rename if necessary
+              val aX = Variable("x", None, Real)
+              val alpha =
+                if (x.name != aX.name || x.index != aX.index) new PositionTactic("Alpha") {
+                  override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+                    case Equiv(BoxModality(ODESystem(_, _, _), BoxModality(Assign(_: Derivative, _), _)),
+                    BoxModality(ODESystem(_, _, _), _)) => true
+                    case _ => false
+                  }
+
+                  override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+                    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                      Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+                    override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+                  }
+                } else NilPT
+
+              Some(differentialEffectT(instance, subst, alpha, x)(p))
+          }
+        }
+      }
+    }
+  }
+  /** Uncovering differential equation system from context */
+  private def differentialEffectT(axInstance: Formula, subst: List[SubstitutionPair],
+                                       alpha: PositionTactic, x: Variable): PositionTactic = {
+    uncoverAxiomT("DE differential effect (system)", _ => axInstance, _ => differentialEffectBaseT(subst, alpha, x))
+  }
+  /** Base tactic for DE differential effect (system) */
+  private def differentialEffectBaseT(subst: List[SubstitutionPair], alpha: PositionTactic,
+                                           x: Variable): PositionTactic = {
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = {
+      val aX = Variable("x", None, Real)
+      if (x.name != aX.name || x.index != aX.index) replace(axiom)(aX, x)
+      else axiom
+    }
+    axiomLookupBaseT("DE differential effect (system)", _ => subst, _ => alpha, axiomInstance)
+  }
+  
   /*
     Axiom "DI System Complete".
       [$$x' =` f(x), c$$ & H(x);]p(x) <- p(X)
@@ -818,7 +922,7 @@ object ODETactics {
   }
 
   /**
-   * The "master" DI tactic.
+   * The "master" DI tactic for differential invariants.
    * @todo no testing yet.
    */
   def diffInvariantT: PositionTactic = new PositionTactic("DI differential invariant system") {
@@ -838,10 +942,10 @@ object ODETactics {
             val finishingTouch = (AxiomCloseT | locateSucc(OrRightT) | locateSucc(NotRightT) |
               locateSucc(TacticLibrary.boxDerivativeAssignT) | locateSucc(ImplyRightT) | arithmeticT)*
 
-            Some(diffInvariantSystemIntroT(p) & ImplyRightT(p) & AndRightT(p) & (
+            Some(diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
               debugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
-              debugT("right branch") & (diffInvariantSystemHeadT(p) *) & debugT("head is now complete") &
-                diffInvariantSystemTailT(p) &&
+              debugT("right branch") & (differentialEffectSystemT(p) /*@TODO run n times where n is size of ODE or run until all vars pulled out by DE */ *) & debugT("head is now complete") &
+                boxVacuousT(p) &&
                 debugT("About to NNF rewrite") & NNFRewrite(p) && debugT("Finished NNF rewrite") &
                 SyntacticDerivationInContext.SyntacticDerivationT(p) ~ debugT("Done with syntactic derivation") &
                 finishingTouch ~ debugT("Finished result")
