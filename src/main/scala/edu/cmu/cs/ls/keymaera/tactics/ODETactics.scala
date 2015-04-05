@@ -925,7 +925,7 @@ object ODETactics {
    * The "master" DI tactic for differential invariants.
    * @todo no testing yet.
    */
-  def diffInvariantT: PositionTactic = new PositionTactic("DI differential invariant system") {
+  def diffInvariantT: PositionTactic = new PositionTactic("DI differential invariant") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
       case BoxModality(_: ODESystem, _) => true
       case _ => false
