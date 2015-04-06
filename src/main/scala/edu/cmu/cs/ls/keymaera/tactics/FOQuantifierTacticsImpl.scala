@@ -130,13 +130,18 @@ object FOQuantifierTacticsImpl {
 
       private def withStuttering(s: Sequent, quantStillPresentAfterAround: Boolean, around: Tactic): Tactic = {
         var stutteringAt: Set[PosInExpr] = Set.empty[PosInExpr]
-        ExpressionTraversal.traverse(new ExpressionTraversalFunction {
-          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-            case BoxModality(prg, _) if StaticSemantics(prg).bv.contains(quantified) && !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
-            case DiamondModality(prg, _) if StaticSemantics(prg).bv.contains(quantified) && !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
-            case _ => Left(None)
-          }
-        }, getFormula(s, pos))
+
+        // HACK don't need stuttering for dummy variable introduced in abstractionT
+        // (no longer necessary when we have the correct condition on filtering stutteringAt)
+        if (quantified.name != "$abstraction_dummy") {
+          ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+            override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
+              case BoxModality(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+              case DiamondModality(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+              case _ => Left(None)
+            }
+          }, getFormula(s, pos))
+        }
 
         if (stutteringAt.nonEmpty) {
           val pPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p))

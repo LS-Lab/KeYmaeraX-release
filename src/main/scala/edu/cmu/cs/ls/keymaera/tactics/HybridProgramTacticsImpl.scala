@@ -446,10 +446,9 @@ object HybridProgramTacticsImpl {
    * @author Stefan Mitsch
    */
   def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
-    import NameCategorizer.freeVariables
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case BoxModality(Assign(_: Variable, v: Variable), pred) => !freeVariables(pred).contains(v)
-      case DiamondModality(Assign(_: Variable, v: Variable), pred) => !freeVariables(pred).contains(v)
+      case BoxModality(Assign(_: Variable, v: Variable), pred) => true
+      case DiamondModality(Assign(_: Variable, v: Variable), pred) => true
       case _ => false
     }
 
