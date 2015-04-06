@@ -37,32 +37,26 @@ import StaticSemantics._
  */
 final case class SubstitutionPair (val what: Expr, val repl: Expr) {
   applicable
-  // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
-  //require(n != t, "Unexpected identity substitution " + n + " by equal " + t)
   
   @elidable(ASSERTION) def applicable = {
-    // identity substitution would be correct but is usually unintended except for systematic constructions of substitutions that happen to produce identity substitutions. In order to avoid special casing, allow identity substitutions.
-    if(false) { //@todo Nathan suppressed this for now...
-      if (what == repl) println("INFO: Unnecessary identity substitution " + what + " by equal " + repl + "\n(non-critical, just indicates a possible tactics inefficiency)")
-    }
     require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
+    require(kindOf(what) == kindOf(repl),
+      "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + kindOf(what) + " ~> " + kindOf(repl))
     require(what match {
      case _: Term => repl.isInstanceOf[Term]
      case _: Formula => repl.isInstanceOf[Formula]
      case _: Program => repl.isInstanceOf[Program]
     }, "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + kindOf(what) + " ~> " + kindOf(repl))
     require(what match {
+      case Apply(_:Function, CDot | Nothing | Anything) => true
+      case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
       case CDot => true
       case Anything => true
       case Nothing => repl == Nothing
-      case Apply(_:Function, CDot | Nothing | Anything) => true
-      case ApplyPredicate(_:Function, CDot | Nothing | Anything) => true
       case _:ProgramConstant => true
       case _:DifferentialProgramConstant => true
-      case CDotFormula => true
       case ApplyPredicational(_:Function, CDotFormula) => true
-      case xp@Derivative(Real, x: Variable) => require(false,
-        "Substitution of differential symbols not supported: " + xp); false
+      case CDotFormula => true
       case _ => false
       }, "Substitutable expression required, found " + what + " in " + this)
   }
@@ -73,15 +67,15 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
    *         which may not be its head.
    */
   private[core] def matchKey : NamedSymbol = what match {
-    case CDot => CDot
-    case Anything => Anything
-    case a: ProgramConstant => a
-    case a: DifferentialProgramConstant => a
     case Apply(f: Function, CDot | Nothing | Anything) => f
     case ApplyPredicate(p: Function, CDot | Nothing | Anything) => p
+    case CDot => CDot
+    case Anything => Anything
     case Nothing => Nothing
-    case CDotFormula => CDotFormula
+    case a: ProgramConstant => a
+    case a: DifferentialProgramConstant => a
     case ApplyPredicational(p: Function, CDotFormula) => p
+    case CDotFormula => CDotFormula
   }
 
   /**
