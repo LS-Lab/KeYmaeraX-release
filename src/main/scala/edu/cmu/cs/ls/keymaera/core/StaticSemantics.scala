@@ -322,7 +322,7 @@ object SetLattice {
  * @param s Elements in the set: Left[A] elements excluded from the set, Right[A] elements included in the set
  * @tparam A Type of elements in the set
  */
-class SetLattice[A](val s: Either[Set[A], Set[A]]) {
+class SetLattice[A](@deprecated val s: Either[Set[A], Set[A]]) {
   def isTop = s.isLeft
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
     case Left(ts) => other.s match {
