@@ -419,6 +419,7 @@ object FOQuantifierTacticsImpl {
    * Creates a tactic to decompose quantifiers.
    * @return The tactic.
    */
+  @deprecated
   def decomposeQuanT = new PositionTactic("Decompose Quantifiers") {
     override def applies(s: Sequent, pos: Position): Boolean = {
       var res = false

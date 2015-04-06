@@ -328,6 +328,7 @@ object TacticLibrary {
    *********************************************/
 
   def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
+  @deprecated
   def decomposeQuanT = FOQuantifierTacticsImpl.decomposeQuanT
   def instantiateQuanT(q: Variable, t: Term) = FOQuantifierTacticsImpl.instantiateT(q, t)
 

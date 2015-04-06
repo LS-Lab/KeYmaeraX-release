@@ -1075,6 +1075,7 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
  * @TODO Can turn into axiom once list quantifiers and cons in list quantifier are parsable.
  * @TODO Should simplify implementation substantially by only applying at top-level.
  */
+@deprecated
 object DecomposeQuantifiers {
   def apply(p: Position): Rule = new DecomposeQuantifiers(p)
 }
