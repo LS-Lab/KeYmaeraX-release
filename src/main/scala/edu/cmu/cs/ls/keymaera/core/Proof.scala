@@ -267,6 +267,8 @@ object HereP extends PosInExpr
 /**
  * @param index the number of the formula in the antecedent or succedent, respectively.
  * @param inExpr the position in said formula.
+ * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
+ * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
  */
 abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   require (index >= 0, "nonnegative index " + index)
@@ -863,6 +865,9 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     }
   }
 
+  /**
+   * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice. 
+   */
   private def allNames(f: Formula): Set[NamedSymbol] = f match {
     // homomorphic cases
     case Equals(d, l, r) => allNames(l) ++ allNames(r)
@@ -1068,12 +1073,13 @@ class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
  * decompose quantifiers.
  * @NOTE Currently not used. Delete
  * @TODO Can turn into axiom once list quantifiers and cons in list quantifier are parsable.
- * @TODO Could also simplify implementation substantially by only applying at top-level.
+ * @TODO Should simplify implementation substantially by only applying at top-level.
  */
 object DecomposeQuantifiers {
   def apply(p: Position): Rule = new DecomposeQuantifiers(p)
 }
 
+@deprecated("Remove or change")
 class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
   override def apply(s: Sequent): List[Sequent] = {
     val fn = new ExpressionTraversalFunction {
