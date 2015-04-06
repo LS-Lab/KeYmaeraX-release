@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, Stop
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{axiomLookupBaseT,uncoverAxiomT}
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.Propositional
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT, locate}
@@ -92,7 +93,7 @@ object ArithmeticTacticsImpl {
                       }
                     case _ => None
                   }
-                  val contTactic = (closeT | locateSucc(stepAt(true, false, true)) | locateAnte(stepAt(true, false, true, true)))*
+                  val contTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional))*
                   def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
                   //Really simple because this is just checking that the thing we believe to be true is actually true.
                   val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
