@@ -51,7 +51,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    * @return the formula at the given position either from the antecedent or the succedent ignoring p.inExpr
    */
   def apply(p: Position): Formula = {
-    //require(p.inExpr == HereP, "Can only retrieve top level formulas")  //@TODO re-active requires
+    require(p.inExpr == HereP, "Can only retrieve top level formulas")
     if(p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
       ante(p.getIndex)
@@ -86,7 +86,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    * @returns a copy of this sequent with the formula at position p replaced by f.
    */
   def updated(p: Position, f: Formula) : Sequent = {
-    //require(p.inExpr == HereP, "Can only update top level formulas") //@TODO re-active requires
+    require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
     else
@@ -102,7 +102,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    * @see #glue(Sequent)
    */
   def updated(p: Position, s: Sequent) : Sequent = {
-    //require(p.inExpr == HereP, "Can only update top level formulas") //@TODO re-activate requires
+    require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
