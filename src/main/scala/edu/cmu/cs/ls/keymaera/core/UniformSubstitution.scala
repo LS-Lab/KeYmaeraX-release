@@ -218,8 +218,10 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
    * free variables of all repl that are not bound as arguments in what.
    * @return union of the freeVars of all our substitution pairs.
    */
-  def freeVars : SetLattice[NamedSymbol] = subsDefs.map(_.freeVars).
-    foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a++b)
+  def freeVars : SetLattice[NamedSymbol] = {
+    subsDefs.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ (b.freeVars))
+  } ensuring(r => r == subsDefs.map(_.freeVars).
+      foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
 
   // implementation of uniform substitution application
       
