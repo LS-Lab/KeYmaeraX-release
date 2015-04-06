@@ -73,6 +73,14 @@ class DiffInvIntegrationTests extends TacticTestSuite {
     val t = locateSucc(ODETactics.diffInvariantT)
     val n = helper.runTactic(t, new RootNode(s))
     n.openGoals().flatMap(_.sequent.ante) should contain only ("x>=0 -> x>=x".asFormula, "true".asFormula)
+    n.openGoals().flatMap(_.sequent.succ) should contain only "true -> 2<=0 & 2>=2".asFormula
+  }
+
+  it should "work with universal quantifier in inv" in {
+    val s = sequent(Nil, "\\forall t. 0<=t".asFormula::Nil, "[x' = 2, t'=1 & 0<=t;]\\forall t. 0<=t".asFormula :: Nil)
+    val t = locateSucc(ODETactics.diffInvariantT)
+    val n = helper.runTactic(t, new RootNode(s))
+    n.openGoals().flatMap(_.sequent.ante) should contain only ("\\forall t. 0<=t".asFormula, "true".asFormula)
     n.openGoals().flatMap(_.sequent.succ) should contain only "2<=0 & 2>=2".asFormula
   }
 

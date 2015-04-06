@@ -20,7 +20,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{globalAlphaRenamingT, debugT, arithmeticT}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{abstractionT, globalAlphaRenamingT, debugT, arithmeticT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import AlphaConversionHelper._
 
@@ -809,7 +809,7 @@ object ODETactics {
                   , h),
                 BoxModality(Assign(d, t), phi)
               )
-              val instance = Equiv(g, f)
+              val instance = Equiv(f, g)
 
               //construct substitution
               val aF = Apply(Function("f", None, Real, Real), Anything)
@@ -825,8 +825,8 @@ object ODETactics {
               val alpha =
                 if (x.name != aX.name || x.index != aX.index) new PositionTactic("Alpha") {
                   override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-                    case Equiv(BoxModality(ODESystem(_, _, _), BoxModality(Assign(_: Derivative, _), _)),
-                    BoxModality(ODESystem(_, _, _), _)) => true
+                    case Equiv(BoxModality(ODESystem(_, _, _), _),
+                               BoxModality(ODESystem(_, _, _), BoxModality(Assign(_: Derivative, _), _))) => true
                     case _ => false
                   }
 
@@ -940,17 +940,26 @@ object ODETactics {
         import scala.language.postfixOps
         import SearchTacticsImpl.locateSucc
         node.sequent(p) match {
-          case BoxModality(_: ODESystem, _) => {
-            val finishingTouch = (AxiomCloseT | locateSucc(OrRightT) | locateSucc(NotRightT) |
-              locateSucc(TacticLibrary.boxDerivativeAssignT) | locateSucc(ImplyRightT) | arithmeticT)*
+          case BoxModality(ODESystem(_, ode, _), _) => {
+            val n = {
+              var numAtomics = 0
+              ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+                override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
+                  case _: AtomicODE => numAtomics += 1; Left(None)
+                  case _ => Left(None)
+                }
+              }, ode)
+              numAtomics
+            }
 
             Some(diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
               debugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
-              debugT("right branch") & (differentialEffectSystemT(p) /*@TODO run n times where n is size of ODE or run until all vars pulled out by DE */ *) & debugT("head is now complete") &
-                boxVacuousT(p) &&
-                debugT("About to NNF rewrite") & NNFRewrite(p) && debugT("Finished NNF rewrite") &
-                SyntacticDerivationInContext.SyntacticDerivationT(p) ~ debugT("Done with syntactic derivation") &
-                finishingTouch ~ debugT("Finished result")
+              debugT("right branch") & (differentialEffectSystemT(p) * n) & debugT("differential effect complete") &
+                debugT("About to NNF rewrite") & NNFRewrite(p.second) && debugT("Finished NNF rewrite") &
+                SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ debugT("Done with syntactic derivation") &
+                (boxDerivativeAssignT(p.second)*) & debugT("Box assignments complete") &
+                diffWeakenT(p) & debugT("ODE removed") &
+                (arithmeticT | NilT) & debugT("Finished result")
             ))
           }
         }

@@ -228,6 +228,17 @@ class SyntacticDerivationTests extends TacticTestSuite {
     node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](0=0 & 0=0)".asFormula
   }
 
+  it should "work for complicated =" in {
+    val f = "[x':=2;](x = 2*0 + x)'".asFormula
+    val node = helper.formulaToNode(f)
+    val ptactic = SyntacticDerivationT
+
+    val tactic = ptactic(SuccPosition(0, PosInExpr(1::Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=2;](x' = 0*0+2*0 + x')".asFormula
+  }
+
   // TODO not yet supported, fails assertion because of (!true)'
   ignore should "work on imply" in {
     val f = "[x:=2;](true->(x^2+y^2=1))'".asFormula
