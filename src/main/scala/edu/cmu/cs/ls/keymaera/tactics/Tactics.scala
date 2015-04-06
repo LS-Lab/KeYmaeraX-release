@@ -348,6 +348,13 @@ object Tactics {
      */
     def * : Tactic = repeatT(this)
     /**
+     * repeat tactic n times
+     */
+    def *(n: Int): Tactic = {
+      require(n>=0, "Repeat non-negative number of times")
+      if (n > 0) this & this*(n-1) else NilT
+    }
+    /**
      * apply the first tactic applicable
      */
     def |(o: Tactic): Tactic = eitherT(this, o)
