@@ -93,7 +93,7 @@ object StaticSemantics {
     case Exp(s, l, r) => freeVars(l) ++ freeVars(r)
     case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
-    case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
+    //case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
     case Derivative(s, e) => val fv = freeVars(e); fv ++ fv.map[NamedSymbol](x=>DifferentialSymbol(x))
     case _: NumberObj | Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
