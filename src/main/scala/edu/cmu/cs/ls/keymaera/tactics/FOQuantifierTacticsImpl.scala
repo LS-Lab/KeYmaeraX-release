@@ -146,13 +146,13 @@ object FOQuantifierTacticsImpl {
         if (stutteringAt.nonEmpty) {
           val pPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, p) else new SuccPosition(pos.index, p))
           val assignPos = stutteringAt.map(p => if (pos.isAnte) new AntePosition(pos.index, PosInExpr(p.pos.tail)) else new SuccPosition(pos.index, PosInExpr(p.pos.tail)))
-          val alpha = pPos.tail.foldRight(alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(pPos.head))((p, r) => r & alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(p))
+          val alpha = pPos.foldRight(NilT)((p, r) => r & (alphaRenamingT(quantified.name, quantified.index, quantified.name, quantified.index)(p) | NilT))
           val v2v =
-            if (quantStillPresentAfterAround) assignPos.foldRight(NilT)((p, r) => r & v2vAssignT(
+            if (quantStillPresentAfterAround) assignPos.foldRight(NilT)((p, r) => r & (v2vAssignT(
               if (p.isAnte) new AntePosition(p.index, PosInExpr(0 :: p.inExpr.pos))
-              else new SuccPosition(p.index, PosInExpr(0 :: p.inExpr.pos))))
-            else assignPos.foldRight(NilT)((p, r) => r & v2vAssignT(p))
-          (alpha & around & v2v) | around
+              else new SuccPosition(p.index, PosInExpr(0 :: p.inExpr.pos))) | NilT))
+            else assignPos.foldRight(NilT)((p, r) => r & (v2vAssignT(p) | NilT))
+          alpha & around & v2v
         } else around
 
       }
