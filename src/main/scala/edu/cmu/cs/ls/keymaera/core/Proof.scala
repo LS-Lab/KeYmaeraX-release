@@ -690,11 +690,15 @@ object UniformSubstitutionRule {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
-      if (subst(origin) == conclusion) {
-        List(origin)
-      } else {
-        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+      try {
+        log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
+        if (subst(origin) == conclusion) {
+          List(origin)
+        } else {
+          throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+        }
+      } catch {
+        case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " to conclusion\n" + conclusion)
       }
     }
   }
@@ -1190,10 +1194,14 @@ object AxiomaticRule {
      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
      */
     def apply(conclusion: Sequent): List[Sequent] = {
-      if (subst(ruleconclusion) == conclusion) {
-        List(subst(rulepremise))
-      } else {
-        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
+      try {
+        if (subst(ruleconclusion) == conclusion) {
+          List(subst(rulepremise))
+        } else {
+          throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
+        }
+      } catch {
+        case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " for intended conclusion\n" + conclusion)
       }
     }
   }
