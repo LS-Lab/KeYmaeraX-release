@@ -697,17 +697,12 @@ object HybridProgramTacticsImpl {
         }
 
         node.sequent(p) match {
-          case BoxModality(NDetAssign(v: Variable), BoxModality(prg: Loop, _))
-            if BindingAssessment.catVars(prg).bv.contains(v) => Some(
+          case BoxModality(NDetAssign(v: Variable), BoxModality(prg, _))
+            if StaticSemantics(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlphaT(p) & skolemizeT(p) & v2vAssignT(p)
+              boxNDetAssignWithoutAlphaT(p) & v2vAssignT(p.first)
           )
-          case BoxModality(NDetAssign(v: Variable), BoxModality(prg: DifferentialProgram, _))
-            if BindingAssessment.catVars(prg).bv.contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              boxNDetAssignWithoutAlphaT(p) & skolemizeT(p) & v2vAssignT(p)
-          )
-          case _ => Some(boxNDetAssignWithoutAlphaT(p) & skolemizeT(p))
+          case _ => Some(boxNDetAssignWithoutAlphaT(p))
         }
       }
     }
@@ -778,9 +773,6 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-        import FOQuantifierTacticsImpl.skolemizeT
-
         val f = getFormula(node.sequent, p)
         // construct a new name for renaming in ODE
         val newV = f match {
@@ -789,15 +781,10 @@ object HybridProgramTacticsImpl {
         }
 
         f match {
-          case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: Loop, _))
-            if BindingAssessment.catVars(prg).bv.contains(v) => Some(
+          case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg, _))
+            if StaticSemantics(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              diamondNDetAssignWithoutAlphaT(p)
-          )
-          case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg: DifferentialProgram, _))
-            if BindingAssessment.catVars(prg).bv.contains(v) => Some(
-            alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
-              diamondNDetAssignWithoutAlphaT(p)
+              diamondNDetAssignWithoutAlphaT(p) & v2vAssignT(p.first)
           )
           case _ => Some(diamondNDetAssignWithoutAlphaT(p))
         }

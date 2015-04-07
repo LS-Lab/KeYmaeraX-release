@@ -332,12 +332,12 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "work in front of a loop" in {
-    val s = sequent(Nil, "y>0".asFormula :: Nil, "[y:=*;][{y:=y+2;}*;]y>0".asFormula :: Nil)
-    val assignT = locateSucc(boxNDetAssign) & locateSucc(skolemizeT) & locateSucc(ImplyRightT)
+    val s = sucSequent("[y:=*;][{y:=y+2;}*;]y>0".asFormula)
+    val assignT = locateSucc(boxNDetAssign)
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) should contain only "y>0".asFormula
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[{y_1:=y_1+2;}*;]y_1>0".asFormula
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [{y:=y+2;}*;]y>0".asFormula
   }
 
   it should "work in front of a continuous program" in {
@@ -346,7 +346,7 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val result = helper.runTactic(assignT, new RootNode(s))
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=2;]y>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "\\forall y. [y'=2;]y>0".asFormula
   }
 
   "Diamond nondeterministic assignment tactic" should "introduce existential quantifier and rename free variables" in {
@@ -361,6 +361,18 @@ class HybridProgramTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     val assignT = locateSucc(diamondNDetAssign)
     getProofSequent(assignT, new RootNode(s)) should be (
       sequent(Nil, "y>0".asFormula :: Nil, "\\exists y. [z:=2;](y>0 & z>0)".asFormula :: Nil))
+  }
+
+  it should "work with subsequent assignment to same variable" in {
+    val s = sucSequent("<y:=*;><y:=2;>y>0".asFormula)
+    val assignT = locateSucc(diamondNDetAssign)
+    getProofSequent(assignT, new RootNode(s)) shouldBe sucSequent("\\exists y. <y:=2;>y>0".asFormula)
+  }
+
+  it should "work with possible subsequent assignment to same variable" in {
+    val s = sucSequent("<y:=*;><{y:=2++z:=1};>(y>0 | z>0)".asFormula)
+    val assignT = locateSucc(diamondNDetAssign)
+    getProofSequent(assignT, new RootNode(s)) shouldBe sucSequent("\\exists y. <{y:=2++z:=1};>(y>0 | z>0)".asFormula)
   }
 
   it should "neither rename free variables nor variables bound by assignment in modality predicates" in {
