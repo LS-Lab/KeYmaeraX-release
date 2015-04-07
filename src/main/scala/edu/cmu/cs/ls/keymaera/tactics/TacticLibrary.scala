@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
-import PropositionalTacticsImpl.ImplyLeftT
+import PropositionalTacticsImpl.NonBranchingPropositionalT
 import SearchTacticsImpl.{lastAnte,lastSucc,onBranch}
 import HybridProgramTacticsImpl.boxVacuousT
 import BranchLabels._
@@ -200,7 +200,7 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
-  def arithmeticT = repeatT(locateAnte(AndLeftT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
+  def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
 
   private def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
