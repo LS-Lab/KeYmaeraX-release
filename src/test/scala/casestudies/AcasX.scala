@@ -82,10 +82,10 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
       (indStepLbl, debugT("Step") & ls(ImplyRightT) & ls(boxSeqGenT(invariant)) & onBranch(
         (cutShowLbl, debugT("Generalization Holds") &
           ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-          debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & AxiomCloseT,
-          debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
+          debugT("1.1") & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) /* & ls(skolemizeT) & ls(ImplyRightT) */ & AxiomCloseT,
+          debugT("1.2") & ls(boxSeqT) & ls(boxNDetAssign) /* & ls(skolemizeT) & ls(ImplyRightT) */ & ls(boxSeqT) & ls(boxChoiceT) & hideT(AntePosition(1)) &
             ls(AndRightT) & /* both branches are the same */
-            ls(substitutionBoxAssignT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) & arith
+            ls(substitutionBoxAssignT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxNDetAssign) /* & ls(skolemizeT) & ls(ImplyRightT) */ & arith
           )),
         (cutUseLbl, debugT("Generalization Strong Enough") &
           /* remove when HACK ?rv()=rv etc. is removed from model */ ((ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT))*) &
