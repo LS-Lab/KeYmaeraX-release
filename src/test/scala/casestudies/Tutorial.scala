@@ -226,7 +226,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
       (indInitLbl, debugT("Base Case") & ls(AndRightT) & AxiomCloseT),
       (indUseCaseLbl, debugT("Use Case") & ls(ImplyRightT) & arithmeticT),
       (indStepLbl, debugT("Step") & ls(ImplyRightT) & la(AndLeftT) & ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-        debugT("Case 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxNDetAssign) &
+        debugT("Case 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) &
           ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT),
         ls(boxChoiceT) & ls(AndRightT) && (
           debugT("Case 2") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT),
@@ -251,11 +251,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
       (indInitLbl, debugT("Base Case") & ls(AndRightT) & AxiomCloseT),
       (indUseCaseLbl, debugT("Use Case") & ls(ImplyRightT) & arithmeticT),
       (indStepLbl, debugT("Step") & ls(ImplyRightT) & la(AndLeftT) & ls(boxSeqT) & ls(boxChoiceT) & ls(AndRightT) && (
-        debugT("Case 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxNDetAssign) &
+        debugT("Case 1") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) &
           ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT),
         ls(boxChoiceT) & ls(AndRightT) && (
           debugT("Case 2") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxAssignT),
-          debugT("Case 3") & ls(boxSeqT) & ls(boxNDetAssign) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT)
+          debugT("Case 3") & ls(boxSeqT) & ls(boxNDetAssign) & ls(skolemizeT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT)
           )
         ) & plant & ls(AndRightT) & (AxiomCloseT | arithmeticT)
         )
