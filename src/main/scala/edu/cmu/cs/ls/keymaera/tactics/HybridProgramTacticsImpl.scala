@@ -222,7 +222,14 @@ object HybridProgramTacticsImpl {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
-          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) & (v2vAssignT(p) | NilT))
+          // TODO could use v2vAssignT without Skolemize and ImplyRight first
+          else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) &
+            // remove stuttering assignment that may have been introduced, but don't work on assignments that were
+            // already present in the original model.
+            // (still not perfect, i.e., may handle multiple assignments at once: e.g., x:=x;x:=x;)
+            ifElseT(n => getFormula(n.sequent, p) match {
+              case BoxModality(Assign(v2: Variable, v3: Variable), _) => v.name == v2.name && v.name == v3.name
+              case _ => false }, v2vAssignT(p), NilT))
         case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) =>
           Some(substitutionBoxAssignT(p))
         }
