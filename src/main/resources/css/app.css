@@ -311,3 +311,15 @@ table .btn{
     color: #FFF;
     margin-right: 10px;
 }
+
+/*
+ * Errors on input fields.
+ */
+.k4-invalid-input {
+  border-color: #FF0000;
+  border-width: 1px;
+}
+
+.error {
+  boder-color: #FF0000;
+}

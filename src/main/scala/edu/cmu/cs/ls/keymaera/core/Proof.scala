@@ -9,6 +9,8 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import java.io.File
+
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -1115,12 +1117,27 @@ object Axiom {
   // immutable list of axioms
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
+  def axiomFileLocation() : String = {
+    val resource = this.getClass().getResource("edu/cmu/cs/ls/keymaera/core/axioms.key.alp")
+    val fileLocation : String = {
+      if(resource == null) {
+        //@todo this is a hack so that developers can still develop without creating Jars for every single compile.
+        "src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp"
+      }
+      else {
+        resource.getFile()
+      }
+    }
+    assert(new java.io.File(fileLocation).exists());
+    fileLocation
+  }
+
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = io.Source.fromFile("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp").mkString
+    val src = io.Source.fromFile(axiomFileLocation()).mkString
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.

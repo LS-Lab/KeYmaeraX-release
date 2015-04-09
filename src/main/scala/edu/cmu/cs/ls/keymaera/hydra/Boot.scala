@@ -6,12 +6,21 @@ import edu.cmu.cs.ls.keymaera.api.ComponentConfig
 import spray.can.Http
 
 object Boot extends App {
+  def restart(): Unit = {
+    this.system.shutdown();
+    this.system.awaitTermination();
 
+    //Re-initialize the server
+    this.system = ActorSystem("on-spray-can")
+    var service = system.actorOf(Props[RestApiActor], "hydra")
+    ComponentConfig.keymaeraInitializer.initialize()
+    IO(Http) ! Http.Bind(service, interface = "localhost", port = 8090)
+  }
   // we need an ActorSystem to host our application in
-  implicit val system = ActorSystem("on-spray-can")
+  implicit var system = ActorSystem("on-spray-can")
 
   // create and start our service actor
-  val service = system.actorOf(Props[RestApiActor], "hydra")
+  var service = system.actorOf(Props[RestApiActor], "hydra")
 
   // spawn dependency injection framework
   ComponentConfig.keymaeraInitializer.initialize()

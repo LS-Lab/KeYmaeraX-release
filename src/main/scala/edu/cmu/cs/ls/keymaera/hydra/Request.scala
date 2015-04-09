@@ -4,13 +4,13 @@
  */
 package edu.cmu.cs.ls.keymaera.hydra
 
-import java.io.FileReader
+import java.io.{FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
+import edu.cmu.cs.ls.keymaera.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
@@ -76,6 +76,52 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
     new DashInfoResponse(openProofCount, allModelsCount, provedModelsCount) :: Nil
   }
 }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// System Configuration
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibDir : String) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    try {
+      //check to make sure the indicated files exist.
+      val linkNameExists = new java.io.File(linkName).exists()
+      val jlinkLibDirExists = new java.io.File(jlinkLibDir).exists()
+
+      if(!linkNameExists || !jlinkLibDirExists) {
+        new ConfigureMathematicaResponse(linkNameExists, jlinkLibDirExists, false) :: Nil
+      }
+      else {
+        val originalConfig = db.getConfiguration("mathematica")
+
+        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir)
+        val newConfig = new ConfigurationPOJO("mathematica", configMap)
+
+        db.updateConfiguration(newConfig)
+
+        var success = false;
+        try {
+          ComponentConfig.keymaeraInitializer.initMathematicaFromDB() //um.
+          success = true
+        }
+        catch {
+          case e : Exception => {
+            db.updateConfiguration(originalConfig)
+            e.printStackTrace()
+            success = false
+          }
+        }
+
+        new ConfigureMathematicaResponse(linkNameExists, jlinkLibDirExists, success) :: Nil
+      }
+    }
+    catch {
+      case e : Exception => new ErrorResponse(e) :: Nil
+    }
+  }
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Models

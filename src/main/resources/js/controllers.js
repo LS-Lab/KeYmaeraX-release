@@ -21,6 +21,67 @@ keymaeraProofControllers.factory('Models', function () {
     };
 });
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Mathematica Config
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+keymaeraProofControllers.controller('MathematicaConfig',
+  function($scope, $http, $cookies, $modal, $routeParams) {
+        $scope.configureMathematica = function() {
+            var uri     = "/config/mathematica"
+            var linkName = $scope.linkName ? $scope.linkName : "";
+            var jlinkLibDir = $scope.jlinkLibDir ? $scope.jlinkLibDir : "";
+            var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibDir}
+
+            $http.post(uri, dataObj)
+                .success(function(data) {
+                    if(data.jlinkLibDirExists && data.linkNameExists && data.success) {
+                        $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
+                        $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
+
+                        $modal.open({
+                            templateUrl: 'partials/mathematicaconfig_update.html',
+                            controller: 'MathematicaConfig.UpdateDialog',
+                            size: 'md'
+                        })
+                    }
+                    else {
+                        $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
+                        $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", data.jlinkLibDirExists);
+                        var modalInstance = $modal.open({
+                          templateUrl: 'partials/mathematicaconfig_failure.html',
+                          controller: 'MathematicaConfig.FailureDialog',
+                          size: 'md'
+                        });
+                    }
+                })
+                .error(function(data) {
+                    alert("error: " + JSON.stringify(data))
+                })
+        }
+});
+
+keymaeraProofControllers.controller('MathematicaConfig.FailureDialog', function($scope, $http, $cookies, $modalInstance) {
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
+keymaeraProofControllers.controller('MathematicaConfig.UpdateDialog', function($scope, $http, $cookies, $modalInstance) {
+  $scope.cancel = function() {
+      $modalInstance.dismiss('cancel');
+  }
+});
+
+//keymaeraProofControllers.controller('MathematicaConfig.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+//  $scope.cancel = function() {
+//      alert("Closing your browser window because the server is now off-line!")
+//      $window.close();
+//  }
+//});
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 /**
  * Definition of Agenda
  */
@@ -272,7 +333,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
   });
 
 keymaeraProofControllers.controller('ModelUploadCtrl',
-  function ($scope, $http, $cookies, $cookieStore, Models) {
+  function ($scope, $http, $cookies, $cookieStore, $route, Models) {
 
      $scope.addModel = function() {
           var file = keyFile.files[0];

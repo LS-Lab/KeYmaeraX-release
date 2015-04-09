@@ -69,6 +69,10 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/dev.html',
         controller: 'DevCtrl'
       }).
+      when('/mathematica', {
+        templateUrl: 'partials/mathematica_config.html',
+        controller: 'MathematicaConfig'
+      }).
       otherwise({
         redirectTo: '/dashboard'
       });

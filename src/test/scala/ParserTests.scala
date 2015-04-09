@@ -178,7 +178,8 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
 
   it should "parse the axioms file!" in {
-    val axiomFile = new File("src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp")
+    val file = this.getClass().getResource("edu/cmu/cs/ls/keymaera/core/axioms.key.alp").getFile()
+    val axiomFile = new File(file) // "src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp"
     require(axiomFile.exists(), "existence of axiom file.")
     alpParser.runParser(io.Source.fromFile(axiomFile).mkString) //test fails on exception.
   }

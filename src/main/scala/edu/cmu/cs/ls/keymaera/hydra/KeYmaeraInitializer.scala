@@ -13,11 +13,8 @@ import scala.reflect.runtime.universe.TypeTag
  */
 class KeYmaeraInitializer(env : {val db: DBAbstraction
                                  val tacticLibrary: TacticLibrary2}) {
-  def initialize() {
-    Tactics.KeYmaeraScheduler.init(Map())
-    // TODO move to DB initialization
-    env.db.createConfiguration("mathematica")
-    // TODO replace with dependency injection
+
+  def initMathematicaFromDB() = {
     getMathematicaLinkName match {
       case Some(l) => getMathematicaLibDir match {
         case Some(libDir) => Tactics.MathematicaScheduler.init(Map("linkName" -> l, "libDir" -> libDir))
@@ -26,6 +23,14 @@ class KeYmaeraInitializer(env : {val db: DBAbstraction
 
       case None => println("Warning: Mathematica not configured")
     }
+  }
+
+  def initialize() {
+    Tactics.KeYmaeraScheduler.init(Map())
+    // TODO move to DB initialization
+    env.db.createConfiguration("mathematica")
+    // TODO replace with dependency injection
+    initMathematicaFromDB()
 
     initTactic("keymaera.default", "TacticLibrary.default", TacticKind.Tactic, env.tacticLibrary.default)
     initTactic("keymaera.defaultNoArith", "TacticLibrary.defaultNoArith", TacticKind.Tactic, env.tacticLibrary.defaultNoArith)

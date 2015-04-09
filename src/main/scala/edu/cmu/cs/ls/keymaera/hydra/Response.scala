@@ -26,32 +26,48 @@ import scala.collection.mutable.ListBuffer
  * See BooleanResponse for the simplest example.
  */
 sealed trait Response {
-  protected val SCHEMA_DIRECTORY = "src/main/resources/js/schema/"
+//  private def jsonFile() : Option[File] = schema match {
+//      case Some(schemaFile) => {
+//        val resource = this.getClass().getResource("resources/js/schema/" + schemaFile)
+//        if(resource != null && resource.getFile() != null) {
+//          Some(new File(resource.getFile()))
+//        }
+//        else {
+//          if(resource == null) throw new Exception("Could not find schema file " + schemaFile)
+//          else throw new Exception("Found sources but could not find file for " + schemaFile)
+//        }
+//      }
+//    case None => None
+//  }
+
 
   protected val json: JsValue
-  val schema: Option[java.io.File] = None
+  /**
+   * Should be the name of a single file within resources/js/schema.
+   */
+  val schema: Option[String] = None
 
   def getJson = {
-    validate()
+//    validate()
     json
   }
 
-  def validate() = {
-    schema match {
-      case None => true //OK.
-      case Some(file) =>
-        val schema = JsonSchemaFactory.byDefault().getJsonSchema(
-          JsonLoader.fromFile(file)
-        )
-        val report = schema.validate(JsonLoader.fromString(json.prettyPrint))
-        if (report.isSuccess) true
-        else throw report.iterator().next().asException()
-    }
-  }
+//  def validate() = {
+//    jsonFile() match {
+//      case None => true //OK.
+//      case Some(file) =>
+//        val schema = JsonSchemaFactory.byDefault().getJsonSchema(
+//          JsonLoader.fromFile(file)
+//        )
+//        val report = schema.validate(JsonLoader.fromString(json.prettyPrint))
+//        if (report.isSuccess) true
+//        else throw report.iterator().next().asException()
+//    }
+//  }
 }
 
 class BooleanResponse(flag : Boolean) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "BooleanResponse.js"))
+  override val schema = Some("BooleanResponse.js")
 
   val json = JsObject(
     "success" -> (if(flag) JsTrue else JsFalse),
@@ -79,7 +95,7 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
  * @param models -- optionally, a list of model names associated with each of the proofs in <em>proofs</em>
  */
 class ProofListResponse(proofs : List[(ProofPOJO, String)], models : Option[List[String]] = None) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "prooflist.js"))
+  override val schema = Some("prooflist.js")
 
   val objects : List[JsObject] = models match {
     case None => proofs.map({case (proof, loadStatus) => JsObject(
@@ -147,6 +163,12 @@ class ErrorResponse(exn : Exception) extends Response {
       )
 }
 
+class GenericOKResponse() extends Response {
+  val json = JsObject(
+    "success" -> JsTrue
+  )
+}
+
 class UnimplementedResponse(callUrl : String) extends Response {
   val json = JsObject(
       "textStatus" -> JsString("Call unimplemented: " + callUrl),
@@ -156,7 +178,7 @@ class UnimplementedResponse(callUrl : String) extends Response {
 }
 
 class ProofStatusResponse(proofId : String, error : String) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "proofstatus.js"))
+  override val schema = Some("proofstatus.js")
   val json = JsObject(
     "textStatus" -> JsString(error + ": " + proofId),
     "errorThrown" -> JsString(error),
@@ -229,7 +251,7 @@ class ProofTreeResponse(tree: String) extends Response {
 }
 
 class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "proof.js"))
+  override val schema = Some("proof.js")
   val json = JsObject(
     "id" -> JsString(proof.proofId),
     "name" -> JsString(proof.name),
@@ -243,7 +265,7 @@ class OpenProofResponse(proof : ProofPOJO, loadStatus : String) extends Response
 }
 
 class ProofAgendaResponse(tasks : List[(ProofPOJO, String, String)]) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "proofagenda.js"))
+  override val schema = Some("proofagenda.js")
   val objects = tasks.map({ case (proofPojo, nodeId, nodeJson) => JsObject(
     "proofId" -> JsString(proofPojo.proofId),
     "nodeId" -> JsString(nodeId),
@@ -270,11 +292,20 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
+class ConfigureMathematicaResponse(linkNameExists : Boolean, jlinkLibDirExists : Boolean, success : Boolean) extends Response {
+  val json = JsObject(
+    "linkNameExists" -> {if(linkNameExists) JsTrue else JsFalse},
+    "jlinkLibDirExists" -> {if(jlinkLibDirExists) JsTrue else JsFalse},
+    "success" -> {if(success) JsTrue else JsFalse}
+  )
+}
+
+
 /**
  * @return JSON that is directly usable by angular.treeview
  */
 class AngularTreeViewResponse(tree : String) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "angular.treeview.js"))
+  override val schema = Some("angular.treeview.js")
   
   val json = JsArray( convert(JsonParser(tree).asJsObject) )
 
@@ -345,7 +376,7 @@ class ProofHistoryResponse(history : List[(DispatchedTacticPOJO, TacticPOJO)]) e
 }
 
 class DashInfoResponse(openProofs:Int, allModels: Int, provedModels: Int) extends Response {
-  override val schema = Some(new File(SCHEMA_DIRECTORY + "DashInfoResponse.js"))
+  override val schema = Some("DashInfoResponse.js")
   val json = JsObject(
     "open_proof_count" -> JsNumber(openProofs),
     "all_models_count" -> JsNumber(allModels),

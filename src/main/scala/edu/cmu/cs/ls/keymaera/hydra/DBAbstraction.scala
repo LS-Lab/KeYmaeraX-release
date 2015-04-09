@@ -129,5 +129,4 @@ trait DBAbstraction {
   def getDispatchedCLTerm(id : String) : Option[DispatchedCLTermPOJO]
   def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
   def updateProofOnCLTermCompletion(proofId : String, termId : String)
-
 }
