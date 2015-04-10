@@ -1116,13 +1116,13 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
 
 object Axiom {
   // immutable list of axioms
-  val axioms: scala.coltion.immutable.Map[String, Formula] = loadAxiomFile
+  val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
   def axiomFileLocation() : String = {
     val resource = this.getClass().getResource("axioms.key.alp")
     val fileLocation : String = {
       if(resource == null) {
-        ???
+        throw new Exception("Axioms file could not be found.")
       }
       else {
         resource.getFile()
