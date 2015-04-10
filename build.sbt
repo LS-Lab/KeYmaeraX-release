@@ -12,6 +12,11 @@ libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" 
 
 libraryDependencies += "org.mongodb" %% "casbah" % "2.7.4"
 
+/// sqlite driver
+
+libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Mathematica Interop
 ////////////////////////////////////////////////////////////////////////////////
