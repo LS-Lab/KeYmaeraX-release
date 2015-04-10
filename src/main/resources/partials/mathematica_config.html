@@ -4,7 +4,7 @@
             Absolute path of MathKernel executable
         </label>
         <div class="input-group col-lg-6">
-            <input type="text" class="form-control" placeholder="/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel" id="linkName" name="linkName" ng-model="linkName">
+            <input type="text" class="form-control" id="linkName" name="linkName" ng-model="linkName">
             <span ng-show="MathematicaForm.linkName.$invalid" style="color: red;">This file does not exist on your system.</span>
 
             <!--
@@ -26,7 +26,7 @@
             Absolute path of Mathematica JLink Library
         </label>
         <div class="input-group col-lg-6">
-            <input type="text" class="form-control" placeholder="/usr/local/Wolfram/Mathematica/9.0/SystemFiles/Links/JLink" id="jlinkLibDir" name="jlinkLibDir" ng-model="jlinkLibDir">
+            <input type="text" class="form-control" id="jlinkLibDir" name="jlinkLibDir" ng-model="jlinkLibDir">
             <span ng-show="MathematicaForm.jlinkLibDir.$invalid" style="color: red;">This file does not exist on your system.</span>
         </div>
     </div>
