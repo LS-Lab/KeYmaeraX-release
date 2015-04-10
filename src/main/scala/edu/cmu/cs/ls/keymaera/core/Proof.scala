@@ -1361,14 +1361,39 @@ object LookupLemma {
           newFile.createNewFile
           newFile
         }
-
-
         val evidence = new ToolEvidence(Map(
           "input" -> input, "output" -> output))
         KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
 
         //Return the file where the result is saved, together with the result.
         Some((file, file.getName, result))
+
+      case x: Z3 =>
+        val (solution, input, output) = x.cricitalQE.qeInOut(f)
+        val result = Equiv(f,solution)
+
+        //Save the solution to a file.
+        //TODO-nrf create an interface for databases.
+        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+          val lemmadbpath = new java.io.File("lemmadb")
+          lemmadbpath.mkdirs
+          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
+          if(f.exists()) getUniqueLemmaFile(idx+1)
+          else f
+        }
+        val file = LookupLemma.synchronized {
+          // synchronize on file creation to make sure concurrent uses use new file names
+          val newFile = getUniqueLemmaFile()
+          newFile.createNewFile
+          newFile
+        }
+        val evidence = new ToolEvidence(Map(
+          "input" -> input, "output" -> output))
+        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+        //Return the file where the result is saved, together with the result.
+        Some((file, file.getName, result))
+
       case _ => None
     }
   }

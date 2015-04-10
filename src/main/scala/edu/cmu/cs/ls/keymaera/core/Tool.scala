@@ -10,7 +10,7 @@
 
 package edu.cmu.cs.ls.keymaera.core
 
-import edu.cmu.cs.ls.keymaera.tools.{DiffSolutionTool, JLinkMathematicaLink, QETool}
+import edu.cmu.cs.ls.keymaera.tools.{Z3Solver, DiffSolutionTool, JLinkMathematicaLink, QETool}
 
 /**
  * Defines the lifecycle for external tools. A tool is available once init is called.
@@ -80,4 +80,9 @@ class Mathematica extends ToolBase("Mathematica") {
   }
 
   override def shutdown() = jlink.shutdown()
+}
+
+class Z3 extends ToolBase("Z3") {
+  private val z3 = new Z3Solver
+  private[core] val cricitalQE: QETool = z3
 }
