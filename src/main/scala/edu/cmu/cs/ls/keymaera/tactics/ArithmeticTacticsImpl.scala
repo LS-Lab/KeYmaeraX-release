@@ -63,7 +63,13 @@ object ArithmeticTacticsImpl {
     override def applicable(node: ProofNode): Boolean = qeApplicable(node.sequent)
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
-      val t: Tactic = new ConstructionTactic("Mathematica QE") {
+      var tacticName : String = ""
+      if (toolId.equals("Mathematica")) {
+        tacticName = "Mathematica QE"
+      } else if (toolId.equals("Z3")) {
+        tacticName = "Z3 QE"
+      }
+      val t: Tactic = new ConstructionTactic(tacticName) {
         override def applicable(node: ProofNode): Boolean = true
 
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
@@ -109,7 +115,13 @@ object ArithmeticTacticsImpl {
           }
         }
       }
-      t.scheduler = Tactics.MathematicaScheduler
+
+      if (toolId.equals("Mathematica")) {
+        t.scheduler = Tactics.MathematicaScheduler
+      } else if (toolId.equals("Z3")) {
+        t.scheduler = Tactics.Z3Scheduler
+      } else throw new Exception("Cannot find the QE tool")
+
       t.continuation = continuation
       t.dispatch(this, node)
     }

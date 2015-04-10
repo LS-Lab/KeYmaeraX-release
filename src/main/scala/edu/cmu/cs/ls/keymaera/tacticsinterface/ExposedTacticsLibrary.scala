@@ -24,15 +24,16 @@ object ExposedTacticsLibrary {
   // Tactics used in the paper.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Plain tactics
-  def ImplyRight : Tactic = TacticLibrary.locate(TacticLibrary.ImplyRightT)
-  def Master     : Tactic = TacticLibrary.master(new NoneGenerate(), true)
-  def Seq        : Tactic = TacticLibrary.locate(TacticLibrary.boxSeqT)
-  def Choice     : Tactic = TacticLibrary.locate(TacticLibrary.boxChoiceT)
-  def AndRight   : Tactic = TacticLibrary.locate(TacticLibrary.AndRightT)
-  def Assign     : Tactic = TacticLibrary.locate(TacticLibrary.boxAssignT)
-  def ODESolve   : Tactic = TacticLibrary.locate(TacticLibrary.diffSolutionT)
-  def Test       : Tactic = TacticLibrary.locate(TacticLibrary.boxTestT)
-  def AndLeft    : Tactic = TacticLibrary.locate(TacticLibrary.AndLeftT)
+  def ImplyRight              : Tactic = TacticLibrary.locate(TacticLibrary.ImplyRightT)
+  def Master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
+  def Master(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
+  def Seq                     : Tactic = TacticLibrary.locate(TacticLibrary.boxSeqT)
+  def Choice                  : Tactic = TacticLibrary.locate(TacticLibrary.boxChoiceT)
+  def AndRight                : Tactic = TacticLibrary.locate(TacticLibrary.AndRightT)
+  def Assign                  : Tactic = TacticLibrary.locate(TacticLibrary.boxAssignT)
+  def ODESolve                : Tactic = TacticLibrary.locate(TacticLibrary.diffSolutionT)
+  def Test                    : Tactic = TacticLibrary.locate(TacticLibrary.boxTestT)
+  def AndLeft                 : Tactic = TacticLibrary.locate(TacticLibrary.AndLeftT)
   //Tactics with input
   def Loop(inv : Option[Formula]) : Tactic = TacticLibrary.locate(TacticLibrary.inductionT(inv))
 
@@ -40,13 +41,14 @@ object ExposedTacticsLibrary {
   // Additional Tactics.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  def CutT(inv : Option[Formula]) : Tactic         = TacticLibrary.cutT(inv)
-  def ImplyRightT                 : PositionTactic = TacticLibrary.ImplyRightT
-  def ImplyLeftT                  : PositionTactic = TacticLibrary.ImplyLeftT
-  def AndRightT                   : PositionTactic = TacticLibrary.AndRightT
-  def OrRightT                    : PositionTactic = TacticLibrary.OrRightT
-  def ArithmeticT                 : Tactic         = TacticLibrary.arithmeticT
-  def AxiomCloseT                 : Tactic         = TacticLibrary.AxiomCloseT
+  def CutT(inv : Option[Formula])  : Tactic         = TacticLibrary.cutT(inv)
+  def ImplyRightT                  : PositionTactic = TacticLibrary.ImplyRightT
+  def ImplyLeftT                   : PositionTactic = TacticLibrary.ImplyLeftT
+  def AndRightT                    : PositionTactic = TacticLibrary.AndRightT
+  def OrRightT                     : PositionTactic = TacticLibrary.OrRightT
+  def ArithmeticT                  : Tactic         = TacticLibrary.arithmeticT
+  def ArithmeticT(toolId : String) : Tactic         = TacticLibrary.arithmeticT(toolId)
+  def AxiomCloseT                  : Tactic         = TacticLibrary.AxiomCloseT
 }
 
 /*
