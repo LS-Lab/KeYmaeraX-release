@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import edu.cmu.cs.ls.keymaera.tools.Z3Solver
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaera.tactics.ODETactics.diffSolution
@@ -32,9 +33,11 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
+    Tactics.Z3Scheduler = new Interpreter(new Z3)
   }
 
   override def afterEach() = {
+    Tactics.Z3Scheduler = null
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler = null
@@ -64,10 +67,18 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  it should "be provable automatically" in {
+  it should "be provable automatically with Mathematica" in {
     val file = new File("examples/tutorials/lics/lics-4a.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true), new RootNode(s)) shouldBe 'closed
+    helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/lics/lics-4a.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
 }

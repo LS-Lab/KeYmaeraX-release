@@ -217,7 +217,7 @@ object TermTests {
     val invString = "v^2<=2*b*(m-z)"
     val invInput = "Functions. R b. End.\n ProgramVariables. R v. R m. R z. End.\n Problem.\n " + invString + "End.\n"
     val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
-    val tactic = master(new Generate(inv), true)
+    val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -255,7 +255,7 @@ object TermTests {
     val invString = "v^2 - d^2 <= 2*b*(m-z) & d >= 0"
     val invInput = "Functions. R b. End.\n ProgramVariables. R v. R m. R z. R d. End.\n Problem.\n " + invString + "End.\n"
     val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
-    val tactic = master(new Generate(inv), true)
+    val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -275,7 +275,7 @@ object TermTests {
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     val inv = GreaterThan(Real, Variable("x", None, Real), Number(0))
-    val tactic = master(new Generate(inv), true)
+    val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -294,7 +294,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = master(new Generate(True), true)
+    val tactic = master(new Generate(True), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
