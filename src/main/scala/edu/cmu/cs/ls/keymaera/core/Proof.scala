@@ -1118,11 +1118,10 @@ object Axiom {
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
   def axiomFileLocation() : String = {
-    val resource = this.getClass().getResource("edu/cmu/cs/ls/keymaera/core/axioms.key.alp")
+    val resource = this.getClass().getResource("axioms.key.alp")
     val fileLocation : String = {
       if(resource == null) {
-        //@todo this is a hack so that developers can still develop without creating Jars for every single compile.
-        "src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp"
+        ???
       }
       else {
         resource.getFile()

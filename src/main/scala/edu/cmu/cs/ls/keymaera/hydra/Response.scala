@@ -300,6 +300,12 @@ class ConfigureMathematicaResponse(linkNameExists : Boolean, jlinkLibDirExists :
   )
 }
 
+class MathematicaStatusResponse(configured : Boolean) extends Response {
+  override protected val json: JsValue = JsObject(
+    "configured" -> {if(configured) JsTrue else JsFalse}
+  )
+}
+
 
 /**
  * @return JSON that is directly usable by angular.treeview
