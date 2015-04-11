@@ -61,9 +61,10 @@ object BuiltinHigherTactics {
    * Master tactic.
    * @param invGenerator Generates invariants.
    * @param exhaustive True, if tactic should be applied exhaustively, false otherwise.
+   * @param toolId quantifier elimination tool
    * @return The applicable tactic.
    */
-  protected[tactics] def master(invGenerator: Generator[Formula], exhaustive: Boolean = false) = {
+  protected[tactics] def master(invGenerator: Generator[Formula], exhaustive: Boolean = false, toolId : String) = {
     def repeat(t: Tactic):Tactic = if(exhaustive) repeatT(t) else t
     repeat(closeT
       | locateSuccAnte(stepAt(beta = false, simplifyProg = true, quantifiers = true))
@@ -73,7 +74,7 @@ object BuiltinHigherTactics {
       | locateSucc(diffInvariantSystemT)
       | locateAnte(eqLeft(exhaustive = false))
       | locateSuccAnte(stepAt(beta = true, simplifyProg = true, quantifiers = true, equiv = true))
-    ) ~ arithmeticT
+    ) ~ arithmeticT(toolId)
   }
 
   /**

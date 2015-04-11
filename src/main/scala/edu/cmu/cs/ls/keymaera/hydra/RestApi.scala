@@ -233,6 +233,14 @@ trait RestApi extends HttpService {
     }
   }
 
+  val mathematicaStatus = path("config" / "mathematicaStatus") {
+    pathEnd {
+      get {
+        complete(standardCompletion(new MathematicaStatusRequest(database)))
+      }
+    }
+  }
+
   val runClTerm = path("proofs" / "user" / Segment / Segment / "nodes" / Segment / "tactics" / "runTerm") { (userId, proofId, nodeId) => { pathEnd {
     post {
       entity(as[String]) { params => {
@@ -370,7 +378,8 @@ trait RestApi extends HttpService {
     devAction             ::
     sequent               ::
     dashInfo              ::
-      mathematicaConfig ::
+    mathematicaConfig ::
+    mathematicaStatus ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

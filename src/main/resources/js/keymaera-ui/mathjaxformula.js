@@ -236,7 +236,7 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                         case "Choice":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + " \\cup " + right;
+                            content = left + " ~\\cup~ " + right;
                             break;
 
                         case "AtomicODE":

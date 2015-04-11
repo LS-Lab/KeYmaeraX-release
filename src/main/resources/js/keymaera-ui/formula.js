@@ -288,7 +288,11 @@ angular.module('formula', ['ngSanitize'])
                         case "NFODEProduct":
                             var left = parensIfNeeded(json, c[0], depth + 1);
                             var right = parensIfNeeded(json, c[1], depth + 1);
-                            content = left + " &amp; " + right;
+                            if (c[1].name != "EmptyODE") {
+                              content = left + ", " + right;
+                            } else {
+                              content = left;
+                            }
                             break;
 
                         case "formuladerivative":

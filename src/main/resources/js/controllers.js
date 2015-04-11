@@ -26,7 +26,7 @@ keymaeraProofControllers.factory('Models', function () {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 keymaeraProofControllers.controller('MathematicaConfig',
-  function($scope, $http, $cookies, $modal, $routeParams) {
+  function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
         $scope.configureMathematica = function() {
             var uri     = "/config/mathematica"
             var linkName = $scope.linkName ? $scope.linkName : "";
@@ -44,6 +44,9 @@ keymaeraProofControllers.controller('MathematicaConfig',
                             controller: 'MathematicaConfig.UpdateDialog',
                             size: 'md'
                         })
+
+                        $("#mathematicaConfigurationAlert").hide();
+                        $rootScope.mathematicaIsConfigured = data.configured;
                     }
                     else {
                         $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
@@ -321,6 +324,15 @@ keymaeraProofControllers.controller('DashboardCtrl',
     $scope.$on('routeLoaded', function (event, args) {
       $scope.theview = args.theview;
     });
+
+    $http.get("/config/mathematicaStatus")
+        .success(function(data) {
+            $scope.mathematicaIsConfigured = data.configured;
+        })
+        .error(function() {
+            alert("Unhandled error when attempting to get Mathematica status.")
+        });
+
 
     $http.get('/users/' + $cookies.userId + '/dashinfo')
         .success(function(data) {

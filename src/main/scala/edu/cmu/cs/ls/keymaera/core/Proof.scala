@@ -89,7 +89,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    * @returns a copy of this sequent with the formula at position p replaced by f.
    */
   def updated(p: Position, f: Formula) : Sequent = {
-    require(p.inExpr == HereP, "Can only update top level formulas")
+//    require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
     else
@@ -105,7 +105,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    * @see #glue(Sequent)
    */
   def updated(p: Position, s: Sequent) : Sequent = {
-    require(p.inExpr == HereP, "Can only update top level formulas")
+//    require(p.inExpr == HereP, "Can only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
@@ -1119,11 +1119,10 @@ object Axiom {
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
   def axiomFileLocation() : String = {
-    val resource = this.getClass().getResource("edu/cmu/cs/ls/keymaera/core/axioms.key.alp")
+    val resource = this.getClass().getResource("axioms.key.alp")
     val fileLocation : String = {
       if(resource == null) {
-        //@todo this is a hack so that developers can still develop without creating Jars for every single compile.
-        "src/main/scala/edu/cmu/cs/ls/keymaera/core/axioms.key.alp"
+        throw new Exception("Axioms file could not be found.")
       }
       else {
         resource.getFile()
@@ -1362,14 +1361,39 @@ object LookupLemma {
           newFile.createNewFile
           newFile
         }
-
-
         val evidence = new ToolEvidence(Map(
           "input" -> input, "output" -> output))
         KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
 
         //Return the file where the result is saved, together with the result.
         Some((file, file.getName, result))
+
+      case x: Z3 =>
+        val (solution, input, output) = x.cricitalQE.qeInOut(f)
+        val result = Equiv(f,solution)
+
+        //Save the solution to a file.
+        //TODO-nrf create an interface for databases.
+        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+          val lemmadbpath = new java.io.File("lemmadb")
+          lemmadbpath.mkdirs
+          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
+          if(f.exists()) getUniqueLemmaFile(idx+1)
+          else f
+        }
+        val file = LookupLemma.synchronized {
+          // synchronize on file creation to make sure concurrent uses use new file names
+          val newFile = getUniqueLemmaFile()
+          newFile.createNewFile
+          newFile
+        }
+        val evidence = new ToolEvidence(Map(
+          "input" -> input, "output" -> output))
+        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+        //Return the file where the result is saved, together with the result.
+        Some((file, file.getName, result))
+
       case _ => None
     }
   }

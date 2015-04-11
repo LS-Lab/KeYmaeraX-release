@@ -75,6 +75,7 @@
                         <!--<li><a href="#">Examples</a></li>-->
                         <li><a href="dashboard.html?#/tutorials">Tutorials</a></li>
                         <li><a href="dashboard.html?#/usage">Using KeYmaera</a></li>
+                        <li><a href="dashboard.html#/mathematica">Mathematica Confguration</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/syntax">Hybrid Program Syntax and Semantics</a></li>
@@ -86,6 +87,13 @@
                 </li>
             </ul>
         </div><!--/.navbar-collapse -->
+    </div>
+</div>
+
+<div class="container">
+    <div class="alert alert-warning"  role="alert" ng-show="!mathematicaIsConfigured" id="mathematicaConfigurationAlert">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <b>Warning:</b> Mathematica is not configured. Most proofs will fail without Mathematica. <a href="dashboard.html#/mathematica"><b>Configure now.</b></a>
     </div>
 </div>
 
