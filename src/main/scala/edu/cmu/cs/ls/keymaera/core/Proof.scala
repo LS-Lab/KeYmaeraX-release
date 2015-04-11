@@ -54,7 +54,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def apply(p: Position): Formula = {
     //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
-    if (p.inExpr != HereP) print("INFO: Should only retrieve top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
     if(p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
       ante(p.getIndex)
