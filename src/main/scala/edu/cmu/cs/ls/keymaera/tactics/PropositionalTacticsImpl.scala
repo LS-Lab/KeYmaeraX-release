@@ -171,7 +171,7 @@ object PropositionalTacticsImpl {
     }
   }
 
-  def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(AxiomClose(a, b)) {
+  def AxiomCloseT(a: Position, b: Position): Tactic = new Tactics.ApplyRule(Close(a, b)) {
     override def applicable(node: ProofNode): Boolean = a.isAnte && !b.isAnte &&
       getFormula(node.sequent, a) == getFormula(node.sequent, b)
   }

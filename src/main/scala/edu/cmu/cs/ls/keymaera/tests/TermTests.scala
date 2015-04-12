@@ -61,7 +61,7 @@ object TermTests {
       for(n <- c) {
         val c2 = n(ImplyRight(pos)).subgoals
         for(n2 <- c2) {
-          val end = n2(AxiomClose(pos2, pos))
+          val end = n2(Close(pos2, pos))
           println(end)
         }
       }

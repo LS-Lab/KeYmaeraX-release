@@ -254,6 +254,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  *********************************************************************************
  */
 
+@deprecated("Remove from prover core")
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -404,8 +405,7 @@ class CoHide(p: Position) extends PositionRule("CoHide", p) {
 object ExchangeLeft {
   def apply(p1: Position, p2: Position): Rule = new ExchangeLeftRule(p1, p2)
 
-  //@TODO Why is this not a TwoPositionRule?
-  private class ExchangeLeftRule(p1: Position, p2: Position) extends Rule("ExchangeLeft") {
+  private class ExchangeLeftRule(p1: Position, p2: Position) extends TwoPositionRule("ExchangeLeft", p1, p2) {
     require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the antecedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
@@ -418,8 +418,7 @@ object ExchangeLeft {
 object ExchangeRight {
   def apply(p1: Position, p2: Position): Rule = new ExchangeRightRule(p1, p2)
 
-  //@TODO Why is this not a TwoPositionRule?
-  private class ExchangeRightRule(p1: Position, p2: Position) extends Rule("ExchangeRight") {
+  private class ExchangeRightRule(p1: Position, p2: Position) extends TwoPositionRule("ExchangeRight", p1, p2) {
     require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
@@ -460,23 +459,22 @@ object ContractionLeft {
  */
 
 // Ax Axiom close / Identity rule
-//@TODO Rename to Close or CloseId to avoid confusion with Axiom lookup
-object AxiomClose extends ((Position, Position) => Rule) {
-  def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
+object Close extends ((Position, Position) => Rule) {
+  def apply(ass: Position, p: Position): Rule = new Close(ass, p)
 }
 
 
-class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass, p) with ClosingRule {
-  require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
-  require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
+class Close(assume: Position, p: Position) extends AssumptionRule("Axiom", assume, p) with ClosingRule {
+  require(p.isAnte != assume.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
+  require(p.inExpr == HereP && assume.inExpr == HereP, "Axiom close can only be applied to top level formulas")
 
   def apply(s: Sequent): List[Sequent] = {
-    require(p.isAnte != ass.isAnte, "axiom close applies to different sides of sequent")
-    if(p.isAnte != ass.isAnte && s(ass) == s(p)) {
+    require(p.isAnte != assume.isAnte, "axiom close applies to different sides of sequent")
+    if(p.isAnte != assume.isAnte && s(assume) == s(p)) {
         // close goal
         Nil
     } else {
-        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(ass) + " not the same as " + s(p), this, s)
+        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(p), this, s)
     }
   } ensuring (_.isEmpty, "closed if applicable")
 }
@@ -1070,14 +1068,14 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
  */
 
 object Axiom {
-  // immutable list of axioms
+  // immutable list of sound axioms
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
   def axiomFileLocation() : String = {
     val resource = this.getClass().getResource("axioms.key.alp")
     val fileLocation : String = {
       if(resource == null) {
-        throw new Exception("Axioms file could not be found.")
+        throw new Exception("KeYmaera Axioms file could not be found.")
       }
       else {
         resource.getFile()
