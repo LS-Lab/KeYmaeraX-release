@@ -111,9 +111,9 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
     else
         Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
     } ensuring(r=> if (p.isAnte)
-         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).equivalent(this.glue(s))
+         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).sameSequentAs(this.glue(s))
      else
-         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).equivalent(this.glue(s)),
+         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
          "result after re-including updated formula is equivalent to " + this + " glue " + s
      )
   
@@ -125,7 +125,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   /**
    * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
    */
-  def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
+  def sameSequentAs(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
   override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "),\n " +
     ante.map(_.prettyString()).mkString(",\n ") + "\n\n==>\n\n " + succ.map(_.prettyString()).mkString(",\n ") + "}]"

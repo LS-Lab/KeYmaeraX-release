@@ -1,6 +1,7 @@
 package testHelper
 
-import edu.cmu.cs.ls.keymaera.core.{UnknownOperatorException, Sequent, RootNode, ProofNode}
+import edu.cmu.cs.ls.keymaera.core.{UnknownOperatorException, Sequent}
+import edu.cmu.cs.ls.keymaera.tactics.ProofNode
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 

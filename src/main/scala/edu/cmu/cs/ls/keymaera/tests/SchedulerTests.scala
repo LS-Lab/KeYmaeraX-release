@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaera.tests
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.KeYmaera
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Scheduler
+import edu.cmu.cs.ls.keymaera.tactics.{RootNode, ProofNode, Scheduler}
 import scala.collection.immutable
 
 object SchedulerTests {

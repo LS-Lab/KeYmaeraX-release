@@ -4,6 +4,8 @@
  */
 package edu.cmu.cs.ls.keymaera.core
 
+import edu.cmu.cs.ls.keymaera.tactics.ProofNode
+
 /**
  * KeYmaera Prover Exceptions.
  */

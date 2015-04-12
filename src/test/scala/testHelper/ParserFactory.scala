@@ -3,7 +3,7 @@ package testHelper
 import java.io.File
 
 import edu.cmu.cs.ls.keymaera.api.ComponentConfig
-import edu.cmu.cs.ls.keymaera.core.{RootNode, Sequent, Formula}
+import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 /**

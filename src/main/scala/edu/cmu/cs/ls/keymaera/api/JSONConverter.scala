@@ -3,11 +3,12 @@ package edu.cmu.cs.ls.keymaera.api
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraPrettyPrinter, ParseSymbols}
+import edu.cmu.cs.ls.keymaera.tactics.{ProofStepInfo, ProofNode}
 import spray.json._
 import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaera.core.Sequent
 import edu.cmu.cs.ls.keymaera.core.PosInExpr
-import edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep
+import ProofNode.ProofStep
 
 import scala.collection.mutable
 

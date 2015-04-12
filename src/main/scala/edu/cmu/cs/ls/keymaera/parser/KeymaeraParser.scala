@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.parser
 
-import edu.cmu.cs.ls.keymaera.tactics.{ConfigurableGenerate, Generator}
+import edu.cmu.cs.ls.keymaera.tactics.{ProofNode, ConfigurableGenerate, Generator}
 
 import scala.util.parsing.combinator._
 import scala.util.parsing.combinator.lexical._
@@ -1391,7 +1391,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     /**
      * Type of parsers for proof steps.
      */
-    type StepParser = PackratParser[edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep]
+    type StepParser = PackratParser[ProofNode.ProofStep]
     
     lazy val parserList = 
       branchP ::

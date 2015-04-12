@@ -807,7 +807,7 @@ object Tactics {
   }
 
   object ProofStepView {
-    def apply(n: edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep): ProofStepView = new ProofStepView(n)
+    def apply(n: ProofNode.ProofStep): ProofStepView = new ProofStepView(n)
   }
   sealed class ProofStepView(private val s: ProofNode.ProofStep) {
     // TODO check when this is allowed to be readable

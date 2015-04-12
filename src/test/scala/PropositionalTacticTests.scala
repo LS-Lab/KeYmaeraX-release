@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.core.{AntePosition, Mathematica, KeYmaera, RootNode}
+import edu.cmu.cs.ls.keymaera.core.{AntePosition, Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, Config}
+import edu.cmu.cs.ls.keymaera.tactics.{RootNode, Interpreter, Tactics, Config}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ProofFactory._

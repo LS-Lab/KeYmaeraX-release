@@ -5,20 +5,15 @@
  * @author nfulton
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
-package edu.cmu.cs.ls.keymaera.core
+package edu.cmu.cs.ls.keymaera.tactics
 
 // require favoring immutable Seqs for soundness
 
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
+import edu.cmu.cs.ls.keymaera.core.{Provable, Rule, Sequent}
 
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.Set
-
-import scala.annotation.{unspecialized, elidable}
+import scala.annotation.elidable
 import scala.annotation.elidable._
-import scala.collection.immutable.HashMap
+import scala.collection.immutable.{List, Map}
 
   sealed abstract class Status
     case object Success       extends Status
