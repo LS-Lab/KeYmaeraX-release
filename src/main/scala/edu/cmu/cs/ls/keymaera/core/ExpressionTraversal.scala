@@ -270,8 +270,6 @@ object ExpressionTraversal {
         case AtomicODE(x, t) => matchTwo(p, AtomicODE.apply, f, x, t)
         case ODEProduct(a, b) => matchTwo(p, ODEProduct.apply, f, a, b)
         case ODESystem(v, a, h) => matchTwo(p, ODESystem(v, _: DifferentialProgram, _: Formula), f, a, h)
-        case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s) //@todo eisegesis
-        case CheckedContEvolveFragment(fragment) => matchOne(p, CheckedContEvolveFragment.apply, f, fragment) //@todo eisegesis
         case _: EmptyODE => matchZero(p, f, e)
 
         case _ => failFTPG(e)

@@ -802,8 +802,6 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
       case ODEProduct(a, b) => ODEProduct(renameODE(a), renameODE(b))
       case ODESystem(d, a, h) => ODESystem(d, renameODE(a), rename(h))
       case _: EmptyODE => p
-      case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
-      case CheckedContEvolveFragment(a) => CheckedContEvolveFragment(renameODE(a))
       case _: DifferentialProgramConstant => p
   }
 
@@ -884,8 +882,6 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case AtomicODE(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
     case ODEProduct(a, b) => allNames(a) ++ allNames(b)
     case ODESystem(vars, a, h) => allNames(a) ++ allNames(h)
-    case IncompleteSystem(a) => allNames(a)
-    case CheckedContEvolveFragment(a) => allNames(a)
     case _: EmptyODE => Set()
     case Sequence(a, b) => allNames(a) ++ allNames(b)
     case Choice(a, b) => allNames(a) ++ allNames(b)
