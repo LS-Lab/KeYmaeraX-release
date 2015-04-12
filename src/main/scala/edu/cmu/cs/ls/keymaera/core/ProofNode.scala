@@ -83,6 +83,7 @@ import scala.collection.immutable.HashMap
      * Note that only ProofNode.apply is allowed to construct proof steps.
      * @param goal - parent of the step
      * @param subgoals - children of the step
+     * @todo could use a Provable
      */
     sealed case class ProofStep private[ProofNode] (rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode], tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
       justifiedByProofRule
@@ -96,10 +97,11 @@ import scala.collection.immutable.HashMap
     }
   }
 
-  sealed class ProofNode protected (val sequent : Sequent, val parent : ProofNode) {
+  sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
 
 
     @volatile private[this] var alternatives : List[ProofNode.ProofStep] = Nil
+
 
     /**
      * Soundness-critical invariant that all alternative proof steps have us as their goal.
@@ -107,7 +109,9 @@ import scala.collection.immutable.HashMap
      */
     private def checkInvariant = 
       assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
-      
+
+    def sequent : Sequent = provable.subgoals(subgoal)
+
     /**
      * List of all current or-branching alternatives of proving this proof node.
      * Result can change over time as new alternative or-branches are added.
@@ -143,7 +147,13 @@ import scala.collection.immutable.HashMap
      */
     final def apply(rule : Rule) : ProofNode.ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
-      val subgoals = rule(sequent).map(new ProofNode(_, this))
+      checkInvariant
+      val newProvable = provable(rule, subgoal)
+      val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
+        else List(new ProofNode(this, newProvable, subgoal)) ++
+        Range(provable.subgoals.length, newProvable.subgoals.length).
+          map(new ProofNode(this, newProvable, _))
+      //@TODO assert(all subgoals have the same provable and the same parent)
       val proofStep = ProofNode.ProofStep(rule, this, subgoals)
       // Add as or-branching alternative
       this.synchronized {
@@ -163,6 +173,9 @@ import scala.collection.immutable.HashMap
 
     /**
      * @return true iff the node is closed.
+     * @TODO This is the fast version of isClosed.
+     *      The sound version needs to find an alternative
+     *      that it can successively merge via Provability.apply(Provable, Int) to yield an isProved()
      */
     def isClosed(): Boolean =
       children.map((f: ProofNode.ProofStep) =>  f.subgoals.foldLeft(true)(_ && _.isClosed())).contains(true)
@@ -182,6 +195,6 @@ import scala.collection.immutable.HashMap
   /**
    * The root node (conclusion) where a sequent derivation starts.
    */
-  class RootNode(sequent : Sequent) extends ProofNode(sequent, null) {
+  class RootNode(sequent : Sequent) extends ProofNode(null, Provable.startProof(sequent), 0) {
 
   }
