@@ -387,8 +387,6 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       s"Substitution clash: ${this} not {$primed}-admissible for {$t.prettyString()} when substituting in ${ode.prettyString()}")
       AtomicODE(dv, usubst(t))
     case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
-    case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
-    case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
     case c: DifferentialProgramConstant if  subsDefs.exists(_.what == c) =>
       val repl = subsDefs.find(_.what == c).get.repl
       repl match {
