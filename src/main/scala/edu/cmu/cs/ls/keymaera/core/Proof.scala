@@ -771,7 +771,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
     case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
     case Divide(s, l, r) => Divide(s, rename(l), rename(r))
-    case Exp(s, l, r) => Exp(s, rename(l), rename(r))
+    case Power(s, l, r) => Power(s, rename(l), rename(r))
     case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
     case Derivative(s, e) => Derivative(s, rename(e))
     case Apply(f, theta) => Apply(f, rename(theta))
@@ -863,7 +863,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case Subtract(s, l, r) => allNames(l) ++ allNames(r)
     case Multiply(s, l, r) => allNames(l) ++ allNames(r)
     case Divide(s, l, r) => allNames(l) ++ allNames(r)
-    case Exp(s, l, r) => allNames(l) ++ allNames(r)
+    case Power(s, l, r) => allNames(l) ++ allNames(r)
     case Pair(dom, l, r) => allNames(l) ++ allNames(r)
     case Derivative(s, e) => allNames(e)
     // base cases

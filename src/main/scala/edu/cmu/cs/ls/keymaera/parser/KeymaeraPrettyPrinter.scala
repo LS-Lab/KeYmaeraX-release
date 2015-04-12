@@ -145,7 +145,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV, Some(RightAssoc()))
     
 
-    case Exp(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP, None)
+    case Power(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP, None)
     
     //BinaryProgram
     case c@Choice(l,r) => {
@@ -373,7 +373,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Subtract.getClass.getCanonicalName ::
       Multiply.getClass.getCanonicalName ::
       Divide.getClass.getCanonicalName ::
-      Exp.getClass.getCanonicalName ::
+      Power.getClass.getCanonicalName ::
       Neg.getClass.getCanonicalName ::
       Derivative.getClass.getCanonicalName ::
       Apply.getClass.getCanonicalName ::
@@ -499,7 +499,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case DiamondModality(p,f) => true
     case Equiv(l,r) => false
     
-    case Exp(s,l,r) => false
+    case Power(s,l,r) => false
     
     
     //BinaryProgram

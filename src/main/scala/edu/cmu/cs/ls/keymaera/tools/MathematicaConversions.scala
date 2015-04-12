@@ -268,7 +268,7 @@ object MathematicaToKeYmaera {
   def convertExponentiation(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Exp(Real,l,r))
+    asTerms.reduce((l,r) => Power(Real,l,r))
   }
   
   def convertAnd(e : MExpr) = {
@@ -479,7 +479,7 @@ object KeYmaeraToMathematica {
       case Subtract(s, l, r) => convertSubtract(l, r)
       case Multiply(s, l, r) => convertMultiply(l, r)
       case Divide(s, l, r) => convertDivide(l, r)
-      case Exp(s, l, r) => convertExp(l, r)
+      case Power(s, l, r) => convertExp(l, r)
       case Derivative(s, c) => convertDerivative(c)
       case False() => MathematicaSymbols.FALSE
       case True() => MathematicaSymbols.TRUE

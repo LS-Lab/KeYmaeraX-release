@@ -92,7 +92,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     ml.run("x+y")._2 should be (Add(Real,x,y))
     ml.run("x*y")._2 should be (Multiply(Real,x,y))
     ml.run("x-1")._2 should be (Add(Real,Neg(Real,num(1)),x)) //TODO-nrf these two tests are nasty.
-    ml.run("x/y")._2 should be (Multiply(Real, x, Exp(Real, y,num(-1))))
+    ml.run("x/y")._2 should be (Multiply(Real, x, Power(Real, y,num(-1))))
     ml.run("ForAll[{x}, x/4 == 4]")._2 should be
     (
       Forall(Seq(x),
@@ -158,7 +158,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
         Add(
           Real,
           Multiply(Real,num(2),x),
-          Exp(Real,x,num(2))
+          Power(Real,x,num(2))
         )
       )
     )

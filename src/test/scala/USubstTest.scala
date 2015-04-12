@@ -137,7 +137,7 @@ class USubstTests extends FlatSpec with Matchers {
   // uniform substitution of rules
 
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
-    val fml = GreaterEqual(Real, Exp(Real, Neg(Real, x), Number(2)), Number(0))
+    val fml = GreaterEqual(Real, Power(Real, Neg(Real, x), Number(2)), Number(0))
     val prog = Assign(x, Subtract(Real, x, Number(1)))
     val conc = BoxModality(prog, fml)
     val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1_, Anything), fml),
@@ -288,10 +288,10 @@ class USubstTests extends FlatSpec with Matchers {
         val s = USubst(
           SubstitutionPair(Apply(f1_, Anything), term1) ::
           SubstitutionPair(Apply(g1_, Anything), term2) ::
-          SubstitutionPair(Apply(ctxt, CDot), Multiply(Real, Exp(Real, x, Number(3)), CDot)) :: Nil)
+          SubstitutionPair(Apply(ctxt, CDot), Multiply(Real, Power(Real, x, Number(3)), CDot)) :: Nil)
         AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Multiply(Real, Exp(Real, x, Number(3)), term1),
-          Multiply(Real, Exp(Real, x, Number(3)), term2))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Multiply(Real, Power(Real, x, Number(3)), term1),
+          Multiply(Real, Power(Real, x, Number(3)), term2))
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
@@ -429,10 +429,10 @@ class USubstTests extends FlatSpec with Matchers {
         val s = USubst(
           SubstitutionPair(Apply(f1_, Anything), term1) ::
           SubstitutionPair(Apply(g1_, Anything), term2) ::
-          SubstitutionPair(Apply(ctxt, CDot), Multiply(Real, Exp(Real, x, Number(3)), CDot)) :: Nil)
+          SubstitutionPair(Apply(ctxt, CDot), Multiply(Real, Power(Real, x, Number(3)), CDot)) :: Nil)
         AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Multiply(Real, Exp(Real, x, Number(3)), term1),
-          Multiply(Real, Exp(Real, x, Number(3)), term2))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Multiply(Real, Power(Real, x, Number(3)), term1),
+          Multiply(Real, Power(Real, x, Number(3)), term2))
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     

@@ -43,8 +43,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case Multiply(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       case Divide(s, l, r) if t != what => Divide(s, usubst(o, u, l), usubst(o, u, r))
       case Divide(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Exp(s, l, r) if t != what => Exp(s, usubst(o, u, l), usubst(o, u, r))
-      case Exp(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Power(s, l, r) if t != what => Power(s, usubst(o, u, l), usubst(o, u, r))
+      case Power(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       case Pair(dom, l, r) if t != what => Pair(dom, usubst(o, u, l), usubst(o, u, r))
       case Pair(dom, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       // base cases

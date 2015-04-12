@@ -184,18 +184,6 @@ object Variable {
 }
 final class Variable(name : String, index: Option[Int] = None, sort : Sort) extends NamedSymbol(name, index, Unit, sort) with Atom with Term
 
-@deprecated("Remove")
-object PredicateConstant {
-  def apply(name : String, index: Option[Int] = None): PredicateConstant = new PredicateConstant(name, index)
-  def unapply(e: Any): Option[(String, Option[Int])] = e match {
-    case x: PredicateConstant => Some((x.name, x.index))
-    case _ => None
-  }
-}
-//@TODO replace with just predicate functions, alias functions that happen to be of type ()=>bool
-@deprecated("Remove")
-final class PredicateConstant(name : String, index: Option[Int] = None) extends NamedSymbol(name, index, Unit, Bool) with Formula
-
 object ProgramConstant {
   def apply(name : String, index: Option[Int] = None): ProgramConstant = new ProgramConstant(name, index)
   def unapply(e: Any): Option[(String, Option[Int])] = e match {
@@ -221,21 +209,7 @@ object Function {
     case _ => None
   }
 }
-final class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort) {
-  /**
-   * A function is marked as external by using the external input during
-   * function delcaration. External functions are passed as bare names to QE
-   * backends.
-   * @TODO If we need this at all, let's turn it into a new type of NamedSymbols. ExternalFunction or something stateless
-   */
-  val external : Boolean = false
-  /*var external : Boolean = false
-  @deprecated("Terrible state. Remove!")
-  def markExternal() = {
-    external = true
-    this
-  }*/
-}
+final class Function (name : String, index: Option[Int] = None, domain : Sort, sort : Sort) extends NamedSymbol(name, index, domain, sort) {}
 
 /*
 object Predicational {
@@ -780,10 +754,10 @@ final class Divide  (sort : Sort, left  : Term, right : Term) extends Binary(sor
   override def hashCode: Int = hash(103, sort, left, right)
 }
 
-object Exp {
-  def apply(sort: Sort, left: Term, right: Term): Exp = new Exp(sort, left, right)
+object Power {
+  def apply(sort: Sort, left: Term, right: Term): Power = new Power(sort, left, right)
   def unapply(e: Any): Option[(Sort, Term, Term)] = e match {
-    case x: Exp => (x.left, x.right) match {
+    case x: Power => (x.left, x.right) match {
       case (l: Term, r: Term) => Some((x.sort, l, r))
       case _ => None
     }
@@ -791,10 +765,10 @@ object Exp {
   }
 }
 //@TODO Rename to Power or Pow
-final class Exp     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
+final class Power     (sort : Sort, left  : Term, right : Term) extends Binary(sort, TupleT(sort, sort), left, right) with Term {
   //@TODO Exp does not make sense except on sort reals.
   override def equals(e: Any): Boolean = e match {
-    case Exp(a, b, c) => a == sort && b == left && c == right
+    case Power(a, b, c) => a == sort && b == left && c == right
     case _ => false
   }
   override def hashCode: Int = hash(107, sort, left, right)
@@ -1105,52 +1079,6 @@ final class Test(child : Formula) extends Unary(ProgramSort, Bool, child) with A
   override def hashCode: Int = hash(211, child)
 }
 
-/* child = differential algebraic formula */
-@deprecated(message="Use AtomicODE, ODEProduct, ODESystem etc. instead", since="")
-object ContEvolve {
-  def apply(child: Formula): ContEvolve = new ContEvolve(child)
-  def unapply(e: Any): Option[Formula] = e match {
-    case x: ContEvolve => x.child match {
-      case a: Formula => Some(a)
-      case _ => None
-    }
-    case _ => None
-  }
-}
-//@TODO Remove
-@deprecated("Remove?")
-final class ContEvolve(child : Formula) extends Unary(ProgramSort, Bool, child) with AtomicProgram with DifferentialProgram {
-  override def equals(e: Any): Boolean = e match {
-    case x: ContEvolve => x.child == child
-    case _ => false
-  }
-  override def hashCode: Int = hash(223, child)
-}
-
-object CheckedContEvolveFragment {
-  def apply(child: DifferentialProgram): CheckedContEvolveFragment = {
-    assert(!child.isInstanceOf[CheckedContEvolveFragment])
-    new CheckedContEvolveFragment(child)
-  }
-  def unapply(e:Any) : Option[DifferentialProgram] = e match {
-    case x: CheckedContEvolveFragment => {
-      assert(x.child.isInstanceOf[DifferentialProgram]) //the lone constructor should enforce this.
-      Some(x.child.asInstanceOf[DifferentialProgram])
-    }
-    case _ => None
-  }
-}
-//@TODO Not sure what this is. Remove?
-@deprecated("Remove?")
-final class CheckedContEvolveFragment(child:DifferentialProgram) extends Unary(ProgramSort, ProgramSort, child) with AtomicProgram with DifferentialProgram {
-  override def equals(e: Any): Boolean = e match {
-    case x: CheckedContEvolveFragment => x.child.equals(child)
-    case _ => false
-  }
-  override def hashCode: Int = hash(224, child)
-}
-
-
 sealed trait DifferentialProgram extends Program {
   def normalize() = this
 }
@@ -1162,7 +1090,7 @@ object AtomicODE {
     case _ => None
   }
 }
-//@TODO Change types to "val x: DifferentialSymbol" for now?
+//@TODO Change types to "val x: DifferentialSymbol" for now
 final class AtomicODE(val x: Derivative, val theta: Term) extends Expr(ProgramSort) with AtomicProgram with DifferentialProgram {
   override def equals(e: Any): Boolean = e match {
     case o: AtomicODE => o.x == x && o.theta == theta
@@ -1265,25 +1193,6 @@ final class ODESystem(val disturbance: Seq[NamedSymbol], val child: Differential
     case _ => false
   }
   override def hashCode: Int = hash(277, child, constraint)
-}
-
-//@TODO What is this?
-@deprecated("Remove")
-object IncompleteSystem {
-  def apply(system: DifferentialProgram) = new IncompleteSystem(system)
-  def apply() = new IncompleteSystem(new EmptyODE)
-  def unapply(e: Any): Option[DifferentialProgram] = e match {
-      case s: IncompleteSystem => Some(s.system)
-      case _                   => None
-  }
-}
-@deprecated("Remove")
-final class IncompleteSystem(val system: DifferentialProgram) extends Expr(ProgramSort) with DifferentialProgram {
-  override def equals(e: Any): Boolean = e match {
-    case IncompleteSystem(s) => system == s
-    case _ => false
-  }
-  override def hashCode: Int = hash(263, system)
 }
 
 /**

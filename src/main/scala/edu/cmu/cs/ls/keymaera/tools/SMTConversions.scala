@@ -104,7 +104,7 @@ class KeYmaeraToSMT {
       case Subtract(s, l, r) => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Multiply(s, l, r) => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Divide(s, l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Exp(s, l, r) => convertExp(s, l, r)
+      case Power(s, l, r) => convertExp(s, l, r)
 //      case Derivative(s, c) => ???
 //      case t: IfThenElseTerm => ???
       case Number(s, n) => n.underlying().toString
@@ -161,10 +161,10 @@ class KeYmaeraToSMT {
               }
               res += ")"
               res
-            } else throw new SMTConversionException("Cannot convert exponential " + Exp(s,l,r).prettyString() + " with negative index")
-          } else throw new SMTConversionException("Cannot convert exponential " + Exp(s,l,r).prettyString() + " with non-integer index")
+            } else throw new SMTConversionException("Cannot convert exponential " + Power(s,l,r).prettyString() + " with negative index")
+          } else throw new SMTConversionException("Cannot convert exponential " + Power(s,l,r).prettyString() + " with non-integer index")
         case Neg(ns, Number(ss, n)) => "(/ 1. " + convertExp(s, base, Number(ss, n)) + ")"
-        case _ => throw new SMTConversionException("Conversion of exponential " + Exp(s,l,r).prettyString() + " is not defined")
+        case _ => throw new SMTConversionException("Conversion of exponential " + Power(s,l,r).prettyString() + " is not defined")
       }
     }
   }

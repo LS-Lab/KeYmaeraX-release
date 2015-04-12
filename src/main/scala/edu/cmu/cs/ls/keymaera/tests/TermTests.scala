@@ -375,7 +375,7 @@ object TermTests {
           case Subtract(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"subtract\"" + ", \"children\": [ "
           case Multiply(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
           case Divide(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
-          case Exp(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
+          case Power(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
           case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
@@ -424,7 +424,7 @@ object TermTests {
           case Subtract(_, a, b) => "]}"
           case Multiply(_, a, b) => "]}"
           case Divide(_, a, b) => "]}"
-          case Exp(_, a, b) => "]}"
+          case Power(_, a, b) => "]}"
           case _ =>""
         })
         Left(None)

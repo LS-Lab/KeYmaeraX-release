@@ -387,7 +387,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val expP:SubtermParser = {
       lazy val pattern = tighterParsers(precedence,expP).reduce(_|_) ~ EXP ~ asTightAsParsers(precedence,expP).reduce(_|_) 
       log(pattern)("Exponentiation") ^^ {
-        case left ~ EXP ~ right => Exp(left.sort, left,right)
+        case left ~ EXP ~ right => Power(left.sort, left,right)
       }
     }
     lazy val addP:SubtermParser = {

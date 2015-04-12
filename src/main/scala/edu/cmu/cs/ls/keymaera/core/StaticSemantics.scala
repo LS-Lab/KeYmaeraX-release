@@ -90,7 +90,7 @@ object StaticSemantics {
     case Subtract(s, l, r) => freeVars(l) ++ freeVars(r)
     case Multiply(s, l, r) => freeVars(l) ++ freeVars(r)
     case Divide(s, l, r) => freeVars(l) ++ freeVars(r)
-    case Exp(s, l, r) => freeVars(l) ++ freeVars(r)
+    case Power(s, l, r) => freeVars(l) ++ freeVars(r)
     case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
     //case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
@@ -213,7 +213,7 @@ object StaticSemantics {
     case Subtract(s, l, r) => signature(l) ++ signature(r)
     case Multiply(s, l, r) => signature(l) ++ signature(r)
     case Divide(s, l, r) => signature(l) ++ signature(r)
-    case Exp(s, l, r) => signature(l) ++ signature(r)
+    case Power(s, l, r) => signature(l) ++ signature(r)
     case Pair(dom, l, r) => signature(l) ++ signature(r)
     case Derivative(s, e) => signature(e)
     // special

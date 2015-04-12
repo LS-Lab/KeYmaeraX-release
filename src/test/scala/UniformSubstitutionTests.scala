@@ -1092,11 +1092,11 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     s(f) should be ("\\forall x. [x:=0;]x>=0 -> [x:=0;]\\forall x. x>=0".asFormula)
 
     val t = create(SubstitutionPair(ca, "y:=x^2;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Exp(Real, CDot, Number(2)))))
+      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Power(Real, CDot, Number(2)))))
     a [SubstitutionClashException] should be thrownBy t(f)
 
     val u = create(SubstitutionPair(ca, "?y=x^2;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Exp(Real, CDot, Number(2)))))
+      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Power(Real, CDot, Number(2)))))
     // no clash, but derived conclusion is wrong
     u(f) should be ("\\forall x. [?y=x^2;]y=x^2 -> [?y=x^2;]\\forall x. y=x^2".asFormula)
   }

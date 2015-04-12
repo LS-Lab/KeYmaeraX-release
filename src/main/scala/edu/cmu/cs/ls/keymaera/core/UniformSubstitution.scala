@@ -255,7 +255,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Subtract(s, l, r) => Subtract(s, usubst(l), usubst(r))
         case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
         case Divide(s, l, r) => Divide(s, usubst(l), usubst(r))
-        case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
+        case Power(s, l, r) => Power(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
             "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")

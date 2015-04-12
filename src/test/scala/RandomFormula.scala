@@ -75,7 +75,7 @@ class RandomFormula(val rand : Random = new Random()) {
         case it if 30 until 40 contains it => Subtract(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 40 until 50 contains it => Multiply(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 50 until 55 contains it => Divide(Real, nextT(vars, n-1, dots), nextT(vars, n-1, dots))
-        case it if 55 until 60 contains it => Exp(Real, nextT(vars, n-1, dots), Number(BigDecimal(rand.nextInt(6))))
+        case it if 55 until 60 contains it => Power(Real, nextT(vars, n-1, dots), Number(BigDecimal(rand.nextInt(6))))
         case it if 60 until 100 contains it => CDot
         // TODO IfThenElseTerm not yet supported
 //        case it if 60 until 62 contains it => IfThenElseTerm(nextF(vars, n-1), nextT(vars, n-1), nextT(vars, n-1))
