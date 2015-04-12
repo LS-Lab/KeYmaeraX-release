@@ -960,7 +960,7 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   require(p.inExpr == HereP, "Can only skolemize top level formulas")
   override def apply(s: Sequent): List[Sequent] = {
     // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-    val vars = allNamesExceptAt(s, p)
+    val vars = BindingAssessment.allNamesExceptAt(s, p)
     val (v,phi) = s(p) match {
       case Forall(qv, qphi) if !p.isAnte => (qv,qphi)
       case Exists(qv, qphi) if p.isAnte => (qv,qphi)
