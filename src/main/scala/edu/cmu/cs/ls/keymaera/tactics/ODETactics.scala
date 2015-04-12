@@ -352,9 +352,9 @@ object ODETactics {
           val initialGhosts = primedSymbols(ode).foldLeft(NilT)((a, b) =>
             a & (discreteGhostT(Some(iv(b)), b)(diffEqPos) & boxAssignT(skolemizeToFnT(_))(diffEqPos)))
 
-          // flatten conjunctions and sort by free variables to approximate ODE dependencies
+          // flatten conjunctions and sort by number of right-hand side symbols to approximate ODE dependencies
           val flatSolution = flattenConjunctions(solution).
-            sortWith((f, g) => sizeOf(BindingAssessment.catVars(f).fv) < sizeOf(BindingAssessment.catVars(g).fv)).reverse
+            sortWith((f, g) => StaticSemantics.symbols(f).size < StaticSemantics.symbols(g).size).reverse
 
           val cuts = flatSolution.foldLeft(diffWeakenT(p))((a, b) =>
             debugT(s"About to cut in $b at $p") & diffCutT(b)(p) & onBranch(
