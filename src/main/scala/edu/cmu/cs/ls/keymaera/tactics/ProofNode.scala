@@ -144,18 +144,19 @@ import scala.collection.immutable.{List, Map}
     final def apply(rule : Rule) : ProofNode.ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
       checkInvariant
-      var proofStep
-      if (fullProvable) { // keep full provable around
+      var proofStep = {
+        if (fullProvable) { // keep full provable around
         val newProvable = provable(rule, subgoal)
-        val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
-        else List(new ProofNode(this, newProvable, subgoal)) ++
-          Range(provable.subgoals.length, newProvable.subgoals.length).
-            map(new ProofNode(this, newProvable, _))
-        //@TODO assert(all subgoals have the same provable and the same parent)
-         proofStep = ProofNode.ProofStep(rule, this, subgoals)
-      } else {  // only keep subProvable around to simplify subsequent merge
+          val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
+          else List(new ProofNode(this, newProvable, subgoal)) ++
+            Range(provable.subgoals.length, newProvable.subgoals.length).
+              map(new ProofNode(this, newProvable, _))
+          //@TODO assert(all subgoals have the same provable and the same parent)
+          ProofNode.ProofStep(rule, this, subgoals)
+        } else {  // only keep subProvable around to simplify subsequent merge
         val subgoals = provable.sub(subgoal)(rule, 0)
-        ???
+          ???
+        }
       }
       // Add as or-branching alternative
       this.synchronized {
