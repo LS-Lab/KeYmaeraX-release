@@ -750,6 +750,11 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
   private def ghostify(f: Formula) = BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
 
   /**
+   * Introduce a ghost for the target variable to remember the value of the previous variable.
+   */
+  private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+
+  /**
    * Performing alpha conversion renaming in a term
    */
   private def rename(t: Term): Term = t match {
@@ -854,8 +859,54 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
       case _: DifferentialProgramConstant => p
   }
 
+  // rename at a target position
+
+  private def renameAt(f: Formula, p: PosInExpr): Formula =
+    if (p == HereP) f match {
+      // only allow renaming at a specific position if the name to be replaced is bound there
+      // (needed for skolemization and renaming of quantified parts inside a formula)
+      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+      // if program may bind var, then rename with stored initial value
+      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+        ghostify(f)
+      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+        ghostifyDiamond(f)
+      case _ => f //@TODO throw new CoreException since this is a bug if it happens?
+    } else f match {
+      // homomorphic cases
+      case Not(g) => Not(renameAt(g, p.child))
+      case And(l, r) => if (p.pos.head == 0) And(renameAt(l, p.child), r) else And(l, renameAt(r, p.child))
+      case Or(l, r) => if (p.pos.head == 0) Or(renameAt(l, p.child), r) else Or(l, renameAt(r, p.child))
+      case Imply(l, r) => if (p.pos.head == 0) Imply(renameAt(l, p.child), r) else Imply(l, renameAt(r, p.child))
+      case Equiv(l, r) => if (p.pos.head == 0) Equiv(renameAt(l, p.child), r) else Equiv(l, renameAt(r, p.child))
+      case FormulaDerivative(df) => FormulaDerivative(renameAt(df, p.child))
+
+      case Forall(vars, g) => if (p.pos.head == 0) Forall(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
+      case Exists(vars, g) => if (p.pos.head == 0) Exists(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
+
+      case BoxModality(prg, g) => if (p.pos.head == 0) BoxModality(renameAt(prg, p.child), g) else BoxModality(prg, renameAt(g, p.child))
+      case DiamondModality(prg, g) => if (p.pos.head == 0) DiamondModality(renameAt(prg, p.child), g) else DiamondModality(prg, renameAt(g, p.child))
+
+      // base cases
+      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula" + a + " but would still need to traverse to " + p)
+  }
+
+  private def renameAt(prg: Program, p: PosInExpr): Program =
+    if (p == HereP) throw new IllegalArgumentException("Position " + p + " is program " + prg + ", not a formula")
+    else prg match {
+      case Test(f) => if (p.pos.head == 0) Test(renameAt(f, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in test, only 0 allowed")
+      case ODESystem(vars, a, h) => if (p.pos.head == 2) ODESystem(vars, a, renameAt(h, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in ODE system, only 2 allowed")
+      case Sequence(a, b) => if (p.pos.head == 0) Sequence(renameAt(a, p.child), b) else Sequence(a, renameAt(b, p.child))
+      case Choice(a, b) => if (p.pos.head == 0) Choice(renameAt(a, p.child), b) else Choice(a, renameAt(b, p.child))
+      case Loop(a) => if (p.pos.head == 0) Loop(renameAt(a, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in loop, only 0 allowed")
+      case IfThen(cond, thenT) => if (p.pos.head == 0) IfThen(renameAt(cond, p.child), thenT) else IfThen(cond, renameAt(thenT, p.child))
+      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula " + a + " but would still need to traverse to " + p)
+  }
+
   /**
-   * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice. 
+   * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice.
+   * @TODO Or let .symbols only return literally occurring symbols without tops? Unlike free variables.
    */
   private def allNames(f: Formula): Set[NamedSymbol] = f match {
     // homomorphic cases
@@ -920,49 +971,6 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
     case prg: ProgramConstant => Set(prg)
     case prg: DifferentialProgramConstant  => Set(prg)
     case _ => throw new UnknownOperatorException("Not implemented", p)
-  }
-
-  private def renameAt(f: Formula, p: PosInExpr): Formula =
-    if (p == HereP) f match {
-      // only allow renaming at a specific position if the name to be replaced is bound there
-      // (needed for skolemization and renaming of quantified parts inside a formula)
-      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
-      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
-      // if program may bind var, then rename with stored initial value
-      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
-        BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), rename(f))
-      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
-        DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), rename(f))
-      case _ => f
-    } else f match {
-      // homomorphic cases
-      case Not(g) => Not(renameAt(g, p.child))
-      case And(l, r) => if (p.pos.head == 0) And(renameAt(l, p.child), r) else And(l, renameAt(r, p.child))
-      case Or(l, r) => if (p.pos.head == 0) Or(renameAt(l, p.child), r) else Or(l, renameAt(r, p.child))
-      case Imply(l, r) => if (p.pos.head == 0) Imply(renameAt(l, p.child), r) else Imply(l, renameAt(r, p.child))
-      case Equiv(l, r) => if (p.pos.head == 0) Equiv(renameAt(l, p.child), r) else Equiv(l, renameAt(r, p.child))
-      case FormulaDerivative(df) => FormulaDerivative(renameAt(df, p.child))
-
-      case Forall(vars, g) => if (p.pos.head == 0) Forall(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
-      case Exists(vars, g) => if (p.pos.head == 0) Exists(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
-
-      case BoxModality(prg, g) => if (p.pos.head == 0) BoxModality(renameAt(prg, p.child), g) else BoxModality(prg, renameAt(g, p.child))
-      case DiamondModality(prg, g) => if (p.pos.head == 0) DiamondModality(renameAt(prg, p.child), g) else DiamondModality(prg, renameAt(g, p.child))
-
-      // base cases
-      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula" + a + " but would still need to traverse to " + p)
-  }
-
-  private def renameAt(prg: Program, p: PosInExpr): Program =
-    if (p == HereP) throw new IllegalArgumentException("Position " + p + " is program " + prg + ", not a formula")
-    else prg match {
-      case Test(f) => if (p.pos.head == 0) Test(renameAt(f, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in test, only 0 allowed")
-      case IfThen(cond, thenT) => if (p.pos.head == 0) IfThen(renameAt(cond, p.child), thenT) else IfThen(cond, renameAt(thenT, p.child))
-      case ODESystem(vars, a, h) => if (p.pos.head == 2) ODESystem(vars, a, renameAt(h, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in ODE system, only 2 allowed")
-      case Sequence(a, b) => if (p.pos.head == 0) Sequence(renameAt(a, p.child), b) else Sequence(a, renameAt(b, p.child))
-      case Choice(a, b) => if (p.pos.head == 0) Choice(renameAt(a, p.child), b) else Choice(a, renameAt(b, p.child))
-      case Loop(a) => if (p.pos.head == 0) Loop(renameAt(a, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in loop, only 0 allowed")
-      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula " + a + " but would still need to traverse to " + p)
   }
 }
 
