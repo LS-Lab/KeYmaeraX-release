@@ -74,6 +74,15 @@ watchSources <++= baseDirectory map {
   path => ((path / "src/main/resources") ** "*.html").get 
 }
 
+
+unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
+
+//unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/scala"
+//unmanagedResourceDirectories in Test += baseDirectory.value / "src/main/scala"
+
+// def axiomSources = (baseDirectory.value / "src/main/scala" ##) ** "*.txt"
+// override def mainResources = super.mainResources +++ axiomSources
+
 ////////////////////////////////////////////////////////////////////////////////
 // Unit testing
 ////////////////////////////////////////////////////////////////////////////////
