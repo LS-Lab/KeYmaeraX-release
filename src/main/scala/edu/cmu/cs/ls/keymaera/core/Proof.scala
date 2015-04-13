@@ -744,7 +744,7 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
 
   def apply(f: Formula): Formula = {
     if (allNames(f).exists(v => v.name == repl && v.index == rIdx))
-      throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this, f.prettyString())
+      throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     rename(f)
   }
 
