@@ -1108,26 +1108,12 @@ object Axiom {
   // immutable list of sound axioms
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
-  def axiomFileLocation() : String = {
-    val resource = this.getClass().getResource("axioms.key.alp")
-    val fileLocation : String = {
-      if(resource == null) {
-        throw new Exception("KeYmaera Axioms file could not be found.")
-      }
-      else {
-        resource.getFile()
-      }
-    }
-    assert(new java.io.File(fileLocation).exists());
-    fileLocation
-  }
-
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = io.Source.fromFile(axiomFileLocation()).mkString
+    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.key.alp")).mkString
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.
