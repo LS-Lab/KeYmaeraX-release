@@ -1133,57 +1133,6 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
   }
 }
 
-/**
- * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
- * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
- * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization" for functions
- * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
- *      p(c())
- *  ---------------US c()~>x
- *      p(x)
- *  ---------------all generalize
- *  \forall x. p(x)
- * @TODO Or replace by AxiomaticRule with context padding using uniform substitution
- *  Gamma |- p(c()), Delta
- *  --------------- when c\not\in signature(Gamma,Delta)
- *  Gamma |- \forall x. p(x), Delta
- * And derive Skolemize from that by US.
- */
-@deprecated("Replace by tactics performing uniform substitution c()~>z after a Skolemize that introduced variable z")
-class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
-  require(p.inExpr == HereP, "Can only skolemize top level formulas")
-
-  override def apply(s: Sequent): List[Sequent] = {
-    // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-
-    val vars = BindingAssessment.allNamesExceptAt(s, p)
-    val (fn, phi) = s(p) match {
-      case Forall(qvs, qphi) if !p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
-      case Exists(qvs, qphi) if p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
-      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
-    }
-    if (vars.intersect(fn.toSet).nonEmpty)
-      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
-        vars.intersect(fn.toSet))
-    // TODO append v to prefix for merge or existential quantifier handling
-    List(if (p.isAnte) Sequent(s.pref /*++ fn*/, s.ante.updated(p.index, phi), s.succ)
-    else Sequent(s.pref /*++ fn*/, s.ante, s.succ.updated(p.index, phi)))
-  }
-
-  // TODO flat implementation, get rid of expression traversal
-  import ExpressionTraversal.traverse
-  private def varsToFnIn(vs: Seq[NamedSymbol], f: Formula) = traverse(new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-        case v: Variable if vs.contains(v) => Right(Apply(Function(v.name, v.index, Unit, v.sort), Nothing))
-        case _ => Left(None)
-      }
-    }, f) match {
-    case Some(frm) => frm
-    case _ => throw new IllegalArgumentException("Skolemization was unable to replace quantified variables with constant function symbols")
-  }
-
-}
-
 /*********************************************************************************
  * Block Quantifier Decomposition
  *********************************************************************************

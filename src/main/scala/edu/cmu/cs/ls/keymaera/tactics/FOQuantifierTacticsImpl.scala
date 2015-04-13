@@ -453,11 +453,11 @@ object FOQuantifierTacticsImpl {
    * @return The skolemization tactic.
    */
   def skolemizeT: PositionTactic = skolemizeT(forceUniquify = false)
-  def skolemizeT(forceUniquify: Boolean): PositionTactic = skolemize(new Skolemize(_), forceUniquify)
+  def skolemizeT(forceUniquify: Boolean): PositionTactic = skolemize(forceUniquify, toFunctionSymbol = false)
   def skolemizeToFnT: PositionTactic = skolemizeToFnT(forceUniquify = false)
-  def skolemizeToFnT(forceUniquify: Boolean): PositionTactic = skolemize(new SkolemizeToFn(_), forceUniquify)
+  def skolemizeToFnT(forceUniquify: Boolean): PositionTactic = skolemize(forceUniquify, toFunctionSymbol = true)
 
-  private def skolemize(factory: Position => PositionRule, forceUniquify: Boolean): PositionTactic =
+  private def skolemize(forceUniquify: Boolean, toFunctionSymbol: Boolean): PositionTactic =
       new PositionTactic("Skolemize") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
       case Forall(_, _) => !p.isAnte
@@ -468,20 +468,48 @@ object FOQuantifierTacticsImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       import BindingAssessment.allNamesExceptAt
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Forall(vars, _) =>
+        case Forall(vars, phi) =>
           val rename =
             if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
             else NilT
-          Some(rename ~ new ApplyRule(factory(p)) {
+
+          val substToFn = if (toFunctionSymbol) {
+            val futureVars =
+              if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) vars.map(v => freshNamedSymbol(v, node.sequent))
+              else vars
+            val subst = futureVars.map(v => SubstitutionPair(Apply(Function(v.name, v.index, Unit, v.sort), Nothing), v)).toList
+            val futurePhi =
+              if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty)
+                vars.foldRight(phi)((a, b) => replace(b)(a.asInstanceOf[Term], freshNamedSymbol(a, node.sequent).asInstanceOf[Term]))
+              else phi
+            val desiredResult = futureVars.foldRight(futurePhi)((a, b) => replace(b)(a.asInstanceOf[Term], Apply(Function(a.name, a.index, Unit, a.sort), Nothing)))
+            uniformSubstT(subst, Map(futurePhi -> desiredResult))
+          } else NilT
+
+          Some(rename ~ new ApplyRule(new Skolemize(p)) {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-          })
-        case Exists(vars, _) =>
+          } ~ substToFn)
+        case Exists(vars, phi) =>
           val rename =
             if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) uniquify(p)
             else NilT
-          Some(rename ~ new ApplyRule(factory(p)) {
+
+          val substToFn = if (toFunctionSymbol) {
+            val futureVars =
+              if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) vars.map(v => freshNamedSymbol(v, node.sequent))
+              else vars
+            val subst = futureVars.map(v => SubstitutionPair(Apply(Function(v.name, v.index, Unit, v.sort), Nothing), v)).toList
+            val futurePhi =
+              if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty)
+                vars.foldRight(phi)((a, b) => replace(b)(a.asInstanceOf[Term], freshNamedSymbol(a, node.sequent).asInstanceOf[Term]))
+              else phi
+            val desiredResult = futureVars.foldRight(futurePhi)((a, b) => replace(b)(a.asInstanceOf[Term], Apply(Function(a.name, a.index, Unit, a.sort), Nothing)))
+            uniformSubstT(subst, Map(futurePhi -> desiredResult))
+          } else NilT
+
+          Some(rename ~ new ApplyRule(new Skolemize(p)) {
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-          })
+          } ~ substToFn)
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
