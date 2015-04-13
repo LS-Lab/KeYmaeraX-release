@@ -138,49 +138,6 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
     helper.parseBareProgram("x' := 1;")
   }
 
-  "The IncompleteSystem Parser" should "parse incomplete systems" in {
-    helper.parseBareProgram("x'=y, y' =x, t' = 1 & t < eps;") //Sanity test; it should at least parse.
-    helper.parseBareProgram("$$x'=y, y' =x, t' = 1$$ & t < eps;") //should not throw an exception.
-  }
-
-  {
-    val preamble = "Variables. CP a. T x. T tx. T y. T ty. F H. F Hx. F Hy. F p. End. Axiom \"test123\".\n"
-    val end = "\nEnd."
-    val parse = (x:String) => new KeYmaeraParser().ProofFileParser.runParser(x)
-
-    it should "sanity-check" in {
-      parse(preamble + "1=2" + end) //sanity-check the preamble.
-    }
-
-
-    //@todo these rules need semantically suggestive names.
-    //@todo do the equality tests instead of merely making sure the parse does not choke.
-    it should "parse the System-Diff-Intro rule" in {
-      parse(preamble + "[a;]p <- [$$ a $$;]p" + end)
-    }
-
-    it should "parse the System-Diff-Final rule" in {
-      parse(preamble + "[$$ x' = tx $$ & Hx ;]p <- [x' := tx;][?Hx;]p" + end)
-    }
-
-    it should "parse the System-Diff-Head-Test rule" in {
-      parse(preamble + "[$$ x' = tx, a $$ & Hx;][?H;]p <- [x' := tx;][a;][?H&Hx;]p" + end)
-    }
-
-    it should "parse the System-Diff-NoHead-Test rule" in {
-      parse(preamble + "[$$ x' = tx, a $$ & Hx;]p <- [x' := tx;][a;][?Hx;]p" + end)
-    }
-
-
-    /**
-     * A test about how the incomplete system axioms will be parsed.
-     */
-    it should "parse formula symbols how I expect" in {
-      val result:List[LoadedKnowledge] = parse("Variables. T f(x). End. Axiom \"expectations\".\n" + "f(x) = 1" + "End.")
-//      result.last.formula.asInstanceOf[Assign].left should be(Function("f", None, Bool, Bool))
-    }
-  }
-
   /**
    * This test just makes sure that we parse boxes in the expected way, because that's necessary for the system axioms.
    */
