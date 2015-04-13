@@ -75,7 +75,11 @@ watchSources <++= baseDirectory map {
 }
 
 
-unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
+//unmanagedResourceDirectories in Compile <++= baseDirectory map { 
+//  path => ((path / "src/main/scala") ** "*.txt").get 
+//}
+
+//unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
 
 //unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/scala"
 //unmanagedResourceDirectories in Test += baseDirectory.value / "src/main/scala"
