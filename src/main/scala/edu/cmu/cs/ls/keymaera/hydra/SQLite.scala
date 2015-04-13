@@ -20,6 +20,11 @@ object SQLite extends DBAbstraction {
 
   val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver= "org.sqlite.JDBC")
 
+
+  if(!new java.io.File(dblocation).exists()) {
+    this.cleanup()
+  }
+
 //@TODO
   // Configuration
   override def getAllConfigurations: Set[ConfigurationPOJO] =
