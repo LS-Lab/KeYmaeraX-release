@@ -745,7 +745,8 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   }
 
   def apply(f: Formula): Formula = {
-    if (allNames(f).exists(v => v.name == repl && v.index == rIdx))
+    // allow self renaming to get stuttering
+    if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
       throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     rename(f)
   }
@@ -869,7 +870,8 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
 
   private def renameAt(f: Formula, p: PosInExpr): Formula =
     if (p == HereP) {
-      if (allNames(f).exists(v => v.name == repl && v.index == rIdx))
+      // allow self renaming to get stuttering
+      if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
         throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
       f match {
         // only allow renaming at a specific position if the name to be replaced is bound there
