@@ -226,6 +226,13 @@ Jan-David Quesel and André Platzer.
 Playing hybrid games with KeYmaera.
 In Bernhard Gramlich, Dale Miller, and Ulrike Sattler, editors, Automated Reasoning, Sixth International Joint Conference, IJCAR 2012, Manchester, UK, Proceedings, volume 7364 of LNCS, pages 439-453. Springer, June 2012
 
+Licenses of External Tools
+==========================
+
+KeYmaera X distribution contains external tools. A list of tools and their licenses can be found at
+
+src/main/resources/license/tools_licenses
+
 Background & References
 =======================
 
@@ -234,3 +241,4 @@ Background material and more material can be found at
 http://symbolaris.com/pub/
 
 http://symbolaris.com/info/KeYmaera.html
+
