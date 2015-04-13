@@ -93,6 +93,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: Position, f: Formula) : Sequent = {
 //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
     else
@@ -109,6 +110,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: Position, s: Sequent) : Sequent = {
 //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
