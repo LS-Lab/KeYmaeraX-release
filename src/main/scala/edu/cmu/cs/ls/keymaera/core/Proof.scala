@@ -329,7 +329,8 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
       case Nil => new Provable(conclusion, subgoals.drop(subgoal))
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
-  } ensuring(r => r.conclusion == conclusion, "Same conclusion after joining derivations") ensuring (
+  } ensuring(r => r.conclusion == conclusion,
+    "Same conclusion\n" + conclusion + " after joining derivations") ensuring (
     r => subgoals.drop(subgoal).toSet.subsetOf(r.subgoals.toSet),
     "All previous premises still around except the one replaced by a derivation") ensuring (
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
@@ -340,7 +341,8 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
   def sub(subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     Provable.startProof(subgoals(subgoal))
-  }
+  } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
+    r => r.subgoals == List(r.conclusion), "sub Provable is unfinished")
 }
 
 

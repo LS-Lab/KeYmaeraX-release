@@ -83,17 +83,18 @@ import scala.collection.immutable.{List, Map}
     sealed case class ProofStep private[ProofNode] (rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode], tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
       justifiedByProofRule
       @elidable(ASSERTION) def justifiedByProofRule = {
-        // println("Checking " + this)
-        // println("Reapply  " + rule(goal.sequent))
-        require(rule(goal.sequent) == subgoals.map(_.sequent), "ProofStep " + this + " is justified by said proof rule application")
-        // println("Checked  " + this)
+//        println("Checking " + this)
+//        println("Reapply  " + rule(goal.sequent))
+        require(rule(goal.sequent) == subgoals.map(_.sequent), this + "\nled to subgoals\n" + rule(goal.sequent))
+//        println("Checked  " + this)
       }
 
+      override def toString() = "ProofStep(" + rule + "\napplied to goal\n\n" + goal + "\n\nexpects subgoals\n" + subgoals.map(_.sequent).mkString("\n") + ")"
     }
   }
 
   sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
-    private val fullProvable = false
+    private val fullProvable = true
 
     @volatile private[this] var alternatives : List[ProofNode.ProofStep] = Nil
 
@@ -102,7 +103,7 @@ import scala.collection.immutable.{List, Map}
      * Soundness-critical invariant that all alternative proof steps have us as their goal.
      * Dropping alternatives is sound, but adding alternatives requires passing this invariant.
      */
-    private def checkInvariant = 
+    @elidable(ASSERTION) private def checkInvariant =
       assert(alternatives.forall(_.goal == this), "all alternatives are children of this goal")
 
     def sequent : Sequent = provable.subgoals(subgoal)
