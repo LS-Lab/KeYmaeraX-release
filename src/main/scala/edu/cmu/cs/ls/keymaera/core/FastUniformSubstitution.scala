@@ -43,10 +43,8 @@ object BindingAssessment {
   def catVars(p: Program) = StaticSemantics(p)
 
   def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
-    case CheckedContEvolveFragment(child) => primedVariables(child) //@todo eisegesis
     case ODEProduct(a, b) => primedVariables(a) ++ primedVariables(b)
     case ODESystem(_, child, _) => primedVariables(child)
-    case IncompleteSystem(a) => primedVariables(a)
     case AtomicODE(Derivative(_, x: Variable), _) => Set(x)
     case _: EmptyODE => Set.empty
     case _: DifferentialProgramConstant => Set.empty

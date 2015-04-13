@@ -42,7 +42,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(from, None, to, None, Some(p))) {
+        Some(new ApplyRule(new BoundRenaming(from, None, to, None, Some(p))) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         } & hideT(p.topLevel))
       }
@@ -53,7 +53,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     import scala.language.postfixOps
     override def applicable(node: ProofNode): Boolean = true
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      Some(new ApplyRule(new AlphaConversion(from, None, to, None, None)) {
+      Some(new ApplyRule(new BoundRenaming(from, None, to, None, None)) {
         override def applicable(node: ProofNode): Boolean = true
       })
     }
@@ -628,19 +628,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
         And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
     AlphaConversionHelper.replaceFree("[z'=2+x;](x>0 & z>0)".asFormula)(z, CDot) should be (
       BoxModality(ODESystem(ODEProduct(AtomicODE(Derivative(Real, z), Add(Real, Number(2), x))), True),
-        And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
-  }
-
-  it should "rename free variables but not variables bound by marked ODEs" in {
-    val x = new Variable("x", None, Real)
-    val z = new Variable("z", None, Real)
-    AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(x, CDot) should be (
-      BoxModality(ODESystem(IncompleteSystem(ODEProduct(AtomicODE(Derivative(Real, z),
-        Add(Real, Number(2), CDot)))), True),
-        And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
-    AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(z, CDot) should be (
-      BoxModality(ODESystem(IncompleteSystem(ODEProduct(AtomicODE(Derivative(Real, z),
-        Add(Real, Number(2), x)))), True),
         And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
   }
 

@@ -8,8 +8,8 @@ import scala.collection.immutable._
 
 class CoreTests extends FlatSpec with Matchers {
   
-  val p = PredicateConstant("p", None)
-  val q = PredicateConstant("q", None)
+  val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+  val q = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
 
   val sPos = SuccPosition(0)
   val aPos = AntePosition(0)

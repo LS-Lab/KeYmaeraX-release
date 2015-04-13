@@ -67,13 +67,6 @@ object AlphaConversionHelper {
             case None => Right(BoxModality(ODESystem(v, replaceFree(a)(o, n, None),
               replaceFree(h)(o, n, None)), replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(IncompleteSystem(ode), pred) => free match {
-            case Some(freeVars) =>
-              Right(BoxModality(IncompleteSystem(replaceFree(ode)(o, n, Some(certainlyFreeVariables(ode, freeVars)))),
-                replaceFree(pred)(o, n, Some(certainlyFreeVariables(ode, freeVars)))))
-            case None => Right(BoxModality(IncompleteSystem(replaceFree(ode)(o, n, None)),
-              replaceFree(pred)(o, n, None)))
-          }
           case BoxModality(Loop(a), pred) => free match {
             case Some(freeVars) => Right(BoxModality(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
               replaceFree(pred)(o, n, Some(certainlyFreeVariables(a, freeVars)))))

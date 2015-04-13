@@ -23,14 +23,6 @@ import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticWrapper, TacticLibrary, T
 
 object TermTests {
 
-  def getTautology: Formula = {
-    val p = new PredicateConstant("p")
-    val q = new PredicateConstant("q")
-    //val q = new FormulaName("q")
-    val i = Imply(p, q)
-    Imply(q, i)
-  }
-
   def getTautology2: Formula = {
     val x = Variable("x", None, Real)
     val a = Assign(x, Number(0))
@@ -44,28 +36,12 @@ object TermTests {
     val a = Assign(x, Number(0))
     val b = Assign(x, Number(1))
     val p = GreaterThan(Real, x, Number(0))
-    val substPairs = Seq(new SubstitutionPair(PredicateConstant("p"), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
+    val substPairs = Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
     val subst = USubst(substPairs)
     Axiom.axioms.get("[++] choice") match {
       case Some(f) => (subst, Map((getTautology2, f)))
       case _ => throw new IllegalArgumentException("blub")
     }
-  }
-
-
-  def test = {
-      val i2 = getTautology
-      val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-      val pos = SuccPosition(0)
-      val pos2 = AntePosition(0)
-      val c = r(ImplyRight(pos)).subgoals
-      for(n <- c) {
-        val c2 = n(ImplyRight(pos)).subgoals
-        for(n2 <- c2) {
-          val end = n2(Close(pos2, pos))
-          println(end)
-        }
-      }
   }
 
 /*  def test2 = {
@@ -196,7 +172,7 @@ object TermTests {
     val master = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true))
       | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true))
       | locateAnte(eqLeft(false)) )*) ~ quantifierEliminationT("Mathematica")
-    val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(PredicateConstant("inv")))) & master
+    val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(ApplyPredicate(Function("inv", None, Unit, Bool), Nothing)))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -342,7 +318,6 @@ object TermTests {
         jsonResult += (e match {
           case True() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"true\"}"
           case False() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"false\"}"
-          case x@PredicateConstant(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\": " + printNamedSymbol(x.asInstanceOf[PredicateConstant]) + "}"
           case ApplyPredicate(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
           case Equals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equals\"" + ", \"children\": [ "
           case NotEquals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"notEquals\"" + ", \"children\": [ "

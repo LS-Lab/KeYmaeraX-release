@@ -32,7 +32,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Assign(_) => !needsParens(e,parent, false )
     case Test(_) => !needsParens(e,parent, false )
     case NDetAssign(_) => !needsParens(e,parent, false)
-    case ContEvolve(_) => !needsParens(e,parent,false)
     case _: DifferentialProgram => !needsParens(e,parent, false)
     case _ => false
   }
@@ -139,7 +138,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     
     case BoxModality(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint, false)
-    case ContEvolve(child) => prettyPrinter(child) + symbolTable.SCOLON
     case Derivative(s, child) => recPostfix(child, symbolTable.PRIME)
     case DiamondModality(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint, false)
     case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV, Some(RightAssoc()))
@@ -202,11 +200,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     case False() => symbolTable.FALSE
     case True() => symbolTable.TRUE
-    
-    case PredicateConstant(name,i) => name + (i match {
-      case Some(idx) => "_" + idx
-      case None => ""
-    })
     case ProgramConstant(name, i) => name + (i match {
       case Some(idx) => "_" + idx
       case None => ""
@@ -256,13 +249,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
         case _ => " " + symbolTable.AND + " " + groupIfNotAtomic(f, prettyPrinter(f))
       }
       prettyPrinter(a) + printEvolDom(f) + symbolTable.SCOLON
-
-    case p@IncompleteSystem(s) => {
-      val system = parensIfNeeded(s, p, false, c => {
-        val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s
-      })
-      symbolTable.START_INCOMPLETE_SYSTEM + system + symbolTable.END_INCOMPLETE_SYSTEM
-    }
     case p: EmptyODE => ""
 
     
@@ -280,21 +266,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       "if (" + prettyPrinter(cond) + ") then {" + prettyPrinter(thenT) + "} else " + prettyPrinter(elseT) + " fi"
     }
 
-    case CheckedContEvolveFragment(child) => {
-      child match {
-        //@todo well this is awkward.
-        case AtomicODE(x, theta) => {
-          processNFContEvolve(x, theta, symbolTable.CHECKED_EQ)
-        }
-        case ContEvolve(Equals(sort, left,right)) => {
-          parensIfNeeded(left, expressionToPrint, false)  + symbolTable.CHECKED_EQ + parensIfNeeded(right, expressionToPrint, false)
-        }
-        case CheckedContEvolveFragment(_) => throw new NotImplementedError("Why do you have a checked fragment inside another checked fragment? Seems broken.")
-        case _ => throw new NotImplementedError("CheckedContEvolveFragment not implemented for " + child.getClass() + " whose child is a " + child.asInstanceOf[CheckedContEvolveFragment].child.getClass())
-      }
-    }
-    
-    
     case Neg(s,e) => symbolTable.NEGATIVE + recurse(e)
     case Test(e) => symbolTable.TEST + prettyPrinter(e) + symbolTable.SCOLON
     
@@ -399,7 +370,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       GreaterEqual.getClass.getCanonicalName    ::
       GreaterThan.getClass.getCanonicalName    ::
       FormulaDerivative.getClass.getCanonicalName ::
-      PredicateConstant.getClass.getCanonicalName ::
       ApplyPredicate.getClass.getCanonicalName ::
       ApplyPredicational.getClass.getCanonicalName :: //@TODO Check
       CDotFormula.getClass.getCanonicalName :: //@TODO Check
@@ -416,12 +386,9 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       IfThen.getClass.getCanonicalName ::
       IfThenElse.getClass.getCanonicalName ::
       EmptyODE.getClass.getCanonicalName ::
-      IncompleteSystem.getClass.getCanonicalName ::
       ODEProduct.getClass.getCanonicalName ::
       ODESystem.getClass.getCanonicalName ::
       AtomicODE.getClass.getCanonicalName ::
-      ContEvolve.getClass.getCanonicalName ::
-      CheckedContEvolveFragment.getClass().getCanonicalName ::
       ProgramConstant.getClass.getCanonicalName ::
       DifferentialProgramConstant.getClass.getCanonicalName ::
       CDot.getClass.getCanonicalName ::
@@ -456,7 +423,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case True => true
     case CDot => true
     case CDotFormula => true
-    case PredicateConstant(name,_) => true
     case ProgramConstant(name, _) => true
     case Variable(name, _,_) => true
     case _: EmptyODE  => true
@@ -494,7 +460,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Forall(_,_) => true
     case Exists(_,_) => true
     case BoxModality(p,f) => true
-    case ContEvolve(child) => true
     case Derivative(s, child) => true
     case DiamondModality(p,f) => true
     case Equiv(l,r) => false

@@ -50,7 +50,7 @@ private object NameConversion {
     //   name (for external functions)
     //   KeYmaera + name
     val identifier : String = ns match {
-      case n: Function if n.external => n.name
+//      case n: Function if n.external => n.name
       case _ => PREFIX + maskIdentifier(ns.name)
     }
 
@@ -516,7 +516,6 @@ object KeYmaeraToMathematica {
     // case t : Globally => ???
     case False() => MathematicaSymbols.FALSE
     case True() => MathematicaSymbols.TRUE
-    case PredicateConstant(name,index) => new MExpr(name)
     case Not(f) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(f)))
     case Exists(vs, f) => convertExists(vs,f)
     case Forall(vs, f) => convertForall(vs,f)

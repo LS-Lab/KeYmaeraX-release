@@ -28,7 +28,6 @@ object JSONConverter {
         e match {
           case True() => /* nothing to do */
           case False() => /* nothing to do */
-          case PredicateConstant(_, _) => /* nothing to do */
           case _ => jsonStack.push(List())
         }
         Left(None)
@@ -59,7 +58,6 @@ object JSONConverter {
         val o = e match {
           case True() => JsObject(("name" -> JsString("true")) +: cf)
           case False() => JsObject(("name" -> JsString("false")) +: cf)
-          case x@PredicateConstant(a, b) => JsObject(("name" -> convertNamedSymbol(x.asInstanceOf[PredicateConstant])) +: cf)
           case ApplyPredicate(a, b) => JsObject(("name" -> JsString("apply")) :: ("function" -> convertNamedSymbol(a)) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Equals(d, a, b) => JsObject(("name" -> JsString("equals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case NotEquals(d, a, b) => JsObject(("name" -> JsString("notEquals")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
@@ -118,8 +116,6 @@ object JSONConverter {
           case IfThenElse(_,_,_) => JsObject(("name" -> JsString("IfThenElse")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case Loop(_) => JsObject(("name" -> JsString("Loop")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case _: EmptyODE => JsObject("name" -> JsString("EmptyODE") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case CheckedContEvolveFragment(_) => JsObject("name" -> JsString("checked=") :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
-          case ContEvolve(_) => JsObject(("name" -> JsString("ContEvolve")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case AtomicODE(_, _) => JsObject(("name" -> JsString("AtomicODE")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ODEProduct(_, _) => JsObject(("name" -> JsString("ODEProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)
           case ODESystem(_, _, _) => JsObject(("name" -> JsString("NFODEProduct")) :: ("children" -> JsArray(jsonStack.pop())) :: Nil ++: cf)

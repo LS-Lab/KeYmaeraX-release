@@ -128,8 +128,6 @@ class JLinkMathematicaLink extends MathematicaLink {
 
   override def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
     diffSol(diffArg, iv, toDiffSys(diffSys, diffArg):_*)
-  override def diffSol(diffSys: ContEvolve, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula] =
-    diffSol(diffArg, iv, toDiffSys(diffSys.child, diffArg):_*)
 
   /**
    * Converts an expression into a differential equation system (list of x'=theta).
