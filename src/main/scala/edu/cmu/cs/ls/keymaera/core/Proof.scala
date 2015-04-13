@@ -420,7 +420,7 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ", " + inExpr + ")"
 }
 
-@deprecated("Use SeqPos instead")
+@deprecated("Use AntePos or SeqPos(-...) instead")
 class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
   def isAnte = true
   protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
@@ -434,7 +434,7 @@ object AntePosition {
   def apply(index: Int, inExpr: PosInExpr = HereP): Position = new AntePosition(index, inExpr)
 }
 
-@deprecated("Use SeqPos instead")
+@deprecated("Use SuccPos or SeqPos instead")
 class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
   def isAnte = false
   protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
