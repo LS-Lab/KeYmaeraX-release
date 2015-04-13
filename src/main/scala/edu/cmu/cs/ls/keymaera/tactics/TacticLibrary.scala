@@ -389,7 +389,7 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(from, fromIdx, to, toIdx, Some(p))) {
+        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx, Some(p))) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         } & hideT(p.topLevel))
       }
@@ -402,7 +402,7 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = true
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(from, fromIdx, to, toIdx, None)) {
+        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx, None)) {
           override def applicable(node: ProofNode): Boolean = true
         } & initialValueTactic(node.sequent.ante, AntePosition.apply)
           & initialValueTactic(node.sequent.succ, SuccPosition.apply))

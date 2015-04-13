@@ -724,7 +724,7 @@ object UniformSubstitutionRule {
  * @requires target name with target index tIdx is fresh in the sequent.
  * @author smitsch
  */
-class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int], pos: Option[Position])
+class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
   @unspecialized
