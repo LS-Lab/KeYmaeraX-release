@@ -676,6 +676,7 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
  * @param substitution the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ * @author aplatzer
  */
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
@@ -696,7 +697,7 @@ object UniformSubstitutionRule {
         if (subst(origin) == conclusion) {
           List(origin)
         } else {
-          throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+          throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
         }
       } catch {
         case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " to conclusion\n" + conclusion)
@@ -708,15 +709,20 @@ object UniformSubstitutionRule {
 
 
 /**
- * Performs alpha conversion from a symbol name_idx to a symbol target_tIdx.
- * @param name The name to replace.
- * @param idx The index to replace.
- * @param target The target name.
- * @param tIdx The target index.
- * @param pos The position where to perform alpha conversion. If Some(p), p must point to a position that binds
+ * Performs alpha conversion renaming all occurrences of symbol name_idx
+ * to a symbol target_tIdx.
+ * @param what What name to replace.
+ * @param wIdx What index of the name to replace.
+ * @param repl The target name to replace what with.
+ * @param rIdx The index of the target name as replacement.
+ * @param pos The position where to perform alpha conversion.
+ *            If Some(p), p must point to a position that binds
  *            name_idx (either a quantifier or a box/diamond modality).
+ *            If None, then prepend a modality [target_tIdx:=name_idx].
+ * @requires target name with target index tIdx is fresh in the sequent.
+ * @author smitsch
  */
-class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
+class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
   @unspecialized
@@ -724,29 +730,64 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 
   def apply(s: Sequent): List[Sequent] = pos match {
     case Some(p) =>
+      //@TODO require(, s"Renaming only to fresh names but ${target}_$tIdx is not fresh in $f")
       val formula = renameAt(s(p), p.inExpr)
+      //@TODO Why is the old formula not replaced but kept?
       if (p.isAnte) List(Sequent(s.pref, s.ante :+ formula, s.succ))
       else List(Sequent(s.pref, s.ante, s.succ :+ formula))
     case None =>
-      val ante = for (f <- s.ante) yield BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f))
-      val succ = for (f <- s.succ) yield BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f))
-      List(Sequent(s.pref, ante, succ))
+      List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
   }
 
   def apply(f: Formula): Formula = {
-    require(!allNames(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
+    require(!allNames(f).exists(v => v.name == repl && v.index == rIdx), s"Renaming only to fresh names but ${repl}_$rIdx is not fresh in $f")
     rename(f)
   }
 
-  def rename(f: Formula): Formula = f match {
-    case Not(g) => Not(rename(g))
-    case And(l, r) => And(rename(l), rename(r))
-    case Or(l, r) => Or(rename(l), rename(r))
-    case Imply(l, r) => Imply(rename(l), rename(r))
-    case Equiv(l, r) => Equiv(rename(l), rename(r))
+  /**
+   * Introduce a ghost for the target variable to remember the value of the previous variable.
+   */
+  private def ghostify(f: Formula) = BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
 
-    case FormulaDerivative(g) => FormulaDerivative(rename(g))
+  /**
+   * Performing alpha conversion renaming in a term
+   */
+  private def rename(t: Term): Term = t match {
+    // base cases
+    case x: Variable => renameVar(x)
+    case CDot => CDot
+    case Nothing => Nothing
+    case Anything => Anything
+    case x@Number(_, _) => x
+    case Apply(f, theta) => Apply(f, rename(theta))
+    // homomorphic cases
+    case Neg(s, l) => Neg(s, rename(l))
+    case Add(s, l, r) => Add(s, rename(l), rename(r))
+    case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
+    case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
+    case Divide(s, l, r) => Divide(s, rename(l), rename(r))
+    case Power(s, l, r) => Power(s, rename(l), rename(r))
+    case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
 
+    case Derivative(s, e) => Derivative(s, rename(e))
+  }
+
+  private def renameVar(e: Variable): Variable =
+    //@TODO Comparison without sort is intended?
+    if (e.name == what && e.index == wIdx) Variable(repl, rIdx, e.sort)
+    else e
+
+  private def rename(e: NamedSymbol): NamedSymbol = e match {
+    case v: Variable => renameVar(v)
+    case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
+    case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
+  }
+
+  /**
+   * Performing alpha conversion renaming in a formula
+   */
+  private def rename(f: Formula): Formula = f match {
+    // homomorphic base cases
     case Equals(d, l, r) => Equals(d, rename(l), rename(r))
     case NotEquals(d, l, r) => NotEquals(d, rename(l), rename(r))
     case GreaterEqual(d, l, r) => GreaterEqual(d, rename(l), rename(r))
@@ -756,71 +797,61 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 
     case ApplyPredicate(fn, theta) => ApplyPredicate(fn, rename(theta))
 
-    case Forall(vars, phi) => renameQuantifier(vars, phi, Forall.apply)
-    case Exists(vars, phi) => renameQuantifier(vars, phi, Exists.apply)
+    // homomorphic cases
+    case Not(g) => Not(rename(g))
+    case And(l, r) => And(rename(l), rename(r))
+    case Or(l, r) => Or(rename(l), rename(r))
+    case Imply(l, r) => Imply(rename(l), rename(r))
+    case Equiv(l, r) => Equiv(rename(l), rename(r))
+
+    case Forall(vars, phi) => Forall(vars.map(rename), rename(phi))
+    case Exists(vars, phi) => Exists(vars.map(rename), rename(phi))
 
     case BoxModality(p, phi) => BoxModality(rename(p), rename(phi))
     case DiamondModality(p, phi) => DiamondModality(rename(p), rename(phi))
 
+    case FormulaDerivative(g) => FormulaDerivative(rename(g))
+
     case True | False => f
   }
 
-  def rename(t: Term): Term = t match {
-    case Neg(s, l) => Neg(s, rename(l))
-    case Add(s, l, r) => Add(s, rename(l), rename(r))
-    case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
-    case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
-    case Divide(s, l, r) => Divide(s, rename(l), rename(r))
-    case Power(s, l, r) => Power(s, rename(l), rename(r))
-    case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
-    case Derivative(s, e) => Derivative(s, rename(e))
-    case Apply(f, theta) => Apply(f, rename(theta))
-    case x: Variable => renameVar(x)
-    case CDot => CDot
-    case Nothing => Nothing
-    case Anything => Anything
-    case x@Number(_, _) => x
-  }
+//  private def renameQuantifier[T <: Quantifier](vars: Seq[NamedSymbol], phi: Formula,
+//                                                factory: (Seq[NamedSymbol], Formula) => T) = {
+//    // assumes that variables in a quantifier block are unique
+//    vars.find(v => v.name == name && v.index == idx) match {
+//      case Some(oldVar) => factory(vars.map(rename), rename(phi))
+//        //@TODO Can't we always use the upper case? So get rid of the private def altogether.
+//      case None => factory(vars, rename(phi))
+//    }
+//  }
 
-  def rename(p: Program): Program = p match {
+
+  /**
+   * Performing alpha conversion renaming in a program
+   */
+  private def rename(p: Program): Program = p match {
     case Assign(v: Variable, t) => Assign(renameVar(v), rename(t))
     case Assign(Derivative(s, v: Variable), t) => Assign(Derivative(s, renameVar(v)), rename(t))
     case NDetAssign(v: Variable) => NDetAssign(renameVar(v))
     case Test(phi) => Test(rename(phi))
-    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
     case ode: DifferentialProgram => renameODE(ode)
     case Sequence(a, b) => Sequence(rename(a), rename(b))
     case Choice(a, b) => Choice(rename(a), rename(b))
     case Loop(a) => Loop(rename(a))
+    // extended cases
+    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
+    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
   }
 
   private def renameODE(p: DifferentialProgram): DifferentialProgram = p match {
-      case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == name && i == idx =>
-        AtomicODE(Derivative(dd, Variable(target, tIdx, d)), rename(t))
-      case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != name || i != idx =>
+      case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == what && i == wIdx =>
+        AtomicODE(Derivative(dd, Variable(repl, rIdx, d)), rename(t))
+      case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != what || i != wIdx =>
         AtomicODE(dv, rename(t))
       case ODEProduct(a, b) => ODEProduct(renameODE(a), renameODE(b))
       case ODESystem(d, a, h) => ODESystem(d, renameODE(a), rename(h))
       case _: EmptyODE => p
       case _: DifferentialProgramConstant => p
-  }
-
-  private def renameVar(e: Variable): Variable =
-    if (e.name == name && e.index == idx) Variable(target, tIdx, e.sort)
-    else e
-
-  private def rename(e: NamedSymbol): NamedSymbol = e match {
-    case v: Variable => renameVar(v)
-    case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
-    case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
-  }
-
-  private def renameQuantifier[T <: Quantifier](vars: Seq[NamedSymbol], phi: Formula,
-                                                factory: (Seq[NamedSymbol], Formula) => T) = {
-    vars.find(v => v.name == name && v.index == idx) match {
-      case Some(oldVar) => factory(vars.map(rename), rename(phi))
-      case None => factory(vars, rename(phi))
-    }
   }
 
   /**
@@ -895,13 +926,13 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     if (p == HereP) f match {
       // only allow renaming at a specific position if the name to be replaced is bound there
       // (needed for skolemization and renaming of quantified parts inside a formula)
-      case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => rename(f)
-      case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => rename(f)
+      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
       // if program may bind var, then rename with stored initial value
-      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
-        BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
-      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
-        DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
+      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+        BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), rename(f))
+      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+        DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), rename(f))
       case _ => f
     } else f match {
       // homomorphic cases

@@ -1217,6 +1217,8 @@ object Forall {
 
 final class Forall(variables : immutable.Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
   require(!variables.isEmpty, "Quantifiers should bind at least one variable")
+  require(variables.distinct.size == variables.size, "no duplicates in quantifier block")
+
   override def equals(e: Any): Boolean = e match {
     case x: Forall => x.variables == variables && x.child == child
     case _ => false
@@ -1236,6 +1238,7 @@ object Exists {
 }
 final class Exists(variables : immutable.Seq[NamedSymbol], child : Formula) extends Quantifier(variables, child) {
   require(!variables.isEmpty, "Quantifiers should bind at least one variable")
+  require(variables.distinct.size == variables.size, "no duplicates in quantifier block")
 
   override def equals(e: Any): Boolean = e match {
     case x: Exists => x.variables == variables && x.child == child
