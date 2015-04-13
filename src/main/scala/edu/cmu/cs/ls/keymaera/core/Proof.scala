@@ -36,9 +36,9 @@ import scala.collection.GenTraversableOnce
 /**
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
  * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
- *  Negative numbers indicate antecedent positions.
- *  Positive numbers indicate succedent positions.
- *  Zero is a degenerate case indicating whole sequent.
+ *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+ *  Positive numbers indicate succedent positions, 1, 2, 3.
+ *  Zero is a degenerate case indicating whole sequent 0.
  */
 final case class SeqPos(val pos: Int) {
   require(pos != 0, "no whole sequent positions at the moment")
@@ -47,18 +47,25 @@ final case class SeqPos(val pos: Int) {
   //def isFullSequent: Boolean = pos == 0
 
   /**
-   * The unsigned index in the antecedent or succedent, respectively
+   * The unsigned position for the antecedent or succedent list, respectively, base 1.
    */
-  def getIndex: Int = if (pos < 0) -pos else if (pos > 0) pos else throw new IllegalStateException("Full sequent has no index")
+  def getPos: Int = if (pos < 0) -pos else if (pos > 0) pos else throw new IllegalStateException("Full sequent has no index")
 
   /**
-   * Check whether index of this position is defined in given sequent (ignoring inExpr).
+   * The unsigned index into the antecedent or succedent list, respectively, base 0.
+   */
+  def getIndex: Int = if (pos < 0) -pos - 1 else if (pos > 0) pos - 1 else throw new IllegalStateException("Full sequent has no index")
+
+  /**
+   * Check whether index of this position is defined in given sequent.
    */
   def isIndexDefined(s: Sequent): Boolean =
     if (isAnte)
-      s.ante.length > getIndex
-    else //if (isSucc)
-      s.succ.length > getIndex
+      s.ante.length >= -pos
+    else {
+      assert(isSucc)
+      s.succ.length >= pos
+    }
 
   override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + pos + ")"
 }
@@ -75,7 +82,7 @@ object SeqPos {
   def SuccPos(pos: Int) = SeqPos(pos)
 
   @deprecated("Remove")
-  private[core] def position2SeqPos(p: Position) = new SeqPos(if (p.isAnte) -p.index else p.index)
+  private[core] def position2SeqPos(p: Position) = new SeqPos(if (p.isAnte) -(p.index+1) else p.index+1)
 }
 
 /**
