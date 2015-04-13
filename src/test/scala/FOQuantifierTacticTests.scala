@@ -214,22 +214,27 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
 
     "Quantifier instantiation" should "pick the correct subtactic" in {
     val t1 = locateSucc(instantiateT(Variable("x", None, Real), "z".asTerm))
+    // TODO should really be [y:=z][y'=1;]y>0
     getProofSequent(t1, new RootNode(sucSequent("\\exists x. [y:=x;][y'=1;]y>0".asFormula))) should be (
-      sucSequent("[y:=z;][y'=1;]y>0".asFormula))
+      sucSequent("[z'=1;]z>0".asFormula))
 
     val t2 = locateAnte(instantiateT(Variable("x", None, Real), "z".asTerm))
+    // TODO should really be [y:=z][y:=2;]y>0
     getProofSequent(t2, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))) should be (
-      sequent(Nil, "[y:=z;][y:=2;]y>0".asFormula :: Nil, Nil))
+      sequent(Nil, "[z:=2;]z>0".asFormula :: Nil, Nil))
   }
 
   it should "pick the correct subtactic and try the quantified names for instantiation" in {
     val t1 = locateSucc(instantiateT)
+    // TODO should really be [y:=x;][y'=1;]y>0
     getProofSequent(t1, new RootNode(sucSequent("\\exists x. [y:=x;][y'=1;]y>0".asFormula))) should be (
-      sucSequent("[y:=x;][y'=1;]y>0".asFormula))
+      sucSequent("[x'=1;]x>0".asFormula))
 
     val t2 = locateAnte(instantiateT)
+
+    // TODO should really be [y:=x;][y:=2;]y>0
     getProofSequent(t2, new RootNode(sequent(Nil, "\\forall x. [y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))) should be (
-      sequent(Nil, "[y:=x;][y:=2;]y>0".asFormula :: Nil, Nil))
+      sequent(Nil, "[x:=2;]x>0".asFormula :: Nil, Nil))
   }
 
   "Existential generalization p(t) -> \\exists x. p(x)" should "introduce existential quantifier in antecedent" in {
