@@ -389,27 +389,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  it should "be [t:=x;][$$t'=t+1$$;]t>0 with (x,t) on [$$x'=x+1$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1$$;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1$$;]t>0".asFormula)
-    ))
-  }
-
-  it should "be [t:=x;][$$t'=t+1,y'=t$$;]t>0 with (x,t) on [$$x'=x+1, y'=x$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1,y'=x$$;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1,y'=t$$;]t>0".asFormula)
-    ))
-  }
-
-  it should "be [t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0 with (x,t) on [$$x'=x+1 & x>0, y'=x & y<x$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1, y'=x $$ & x>0 & y<x;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1 ,y'=t$$ & t>0 & y<t;]t>0".asFormula)
-    ))
-  }
-
   // (8) Modality(DiamondModality(DifferentialProgram | IncompleteSystem, _), phi)
 
   "Alpha-conversion rule on diamond ODE" should "be <t:=x;><t'=1;>t>0 with (x,t) on <x'=1;>x>0" in {
@@ -423,27 +402,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val s = sucSequent("<x'=x+1;>x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;]<t'=t+1;>t>0".asFormula)
-    ))
-  }
-
-  it should "be <t:=x;><$$t'=t+1$$;>t>0 with (x,t) on <$$x'=x+1$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1$$;>x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1$$;>t>0".asFormula)
-    ))
-  }
-
-  it should "be <t:=x;><$$t'=t+1,y'=t$$;>t>0 with (x,t) on <$$x'=x+1, y'=x$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1,y'=x$$;>x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1,y'=t$$;>t>0".asFormula)
-    ))
-  }
-
-  it should "be <t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0 with (x,t) on <$$x'=x+1 & x>0, y'=x & y<x$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1, y'=x$$ & x>0 & y<x;>x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1,y'=t$$ & t>0 & y<t;>t>0".asFormula)
     ))
   }
 
@@ -538,13 +496,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val s = sucSequent("[x':=0;]x'>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;][t':=0;]t'>0".asFormula)
-    ))
-  }
-
-  it should "rename in checked ODE fragments" in {
-    val s = sucSequent("[$$x' ≚ x$$;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t' ≚ t$$;]t>0".asFormula)
     ))
   }
 
