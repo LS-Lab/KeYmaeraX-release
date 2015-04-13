@@ -93,6 +93,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: Position, f: Formula) : Sequent = {
 //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
     else
@@ -109,6 +110,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: Position, s: Sequent) : Sequent = {
 //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
@@ -1119,7 +1121,7 @@ object Axiom {
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.key.alp")).mkString
+    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.txt")).mkString
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.
