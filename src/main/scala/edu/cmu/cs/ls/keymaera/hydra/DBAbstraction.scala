@@ -5,6 +5,11 @@ import java.util
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
 
+//Global setting:
+object DBAbstractionObj {
+  def defaultDatabase = SQLite
+}
+
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
 object TacticKind extends Enumeration {
   type TacticKind = Value
@@ -14,6 +19,14 @@ object TacticKind extends Enumeration {
 object DispatchedTacticStatus extends Enumeration {
   type DispatchedTacticStatus = Value
   val Prepared, Running, Finished, Aborted = Value
+
+  def fromString(s : String) = s match {
+    case "Prepared" => Prepared
+    case "Running" => Running
+    case "Finished" => Finished
+    case "Aborted" => Aborted
+    case _ => throw new Exception("Status " + s + " not in enum.")
+  }
 }
 
 /**
@@ -74,6 +87,7 @@ class ConfigurationPOJO(val name: String, val config: Map[String,String])
 //tactics: _id, name, class
 //dispatched_tactics: _id, tactic_id, task_id, node_id, count
 
+
 /**
  * Proof database
  */
@@ -109,7 +123,6 @@ trait DBAbstraction {
   def getProofInfo(proofId : String) : ProofPOJO
   def updateProofInfo(proof: ProofPOJO)
   def getProofSteps(proofId : String) : List[String]
-  def addFinishedTactic(proofId : String, tacticInstId : String)
 
   // Tactics
   def createTactic(name : String, clazz : String, kind : TacticKind.Value) : String
@@ -118,7 +131,7 @@ trait DBAbstraction {
   def getTacticByName(name: String) : Option[TacticPOJO]
   def getTactics : List[TacticPOJO]
   def createDispatchedTactics(taskId:String, nodeId:Option[String], formulaId:Option[String], tacticsId:String,
-                              input:Map[Int, String], auto: Option[PositionTacticAutomation.Value],
+                              input:Map[Int, String], auto: Option[PositionTacticAutomation.PositionTacticAutomation],
                               status:DispatchedTacticStatus.Value) : String
   def updateDispatchedTactics(tactic:DispatchedTacticPOJO)
   def getDispatchedTactics(tId : String) : Option[DispatchedTacticPOJO]
