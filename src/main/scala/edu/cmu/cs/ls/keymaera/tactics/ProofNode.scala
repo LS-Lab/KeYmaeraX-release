@@ -89,7 +89,7 @@ import scala.collection.immutable.{List, Map}
 //        println("Checked  " + this)
       }
 
-      override def toString() = "ProofStep(" + rule + "\napplied to goal\n\n" + goal + "\n\nexpects subgoals\n" + subgoals.map(_.sequent).mkString("\n") + ")"
+      override def toString() = "ProofStep(" + rule + "\napplied to goal\n\n" + goal + "\n\nexpects subgoals\n" + subgoals.map(_.sequent).mkString(",\n") + ")"
     }
   }
 
@@ -144,14 +144,19 @@ import scala.collection.immutable.{List, Map}
     final def apply(rule : Rule) : ProofNode.ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
       checkInvariant
-      val newProvable = if (fullProvable) provable(rule, subgoal) // keep full provable around
-      else provable.sub(subgoal)(rule, 0) // only keep subProvable around to simplify merge
-      val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
+      var proofStep
+      if (fullProvable) { // keep full provable around
+        val newProvable = provable(rule, subgoal)
+        val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
         else List(new ProofNode(this, newProvable, subgoal)) ++
-        Range(provable.subgoals.length, newProvable.subgoals.length).
-          map(new ProofNode(this, newProvable, _))
-      //@TODO assert(all subgoals have the same provable and the same parent)
-      val proofStep = ProofNode.ProofStep(rule, this, subgoals)
+          Range(provable.subgoals.length, newProvable.subgoals.length).
+            map(new ProofNode(this, newProvable, _))
+        //@TODO assert(all subgoals have the same provable and the same parent)
+         proofStep = ProofNode.ProofStep(rule, this, subgoals)
+      } else {  // only keep subProvable around to simplify subsequent merge
+        val subgoals = provable.sub(subgoal)(rule, 0)
+        ???
+      }
       // Add as or-branching alternative
       this.synchronized {
         alternatives = alternatives :+ proofStep
@@ -169,7 +174,7 @@ import scala.collection.immutable.{List, Map}
       "\nfrom " + parent + ")"
 
     /**
-     * @return true iff the node is marked as closed.
+     * @return true iff the node is marked as closed by proof node management, which is not necessarily correct.
      * The sound way of checking whether a proof finished successfully is asking isProved()
      * @see #isProved()
      */
@@ -180,6 +185,7 @@ import scala.collection.immutable.{List, Map}
      * Test whether this ProofNode can be proved by merging Provable's of one of its alternatives.
      * @TODO The sound version needs to find an alternative
      *      that it can successively merge via Provability.apply(Provable, Int) to yield an isProved()
+     * @TODO Could return Provable witness too.
      */
     def isProved(): Boolean = ???
 
