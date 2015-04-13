@@ -1,0 +1,17 @@
+  Tools             Licenses
+============================
+AngularJS           MIT (http://opensource.org/licenses/mit-license.html)
+angular.treeview    MIT
+angular-dragdrop    MIT
+angular-ui-tree     MIT
+Bootstrap           MIT
+Jasny Bootstrap     Apache v2.0 (https://www.apache.org/licenses/LICENSE-2.0)
+Font Awesome        SIL OFL 1.1 (http://scripts.sil.org/OFL) and MIT
+jQuery              MIT
+MathJax             Apache v2.0
+ngDialog            MIT
+RequireJS           BSD 3-Clause (http://opensource.org/licenses/BSD-3-Clause) or MIT
+D3.js               BSD 3-Clause
+es5-shim            MIT
+jsTree              MIT
+z3                  MIT
