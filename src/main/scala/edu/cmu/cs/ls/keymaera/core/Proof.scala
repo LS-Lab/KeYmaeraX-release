@@ -179,6 +179,11 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
 
   /**
+   * Position types for the subgoals of a Provable.
+   */
+  type Subgoal = Int
+
+  /**
    * Checks whether this Provable proves its conclusion.
    */
   final def isProved : Boolean = (subgoals.isEmpty)
@@ -200,7 +205,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    */
-  final def apply(rule : Rule, subgoal : Int) : Provable = {
+  final def apply(rule : Rule, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
@@ -221,7 +226,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    * @requires(subderivation.conclusion == subgoals(subgoal))
    */
-  final def apply(subderivation : Provable, subgoal : Int) : Provable = {
+  final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     require(subderivation.conclusion == subgoals(subgoal), "the given derivation concludes " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
@@ -234,6 +239,13 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
     "All previous premises still around except the one replaced by a derivation") ensuring (
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 
+  /**
+   * Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
+   */
+  def sub(subgoal : Subgoal) : Provable = {
+    require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
+    Provable.startProof(subgoals(subgoal))
+  }
 }
 
 
