@@ -44,18 +44,6 @@ class SDTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only "[a'=b & true;]x'-y'<=0".asFormula
   }
 
-  it should "work on marked boxes when there's no binding" in {
-    //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping
-    val node = helper.formulaToNode("[$$a'=b$$;](x-y<1)'".asFormula)
-
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    val result = helper.runTactic(tactic, node, mustApply = true)
-
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[$$a'=b$$;]x'-y'<=0".asFormula
-  }
-
   it should "work on an identical example with assignment" in {
     //@todo the fact that SyntacticDerivationT finds its own position at which to apply is arguably a bug -- witness inf looping (findApplicablePositionForTermAxiom)
     val node = helper.formulaToNode("[a:=b;](x-y<1)'".asFormula)
