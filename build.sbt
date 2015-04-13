@@ -12,6 +12,16 @@ libraryDependencies += "org.scalamock" %% "scalamock-scalatest-support" % "3.2" 
 
 libraryDependencies += "org.mongodb" %% "casbah" % "2.7.4"
 
+/// sqlite driver
+
+libraryDependencies += "com.typesafe.slick" %% "slick" % "2.1.0"
+
+libraryDependencies += "com.typesafe.slick" %% "slick-codegen" % "2.1.0"
+
+//libraryDependencies += "org.scalaquery" %% "scalaquery" % "0.9.5"
+
+libraryDependencies += "org.xerial" % "sqlite-jdbc" % "3.7.2"
+
 ////////////////////////////////////////////////////////////////////////////////
 // Mathematica Interop
 ////////////////////////////////////////////////////////////////////////////////
@@ -75,7 +85,11 @@ watchSources <++= baseDirectory map {
 }
 
 
-unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
+//unmanagedResourceDirectories in Compile <++= baseDirectory map { 
+//  path => ((path / "src/main/scala") ** "*.txt").get 
+//}
+
+//unmanagedResourceDirectories in Compile <+= baseDirectory {_ / "src/main/scala"}
 
 //unmanagedResourceDirectories in Compile += baseDirectory.value / "src/main/scala"
 //unmanagedResourceDirectories in Test += baseDirectory.value / "src/main/scala"

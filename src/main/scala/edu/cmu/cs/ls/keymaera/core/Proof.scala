@@ -4,6 +4,7 @@
  * @author aplatzer
  * @author nfulton
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
 package edu.cmu.cs.ls.keymaera.core
 
@@ -178,6 +179,11 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
 
   /**
+   * Position types for the subgoals of a Provable.
+   */
+  type Subgoal = Int
+
+  /**
    * Checks whether this Provable proves its conclusion.
    */
   final def isProved : Boolean = (subgoals.isEmpty)
@@ -199,7 +205,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    */
-  final def apply(rule : Rule, subgoal : Int) : Provable = {
+  final def apply(rule : Rule, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
@@ -220,7 +226,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    * @requires(subderivation.conclusion == subgoals(subgoal))
    */
-  final def apply(subderivation : Provable, subgoal : Int) : Provable = {
+  final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     require(subderivation.conclusion == subgoals(subgoal), "the given derivation concludes " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
@@ -233,6 +239,13 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
     "All previous premises still around except the one replaced by a derivation") ensuring (
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 
+  /**
+   * Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
+   */
+  def sub(subgoal : Subgoal) : Provable = {
+    require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
+    Provable.startProof(subgoals(subgoal))
+  }
 }
 
 
@@ -1114,16 +1127,38 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
  *********************************************************************************
  */
 
+/**
+ * Look up an axiom,
+ * i.e. sound axioms are valid formulas of differential dynamic logic.
+ * @author nfulton
+ * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+ */
 object Axiom {
   // immutable list of sound axioms
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
 
-  //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
-  //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+  /**
+   * lookup axiom named id
+   */
+  final def apply(id: String): Rule = new Rule("Axiom " + id) {
+    def apply(s: Sequent): List[Sequent] = {
+      axioms.get(id) match {
+        case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
+        case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
+      }
+    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
+  }
+
+  /**
+   * parse the axiom file and add all loaded knowledge to the axioms map.
+   * @TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+   */
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.txt")).mkString
+    val src = AxiomBase.loadAxioms()   //io.Source.fromInputStream(getClass.getResourceAsStream("axioms.txt")).mkString
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.
@@ -1134,16 +1169,6 @@ object Axiom {
       yield (k.name -> k.formula)).toMap
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
-  // lookup axiom named id
-  final def apply(id: String): Rule = new Rule("Axiom " + id) {
-    def apply(s: Sequent): List[Sequent] = {
-      axioms.get(id) match {
-        case Some(f) => List(new Sequent(s.pref, s.ante :+ f, s.succ))
-        case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
-      }
-    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
-  }
-  
   @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x", None, Real)
     val aP0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
@@ -1180,7 +1205,7 @@ object Axiom {
  */
 object AxiomaticRule {
   // immutable list of locally sound axiomatic proof rules (premise, conclusion)
-  val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = loadRuleFile()
+  val rules: scala.collection.immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
 
   // apply uniform substitution instance subst of "axiomatic" rule named id
   final def apply(id: String, subst: USubst): Rule = new AxiomaticRuleInstance(id, subst)
@@ -1207,93 +1232,6 @@ object AxiomaticRule {
         case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " for intended conclusion\n" + conclusion)
       }
     }
-  }
-
-  /**
-   * KeYmaera Axiomatic Proof Rules.
-   * @note Soundness-critical: Only return locally sound proof rules.
-   * @author aplatzer
-   */
-  private def loadRuleFile() = {
-    val x = Variable("x_", None, Real)
-    val px = ApplyPredicate(Function("p_", None, Real, Bool), x)
-    val pny = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
-    val qx = ApplyPredicate(Function("q_", None, Real, Bool), x)
-    val qny = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
-    val fny = Apply(Function("f_", None, Real, Real), Anything)
-    val gny = Apply(Function("g_", None, Real, Real), Anything)
-    val ctxt = Function("ctx_", None, Real, Real)
-    val ctxf = Function("ctx_", None, Real, Bool)
-    val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis  should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
-    val a = ProgramConstant("a_")
-    val fmlny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
-    
-    scala.collection.immutable.Map(
-      /* @deprecated/@derived("Could use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
-      ("CT term congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Apply(ctxt, fny), Apply(ctxt, gny)))))),
-      ("CQ equation congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(ctxf, fny), ApplyPredicate(ctxf, gny)))))),
-      ("CE congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicational(context, pny), ApplyPredicational(context, qny)))))),
-      ("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
-      ("all monotone",
-         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
-          Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
-      ("[] monotone",
-        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
-      ("<> monotone",
-        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
-      //@deprecated("Use CE instead.")
-      ("all congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
-      //@deprecated("Use CE instead.")
-      ("exists congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
-      //@deprecated("Use [] monotone twice or just use CE equivalence congruence")
-      //@TODO likewise for the other congruence rules.
-      ("[] congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
-          //@deprecated("Use CE instead.")
-      ("<> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
-      //@deprecated Use "CE equivalence congruence" instead of all these congruence rules.
-      // Derived axiomatic rules
-      ("-> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fmlny, pny), Imply(fmlny, qny)))))),
-          //@deprecated("Use CE instead.")
-      ("<-> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fmlny, pny), Equiv(fmlny, qny)))))),
-          //@deprecated("Use CE instead.")
-      ("& congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fmlny, pny), And(fmlny, qny)))))),
-          //@deprecated("Use CE instead.")
-      ("| congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fmlny, pny), Or(fmlny, qny)))))),
-          //@deprecated("Use CE instead.")
-      ("! congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny)))))),
-      /* UNSOUND FOR HYBRID GAMES */
-      ("Goedel", /* unsound for hybrid games */
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
-         Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
-    )
   }
 
 }

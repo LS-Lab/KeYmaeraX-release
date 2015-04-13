@@ -35,6 +35,8 @@ object KeYmaeraInterface {
     val SaturateSucc = Value("saturatesucc")
     val SaturateAll = Value("saturateall")
     val SaturateCurrent = Value("saturatecurrent")
+
+    def fromString(s : String) = Value(s)
   }
 
   object TaskManagement {

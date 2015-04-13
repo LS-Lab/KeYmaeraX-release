@@ -225,7 +225,7 @@ object MongoDB extends DBAbstraction {
     results.one().getAs[List[ObjectId]]("completedSteps").getOrElse(List[ObjectId]()).map(_.toString)
   }
 
-  override def addFinishedTactic(proofId: String, tacticInstId: String) = {
+   def addFinishedTactic(proofId: String, tacticInstId: String) = {
     val query = MongoDBObject("_id" -> new ObjectId(proofId))
     val results = proofs.find(query)
     if(results.length > 1) throw new IllegalStateException("Proof ID " + proofId + " is not unique")

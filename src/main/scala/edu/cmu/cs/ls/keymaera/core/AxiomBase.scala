@@ -1,4 +1,131 @@
 /**
+ * Axioms of KeYmaera and axiomatic proof rules of KeYmaera
+ * resulting from differential dynamic logic
+ * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+ */
+package edu.cmu.cs.ls.keymaera.core
+
+// require favoring immutable Seqs for soundness
+
+import java.io.File
+
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.Set
+
+import scala.annotation.{unspecialized, elidable}
+import scala.annotation.elidable._
+
+/**
+ * Created by aplatzer on 4/13/15.
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+ * @author aplatzer
+ */
+private[core] object AxiomBase {
+  /**
+   * KeYmaera Axiomatic Proof Rules.
+   * @note Soundness-critical: Only return locally sound proof rules.
+   * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
+   * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+   * @author aplatzer
+   */
+  private[core] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
+    val x = Variable("x_", None, Real)
+    val px = ApplyPredicate(Function("p_", None, Real, Bool), x)
+    val pny = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+    val qx = ApplyPredicate(Function("q_", None, Real, Bool), x)
+    val qny = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
+    val fny = Apply(Function("f_", None, Real, Real), Anything)
+    val gny = Apply(Function("g_", None, Real, Real), Anything)
+    val ctxt = Function("ctx_", None, Real, Real)
+    val ctxf = Function("ctx_", None, Real, Bool)
+    val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis predicational should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
+    val a = ProgramConstant("a_")
+    val fmlny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
+
+    scala.collection.immutable.Map(
+      /* @derived("Could use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
+      ("CT term congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Apply(ctxt, fny), Apply(ctxt, gny)))))),
+      ("CQ equation congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(ctxf, fny), ApplyPredicate(ctxf, gny)))))),
+      ("CE congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicational(context, pny), ApplyPredicational(context, qny)))))),
+      ("all generalization",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
+      ("all monotone",
+        (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
+          Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+      ("[] monotone",
+        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
+          Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
+      ("<> monotone",
+        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
+          Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
+/* @TODO REMOVE */
+      //@deprecated("Use CE instead.")
+      ("all congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
+      //@deprecated("Use CE instead.")
+      ("exists congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
+      //@deprecated("Use [] monotone twice or just use CE equivalence congruence")
+      //@TODO likewise for the other congruence rules.
+      ("[] congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
+      //@deprecated("Use CE instead.")
+      ("<> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
+      //@deprecated Use "CE equivalence congruence" instead of all these congruence rules.
+      // Derived axiomatic rules
+      ("-> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fmlny, pny), Imply(fmlny, qny)))))),
+      //@deprecated("Use CE instead.")
+      ("<-> congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fmlny, pny), Equiv(fmlny, qny)))))),
+      //@deprecated("Use CE instead.")
+      ("& congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fmlny, pny), And(fmlny, qny)))))),
+      //@deprecated("Use CE instead.")
+      ("| congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fmlny, pny), Or(fmlny, qny)))))),
+      //@deprecated("Use CE instead.")
+      ("! congruence",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny)))))),
+/* @TODO END REMOVE */
+      /* UNSOUND FOR HYBRID GAMES */
+      ("Goedel", /* unsound for hybrid games */
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
+    )
+  }
+
+  /**
+   * Look up an axiom,
+   * i.e. sound axioms are valid formulas of differential dynamic logic.
+   */
+  private[core] def loadAxioms() : String =
+"""
+/**
  * KeYmaera Axioms.
  *
  * @note Soundness-critical: Only adopt valid formulas as axioms.
@@ -530,3 +657,5 @@ Axiom "min expand".
   Min(s, t) = if (s < t) then s else t fi
 End.
 */
+"""
+}

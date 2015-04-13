@@ -93,7 +93,7 @@ import scala.collection.immutable.{List, Map}
   }
 
   sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
-
+    private val fullProvable = false
 
     @volatile private[this] var alternatives : List[ProofNode.ProofStep] = Nil
 
@@ -143,7 +143,8 @@ import scala.collection.immutable.{List, Map}
     final def apply(rule : Rule) : ProofNode.ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
       checkInvariant
-      val newProvable = provable(rule, subgoal)
+      val newProvable = if (fullProvable) provable(rule, subgoal) // keep full provable around
+      else provable.sub(subgoal)(rule, 0) // only keep subProvable around to simplify merge
       val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
         else List(new ProofNode(this, newProvable, subgoal)) ++
         Range(provable.subgoals.length, newProvable.subgoals.length).
@@ -167,13 +168,19 @@ import scala.collection.immutable.{List, Map}
       "\nfrom " + parent + ")"
 
     /**
-     * @return true iff the node is closed.
-     * @TODO This is the fast version of isClosed.
-     *      The sound version needs to find an alternative
-     *      that it can successively merge via Provability.apply(Provable, Int) to yield an isProved()
+     * @return true iff the node is marked as closed.
+     * The sound way of checking whether a proof finished successfully is asking isProved()
+     * @see #isProved()
      */
     def isClosed(): Boolean =
       children.map((f: ProofNode.ProofStep) =>  f.subgoals.foldLeft(true)(_ && _.isClosed())).contains(true)
+
+    /**
+     * Test whether this ProofNode can be proved by merging Provable's of one of its alternatives.
+     * @TODO The sound version needs to find an alternative
+     *      that it can successively merge via Provability.apply(Provable, Int) to yield an isProved()
+     */
+    def isProved(): Boolean = ???
 
     /**
      * Retrieves a list of open goals.
