@@ -32,9 +32,11 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
+    Tactics.Z3Scheduler = new Interpreter(new Z3)
   }
 
   override def afterEach() = {
+    Tactics.Z3Scheduler = null
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler = null
@@ -73,11 +75,18 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  it should "be provable automatically" in {
+  it should "be provable automatically with Mathematica" in {
     val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
+    helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
 }

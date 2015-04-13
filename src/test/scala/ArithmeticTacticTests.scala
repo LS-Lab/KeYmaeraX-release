@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Config, BranchLabels, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._

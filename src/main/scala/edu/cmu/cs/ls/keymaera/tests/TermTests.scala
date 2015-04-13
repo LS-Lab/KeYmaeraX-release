@@ -2,7 +2,8 @@ package edu.cmu.cs.ls.keymaera.tests
 
 // favoring immutable Seqs
 
-import edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep
+import edu.cmu.cs.ls.keymaera.tactics._
+import ProofNode.ProofStep
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
@@ -22,14 +23,6 @@ import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticWrapper, TacticLibrary, T
 
 object TermTests {
 
-  def getTautology: Formula = {
-    val p = new PredicateConstant("p")
-    val q = new PredicateConstant("q")
-    //val q = new FormulaName("q")
-    val i = Imply(p, q)
-    Imply(q, i)
-  }
-
   def getTautology2: Formula = {
     val x = Variable("x", None, Real)
     val a = Assign(x, Number(0))
@@ -43,28 +36,12 @@ object TermTests {
     val a = Assign(x, Number(0))
     val b = Assign(x, Number(1))
     val p = GreaterThan(Real, x, Number(0))
-    val substPairs = Seq(new SubstitutionPair(PredicateConstant("p"), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
+    val substPairs = Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
     val subst = USubst(substPairs)
     Axiom.axioms.get("[++] choice") match {
       case Some(f) => (subst, Map((getTautology2, f)))
       case _ => throw new IllegalArgumentException("blub")
     }
-  }
-
-
-  def test = {
-      val i2 = getTautology
-      val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-      val pos = SuccPosition(0)
-      val pos2 = AntePosition(0)
-      val c = r(ImplyRight(pos)).subgoals
-      for(n <- c) {
-        val c2 = n(ImplyRight(pos)).subgoals
-        for(n2 <- c2) {
-          val end = n2(AxiomClose(pos2, pos))
-          println(end)
-        }
-      }
   }
 
 /*  def test2 = {
@@ -195,7 +172,7 @@ object TermTests {
     val master = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true))
       | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true))
       | locateAnte(eqLeft(false)) )*) ~ quantifierEliminationT("Mathematica")
-    val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(PredicateConstant("inv")))) & master
+    val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(ApplyPredicate(Function("inv", None, Unit, Bool), Nothing)))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -217,7 +194,7 @@ object TermTests {
     val invString = "v^2<=2*b*(m-z)"
     val invInput = "Functions. R b. End.\n ProgramVariables. R v. R m. R z. End.\n Problem.\n " + invString + "End.\n"
     val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
-    val tactic = master(new Generate(inv), true)
+    val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -255,7 +232,7 @@ object TermTests {
     val invString = "v^2 - d^2 <= 2*b*(m-z) & d >= 0"
     val invInput = "Functions. R b. End.\n ProgramVariables. R v. R m. R z. R d. End.\n Problem.\n " + invString + "End.\n"
     val inv: Formula = parse.runParser(invInput).asInstanceOf[Formula]
-    val tactic = master(new Generate(inv), true)
+    val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -275,7 +252,7 @@ object TermTests {
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
     val inv = GreaterThan(Real, Variable("x", None, Real), Number(0))
-    val tactic = master(new Generate(inv), true)
+    val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -294,7 +271,7 @@ object TermTests {
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val tactic = master(new Generate(True), true)
+    val tactic = master(new Generate(True), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -341,7 +318,6 @@ object TermTests {
         jsonResult += (e match {
           case True() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"true\"}"
           case False() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"false\"}"
-          case x@PredicateConstant(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\": " + printNamedSymbol(x.asInstanceOf[PredicateConstant]) + "}"
           case ApplyPredicate(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
           case Equals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equals\"" + ", \"children\": [ "
           case NotEquals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"notEquals\"" + ", \"children\": [ "
@@ -375,7 +351,7 @@ object TermTests {
           case Subtract(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"subtract\"" + ", \"children\": [ "
           case Multiply(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
           case Divide(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
-          case Exp(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
+          case Power(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
           case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
         })
         Left(None)
@@ -424,7 +400,7 @@ object TermTests {
           case Subtract(_, a, b) => "]}"
           case Multiply(_, a, b) => "]}"
           case Divide(_, a, b) => "]}"
-          case Exp(_, a, b) => "]}"
+          case Power(_, a, b) => "]}"
           case _ =>""
         })
         Left(None)

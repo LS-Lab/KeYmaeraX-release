@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{PosInExpr, RootNode, Mathematica, KeYmaera}
-import edu.cmu.cs.ls.keymaera.tactics.{AxiomaticRuleTactics, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaera.core.{PosInExpr, Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaera.tactics.{RootNode, AxiomaticRuleTactics, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._

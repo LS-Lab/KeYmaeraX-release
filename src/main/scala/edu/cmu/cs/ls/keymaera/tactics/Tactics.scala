@@ -96,6 +96,7 @@ object Tactics {
   // TODO replace with dependency injection
   var KeYmaeraScheduler = new Interpreter(KeYmaera)//new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
   var MathematicaScheduler = new Interpreter(new Mathematica)
+  var Z3Scheduler = new Interpreter(new Z3)
     //new Scheduler(for (i <- 0 until Config.mathlicenses) yield new Mathematica)
 
   class Stats(var executionTime : Int, var branches : Int, var rules : Int) {
@@ -806,7 +807,7 @@ object Tactics {
   }
 
   object ProofStepView {
-    def apply(n: edu.cmu.cs.ls.keymaera.core.ProofNode.ProofStep): ProofStepView = new ProofStepView(n)
+    def apply(n: ProofNode.ProofStep): ProofStepView = new ProofStepView(n)
   }
   sealed class ProofStepView(private val s: ProofNode.ProofStep) {
     // TODO check when this is allowed to be readable

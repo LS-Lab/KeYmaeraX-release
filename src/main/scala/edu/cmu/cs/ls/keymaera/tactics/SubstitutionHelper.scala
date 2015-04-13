@@ -43,8 +43,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case Multiply(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       case Divide(s, l, r) if t != what => Divide(s, usubst(o, u, l), usubst(o, u, r))
       case Divide(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Exp(s, l, r) if t != what => Exp(s, usubst(o, u, l), usubst(o, u, r))
-      case Exp(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Power(s, l, r) if t != what => Power(s, usubst(o, u, l), usubst(o, u, r))
+      case Power(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       case Pair(dom, l, r) if t != what => Pair(dom, usubst(o, u, l), usubst(o, u, r))
       case Pair(dom, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
       // base cases
@@ -120,8 +120,6 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case ODESystem(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
     case AtomicODE(d@Derivative(_, x: Variable), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: EmptyODE => p
-    case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
-    case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
     case _: DifferentialProgramConstant => p
   }
 }

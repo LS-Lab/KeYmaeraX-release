@@ -90,7 +90,7 @@ object StaticSemantics {
     case Subtract(s, l, r) => freeVars(l) ++ freeVars(r)
     case Multiply(s, l, r) => freeVars(l) ++ freeVars(r)
     case Divide(s, l, r) => freeVars(l) ++ freeVars(r)
-    case Exp(s, l, r) => freeVars(l) ++ freeVars(r)
+    case Power(s, l, r) => freeVars(l) ++ freeVars(r)
     case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
     //case Derivative(s, x:NamedSymbol) => SetLattice(DifferentialSymbol(x)) //@TODO This case is weird
@@ -180,8 +180,6 @@ object StaticSemantics {
     case ODESystem(v, a, h) => val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
     case ODEProduct(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
-    case IncompleteSystem(a) => progVars(a) //@todo eisegesis
-    case CheckedContEvolveFragment(a) => progVars(a) //@todo eisegesis
     case _: EmptyODE => VCP(fv = SetLattice.bottom, bv = SetLattice.bottom, mbv = SetLattice.bottom)
   }} ensuring(r => { val VCP(_, bv, mbv) = r; mbv.subsetOf(bv) }, s"Result MBV($p) must be a subset of BV($p)")
 
@@ -213,7 +211,7 @@ object StaticSemantics {
     case Subtract(s, l, r) => signature(l) ++ signature(r)
     case Multiply(s, l, r) => signature(l) ++ signature(r)
     case Divide(s, l, r) => signature(l) ++ signature(r)
-    case Exp(s, l, r) => signature(l) ++ signature(r)
+    case Power(s, l, r) => signature(l) ++ signature(r)
     case Pair(dom, l, r) => signature(l) ++ signature(r)
     case Derivative(s, e) => signature(e)
     // special
@@ -272,8 +270,6 @@ object StaticSemantics {
     case AtomicODE(Derivative(_, x: Variable), e) => signature(e)
     case ODESystem(vars, a, h) => signature(a) ++ signature(h)
     case ODEProduct(a, b) => signature(a) ++ signature(b)
-    case IncompleteSystem(a) => signature(a)
-    case CheckedContEvolveFragment(a) => signature(a)
     case _: EmptyODE => Set()
     // homomorphic cases
     case Choice(a, b) => signature(a) ++ signature(b)

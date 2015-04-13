@@ -557,12 +557,12 @@ object SyntacticDerivationInContext {
    * End.
    */
   def DivideDerivativeT = BinaryDerivativeT("/' derive quotient", Divide.unapply, deriveDivision)
-  def deriveDivision(s: Sort, lhs: Term, rhs: Term): Term = Divide(s, Subtract(s, Multiply(s, Derivative(s, lhs), rhs), Multiply(s, lhs, Derivative(s, rhs))), Exp(s, rhs, Number(2)))
+  def deriveDivision(s: Sort, lhs: Term, rhs: Term): Term = Divide(s, Subtract(s, Multiply(s, Derivative(s, lhs), rhs), Multiply(s, lhs, Derivative(s, rhs))), Power(s, rhs, Number(2)))
 
-  def PowerDerivativeT = BinaryDerivativeT("^' derive power", Exp.unapply, deriveExponential)
+  def PowerDerivativeT = BinaryDerivativeT("^' derive power", Power.unapply, deriveExponential)
   def deriveExponential(s: Sort, lhs: Term, rhs: Term): Term = {
     assert(rhs != Number(0), "not power 0")
-    Multiply(Real, Multiply(Real, rhs, Exp(Real, lhs, Subtract(Real, rhs, Number(1)))), Derivative(Real, lhs))
+    Multiply(Real, Multiply(Real, rhs, Power(Real, lhs, Subtract(Real, rhs, Number(1)))), Derivative(Real, lhs))
   }
 
   class BinaryUnapplyer[T: Manifest](m: T => Option[(Sort, Term, Term)]) {
@@ -962,7 +962,7 @@ object SyntacticDerivationInContext {
   def MonomialAndConstantDerivationT = new PositionTactic("Derive monomial and constant") {
     override def applies(s: Sequent, p: Position): Boolean = !formulaContainsModality(s(p)).isDefined && {getTermAtPosition(s,p) match {
       case Some(Derivative(_, Number(_))) => true
-      case Some(Derivative(_, exp:Exp)) => true
+      case Some(Derivative(_, exp:Power)) => true
       case _ => false
     }}
 
@@ -973,7 +973,7 @@ object SyntacticDerivationInContext {
     override def applies(s: Sequent, p: Position): Boolean = {
       formulaContainsModality(s(p)).isDefined && {getTermAtPosition(s,p) match {
         case Some(Derivative(_, Number(_))) => true
-        case Some(Derivative(_, exp:Exp)) => true
+        case Some(Derivative(_, exp:Power)) => true
         case _ => false
       }}
     }
@@ -1031,7 +1031,7 @@ object SyntacticDerivationInContext {
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
           case Derivative(_, _: Variable) => Left(None)
-          case Derivative(_, _: Exp) => Left(None)
+          case Derivative(_, _: Power) => Left(None)
           case Derivative(_, _) => containsTd = true; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }

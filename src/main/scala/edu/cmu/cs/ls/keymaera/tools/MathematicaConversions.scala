@@ -50,7 +50,7 @@ private object NameConversion {
     //   name (for external functions)
     //   KeYmaera + name
     val identifier : String = ns match {
-      case n: Function if n.external => n.name
+//      case n: Function if n.external => n.name
       case _ => PREFIX + maskIdentifier(ns.name)
     }
 
@@ -268,7 +268,7 @@ object MathematicaToKeYmaera {
   def convertExponentiation(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Exp(Real,l,r))
+    asTerms.reduce((l,r) => Power(Real,l,r))
   }
   
   def convertAnd(e : MExpr) = {
@@ -479,7 +479,7 @@ object KeYmaeraToMathematica {
       case Subtract(s, l, r) => convertSubtract(l, r)
       case Multiply(s, l, r) => convertMultiply(l, r)
       case Divide(s, l, r) => convertDivide(l, r)
-      case Exp(s, l, r) => convertExp(l, r)
+      case Power(s, l, r) => convertExp(l, r)
       case Derivative(s, c) => convertDerivative(c)
       case False() => MathematicaSymbols.FALSE
       case True() => MathematicaSymbols.TRUE
@@ -516,7 +516,6 @@ object KeYmaeraToMathematica {
     // case t : Globally => ???
     case False() => MathematicaSymbols.FALSE
     case True() => MathematicaSymbols.TRUE
-    case PredicateConstant(name,index) => new MExpr(name)
     case Not(f) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(f)))
     case Exists(vs, f) => convertExists(vs,f)
     case Forall(vs, f) => convertForall(vs,f)

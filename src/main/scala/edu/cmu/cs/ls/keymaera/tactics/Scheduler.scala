@@ -42,7 +42,7 @@
 
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.{Failed, Tool, ProofNode}
+import edu.cmu.cs.ls.keymaera.core.Tool
 import Config._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import java.util.NoSuchElementException

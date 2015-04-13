@@ -255,7 +255,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Subtract(s, l, r) => Subtract(s, usubst(l), usubst(r))
         case Multiply(s, l, r) => Multiply(s, usubst(l), usubst(r))
         case Divide(s, l, r) => Divide(s, usubst(l), usubst(r))
-        case Exp(s, l, r) => Exp(s, usubst(l), usubst(r))
+        case Power(s, l, r) => Power(s, usubst(l), usubst(r))
         case der@Derivative(Real, e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
             "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")
@@ -387,8 +387,6 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       s"Substitution clash: ${this} not {$primed}-admissible for {$t.prettyString()} when substituting in ${ode.prettyString()}")
       AtomicODE(dv, usubst(t))
     case ODEProduct(a, b) => ODEProduct(usubstODE(a, primed), usubstODE(b, primed))
-    case IncompleteSystem(s) => IncompleteSystem(usubstODE(s, primed))
-    case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubstODE(s, primed))
     case c: DifferentialProgramConstant if  subsDefs.exists(_.what == c) =>
       val repl = subsDefs.find(_.what == c).get.repl
       repl match {

@@ -213,7 +213,6 @@ object ExpressionTraversal {
         // Formulas
         case True => matchZero(p, f, e)
         case False => matchZero(p, f, e)
-        case PredicateConstant(_, _) => matchZero(p, f, e)
         case ApplyPredicate(a, b) => matchOne(p, ApplyPredicate.apply(a, _: Term), f, b)
         case Equals(d, a, b) => matchTwo(p, Equals.apply(d, _: Term, _: Term), f, a, b)
         case NotEquals(d, a, b) => matchTwo(p, NotEquals.apply(d, _: Term, _: Term), f, a, b)
@@ -243,7 +242,7 @@ object ExpressionTraversal {
         case Subtract(d, a, b) => matchTwo(p, Subtract.apply(d, _: Term, _: Term), f, a, b)
         case Multiply(d, a, b) => matchTwo(p, Multiply.apply(d, _: Term, _: Term), f, a, b)
         case Divide(d, a, b) => matchTwo(p, Divide.apply(d, _: Term, _: Term), f, a, b)
-        case Exp(d, a, b) => matchTwo(p, Exp.apply(d, _: Term, _: Term), f, a, b)
+        case Power(d, a, b) => matchTwo(p, Power.apply(d, _: Term, _: Term), f, a, b)
         case IfThenElseTerm(a, b, c) => matchThree(p, IfThenElseTerm.apply, f, a, b, c)
         case Pair(d, a, b) => matchTwo(p, Pair.apply(d, _: Term, _: Term), f, a, b)
 
@@ -260,7 +259,6 @@ object ExpressionTraversal {
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
         case Test(a) => matchOne(p, Test.apply, f, a)
-        case ContEvolve(a) => matchOne(p, ContEvolve.apply, f, a)
         case IfThen(a, b) => matchTwo(p, IfThen.apply, f, a, b)
         case IfThenElse(a, b, c) => matchThree(p, IfThenElse.apply, f, a, b, c)
         case Sequence(a, b) => matchTwo(p, Sequence.apply, f, a, b)
@@ -270,8 +268,6 @@ object ExpressionTraversal {
         case AtomicODE(x, t) => matchTwo(p, AtomicODE.apply, f, x, t)
         case ODEProduct(a, b) => matchTwo(p, ODEProduct.apply, f, a, b)
         case ODESystem(v, a, h) => matchTwo(p, ODESystem(v, _: DifferentialProgram, _: Formula), f, a, h)
-        case IncompleteSystem(s) => matchOne(p, IncompleteSystem.apply, f, s) //@todo eisegesis
-        case CheckedContEvolveFragment(fragment) => matchOne(p, CheckedContEvolveFragment.apply, f, fragment) //@todo eisegesis
         case _: EmptyODE => matchZero(p, f, e)
 
         case _ => failFTPG(e)

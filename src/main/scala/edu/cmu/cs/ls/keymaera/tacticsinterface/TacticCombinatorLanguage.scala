@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tacticsinterface
 
-import edu.cmu.cs.ls.keymaera.core.{Formula, ProofNode, Position}
-import edu.cmu.cs.ls.keymaera.tactics.{Tactics, TacticLibrary, SearchTacticsImpl}
+import edu.cmu.cs.ls.keymaera.core.{Formula, Position}
+import edu.cmu.cs.ls.keymaera.tactics.{ProofNode, Tactics, TacticLibrary, SearchTacticsImpl}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{LabelBranch, Tactic, PositionTactic}
 
 /**

@@ -32,6 +32,13 @@ class SubstitutionClashException(msg: String, s: String/*Substitution*/, info: S
   def inContext(context: String) = new SubstitutionClashException(msg, s, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
 
+class BoundRenamingClashException(msg: String, s: String/*AlphaConversion*/, info: String = "") extends CoreException(msg + "\nAlphaConversion " + s + " (details: " + info + ")") {
+  /**
+   * Add the context information to this exception, returning the resulting exception to be thrown.
+   */
+  def inContext(context: String) = new BoundRenamingClashException(msg, s, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
+}
+
 class SkolemClashException(msg: String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 
 class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
@@ -39,5 +46,3 @@ class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends C
 }
 
 class UnknownOperatorException(msg: String, e:Expr) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
-  
-class TacticException(msg: String, node: ProofNode) extends ProverException(msg + "\nat " + node.sequent) {}

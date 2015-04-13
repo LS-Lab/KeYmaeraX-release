@@ -5,7 +5,7 @@ import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement.TaskStatus
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
-import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.core.Sequent
 import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLParser, CLInterpreter}
 

@@ -173,7 +173,8 @@ object TacticLibrary {
    * Default tactics without any invariant generation.
    */
   def master = BuiltinHigherTactics.master _
-  def default = BuiltinHigherTactics.master(new NoneGenerate(), exhaustive = true)
+  def default = BuiltinHigherTactics.master(new NoneGenerate(), exhaustive = true, "Mathematica")
+  def default(toolId : String) = BuiltinHigherTactics.master(new NoneGenerate(), exhaustive = true, toolId)
   def defaultNoArith = BuiltinHigherTactics.noArith(new NoneGenerate(), exhaustive = true)
 
   /**
@@ -200,8 +201,20 @@ object TacticLibrary {
    * Tactic for arithmetic.
    * @return The tactic.
    */
+
+  /**
+   * Default arithmeticT
+   * Use Mathematica
+   */
   def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
     ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+
+  /**
+   * Alternative arithmeticT
+   * @param toolId quantifier elimination tool, could be: Mathematica, Z3, ...
+   */
+  def arithmeticT(toolId : String) = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) & 
+    ArithmeticTacticsImpl.quantifierEliminationT(toolId)
 
   private def eqThenHideIfChanged: PositionTactic = new PositionTactic("Eq and Hide if Changed") {
     override def applies(s: Sequent, p: Position): Boolean = eqLeft(exhaustive = true).applies(s, p)
@@ -376,7 +389,7 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(from, fromIdx, to, toIdx, Some(p))) {
+        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx, Some(p))) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         } & hideT(p.topLevel))
       }
@@ -389,7 +402,7 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = true
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(from, fromIdx, to, toIdx, None)) {
+        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx, None)) {
           override def applicable(node: ProofNode): Boolean = true
         } & initialValueTactic(node.sequent.ante, AntePosition.apply)
           & initialValueTactic(node.sequent.succ, SuccPosition.apply))

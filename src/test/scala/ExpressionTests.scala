@@ -7,53 +7,6 @@ import testHelper.StringConverter._
  * @author Stefan Mitsch
  */
 class ExpressionTests extends FlatSpec with Matchers {
-  "IncompleteSystem(c)" should "be equal to IncompleteSystem(c)" in {
-    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
-    IncompleteSystem(c) should be (IncompleteSystem(c))
-  }
-
-  it should "not be equal to empty IncompleteSystem" in {
-    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
-    IncompleteSystem(c) should not be IncompleteSystem()
-  }
-
-  it should "not be equal to empty IncompleteSystem(d)" in {
-    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
-    val d = AtomicODE(Derivative(Real, Variable("y", None, Real)), Number(1))
-    IncompleteSystem(c) should not be IncompleteSystem(d)
-  }
-
-  it should "match IncompleteSystem(c) " in {
-    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
-    IncompleteSystem(c) match {
-      case IncompleteSystem(cc) => cc should be (c)
-      case _ => fail()
-    }
-  }
-
-  "Empty IncompleteSystem" should "be equal to other empty IncompleteSystem" in {
-    IncompleteSystem() should be (IncompleteSystem())
-  }
-
-  it should "not be equal to IncompleteSystem(c)" in {
-    val c = AtomicODE(Derivative(Real, Variable("x", None, Real)), Number(1))
-    IncompleteSystem() should not be IncompleteSystem(c)
-  }
-
-  it should "match IncompleteSystem(EmptyODE) " in {
-    IncompleteSystem() match {
-      case IncompleteSystem(c) => c should be (EmptyODE())
-      case _ => fail()
-    }
-  }
-
-  it should "not match IncompleteSystem(c)" in {
-    IncompleteSystem() match {
-      case IncompleteSystem(_: EmptyODE) => /* expected */
-      case _ => fail()
-    }
-  }
-
   "Equality of EmptyODE" should "consider a product of empty programs an empty program" in {
     EmptyODE() should be (ODEProduct(EmptyODE(), EmptyODE()))
   }

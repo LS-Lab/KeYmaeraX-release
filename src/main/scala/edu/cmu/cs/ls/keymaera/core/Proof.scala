@@ -39,6 +39,9 @@ import scala.collection.GenTraversableOnce
 final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
                          val ante: scala.collection.immutable.IndexedSeq[Formula],
                          val succ: scala.collection.immutable.IndexedSeq[Formula]) {
+  applicable
+  @elidable(ASSERTION) def applicable = require(pref.isEmpty, "only empty sequent prefix supported so far " + pref)
+
   // Could use scala.collection.immutable.Seq instead of IndexedSeq, since equivalent except for performance. But many KeYmaera parts construct Sequents, so safer for performance.
   override def equals(e: Any): Boolean = e match {
     case Sequent(p, a, s) => pref == p && ante == a && succ == s
@@ -54,7 +57,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def apply(p: Position): Formula = {
     //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
-    if (p.inExpr != HereP) print("INFO: Should only retrieve top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
     if(p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
       ante(p.getIndex)
@@ -90,6 +93,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: Position, f: Formula) : Sequent = {
 //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.updated(p.getIndex, f), succ)
     else
@@ -106,14 +110,15 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: Position, s: Sequent) : Sequent = {
 //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     if (p.isAnte)
         Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     else
         Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
     } ensuring(r=> if (p.isAnte)
-         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).equivalent(this.glue(s))
+         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).sameSequentAs(this.glue(s))
      else
-         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).equivalent(this.glue(s)),
+         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
          "result after re-including updated formula is equivalent to " + this + " glue " + s
      )
   
@@ -125,10 +130,10 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   /**
    * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
    */
-  def equivalent(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
+  def sameSequentAs(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
-  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "),\n " +
-    ante.map(_.prettyString()).mkString(",\n ") + "\n\n==>\n\n " + succ.map(_.prettyString()).mkString(",\n ") + "}]"
+  override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
+    ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
 }
 
 
@@ -137,14 +142,15 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
  * A proof rule is ultimately a named mapping from sequents to lists of sequents.
  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
  * to prove the current sequent (desired conclusion).
+ * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
-  sealed abstract class Rule(val name: String) extends (Sequent => scala.collection.immutable.List[Sequent]) {
-    //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+sealed abstract class Rule(val name: String) extends (Sequent => scala.collection.immutable.List[Sequent]) {
+  //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
-    override def toString: String = name
-  }
+  override def toString: String = name
+}
   
-  sealed trait ClosingRule {}
+sealed trait ClosingRule {}
 
 object Provable {
   /**
@@ -196,12 +202,12 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
   final def apply(rule : Rule, subgoal : Int) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
-      case Nil => new Provable(conclusion, subgoals.drop(subgoal))
+      case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
   } ensuring(r => r.conclusion == conclusion, "Same conclusion after applying proof rules") ensuring (
-    r => subgoals.drop(subgoal).toSet.subsetOf(r.subgoals.toSet),
-    "All previous premises still around except the one that the proof rule has been applied to") ensuring (
+    r => subgoals.patch(subgoal, Nil, 1).toSet.subsetOf(r.subgoals.toSet),
+    "All previous premises still around except the one that the proof rule " + rule + " has been applied to subgoal " + subgoals(subgoal) + " in " + this) ensuring (
     r => rule(subgoals(subgoal)).toSet.subsetOf(r.subgoals.toSet), "All premises generated by rule application are new subgoals")
 
   /**
@@ -254,6 +260,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  *********************************************************************************
  */
 
+@deprecated("Remove from prover core. But needed in AlphaConversion?")
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -337,8 +344,6 @@ object SuccPosition {
   def apply(index: Int, inExpr: PosInExpr = HereP): Position = new SuccPosition(index, inExpr)
 }
 
-//abstract class Signature
-
 /*********************************************************************************
  * Proof Rules
  *********************************************************************************
@@ -404,8 +409,7 @@ class CoHide(p: Position) extends PositionRule("CoHide", p) {
 object ExchangeLeft {
   def apply(p1: Position, p2: Position): Rule = new ExchangeLeftRule(p1, p2)
 
-  //@TODO Why is this not a TwoPositionRule?
-  private class ExchangeLeftRule(p1: Position, p2: Position) extends Rule("ExchangeLeft") {
+  private class ExchangeLeftRule(p1: Position, p2: Position) extends TwoPositionRule("ExchangeLeft", p1, p2) {
     require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the antecedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
@@ -418,8 +422,7 @@ object ExchangeLeft {
 object ExchangeRight {
   def apply(p1: Position, p2: Position): Rule = new ExchangeRightRule(p1, p2)
 
-  //@TODO Why is this not a TwoPositionRule?
-  private class ExchangeRightRule(p1: Position, p2: Position) extends Rule("ExchangeRight") {
+  private class ExchangeRightRule(p1: Position, p2: Position) extends TwoPositionRule("ExchangeRight", p1, p2) {
     require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
@@ -460,23 +463,22 @@ object ContractionLeft {
  */
 
 // Ax Axiom close / Identity rule
-//@TODO Rename to Close or CloseId to avoid confusion with Axiom lookup
-object AxiomClose extends ((Position, Position) => Rule) {
-  def apply(ass: Position, p: Position): Rule = new AxiomClose(ass, p)
+object Close extends ((Position, Position) => Rule) {
+  def apply(ass: Position, p: Position): Rule = new Close(ass, p)
 }
 
 
-class AxiomClose(ass: Position, p: Position) extends AssumptionRule("Axiom", ass, p) with ClosingRule {
-  require(p.isAnte != ass.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
-  require(p.inExpr == HereP && ass.inExpr == HereP, "Axiom close can only be applied to top level formulas")
+class Close(assume: Position, p: Position) extends AssumptionRule("Axiom", assume, p) with ClosingRule {
+  require(p.isAnte != assume.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
+  require(p.inExpr == HereP && assume.inExpr == HereP, "Axiom close can only be applied to top level formulas")
 
   def apply(s: Sequent): List[Sequent] = {
-    require(p.isAnte != ass.isAnte, "axiom close applies to different sides of sequent")
-    if(p.isAnte != ass.isAnte && s(ass) == s(p)) {
+    require(p.isAnte != assume.isAnte, "axiom close applies to different sides of sequent")
+    if(p.isAnte != assume.isAnte && s(assume) == s(p)) {
         // close goal
         Nil
     } else {
-        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(ass) + " not the same as " + s(p), this, s)
+        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(p), this, s)
     }
   } ensuring (_.isEmpty, "closed if applicable")
 }
@@ -678,6 +680,7 @@ class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
  * @param substitution the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
+ * @author aplatzer
  */
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
@@ -698,7 +701,7 @@ object UniformSubstitutionRule {
         if (subst(origin) == conclusion) {
           List(origin)
         } else {
-          throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+          throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
         }
       } catch {
         case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " to conclusion\n" + conclusion)
@@ -709,61 +712,21 @@ object UniformSubstitutionRule {
 
 
 
-// /**
-//  * Fast Uniform Substitution Rule.
-//  * Applies a given uniform substitution to the given original premise (origin).
-//  * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
-//  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
-//  * @param substitution the uniform substitution to be applied to origin.
-//  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
-//  */
-// // uniform substitution
-// // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
-// object FastUniformSubstitutionRule {
-//   def apply(substitution: FastUSubst, origin: Sequent) : Rule = new FastUniformSubstitution(substitution, origin)
-//
-//   @elidable(FINEST) private def log(msg: =>String) = {} //println(msg)
-//
-//   private class FastUniformSubstitutionRule(val subst: FastUSubst, val origin: Sequent) extends Rule("Fast Uniform Substitution") {
-//     /**
-//      * check that s is indeed derived from origin via subst (note that no reordering is allowed since those operations
-//      * require explicit rule applications)
-//      * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
-//      */
-//     def apply(conclusion: Sequent): List[Sequent] = {
-//       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if(subst(origin)==conclusion) "\n==  " else "\n!=  ") + conclusion)
-//       val substAtOrigin = subst(origin) //just for debugging.
-//       if (subst(origin) == conclusion) {
-//         assert(alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-//         List(origin)
-//       } else {
-//         assert(!alternativeAppliesCheck(conclusion), "uniform substitution application mechanisms agree")
-//         throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude\n  " + conclusion + "\nbut instead\n  " + subst(origin))
-//       }
-//     }
-//
-//     private def alternativeAppliesCheck(conclusion: Sequent) : Boolean = {
-//       //val subst = new OSubstitution(this.subst.l)
-//       //val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => {val a = subst(p._1); println("-------- Uniform " + subst + "\n" + p._1.prettyString + "\nbecomes\n" + a.prettyString + (if (a==p._2) "\nis equal to expected conclusion\n" else "\nshould have been equal to expected conclusion\n") + p._2.prettyString); a == p._2})
-//       val singleSideMatch = ((acc: Boolean, p: (Formula, Formula)) => { subst(p._1) == p._2})
-//       (conclusion.pref == origin.pref // universal prefix is identical
-//         && origin.ante.length == conclusion.ante.length && origin.succ.length == conclusion.succ.length  // same length makes sure zip is exhaustive
-//         && (origin.ante.zip(conclusion.ante)).foldLeft(true)(singleSideMatch)  // formulas in ante results from substitution
-//         && (origin.succ.zip(conclusion.succ)).foldLeft(true)(singleSideMatch)) // formulas in succ results from substitution
-//     }
-//   }
-// }
-
 /**
- * Performs alpha conversion from a symbol name_idx to a symbol target_tIdx.
- * @param name The name to replace.
- * @param idx The index to replace.
- * @param target The target name.
- * @param tIdx The target index.
- * @param pos The position where to perform alpha conversion. If Some(p), p must point to a position that binds
+ * Performs alpha conversion renaming all occurrences of symbol name_idx
+ * to a symbol target_tIdx.
+ * @param what What name to replace.
+ * @param wIdx What index of the name to replace.
+ * @param repl The target name to replace what with.
+ * @param rIdx The index of the target name as replacement.
+ * @param pos The position where to perform alpha conversion.
+ *            If Some(p), p must point to a position that binds
  *            name_idx (either a quantifier or a box/diamond modality).
+ *            If None, then prepend a modality [target_tIdx:=name_idx].
+ * @requires target name with target index tIdx is fresh in the sequent.
+ * @author smitsch
  */
-class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Option[Int], pos: Option[Position])
+class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int], pos: Option[Position])
   extends Rule("Alpha Conversion") {
 
   @unspecialized
@@ -771,29 +734,72 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 
   def apply(s: Sequent): List[Sequent] = pos match {
     case Some(p) =>
-      val formula = renameAt(s(p), p.inExpr)
+      //@TODO Should be able to get rid of this case by using CE.
+      // BoundRenamingClashException will be checked within renameAt
+      //@TODO Should return List(s.updated(p.topLevel, renameAt(s(p.topLevel), p.inExpr)) in place
+      val formula = renameAt(s(p.topLevel), p.inExpr)
       if (p.isAnte) List(Sequent(s.pref, s.ante :+ formula, s.succ))
       else List(Sequent(s.pref, s.ante, s.succ :+ formula))
     case None =>
-      val ante = for (f <- s.ante) yield BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f))
-      val succ = for (f <- s.succ) yield BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), apply(f))
-      List(Sequent(s.pref, ante, succ))
+      List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
   }
 
   def apply(f: Formula): Formula = {
-    require(!allNames(f).exists(v => v.name == target && v.index == tIdx), s"Name ${target}_$tIdx not fresh in $f")
+    // allow self renaming to get stuttering
+    if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
+      throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     rename(f)
   }
 
-  def rename(f: Formula): Formula = f match {
-    case Not(g) => Not(rename(g))
-    case And(l, r) => And(rename(l), rename(r))
-    case Or(l, r) => Or(rename(l), rename(r))
-    case Imply(l, r) => Imply(rename(l), rename(r))
-    case Equiv(l, r) => Equiv(rename(l), rename(r))
+  /**
+   * Introduce a ghost for the target variable to remember the value of the previous variable.
+   */
+  private def ghostify(f: Formula) = BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
 
-    case FormulaDerivative(g) => FormulaDerivative(rename(g))
+  /**
+   * Introduce a ghost for the target variable to remember the value of the previous variable.
+   */
+  private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
 
+  /**
+   * Performing alpha conversion renaming in a term
+   */
+  private def rename(t: Term): Term = t match {
+    // base cases
+    case x: Variable => renameVar(x)
+    case CDot => CDot
+    case Nothing => Nothing
+    case Anything => Anything
+    case x@Number(_, _) => x
+    case Apply(f, theta) => Apply(f, rename(theta))
+    // homomorphic cases
+    case Neg(s, l) => Neg(s, rename(l))
+    case Add(s, l, r) => Add(s, rename(l), rename(r))
+    case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
+    case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
+    case Divide(s, l, r) => Divide(s, rename(l), rename(r))
+    case Power(s, l, r) => Power(s, rename(l), rename(r))
+    case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
+
+    case Derivative(s, e) => Derivative(s, rename(e))
+  }
+
+  private def renameVar(e: Variable): Variable =
+    //@TODO Comparison without sort is intended?
+    if (e.name == what && e.index == wIdx) Variable(repl, rIdx, e.sort)
+    else e
+
+  private def rename(e: NamedSymbol): NamedSymbol = e match {
+    case v: Variable => renameVar(v)
+    case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
+    case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
+  }
+
+  /**
+   * Performing alpha conversion renaming in a formula
+   */
+  private def rename(f: Formula): Formula = f match {
+    // homomorphic base cases
     case Equals(d, l, r) => Equals(d, rename(l), rename(r))
     case NotEquals(d, l, r) => NotEquals(d, rename(l), rename(r))
     case GreaterEqual(d, l, r) => GreaterEqual(d, rename(l), rename(r))
@@ -803,77 +809,116 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
 
     case ApplyPredicate(fn, theta) => ApplyPredicate(fn, rename(theta))
 
-    case Forall(vars, phi) => renameQuantifier(vars, phi, Forall.apply)
-    case Exists(vars, phi) => renameQuantifier(vars, phi, Exists.apply)
+    // homomorphic cases
+    case Not(g) => Not(rename(g))
+    case And(l, r) => And(rename(l), rename(r))
+    case Or(l, r) => Or(rename(l), rename(r))
+    case Imply(l, r) => Imply(rename(l), rename(r))
+    case Equiv(l, r) => Equiv(rename(l), rename(r))
+
+    case Forall(vars, phi) => Forall(vars.map(rename), rename(phi))
+    case Exists(vars, phi) => Exists(vars.map(rename), rename(phi))
 
     case BoxModality(p, phi) => BoxModality(rename(p), rename(phi))
     case DiamondModality(p, phi) => DiamondModality(rename(p), rename(phi))
 
+    case FormulaDerivative(g) => FormulaDerivative(rename(g))
+
     case True | False => f
   }
 
-  def rename(t: Term): Term = t match {
-    case Neg(s, l) => Neg(s, rename(l))
-    case Add(s, l, r) => Add(s, rename(l), rename(r))
-    case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
-    case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
-    case Divide(s, l, r) => Divide(s, rename(l), rename(r))
-    case Exp(s, l, r) => Exp(s, rename(l), rename(r))
-    case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
-    case Derivative(s, e) => Derivative(s, rename(e))
-    case Apply(f, theta) => Apply(f, rename(theta))
-    case x: Variable => renameVar(x)
-    case CDot => CDot
-    case Nothing => Nothing
-    case Anything => Anything
-    case x@Number(_, _) => x
-  }
+//  private def renameQuantifier[T <: Quantifier](vars: Seq[NamedSymbol], phi: Formula,
+//                                                factory: (Seq[NamedSymbol], Formula) => T) = {
+//    // assumes that variables in a quantifier block are unique
+//    vars.find(v => v.name == name && v.index == idx) match {
+//      case Some(oldVar) => factory(vars.map(rename), rename(phi))
+//        //@TODO Can't we always use the upper case? So get rid of the private def altogether.
+//      case None => factory(vars, rename(phi))
+//    }
+//  }
 
-  def rename(p: Program): Program = p match {
+
+  /**
+   * Performing alpha conversion renaming in a program
+   */
+  private def rename(p: Program): Program = p match {
     case Assign(v: Variable, t) => Assign(renameVar(v), rename(t))
     case Assign(Derivative(s, v: Variable), t) => Assign(Derivative(s, renameVar(v)), rename(t))
     case NDetAssign(v: Variable) => NDetAssign(renameVar(v))
     case Test(phi) => Test(rename(phi))
-    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
     case ode: DifferentialProgram => renameODE(ode)
     case Sequence(a, b) => Sequence(rename(a), rename(b))
     case Choice(a, b) => Choice(rename(a), rename(b))
     case Loop(a) => Loop(rename(a))
+    // extended cases
+    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
+    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
   }
 
   private def renameODE(p: DifferentialProgram): DifferentialProgram = p match {
-      case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == name && i == idx =>
-        AtomicODE(Derivative(dd, Variable(target, tIdx, d)), rename(t))
-      case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != name || i != idx =>
+      case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == what && i == wIdx =>
+        AtomicODE(Derivative(dd, Variable(repl, rIdx, d)), rename(t))
+      case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != what || i != wIdx =>
         AtomicODE(dv, rename(t))
       case ODEProduct(a, b) => ODEProduct(renameODE(a), renameODE(b))
       case ODESystem(d, a, h) => ODESystem(d, renameODE(a), rename(h))
       case _: EmptyODE => p
-      case IncompleteSystem(a) => IncompleteSystem(renameODE(a))
-      case CheckedContEvolveFragment(a) => CheckedContEvolveFragment(renameODE(a))
       case _: DifferentialProgramConstant => p
   }
 
-  private def renameVar(e: Variable): Variable =
-    if (e.name == name && e.index == idx) Variable(target, tIdx, e.sort)
-    else e
+  // rename at a target position
 
-  private def rename(e: NamedSymbol): NamedSymbol = e match {
-    case v: Variable => renameVar(v)
-    case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
-    case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
+  private def renameAt(f: Formula, p: PosInExpr): Formula =
+    if (p == HereP) {
+      // allow self renaming to get stuttering
+      if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
+        throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+      f match {
+        // only allow renaming at a specific position if the name to be replaced is bound there
+        // (needed for skolemization and renaming of quantified parts inside a formula)
+        case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+        case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+        // if program may bind var, then rename with stored initial value
+        case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+          ghostify(f)
+        case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+          ghostifyDiamond(f)
+        case _ => f //@TODO throw new CoreException since this is a bug if it happens?
+      }
+    } else f match {
+      // homomorphic cases
+      case Not(g) => Not(renameAt(g, p.child))
+      case And(l, r) => if (p.pos.head == 0) And(renameAt(l, p.child), r) else And(l, renameAt(r, p.child))
+      case Or(l, r) => if (p.pos.head == 0) Or(renameAt(l, p.child), r) else Or(l, renameAt(r, p.child))
+      case Imply(l, r) => if (p.pos.head == 0) Imply(renameAt(l, p.child), r) else Imply(l, renameAt(r, p.child))
+      case Equiv(l, r) => if (p.pos.head == 0) Equiv(renameAt(l, p.child), r) else Equiv(l, renameAt(r, p.child))
+      case FormulaDerivative(df) => FormulaDerivative(renameAt(df, p.child))
+
+      case Forall(vars, g) => if (p.pos.head == 0) Forall(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
+      case Exists(vars, g) => if (p.pos.head == 0) Exists(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
+
+      case BoxModality(prg, g) => if (p.pos.head == 0) BoxModality(renameAt(prg, p.child), g) else BoxModality(prg, renameAt(g, p.child))
+      case DiamondModality(prg, g) => if (p.pos.head == 0) DiamondModality(renameAt(prg, p.child), g) else DiamondModality(prg, renameAt(g, p.child))
+
+      // base cases
+      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula" + a + " but would still need to traverse to " + p)
   }
 
-  private def renameQuantifier[T <: Quantifier](vars: Seq[NamedSymbol], phi: Formula,
-                                                factory: (Seq[NamedSymbol], Formula) => T) = {
-    vars.find(v => v.name == name && v.index == idx) match {
-      case Some(oldVar) => factory(vars.map(rename), rename(phi))
-      case None => factory(vars, rename(phi))
-    }
+  private def renameAt(prg: Program, p: PosInExpr): Program =
+    if (p == HereP) throw new IllegalArgumentException("Position " + p + " is program " + prg + ", not a formula")
+    else prg match {
+      case Test(f) => if (p.pos.head == 0) Test(renameAt(f, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in test, only 0 allowed")
+      case ODESystem(vars, a, h) => if (p.pos.head == 2) ODESystem(vars, a, renameAt(h, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in ODE system, only 2 allowed")
+      case Sequence(a, b) => if (p.pos.head == 0) Sequence(renameAt(a, p.child), b) else Sequence(a, renameAt(b, p.child))
+      case Choice(a, b) => if (p.pos.head == 0) Choice(renameAt(a, p.child), b) else Choice(a, renameAt(b, p.child))
+      case Loop(a) => if (p.pos.head == 0) Loop(renameAt(a, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in loop, only 0 allowed")
+      case IfThen(cond, thenT) => if (p.pos.head == 0) IfThen(renameAt(cond, p.child), thenT) else IfThen(cond, renameAt(thenT, p.child))
+      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula " + a + " but would still need to traverse to " + p)
   }
 
   /**
-   * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice. 
+   * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice.
+   * @TODO Or let .symbols only return literally occurring symbols without tops? Unlike free variables.
    */
   private def allNames(f: Formula): Set[NamedSymbol] = f match {
     // homomorphic cases
@@ -910,7 +955,7 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case Subtract(s, l, r) => allNames(l) ++ allNames(r)
     case Multiply(s, l, r) => allNames(l) ++ allNames(r)
     case Divide(s, l, r) => allNames(l) ++ allNames(r)
-    case Exp(s, l, r) => allNames(l) ++ allNames(r)
+    case Power(s, l, r) => allNames(l) ++ allNames(r)
     case Pair(dom, l, r) => allNames(l) ++ allNames(r)
     case Derivative(s, e) => allNames(e)
     // base cases
@@ -931,8 +976,6 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case AtomicODE(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
     case ODEProduct(a, b) => allNames(a) ++ allNames(b)
     case ODESystem(vars, a, h) => allNames(a) ++ allNames(h)
-    case IncompleteSystem(a) => allNames(a)
-    case CheckedContEvolveFragment(a) => allNames(a)
     case _: EmptyODE => Set()
     case Sequence(a, b) => allNames(a) ++ allNames(b)
     case Choice(a, b) => allNames(a) ++ allNames(b)
@@ -940,49 +983,6 @@ class AlphaConversion(name: String, idx: Option[Int], target: String, tIdx: Opti
     case prg: ProgramConstant => Set(prg)
     case prg: DifferentialProgramConstant  => Set(prg)
     case _ => throw new UnknownOperatorException("Not implemented", p)
-  }
-
-  private def renameAt(f: Formula, p: PosInExpr): Formula =
-    if (p == HereP) f match {
-      // only allow renaming at a specific position if the name to be replaced is bound there
-      // (needed for skolemization and renaming of quantified parts inside a formula)
-      case Forall(vars, _) if vars.exists(v => v.name == name && v.index == idx) => rename(f)
-      case Exists(vars, _) if vars.exists(v => v.name == name && v.index == idx) => rename(f)
-      // if program may bind var, then rename with stored initial value
-      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
-        BoxModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
-      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == name && v.index == idx) =>
-        DiamondModality(Assign(Variable(target, tIdx, Real), Variable(name, idx, Real)), rename(f))
-      case _ => f
-    } else f match {
-      // homomorphic cases
-      case Not(g) => Not(renameAt(g, p.child))
-      case And(l, r) => if (p.pos.head == 0) And(renameAt(l, p.child), r) else And(l, renameAt(r, p.child))
-      case Or(l, r) => if (p.pos.head == 0) Or(renameAt(l, p.child), r) else Or(l, renameAt(r, p.child))
-      case Imply(l, r) => if (p.pos.head == 0) Imply(renameAt(l, p.child), r) else Imply(l, renameAt(r, p.child))
-      case Equiv(l, r) => if (p.pos.head == 0) Equiv(renameAt(l, p.child), r) else Equiv(l, renameAt(r, p.child))
-      case FormulaDerivative(df) => FormulaDerivative(renameAt(df, p.child))
-
-      case Forall(vars, g) => if (p.pos.head == 0) Forall(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
-      case Exists(vars, g) => if (p.pos.head == 0) Exists(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
-
-      case BoxModality(prg, g) => if (p.pos.head == 0) BoxModality(renameAt(prg, p.child), g) else BoxModality(prg, renameAt(g, p.child))
-      case DiamondModality(prg, g) => if (p.pos.head == 0) DiamondModality(renameAt(prg, p.child), g) else DiamondModality(prg, renameAt(g, p.child))
-
-      // base cases
-      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula" + a + " but would still need to traverse to " + p)
-  }
-
-  private def renameAt(prg: Program, p: PosInExpr): Program =
-    if (p == HereP) throw new IllegalArgumentException("Position " + p + " is program " + prg + ", not a formula")
-    else prg match {
-      case Test(f) => if (p.pos.head == 0) Test(renameAt(f, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in test, only 0 allowed")
-      case IfThen(cond, thenT) => if (p.pos.head == 0) IfThen(renameAt(cond, p.child), thenT) else IfThen(cond, renameAt(thenT, p.child))
-      case ODESystem(vars, a, h) => if (p.pos.head == 2) ODESystem(vars, a, renameAt(h, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in ODE system, only 2 allowed")
-      case Sequence(a, b) => if (p.pos.head == 0) Sequence(renameAt(a, p.child), b) else Sequence(a, renameAt(b, p.child))
-      case Choice(a, b) => if (p.pos.head == 0) Choice(renameAt(a, p.child), b) else Choice(a, renameAt(b, p.child))
-      case Loop(a) => if (p.pos.head == 0) Loop(renameAt(a, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in loop, only 0 allowed")
-      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula " + a + " but would still need to traverse to " + p)
   }
 }
 
@@ -1115,29 +1115,15 @@ class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quanti
  */
 
 object Axiom {
-  // immutable list of axioms
+  // immutable list of sound axioms
   val axioms: scala.collection.immutable.Map[String, Formula] = loadAxiomFile
-
-  def axiomFileLocation() : String = {
-    val resource = this.getClass().getResource("axioms.key.alp")
-    val fileLocation : String = {
-      if(resource == null) {
-        throw new Exception("Axioms file could not be found.")
-      }
-      else {
-        resource.getFile()
-      }
-    }
-    assert(new java.io.File(fileLocation).exists());
-    fileLocation
-  }
 
   //TODO-nrf here, parse the axiom file and add all loaded knowledge to the axioms map.
   //@TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = io.Source.fromFile(axiomFileLocation()).mkString
+    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.txt")).mkString
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.
@@ -1361,14 +1347,39 @@ object LookupLemma {
           newFile.createNewFile
           newFile
         }
-
-
         val evidence = new ToolEvidence(Map(
           "input" -> input, "output" -> output))
         KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
 
         //Return the file where the result is saved, together with the result.
         Some((file, file.getName, result))
+
+      case x: Z3 =>
+        val (solution, input, output) = x.cricitalQE.qeInOut(f)
+        val result = Equiv(f,solution)
+
+        //Save the solution to a file.
+        //TODO-nrf create an interface for databases.
+        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
+          val lemmadbpath = new java.io.File("lemmadb")
+          lemmadbpath.mkdirs
+          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
+          if(f.exists()) getUniqueLemmaFile(idx+1)
+          else f
+        }
+        val file = LookupLemma.synchronized {
+          // synchronize on file creation to make sure concurrent uses use new file names
+          val newFile = getUniqueLemmaFile()
+          newFile.createNewFile
+          newFile
+        }
+        val evidence = new ToolEvidence(Map(
+          "input" -> input, "output" -> output))
+        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+        //Return the file where the result is saved, together with the result.
+        Some((file, file.getName, result))
+
       case _ => None
     }
   }

@@ -42,7 +42,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new AlphaConversion(from, None, to, None, Some(p))) {
+        Some(new ApplyRule(new BoundRenaming(from, None, to, None, Some(p))) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         } & hideT(p.topLevel))
       }
@@ -53,7 +53,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     import scala.language.postfixOps
     override def applicable(node: ProofNode): Boolean = true
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      Some(new ApplyRule(new AlphaConversion(from, None, to, None, None)) {
+      Some(new ApplyRule(new BoundRenaming(from, None, to, None, None)) {
         override def applicable(node: ProofNode): Boolean = true
       })
     }
@@ -389,27 +389,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  it should "be [t:=x;][$$t'=t+1$$;]t>0 with (x,t) on [$$x'=x+1$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1$$;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1$$;]t>0".asFormula)
-    ))
-  }
-
-  it should "be [t:=x;][$$t'=t+1,y'=t$$;]t>0 with (x,t) on [$$x'=x+1, y'=x$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1,y'=x$$;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1,y'=t$$;]t>0".asFormula)
-    ))
-  }
-
-  it should "be [t:=x;][$$t'=t+1 & t>0,y'=t & y<t$$;]t>0 with (x,t) on [$$x'=x+1 & x>0, y'=x & y<x$$;]x>0" in {
-    val s = sucSequent("[$$x'=x+1, y'=x $$ & x>0 & y<x;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t'=t+1 ,y'=t$$ & t>0 & y<t;]t>0".asFormula)
-    ))
-  }
-
   // (8) Modality(DiamondModality(DifferentialProgram | IncompleteSystem, _), phi)
 
   "Alpha-conversion rule on diamond ODE" should "be <t:=x;><t'=1;>t>0 with (x,t) on <x'=1;>x>0" in {
@@ -423,27 +402,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     val s = sucSequent("<x'=x+1;>x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("[t:=x;]<t'=t+1;>t>0".asFormula)
-    ))
-  }
-
-  it should "be <t:=x;><$$t'=t+1$$;>t>0 with (x,t) on <$$x'=x+1$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1$$;>x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1$$;>t>0".asFormula)
-    ))
-  }
-
-  it should "be <t:=x;><$$t'=t+1,y'=t$$;>t>0 with (x,t) on <$$x'=x+1, y'=x$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1,y'=x$$;>x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1,y'=t$$;>t>0".asFormula)
-    ))
-  }
-
-  it should "be <t:=x;><$$t'=t+1 & t>0,y'=t & y<t$$;>t>0 with (x,t) on <$$x'=x+1 & x>0, y'=x & y<x$$;>x>0" in {
-    val s = sucSequent("<$$x'=x+1, y'=x$$ & x>0 & y<x;>x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;]<$$t'=t+1,y'=t$$ & t>0 & y<t;>t>0".asFormula)
     ))
   }
 
@@ -541,13 +499,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  it should "rename in checked ODE fragments" in {
-    val s = sucSequent("[$$x' ≚ x$$;]x>0".asFormula)
-    helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
-      sucSequent("[t:=x;][$$t' ≚ t$$;]t>0".asFormula)
-    ))
-  }
-
   "Global alpha conversion" should "store initial value and rename quantified variables" in {
     val s = sucSequent("[x:=0;]\\forall x. x>0".asFormula)
     helper.runTactic(globalAlphaRule("x", "t"), new RootNode(s)).openGoals().foreach(_.sequent should be (
@@ -628,19 +579,6 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
         And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
     AlphaConversionHelper.replaceFree("[z'=2+x;](x>0 & z>0)".asFormula)(z, CDot) should be (
       BoxModality(ODESystem(ODEProduct(AtomicODE(Derivative(Real, z), Add(Real, Number(2), x))), True),
-        And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
-  }
-
-  it should "rename free variables but not variables bound by marked ODEs" in {
-    val x = new Variable("x", None, Real)
-    val z = new Variable("z", None, Real)
-    AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(x, CDot) should be (
-      BoxModality(ODESystem(IncompleteSystem(ODEProduct(AtomicODE(Derivative(Real, z),
-        Add(Real, Number(2), CDot)))), True),
-        And(GreaterThan(Real, CDot, Number(0)), GreaterThan(Real, z, Number(0)))))
-    AlphaConversionHelper.replaceFree("[$$z'=2+x$$;](x>0 & z>0)".asFormula)(z, CDot) should be (
-      BoxModality(ODESystem(IncompleteSystem(ODEProduct(AtomicODE(Derivative(Real, z),
-        Add(Real, Number(2), x)))), True),
         And(GreaterThan(Real, x, Number(0)), GreaterThan(Real, z, Number(0)))))
   }
 

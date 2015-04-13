@@ -94,12 +94,17 @@ End.
 /*
 Rule "CT term congruence".
 Premise f_(?) = g_(?)
-Conclusion ctx_(f_(?)) = ctx_(g_(?))
+Conclusion ctxT_(f_(?)) = ctxT_(g_(?))
 End.
 
 Rule "CQ equation congruence".
 Premise f_(?) = g_(?)
-Conclusion ctx_(f_(?)) <-> ctx_(g_(?))
+Conclusion ctxP_(f_(?)) <-> ctxP_(g_(?))
+End.
+
+Rule "CE congruence".
+Premise p_(?) = q_(?)
+Conclusion ctxF_(p_(?)) <-> ctxF_(q_(?))
 End.
 
 Rule "all generalization".
@@ -120,54 +125,63 @@ End.
 // derived rules
 
 // @Derived
+// @deprecated
 Rule "all congruence".
 Premise p(x) <-> q(x)
 Conclusion (\forall x . p(x)) <-> (\forall x . q(x))
 End.
 
 // @Derived
+// @deprecated
 Rule "exists congruence".
 Premise p(x) <-> q(x)
 Conclusion (\exists x . p(x)) <-> (\exists x . q(x))
 End.
 
 // @Derived
+// @deprecated
 Rule "[] congruence".
 Premise p(x) <-> q(x)
 Conclusion [a;]p(x) <-> [a;]q(x)
 End.
 
 // @Derived
+// @deprecated
 Rule "<> congruence".
 Premise p(x) <-> q(x)
 Conclusion <a;>p(x) <-> <a;>q(x)
 End.
 
 // @Derived
+// @deprecated
 Rule "-> congruence".
 Premise p <-> q
 Conclusion (F->p) <-> (F->q)
 End.
 
 // @Derived
+// @deprecated
 Rule "<-> congruence".
 Premise p <-> q
 Conclusion (F<->p) <-> (F<->q)
 End.
 
 // @Derived
+// @deprecated
 Rule "& congruence".
 Premise p <-> q
 Conclusion (F & p) <-> (F & q)
 End.
 
 // @Derived
+// @deprecated
 Rule "| congruence".
 Premise p <-> q
 Conclusion (F | p) <-> (F | q)
 End.
 
 // @Derived
+// @deprecated
 Rule "! congruence".
 Premise p <-> q
 Conclusion (!p) <-> (!q)
@@ -199,12 +213,10 @@ Axiom "[:=] assign equational".
   [v:=t();]p(v) <-> \forall v . (v=t() -> p(v))
 End.
 
-/*@TODO could use V vacuous instead? */
 Axiom "[:=] vacuous assign".
   [v:=t();]p <-> p
 End.
 
-/*@TODO could use V vacuous instead? */
 Axiom "<:=> vacuous assign".
   <v:=t();>p <-> p
 End.
@@ -291,11 +303,6 @@ Axiom "Dsol differential equation solution".
  <x'=c();>p(x) <-> \exists t. (t>=0 & <x:=x+c()*t;>p(x))
 End.
 
-/* @deprecated */
-Axiom "<'> differential solution".
-  (<x'=f(x)&H(x);>p(x) <-> \exists t . (t>=0 & ((\forall s . ((0<=s&s<=t) -> <x:=g(s);>H(x))) & <x:=g(t);>p(x)))) <- (g(0)=x & [t'=1;]g(t)'=f(g(t)))
-End.
-
 /**
  * DIFFERENTIAL INVARIANTS for SYSTEMS
  */
@@ -304,23 +311,6 @@ Axiom "DE differential effect (system)".
     /* @TODO f(?) cannot contain primes */
     /* @NOTE reassociate needed in data structures */
     [x'=f(?),c&H(?);]p(?) <-> [c,x'=f(?)&H(?);][x':=f(?);]p(?)
-End.
-
-/* Differential Invariant for Systems of Differential Equations */
-/* @deprecated("Use axiom DI instead") */
-Axiom "DI System Marker Intro".
-  [c&H(?);]p(?) <- (H(?) -> p(?) & [$$c$$&H(?);]p(?)')
-End.
-
-/* @deprecated("Use axiom DE instead")*/
-Axiom "DI System Head Test".
-    [$$x'=f(?), c$$&H(?);]p(?) <- [$$c, x' ≚ f(?)$$&H(?);][x' := f(?);]p(?)
-End.
-
-/* @todo unsound? */
-/* @deprecated("Use V alias quantifier abstraction instead") */
-Axiom "DI System Complete".
-    ([$$x' ≚ f(?), c$$&H(?);]p(?)) <- p(?)
 End.
 
 /**
@@ -443,22 +433,6 @@ Axiom "I induction".
 End.
 
 /*@TODO Convergence axiom*/
-
-/* @TODO ap: corrected parentheses
-// \forall {a} quantifies over all variables written in a
-// not sure if this can be an axiom or needs to be a built-in rule
-// since it's hard to get this working with uniform substitution
-// @derived from V
-Axiom "QuantifierAbstraction".
-  (\forall {a}. p) -> ([a] p)
-  (\forall BF(a). p(?)) -> ([a] p(?))
-End.
-Axiom "QuantifierAbstraction".
-  \forall x . p(x) -> [a(x)]p(x)
-End.
-*/
-
-
 
 /**
  * Real arithmetic

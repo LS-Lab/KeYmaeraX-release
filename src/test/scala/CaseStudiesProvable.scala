@@ -36,42 +36,77 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
   def ls(t: PositionTactic) = locateSucc(t)
   def la(t: PositionTactic) = locateAnte(t)
 
-  "AxiomClose" should "be provable" in {
+  "AxiomClose" should "be provable with Mathematica" in {
     val file = new File("examples/dev/t/tactics/AxiomClose.key")
     val s = parseToSequent(file)
 
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  "DecomposeQuant" should "be provable" in {
+  it should "be provable with Z3" in {
+    val file = new File("examples/dev/t/tactics/AxiomClose.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  "DecomposeQuant" should "be provable with Mathematica" in {
     val file = new File("examples/dev/t/tactics/DecomposeQuant.key")
     val s = parseToSequent(file)
 
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  "EqualityRewriting" should "be provable" in {
+  it should "be provable with Z3" in {
+    val file = new File("examples/dev/t/tactics/DecomposeQuant.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  "EqualityRewriting" should "be provable with Mathematica" in {
     val file = new File("examples/dev/t/tactics/EqualityRewriting.key")
     val s = parseToSequent(file)
 
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-essentials-noloop" should "be provable" in {
+  it should "be provable with Z3" in {
+    val file = new File("examples/dev/t/tactics/EqualityRewriting.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  "ETCS-essentials-noloop" should "be provable with Mathematica" in {
     val file = new File("examples/dev/t/tactics/ETCS-essentials-noloop.key")
     val s = parseToSequent(file)
 
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-essentials" should "be provable" in {
+  it should "be provable with Z3" in {
+    val file = new File("examples/dev/t/tactics/ETCS-essentials-noloop.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  "ETCS-essentials" should "be provable with Mathematica" in {
     val file = new File("examples/dev/t/tactics/ETCS-essentials.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true), new RootNode(s)) shouldBe 'closed
+    helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-  "Stuttering" should "be provable" in {
+  it should "be provable with Z3" in {
+    val file = new File("examples/dev/t/tactics/ETCS-essentials.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  "Stuttering" should "be provable with Mathematica" in {
     import scala.language.postfixOps
     import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
     import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
@@ -90,6 +125,18 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering-allwrites.key")))) shouldBe 'closed
     // loops where not all branches write the same variables are not yet supported
 //    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/dev/t/tactics/Stuttering-allwrites.key")
+    val s = parseToSequent(file)
+    helper.runTactic(master(new Generate("x <= y".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/dev/t/tactics/Stuttering-allwrites.key")
+    val s = parseToSequent(file)
+    helper.runTactic(master(new Generate("x <= y".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "ETCS-safety-allwrites" should "be provable with explicit strategy" in {
@@ -154,23 +201,30 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  it should "be provable with master strategy" in {
+  it should "be provable automatically with Mathematica" in {
     val file = new File("examples/dev/t/tactics/ETCS-safety-allwrites.key")
     val s = parseToSequent(file)
-    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
+    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
-//  "ETCS-safety" should "be provable with master strategy" in {
-//    val file = new File("examples/dev/t/tactics/ETCS-safety.key")
-//    val s = parseToSequent(file)
-//    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true), new RootNode(s)) shouldBe 'closed
-//  }
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/dev/t/tactics/ETCS-safety-allwrites.key")
+    val s = parseToSequent(file)
+    helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
 
-  "Saturable" should "be provable" in {
+  "Saturable" should "be provable with Mathematica" in {
     val file = new File("examples/dev/t/tactics/Saturable.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
+    helper.runTactic(default("Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable with Z3" in {
+    val file = new File("examples/dev/t/tactics/Saturable.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   ignore should "prove SimpleDiff" in {
@@ -207,4 +261,19 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
+
+  it should "be provable automatically with Mathematica" in {
+
+    val file = new File("examples/tutorials/sttt/simplecar.key")
+    val s = parseToSequent(file)
+    helper.runTactic(master(new Generate("v>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+
+    val file = new File("examples/tutorials/sttt/simplecar.key")
+    val s = parseToSequent(file)
+    helper.runTactic(master(new Generate("v>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
 }

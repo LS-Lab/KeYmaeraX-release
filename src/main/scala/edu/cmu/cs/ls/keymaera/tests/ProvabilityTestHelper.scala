@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary, TacticWrapper, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 
 import scala.collection.immutable.Map

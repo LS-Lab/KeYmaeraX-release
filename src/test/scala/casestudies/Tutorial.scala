@@ -7,7 +7,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateAnte
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
-import edu.cmu.cs.ls.keymaera.tactics.{Generate, Interpreter, BranchLabels, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -36,9 +36,11 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
+    Tactics.Z3Scheduler = new Interpreter(new Z3)
   }
 
   override def afterEach() = {
+    Tactics.Z3Scheduler = null
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.MathematicaScheduler = null
@@ -84,6 +86,20 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     )
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example2.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example2.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   // TODO not implemented yet: evolution domain must hold in the beginning
@@ -207,11 +223,18 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  it should "be provable automatically" in {
+  it should "be provable automatically with Mathematica" in {
     val file = new File("examples/tutorials/sttt/example5.key")
     val s = parseToSequent(file)
 
-    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true), new RootNode(s)) shouldBe 'closed
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example5.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 6" should "be provable" in {

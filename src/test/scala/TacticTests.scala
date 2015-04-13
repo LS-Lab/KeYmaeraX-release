@@ -161,10 +161,10 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("p", None, Real, Bool)
-    val assume = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), ApplyPredicate(p1, Add(Real,x,y))),
-      ApplyPredicate(p1, Add(Real,Exp(Real,x,Number(2)),Number(5))))
-    val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), GreaterEqual(Real,y, Add(Real,x,y))),
-        GreaterEqual(Real,y, Add(Real,Exp(Real,x,Number(2)),Number(5))))
+    val assume = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Power(Real,x, Number(2)))), ApplyPredicate(p1, Add(Real,x,y))),
+      ApplyPredicate(p1, Add(Real,Power(Real,x,Number(2)),Number(5))))
+    val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Power(Real,x, Number(2)))), GreaterEqual(Real,y, Add(Real,x,y))),
+        GreaterEqual(Real,y, Add(Real,Power(Real,x,Number(2)),Number(5))))
 
     // cannot yet prove assumption automatically
     unsoundUniformSubstitution(assume, conclude,
@@ -204,10 +204,10 @@ class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
     val p1 = Function("q", None, Real, Bool)
-    val assume = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), ApplyPredicate(p1, Add(Real,x,y))),
-      ApplyPredicate(p1, Add(Real,Exp(Real,x,Number(2)),Number(5))))
-    val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Exp(Real,x, Number(2)))), GreaterEqual(Real,y, Add(Real,x,y))),
-        GreaterEqual(Real,y, Add(Real,Exp(Real,x,Number(2)),Number(5))))
+    val assume = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Power(Real,x, Number(2)))), ApplyPredicate(p1, Add(Real,x,y))),
+      ApplyPredicate(p1, Add(Real,Power(Real,x,Number(2)),Number(5))))
+    val conclude = Equiv(BoxModality(Sequence(Assign(y, Number(5)), Assign(x, Power(Real,x, Number(2)))), GreaterEqual(Real,y, Add(Real,x,y))),
+        GreaterEqual(Real,y, Add(Real,Power(Real,x,Number(2)),Number(5))))
 
     unsoundUniformSubstitution(assume, conclude,
       USubst(List(SubstitutionPair(ApplyPredicate(p1,CDot), GreaterEqual(Real,y,CDot)))),
