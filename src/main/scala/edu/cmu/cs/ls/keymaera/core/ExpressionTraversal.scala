@@ -213,7 +213,6 @@ object ExpressionTraversal {
         // Formulas
         case True => matchZero(p, f, e)
         case False => matchZero(p, f, e)
-        case PredicateConstant(_, _) => matchZero(p, f, e)
         case ApplyPredicate(a, b) => matchOne(p, ApplyPredicate.apply(a, _: Term), f, b)
         case Equals(d, a, b) => matchTwo(p, Equals.apply(d, _: Term, _: Term), f, a, b)
         case NotEquals(d, a, b) => matchTwo(p, NotEquals.apply(d, _: Term, _: Term), f, a, b)
@@ -260,7 +259,6 @@ object ExpressionTraversal {
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
         case Test(a) => matchOne(p, Test.apply, f, a)
-        case ContEvolve(a) => matchOne(p, ContEvolve.apply, f, a)
         case IfThen(a, b) => matchTwo(p, IfThen.apply, f, a, b)
         case IfThenElse(a, b, c) => matchThree(p, IfThenElse.apply, f, a, b, c)
         case Sequence(a, b) => matchTwo(p, Sequence.apply, f, a, b)

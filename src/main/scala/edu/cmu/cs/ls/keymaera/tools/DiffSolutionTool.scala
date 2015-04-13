@@ -15,13 +15,4 @@ trait DiffSolutionTool {
    * @return The solution if found; None otherwise
    */
   def diffSol(diffSys: DifferentialProgram, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula]
-
-  /**
-   * Computes the symbolic solution of a system of differential equations.
-   * @param diffSys The system of differential equations.
-   * @param diffArg The name of the differential argument (dx/d diffArg = theta).
-   * @param iv The initial values per derivative.
-   * @return The solution if found; None otherwise
-   */
-  def diffSol(diffSys: ContEvolve, diffArg: Variable, iv: Map[Variable, Function]): Option[Formula]
 }

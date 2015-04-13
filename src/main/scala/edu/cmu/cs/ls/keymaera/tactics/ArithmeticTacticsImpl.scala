@@ -38,7 +38,6 @@ object ArithmeticTacticsImpl {
           e match {
             case Modality(_, _) => qeAble = false
             case ApplyPredicate(_, _) => qeAble = false
-            case PredicateConstant(_, _) => qeAble = false
             case _ =>
           }
           if (qeAble) Left(None) else Left(Some(new StopTraversal {}))

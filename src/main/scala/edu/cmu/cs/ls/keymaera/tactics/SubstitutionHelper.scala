@@ -120,8 +120,6 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case ODESystem(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
     case AtomicODE(d@Derivative(_, x: Variable), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
     case _: EmptyODE => p
-    case IncompleteSystem(s) => IncompleteSystem(usubst(o, u, primed, s))
-    case CheckedContEvolveFragment(s) => CheckedContEvolveFragment(usubst(o, u, primed, s))
     case _: DifferentialProgramConstant => p
   }
 }

@@ -783,9 +783,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       closureP    ::
       assignP     ::
       ndassignP   ::
-      incompleteSystemP ::
       normalFormEvolutionSystemP :: //@todo document this.
-      checkedEvolutionFragmentP :: //@todo not sure where this really should go in the precedence list... If you move it make sure to also move it in the pretty printer list.
       testP       ::
       pvarP       ::
       contEvolvePVarP ::
@@ -796,7 +794,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     //If that's really the only place we need this, maybe we should move it into local scope.
     val DifferentialProgramPPrecedence =
       normalFormEvolutionSystemP ::
-      checkedEvolutionFragmentP  ::
       evolutionP                 ::
       contEvolvePVarP            ::
       Nil
@@ -934,13 +931,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    lazy val checkedEvolutionFragmentP: PackratParser[CheckedContEvolveFragment] = {
-      lazy val pattern = theTermParser.termDerivativeP ~ (CHECKED_EQ ~> termParser)
-      log(pattern)("checked evolution") ^^ {
-        case d ~ t => CheckedContEvolveFragment(AtomicODE(d, t))
-      }
-    }
-
     lazy val evolutionP: PackratParser[AtomicODE] = {
       lazy val pattern = (theTermParser.termDerivativeP <~ EQ) ~ theTermParser.nonDerivativeTermP
 
@@ -953,24 +943,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         }
       }
     }
-
-    //@todo find a better term for this construct
-    lazy val incompleteSystemP: PackratParser[DifferentialProgram] = {
-      lazy val pattern = START_INCOMPLETE_SYSTEM ~> (evolutionSystemP.? <~ END_INCOMPLETE_SYSTEM) ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
-
-      log(pattern)("Incomplete Differential Equation System") ^^ {
-        case system ~ f => system match {
-          case Some(x: DifferentialProgram) => f match {
-            case Some(frm) => ODESystem(IncompleteSystem(x), frm)
-            case None => ODESystem(IncompleteSystem(x), True)
-          }
-          case None =>
-            require(!f.isDefined, "Empty incomplete system with evolution domain constraint not supported")
-            IncompleteSystem()
-          case _ => throw new Exception("Expected the interior of an IncompleteSystem to be a continuous evolution, but found: " + system.getClass.getCanonicalName + ".")
-        }
-      }
-    }
     
     lazy val testP:SubprogramParser = {
       lazy val pattern = TEST ~ formulaParser
@@ -978,19 +950,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         case TEST ~ f => new Test(f)
       }
     }
-    
-    //this need rewriting, but we dont suppor these at the moment anyway.
-//    lazy val pvarP:SubprogramParser = {
-//      log(ident)("Program Variable") ^^ {
-//        case name => programVariables.find(ProgramConstant.unapply(_) match {
-//          case Some(t) => t._1.equals(name)
-//          case None    => false
-//        }) match {
-//          case Some(p ) => p
-//          case None     => throw new Exception("Program variable was mentioned but not in context: " + name)
-//        }
-//      }
-//    }
     
     lazy val groupP:SubprogramParser = {
     lazy val pattern = "{" ~> parser <~ "}"
