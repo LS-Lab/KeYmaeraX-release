@@ -1,6 +1,7 @@
 /**
- * Axioms of KeYmaera and axiomatic proof rules of KeYmaera
+ * Axioms of KeYmaera X and axiomatic proof rules of KeYmaera X.
  * resulting from differential dynamic logic
+ * @note Soundness-critical: Only adopt sound axioms and sound axiomatic rules.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
@@ -9,8 +10,6 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
-import java.io.File
-
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -18,18 +17,15 @@ import scala.collection.immutable.List
 import scala.collection.immutable.Map
 import scala.collection.immutable.Set
 
-import scala.annotation.{unspecialized, elidable}
-import scala.annotation.elidable._
-
 /**
- * Created by aplatzer on 4/13/15.
+ * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author aplatzer
  */
 private[core] object AxiomBase {
   /**
-   * KeYmaera Axiomatic Proof Rules.
+   * KeYmaera X Axiomatic Proof Rules.
    * @note Soundness-critical: Only return locally sound proof rules.
    * @return immutable list of locally sound axiomatic proof rules (premise, conclusion)
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
@@ -120,7 +116,7 @@ private[core] object AxiomBase {
   }
 
   /**
-   * Look up an axiom,
+   * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
   private[core] def loadAxioms() : String =

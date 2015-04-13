@@ -1,5 +1,6 @@
 /**
- * Sequent prover, proof rules, and axioms of KeYmaera
+ * Sequent prover, proof rules, and axioms of KeYmaera X.
+ * @note Soundness-critical: Only provide sound proof rule application mechanisms.
  * @author Jan-David Quesel
  * @author aplatzer
  * @author nfulton
