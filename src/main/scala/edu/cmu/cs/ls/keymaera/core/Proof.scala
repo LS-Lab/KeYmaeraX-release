@@ -732,8 +732,12 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
 
   def apply(s: Sequent): List[Sequent] = pos match {
     case Some(p) =>
+      //@TODO Should be able to get rid of this case by using CE.
       // BoundRenamingClashException will be checked within renameAt
-      List(s.updated(p.topLevel, renameAt(s(p.topLevel), p.inExpr))
+      //@TODO Should return List(s.updated(p.topLevel, renameAt(s(p.topLevel), p.inExpr)) in place
+      val formula = renameAt(s(p.topLevel), p.inExpr)
+      if (p.isAnte) List(Sequent(s.pref, s.ante :+ formula, s.succ))
+      else List(Sequent(s.pref, s.ante, s.succ :+ formula))
     case None =>
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
   }
