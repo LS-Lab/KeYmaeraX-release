@@ -32,6 +32,52 @@ import scala.collection.GenTraversableOnce
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
+
+/**
+ * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
+ * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
+ *  Negative numbers indicate antecedent positions.
+ *  Positive numbers indicate succedent positions.
+ *  Zero is a degenerate case indicating whole sequent.
+ */
+final case class SeqPos(val pos: Int) {
+  require(pos != 0, "no whole sequent positions at the moment")
+  def isAnte: Boolean = pos < 0
+  def isSucc: Boolean = pos > 0
+  //def isFullSequent: Boolean = pos == 0
+
+  /**
+   * The unsigned index in the antecedent or succedent, respectively
+   */
+  def getIndex: Int = if (pos < 0) -pos else if (pos > 0) pos else throw new IllegalStateException("Full sequent has no index")
+
+  /**
+   * Check whether index of this position is defined in given sequent (ignoring inExpr).
+   */
+  def isIndexDefined(s: Sequent): Boolean =
+    if (isAnte)
+      s.ante.length > getIndex
+    else //if (isSucc)
+      s.succ.length > getIndex
+
+  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + pos + ")"
+}
+
+object SeqPos {
+  /**
+   * An antecedent position
+   */
+  def AntePos(pos: Int) = SeqPos(-pos)
+
+  /**
+   * A succedent position
+   */
+  def SuccPos(pos: Int) = SeqPos(pos)
+
+  @deprecated("Remove")
+  private[core] def position2SeqPos(p: Position) = new SeqPos(if (p.isAnte) -p.index else p.index)
+}
+
 /**
  * Sequents
  * @author aplatzer
@@ -52,22 +98,21 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   override def hashCode: Int = HashFn.hash(251, pref, ante, succ)
 
   /**
-   * Retrieves the formula in sequent at a given position. Note that this ignores p.inExpr
+   * Retrieves the formula in sequent at a given position.
    * @param p the position of the formula
-   * @return the formula at the given position either from the antecedent or the succedent ignoring p.inExpr
+   * @return the formula at the given position either from the antecedent or the succedent
    */
-  def apply(p: Position): Formula = {
-    //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
-    if(p.isAnte) {
+  def apply(p: SeqPos): Formula = {
+    if (p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
       ante(p.getIndex)
     } else {
+      assert (p.isSucc)
       require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
       succ(p.getIndex)
     }
   }
-  
+
   // transformations giving copies of sequents
   
   /**
@@ -85,44 +130,48 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
         && r.succ.forall(f=>this.succ.contains(f) || s.succ.contains(f)),
         "result is a supersequent of its pieces and all formulas in result come from either one"
     )
-      
+
   /**
    * A copy of this sequent with the indicated position replaced by the formula f.
    * @param p the position of the replacement
    * @param f the replacing formula
    * @returns a copy of this sequent with the formula at position p replaced by f.
    */
-  def updated(p: Position, f: Formula) : Sequent = {
-//    require(p.inExpr == HereP, "Can only update top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
-    if (p.isAnte)
-        Sequent(pref, ante.updated(p.getIndex, f), succ)
-    else
-        Sequent(pref, ante, succ.updated(p.getIndex, f))
+  def updated(p: SeqPos, f: Formula) : Sequent = {
+    if (p.isAnte) {
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      Sequent(pref, ante.updated(p.getIndex, f), succ)
+    } else {
+      assert(p.isSucc)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      Sequent(pref, ante, succ.updated(p.getIndex, f))
+    }
   }
-  
+
   /**
    * A copy of this sequent with the indicated position replaced by gluing the sequent s.
    * @param p the position of the replacement
    * @param s the sequent glued / concatenated to this sequent after dropping p.
-   * @returns a copy of this sequent with the formula at position p removed and the sequent s appended.
+   * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
    * @see #updated(Position,Formula)
    * @see #glue(Sequent)
    */
-  def updated(p: Position, s: Sequent) : Sequent = {
-//    require(p.inExpr == HereP, "Can only update top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
-    if (p.isAnte)
-        Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
-    else
-        Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
-    } ensuring(r=> if (p.isAnte)
-         r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).sameSequentAs(this.glue(s))
-     else
-         r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
-         "result after re-including updated formula is equivalent to " + this + " glue " + s
-     )
-  
+  def updated(p: SeqPos, s: Sequent) : Sequent = {
+    if (p.isAnte) {
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
+    } else {
+      assert(p.isSucc)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
+    }
+  } ensuring(r=> if (p.isAnte)
+    r.glue(Sequent(pref,IndexedSeq(this(p)),IndexedSeq())).sameSequentAs(this.glue(s))
+  else
+    r.glue(Sequent(pref,IndexedSeq(),IndexedSeq(this(p)))).sameSequentAs(this.glue(s)),
+    "result after re-including updated formula is equivalent to " + this + " glue " + s
+    )
+
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
    */
@@ -135,6 +184,45 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
 
   override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
+
+  /**
+   * Retrieves the formula in sequent at a given position. Note that this ignores p.inExpr
+   * @param p the position of the formula
+   * @return the formula at the given position either from the antecedent or the succedent ignoring p.inExpr
+   */
+  @deprecated("Use apply(SeqPos) instead.")
+  def apply(p: Position): Formula = {
+    //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
+    apply(SeqPos.position2SeqPos(p))
+  }
+  /**
+   * A copy of this sequent with the indicated position replaced by the formula f.
+   * @param p the position of the replacement
+   * @param f the replacing formula
+   * @returns a copy of this sequent with the formula at position p replaced by f.
+   */
+  @deprecated("Use updated(SeqPos, Formula) instead")
+  def updated(p: Position, f: Formula) : Sequent = {
+    //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
+    updated(SeqPos.position2SeqPos(p), f)
+  }
+  /**
+   * A copy of this sequent with the indicated position replaced by gluing the sequent s.
+   * @param p the position of the replacement
+   * @param s the sequent glued / concatenated to this sequent after dropping p.
+   * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
+   * @see #updated(Position,Formula)
+   * @see #glue(Sequent)
+   */
+  @deprecated("Use updated(SeqPos, Sequent) instead.")
+  def updated(p: Position, s: Sequent) : Sequent = {
+    //    require(p.inExpr == HereP, "Can only update top level formulas")
+    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
+    updated(SeqPos.position2SeqPos(p), s)
+  }
+
 }
 
 
@@ -273,7 +361,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  *********************************************************************************
  */
 
-@deprecated("Remove from prover core. But needed in AlphaConversion?")
+@deprecated("Remove from prover core")
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -293,6 +381,7 @@ object HereP extends PosInExpr
  * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
  * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
  */
+@deprecated("Use SeqPos instead in prover core")
 abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   require (index >= 0, "nonnegative index " + index)
   def isAnte: Boolean
@@ -331,6 +420,7 @@ abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
   override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ", " + inExpr + ")"
 }
 
+@deprecated("Use AntePos or SeqPos(-...) instead")
 class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
   def isAnte = true
   protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
@@ -344,6 +434,7 @@ object AntePosition {
   def apply(index: Int, inExpr: PosInExpr = HereP): Position = new AntePosition(index, inExpr)
 }
 
+@deprecated("Use SuccPos or SeqPos instead")
 class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
   def isAnte = false
   protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
