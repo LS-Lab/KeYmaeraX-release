@@ -1121,7 +1121,7 @@ object Axiom {
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.key.alp")).mkString
+    val src = io.Source.fromInputStream(getClass.getResourceAsStream("axioms.txt")).mkString
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.
