@@ -732,17 +732,15 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
 
   def apply(s: Sequent): List[Sequent] = pos match {
     case Some(p) =>
-      //@TODO require(, s"Renaming only to fresh names but ${target}_$tIdx is not fresh in $f")
-      val formula = renameAt(s(p), p.inExpr)
-      //@TODO Why is the old formula not replaced but kept?
-      if (p.isAnte) List(Sequent(s.pref, s.ante :+ formula, s.succ))
-      else List(Sequent(s.pref, s.ante, s.succ :+ formula))
+      // BoundRenamingClashException will be checked within renameAt
+      List(s.updated(p.topLevel, renameAt(s(p.topLevel), p.inExpr))
     case None =>
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
   }
 
   def apply(f: Formula): Formula = {
-    require(!allNames(f).exists(v => v.name == repl && v.index == rIdx), s"Renaming only to fresh names but ${repl}_$rIdx is not fresh in $f")
+    if (allNames(f).exists(v => v.name == repl && v.index == rIdx))
+      throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this, f.prettyString())
     rename(f)
   }
 
@@ -864,17 +862,21 @@ class AlphaConversion(what: String, wIdx: Option[Int], repl: String, rIdx: Optio
   // rename at a target position
 
   private def renameAt(f: Formula, p: PosInExpr): Formula =
-    if (p == HereP) f match {
-      // only allow renaming at a specific position if the name to be replaced is bound there
-      // (needed for skolemization and renaming of quantified parts inside a formula)
-      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
-      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
-      // if program may bind var, then rename with stored initial value
-      case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
-        ghostify(f)
-      case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
-        ghostifyDiamond(f)
-      case _ => f //@TODO throw new CoreException since this is a bug if it happens?
+    if (p == HereP) {
+      if (allNames(f).exists(v => v.name == repl && v.index == rIdx))
+        throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+      f match {
+        // only allow renaming at a specific position if the name to be replaced is bound there
+        // (needed for skolemization and renaming of quantified parts inside a formula)
+        case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+        case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
+        // if program may bind var, then rename with stored initial value
+        case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+          ghostify(f)
+        case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
+          ghostifyDiamond(f)
+        case _ => f //@TODO throw new CoreException since this is a bug if it happens?
+      }
     } else f match {
       // homomorphic cases
       case Not(g) => Not(renameAt(g, p.child))
