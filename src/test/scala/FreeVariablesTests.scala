@@ -28,7 +28,7 @@ class FreeVariablesTests extends FlatSpec with Matchers with PrivateMethodTester
   }
 
   "Free variables of x'" should "be {x}" in {
-    freeVariables("x'".asTerm) should be (Set(DifferentialSymbol("x".asNamedSymbol)))
+    freeVariables("x'".asTerm) should be (Set("x".asNamedSymbol, DifferentialSymbol("x".asNamedSymbol)))
   }
 
   "Free variables of x+1" should "be {x}" in {
@@ -72,7 +72,7 @@ class FreeVariablesTests extends FlatSpec with Matchers with PrivateMethodTester
   }
 
   "Free variables of x'*y+x*z'" should "be {x,y}" in {
-    freeVariables("x'*y+x*z'".asTerm) should be (Set(V("x"),V("y"),DifferentialSymbol("x".asNamedSymbol),
+    freeVariables("x'*y+x*z'".asTerm) should be (Set(V("x"),V("y"),V("z"),DifferentialSymbol("x".asNamedSymbol),
       DifferentialSymbol("z".asNamedSymbol)))
   }
 
