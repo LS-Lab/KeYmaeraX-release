@@ -39,6 +39,9 @@ import scala.collection.GenTraversableOnce
 final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
                          val ante: scala.collection.immutable.IndexedSeq[Formula],
                          val succ: scala.collection.immutable.IndexedSeq[Formula]) {
+  applicable
+  @elidable(ASSERTION) def applicable = require(pref.isEmpty, "only empty sequent prefix supported so far " + pref)
+
   // Could use scala.collection.immutable.Seq instead of IndexedSeq, since equivalent except for performance. But many KeYmaera parts construct Sequents, so safer for performance.
   override def equals(e: Any): Boolean = e match {
     case Sequent(p, a, s) => pref == p && ante == a && succ == s
@@ -137,14 +140,15 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
  * A proof rule is ultimately a named mapping from sequents to lists of sequents.
  * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
  * to prove the current sequent (desired conclusion).
+ * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
-  sealed abstract class Rule(val name: String) extends (Sequent => scala.collection.immutable.List[Sequent]) {
-    //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+sealed abstract class Rule(val name: String) extends (Sequent => scala.collection.immutable.List[Sequent]) {
+  //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
-    override def toString: String = name
-  }
+  override def toString: String = name
+}
   
-  sealed trait ClosingRule {}
+sealed trait ClosingRule {}
 
 object Provable {
   /**
@@ -254,7 +258,7 @@ abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Posit
  *********************************************************************************
  */
 
-@deprecated("Remove from prover core")
+@deprecated("Remove from prover core. But needed in AlphaConversion?")
 case class PosInExpr(pos: List[Int] = Nil) {
   require(pos forall(_>=0), "all nonnegative positions")
   def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -337,8 +341,6 @@ class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index
 object SuccPosition {
   def apply(index: Int, inExpr: PosInExpr = HereP): Position = new SuccPosition(index, inExpr)
 }
-
-//abstract class Signature
 
 /*********************************************************************************
  * Proof Rules
