@@ -41,7 +41,6 @@ object SQLite extends DBAbstraction {
   /**
    * Initializes a new database.
    */
-
   override def cleanup(): Unit = {
     sqldb.withSession(implicit session => {
       try {
@@ -68,7 +67,6 @@ object SQLite extends DBAbstraction {
         blankOk(element.description), blankOk(element.publink), blankOk(element.title)))
     })
   }
-
 
   override def getDispatchedTermOrTactic(tId: String): Option[AbstractDispatchedPOJO] =
     sqldb.withSession(implicit session => {
@@ -114,14 +112,14 @@ object SQLite extends DBAbstraction {
           //Update the running and completed task lists.
         case Some(x: DispatchedTacticPOJO) => {
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid, t.prooftacticid.get))
-                        .insert(idgen(), proofId, newIdx, None, tId)
+                        .insert(tId, proofId, newIdx, None, tId)
           val q = for{l <- Tacticonproof if(l.prooftacticid === tId)} yield l.status
           q.update(Some(DispatchedTacticStatus.Finished.toString))
         }
         case Some(x : DispatchedCLTermPOJO) => {
 
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid.get, t.prooftacticid))
-            .insert(idgen(), proofId, newIdx, tId, None)
+            .insert(tId, proofId, newIdx, tId, None)
           val q = for{l <- Clterms if(l.termid === tId)} yield l.status
           q.update(Some(DispatchedTacticStatus.Finished.toString))
         }
@@ -218,6 +216,11 @@ object SQLite extends DBAbstraction {
       else list.head
     })
 
+  /**
+   *
+   * @param proofId
+   * @return A list of completedTask IDs.
+   */
   override def getProofSteps(proofId: String): List[String] =
     sqldb.withSession(implicit session => {
       Completedtasks.filter(_.proofid === proofId).sortBy(_.idx).list.map(_.stepid)
