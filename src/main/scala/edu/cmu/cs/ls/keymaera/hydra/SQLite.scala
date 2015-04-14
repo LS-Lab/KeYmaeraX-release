@@ -197,7 +197,7 @@ object SQLite extends DBAbstraction {
             .list
             .map(p => new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
                                     blankOk(p.date), stepCount, p.closed.getOrElse(0) == 0))
-      if(list.length > 0) throw new Exception()
+      if(list.length > 1) throw new Exception()
       else if(list.length == 0) throw new Exception()
       else list.head
     })
