@@ -127,7 +127,7 @@ object SQLite extends DBAbstraction {
         }
       }
 
-      //Update the proof statis the proof is complete.
+      //Update the proof status the proof is complete.
       if(openGoals == 0) {
         val q = for{l <- Proofs if(l.proofid === proofId)} yield l.closed
         q.update(Some(1))
@@ -182,17 +182,28 @@ object SQLite extends DBAbstraction {
     })
 
 
+  /**
+   * Poorly names -- either update the config, or else insert an existing key.
+   * But in Mongo it was just update, because of the nested documents thing.
+   * @param config
+   */
   override def updateConfiguration(config: ConfigurationPOJO): Unit =
     sqldb.withSession(implicit session => {
-      //Wow that's a pain.
-      config.config.map(kvp => {
-        val key = kvp._1
-        val value = kvp._2
-        val q = for {l <- Config if(l.configname === config.name && l.key === key)} yield l.value
-        q.update(Some(value))
-      })
-    })
+        config.config.map(kvp => {
+          val key = kvp._1
+          val value = kvp._2
+          val configExists = Config.filter(c => c.configname===config.name && c.key===key).list.length != 0
 
+          if(configExists) {
+            val q = for {l <- Config if (l.configname === config.name && l.key === key)} yield l.value
+            q.update(Some(value))
+          }
+          else {
+            Config.map(c => (c.configid.get, c.configname.get, c.key.get, c.value.get))
+              .insert((idgen, config.name, key, value))
+          }
+        })
+    })
 
   //Proofs and Proof Nodes
   override def getProofInfo(proofId: String): ProofPOJO =
