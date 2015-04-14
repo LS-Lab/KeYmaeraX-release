@@ -152,7 +152,7 @@ trait Tables {
     val title: Column[Option[String]] = column[Option[String]]("title")
     
     /** Foreign key referencing Users (database name users_FK_1) */
-    lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.userid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.email, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Models */
   lazy val Models = new TableQuery(tag => new Models(tag))
@@ -286,23 +286,20 @@ trait Tables {
   lazy val Tactics = new TableQuery(tag => new Tactics(tag))
   
   /** Entity class storing rows of table Users
-   *  @param userid Database column userId DBType(TEXT), PrimaryKey
-   *  @param email Database column email DBType(TEXT)
+   *  @param email Database column email DBType(TEXT), PrimaryKey
    *  @param password Database column password DBType(TEXT) */
-  case class UsersRow(userid: Option[String], email: Option[String], password: Option[String])
+  case class UsersRow(email: Option[String], password: Option[String])
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
   implicit def GetResultUsersRow(implicit e0: GR[Option[String]]): GR[UsersRow] = GR{
     prs => import prs._
-    UsersRow.tupled((<<?[String], <<?[String], <<?[String]))
+    UsersRow.tupled((<<?[String], <<?[String]))
   }
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends Table[UsersRow](_tableTag, "users") {
-    def * = (userid, email, password) <> (UsersRow.tupled, UsersRow.unapply)
+    def * = (email, password) <> (UsersRow.tupled, UsersRow.unapply)
     
-    /** Database column userId DBType(TEXT), PrimaryKey */
-    val userid: Column[Option[String]] = column[Option[String]]("userId", O.PrimaryKey)
-    /** Database column email DBType(TEXT) */
-    val email: Column[Option[String]] = column[Option[String]]("email")
+    /** Database column email DBType(TEXT), PrimaryKey */
+    val email: Column[Option[String]] = column[Option[String]]("email", O.PrimaryKey)
     /** Database column password DBType(TEXT) */
     val password: Column[Option[String]] = column[Option[String]]("password")
   }
