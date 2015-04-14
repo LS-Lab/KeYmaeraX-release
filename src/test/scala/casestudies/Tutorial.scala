@@ -365,20 +365,6 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
-  it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example9a.key")
-    val s = parseToSequent(file)
-
-    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
-  }
-
-  it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example9a.key")
-    val s = parseToSequent(file)
-
-    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
-  }
-
   "Example 9b" should "be provable" in {
     val file = new File("examples/tutorials/sttt/example9b.key")
     val s = parseToSequent(file)
