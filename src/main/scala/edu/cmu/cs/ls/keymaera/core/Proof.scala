@@ -36,55 +36,69 @@ import scala.collection.GenTraversableOnce
 
 /**
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
- * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
- *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
- *  Positive numbers indicate succedent positions, 1, 2, 3.
- *  Zero is a degenerate case indicating whole sequent 0.
  */
-final case class SeqPos(val pos: Int) {
-  require(pos != 0, "no whole sequent positions at the moment")
-  def isAnte: Boolean = pos < 0
-  def isSucc: Boolean = pos > 0
-  //def isFullSequent: Boolean = pos == 0
-
-  /**
-   * The unsigned position for the antecedent or succedent list, respectively, base 1.
-   */
-  def getPos: Int = if (pos < 0) -pos else if (pos > 0) pos else throw new IllegalStateException("Full sequent has no index")
+sealed trait SeqPos {
+  def isAnte: Boolean
+  def isSucc: Boolean
 
   /**
    * The unsigned index into the antecedent or succedent list, respectively, base 0.
    */
-  def getIndex: Int = getPos-1
+  def getIndex: Int
+
+  /**
+   * The signed position for the antecedent or succedent list, respectively, base 1.
+   *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+   *  Positive numbers indicate succedent positions, 1, 2, 3.
+   *  Zero is a degenerate case indicating whole sequent 0.
+   */
+  def getPos: Int = if (isAnte) {-(getIndex+1)} else {assert(isSucc); getIndex+1}
 
   /**
    * Check whether index of this position is defined in given sequent.
    */
-  def isIndexDefined(s: Sequent): Boolean =
+  final def isIndexDefined(s: Sequent): Boolean =
     if (isAnte)
-      s.ante.length >= -pos
+      getIndex < s.ante.length
     else {
       assert(isSucc)
-      s.succ.length >= pos
+      getIndex < s.succ.length
     }
 
-  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + pos + ")"
+  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + getPos + ")"
+}
+
+/**
+ * Antecedent Positions of formulas in a sequent.
+ * @param index the position base 0 in antecedent.
+ */
+case class AntePos(private[core] val index: Int) extends SeqPos {
+  def isAnte = true
+  def isSucc = false
+  def getIndex = index
+}
+
+/**
+ * Antecedent Positions of formulas in a sequent.
+ * @param index the position base 0 in antecedent.
+ */
+case class SuccPos(private[core] val index: Int) extends SeqPos {
+  def isAnte = false
+  def isSucc = true
+  def getIndex = index
 }
 
 object SeqPos {
   /**
-   * An antecedent position
-   * @TODO Keep as sub types and split PositionRule to LeftRule and RightRule expecting AntePos and SuccPos respectively by typing?
+   * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
+   *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+   *  Positive numbers indicate succedent positions, 1, 2, 3.
+   *  Zero is a degenerate case indicating whole sequent 0.
    */
-  def AntePos(pos: Int) = SeqPos(-pos)
-
-  /**
-   * A succedent position
-   */
-  def SuccPos(pos: Int) = SeqPos(pos)
+  def SeqPos(signedPos: Int) = if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos+1)}
 
   @deprecated("Move as implicit definition to tactics and then ultimately remove")
-  private[core] def position2SeqPos(p: Position) = new SeqPos(if (p.isAnte) -(p.index+1) else p.index+1)
+  private[core] def position2SeqPos(p: Position) = if (p.isAnte) new AntePos(p.index) else new SuccPos(p.index)
 }
 
 /**
@@ -112,11 +126,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def apply(p: SeqPos): Formula = {
     if (p.isAnte) {
-      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) // @elidable
       ante(p.getIndex)
     } else {
       assert (p.isSucc)
-      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this) // @elidable
       succ(p.getIndex)
     }
   }
@@ -147,11 +161,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: SeqPos, f: Formula) : Sequent = {
     if (p.isAnte) {
-      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante.updated(p.getIndex, f), succ)
     } else {
       assert(p.isSucc)
-      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante, succ.updated(p.getIndex, f))
     }
   }
@@ -166,11 +180,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: SeqPos, s: Sequent) : Sequent = {
     if (p.isAnte) {
-      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     } else {
       assert(p.isSucc)
-      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
     }
   } ensuring(r=> if (p.isAnte)
@@ -473,6 +487,7 @@ object SuccPosition {
 
 // weakening left = hide left
 // remove duplicate antecedent (this should be a tactic)
+//@TODO Change type to LeftRule: AntePos => Rule
 object HideLeft extends (Position => Rule) {
   def apply(p: Position): Rule = {
     require(p.isAnte && p.inExpr == HereP, "Hide left should be done in the antecendent and on top level. Not on " + p)
@@ -481,6 +496,7 @@ object HideLeft extends (Position => Rule) {
 }
 // weakening right = hide right
 // remove duplicate succedent (this should be a tactic)
+//@TODO Change type to RightRule: SuccPos => Rule
 object HideRight extends (Position => Rule) {
   def apply(p: Position): Rule = {
     require(!p.isAnte && p.inExpr == HereP, "Hide right should be done in succedent and on top level. Not on " + p)
