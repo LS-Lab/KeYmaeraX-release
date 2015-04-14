@@ -3,20 +3,23 @@ package edu.cmu.cs.ls.keymaera.tactics
 // favoring immutable Seqs
 
 import scala.collection.immutable.Seq
-import scala.collection.immutable.List
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.onesidedCongruenceT
+import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.replaceInContext
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohide2T,uniformSubstT}
+import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
 import PropositionalTacticsImpl.NonBranchingPropositionalT
 import SearchTacticsImpl.{lastAnte,lastSucc,onBranch}
 import HybridProgramTacticsImpl.boxVacuousT
+import AlphaConversionHelper.replace
 import BranchLabels._
 
 import BuiltinHigherTactics._
-import BindingAssessment.allNames
 
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
@@ -367,8 +370,7 @@ object TacticLibrary {
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
       new PositionTactic("Bound Renaming") {
-    import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = /*s(p) match*/ {
+    override def applies(s: Sequent, p: Position): Boolean = {
       var applicable = false
       ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
         override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
@@ -389,10 +391,38 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        ??? //@TODO implement for Some(p) using CE
-        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx/*, Some(p)*/)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        } & hideT(p.topLevel))
+        if (p.isTopLevel) {
+          Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
+            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+          })
+        } else {
+          // TODO sorts? variables?
+          val fml = TacticHelper.getFormula(node.sequent, p)
+          val vFrom = Variable(from, fromIdx, Real)
+          val vTo = Variable(to, toIdx, Real)
+          val desiredResult = replace(fml)(vFrom, vTo)
+          if (p.isAnte) {
+            Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
+              (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
+                onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(fml, desiredResult))(SuccPosition(0)) &
+                EquivRightT(SuccPosition(0)) & onBranch(
+                (equivLeftLbl, alphaRenamingT(from, fromIdx, to, toIdx)(AntePosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT)),
+                (equivRightLbl, alphaRenamingT(from, fromIdx, to, toIdx)(SuccPosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT))
+              )),
+              (cutUseLbl, hideT(p.topLevel))
+            ))
+          } else {
+            Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
+              (cutShowLbl, hideT(p.topLevel)),
+              (cutUseLbl, cohide2T(AntePos(node.sequent.ante.length), p.topLevel) &
+                onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(desiredResult, fml))(SuccPosition(0)) &
+                EquivRightT(SuccPosition(0)) & onBranch(
+                (equivLeftLbl, alphaRenamingT(from, fromIdx, to, toIdx)(SuccPosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT)),
+                (equivRightLbl, alphaRenamingT(from, fromIdx, to, toIdx)(AntePosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT))
+                ))
+            ))
+          }
+        }
       }
     }
   }
