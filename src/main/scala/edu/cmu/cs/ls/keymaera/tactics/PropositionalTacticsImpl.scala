@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT, axiomLookupBas
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tactics.Position._
 
 import scala.collection.immutable.{Map, List}
 

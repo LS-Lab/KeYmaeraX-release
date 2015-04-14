@@ -1,4 +1,3 @@
-import edu.cmu.cs.ls.keymaera.core.{SuccPosition, AntePosition}
 import edu.cmu.cs.ls.keymaera.tacticsinterface.CLParser
 import org.scalatest.{Matchers, FlatSpec}
 import edu.cmu.cs.ls.keymaera.tacticsinterface._

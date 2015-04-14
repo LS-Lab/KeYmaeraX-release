@@ -1,7 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{EquivRight, PosInExpr, SuccPosition}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tactics.{SearchTacticsImpl, TacticLibrary, NNFRewrite}
+import edu.cmu.cs.ls.keymaera.tactics.{PosInExpr, SearchTacticsImpl, SuccPosition, TacticLibrary, NNFRewrite}
 import edu.cmu.cs.ls.keymaera.tactics.NNFRewrite._
 import testHelper.StringConverter._
 

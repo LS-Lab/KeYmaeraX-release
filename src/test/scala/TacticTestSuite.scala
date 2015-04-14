@@ -1,5 +1,7 @@
-import edu.cmu.cs.ls.keymaera.tactics.{ExpressionTraversal, ProofNode, Interpreter, Tactics}
-import ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaera.tactics.Position
+import edu.cmu.cs.ls.keymaera.tactics.PosInExpr
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{ProofNode, Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
