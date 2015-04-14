@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.api
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaera.tactics._
 
 import scala.reflect.runtime.universe.{TypeTag,typeOf}
 

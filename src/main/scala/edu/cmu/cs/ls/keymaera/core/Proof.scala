@@ -11,8 +11,6 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
-import java.io.File
-
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -22,17 +20,20 @@ import scala.collection.immutable.Set
 
 import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
-import scala.collection.immutable.HashMap
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaera.parser._
 import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
 
-import scala.collection.GenTraversableOnce
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser  // external
+import edu.cmu.cs.ls.keymaera.parser.LoadedKnowledgeTools  // external
+import edu.cmu.cs.ls.keymaera.parser.ToolEvidence  // external
 
 /*--------------------------------------------------------------------------------*/
 /*--------------------------------------------------------------------------------*/
 
+/*********************************************************************************
+  * Sequents and positioning
+  *********************************************************************************
+  */
 
 /**
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
@@ -90,15 +91,13 @@ case class SuccPos(private[core] val index: Int) extends SeqPos {
 
 object SeqPos {
   /**
-   * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
+   * @param signedPos the signed integer position of the formula in the antecedent or succedent, respectively.
    *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
    */
   def SeqPos(signedPos: Int) = if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos+1)}
 
-  @deprecated("Move as implicit definition to tactics and then ultimately remove")
-  private[core] def position2SeqPos(p: Position) = if (p.isAnte) new AntePos(p.index) else new SuccPos(p.index)
 }
 
 /**
@@ -207,61 +206,13 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
 
-  /**
-   * Retrieves the formula in sequent at a given position. Note that this ignores p.inExpr
-   * @param p the position of the formula
-   * @return the formula at the given position either from the antecedent or the succedent ignoring p.inExpr
-   */
-  @deprecated("Use apply(SeqPos) instead.")
-  def apply(p: Position): Formula = {
-    //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
-//    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
-    apply(SeqPos.position2SeqPos(p))
-  }
-  /**
-   * A copy of this sequent with the indicated position replaced by the formula f.
-   * @param p the position of the replacement
-   * @param f the replacing formula
-   * @returns a copy of this sequent with the formula at position p replaced by f.
-   */
-  @deprecated("Use updated(SeqPos, Formula) instead")
-  def updated(p: Position, f: Formula) : Sequent = {
-    //    require(p.inExpr == HereP, "Can only update top level formulas")
-//    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
-    updated(SeqPos.position2SeqPos(p), f)
-  }
-  /**
-   * A copy of this sequent with the indicated position replaced by gluing the sequent s.
-   * @param p the position of the replacement
-   * @param s the sequent glued / concatenated to this sequent after dropping p.
-   * @return a copy of this sequent with the formula at position p removed and the sequent s appended.
-   * @see #updated(Position,Formula)
-   * @see #glue(Sequent)
-   */
-  @deprecated("Use updated(SeqPos, Sequent) instead.")
-  def updated(p: Position, s: Sequent) : Sequent = {
-    //    require(p.inExpr == HereP, "Can only update top level formulas")
-//    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
-    updated(SeqPos.position2SeqPos(p), s)
-  }
-
 }
 
 
-/**
- * Subclasses represent all proof rules.
- * A proof rule is ultimately a named mapping from sequents to lists of sequents.
- * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
- * to prove the current sequent (desired conclusion).
- * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
- */
-sealed abstract class Rule(val name: String) extends (Sequent => scala.collection.immutable.List[Sequent]) {
-  //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
-
-  override def toString: String = name
-}
-  
-sealed trait ClosingRule {}
+/*********************************************************************************
+  * Provables as certificates of provability.
+  *********************************************************************************
+  */
 
 object Provable {
   /**
@@ -364,12 +315,30 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 }
 
 
-
-
 /*********************************************************************************
  * Categorize Kinds of Proof Rules
  **********************************************************************************
  */
+
+/**
+ * Subclasses represent all proof rules.
+ * A proof rule is ultimately a named mapping from sequents to lists of sequents.
+ * The resulting list of sequents represent the subgoal/premise and-branches all of which need to be proved
+ * to prove the current sequent (desired conclusion).
+ * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
+ */
+sealed abstract class Rule(val name: String) extends (Sequent => scala.collection.immutable.List[Sequent]) {
+  //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+
+  override def toString: String = name
+}
+
+sealed trait ClosingRule {}
+
+abstract class PositionRule(name: String, val pos: SeqPos) extends Rule(name) {
+  override def toString: String = name + " at " + pos
+}
+
 abstract class LeftRule(name: String, val pos: AntePos) extends Rule(name) {
     override def toString: String = name + " at " + pos
 }
@@ -378,108 +347,12 @@ abstract class RightRule(name: String, val pos: SuccPos) extends Rule(name) {
   override def toString: String = name + " at " + pos
 }
 
-abstract class PositionRule(name: String, val pos: Position) extends Rule(name) {
-    override def toString: String = name + " at " + pos
-}
-
-abstract class AssumptionRule(name: String, val aPos: Position, pos: Position) extends PositionRule(name, pos) {
+abstract class AssumptionRule(name: String, val aPos: SeqPos, pos: SeqPos) extends PositionRule(name, pos) {
   override def toString: String = name + " at " + pos + " assumption at " + aPos
 }
 
-abstract class TwoPositionRule(name: String, val pos1: Position, val pos2: Position) extends Rule(name) {
+abstract class TwoPositionRule(name: String, val pos1: SeqPos, val pos2: SeqPos) extends Rule(name) {
   override def toString: String = name + " at " + pos1 + " and " + pos2
-}
-
-/*********************************************************************************
- * Positioning information within expressions, i.e. formulas / terms / programs
- *********************************************************************************
- */
-
-@deprecated("Remove from prover core")
-case class PosInExpr(pos: List[Int] = Nil) {
-  require(pos forall(_>=0), "all nonnegative positions")
-  def first:  PosInExpr = new PosInExpr(pos :+ 0)
-  def second: PosInExpr = new PosInExpr(pos :+ 1)
-  def third:  PosInExpr = new PosInExpr(pos :+ 2)
-
-  def isPrefixOf(p: PosInExpr): Boolean = p.pos.startsWith(pos)
-  def child: PosInExpr = PosInExpr(pos.tail)
-}
-
-// observe that HereP and PosInExpr([]) will be equals, since PosInExpr is a case class
-object HereP extends PosInExpr
-
-/**
- * @param index the number of the formula in the antecedent or succedent, respectively.
- * @param inExpr the position in said formula.
- * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
- * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
- */
-@deprecated("Use SeqPos instead in prover core")
-abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
-  require (index >= 0, "nonnegative index " + index)
-  def isAnte: Boolean
-  def getIndex: Int = index
-
-  /**
-   * Check whether index of this position is defined in given sequent (ignoring inExpr).
-   */
-  def isIndexDefined(s: Sequent): Boolean =
-    if(isAnte)
-      s.ante.length > getIndex
-    else
-      s.succ.length > getIndex
-
-  /**
-   * Top level position of this position
-   * @return A position with the same index but on the top level (i.e., inExpr == HereP)
-   */
-  def topLevel: Position = {
-    clone(index)
-  } ensuring (r => r.isAnte==isAnte && r.index==index && r.inExpr == HereP)
-
-  /**
-   * Whether this position is a top-level position of a sequent.
-   */
-  def isTopLevel: Boolean = inExpr == HereP
-
-  def +(i: Int): Position
-
-  def first: Position
-  def second: Position
-  def third: Position
-
-  protected def clone(i: Int, e: PosInExpr = HereP): Position
-
-  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ", " + inExpr + ")"
-}
-
-@deprecated("Use AntePos or SeqPos(-...) instead")
-class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
-  def isAnte = true
-  protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
-  def +(i: Int) = AntePosition(index + i, inExpr)
-  def first: Position = AntePosition(index, inExpr.first)
-  def second: Position = AntePosition(index, inExpr.second)
-  def third: Position = AntePosition(index, inExpr.third)
-}
-
-object AntePosition {
-  def apply(index: Int, inExpr: PosInExpr = HereP): Position = new AntePosition(index, inExpr)
-}
-
-@deprecated("Use SuccPos or SeqPos instead")
-class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
-  def isAnte = false
-  protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)
-  def +(i: Int) = SuccPosition(index + i, inExpr)
-  def first: Position = SuccPosition(index, inExpr.first)
-  def second: Position = SuccPosition(index, inExpr.second)
-  def third: Position = SuccPosition(index, inExpr.third)
-}
-
-object SuccPosition {
-  def apply(index: Int, inExpr: PosInExpr = HereP): Position = new SuccPosition(index, inExpr)
 }
 
 /*********************************************************************************
@@ -495,75 +368,64 @@ object SuccPosition {
 // weakening left = hide left
 // remove duplicate antecedent (this should be a tactic)
 //@TODO Change type to LeftRule: AntePos => Rule
-object HideLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    require(p.isAnte && p.inExpr == HereP, "Hide left should be done in the antecendent and on top level. Not on " + p)
-    new Hide(p)
-  }
+object HideLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new HideLeft(p)
 }
+class HideLeft(p: AntePos) extends LeftRule("HideLeft", p) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
 // weakening right = hide right
 // remove duplicate succedent (this should be a tactic)
 //@TODO Change type to RightRule: SuccPos => Rule
-object HideRight extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    require(!p.isAnte && p.inExpr == HereP, "Hide right should be done in succedent and on top level. Not on " + p)
-    new Hide(p)
-  }
+object HideRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new HideRight(p)
 }
-class Hide(p: Position) extends PositionRule("Hide", p) {
-  require(p.inExpr == HereP)
+class HideRight(p: SuccPos) extends RightRule("HideRight", p) {
   def apply(s: Sequent): List[Sequent] = {
-    if (p.isAnte)
-      List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
-    else
-      List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+    List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 // co-weakening left = co-hide left (all but indicated position)
-object CoHideLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    require(p.isAnte && p.inExpr == HereP)
-    new CoHide(p)
-  }
+object CoHideLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new CoHideLeft(p)
 }
-// co-weakening right = co-hide right (all but indicated position)
-object CoHideRight extends (Position => Rule) {
-  def apply(p: Position): Rule = {
-    require(!p.isAnte && p.inExpr == HereP)
-    new CoHide(p)
-  }
-}
-class CoHide(p: Position) extends PositionRule("CoHide", p) {
-  require(p.inExpr == HereP)
+class CoHideLeft(p: AntePos) extends LeftRule("CoHideLeft", p) {
   def apply(s: Sequent): List[Sequent] = {
-    if (p.isAnte)
-      List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
-    else
-      List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(p.getIndex))))
+    List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+// co-weakening right = co-hide right (all but indicated position)
+object CoHideRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new CoHideRight(p)
+}
+class CoHideRight(p: SuccPos) extends RightRule("CoHideRight", p) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(p.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 
 // Exchange left rule reorders antecedent
 object ExchangeLeft {
-  def apply(p1: Position, p2: Position): Rule = new ExchangeLeftRule(p1, p2)
+  def apply(p1: AntePos, p2: AntePos): Rule = new ExchangeLeftRule(p1, p2)
 
-  private class ExchangeLeftRule(p1: Position, p2: Position) extends TwoPositionRule("ExchangeLeft", p1, p2) {
-    require(p1.isAnte && p1.inExpr == HereP && p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the antecedent " + this)
+  private class ExchangeLeftRule(p1: AntePos, p2: AntePos) extends TwoPositionRule("ExchangeLeft", p1, p2) {
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante.updated(p1.getIndex, s.ante(p2.getIndex)).updated(p2.getIndex, s.ante(p1.getIndex)), s.succ))
-      //throw new InapplicableRuleException("Rule is only applicable to two positions in the antecedent", this, s)
     } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
 
-// Exchange right rule reorders succcedent
+// Exchange right rule reorders succedent
 object ExchangeRight {
-  def apply(p1: Position, p2: Position): Rule = new ExchangeRightRule(p1, p2)
+  def apply(p1: SuccPos, p2: SuccPos): Rule = new ExchangeRightRule(p1, p2)
 
-  private class ExchangeRightRule(p1: Position, p2: Position) extends TwoPositionRule("ExchangeRight", p1, p2) {
-    require(!p1.isAnte && p1.inExpr == HereP && !p2.isAnte && p2.inExpr == HereP, "Rule is only applicable to two positions in the succedent " + this)
+  private class ExchangeRightRule(p1: SuccPos, p2: SuccPos) extends TwoPositionRule("ExchangeRight", p1, p2) {
     def apply(s: Sequent): List[Sequent] = {
       List(Sequent(s.pref, s.ante, s.succ.updated(p1.getIndex, s.succ(p2.getIndex)).updated(p2.getIndex, s.succ(p1.getIndex))))
     } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
@@ -571,7 +433,7 @@ object ExchangeRight {
 }
 
 // Contraction right rule duplicates a formula in the succedent
-
+/*
 object ContractionRight {
   def apply(p: Position): Rule = new ContractionRightRule(p)
 
@@ -595,7 +457,7 @@ object ContractionLeft {
     } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
   }
 }
-
+*/
 
 /*********************************************************************************
  * Sequent Proof Rules for identity/closing and cut
@@ -603,18 +465,15 @@ object ContractionLeft {
  */
 
 // Ax Axiom close / Identity rule
-object Close extends ((Position, Position) => Rule) {
-  def apply(ass: Position, p: Position): Rule = new Close(ass, p)
+object Close extends ((AntePos, SuccPos) => Rule) {
+  def apply(assume: AntePos, p: SuccPos): Rule = new Close(assume, p)
 }
 
 
-class Close(assume: Position, p: Position) extends AssumptionRule("Axiom", assume, p) with ClosingRule {
-  require(p.isAnte != assume.isAnte, "Axiom close can only be applied to one formula in the antecedent and one in the succedent")
-  require(p.inExpr == HereP && assume.inExpr == HereP, "Axiom close can only be applied to top level formulas")
-
+class Close(assume: AntePos, p: SuccPos) extends AssumptionRule("Axiom", assume, p) with ClosingRule {
   def apply(s: Sequent): List[Sequent] = {
-    require(p.isAnte != assume.isAnte, "axiom close applies to different sides of sequent")
-    if(p.isAnte != assume.isAnte && s(assume) == s(p)) {
+    if (s(assume) == s(p)) {
+        assert (assume.isAnte && p.isSucc)
         // close goal
         Nil
     } else {
@@ -625,28 +484,26 @@ class Close(assume: Position, p: Position) extends AssumptionRule("Axiom", assum
 
 // close by true
 object CloseTrue {
-  def apply(p: Position): PositionRule = new CloseTrue(p)
+  def apply(p: SuccPos): RightRule = new CloseTrue(p)
 }
 
-class CloseTrue(p: Position) extends PositionRule("CloseTrue", p) with ClosingRule {
-  require(!p.isAnte && p.inExpr == HereP, "CloseTrue only works in the succedent on top-level")
+class CloseTrue(p: SuccPos) extends RightRule("CloseTrue", p) with ClosingRule {
   override def apply(s: Sequent): List[Sequent] = {
-    require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s)
-    if(!p.isAnte && s.succ(p.getIndex) == True) Nil
+    require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s) // @elidable
+    if (s(p) == True) Nil
     else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + p, this, s)
   } ensuring (_.isEmpty, "closed if applicable")
 }
 
 // close by false
 object CloseFalse {
-  def apply(p: Position): PositionRule = new CloseFalse(p)
+  def apply(p: AntePos): LeftRule = new CloseFalse(p)
 }
 
-class CloseFalse(p: Position) extends PositionRule("CloseFalse", p) with ClosingRule {
-  require(p.isAnte && p.inExpr == HereP, "CloseFalse only works in the antecedent on top-level")
+class CloseFalse(p: AntePos) extends LeftRule("CloseFalse", p) with ClosingRule {
   override def apply(s: Sequent): List[Sequent] = {
-    require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s)
-    if(p.isAnte && s.ante(p.getIndex) == False) Nil
+    require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s) //@elidable
+    if (s(p) == False) Nil
     else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + p, this, s)
   } ensuring (_.isEmpty, "closed if applicable")
 }
@@ -672,12 +529,11 @@ object Cut {
  */
 
 // !R Not right
-object NotRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new NotRight(p)
+object NotRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new NotRight(p)
 }
 
-class NotRight(p: Position) extends PositionRule("Not Right", p) {
-  require(!p.isAnte && p.inExpr == HereP, "Not Right is only applicable to top-level formulas in the succedent not to: " + p)
+class NotRight(p: SuccPos) extends RightRule("Not Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Not(a) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq())))
@@ -685,12 +541,11 @@ class NotRight(p: Position) extends PositionRule("Not Right", p) {
 }
 
 // !L Not left
-object NotLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new NotLeft(p)
+object NotLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new NotLeft(p)
 }
 
-class NotLeft(p: Position) extends PositionRule("Not Left", p) {
-  require(p.isAnte && p.inExpr == HereP, "Not Left is only applicable to top-level formulas in the antecedent not to: " + p)
+class NotLeft(p: AntePos) extends LeftRule("Not Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Not(a) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))))
@@ -698,11 +553,10 @@ class NotLeft(p: Position) extends PositionRule("Not Left", p) {
 }
 
 // |R Or right
-object OrRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new OrRight(p)
+object OrRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new OrRight(p)
 }
-class OrRight(p: Position) extends PositionRule("Or Right", p) {
-  require(!p.isAnte && p.inExpr == HereP, "Or Right is only applicable to top-level formulas in the succedent not to: " + p)
+class OrRight(p: SuccPos) extends RightRule("Or Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Or(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a,b))))
@@ -710,12 +564,11 @@ class OrRight(p: Position) extends PositionRule("Or Right", p) {
 }
 
 // |L Or left
-object OrLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new OrLeft(p)
+object OrLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new OrLeft(p)
 }
 
-class OrLeft(p: Position) extends PositionRule("Or Left", p) {
-  require(p.isAnte && p.inExpr == HereP, "Or Left is only applicable to top-level formulas in the antecedent not to: " + p)
+class OrLeft(p: AntePos) extends LeftRule("Or Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Or(a,b) = s(p)
     List(s.updated(p, a), s.updated(p, b))
@@ -723,11 +576,10 @@ class OrLeft(p: Position) extends PositionRule("Or Left", p) {
 }
 
 // &R And right
-object AndRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndRight(p)
+object AndRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new AndRight(p)
 }
-class AndRight(p: Position) extends PositionRule("And Right", p) {
-  require(!p.isAnte && p.inExpr == HereP, "And Right is only applicable to top-level formulas in the succedent not to: " + p)
+class AndRight(p: SuccPos) extends RightRule("And Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val And(a,b) = s(p)
     List(s.updated(p, a), s.updated(p, b))
@@ -735,12 +587,11 @@ class AndRight(p: Position) extends PositionRule("And Right", p) {
 }
 
 // &L And left
-object AndLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new AndLeft(p)
+object AndLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new AndLeft(p)
 }
 
-class AndLeft(p: Position) extends PositionRule("And Left", p) {
-  require(p.isAnte && p.inExpr == HereP, "And Left is only applicable to top-level formulas in the antecedent not to: " + p)
+class AndLeft(p: AntePos) extends LeftRule("And Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val And(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b), IndexedSeq())))
@@ -748,12 +599,11 @@ class AndLeft(p: Position) extends PositionRule("And Left", p) {
 }
 
 // ->R Implication right
-object ImplyRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplyRight(p)
+object ImplyRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new ImplyRight(p)
 }
 
-class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
-  require(!p.isAnte && p.inExpr == HereP, "Imply Right is only applicable to top-level formulas in the succedent not to: " + p)
+class ImplyRight(p: SuccPos) extends RightRule("Imply Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Imply(a,b) = s(p)
     List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
@@ -762,11 +612,10 @@ class ImplyRight(p: Position) extends PositionRule("Imply Right", p) {
 
 
 // ->L Implication left
-object ImplyLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new ImplyLeft(p)
+object ImplyLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new ImplyLeft(p)
 }
-class ImplyLeft(p: Position) extends PositionRule("Imply Left", p) {
-  require(p.isAnte && p.inExpr == HereP, "Imply Left is only applicable to top-level formulas in the antecedent not to: " + p)
+class ImplyLeft(p: AntePos) extends LeftRule("Imply Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Imply(a,b) = s(p)
     //@TODO Surprising that both positions change.
@@ -776,11 +625,10 @@ class ImplyLeft(p: Position) extends PositionRule("Imply Left", p) {
 }
 
 // <->R Equiv right
-object EquivRight extends (Position => Rule) {
-  def apply(p: Position): Rule = new EquivRight(p)
+object EquivRight extends (SuccPos => Rule) {
+  def apply(p: SuccPos): Rule = new EquivRight(p)
 }
-class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
-  require(!p.isAnte && p.inExpr == HereP, "Equivalence Right is only applicable to top-level formulas in the succedent not to: " + p)
+class EquivRight(p: SuccPos) extends RightRule("Equiv Right", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Equiv(a,b) = s(p)
     //List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
@@ -790,12 +638,11 @@ class EquivRight(p: Position) extends PositionRule("Equiv Right", p) {
 }
 
 // <->L Equiv left
-object EquivLeft extends (Position => Rule) {
-  def apply(p: Position): Rule = new EquivLeft(p)
+object EquivLeft extends (AntePos => Rule) {
+  def apply(p: AntePos): Rule = new EquivLeft(p)
 }
 
-class EquivLeft(p: Position) extends PositionRule("Equiv Left", p) {
-  require(p.isAnte && p.inExpr == HereP, "Equivalence Left is only applicable to top-level formulas in the antecedent not to: " + p)
+class EquivLeft(p: AntePos) extends LeftRule("Equiv Left", p) {
   def apply(s: Sequent): List[Sequent] = {
     val Equiv(a,b) = s(p)
     //List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
@@ -859,35 +706,23 @@ object UniformSubstitutionRule {
  * @param wIdx What index of the name to replace.
  * @param repl The target name to replace what with.
  * @param rIdx The index of the target name as replacement.
- * @param pos The position where to perform alpha conversion.
- *            If Some(p), p must point to a position that binds
- *            name_idx (either a quantifier or a box/diamond modality).
- *            If None, then prepend a modality [target_tIdx:=name_idx].
  * @requires target name with target index tIdx is fresh in the sequent.
  * @author smitsch
  */
-class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int], pos: Option[Position])
-  extends Rule("Alpha Conversion") {
+class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int])
+  extends Rule("Bound Renaming") {
 
+  //@TODO Unclear. Remove?
   @unspecialized
   override def compose[A](g: (A) => _root_.edu.cmu.cs.ls.keymaera.core.Sequent): (A) => scala.List[_root_.edu.cmu.cs.ls.keymaera.core.Sequent] = super.compose(g)
 
-  def apply(s: Sequent): List[Sequent] = pos match {
-    case Some(p) =>
-      //@TODO Should be able to get rid of this case by using CE.
-      // BoundRenamingClashException will be checked within renameAt
-      //@TODO Should return List(s.updated(p.topLevel, renameAt(s(p.topLevel), p.inExpr)) in place
-      val formula = renameAt(s(p.topLevel), p.inExpr)
-      if (p.isAnte) List(Sequent(s.pref, s.ante :+ formula, s.succ))
-      else List(Sequent(s.pref, s.ante, s.succ :+ formula))
-    case None =>
+  def apply(s: Sequent): List[Sequent] =
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
-  }
 
   def apply(f: Formula): Formula = {
     // allow self renaming to get stuttering
     if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
-      throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+      throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     rename(f)
   }
 
@@ -899,7 +734,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
-  private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+  //private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
 
   /**
    * Performing alpha conversion renaming in a term
@@ -932,7 +767,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   private def rename(e: NamedSymbol): NamedSymbol = e match {
     case v: Variable => renameVar(v)
     case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
-    case _ => throw new IllegalArgumentException("Alpha conversion only supported for variables so far")
+    case _ => throw new IllegalArgumentException("Bound renaming only supported for variables so far")
   }
 
   /**
@@ -967,17 +802,6 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case True | False => f
   }
 
-//  private def renameQuantifier[T <: Quantifier](vars: Seq[NamedSymbol], phi: Formula,
-//                                                factory: (Seq[NamedSymbol], Formula) => T) = {
-//    // assumes that variables in a quantifier block are unique
-//    vars.find(v => v.name == name && v.index == idx) match {
-//      case Some(oldVar) => factory(vars.map(rename), rename(phi))
-//        //@TODO Can't we always use the upper case? So get rid of the private def altogether.
-//      case None => factory(vars, rename(phi))
-//    }
-//  }
-
-
   /**
    * Performing alpha conversion renaming in a program
    */
@@ -1004,56 +828,6 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       case ODESystem(d, a, h) => ODESystem(d, renameODE(a), rename(h))
       case _: EmptyODE => p
       case _: DifferentialProgramConstant => p
-  }
-
-  // rename at a target position
-
-  private def renameAt(f: Formula, p: PosInExpr): Formula =
-    if (p == HereP) {
-      // allow self renaming to get stuttering
-      if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
-        throw new BoundRenamingClashException("Renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
-      f match {
-        // only allow renaming at a specific position if the name to be replaced is bound there
-        // (needed for skolemization and renaming of quantified parts inside a formula)
-        case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
-        case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => rename(f)
-        // if program may bind var, then rename with stored initial value
-        case BoxModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
-          ghostify(f)
-        case DiamondModality(a, _) if StaticSemantics(a).bv.exists(v => v.name == what && v.index == wIdx) =>
-          ghostifyDiamond(f)
-        case _ => f //@TODO throw new CoreException since this is a bug if it happens?
-      }
-    } else f match {
-      // homomorphic cases
-      case Not(g) => Not(renameAt(g, p.child))
-      case And(l, r) => if (p.pos.head == 0) And(renameAt(l, p.child), r) else And(l, renameAt(r, p.child))
-      case Or(l, r) => if (p.pos.head == 0) Or(renameAt(l, p.child), r) else Or(l, renameAt(r, p.child))
-      case Imply(l, r) => if (p.pos.head == 0) Imply(renameAt(l, p.child), r) else Imply(l, renameAt(r, p.child))
-      case Equiv(l, r) => if (p.pos.head == 0) Equiv(renameAt(l, p.child), r) else Equiv(l, renameAt(r, p.child))
-      case FormulaDerivative(df) => FormulaDerivative(renameAt(df, p.child))
-
-      case Forall(vars, g) => if (p.pos.head == 0) Forall(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
-      case Exists(vars, g) => if (p.pos.head == 0) Exists(vars, renameAt(g, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in quantifier, only 0 allowed")
-
-      case BoxModality(prg, g) => if (p.pos.head == 0) BoxModality(renameAt(prg, p.child), g) else BoxModality(prg, renameAt(g, p.child))
-      case DiamondModality(prg, g) => if (p.pos.head == 0) DiamondModality(renameAt(prg, p.child), g) else DiamondModality(prg, renameAt(g, p.child))
-
-      // base cases
-      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula" + a + " but would still need to traverse to " + p)
-  }
-
-  private def renameAt(prg: Program, p: PosInExpr): Program =
-    if (p == HereP) throw new IllegalArgumentException("Position " + p + " is program " + prg + ", not a formula")
-    else prg match {
-      case Test(f) => if (p.pos.head == 0) Test(renameAt(f, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in test, only 0 allowed")
-      case ODESystem(vars, a, h) => if (p.pos.head == 2) ODESystem(vars, a, renameAt(h, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in ODE system, only 2 allowed")
-      case Sequence(a, b) => if (p.pos.head == 0) Sequence(renameAt(a, p.child), b) else Sequence(a, renameAt(b, p.child))
-      case Choice(a, b) => if (p.pos.head == 0) Choice(renameAt(a, p.child), b) else Choice(a, renameAt(b, p.child))
-      case Loop(a) => if (p.pos.head == 0) Loop(renameAt(a, p.child)) else throw new IllegalArgumentException("Cannot traverse to " + p.pos.head + " in loop, only 0 allowed")
-      case IfThen(cond, thenT) => if (p.pos.head == 0) IfThen(renameAt(cond, p.child), thenT) else IfThen(cond, renameAt(thenT, p.child))
-      case a => throw new IllegalArgumentException("Unable to traverse deeper, reached non-formula " + a + " but would still need to traverse to " + p)
   }
 
   /**
@@ -1141,60 +915,28 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
  *  ---------------all generalize
  *  \forall x. p(x)
  */
-class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
-  require(p.inExpr == HereP, "Can only skolemize top level formulas")
+class Skolemize(p: SeqPos) extends PositionRule("Skolemize", p) {
   override def apply(s: Sequent): List[Sequent] = {
     // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-    val vars = BindingAssessment.allNamesExceptAt(s, p)
+    val vars = allNamesExceptAt(s, p)
     val (v,phi) = s(p) match {
       case Forall(qv, qphi) if !p.isAnte => (qv,qphi)
       case Exists(qv, qphi) if p.isAnte => (qv,qphi)
       case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
     }
     if (vars.intersect(v.toSet).nonEmpty)
-      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
+      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
         vars.intersect(v.toSet))
     // TODO append v to prefix for merge or existential quantifier handling
-    List(if (p.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(p.index, phi), s.succ)
-         else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.index, phi)))
+    List(s.updated(p, phi))
+    /*List(if (p.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(p.getIndex, phi), s.succ)
+         else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.getIndex, phi)))*/
   }
-}
 
-/*********************************************************************************
- * Block Quantifier Decomposition
- *********************************************************************************
- */
-
-/**
- * decompose quantifiers.
- * @NOTE Currently not used. Delete
- * @TODO Can turn into axiom once list quantifiers and cons in list quantifier are parsable.
- * @TODO Should simplify implementation substantially by only applying at top-level.
- */
-@deprecated
-object DecomposeQuantifiers {
-  def apply(p: Position): Rule = new DecomposeQuantifiers(p)
-}
-
-@deprecated("Remove or change")
-class DecomposeQuantifiers(pos: Position) extends PositionRule("Decompose Quantifiers", pos) {
-  override def apply(s: Sequent): List[Sequent] = {
-    val fn = new ExpressionTraversalFunction {
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = if(p == pos.inExpr) Left(None) else Right(e)
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-        case Forall(vars, f) if vars.length >= 2 => Right(Forall(vars.take(1), Forall(vars.drop(1), f)))
-        case Exists(vars, f) if vars.length >= 2 => Right(Exists(vars.take(1), Exists(vars.drop(1), f)))
-        case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + e.prettyString(), DecomposeQuantifiers.this, s)
-      }
-    }
-    val f = ExpressionTraversal.traverse(TraverseToPosition(pos.inExpr, fn), s(pos)) match {
-      case Some(form) => form
-      case _ => throw new InapplicableRuleException("Can only decompose quantifiers with at least 2 variables. Not: " + s(pos).prettyString() + " at " + pos, this, s)
-    }
-    if(pos.isAnte)
-      List(Sequent(s.pref, s.ante.updated(pos.getIndex, f), s.succ))
-    else
-      List(Sequent(s.pref, s.ante, s.succ.updated(pos.getIndex, f)))
+  private def allNamesExceptAt(s: Sequent, p: SeqPos) = {
+    val fs = if (p.isAnte) s.ante.slice(0, p.getIndex) ++ s.ante.slice(p.getIndex + 1, s.ante.length) ++ s.succ
+    else s.ante ++ s.succ.slice(0, p.getIndex) ++ s.succ.slice(p.getIndex + 1, s.ante.length)
+    fs.flatMap(StaticSemantics.symbols).toSet
   }
 }
 

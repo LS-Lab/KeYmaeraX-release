@@ -1,8 +1,10 @@
 package edu.cmu.cs.ls.keymaera.tools
 
 import com.wolfram.jlink._
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal
+import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.PosInExpr
 
 /**
  * An abstract interface to Mathematica link implementations.

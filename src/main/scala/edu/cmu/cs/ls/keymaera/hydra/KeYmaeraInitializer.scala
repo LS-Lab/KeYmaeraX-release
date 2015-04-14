@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import edu.cmu.cs.ls.keymaera.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.{TacticLibrary2, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 

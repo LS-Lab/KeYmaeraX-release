@@ -1,8 +1,8 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.core.BindingAssessment.allNames
+import BindingAssessment.allNames
 import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
@@ -443,9 +443,9 @@ object FOQuantifierTacticsImpl {
       res
     }
 
-    override def apply(p: Position): Tactic = new ApplyRule(DecomposeQuantifiers(p)) {
+    override def apply(p: Position): Tactic = ??? /*new ApplyRule(DecomposeQuantifiers(p)) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-    }
+    }*/
   }
 
   /**
