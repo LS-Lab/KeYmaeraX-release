@@ -147,17 +147,22 @@ trait DBAbstraction {
   def updateProofOnCLTermCompletion(proofId : String, termId : String)
 
   protected def initializeForDemo() : Unit = {
+    println("Initializing a demo database")
+
     //Add user
     this.createUser("guest", "guest")
 
     //Model name, file
     val indexFileContents : List[(String, String)] = {
-      val reader = this.getClass.getResourceAsStream("examples/index.txt")
-      val lines = Source.fromInputStream(reader).getLines
+      val r = this.getClass.getResourceAsStream("/examples/index.txt")
+      if(r == null) {
+        throw new Exception("Could not initialize database because examples/index.txt does not exist in this JAR")
+      }
+      val lines = Source.fromInputStream(r).getLines
       lines.map(line => {
         val parts = line.split(",")
-        if(parts != 2) throw new Exception("Could not parse examples/index.txt")
-        (parts.head, parts.tail.head)
+        if(parts.length != 2) throw new Exception("Could not parse examples/index.txt")
+        (parts.head, "/" + parts.tail.head)
       }).toList
     }
 
