@@ -356,7 +356,6 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
   }
 }
 
-
 class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], clTerm : String) extends Request {
   def getResultingResponses() = {
     try {
@@ -497,5 +496,21 @@ class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[Strin
       case Some(theNode) => new NodeResponse(theNode) :: Nil
       case None => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
     }
+  }
+}
+
+class IsLicenseAcceptedRequest(db : DBAbstraction) extends Request {
+  def getResultingResponses() = {
+    new BooleanResponse(
+      db.getConfiguration("license").config.contains("accepted") && db.getConfiguration("license").config.get("accepted").get.equals("true")
+    ) :: Nil
+  }
+}
+
+class AcceptLicenseRequest(db : DBAbstraction) extends Request {
+  def getResultingResponses() = {
+    val newConfiguration = new ConfigurationPOJO("license", Map("accepted" -> "true"))
+    db.updateConfiguration(newConfiguration)
+    new BooleanResponse(true) :: Nil
   }
 }

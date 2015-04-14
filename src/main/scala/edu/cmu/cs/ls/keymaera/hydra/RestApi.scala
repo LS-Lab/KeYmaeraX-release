@@ -345,6 +345,17 @@ trait RestApi extends HttpService {
     }
   }}
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Licensing
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  val license = path("licenseacceptance") {  {
+    get {
+      complete(standardCompletion(new IsLicenseAcceptedRequest(database)))
+    } ~
+    post {
+      complete(standardCompletion(new AcceptLicenseRequest(database)))
+    }
+  }}
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
@@ -380,6 +391,7 @@ trait RestApi extends HttpService {
     dashInfo              ::
     mathematicaConfig ::
     mathematicaStatus ::
+    license ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }
