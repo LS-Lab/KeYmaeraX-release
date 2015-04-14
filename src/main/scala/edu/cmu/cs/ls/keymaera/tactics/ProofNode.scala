@@ -78,7 +78,7 @@ import scala.collection.immutable.{List, Map}
      * Note that only ProofNode.apply is allowed to construct proof steps.
      * @param goal - parent of the step
      * @param subgoals - children of the step
-     * @todo could use a Provable
+     * @todo could merely use a Provable as evidence rather than remembering the Rule as evidence.
      */
     sealed case class ProofStep private[ProofNode] (rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode], tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
       justifiedByProofRule
@@ -94,7 +94,10 @@ import scala.collection.immutable.{List, Map}
   }
 
   sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
-    private val fullProvable = true
+    /**
+     * Whether to keep full provables or just local provables around as evidence.
+     */
+    private val fullProvable = false
 
     @volatile private[this] var alternatives : List[ProofNode.ProofStep] = Nil
 
@@ -144,9 +147,9 @@ import scala.collection.immutable.{List, Map}
     final def apply(rule : Rule) : ProofNode.ProofStep = {
       // ProofNodes for the respective sequents resulting from applying rule to sequent.
       checkInvariant
-      var proofStep = {
+      val proofStep = {
         if (fullProvable) { // keep full provable around
-        val newProvable = provable(rule, subgoal)
+          val newProvable = provable(rule, subgoal)
           val subgoals = if (newProvable.subgoals.length < provable.subgoals.length) List()
           else List(new ProofNode(this, newProvable, subgoal)) ++
             Range(provable.subgoals.length, newProvable.subgoals.length).
@@ -154,8 +157,9 @@ import scala.collection.immutable.{List, Map}
           //@TODO assert(all subgoals have the same provable and the same parent)
           ProofNode.ProofStep(rule, this, subgoals)
         } else {  // only keep subProvable around to simplify subsequent merge
-        val subgoals = provable.sub(subgoal)(rule, 0)
-          ???
+          val newProvable = provable.sub(subgoal)(rule, 0)
+          ProofNode.ProofStep(rule, this, Range(0, newProvable.subgoals.length).
+            map(new ProofNode(this, newProvable, _)).toList)
         }
       }
       // Add as or-branching alternative
