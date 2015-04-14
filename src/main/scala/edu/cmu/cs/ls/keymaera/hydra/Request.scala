@@ -142,7 +142,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
       p.runParser(keyFileContents) match {
         case f : Formula => {
           val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
-          new BooleanResponse(result) :: Nil
+          new BooleanResponse(result.isDefined) :: Nil
         }
         case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
       }

@@ -94,15 +94,15 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Models
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  override def createModel(userId: String, name: String, fileContents: String, currentDate : String): Boolean = {
+  override def createModel(userId: String, name: String, fileContents: String, currentDate : String): Option[String] = {
     val query = MongoDBObject("userId" -> userId, "name" -> name, "fileContents" -> fileContents) //w/o date
     if (models.find(query).length == 0) {
       val obj = MongoDBObject("userId" -> userId, "name" -> name, "date" -> currentDate, "fileContents" -> fileContents)
       models.insert(obj)
-      true // TODO should we allow models by the same user and with the same name?
+      Some(obj._id.getOrElse(???).toString()) // TODO should we allow models by the same user and with the same name?
     }
     else {
-      false
+      None
     }
   }
 

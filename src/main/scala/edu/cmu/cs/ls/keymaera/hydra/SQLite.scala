@@ -280,16 +280,16 @@ object SQLite extends DBAbstraction {
 
 
   //Models
-  override def createModel(userId: String, name: String, fileContents: String, date: String): Boolean =
+  override def createModel(userId: String, name: String, fileContents: String, date: String): Option[String] =
     sqldb.withSession(implicit session => {
       if(Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
         def modelId = idgen()
 
         Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get))
           .insert(modelId, userId, name, fileContents, date)
-        true
+        Some(modelId)
       }
-      else false
+      else None
     })
 
 
