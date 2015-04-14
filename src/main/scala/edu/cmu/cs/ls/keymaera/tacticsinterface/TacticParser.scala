@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tacticsinterface
 
-import edu.cmu.cs.ls.keymaera.core.{Formula, Position, SuccPosition, AntePosition}
+import edu.cmu.cs.ls.keymaera.core.Formula
+import edu.cmu.cs.ls.keymaera.tactics.{Position, SuccPosition, AntePosition}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}

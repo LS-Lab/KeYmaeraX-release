@@ -7,7 +7,7 @@ import scala.collection.immutable.List
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
 import PropositionalTacticsImpl.NonBranchingPropositionalT
@@ -366,7 +366,7 @@ object TacticLibrary {
   def diffSolutionT = ODETactics.diffSolution(None)
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
-      new PositionTactic("Alpha Renaming") {
+      new PositionTactic("Bound Renaming") {
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = /*s(p) match*/ {
       var applicable = false
@@ -389,7 +389,8 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx, Some(p))) {
+        ??? //@TODO implement for Some(p) using CE
+        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx/*, Some(p)*/)) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         } & hideT(p.topLevel))
       }
@@ -397,12 +398,12 @@ object TacticLibrary {
   }
 
   def globalAlphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): Tactic =
-    new ConstructionTactic("Alpha Renaming") {
+    new ConstructionTactic("Bound Renaming") {
       import scala.language.postfixOps
       override def applicable(node: ProofNode): Boolean = true
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx, None)) {
+        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
           override def applicable(node: ProofNode): Boolean = true
         } & initialValueTactic(node.sequent.ante, AntePosition.apply)
           & initialValueTactic(node.sequent.succ, SuccPosition.apply))

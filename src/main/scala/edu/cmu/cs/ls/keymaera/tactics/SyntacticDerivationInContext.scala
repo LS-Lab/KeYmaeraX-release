@@ -2,7 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 //@todo minimize imports
 
-import edu.cmu.cs.ls.keymaera.core.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
+import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper.replace
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._

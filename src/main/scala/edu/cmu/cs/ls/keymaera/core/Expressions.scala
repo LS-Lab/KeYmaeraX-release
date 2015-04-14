@@ -20,7 +20,7 @@ import scala.annotation.elidable._
 
 import scala.math._
 
-import edu.cmu.cs.ls.keymaera.parser._
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
 import scala.collection.immutable
 
 //the pretty printer.

@@ -1,4 +1,6 @@
-package edu.cmu.cs.ls.keymaera.core
+package edu.cmu.cs.ls.keymaera.tactics
+
+import edu.cmu.cs.ls.keymaera.core._
 
 /**
  * Created by jdq on 3/17/14.
