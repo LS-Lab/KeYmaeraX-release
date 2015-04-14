@@ -1,11 +1,12 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{RootNode, FOQuantifierTacticsImpl, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, FOQuantifierTacticsImpl,
+  Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte,alphaRenamingT}
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
   instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT}
 
