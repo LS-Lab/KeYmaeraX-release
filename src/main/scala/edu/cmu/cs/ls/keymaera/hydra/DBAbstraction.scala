@@ -151,7 +151,7 @@ trait DBAbstraction {
     this.createUser("guest", "guest")
 
     //Model name, file
-    val fileContents : List[(String, String)] = {
+    val indexFileContents : List[(String, String)] = {
       val reader = this.getClass.getResourceAsStream("examples/index.txt")
       val lines = Source.fromInputStream(reader).getLines
       lines.map(line => {
@@ -161,15 +161,15 @@ trait DBAbstraction {
       }).toList
     }
 
-    //name, file contents
-//    val modelsFromFile : List[(String, String)] =
-//      fileContents.map(line => (line._1, {
-//        this.getClass.getResourceAsStream(line._2);
-//        ???
-//      })
+    indexFileContents.map(entry => {
+      val modelName = entry._1
+      val fileContents : String = {
+        val reader = this.getClass.getResourceAsStream(entry._2)
+        Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+      }
+      this.createModel("guest", modelName, fileContents, new java.util.Date().toString())
+    })
 
-    //Add models
-
-    //Add
+    //@todo add proofs based on tactics.
   }
 }
