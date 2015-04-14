@@ -101,7 +101,10 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
 
-      val newIdx : Int = Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.map(_.idx).max + 1
+      val newIdx : Int =
+        if (Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.nonEmpty)
+          Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.map(_.idx).max + 1
+        else 0
 
       val dispatchedTactic = getDispatchedTermOrTactic(tId)
 
