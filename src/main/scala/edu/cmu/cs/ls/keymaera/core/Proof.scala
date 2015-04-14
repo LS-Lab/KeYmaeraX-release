@@ -55,7 +55,7 @@ final case class SeqPos(val pos: Int) {
   /**
    * The unsigned index into the antecedent or succedent list, respectively, base 0.
    */
-  def getIndex: Int = if (pos < 0) -pos - 1 else if (pos > 0) pos - 1 else throw new IllegalStateException("Full sequent has no index")
+  def getIndex: Int = getPos-1
 
   /**
    * Check whether index of this position is defined in given sequent.
@@ -74,6 +74,7 @@ final case class SeqPos(val pos: Int) {
 object SeqPos {
   /**
    * An antecedent position
+   * @TODO Keep as sub types and split PositionRule to LeftRule and RightRule expecting AntePos and SuccPos respectively by typing?
    */
   def AntePos(pos: Int) = SeqPos(-pos)
 
@@ -82,7 +83,7 @@ object SeqPos {
    */
   def SuccPos(pos: Int) = SeqPos(pos)
 
-  @deprecated("Remove")
+  @deprecated("Move as implicit definition to tactics and then ultimately remove")
   private[core] def position2SeqPos(p: Position) = new SeqPos(if (p.isAnte) -(p.index+1) else p.index+1)
 }
 
@@ -90,7 +91,6 @@ object SeqPos {
  * Sequents
  * @author aplatzer
  */
-
 final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
                          val ante: scala.collection.immutable.IndexedSeq[Formula],
                          val succ: scala.collection.immutable.IndexedSeq[Formula]) {
@@ -201,7 +201,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   @deprecated("Use apply(SeqPos) instead.")
   def apply(p: Position): Formula = {
     //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
+//    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
     apply(SeqPos.position2SeqPos(p))
   }
   /**
@@ -213,7 +213,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   @deprecated("Use updated(SeqPos, Formula) instead")
   def updated(p: Position, f: Formula) : Sequent = {
     //    require(p.inExpr == HereP, "Can only update top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
+//    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     updated(SeqPos.position2SeqPos(p), f)
   }
   /**
@@ -227,7 +227,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   @deprecated("Use updated(SeqPos, Sequent) instead.")
   def updated(p: Position, s: Sequent) : Sequent = {
     //    require(p.inExpr == HereP, "Can only update top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
+//    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     updated(SeqPos.position2SeqPos(p), s)
   }
 
@@ -276,6 +276,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   /**
    * Position types for the subgoals of a Provable.
+   * @TODO Not sure how to make this type visible outside as well
    */
   type Subgoal = Int
 
