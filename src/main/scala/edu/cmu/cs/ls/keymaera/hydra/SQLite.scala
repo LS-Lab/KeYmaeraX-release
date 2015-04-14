@@ -110,13 +110,13 @@ object SQLite extends DBAbstraction {
 
       dispatchedTactic match {
           //Update the running and completed task lists.
-        case x : DispatchedTacticPOJO => {
+        case Some(x: DispatchedTacticPOJO) => {
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid, t.prooftacticid.get))
                         .insert(idgen(), proofId, newIdx, None, tId)
           val q = for{l <- Tacticonproof if(l.prooftacticid === tId)} yield l.status
           q.update(Some(DispatchedTacticStatus.Finished.toString))
         }
-        case x : DispatchedCLTermPOJO => {
+        case Some(x : DispatchedCLTermPOJO) => {
 
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid.get, t.prooftacticid))
             .insert(idgen(), proofId, newIdx, tId, None)
@@ -363,8 +363,13 @@ object SQLite extends DBAbstraction {
             .list
             .map(element => (element.inputorder.get, blankOk(element.input))).toMap
 
+          val auto = element.auto match {
+            case Some(a) => Some(PositionTacticAutomation.withName(a))
+            case None => None
+          }
+
           DispatchedTacticPOJO(element.prooftacticid.get, element.proofid.get, element.nodeid, element.formulaid,
-            element.tacticsid.get, inputs, Some(PositionTacticAutomation.withName(element.auto.get)),
+            element.tacticsid.get, inputs, auto,
             DispatchedTacticStatus.fromString(element.status.get))
         })
 
