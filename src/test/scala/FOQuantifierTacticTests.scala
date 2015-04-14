@@ -417,6 +417,14 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "[?z>1;z'=1;]z>0".asFormula :: Nil, Nil))
   }
 
+  // TODO not yet supported
+  ignore should "instantiate loops" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val tactic = instantiateT(Variable("x", None, Real), "z".asTerm)(SuccPosition(0))
+    getProofSequent(tactic, new RootNode(sucSequent("\\exists x. [{x:=x+1;}*]x>0".asFormula))) should be (
+      sucSequent("[{z:=z+1;}*]z>0".asFormula))
+  }
+
   "Forall duality" should "turn a universal quantifier into a negated existential" in {
     val tactic = locateSucc(FOQuantifierTacticsImpl.forallDualT)
     getProofSequent(tactic, new RootNode(sucSequent("\\forall x . x>y".asFormula))) should be (

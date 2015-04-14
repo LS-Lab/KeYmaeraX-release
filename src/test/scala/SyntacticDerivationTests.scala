@@ -280,16 +280,4 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'-x'<=0".asFormula
   }
-
-  it should "work on a previous counter-example" in {
-    val f = helper.parseFormula("x=1&[$$x'=y,y'=x$$ & (x^2+y^2=1);](x=1)'")
-    val node = helper.formulaToNode(f)
-
-    val tactic = helper.positionTacticToTactic(SyntacticDerivationT)
-    helper.runTactic(tactic, node, true)
-
-//    val expected = helper.parseFormula("[a:=b;]((!true)'&x'-y'=0)")
-    helper.report(node)
-//    require(containsOpenGoal(node, expected))
-  }
 }

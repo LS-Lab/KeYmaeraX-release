@@ -266,9 +266,9 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     a [SubstitutionClashException] should be thrownBy s("{x:=x+y;}*".asProgram)
   }
 
-  "Uniform substitution of (x,1) |-> {x:=1 ++ x:=x+1 ++ z:=x}*;" should "clash" in {
+  "Uniform substitution of (x(),1) |-> {x:=1 ++ x:=x()+1 ++ z:=x()}*;" should "work" in {
     val s = create(SubstitutionPair("x()".asTerm, "1".asTerm))
-    a [SubstitutionClashException] should be thrownBy s("{x:=1 ++ x:=x()+1 ++ z:=x()}*".asProgram)
+    s("{x:=1 ++ x:=x()+1 ++ z:=x()}*".asProgram) shouldBe "{x:=1 ++ x:=1+1 ++ z:=1}*".asProgram
   }
 
   // ?\psi

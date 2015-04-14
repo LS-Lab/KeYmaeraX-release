@@ -103,19 +103,22 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       val openGoals = KeYmaeraInterface.getOpenGoalCount(proofId)
 
-      val newIdx : Int = Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.map(_.idx).max + 1
+      val newIdx : Int =
+        if (Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.nonEmpty)
+          Completedtasks.filter(_.proofid === proofId).filter(_.termid === tId).list.map(_.idx).max + 1
+        else 0
 
       val dispatchedTactic = getDispatchedTermOrTactic(tId)
 
       dispatchedTactic match {
           //Update the running and completed task lists.
-        case x : DispatchedTacticPOJO => {
+        case Some(x: DispatchedTacticPOJO) => {
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid, t.prooftacticid.get))
                         .insert(idgen(), proofId, newIdx, None, tId)
           val q = for{l <- Tacticonproof if(l.prooftacticid === tId)} yield l.status
           q.update(Some(DispatchedTacticStatus.Finished.toString))
         }
-        case x : DispatchedCLTermPOJO => {
+        case Some(x : DispatchedCLTermPOJO) => {
 
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid.get, t.prooftacticid))
             .insert(idgen(), proofId, newIdx, tId, None)
@@ -199,7 +202,7 @@ object SQLite extends DBAbstraction {
             .list
             .map(p => new ProofPOJO(p.proofid.get, p.modelid.get, blankOk(p.name), blankOk(p.description),
                                     blankOk(p.date), stepCount, p.closed.getOrElse(0) == 0))
-      if(list.length > 0) throw new Exception()
+      if(list.length > 1) throw new Exception()
       else if(list.length == 0) throw new Exception()
       else list.head
     })
@@ -362,8 +365,13 @@ object SQLite extends DBAbstraction {
             .list
             .map(element => (element.inputorder.get, blankOk(element.input))).toMap
 
+          val auto = element.auto match {
+            case Some(a) => Some(PositionTacticAutomation.withName(a))
+            case None => None
+          }
+
           DispatchedTacticPOJO(element.prooftacticid.get, element.proofid.get, element.nodeid, element.formulaid,
-            element.tacticsid.get, inputs, Some(PositionTacticAutomation.withName(element.auto.get)),
+            element.tacticsid.get, inputs, auto,
             DispatchedTacticStatus.fromString(element.status.get))
         })
 

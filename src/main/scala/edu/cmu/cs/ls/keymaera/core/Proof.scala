@@ -36,61 +36,75 @@ import scala.collection.GenTraversableOnce
 
 /**
  * Positions of formulas in a sequent, i.e. antecedent or succedent positions.
- * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
- *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
- *  Positive numbers indicate succedent positions, 1, 2, 3.
- *  Zero is a degenerate case indicating whole sequent 0.
  */
-final case class SeqPos(val pos: Int) {
-  require(pos != 0, "no whole sequent positions at the moment")
-  def isAnte: Boolean = pos < 0
-  def isSucc: Boolean = pos > 0
-  //def isFullSequent: Boolean = pos == 0
-
-  /**
-   * The unsigned position for the antecedent or succedent list, respectively, base 1.
-   */
-  def getPos: Int = if (pos < 0) -pos else if (pos > 0) pos else throw new IllegalStateException("Full sequent has no index")
+sealed trait SeqPos {
+  def isAnte: Boolean
+  def isSucc: Boolean
 
   /**
    * The unsigned index into the antecedent or succedent list, respectively, base 0.
    */
-  def getIndex: Int = if (pos < 0) -pos - 1 else if (pos > 0) pos - 1 else throw new IllegalStateException("Full sequent has no index")
+  def getIndex: Int
+
+  /**
+   * The signed position for the antecedent or succedent list, respectively, base 1.
+   *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+   *  Positive numbers indicate succedent positions, 1, 2, 3.
+   *  Zero is a degenerate case indicating whole sequent 0.
+   */
+  def getPos: Int = if (isAnte) {-(getIndex+1)} else {assert(isSucc); getIndex+1}
 
   /**
    * Check whether index of this position is defined in given sequent.
    */
-  def isIndexDefined(s: Sequent): Boolean =
+  final def isIndexDefined(s: Sequent): Boolean =
     if (isAnte)
-      s.ante.length >= -pos
+      getIndex < s.ante.length
     else {
       assert(isSucc)
-      s.succ.length >= pos
+      getIndex < s.succ.length
     }
 
-  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + pos + ")"
+  override def toString: String = "(" + (if (isAnte) "Ante" else "Succ") + ", " + getIndex + ")" //= "(" + getPos + ")"
+}
+
+/**
+ * Antecedent Positions of formulas in a sequent.
+ * @param index the position base 0 in antecedent.
+ */
+case class AntePos(private[core] val index: Int) extends SeqPos {
+  def isAnte = true
+  def isSucc = false
+  def getIndex = index
+}
+
+/**
+ * Antecedent Positions of formulas in a sequent.
+ * @param index the position base 0 in antecedent.
+ */
+case class SuccPos(private[core] val index: Int) extends SeqPos {
+  def isAnte = false
+  def isSucc = true
+  def getIndex = index
 }
 
 object SeqPos {
   /**
-   * An antecedent position
+   * @param pos the signed integer position of the formula in the antecedent or succedent, respectively.
+   *  Negative numbers indicate antecedent positions, -1, -2, -3, ....
+   *  Positive numbers indicate succedent positions, 1, 2, 3.
+   *  Zero is a degenerate case indicating whole sequent 0.
    */
-  def AntePos(pos: Int) = SeqPos(-pos)
+  def SeqPos(signedPos: Int) = if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos+1)}
 
-  /**
-   * A succedent position
-   */
-  def SuccPos(pos: Int) = SeqPos(pos)
-
-  @deprecated("Remove")
-  private[core] def position2SeqPos(p: Position) = new SeqPos(if (p.isAnte) -(p.index+1) else p.index+1)
+  @deprecated("Move as implicit definition to tactics and then ultimately remove")
+  private[core] def position2SeqPos(p: Position) = if (p.isAnte) new AntePos(p.index) else new SuccPos(p.index)
 }
 
 /**
  * Sequents
  * @author aplatzer
  */
-
 final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
                          val ante: scala.collection.immutable.IndexedSeq[Formula],
                          val succ: scala.collection.immutable.IndexedSeq[Formula]) {
@@ -112,11 +126,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def apply(p: SeqPos): Formula = {
     if (p.isAnte) {
-      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) // @elidable
       ante(p.getIndex)
     } else {
       assert (p.isSucc)
-      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this) // @elidable
       succ(p.getIndex)
     }
   }
@@ -147,11 +161,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: SeqPos, f: Formula) : Sequent = {
     if (p.isAnte) {
-      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante.updated(p.getIndex, f), succ)
     } else {
       assert(p.isSucc)
-      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante, succ.updated(p.getIndex, f))
     }
   }
@@ -166,11 +180,11 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    */
   def updated(p: SeqPos, s: Sequent) : Sequent = {
     if (p.isAnte) {
-      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
     } else {
       assert(p.isSucc)
-      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this)
+      require(p.getIndex < succ.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante, succ.patch(p.getIndex, Nil, 1)).glue(s)
     }
   } ensuring(r=> if (p.isAnte)
@@ -201,7 +215,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   @deprecated("Use apply(SeqPos) instead.")
   def apply(p: Position): Formula = {
     //@TODO require(p.inExpr == HereP, "Can only retrieve top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
+//    if (p.inExpr != HereP) println("INFO: Should only retrieve top level formulas")
     apply(SeqPos.position2SeqPos(p))
   }
   /**
@@ -213,7 +227,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   @deprecated("Use updated(SeqPos, Formula) instead")
   def updated(p: Position, f: Formula) : Sequent = {
     //    require(p.inExpr == HereP, "Can only update top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
+//    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     updated(SeqPos.position2SeqPos(p), f)
   }
   /**
@@ -227,7 +241,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   @deprecated("Use updated(SeqPos, Sequent) instead.")
   def updated(p: Position, s: Sequent) : Sequent = {
     //    require(p.inExpr == HereP, "Can only update top level formulas")
-    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
+//    if (p.inExpr != HereP) println("INFO: Should only update top level formulas")
     updated(SeqPos.position2SeqPos(p), s)
   }
 
@@ -276,6 +290,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   /**
    * Position types for the subgoals of a Provable.
+   * @TODO Not sure how to make this type visible outside as well
    */
   type Subgoal = Int
 
@@ -351,10 +366,17 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
 
 
-  /*********************************************************************************
-   * Categorize Kinds of Proof Rules
-   *********************************************************************************
-   */
+/*********************************************************************************
+ * Categorize Kinds of Proof Rules
+ **********************************************************************************
+ */
+abstract class LeftRule(name: String, val pos: AntePos) extends Rule(name) {
+    override def toString: String = name + " at " + pos
+}
+
+abstract class RightRule(name: String, val pos: SuccPos) extends Rule(name) {
+  override def toString: String = name + " at " + pos
+}
 
 abstract class PositionRule(name: String, val pos: Position) extends Rule(name) {
     override def toString: String = name + " at " + pos
@@ -472,6 +494,7 @@ object SuccPosition {
 
 // weakening left = hide left
 // remove duplicate antecedent (this should be a tactic)
+//@TODO Change type to LeftRule: AntePos => Rule
 object HideLeft extends (Position => Rule) {
   def apply(p: Position): Rule = {
     require(p.isAnte && p.inExpr == HereP, "Hide left should be done in the antecendent and on top level. Not on " + p)
@@ -480,6 +503,7 @@ object HideLeft extends (Position => Rule) {
 }
 // weakening right = hide right
 // remove duplicate succedent (this should be a tactic)
+//@TODO Change type to RightRule: SuccPos => Rule
 object HideRight extends (Position => Rule) {
   def apply(p: Position): Rule = {
     require(!p.isAnte && p.inExpr == HereP, "Hide right should be done in succedent and on top level. Not on " + p)
@@ -1134,57 +1158,6 @@ class Skolemize(p: Position) extends PositionRule("Skolemize", p) {
     List(if (p.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(p.index, phi), s.succ)
          else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.index, phi)))
   }
-}
-
-/**
- * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
- * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
- * @TODO Replace by uniform substitution rule application mechanism for rule "all generalization" for functions
- * along with tactics expanding scope of quantifier with axiom "all quantifier scope".
- *      p(c())
- *  ---------------US c()~>x
- *      p(x)
- *  ---------------all generalize
- *  \forall x. p(x)
- * @TODO Or replace by AxiomaticRule with context padding using uniform substitution
- *  Gamma |- p(c()), Delta
- *  --------------- when c\not\in signature(Gamma,Delta)
- *  Gamma |- \forall x. p(x), Delta
- * And derive Skolemize from that by US.
- */
-@deprecated("Replace by tactics performing uniform substitution c()~>z after a Skolemize that introduced variable z")
-class SkolemizeToFn(p: Position) extends PositionRule("Skolemize2Fn", p) {
-  require(p.inExpr == HereP, "Can only skolemize top level formulas")
-
-  override def apply(s: Sequent): List[Sequent] = {
-    // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-
-    val vars = BindingAssessment.allNamesExceptAt(s, p)
-    val (fn, phi) = s(p) match {
-      case Forall(qvs, qphi) if !p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
-      case Exists(qvs, qphi) if p.isAnte => (qvs.map(qv => Function(qv.name, qv.index, Unit, qv.sort)), varsToFnIn(qvs, qphi))
-      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
-    }
-    if (vars.intersect(fn.toSet).nonEmpty)
-      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. AlphaConversion required.",
-        vars.intersect(fn.toSet))
-    // TODO append v to prefix for merge or existential quantifier handling
-    List(if (p.isAnte) Sequent(s.pref /*++ fn*/, s.ante.updated(p.index, phi), s.succ)
-    else Sequent(s.pref /*++ fn*/, s.ante, s.succ.updated(p.index, phi)))
-  }
-
-  // TODO flat implementation, get rid of expression traversal
-  import ExpressionTraversal.traverse
-  private def varsToFnIn(vs: Seq[NamedSymbol], f: Formula) = traverse(new ExpressionTraversalFunction {
-      override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-        case v: Variable if vs.contains(v) => Right(Apply(Function(v.name, v.index, Unit, v.sort), Nothing))
-        case _ => Left(None)
-      }
-    }, f) match {
-    case Some(frm) => frm
-    case _ => throw new IllegalArgumentException("Skolemization was unable to replace quantified variables with constant function symbols")
-  }
-
 }
 
 /*********************************************************************************

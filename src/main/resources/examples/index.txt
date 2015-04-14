@@ -1,0 +1,9 @@
+bouncing_ball, examples/simple/bouncing-ball/bouncing-ball-tout.key
+tutorial_sttt_1, examples/tutorials/sttt/example1.key
+tutorial_sttt_2, examples/tutorials/sttt/example2.key
+tutorial_sttt_5, examples/tutorials/sttt/example5.key
+tutorial_sttt_6, examples/tutorials/sttt/example6.key
+tutorial_sttt_7, examples/tutorials/sttt/example7.key
+tutorial_sttt_9a, examples/tutorials/sttt/example9a.key
+tutorial_sttt_9b, examples/tutorials/sttt/example9b.key
+tutorial_lics_4a, examples/tutorials/lics/lics-4a.key
