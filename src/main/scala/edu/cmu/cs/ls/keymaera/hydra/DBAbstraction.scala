@@ -1,9 +1,12 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
+import java.io.{InputStreamReader, BufferedReader}
 import java.util
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
+
+import scala.io.Source
 
 //Global setting:
 object DBAbstractionObj {
@@ -142,4 +145,31 @@ trait DBAbstraction {
   def getDispatchedCLTerm(id : String) : Option[DispatchedCLTermPOJO]
   def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
   def updateProofOnCLTermCompletion(proofId : String, termId : String)
+
+  protected def initializeForDemo() : Unit = {
+    //Add user
+    this.createUser("guest", "guest")
+
+    //Model name, file
+    val fileContents : List[(String, String)] = {
+      val reader = this.getClass.getResourceAsStream("examples/index.txt")
+      val lines = Source.fromInputStream(reader).getLines
+      lines.map(line => {
+        val parts = line.split(",")
+        if(parts != 2) throw new Exception("Could not parse examples/index.txt")
+        (parts.head, parts.tail.head)
+      }).toList
+    }
+
+    //name, file contents
+//    val modelsFromFile : List[(String, String)] =
+//      fileContents.map(line => (line._1, {
+//        this.getClass.getResourceAsStream(line._2);
+//        ???
+//      })
+
+    //Add models
+
+    //Add
+  }
 }
