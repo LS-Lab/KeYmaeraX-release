@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core.{SeqPos, SuccPos, AntePos, Sequent}
+import scala.language.implicitConversions
 
 /**
  */
@@ -66,7 +67,7 @@ import edu.cmu.cs.ls.keymaera.core.{SeqPos, SuccPos, AntePos, Sequent}
 @deprecated("Automated position converters should be removed ultimately.")
 object Position {
   //@deprecated("Move as implicit definition to tactics and then ultimately remove")
-  implicit def position2SeqPos(p: Position) : SeqPos = if (p.isAnte) new AntePos(p.index) else new SuccPos(p.index)
+  implicit def position2SeqPos[T <: SeqPos](p: Position): T = if (p.isAnte) new AntePos(p.index).asInstanceOf[T] else new SuccPos(p.index).asInstanceOf[T]
 
   //implicit def position2AntePos(p: Position) : AntePos = if (p.isAnte) new AntePos(p.index) else throw new IllegalArgumentException("Wrong position side " + p)
 
