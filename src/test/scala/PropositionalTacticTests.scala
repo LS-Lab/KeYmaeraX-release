@@ -1,7 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core.{Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohide2T,kModalModusPonensT,modusPonensT}
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohide2T,hideT,kModalModusPonensT,modusPonensT}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ProofFactory._
@@ -60,6 +60,29 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) should contain only "b>1".asFormula
     result.openGoals().flatMap(_.sequent.succ) should contain only "y>1".asFormula
+  }
+
+  it should "hide nothing when the only positions present are the ones to retain" in {
+    val tactic = cohide2T(AntePosition(0), SuccPosition(0))
+    val s = sequent(Nil,
+      "a>0".asFormula :: Nil,
+      "x>0".asFormula :: Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "a>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
+  }
+
+  it should "set the continuation correctly" in {
+    // TODO mock testing
+    val tactic = cohide2T(AntePosition(0), SuccPosition(0)) & hideT(AntePosition(0))
+    val s = sequent(Nil,
+      "a>0".asFormula :: Nil,
+      "x>0".asFormula :: Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
   it should "not be applicable when positions do not point to antecedent and succedent" in {

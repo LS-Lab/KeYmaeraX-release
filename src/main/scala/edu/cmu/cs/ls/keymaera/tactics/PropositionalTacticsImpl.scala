@@ -239,9 +239,13 @@ object PropositionalTacticsImpl {
        p1.isAnte && p1.isTopLevel && p1.getIndex < node.sequent.ante.length &&
       !p2.isAnte && p2.isTopLevel && p2.getIndex < node.sequent.succ.length
 
-    override def apply(tool: Tool, node: ProofNode): Unit = new Tactics.ApplyRule(CoHide2(p1, p2)) {
-      override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-    }.apply(tool, node)
+    override def apply(tool: Tool, node: ProofNode): Unit = {
+      val cohideRule = new Tactics.ApplyRule(CoHide2(p1, p2)) {
+        override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+      }
+      cohideRule.continuation = continuation
+      cohideRule.apply(tool, node)
+    }
   }
 
   def cutT(f: Option[Formula]): Tactic = cutT((x: ProofNode) => f)
