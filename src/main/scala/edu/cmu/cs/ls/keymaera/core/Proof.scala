@@ -366,10 +366,17 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
 
 
-  /*********************************************************************************
-   * Categorize Kinds of Proof Rules
-   *********************************************************************************
-   */
+/*********************************************************************************
+ * Categorize Kinds of Proof Rules
+ **********************************************************************************
+ */
+abstract class LeftRule(name: String, val pos: AntePos) extends Rule(name) {
+    override def toString: String = name + " at " + pos
+}
+
+abstract class RightRule(name: String, val pos: SuccPos) extends Rule(name) {
+  override def toString: String = name + " at " + pos
+}
 
 abstract class PositionRule(name: String, val pos: Position) extends Rule(name) {
     override def toString: String = name + " at " + pos
