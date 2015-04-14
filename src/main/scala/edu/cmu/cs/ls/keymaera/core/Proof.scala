@@ -409,6 +409,16 @@ class CoHideRight(p: SuccPos) extends RightRule("CoHideRight", p) {
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
+// co-weakening = co-hide all but the indicated positions
+object CoHide2 extends ((AntePos, SuccPos) => Rule) {
+  def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
+}
+class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p2) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(s.ante(p1.getIndex)), IndexedSeq(s.succ(p2.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
 
 // Exchange left rule reorders antecedent
 object ExchangeLeft {
