@@ -59,6 +59,18 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example1.key")
+    val s = parseToSequent(file)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example1.key")
+    val s = parseToSequent(file)
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
   "Example 1a" should "be provable" in {
     val file = new File("examples/tutorials/sttt/example1a.key")
     val s = parseToSequent(file)
@@ -66,6 +78,18 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example1a.key")
+    val s = parseToSequent(file)
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example1a.key")
+    val s = parseToSequent(file)
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 2" should "be provable" in {
@@ -199,6 +223,20 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example5_simplectrl.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example5_simplectrl.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
   "Example 5" should "be provable" in {
     val file = new File("examples/tutorials/sttt/example5.key")
     val s = parseToSequent(file)
@@ -262,6 +300,20 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example6.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example6.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
   "Example 7" should "be provable" in {
     val file = new File("examples/tutorials/sttt/example7.key")
     val s = parseToSequent(file)
@@ -287,6 +339,20 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example7.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example7.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
   // TODO not yet implemented: differential inequalities
   // Example 8
 
@@ -297,6 +363,20 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffInvariant)
 
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Mathematica" in {
+    val file = new File("examples/tutorials/sttt/example9a.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default, new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable automatically with Z3" in {
+    val file = new File("examples/tutorials/sttt/example9a.key")
+    val s = parseToSequent(file)
+
+    helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 9b" should "be provable" in {
