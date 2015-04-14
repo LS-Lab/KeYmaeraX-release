@@ -730,10 +730,12 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
 
   def apply(f: Formula): Formula = {
-    // allow self renaming to get stuttering
-    if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
-      throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
-    rename(f)
+    if (allNames(f).exists(v => v.name == what && v.index == wIdx)) {
+      // allow self renaming to get stuttering
+      if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
+        throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+      rename(f)
+    } else f
   }
 
   /**
