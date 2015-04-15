@@ -27,41 +27,68 @@ keymaeraProofControllers.factory('Models', function () {
 
 keymaeraProofControllers.controller('MathematicaConfig',
   function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
-        $scope.configureMathematica = function() {
-            var uri     = "/config/mathematica"
-            var linkName = $scope.linkName ? $scope.linkName : "";
-            var jlinkLibDir = $scope.jlinkLibDir ? $scope.jlinkLibDir : "";
-            var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibDir}
+    var osName="Unknown OS";
+    if (navigator.appVersion.indexOf("Win")!=-1) osName="Windows";
+    if (navigator.appVersion.indexOf("Mac")!=-1) osName="MacOS";
+    if (navigator.appVersion.indexOf("X11")!=-1) osName="UNIX";
+    if (navigator.appVersion.indexOf("Linux")!=-1) osName="Linux";
 
-            $http.post(uri, dataObj)
-                .success(function(data) {
-                    if(data.jlinkLibDirExists && data.linkNameExists && data.success) {
-                        $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
-                        $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
+    $scope.osName = osName
+    $scope.defaultMathkernelPath = "MathKernel"
+    if (osName == "Windows") $scope.defaultMathkernelPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\MathKernel.exe"
+    else if (osName == "MacOS") $scope.defaultMathkernelPath = "/Applications/Mathematica.app/Contents/MacOS/MathKernel"
+    else if (osName == "Linux") $scope.defaultMathkernelPath = "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel"
 
-                        $modal.open({
-                            templateUrl: 'partials/mathematicaconfig_update.html',
-                            controller: 'MathematicaConfig.UpdateDialog',
-                            size: 'md'
-                        })
+    $scope.defaultJLinkLibPath = "J/Link Native Library"
+    if (osName == "Windows") $scope.defaultJLinkLibPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\JLinkNativeLibrary.dll"
+    else if (osName == "MacOS") $scope.defaultJLinkLibPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64/libJLinkNativeLibrary.jnilib"
+    else if (osName == "Linux") $scope.defaultJLinkLibPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/libJLinkNativeLibrary.so"
 
-                        $("#mathematicaConfigurationAlert").hide();
-                        $rootScope.mathematicaIsConfigured = data.configured;
-                    }
-                    else {
-                        $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
-                        $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", data.jlinkLibDirExists);
-                        var modalInstance = $modal.open({
-                          templateUrl: 'partials/mathematicaconfig_failure.html',
-                          controller: 'MathematicaConfig.FailureDialog',
-                          size: 'md'
-                        });
-                    }
-                })
-                .error(function(data) {
-                    alert("error: " + JSON.stringify(data))
-                })
-        }
+    $scope.configureMathematica = function() {
+        var uri     = "/config/mathematica"
+//        var linkNamePath = linkName.files[0].name
+//        var jlinkLibDirPath = jlinkLibDir.files[0].name
+        var linkName = $scope.linkName ? $scope.linkName : "";
+        var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
+        var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibPath}
+
+        $http.post(uri, dataObj)
+            .success(function(data) {
+                if(data.jlinkLibDirExists && data.linkNameExists && data.success) {
+                    $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
+                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
+
+                    $modal.open({
+                        templateUrl: 'partials/mathematicaconfig_update.html',
+                        controller: 'MathematicaConfig.UpdateDialog',
+                        size: 'md'
+                    })
+
+                    $("#mathematicaConfigurationAlert").hide();
+                    $rootScope.mathematicaIsConfigured = data.configured;
+                }
+                else {
+                    $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
+                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", data.jlinkLibDirExists);
+                    var modalInstance = $modal.open({
+                      templateUrl: 'partials/mathematicaconfig_failure.html',
+                      controller: 'MathematicaConfig.FailureDialog',
+                      size: 'md'
+                    });
+                }
+            })
+            .error(function(data) {
+                alert("error: " + JSON.stringify(data))
+            })
+    }
+
+    $scope.setDefaultMathKernel = function() {
+      $scope.linkName = $scope.defaultMathkernelPath
+    }
+
+    $scope.setDefaultJLinkLibPath = function() {
+      $scope.jlinkLibPath = $scope.defaultJLinkLibPath
+    }
 });
 
 keymaeraProofControllers.controller('MathematicaConfig.FailureDialog', function($scope, $http, $cookies, $modalInstance) {
