@@ -7,9 +7,8 @@ import scala.collection.immutable.Seq
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.onesidedCongruenceT
-import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.replaceInContext
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohide2T,uniformSubstT}
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.cohide2T
 import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
@@ -20,6 +19,8 @@ import AlphaConversionHelper.replace
 import BranchLabels._
 
 import BuiltinHigherTactics._
+
+import scala.language.postfixOps
 
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
@@ -249,7 +250,6 @@ object TacticLibrary {
     if(vars.isEmpty) f else vars.foldRight(f)((v, fml) => Forall(v :: Nil, fml)) //Forall(vars.toList, f)
   }
 
-  @deprecated("Use [] monotone via boxMonotoneT or <> monotone via diamondMonotoneT or Goedel rule instead.")
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
       case BoxModality(_, _) => true
@@ -275,11 +275,12 @@ object TacticLibrary {
               hideT(p) /* result */,
               cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
                 assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
-                assertT(1,1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & lastAnte(instantiateT) &
-                (AxiomCloseT | debugT("Cut use: Axiom close failed unexpectedly") & stopT)
+                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*) &
+                assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_, _) => false case _ => true }) &
+                (AxiomCloseT | debugT("Abstraction cut use: Axiom close failed unexpectedly") & stopT)
               )),
             (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
-              (AxiomCloseT | debugT("Cut show: Axiom close failed unexpectedly") & stopT))
+              (AxiomCloseT | debugT("Abstraction cut show: Axiom close failed unexpectedly") & stopT))
           ))
       }
     }
