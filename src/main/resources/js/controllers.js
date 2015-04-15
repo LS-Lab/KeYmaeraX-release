@@ -347,7 +347,7 @@ keymaeraProofControllers.value('cgBusyDefaults',{
 
 keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $cookies, $modalInstance) {
   $scope.rejectLicense = function() {
-    alert("You must accept the terms to use KeYmaera X.")
+    alert("KeYmaera X cannot be used without accepting the license.")
       //TODO shut down server? $modalInstance.dismiss('cancel');
   }
 
