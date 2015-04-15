@@ -3,7 +3,6 @@ package edu.cmu.cs.ls.keymaera.tactics
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT,uncoverConditionalAxiomT,axiomLookupBaseT}
-import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.goedelT
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeT
@@ -13,9 +12,6 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AndRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.EquivRightT
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.ImplyRightT
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.NotRightT
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.OrRightT
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.hideT
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
@@ -25,7 +21,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, fr
 import AlphaConversionHelper._
 
 import scala.collection.immutable.List
-import scala.collection.mutable
+import scala.language.postfixOps
 
 /**
  * Created by smitsch on 1/9/15.
@@ -413,7 +409,8 @@ object ODETactics {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case BoxModality(ODESystem(_, _, _), _) =>
-          Some(diffWeakenAxiomT(p) & TacticLibrary.abstractionT(p) & debugT("Skolemize in DiffWeaken") & skolemizeT(p))
+          Some(diffWeakenAxiomT(p) & abstractionT(p) & debugT("Skolemize in DiffWeaken") & (skolemizeT(p)*)
+            & assertT(s => s(p) match { case Forall(_, _) => false case _ => true }, "Diff. weaken did not skolemize all quantifiers"))
         case _ => None
       }
     }
@@ -684,8 +681,6 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        import scala.language.postfixOps
-        import SearchTacticsImpl.locateSucc
         node.sequent(p) match {
           case BoxModality(ODESystem(_, ode, _), _) => {
             val n = {
