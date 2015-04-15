@@ -53,6 +53,9 @@ sealed trait Expr {
   def prettyString() = ??? //new KeYmaeraPrettyPrinter().stringify(this)
 }
 
+sealed trait Atomic extends Expr
+sealed trait Composite extends Expr
+
 /********************************************
  * Terms of differential dynamic logic.
  * @author aplatzer
@@ -62,7 +65,7 @@ sealed trait Expr {
 sealed trait Term extends Expr {}
 
 // atomic terms
-sealed trait AtomicTerm extends Term {}
+sealed trait AtomicTerm extends Term with Atomic {}
 
 sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort) extends NamedSymbol with AtomicTerm {}
 sealed case class DifferentialSymbol(e: Variable/*NamedSymbol?*/) extends NamedSymbol with AtomicTerm {
@@ -74,7 +77,7 @@ case class Number(value: BigDecimal) extends AtomicTerm
 case class FuncOf(func: Function, child: Term) extends AtomicTerm
 
 // composite terms
-sealed trait CompositeTerm extends Term {}
+sealed trait CompositeTerm extends Term with Composite {}
 
 //@TODO require(left.sort == Real && right.sort == Real) in the following
 case class Plus(left: Term, right: Term) extends CompositeTerm
@@ -92,7 +95,7 @@ case class Differential(child: Term) extends CompositeTerm
 sealed trait Formula extends Expr {}
 
 // atomic formulas
-sealed trait AtomicFormula extends Formula {}
+sealed trait AtomicFormula extends Formula with Atomic {}
 
 case class Equal(left: Term, right: Term) extends AtomicFormula //@TODO sort
 case class NotEqual(left: Term, right: Term) extends AtomicFormula //@TODO sort
@@ -106,7 +109,7 @@ case class PredOf(pred: Function, child: Term) extends AtomicFormula
 case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula
 
 // composite formulas
-sealed trait CompositeFormula extends Formula {}
+sealed trait CompositeFormula extends Formula with Composite {}
 
 case class Not(child: Formula) extends CompositeFormula
 case class And(left: Formula, right:Formula) extends CompositeFormula
@@ -133,7 +136,7 @@ case class DifferentialFormula(child: Formula) extends CompositeFormula
 sealed trait Program extends Expr {}
 
 // atomic programs
-sealed trait AtomicProgram extends Program {}
+sealed trait AtomicProgram extends Program with Atomic {}
 sealed case class ProgramConstant(name: String) extends NamedSymbol with AtomicProgram {}
 
 case class Assign(target: Variable, e: Term) extends AtomicProgram
@@ -142,7 +145,7 @@ case class Test(cond: Formula) extends AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Program
 
 // composite programs
-sealed trait CompositeProgram extends Program {}
+sealed trait CompositeProgram extends Program with Composite {}
 case class Choice(left: Program, right: Program) extends Program {}
 case class Compose(left: Program, right: Program) extends Program {}
 case class Star(child: Program) extends Program {}
