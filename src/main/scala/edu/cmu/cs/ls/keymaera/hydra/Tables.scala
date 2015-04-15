@@ -14,7 +14,7 @@ trait Tables {
   import scala.slick.jdbc.{GetResult => GR}
   
   /** DDL for all tables. Call .create to execute. */
-  lazy val ddl = Clterms.ddl ++ Completedtasks.ddl ++ Config.ddl ++ Dispatchedtasks.ddl ++ Models.ddl ++ Proofs.ddl ++ Prooftacticinput.ddl ++ Tacticonproof.ddl ++ Tactics.ddl ++ Users.ddl
+  lazy val ddl = Clterms.ddl ++ Completedtasks.ddl ++ Config.ddl ++ Models.ddl ++ Proofs.ddl ++ Prooftacticinput.ddl ++ Tacticonproof.ddl ++ Tactics.ddl ++ Users.ddl
   
   /** Entity class storing rows of table Clterms
    *  @param termid Database column termId DBType(TEXT), PrimaryKey
@@ -115,42 +115,6 @@ trait Tables {
   /** Collection-like TableQuery object for table Config */
   lazy val Config = new TableQuery(tag => new Config(tag))
   
-  /** Entity class storing rows of table Dispatchedtasks
-   *  @param proofid Database column proofId DBType(TEXT)
-   *  @param idx Database column idx DBType(INTEGER)
-   *  @param termid Database column termId DBType(TEXT)
-   *  @param prooftacticid Database column proofTacticId DBType(TEXT) */
-  case class DispatchedtasksRow(proofid: Option[String], idx: Int, termid: Option[String], prooftacticid: Option[String])
-  /** GetResult implicit for fetching DispatchedtasksRow objects using plain SQL queries */
-  implicit def GetResultDispatchedtasksRow(implicit e0: GR[Option[String]], e1: GR[Int]): GR[DispatchedtasksRow] = GR{
-    prs => import prs._
-    DispatchedtasksRow.tupled((<<?[String], <<[Int], <<?[String], <<?[String]))
-  }
-  /** Table description of table dispatchedTasks. Objects of this class serve as prototypes for rows in queries. */
-  class Dispatchedtasks(_tableTag: Tag) extends Table[DispatchedtasksRow](_tableTag, "dispatchedTasks") {
-    def * = (proofid, idx, termid, prooftacticid) <> (DispatchedtasksRow.tupled, DispatchedtasksRow.unapply)
-    /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (proofid, idx.?, termid, prooftacticid).shaped.<>({r=>import r._; _2.map(_=> DispatchedtasksRow.tupled((_1, _2.get, _3, _4)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
-    
-    /** Database column proofId DBType(TEXT) */
-    val proofid: Column[Option[String]] = column[Option[String]]("proofId")
-    /** Database column idx DBType(INTEGER) */
-    val idx: Column[Int] = column[Int]("idx")
-    /** Database column termId DBType(TEXT) */
-    val termid: Column[Option[String]] = column[Option[String]]("termId")
-    /** Database column proofTacticId DBType(TEXT) */
-    val prooftacticid: Column[Option[String]] = column[Option[String]]("proofTacticId")
-    
-    /** Foreign key referencing Clterms (database name CLTerms_FK_1) */
-    lazy val cltermsFk = foreignKey("CLTerms_FK_1", termid, Clterms)(r => r.termid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Proofs (database name proofs_FK_2) */
-    lazy val proofsFk = foreignKey("proofs_FK_2", proofid, Proofs)(r => r.proofid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-    /** Foreign key referencing Tacticonproof (database name tacticOnProof_FK_3) */
-    lazy val tacticonproofFk = foreignKey("tacticOnProof_FK_3", prooftacticid, Tacticonproof)(r => r.prooftacticid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
-  }
-  /** Collection-like TableQuery object for table Dispatchedtasks */
-  lazy val Dispatchedtasks = new TableQuery(tag => new Dispatchedtasks(tag))
-  
   /** Entity class storing rows of table Models
    *  @param modelid Database column modelId DBType(TEXT), PrimaryKey
    *  @param userid Database column userId DBType(TEXT)
@@ -188,7 +152,7 @@ trait Tables {
     val title: Column[Option[String]] = column[Option[String]]("title")
     
     /** Foreign key referencing Users (database name users_FK_1) */
-    lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.userid, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
+    lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.email, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)
   }
   /** Collection-like TableQuery object for table Models */
   lazy val Models = new TableQuery(tag => new Models(tag))
@@ -322,23 +286,20 @@ trait Tables {
   lazy val Tactics = new TableQuery(tag => new Tactics(tag))
   
   /** Entity class storing rows of table Users
-   *  @param userid Database column userId DBType(TEXT), PrimaryKey
-   *  @param email Database column email DBType(TEXT)
+   *  @param email Database column email DBType(TEXT), PrimaryKey
    *  @param password Database column password DBType(TEXT) */
-  case class UsersRow(userid: Option[String], email: Option[String], password: Option[String])
+  case class UsersRow(email: Option[String], password: Option[String])
   /** GetResult implicit for fetching UsersRow objects using plain SQL queries */
   implicit def GetResultUsersRow(implicit e0: GR[Option[String]]): GR[UsersRow] = GR{
     prs => import prs._
-    UsersRow.tupled((<<?[String], <<?[String], <<?[String]))
+    UsersRow.tupled((<<?[String], <<?[String]))
   }
   /** Table description of table users. Objects of this class serve as prototypes for rows in queries. */
   class Users(_tableTag: Tag) extends Table[UsersRow](_tableTag, "users") {
-    def * = (userid, email, password) <> (UsersRow.tupled, UsersRow.unapply)
+    def * = (email, password) <> (UsersRow.tupled, UsersRow.unapply)
     
-    /** Database column userId DBType(TEXT), PrimaryKey */
-    val userid: Column[Option[String]] = column[Option[String]]("userId", O.PrimaryKey)
-    /** Database column email DBType(TEXT) */
-    val email: Column[Option[String]] = column[Option[String]]("email")
+    /** Database column email DBType(TEXT), PrimaryKey */
+    val email: Column[Option[String]] = column[Option[String]]("email", O.PrimaryKey)
     /** Database column password DBType(TEXT) */
     val password: Column[Option[String]] = column[Option[String]]("password")
   }

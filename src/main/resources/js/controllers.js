@@ -318,12 +318,42 @@ keymaeraProofControllers.value('cgBusyDefaults',{
     templateUrl: 'partials/running-tactics-indicator.html'
 });
 
+keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $cookies, $modalInstance) {
+  $scope.rejectLicense = function() {
+    alert("You must accept the terms to use KeYmaera X.")
+      //TODO shut down server? $modalInstance.dismiss('cancel');
+  }
+
+  $scope.cancel = function() {
+    $http.post("/licenseacceptance")
+        .success(function(data) {}) //ok
+        .error(function() { alert("Failed to udpate database after accepting license!")});
+    $modalInstance.dismiss('cancel');
+  }
+});
+
+
 keymaeraProofControllers.controller('DashboardCtrl',
-  function ($scope, $cookies, $http) {
+  function ($scope, $modal, $cookies, $http) {
     // Set the view for menu active class
     $scope.$on('routeLoaded', function (event, args) {
       $scope.theview = args.theview;
     });
+
+    $http.get("/licenseacceptance")
+         .success(function(data) {
+            if(!data.success && !$scope.licenseDialogDisplayed) {
+                $scope.licenseDialogDisplayed = true;
+                var modalInstance = $modal.open({
+                  templateUrl: 'partials/license_dialog.html',
+                  controller: 'DashboardCtrl.LicenseDialog',
+                  size: 'lg'
+                });
+            }
+         })
+         .error(function() {
+
+         });
 
     $http.get("/config/mathematicaStatus")
         .success(function(data) {

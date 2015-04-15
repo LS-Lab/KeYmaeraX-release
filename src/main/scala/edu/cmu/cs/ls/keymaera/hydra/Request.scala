@@ -142,7 +142,7 @@ class CreateModelRequest(db : DBAbstraction, userId : String, nameOfModel : Stri
       p.runParser(keyFileContents) match {
         case f : Formula => {
           val result = db.createModel(userId, nameOfModel, keyFileContents, currentDate())
-          new BooleanResponse(result) :: Nil
+          new BooleanResponse(result.isDefined) :: Nil
         }
         case a => new ErrorResponse(new Exception("TODO pass back the parse error.")) :: Nil //TODO-nrf pass back useful parser error messages.
       }
@@ -356,7 +356,6 @@ class RunTacticRequest(db : DBAbstraction, userId : String, proofId : String, no
   }
 }
 
-
 class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, nodeId : Option[String], clTerm : String) extends Request {
   def getResultingResponses() = {
     try {
@@ -497,5 +496,22 @@ class GetNodeRequest(db : DBAbstraction, proofId : String, nodeId : Option[Strin
       case Some(theNode) => new NodeResponse(theNode) :: Nil
       case None => new ErrorResponse(new Exception("Could not find a node associated with these id's.")) :: Nil
     }
+  }
+}
+
+class IsLicenseAcceptedRequest(db : DBAbstraction) extends Request {
+  def getResultingResponses() = {
+    new BooleanResponse(
+      db.getConfiguration("license").config.contains("accepted") && db.getConfiguration("license").config.get("accepted").get.equals("true")
+    ) :: Nil
+  }
+}
+
+class AcceptLicenseRequest(db : DBAbstraction) extends Request {
+  def getResultingResponses() = {
+    db.createConfiguration("license")
+    val newConfiguration = new ConfigurationPOJO("license", Map("accepted" -> "true"))
+    db.updateConfiguration(newConfiguration)
+    new BooleanResponse(true) :: Nil
   }
 }

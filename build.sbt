@@ -1,3 +1,7 @@
+name := "KeYmaeraX"
+
+version := "4.0a1"
+
 scalaVersion := "2.10.4"
 
 libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.10.4"

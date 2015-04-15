@@ -41,7 +41,6 @@ object SQLite extends DBAbstraction {
   /**
    * Initializes a new database.
    */
-
   override def cleanup(): Unit = {
     sqldb.withSession(implicit session => {
       try {
@@ -50,9 +49,9 @@ object SQLite extends DBAbstraction {
         case e : SQLException => println("Ignoring an exception when dropping DB")//Tables did not exist -- that's find, we create it below anyways. @todo but we are assuming all or no ables exist.
       };
       ddl.create
+      this.initializeForDemo()
     })
   }
-
 
   private def blankOk(x : Option[String]):String = x match {
     case Some(y) => y
@@ -61,12 +60,11 @@ object SQLite extends DBAbstraction {
 
   override def getModelList(userId: String): List[ModelPOJO] = {
     sqldb.withSession(implicit session => {
-      Models.list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
+      Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
         blankOk(element.date), blankOk(element.filecontents),
         blankOk(element.description), blankOk(element.publink), blankOk(element.title)))
     })
   }
-
 
   override def getDispatchedTermOrTactic(tId: String): Option[AbstractDispatchedPOJO] =
     sqldb.withSession(implicit session => {
@@ -112,20 +110,22 @@ object SQLite extends DBAbstraction {
           //Update the running and completed task lists.
         case Some(x: DispatchedTacticPOJO) => {
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid, t.prooftacticid.get))
-                        .insert(idgen(), proofId, newIdx, None, tId)
+                        .insert(tId, proofId, newIdx, None, tId)
           val q = for{l <- Tacticonproof if(l.prooftacticid === tId)} yield l.status
           q.update(Some(DispatchedTacticStatus.Finished.toString))
         }
         case Some(x : DispatchedCLTermPOJO) => {
 
           Completedtasks.map(t => (t.stepid, t.proofid.get, t.idx, t.termid.get, t.prooftacticid))
-            .insert(idgen(), proofId, newIdx, tId, None)
+            .insert(tId, proofId, newIdx, tId, None)
           val q = for{l <- Clterms if(l.termid === tId)} yield l.status
           q.update(Some(DispatchedTacticStatus.Finished.toString))
         }
+        case Some(x : AbstractDispatchedPOJO) => throw new Exception("Expected only dispatched built-in tactic or dispatched term, but found a different abstract dispatched pojo.")
+        case None => throw new Exception("Found a None.")
       }
 
-      //Update the proof statis the proof is complete.
+      //Update the proof status the proof is complete.
       if(openGoals == 0) {
         val q = for{l <- Proofs if(l.proofid === proofId)} yield l.closed
         q.update(Some(1))
@@ -142,8 +142,8 @@ object SQLite extends DBAbstraction {
 
   override def createUser(username: String, password: String): Unit =
     sqldb.withSession(implicit session => {
-      Users.map(u => (u.userid.get, u.email.get, u.password.get))
-        .insert((idgen, username, password))
+      Users.map(u => (u.email.get, u.password.get))
+        .insert((username, password))
     })
 
 
@@ -180,17 +180,28 @@ object SQLite extends DBAbstraction {
     })
 
 
+  /**
+   * Poorly names -- either update the config, or else insert an existing key.
+   * But in Mongo it was just update, because of the nested documents thing.
+   * @param config
+   */
   override def updateConfiguration(config: ConfigurationPOJO): Unit =
     sqldb.withSession(implicit session => {
-      //Wow that's a pain.
-      config.config.map(kvp => {
-        val key = kvp._1
-        val value = kvp._2
-        val q = for {l <- Config if(l.configname === config.name && l.key === key)} yield l.value
-        q.update(Some(value))
-      })
-    })
+        config.config.map(kvp => {
+          val key = kvp._1
+          val value = kvp._2
+          val configExists = Config.filter(c => c.configname===config.name && c.key===key).list.length != 0
 
+          if(configExists) {
+            val q = for {l <- Config if (l.configname === config.name && l.key === key)} yield l.value
+            q.update(Some(value))
+          }
+          else {
+            Config.map(c => (c.configid.get, c.configname.get, c.key.get, c.value.get))
+              .insert((idgen, config.name, key, value))
+          }
+        })
+    })
 
   //Proofs and Proof Nodes
   override def getProofInfo(proofId: String): ProofPOJO =
@@ -205,6 +216,11 @@ object SQLite extends DBAbstraction {
       else list.head
     })
 
+  /**
+   *
+   * @param proofId
+   * @return A list of completedTask IDs.
+   */
   override def getProofSteps(proofId: String): List[String] =
     sqldb.withSession(implicit session => {
       Completedtasks.filter(_.proofid === proofId).sortBy(_.idx).list.map(_.stepid)
@@ -264,16 +280,16 @@ object SQLite extends DBAbstraction {
 
 
   //Models
-  override def createModel(userId: String, name: String, fileContents: String, date: String): Boolean =
+  override def createModel(userId: String, name: String, fileContents: String, date: String): Option[String] =
     sqldb.withSession(implicit session => {
       if(Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
         def modelId = idgen()
 
         Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get))
           .insert(modelId, userId, name, fileContents, date)
-        true
+        Some(modelId)
       }
-      else false
+      else None
     })
 
 
@@ -390,65 +406,3 @@ object SQLite extends DBAbstraction {
       new ConfigurationPOJO(configName, kvp)
     })
 }
-
-//
-//object SQLiteTables {
-//  class ConfigTable(tag : Tag) extends Table[(String, String,String,String)](tag, "config") {
-//    def configId   = column[String]("configId", O.PrimaryKey, O.NotNull)
-//    def configName = column[String]("configName", O.NotNull)
-//    def key = column[String]("configName", O.NotNull)
-//    def value = column[String]("configName", O.NotNull)
-//
-//    override def * : ProvenShape[(String, String, String, String)] = (configId, configName, key, value)
-//  }
-//
-////  class Tactics(tag : Tag) extends Table[(String, String, String, String)](tag, "tactics") {
-////    def tacticId = column[String]("tacticId", O.PrimaryKey, O.NotNull)
-////    def name = column[String]("name", O.NotNull)
-////    def clazz = column[String]("clazz", O.NotNull)
-////    def kind = column[String]("kind", O.NotNull)
-////
-////    override def * : ProvenShape[(String,String,String,String)] = (tacticId, name, clazz, kind)
-////  }
-////
-////  class Users(tag : Tag) extends Table[(String, String, String)](tag, "users") {
-////    def userId = column[String]("userId", O.PrimaryKey, O.NotNull)
-////    def email = column[String]("email", O.NotNull)
-////    def password = column[String]("password", O.NotNull)
-////    def acceptedTerms = column[String]("acceptedTerms", O.NotNull)
-////
-////    override def * : ProvenShape[(String,String,String, String)] = (userId, email, password, acceptedTerms)
-////  }
-////
-////  class Models(tag : Tag) extends Table[(String, String, String)](tag, "models") {
-////    def modelId = column[String]("modelId", O.PrimaryKey, O.NotNull)
-////    def userId = column[String]("userId", O.NotNull)
-////    def name = column[String]("name", O.NotNull)
-////    def date = column[String]("date")
-////    def description = column[String]("description")
-////    def fileContents = column[String]("fileContents")
-////    def pubLink = column[String]("pubLink")
-////    def title = column[String]("title")
-////
-////    override def * : ProvenShape[(String,String,String,String,String,String,String,String)] = (modelId, userId, name, date, description, fileContents, pubLink, title)
-////  }
-////
-////  class Proofs(tag : Tag) extends Table[(String,String,String,String,String,String,Boolean)](tag, "proofs") {
-////    def proofId = column[String]("proofId", O.PrimaryKey, O.NotNull)
-////    def modelId = column[String]("modelId", O.NotNull)
-////    def name = column[String]("name", O.NotNull)
-////    def description = column[String]("description")
-////    def date = column[String]("date")
-////    def closed = column[Boolean]("closed")
-////
-////    override def * : ProvenShape[(String,String,String,String,String,Boolean)] = (proofId, modelId, name, description, date, closed)
-////  }
-//
-//  //A built-in tactic run on a proof.
-////  class TacticOnProof(tag : Tag) extends Table[(String, String, String, String, String, String)](tag, "tacticOnProof") {
-////    def proofTacticId = column[String]("proofTacticId", O.PrimaryKey, O.NotNull)
-////    def proofId = column[String]("proofId", O.PrimaryKey, O.NotNull)
-////  }
-//
-//
-//}
