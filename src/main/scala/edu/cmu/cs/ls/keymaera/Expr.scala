@@ -45,8 +45,6 @@ case class ObjectSort(name : String) extends Sort
 
 sealed trait NamedSymbol {}
 
-sealed case class Function[D<:Sort,R<:Sort](name: String, domain: D, sort: R) extends NamedSymbol {}
-
 /**
  * Expressions of differential dynamic logic.
  * @author aplatzer
@@ -75,8 +73,12 @@ sealed case class DifferentialSymbol(e: Variable[Real.type]/*NamedSymbol?*/) ext
 
 case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
+sealed case class Function[D<:Sort,R<:Sort](name: String/*, domain: D, sort: R*/) extends NamedSymbol {}
+
 //@todo require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
 case class FuncOf[D<:Sort,S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
+
+object DotTerm extends Function[Unit.type,Real.type]("\\cdot") /*with AtomicTerm[Real.type] if conflating?*/
 
 // composite terms
 sealed trait CompositeTerm[S<:Sort] extends Term[S] with Composite {}
@@ -107,6 +109,8 @@ case class GreaterEqual(left: Term[Real.type], right: Term[Real.type]) extends A
 case class Greater(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 case class LessEqual(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 case class Less(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
+
+object DotFormula extends Function[Unit.type,Bool.type]("\_") /*with AtomicFormula if conflating?*/
 
 case class PredOf[D<:Sort](pred: Function[D,Bool.type], child: Term[D]) extends AtomicFormula
 case class PredicationalOf(pred: Function[Bool.type,Bool.type], child: Formula) extends AtomicFormula
