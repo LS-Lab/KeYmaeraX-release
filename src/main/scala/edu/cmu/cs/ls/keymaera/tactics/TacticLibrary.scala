@@ -20,6 +20,7 @@ import BranchLabels._
 
 import BuiltinHigherTactics._
 
+import scala.collection.immutable.IndexedSeq
 import scala.language.postfixOps
 
 /**
@@ -392,29 +393,24 @@ object TacticLibrary {
       }
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-          // TODO sorts? variables?
-          val fml = TacticHelper.getFormula(node.sequent, p)
-          val vFrom = Variable(from, fromIdx, Real)
-          val vTo = Variable(to, toIdx, Real)
-          val desiredResult  = fml match {
-            case Forall(_, _) | Exists(_, _) => replace(fml)(vFrom, vTo)
-            case _ => BoxModality(Assign(vTo, vFrom), replace(fml)(vFrom, vTo))
-          }
-          if (p.isAnte) {
-            Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
-              (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
-                onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(fml, desiredResult))(SuccPosition(0)) &
-                EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT)),
-              (cutUseLbl, hideT(p.topLevel))
-            ))
-          } else {
-            Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
-              (cutShowLbl, hideT(p.topLevel)),
-              (cutUseLbl, cohide2T(AntePos(node.sequent.ante.length), p.topLevel) &
-                onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(desiredResult, fml))(SuccPosition(0)) &
-                EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT))
-                ))
-          }
+        val fml = TacticHelper.getFormula(node.sequent, p)
+        val findResultProof = Provable.startProof(Sequent(node.sequent.pref, IndexedSeq(), IndexedSeq(fml)))
+        val desiredResult = findResultProof(new BoundRenaming(from, fromIdx, to, toIdx), 0).subgoals.head.succ.head
+        if (p.isAnte) {
+          Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
+            (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
+              onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(fml, desiredResult))(SuccPosition(0)) &
+              EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT)),
+            (cutUseLbl, hideT(p.topLevel))
+          ))
+        } else {
+          Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
+            (cutShowLbl, hideT(p.topLevel)),
+            (cutUseLbl, cohide2T(AntePos(node.sequent.ante.length), p.topLevel) &
+              onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(desiredResult, fml))(SuccPosition(0)) &
+              EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT))
+              ))
+        }
       }
     }
   }
