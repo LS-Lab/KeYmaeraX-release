@@ -94,6 +94,7 @@ case class Plus(left: Term[Real.type], right: Term[Real.type]) extends Composite
 case class Minus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
 case class Times(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
 case class Divide(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
+case class Power(left: Term[Real.type], right: Number) extends CompositeTerm[Real.type]
 
 case class Differential(child: Term[Real.type]) extends CompositeTerm[Real.type]
 
