@@ -81,17 +81,18 @@ class Z3Solver extends SMTSolver {
   }
 
   def qeInOut(f : Formula) : (Formula, String, String) = {
-    var inSMT = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
-    inSMT += "\n(check-sat)\n"
-    println("[Solving with Z3...] \n" + inSMT)
-    val inputFile = new File("KeymaeraToZ3.smt2")
-    val writer = new FileWriter(inputFile)
-    writer.write(inSMT)
+    var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
+    smtCode += "\n(check-sat)\n"
+    println("[Solving with Z3...] \n" + smtCode)
+    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtFile = new File(smtTempDir, "KeymaeraToZ3.smt2")
+    val writer = new FileWriter(smtFile)
+    writer.write(smtCode)
     writer.flush()
     writer.close()
-    val cmd = pathToZ3 + " " + inputFile.getAbsolutePath
+    val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val (output, result) = run(cmd)
-    inputFile.delete()
+    smtFile.delete()
     result match {
       case f : Formula => (f, cmd, output)
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
@@ -99,16 +100,17 @@ class Z3Solver extends SMTSolver {
   }
 
   def simplify(t: Term) = {
-    val simp = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
-//    println("[Simplifying with Z3 ...] \n" + simp)
-    val inputFileSimp = new File("KeymaeraToZ3Simplify.smt2")
-    val writer = new FileWriter(inputFileSimp)
-    writer.write(simp)
+    val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
+//    println("[Simplifying with Z3 ...] \n" + smtCode)
+    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtFile = new File(smtTempDir, "KeymaeraToZ3Simplify.smt2")
+    val writer = new FileWriter(smtFile)
+    writer.write(smtCode)
     writer.flush()
     writer.close()
-    val cmd = pathToZ3 + " " + inputFileSimp.getAbsolutePath
+    val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val output: String = cmd.!!
-    inputFileSimp.delete()
+    smtFile.delete()
     new KeYmaeraParser().parseBareTerm(output) match {
       case Some(output) => output
       case None => t
