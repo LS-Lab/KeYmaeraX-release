@@ -44,6 +44,15 @@ keymaeraProofControllers.controller('MathematicaConfig',
     else if (osName == "MacOS") $scope.defaultJLinkLibPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64/libJLinkNativeLibrary.jnilib"
     else if (osName == "Linux") $scope.defaultJLinkLibPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/libJLinkNativeLibrary.so"
 
+    $http.get("/config/mathematica")
+      .success(function(data) {
+          $scope.linkName = data.linkName;
+          $scope.jlinkLibPath = data.jlinkLibDir;
+      })
+      .error(function() {
+          alert("Unhandled error when attempting to get Mathematica configuration.")
+      });
+
     $scope.configureMathematica = function() {
         var uri     = "/config/mathematica"
 //        var linkNamePath = linkName.files[0].name
