@@ -246,17 +246,19 @@ object TacticLibrary {
 
   def universalClosure(f: Formula): Formula = {
     val vars = NameCategorizer.freeVariables(f)
-    if(vars.isEmpty) f else Forall(vars.toList, f)
+    if(vars.isEmpty) f else vars.foldRight(f)((v, fml) => Forall(v :: Nil, fml)) //Forall(vars.toList, f)
   }
 
   @deprecated("Use [] monotone via boxMonotoneT or <> monotone via diamondMonotoneT or Goedel rule instead.")
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
       case BoxModality(_, _) => true
       case _ => false
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      require(!p.isAnte, "No abstraction in antecedent")
+
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case b@BoxModality(prg, phi) =>
@@ -264,25 +266,21 @@ object TacticLibrary {
             case Right(s) => s.to[scala.collection.immutable.Seq]
             case Left(_) => throw new IllegalArgumentException("Cannot handle non-concrete programs")
           }
-          val qPhi = if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi) else Forall(vars, phi)
+          val qPhi =
+            if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi)
+            else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
 
-          if (!p.isAnte) {
-            Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
-              (cutUseLbl, lastAnte(ImplyLeftT) &&(
-                hideT(p) /* result */,
-                (0 until node.sequent.ante.length).map(i => hideT(AntePosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  (p.index + 1 until node.sequent.succ.length).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  (0 until p.index).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
-                  assertT(1,1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & lastAnte(instantiateT) &
-                  (AxiomCloseT | debugT("Cut use: Axiom close failed unexpectedly") & stopT)
-                )),
-              (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
-                (AxiomCloseT | debugT("Cut show: Axiom close failed unexpectedly") & stopT))
-            ))
-          } else {
-            ???
-          }
+          Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
+            (cutUseLbl, lastAnte(ImplyLeftT) &&(
+              hideT(p) /* result */,
+              cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
+                assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
+                assertT(1,1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & lastAnte(instantiateT) &
+                (AxiomCloseT | debugT("Cut use: Axiom close failed unexpectedly") & stopT)
+              )),
+            (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
+              (AxiomCloseT | debugT("Cut show: Axiom close failed unexpectedly") & stopT))
+          ))
       }
     }
   }
@@ -344,8 +342,6 @@ object TacticLibrary {
    *********************************************/
 
   def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
-  @deprecated
-  def decomposeQuanT = FOQuantifierTacticsImpl.decomposeQuanT
   def instantiateQuanT(q: Variable, t: Term) = FOQuantifierTacticsImpl.instantiateT(q, t)
 
   /*********************************************
@@ -390,25 +386,24 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
+      private def br = new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
+        override def applicable(node: ProofNode): Boolean = true
+      }
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        if (p.isTopLevel) {
-          Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
-            override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-          })
-        } else {
           // TODO sorts? variables?
           val fml = TacticHelper.getFormula(node.sequent, p)
           val vFrom = Variable(from, fromIdx, Real)
           val vTo = Variable(to, toIdx, Real)
-          val desiredResult = replace(fml)(vFrom, vTo)
+          val desiredResult  = fml match {
+            case Forall(_, _) | Exists(_, _) => replace(fml)(vFrom, vTo)
+            case _ => BoxModality(Assign(vTo, vFrom), replace(fml)(vFrom, vTo))
+          }
           if (p.isAnte) {
             Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
               (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
                 onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(fml, desiredResult))(SuccPosition(0)) &
-                EquivRightT(SuccPosition(0)) & onBranch(
-                (equivLeftLbl, alphaRenamingT(from, fromIdx, to, toIdx)(AntePosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT)),
-                (equivRightLbl, alphaRenamingT(from, fromIdx, to, toIdx)(SuccPosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT))
-              )),
+                EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT)),
               (cutUseLbl, hideT(p.topLevel))
             ))
           } else {
@@ -416,13 +411,9 @@ object TacticLibrary {
               (cutShowLbl, hideT(p.topLevel)),
               (cutUseLbl, cohide2T(AntePos(node.sequent.ante.length), p.topLevel) &
                 onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(desiredResult, fml))(SuccPosition(0)) &
-                EquivRightT(SuccPosition(0)) & onBranch(
-                (equivLeftLbl, alphaRenamingT(from, fromIdx, to, toIdx)(SuccPosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT)),
-                (equivRightLbl, alphaRenamingT(from, fromIdx, to, toIdx)(AntePosition(0)) & (AxiomCloseT | debugT("AxiomCloseT unexpectedly failed") & stopT))
+                EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT))
                 ))
-            ))
           }
-        }
       }
     }
   }

@@ -730,7 +730,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
 
   def apply(f: Formula): Formula = {
-    if (allNames(f).exists(v => v.name == what && v.index == wIdx)) {
+    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
       // allow self renaming to get stuttering
       if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
         throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
@@ -741,7 +741,14 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
-  private def ghostify(f: Formula) = BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+  private def ghostify(f: Formula) =
+    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
+      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
+      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
+      case BoxModality(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case DiamondModality(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case _ => BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+    } else f
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
