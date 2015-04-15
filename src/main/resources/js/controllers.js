@@ -38,11 +38,19 @@ keymaeraProofControllers.controller('MathematicaConfig',
     if (osName == "Windows") $scope.defaultMathkernelPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\MathKernel.exe"
     else if (osName == "MacOS") $scope.defaultMathkernelPath = "/Applications/Mathematica.app/Contents/MacOS/MathKernel"
     else if (osName == "Linux") $scope.defaultMathkernelPath = "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel"
+    $scope.mathKernelName = "MathKernel"
+    if (osName == "Windows") $scope.mathKernelName = "MathKernel.exe"
+    else if (osName == "MacOS") $scope.mathKernelName = "MathKernel"
+    else if (osName == "Linux") $scope.mathKernelName = "MathKernel"
 
     $scope.defaultJLinkLibPath = "J/Link Native Library"
     if (osName == "Windows") $scope.defaultJLinkLibPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\JLinkNativeLibrary.dll"
     else if (osName == "MacOS") $scope.defaultJLinkLibPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64/libJLinkNativeLibrary.jnilib"
     else if (osName == "Linux") $scope.defaultJLinkLibPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/libJLinkNativeLibrary.so"
+    $scope.jlinkLib = "MathKernel"
+    if (osName == "Windows") $scope.jlinkLib = "JLinkNativeLibrary.dll"
+    else if (osName == "MacOS") $scope.jlinkLib = "libJLinkNativeLibrary.jnilib"
+    else if (osName == "Linux") $scope.jlinkLib = "libJLinkNativeLibrary.so"
 
     $http.get("/config/mathematica")
       .success(function(data) {

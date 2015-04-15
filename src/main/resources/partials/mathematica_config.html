@@ -1,14 +1,13 @@
+<h2>Mathematica Configuration</h2>
+
 <form ng-controller="MathematicaConfig" name="MathematicaForm">
     <div class="form-group">
-        <label for="linkName">Mathematica Kernel</label>
-        <span ng-show="MathematicaForm.linkName.$invalid" style="color: red;">This file does not exist on your system.</span>
+        <h4 for="linkName">Mathematica Kernel</h4>
 
         <div>
-        Please configure the path to the Mathematica MathKernel.
-        <!--<br/> The default path</span>-->
-        <!--<span ng-if="osName === 'Windows'">on Windows is: C:\Program Files\Wolfram Research\Mathematica\10.0\MathKernel.exe</span>-->
-        <!--<span ng-if="osName ==='MacOS'">on MacOS is: /Applications/Mathematica.app/Contents/MacOS/MathKernel</span>-->
-        <!--<span ng-if="osName ==='Linux'">on Linux is: /usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel</span>-->
+        Please configure the path to the Mathematica MathKernel. On your operating system ({{osName}}), look for an
+            executable file named <code>{{mathKernelName}}</code>. The path for a default installation of Mathematica is
+            <code>{{defaultMathkernelPath}}</code>.
         </div>
 
         <!--<div class="fileinput fileinput-new input-group" data-provides="fileinput">-->
@@ -43,20 +42,19 @@
             <!--</ul>-->
             </span>
         </div>
+        <div ng-show="MathematicaForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i> This file does not exist on your system.</div>
     </div>
 
     <div class="form-group">
-        <label for="jlinkLibDir">
+        <h4 for="jlinkLibDir">
             Mathematica J/Link Native Library
-        </label>
-        <span ng-show="MathematicaForm.jlinkLibDir.$invalid" style="color: red;">This file does not exist on your system.</span>
+        </h4>
 
         <div>
             Please configure the path to the J/Link native library.
-            <!--<br/> The default path</span>-->
-            <!--<span ng-if="osName === 'Windows'">on Windows is: C:\Program Files\Wolfram Research\Mathematica\10.0\SystemFiles\Links\JLink\SystemFiles\Libraries\Windows-x86-64\JLinkNativeLibrary.dll</span>-->
-            <!--<span ng-if="osName ==='MacOS'">on MacOS is: /Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64/libJLinkNativeLibrary.jnilib</span>-->
-            <!--<span ng-if="osName ==='Linux'">on Linux is: /usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/libJLinkNativeLibrary.so</span>-->
+            On your operating system ({{osName}}), look for a
+            file named <code>{{jlinkLib}}</code>. The path for a default installation of Mathematica is
+            <code>{{defaultJLinkLibPath}}</code>.
         </div>
 
         <!--<div class="fileinput fileinput-new input-group" data-provides="fileinput">-->
@@ -85,10 +83,12 @@
                 </button>
             </span>
         </div>
-
+        <div ng-show="MathematicaForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i> This file does not exist on your system.</div>
     </div>
 
     <div class="form-group">
-        <button ng-click="configureMathematica()" class="form-control">Reconfigure and Restart Server</button>
+        <div class="col-md-4 pull-right">
+        <button ng-click="configureMathematica()" class="form-control btn btn-primary">Reconfigure and Restart Server</button>
+        </div>
     </div>
 </form>
