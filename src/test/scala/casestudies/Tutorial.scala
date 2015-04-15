@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateAnte
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.stopT
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -369,10 +370,10 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val file = new File("examples/tutorials/sttt/example9b.key")
     val s = parseToSequent(file)
 
-    val plant = debugT("Plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT) &
-      ls(diffCutT("xm() <= x".asFormula)) & onBranch(
+    val plant = debugT("Plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT) & debugT("Before Cut") &
+      ls(diffCutT("xm() <= x_0".asFormula)) & onBranch(
       (cutShowLbl, debugT("Show cut 1") & ls(diffInvariant)),
-      (cutUseLbl, debugT("Use cut 1") & ls(diffCutT("5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2".asFormula)) & onBranch(
+      (cutUseLbl, debugT("Use cut 1") & ls(diffCutT("5/4*(x_0-xr())^2 + (x_0-xr())*v_0/2 + v_0^2/4 < ((S() - xm())/2)^2".asFormula)) & onBranch(
         (cutShowLbl, debugT("Show cut 2") & ls(diffInvariant)),
         (cutUseLbl, debugT("Use cut 2") & ls(diffWeakenT) & ls(ImplyRightT) & debugT("Result Weaken"))
           )
