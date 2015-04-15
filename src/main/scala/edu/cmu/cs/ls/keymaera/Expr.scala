@@ -33,13 +33,20 @@ sealed abstract class Sort
  */
 object Unit extends Sort
 
-/* sort of booleans: true, false */
+/**
+ * Sort of booleans: true, false
+ */
 object Bool extends Sort
 
-/* sort of reals: 0, 1, 2.73 */
+/**
+ * Sort of real numbers: 0, 1, 2.5
+ */
 object Real extends Sort
 
-/* user defined sort */
+/**
+ * User-defined object sort
+ * @todo replace by statically checkable types?
+ */
 case class ObjectSort(name : String) extends Sort
 
 
@@ -133,7 +140,7 @@ case class Diamond(program: Program, child: Formula) extends CompositeFormula
 case class DifferentialFormula(child: Formula) extends CompositeFormula
 
 /********************************************
-  * Programs of differential dynamic logic.
+  * Hybrid programs of differential dynamic logic.
   * @author aplatzer
   */
 
@@ -141,11 +148,12 @@ sealed trait Program extends Expr {}
 
 // atomic programs
 sealed trait AtomicProgram extends Program with Atomic {}
-sealed case class ProgramConstant(name: String) extends NamedSymbol with AtomicProgram {}
+sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {}
 
 //@todo require(target.sort == e.sort) which in principle could be dead-code eliminated for Real?
 case class Assign[S<:Sort](target: Variable[S], e: Term[S]) extends AtomicProgram
 case class DiffAssign(target: DifferentialSymbol, e: Term[Real.type]) extends AtomicProgram
+case class NonDetAssign[S<:Sort](target: Variable[S]) extends AtomicProgram
 case class Test(cond: Formula) extends AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Program
 
@@ -153,29 +161,29 @@ case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Prog
 sealed trait CompositeProgram extends Program with Composite {}
 case class Choice(left: Program, right: Program) extends Program {}
 case class Compose(left: Program, right: Program) extends Program {}
-case class Star(child: Program) extends Program {}
+case class Loop(child: Program) extends Program {}
 //case class Dual(child: Program) extends Program {}
 
 // differential programs
 sealed trait DifferentialProgram extends Program {}
 sealed case class DifferentialProgramConstant(name: String) extends NamedSymbol with DifferentialProgram {}
 case class AtomicODE(xp: DifferentialSymbol, e: Term[Real.type]) extends DifferentialProgram {}
-case class ODEProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
+case class DifferentialProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
 
-object ODEProduct {
+object DifferentialProduct {
   /**
    * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in the data structures.
    * @note This is important to not get stuck after using axiom "DE differential effect (system)".
    */
-  def apply(left: DifferentialProgram, right : DifferentialProgram): ODEProduct = reassociate(left, right)
+  def apply(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = reassociate(left, right)
 
   //@tailrec
-  private def reassociate(left: DifferentialProgram, right : DifferentialProgram): ODEProduct = left match {
+  private def reassociate(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = left match {
     // properly associated cases
-    case l:AtomicODE => new ODEProduct(l, right)
-    case l:DifferentialProgramConstant => new ODEProduct(l, right)
+    case l:AtomicODE => new DifferentialProduct(l, right)
+    case l:DifferentialProgramConstant => new DifferentialProduct(l, right)
     // reassociate
-    case ODEProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
+    case DifferentialProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
   }
   //@todo ensuring(same list of AtomicODE)
 }
