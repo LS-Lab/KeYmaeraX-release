@@ -31,7 +31,7 @@ sealed abstract class Sort
 object Unit extends Sort
 
 /* sort of booleans: true, false */
-//object Bool extends Sort
+object Bool extends Sort
 
 /* sort of reals: 0, 1, 2.73 */
 object Real extends Sort
@@ -42,7 +42,7 @@ case class ObjectSort(name : String) extends Sort
 
 sealed trait NamedSymbol {}
 
-sealed case class Function(name: String, domain: Sort, sort: Sort) extends NamedSymbol {}
+sealed case class Function[D<:Sort,R<:Sort](name: String, domain: D, sort: R) extends NamedSymbol {}
 
 /**
  * Expressions of differential dynamic logic.
@@ -62,30 +62,31 @@ sealed trait Composite extends Expr
  * @TODO For Term but not the others could move to Term[T<Sort] to statically distinguish Term[Real] from Term[ObjectSort] even if not statically distinguishing Term[ObjectSort("A")] from Term[ObjectSort("B")] :-)
  * @TODO Alternatively could duplicate Equals/NotEquals/FuncOf/Function/Variable for non-real sorts :-/
  */
-sealed trait Term extends Expr {}
+sealed trait Term[T<:Sort] extends Expr {}
 
 // atomic terms
-sealed trait AtomicTerm extends Term with Atomic {}
+sealed trait AtomicTerm[T<:Sort] extends Term[T] with Atomic {}
 
-sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort) extends NamedSymbol with AtomicTerm {}
-sealed case class DifferentialSymbol(e: Variable/*NamedSymbol?*/) extends NamedSymbol with AtomicTerm {
-  require(e.sort == Real, "differentials are only defined in the reals")
+sealed case class Variable[T<:Sort](name: String, index: Option[Int] = None, sort: T) extends NamedSymbol with AtomicTerm[T] {}
+sealed case class DifferentialSymbol(e: Variable[Real.type]/*NamedSymbol?*/) extends NamedSymbol with AtomicTerm[Real.type] {
+  //require(e.sort == Real, "differentials are only defined in the reals")
 }
 
-case class Number(value: BigDecimal) extends AtomicTerm
+case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
-case class FuncOf(func: Function, child: Term) extends AtomicTerm
+//@TODO require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
+case class FuncOf[T<:Sort,R<:Sort](func: Function[T,R], child: Term[T]) extends AtomicTerm[R]
 
 // composite terms
-sealed trait CompositeTerm extends Term with Composite {}
+sealed trait CompositeTerm[T<:Sort] extends Term[T] with Composite {}
 
 //@TODO require(left.sort == Real && right.sort == Real) in the following
-case class Plus(left: Term, right: Term) extends CompositeTerm
-case class Minus(left: Term, right: Term) extends CompositeTerm
-case class Times(left: Term, right: Term) extends CompositeTerm
+case class Plus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
+case class Minus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
+case class Times(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
 
 //@TODO require(left.sort == Real && right.sort == Real) in the following
-case class Differential(child: Term) extends CompositeTerm
+case class Differential(child: Term[Real.type]) extends CompositeTerm[Real.type]
 
 /********************************************
  * Formulas of differential dynamic logic.
@@ -97,16 +98,17 @@ sealed trait Formula extends Expr {}
 // atomic formulas
 sealed trait AtomicFormula extends Formula with Atomic {}
 
-case class Equal(left: Term, right: Term) extends AtomicFormula //@TODO sort
-case class NotEqual(left: Term, right: Term) extends AtomicFormula //@TODO sort
+case class Equal[T<:Sort](left: Term[T], right: Term[T]) extends AtomicFormula //@TODO sort
+//@TODO require(left.sort == right.sort) which in principle could be dead-code eliminated for Real?
+case class NotEqual[T<:Sort](left: Term[T], right: Term[T]) extends AtomicFormula //@TODO sort
 //@TODO require(left.sort == Real && right.sort == Real) in the following
-case class GreaterEqual(left: Term, right: Term) extends AtomicFormula
-case class Greater(left: Term, right: Term) extends AtomicFormula
-case class LessEqual(left: Term, right: Term) extends AtomicFormula
-case class Less(left: Term, right: Term) extends AtomicFormula
+case class GreaterEqual(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
+case class Greater(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
+case class LessEqual(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
+case class Less(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 
-case class PredOf(pred: Function, child: Term) extends AtomicFormula
-case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula
+case class PredOf[D<:Sort](pred: Function[D,Bool.type], child: Term[D]) extends AtomicFormula
+case class PredicationalOf(pred: Function[Bool.type,Bool.type], child: Formula) extends AtomicFormula
 
 // composite formulas
 sealed trait CompositeFormula extends Formula with Composite {}
@@ -139,8 +141,9 @@ sealed trait Program extends Expr {}
 sealed trait AtomicProgram extends Program with Atomic {}
 sealed case class ProgramConstant(name: String) extends NamedSymbol with AtomicProgram {}
 
-case class Assign(target: Variable, e: Term) extends AtomicProgram
-case class DiffAssign(target: DifferentialSymbol, e: Term) extends AtomicProgram
+//@TODO require(target.sort == e.sort) which in principle could be dead-code eliminated for Real?
+case class Assign[T<:Sort](target: Variable[T], e: Term[T]) extends AtomicProgram
+case class DiffAssign(target: DifferentialSymbol, e: Term[Real.type]) extends AtomicProgram
 case class Test(cond: Formula) extends AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Program
 
@@ -154,7 +157,7 @@ case class Star(child: Program) extends Program {}
 // differential programs
 sealed trait DifferentialProgram extends Program {}
 sealed case class DifferentialProgramConstant(name: String) extends NamedSymbol with DifferentialProgram {}
-case class AtomicODE(xp: DifferentialSymbol, e: Term) extends DifferentialProgram {}
+case class AtomicODE(xp: DifferentialSymbol, e: Term[Real.type]) extends DifferentialProgram {}
 case class ODEProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
 //@TODO either enforce auto-normalization during construction via an apply method? :-)
 //@TODO Or flexibilize equals to be as sets that is modulo associative/commutative but possibly breaking symmetry and all kinds of things :-(
