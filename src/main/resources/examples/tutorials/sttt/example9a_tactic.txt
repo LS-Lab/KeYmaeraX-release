@@ -1,0 +1,7 @@
+ImplyRight
+& AndLeft & AndLeft & AndLeft & AndLeft
+& DiffCut("5/4*(x-xr())^2 + (x-xr())*v/2 + v^2/4 < c()")
+& onLabel(
+  ("Use Cut", DiffWeaken & ImplyRight & ArithmeticT),
+  ("Show Cut", DiffInvariant)
+)
