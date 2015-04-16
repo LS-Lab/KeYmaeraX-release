@@ -522,3 +522,21 @@ class AcceptLicenseRequest(db : DBAbstraction) extends Request {
     new BooleanResponse(true) :: Nil
   }
 }
+
+/**
+ * Returns either a DispatchedCLTermResponse or else an ErrorResponse (if no initialization tactic exists for the model)
+ * In the latter case, you should wait until the status of the dispatched term is Finished before taking the user to the proof.
+ */
+class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
+  override def getResultingResponses() : List[Response] = {
+    val model = db.getModel(modelId)
+    model.tactic match {
+      case Some(tactic) => {
+        val initializedProofId = db.createProofForModel(modelId, userId, "Default Proof", new java.util.Date().toString)
+        new RunCLTermRequest(db, userId, initializedProofId, None, tactic).getResultingResponses();
+
+      }
+      case None => new ErrorResponse(new Exception("Could not find an initialization tactic")) :: Nil
+    }
+  }
+}

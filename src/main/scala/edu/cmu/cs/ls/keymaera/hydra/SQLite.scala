@@ -62,7 +62,7 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
         blankOk(element.date), blankOk(element.filecontents),
-        blankOk(element.description), blankOk(element.publink), blankOk(element.title)))
+        blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.title)) //todo change to element.tactic.
     })
   }
 
@@ -280,13 +280,15 @@ object SQLite extends DBAbstraction {
 
 
   //Models
-  override def createModel(userId: String, name: String, fileContents: String, date: String): Option[String] =
+  override def createModel(userId: String, name: String, fileContents: String, date: String,
+                           description : Option[String]=None, publink:Option[String]=None,
+                           title:Option[String]=None, tactic:Option[String]=None) : Option[String] =
     sqldb.withSession(implicit session => {
       if(Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
         def modelId = idgen()
 
-        Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get))
-          .insert(modelId, userId, name, fileContents, date)
+        Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
+          .insert(modelId, userId, name, fileContents, date, description, publink, title, tactic)
         Some(modelId)
       }
       else None
@@ -327,7 +329,7 @@ object SQLite extends DBAbstraction {
         Models.filter(_.modelid === modelId)
             .list
             .map(m => new ModelPOJO(
-              m.modelid.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title)
+              m.modelid.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
             ))
 
       if(models.length < 1) throw new Exception("getModel type should be an Option")

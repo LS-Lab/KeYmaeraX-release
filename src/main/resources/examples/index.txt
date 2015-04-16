@@ -1,7 +1,10 @@
 [
     {
         "name": "bouncing_ball",
-        "file": "examples/simple/bouncing-ball/bouncing-ball-tout.key"
+        "file": "examples/simple/bouncing-ball/bouncing-ball-tout.key",
+        "description": "???",
+        "publink": "http://???",
+        "title": "Title"
     },
     {
         "name" : "tutorial_sttt_1",
