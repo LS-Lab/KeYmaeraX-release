@@ -94,10 +94,13 @@ object MongoDB extends DBAbstraction {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Models
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  override def createModel(userId: String, name: String, fileContents: String, currentDate : String): Option[String] = {
+  override def createModel(userId: String, name: String, fileContents: String, currentDate : String,
+                           description : Option[String]=None, publink:Option[String]=None,
+                           title:Option[String]=None, tactic:Option[String]=None) : Option[String] = {
     val query = MongoDBObject("userId" -> userId, "name" -> name, "fileContents" -> fileContents) //w/o date
     if (models.find(query).length == 0) {
-      val obj = MongoDBObject("userId" -> userId, "name" -> name, "date" -> currentDate, "fileContents" -> fileContents)
+      val obj = MongoDBObject("userId" -> userId, "name" -> name, "date" -> currentDate, "fileContents" -> fileContents,
+        "description" -> description, "publink" -> publink, "title" -> title, "tactic" -> tactic)
       models.insert(obj)
       Some(obj._id.getOrElse(???).toString()) // TODO should we allow models by the same user and with the same name?
     }
@@ -119,7 +122,8 @@ object MongoDB extends DBAbstraction {
         model.getAs[String]("fileContents").getOrElse(""),
         model.getAs[String]("description").getOrElse(""),
         model.getAs[String]("pubLink").getOrElse(""),
-        model.getAs[String]("title").getOrElse("")
+        model.getAs[String]("title").getOrElse(""),
+        model.getAs[String]("tactic")
       )
     ).toList
   }
@@ -137,7 +141,8 @@ object MongoDB extends DBAbstraction {
       result.getAs[String]("fileContents").getOrElse(""),
       result.getAs[String]("description").getOrElse(""),
       result.getAs[String]("pubLink").getOrElse(""),
-      result.getAs[String]("title").getOrElse("")
+      result.getAs[String]("title").getOrElse(""),
+      result.getAs[String]("tactic")
     )).toList.last
   }
 
