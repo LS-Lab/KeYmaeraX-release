@@ -154,19 +154,17 @@ trait DBAbstraction {
 
     //Model name, file
     val indexFileContents : List[(String, String, Option[String])] = {
-      val r = this.getClass.getResourceAsStream("/examples/index.txt")
-      if(r == null) {
-        throw new Exception("Could not initialize database because examples/index.txt does not exist in this JAR")
-      }
-      val lines = Source.fromInputStream(r).getLines
-      lines.map(line => {
-        val parts = line.split(",")
-        if(parts.length != 2 && parts.length != 3) throw new Exception("Could not parse examples/index.txt")
-        val name = parts(0)
-        val modelFile = parts(1)
-        val proofTacticFile = if(parts.length == 3) Some(parts(2)) else None
-        (name, modelFile, proofTacticFile)
-      }).toList
+      import spray.json._ //allows for .parseJoson on strings.
+      val reader = this.getClass.getResourceAsStream("/examples/index.txt")
+      val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+      val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
+      source.elements.map(element => {
+        val kvps = element.asJsObject.fields.map(kvp =>
+          (kvp._1, kvp._2.asInstanceOf[JsString].value.toString)
+        )
+        val name = kvps.get("name").getOrElse(throw new Exception("Expcted a name but found none."))
+        (name, kvps.get("file").get, kvps.get("tactic"))
+      })
     }
 
     indexFileContents.map(entry => {
