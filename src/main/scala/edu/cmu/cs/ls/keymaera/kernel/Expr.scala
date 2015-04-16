@@ -4,7 +4,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-package edu.cmu.cs.ls.keymaera
+package edu.cmu.cs.ls.keymaera.kernel
 
 // require favoring immutable Seqs for soundness
 
@@ -76,18 +76,18 @@ sealed trait Term[S<:Sort] extends Expr[Term] {}
 sealed trait AtomicTerm[S<:Sort] extends Term[S] with Atomic[Term] {}
 
 sealed case class Variable[S<:Sort](name: String, index: Option[Int] = None/*, sort: S*/) extends NamedSymbol[Term] with AtomicTerm[S] {}
-sealed case class DifferentialSymbol(e: Variable[Real.type]/*NamedSymbol?*/) extends NamedSymbol[Term] with AtomicTerm[Real.type] {}
+sealed case class DifferentialSymbol(e: Variable[Real.type]/*@todo NamedSymbol[Real.type]?*/) extends NamedSymbol[Term] with AtomicTerm[Real.type] {}
 
 case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
 sealed case class Function[D<:Sort,R<:Sort](name: String/*, domain: D, sort: R*/) extends Expr[Function] with NamedSymbol[Function] {}
 
-//@todo to check within ObjectSorts add require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
-case class FuncOf[D<:Sort,S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
-
 object DotTerm extends AtomicTerm[Real.type] {
   override def toString = ("\\cdot")
 }
+
+//@todo to check within ObjectSorts add require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
+case class FuncOf[D<:Sort,S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
 
 // composite terms
 sealed trait CompositeTerm[S<:Sort] extends Term[S] with Composite[Term] {}
@@ -109,6 +109,9 @@ sealed trait Formula extends Expr[Formula]
 
 // atomic formulas
 sealed trait AtomicFormula extends Formula with Atomic[Formula] {}
+
+object True extends AtomicFormula
+object False extends AtomicFormula
 
 case class Equal[S<:Sort](left: Term[S], right: Term[S]) extends AtomicFormula
 //@todo require(left.sort == right.sort) which in principle could be dead-code eliminated for Real?
@@ -159,6 +162,7 @@ sealed trait Program extends Expr[Program]
 
 // atomic programs
 sealed trait AtomicProgram extends Program with Atomic[Program] {}
+
 sealed case class ProgramConst(name: String) extends NamedSymbol[Program] with AtomicProgram {}
 
 //@todo require(target.sort == e.sort) which in principle could be dead-code eliminated for Real?
@@ -177,7 +181,7 @@ case class Loop(child: Program) extends Program {}
 
 // differential programs
 sealed trait DifferentialProgram extends Program {}
-sealed case class DifferentialProgramConstant(name: String) extends NamedSymbol[Program] with DifferentialProgram {}
+sealed case class DifferentialProgramConst(name: String) extends NamedSymbol[Program] with DifferentialProgram {}
 case class AtomicODE(xp: DifferentialSymbol, e: Term[Real.type]) extends DifferentialProgram {}
 case class DifferentialProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
 
@@ -192,7 +196,7 @@ object DifferentialProduct {
   private def reassociate(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = left match {
     // properly associated cases
     case l:AtomicODE => new DifferentialProduct(l, right)
-    case l:DifferentialProgramConstant => new DifferentialProduct(l, right)
+    case l:DifferentialProgramConst => new DifferentialProduct(l, right)
     // reassociate
     case DifferentialProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
   }
