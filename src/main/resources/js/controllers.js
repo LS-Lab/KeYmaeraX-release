@@ -476,6 +476,17 @@ keymaeraProofControllers.controller('ModelListCtrl',
         });
     };
 
+    $scope.openTactic = function (modelid) {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/modeltacticdialog.html',
+          controller: 'ModelTacticDialogCtrl',
+          size: 'lg',
+          resolve: {
+            modelid: function () { return modelid; }
+          }
+        });
+    };
+
     $scope.showPrfs = function(modelId) {
         $location.path('/models/' + modelId + "/proofs")
     }
@@ -498,6 +509,16 @@ keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, 
 //  $scope.cancel = function () {
 //    $modalInstance.dismiss('cancel');
 //  };
+});
+
+keymaeraProofControllers.controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
+  $http.get("user/" + $cookies.userId + "/model/" + modelid + "/tactic").success(function(data) {
+      $scope.tactic = data
+  });
+
+  $scope.ok = function () {
+    $modalInstance.close();
+  };
 });
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',

@@ -62,7 +62,7 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
         blankOk(element.date), blankOk(element.filecontents),
-        blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.title)) //todo change to element.tactic.
+        blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic))
     })
   }
 

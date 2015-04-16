@@ -121,9 +121,9 @@ trait RestApi extends HttpService {
         complete(standardCompletion(request))
       }}}}}}}}
 
-  val modelInfo = path("models" / "users" / Segment / "model" / Segment) { (userId, modelId) => pathEnd {
+  val modelTactic = path("user" / Segment / "model" / Segment / "tactic") { (userId, modelId) => pathEnd {
     get {
-      val request = new GetModelRequest(database, userId, modelId)
+      val request = new GetModelTacticRequest(database, userId, modelId)
       complete(standardCompletion(request))
     }
   }}
@@ -378,6 +378,7 @@ trait RestApi extends HttpService {
     homePage              ::
     users                 ::
     modelList             ::
+    modelTactic           ::
     userModel             ::
     userModel2            ::
     cookieecho            ::
