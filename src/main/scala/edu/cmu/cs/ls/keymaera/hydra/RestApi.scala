@@ -128,6 +128,13 @@ trait RestApi extends HttpService {
     }
   }}
 
+  val runModelTactic = path("user" / Segment / "model" / Segment / "tactic" / "run") { (userId, modelId) => pathEnd {
+    post {
+      val request = new RunModelInitializationTacticRequest(database, userId, modelId)
+      complete(standardCompletion(request))
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -382,6 +389,7 @@ trait RestApi extends HttpService {
     userModel             ::
     userModel2            ::
     cookieecho            ::
+    runModelTactic        ::
     createProof           ::
     proofListForModel     ::
     proofList             ::

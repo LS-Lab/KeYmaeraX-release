@@ -487,8 +487,10 @@ keymaeraProofControllers.controller('ModelListCtrl',
         });
     };
 
-    $scope.showPrfs = function(modelId) {
-        $location.path('/models/' + modelId + "/proofs")
+    $scope.runTactic = function (modelid) {
+      $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run").success(function(data) {
+          alert("Done running tactic")
+      });
     }
 
     $scope.$watch('models',

@@ -63,7 +63,7 @@
                 <ul class="dropdown-menu" role="menu" ng-model="model">
                     <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
                     <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>
-                    <li><a ng-href="dashboard.html?#/models/{{ model.id }}/tactic/run">Prove with tactic</a></li>
+                    <li><a ng-href="" ng-if="model.hasTactic" ng-click="runTactic(model.id)">Prove with tactic</a></li>
                 </ul>
             </td>
         </tr>
