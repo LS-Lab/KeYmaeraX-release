@@ -44,6 +44,7 @@
             <td>ID</td>
             <td>Name</td>
             <td>Description</td>
+            <td>Tactic</td>
             <td>Actions</td>
         </tr>
         </thead>
@@ -52,6 +53,7 @@
             <td>{{ model.id.substring(0,5) + ".." + model.id.substring(model.id.length-5) }}</td>
             <td><a href="" ng-click="open(model.id)">{{ model.name }}</a></td>
             <td><a href="{{model.pubLink}}">{{model.title}}</a></td>
+            <td><a href="" ng-if="model.hasTactic" ng-click="openTactic(model.id)">Browse <i class="fa fa-file-code-o"></i></a></td>
             <td class="input-group-btn" ng-model="model">
                 <a class="btn btn-default" ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a>
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
@@ -61,6 +63,7 @@
                 <ul class="dropdown-menu" role="menu" ng-model="model">
                     <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs">Show Proofs</a></li>
                     <li><a ng-href="dashboard.html?#/models/{{ model.id }}/proofs/create">Start new proof</a></li>
+                    <li><a ng-href="" ng-if="model.hasTactic" ng-click="runTactic(model.id)">Prove with tactic</a></li>
                 </ul>
             </td>
         </tr>

@@ -485,8 +485,21 @@ keymaeraProofControllers.controller('ModelListCtrl',
         });
     };
 
-    $scope.showPrfs = function(modelId) {
-        $location.path('/models/' + modelId + "/proofs")
+    $scope.openTactic = function (modelid) {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/modeltacticdialog.html',
+          controller: 'ModelTacticDialogCtrl',
+          size: 'lg',
+          resolve: {
+            modelid: function () { return modelid; }
+          }
+        });
+    };
+
+    $scope.runTactic = function (modelid) {
+      $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run").success(function(data) {
+          alert("Done running tactic")
+      });
     }
 
     $scope.$watch('models',
@@ -507,6 +520,16 @@ keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, 
 //  $scope.cancel = function () {
 //    $modalInstance.dismiss('cancel');
 //  };
+});
+
+keymaeraProofControllers.controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
+  $http.get("user/" + $cookies.userId + "/model/" + modelid + "/tactic").success(function(data) {
+      $scope.tactic = data
+  });
+
+  $scope.ok = function () {
+    $modalInstance.close();
+  };
 });
 
 keymaeraProofControllers.controller('ModelProofCreateCtrl',

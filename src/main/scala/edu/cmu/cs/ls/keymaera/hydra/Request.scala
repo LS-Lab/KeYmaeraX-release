@@ -245,6 +245,13 @@ class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) ext
   }
 }
 
+class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
+  def getResultingResponses() = {
+    val model = db.getModel(modelId)
+    new GetModelTacticResponse(model) :: Nil
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Proofs of models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
