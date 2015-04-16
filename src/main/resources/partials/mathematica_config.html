@@ -32,7 +32,8 @@ configuration is pre-filled below.
         <div ng-show="MathematicaForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
             This file does not exist on your system:
             <span>{{linkNameOkPrefix}}</span><span><strong><em>{{linkNameWrong}}</em></strong></span><br/>
-            Please double check that it points to {{mathematicaConfigSuggestion.kernelName}}.
+            The segment of the path highlighted in bold-face seems wrong.
+            <span ng-if="linkNameIncomplete">The path exists, but it does not point to {{mathematicaConfigSuggestion.kernelName}}.</span>
         </div>
     </div>
 
@@ -66,7 +67,8 @@ configuration is pre-filled below.
         <div ng-show="MathematicaForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
             This file does not exist on your system:
             <span>{{jlinkLibPathOkPrefix}}</span><span><strong><em>{{jlinkLibPathWrong}}</em></strong></span><br/>
-            Please double check that it points to {{mathematicaConfigSuggestion.jlinkName}}.
+            The segment of the path highlighted in bold-face seems wrong.
+            <span ng-if="jlinkPathIncomplete">The path exists, but it does not point to {{mathematicaConfigSuggestion.jlinkName}}.</span>
         </div>
     </div>
 

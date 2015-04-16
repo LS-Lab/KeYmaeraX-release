@@ -37,8 +37,10 @@ keymaeraProofControllers.controller('MathematicaConfig',
 
     $http.get("/config/mathematica")
       .success(function(data) {
-          $scope.linkName = data.linkName;
-          $scope.jlinkLibPath = data.jlinkLibDir;
+          if (data.linkName !== "" && data.jlinkLibPath !== "") {
+            $scope.linkName = data.linkName;
+            $scope.jlinkLibPath = data.jlinkLibDir;
+          }
       })
       .error(function() {
           alert("Unhandled error when attempting to get Mathematica configuration.")
@@ -70,14 +72,19 @@ keymaeraProofControllers.controller('MathematicaConfig',
                       data.linkNamePrefix == $scope.linkName
                     var jlinkExists = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) > -1 &&
                       data.jlinkLibDirPrefix == $scope.jlinkLibPath
+
                     $scope.linkNameOkPrefix = data.linkNamePrefix
                     $scope.linkNameWrong = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 ?
                         $scope.linkName.substring(data.linkNamePrefix.length, $scope.linkName.length) :
                         ".../" + $scope.mathematicaConfigSuggestion.kernelName
+                    $scope.linkNameIncomplete = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) == -1
+
                     $scope.jlinkLibPathOkPrefix = data.jlinkLibDirPrefix
                     $scope.jlinkLibPathWrong = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) > -1 ?
                       $scope.jlinkLibPath.substring(data.jlinkLibDirPrefix.length, $scope.jlinkLibPath.length) :
                       ".../" + $scope.mathematicaConfigSuggestion.jlinkName
+                    $scope.jlinkPathIncomplete = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) == -1
+
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", kernelNameExists);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", jlinkExists);
                 }
