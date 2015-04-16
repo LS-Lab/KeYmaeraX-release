@@ -3,6 +3,7 @@
         "name": "bouncing_ball",
         "file": "examples/simple/bouncing-ball/bouncing-ball-tout.key",
         "description": "A Bouncing Ball",
+        "tactic" : "examples/simple/bouncing-ball/bb_tactic.txt"
     },
     {
         "name" : "tutorial_sttt_1",

@@ -26,7 +26,7 @@ object ExposedTacticsLibrary {
   // Plain tactics
   def ImplyRight              : Tactic = TacticLibrary.locate(TacticLibrary.ImplyRightT)
   def Master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
-  def Master(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
+//  def SpecificMaster(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
   def Seq                     : Tactic = TacticLibrary.locate(TacticLibrary.boxSeqT)
   def Choice                  : Tactic = TacticLibrary.locate(TacticLibrary.boxChoiceT)
   def AndRight                : Tactic = TacticLibrary.locate(TacticLibrary.AndRightT)
@@ -47,7 +47,7 @@ object ExposedTacticsLibrary {
   def AndRightT                    : PositionTactic = TacticLibrary.AndRightT
   def OrRightT                     : PositionTactic = TacticLibrary.OrRightT
   def ArithmeticT                  : Tactic         = TacticLibrary.arithmeticT
-  def ArithmeticT(toolId : String) : Tactic         = TacticLibrary.arithmeticT(toolId)
+//  def SpecificArithmeticT(toolId : String) : Tactic         = TacticLibrary.arithmeticT(toolId)
   def AxiomCloseT                  : Tactic         = TacticLibrary.AxiomCloseT
 }
 

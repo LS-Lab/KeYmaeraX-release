@@ -1,0 +1,15 @@
+ImplyRight
+& Loop("v^2 <= 2 * g() * (H - x) & x >= 0 & x <= H & g() > 0 & H >= 0 & 0 <= c & c <= 1")
+& onLabel(
+  ("Invariant Initially Valid", ArithmeticT),
+  ("Use case", ArithmeticT),
+  ("Induction Step",
+    ImplyRight
+    & Seq
+    & ODESolve & ImplyRight
+    & Choice & AndRight && (
+      Seq & Test & ImplyRight & Assign & ArithmeticT,
+      Test & ImplyRight & ArithmeticT
+    )
+  )
+)
