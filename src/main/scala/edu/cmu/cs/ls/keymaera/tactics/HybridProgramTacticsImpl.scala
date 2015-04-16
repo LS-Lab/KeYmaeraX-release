@@ -12,14 +12,15 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{AndRightT,AxiomC
   hideT,kModalModusPonensT}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import BindingAssessment.allNames
-
+import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import TacticHelper.getFormula
 import SearchTacticsImpl.onBranch
 
 import scala.collection.immutable.{List, Seq}
+import scala.language.postfixOps
 
-import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
+
 
 /**
  * Implementation of tactics for handling hybrid programs.
@@ -1042,8 +1043,11 @@ object HybridProgramTacticsImpl {
               case (f,i) if allNames(f).intersect(vars.toSet).nonEmpty => i }.toSet -- succExcepts
             val succHides = succHidePos.toList.sorted.reverseMap(i => hideT(SuccPosition(i)))
             val bvFromPosCorr = succHidePos.count(_ < bvFromPos.index)
+            val correctedPos = SuccPosition(bvFromPos.index - bvFromPosCorr)
             Some((anteHides ++ succHides).foldLeft(NilT)((t, i) => t & i) &
-              skolemizeT(SuccPosition(bvFromPos.index - bvFromPosCorr)))
+              (skolemizeT(correctedPos)*) &
+              assertT(s => s(correctedPos) match { case Forall(_, _) => false case _ => true },
+                "Wipe context induction tactic did not skolemize exhaustively"))
         }
       }
 

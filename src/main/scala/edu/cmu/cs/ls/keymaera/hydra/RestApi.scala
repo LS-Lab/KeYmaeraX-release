@@ -219,6 +219,10 @@ trait RestApi extends HttpService {
 
   val mathematicaConfig = path("config" / "mathematica") {
     pathEnd {
+      get {
+          val request = new GetMathematicaConfigurationRequest(database)
+          complete(standardCompletion(request))
+      } ~
       post {
         entity(as[String]) { params => {
           val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)

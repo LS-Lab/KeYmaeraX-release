@@ -300,6 +300,13 @@ class ConfigureMathematicaResponse(linkNameExists : Boolean, jlinkLibDirExists :
   )
 }
 
+class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) extends Response {
+  override protected val json: JsValue = JsObject(
+    "linkName" -> JsString(linkName),
+    "jlinkLibDir" -> JsString(jlinkLibDir)
+  )
+}
+
 class MathematicaStatusResponse(configured : Boolean) extends Response {
   override protected val json: JsValue = JsObject(
     "configured" -> {if(configured) JsTrue else JsFalse}

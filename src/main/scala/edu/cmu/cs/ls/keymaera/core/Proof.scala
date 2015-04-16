@@ -409,6 +409,16 @@ class CoHideRight(p: SuccPos) extends RightRule("CoHideRight", p) {
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
+// co-weakening = co-hide all but the indicated positions
+object CoHide2 extends ((AntePos, SuccPos) => Rule) {
+  def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
+}
+class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p2) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(s.ante(p1.getIndex)), IndexedSeq(s.succ(p2.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
 
 // Exchange left rule reorders antecedent
 object ExchangeLeft {
@@ -720,16 +730,25 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
 
   def apply(f: Formula): Formula = {
-    // allow self renaming to get stuttering
-    if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
-      throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
-    rename(f)
+    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
+      // allow self renaming to get stuttering
+      if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
+        throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+      rename(f)
+    } else f
   }
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
-  private def ghostify(f: Formula) = BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+  private def ghostify(f: Formula) =
+    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
+      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
+      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
+      case BoxModality(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case DiamondModality(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case _ => BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+    } else f
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.

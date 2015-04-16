@@ -384,10 +384,12 @@ object MathematicaToKeYmaera {
         
       //Create the final expression.
       if(isThing(e, MathematicaSymbols.FORALL)) {
-        Forall(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        //Forall(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => Forall(v :: Nil, fml))
       }
       else if(isThing(e, MathematicaSymbols.EXISTS)) {
-        Exists(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        //Exists(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => Exists(v :: Nil, fml))
       }
       else {
         throw mathExnMsg(e, "Tried to convert a quantifier-free expression using convertQuantifier. The check in fromMathematica must be wrong.")

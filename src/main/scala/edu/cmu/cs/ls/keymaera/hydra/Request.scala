@@ -122,6 +122,13 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
   }
 }
 
+class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val config = db.getConfiguration("mathematica").config
+    new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")) :: Nil
+  }
+}
+
 class MathematicaStatusRequest(db : DBAbstraction) extends Request {
   override def getResultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
