@@ -145,6 +145,8 @@ class TacticExecutor(val scheduler : Scheduler, val tool : Tool, val id : Int) e
 trait ExecutionEngine {
   /** Initializes the execution engine with configuration values specified as key-value pairs */
   def init(config: Map[String,String]): Unit
+  /** Indicates whether or not the execution engine is initialized */
+  def isInitialized: Boolean
   /** Shuts down the execution engine */
   def shutdown(): Unit
   /** Executes the specified tactic */
@@ -160,6 +162,7 @@ class Scheduler(tools : Seq[Tool]) extends ExecutionEngine {
   val thread   : Array[java.lang.Thread] = new Array(maxThreads)
   val executors: Array[TacticExecutor] = new Array(maxThreads)
   val prioList = new scala.collection.mutable.SynchronizedPriorityQueue[TacticToolBinding]()
+  var initialized = false
   @volatile var blocked = 0/* threads blocked on the scheduler */
 
   override def init(config: Map[String,String]) = {
@@ -171,7 +174,10 @@ class Scheduler(tools : Seq[Tool]) extends ExecutionEngine {
     blocked = 0
     tools.foreach(_.init(config))
     thread.foreach(_.start())
+    initialized = tools.exists(_.isInitialized)
   }
+
+  override def isInitialized: Boolean = initialized
 
   override def shutdown() = {
     executors.foreach(_.stop())
@@ -198,7 +204,13 @@ class Scheduler(tools : Seq[Tool]) extends ExecutionEngine {
  * @param tool The tool to execute tactics.
  */
 class Interpreter(tool : Tool) extends ExecutionEngine {
-  override def init(config: Map[String,String]) = tool.init(config)
+  private var initialized = false
+  override def init(config: Map[String,String]) = {
+    tool.init(config)
+    initialized = tool.isInitialized
+  }
+
+  override def isInitialized: Boolean = initialized
 
   override def shutdown() = tool.shutdown()
 

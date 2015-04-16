@@ -212,7 +212,7 @@ object TacticLibrary {
    * Use Mathematica
    */
   def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
-    ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT

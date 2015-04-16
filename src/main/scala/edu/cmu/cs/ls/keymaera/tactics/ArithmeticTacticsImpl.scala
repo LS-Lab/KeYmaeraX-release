@@ -59,7 +59,7 @@ object ArithmeticTacticsImpl {
       qeAble
     }
 
-    override def applicable(node: ProofNode): Boolean = qeApplicable(node.sequent)
+    override def applicable(node: ProofNode): Boolean = qeApplicable(node.sequent) && toolIsInitialized()
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       var tacticName : String = ""
@@ -123,6 +123,12 @@ object ArithmeticTacticsImpl {
 
       t.continuation = continuation
       t.dispatch(this, node)
+    }
+
+    private def toolIsInitialized(): Boolean = {
+      if (toolId == "Mathematica") MathematicaScheduler.isInitialized
+      else if (toolId == "Z3") Z3Scheduler.isInitialized
+      else false
     }
   }
 

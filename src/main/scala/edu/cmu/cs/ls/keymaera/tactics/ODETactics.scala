@@ -244,9 +244,12 @@ object ODETactics {
    * @return The tactic.
    */
   def diffSolution(solution: Option[Formula]): PositionTactic = new PositionTactic("differential solution") {
-    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
       case BoxModality(odes: DifferentialProgram, _) => odes != EmptyODE()
       case _ => false
+    }) && (solution match {
+      case Some(f) => true
+      case None => MathematicaScheduler.isInitialized
     })
 
     /**
@@ -372,7 +375,7 @@ object ODETactics {
         val theSolution = solution match {
           case sol@Some(_) => sol
           case None => tool match {
-            case x: Mathematica => x.diffSolver.diffSol(diffEq, time, ivm)
+            case x: Mathematica if x.isInitialized => x.diffSolver.diffSol(diffEq, time, ivm)
             case _ => None
           }
         }

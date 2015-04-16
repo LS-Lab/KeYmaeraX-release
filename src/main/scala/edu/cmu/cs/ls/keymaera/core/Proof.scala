@@ -1103,7 +1103,7 @@ object LookupLemma {
   def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
     //Find the solution
     t match {
-      case x: Mathematica =>
+      case x: Mathematica if x.isInitialized =>
         val (solution, input, output) = x.cricitalQE.qeInOut(f)
         val result = Equiv(f,solution)
 
@@ -1129,7 +1129,7 @@ object LookupLemma {
         //Return the file where the result is saved, together with the result.
         Some((file, file.getName, result))
 
-      case x: Z3 =>
+      case x: Z3 if x.isInitialized =>
         val (solution, input, output) = x.cricitalQE.qeInOut(f)
         val result = Equiv(f,solution)
 
