@@ -82,8 +82,15 @@ case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
 sealed case class Function[D<:Sort,R<:Sort](name: String/*, domain: D, sort: R*/) extends Expr[Function] with NamedSymbol[Function] {}
 
-object DotTerm extends AtomicTerm[Real.type] {
+object DotTerm extends NamedSymbol[Term] with AtomicTerm[Real.type] {
   override def toString = ("\\cdot")
+}
+
+object Nothing extends NamedSymbol[Term] with AtomicTerm[Unit.type] {
+  override def toString = ("\\nothing")
+}
+object Anything extends NamedSymbol[Term] with AtomicTerm[Real.type] {
+  override def toString = ("\\anything")
 }
 
 //@todo to check within ObjectSorts add require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
@@ -123,7 +130,7 @@ case class Greater(left: Term[Real.type], right: Term[Real.type]) extends Atomic
 case class LessEqual(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 case class Less(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 
-object DotFormula extends AtomicFormula {
+object DotFormula extends NamedSymbol[Formula] AtomicFormula {
   override def toString = "\\_"
 }
 
