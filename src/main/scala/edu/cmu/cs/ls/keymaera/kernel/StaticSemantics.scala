@@ -75,8 +75,8 @@ object StaticSemantics {
     // base cases
     case x: Variable[S] => SetLattice(x)
     case xp: DifferentialSymbol => SetLattice(xp)
-    case _: Number => bottom
-    case DotTerm => assert(!DotTerm.isInstanceOf[Variable[_]], "DotTerm is no variable"); bottom
+    case _: Number => SetLattice.bottom
+    case DotTerm => assert(!DotTerm.isInstanceOf[Variable[_]], "DotTerm is no variable"); SetLattice.bottom
     // homomorphic cases
     case FuncOf(f, arg) => freeVars(arg)
     case Plus(l, r) => freeVars(l) ++ freeVars(r)
@@ -87,7 +87,7 @@ object StaticSemantics {
     //case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
     case Differential(e) => val fv = freeVars(e); fv ++ differentialSymbols(fv)
-    //case _: Nothing | Anything => bottom
+    //case _: Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
 
@@ -122,17 +122,17 @@ object StaticSemantics {
 
   private def fmlVars(f: Formula): VCF = f match {
     // base cases
-    case Equal(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
-    case NotEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
+    case Equal(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
+    case NotEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
 
-    case GreaterEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
-    case Greater(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
-    case LessEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
-    case Less(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
+    case GreaterEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
+    case Greater(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
+    case LessEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
+    case Less(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
 
-    case DotFormula => VCF(fv = topExceptDotFormula, bv = bottom)
-    case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topExceptDotFormula, bv = bottom)
+    case DotFormula => VCF(fv = topExceptDotFormula, bv = SetLattice.bottom)
+    case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = SetLattice.bottom)
+    case PredicationalOf(p, arg) => VCF(fv = topExceptDotFormula, bv = SetLattice.bottom)
 
     // homomorphic cases
     case Not(g) => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
@@ -154,16 +154,16 @@ object StaticSemantics {
     // special cases
     // TODO DifferentialFormula not mentioned in Definition 7 and 8, analogue to Differential
     case DifferentialFormula(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ differentialSymbols(vdf.fv), bv = vdf.bv) //@todo eisegesis
-    case True | False => VCF(fv = bottom, bv = bottom)
+    case True | False => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
   }
 
   private def progVars(p: Program): VCP = { p match {
     // base cases
-    case _: ProgramConst => VCP(fv = topExceptDotTerm, bv = topExceptDotTerm, mbv = bottom) //@TODO this includes x,x' for all x?
-    case _: DifferentialProgramConst => VCP(fv = topExceptDotTerm, bv = topExceptDotTerm, mbv = bottom)
+    case _: ProgramConst => VCP(fv = topExceptDotTerm, bv = topExceptDotTerm, mbv = SetLattice.bottom) //@TODO this includes x,x' for all x?
+    case _: DifferentialProgramConst => VCP(fv = topExceptDotTerm, bv = topExceptDotTerm, mbv = SetLattice.bottom)
     case Assign(x: Variable[_], e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
     case DiffAssign(xp: DifferentialSymbol, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
-    case Test(f) => VCP(fv = apply(f).fv, bv = bottom, mbv = bottom)
+    case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     case AtomicODE(xp@DifferentialSymbol(x:Variable[Real.type]), e) =>
       VCP(fv = SetLattice[NamedSymbol[Sort]](x) ++ freeVars(e), bv = SetLattice[NamedSymbol[Sort]](x) ++ SetLattice[NamedSymbol[Sort]](xp), mbv = SetLattice[NamedSymbol[Sort]](x) ++ SetLattice[NamedSymbol[Sort]](xp))
     // combinator cases
@@ -171,13 +171,13 @@ object StaticSemantics {
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
     case Compose(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ (vb.fv -- va.mbv), bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
-    case Loop(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = bottom)
+    case Loop(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = SetLattice.bottom)
 
     // special cases //@TODO check all special cases
     //@NOTE x:=* not mentioned in Definition 9
-    case AssignAny(x : Variable[_]) => VCP(fv = bottom, bv = SetLattice(x), mbv = SetLattice(x))
+    case AssignAny(x : Variable[_]) => VCP(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x))
     // TODO system of ODE cases not mentioned in Definition 9
-    case ODESystem(a, h) => val v = bottom[NamedSymbol[Sort]]; val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
+    case ODESystem(a, h) => val v = SetLattice.bottom[NamedSymbol[Sort]]; val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
     case DifferentialProduct(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
   }} ensuring(r => { val VCP(_, bv, mbv) = r; mbv.subsetOf(bv) }, "Result MBV(" + p + ") must be a subset of BV(" + p +")")
@@ -299,12 +299,14 @@ object StaticSemantics {
   def symbols(p : Program): Set[NamedSymbol[Sort]] = {val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet}
 
   type SetLattice[A] = Set[A]
-  private def SetLattice[A](e: A): Set[A] = Set(e)
-  private def bottom[A]: Set[A] = Set()
   private def topExceptDotFormula[A]: Set[A] = ???
   private def topExceptDotTerm[A]: Set[A] = ???
 }
 
+object SetLattice {
+  def apply[A](e: A): Set[A] = Set(e)
+  def bottom[A]: Set[A] = Set()
+}
 
 //object SetLattice {
 //  def apply[A](e: A): SetLattice[A] = new SetLattice(Right(Set(e)))
