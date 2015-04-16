@@ -16,6 +16,10 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLParser, CLInterpreter}
 
+import scala.io.Source
+import spray.json._
+import spray.json.DefaultJsonProtocol._
+
 /**
  * A Request should handle all expensive computation as well as all
  * possible side-effects of a request (e.g. updating the database), but should
@@ -143,6 +147,44 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
     catch {
       case e : Exception => new ErrorResponse(e) :: Nil
     }
+  }
+}
+
+class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
+    val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+    val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
+
+    // TODO provide classes and spray JSON protocol to convert
+    val os = System.getProperty("os.name")
+    val osKey = osKeyOf(os.toLowerCase)
+    val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
+      case Some(opg) => opg.asJsObject.getFields("mathematicaPaths").head.convertTo[List[JsObject]]
+      case None => throw new IllegalStateException("No default configuration for Unknown OS")
+    }
+
+    val pathTuples = osPathGuesses.map(osPath =>
+      (osPath.getFields("version").head.convertTo[String],
+       osPath.getFields("kernelPath").head.convertTo[String],
+       osPath.getFields("kernelName").head.convertTo[String],
+       osPath.getFields("jlinkPath").head.convertTo[String],
+       osPath.getFields("jlinkName").head.convertTo[String]))
+
+    val suggestion = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
+        new java.io.File(path._4 + path._5).exists) match {
+      case Some(s) => s
+      case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
+    }
+
+    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5) :: Nil
+  }
+
+  private def osKeyOf(osName: String): String = {
+    if (osName.contains("win")) "Windows"
+    else if (osName.contains("mac")) "MacOS"
+    else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "Unix"
+    else "Unknown"
   }
 }
 

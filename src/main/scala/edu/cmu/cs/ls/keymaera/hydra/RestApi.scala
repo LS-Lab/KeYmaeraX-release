@@ -216,6 +216,14 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val mathematicaConfigSuggestion = path("config" / "mathematica" / "suggest") {
+    pathEnd {
+      get {
+        val request = new GetMathematicaConfigSuggestionRequest(database)
+        complete(standardCompletion(request))
+      }
+    }
+  }
 
   val mathematicaConfig = path("config" / "mathematica") {
     pathEnd {
@@ -395,6 +403,7 @@ trait RestApi extends HttpService {
     dashInfo              ::
     mathematicaConfig ::
     mathematicaStatus ::
+    mathematicaConfigSuggestion ::
     license ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
