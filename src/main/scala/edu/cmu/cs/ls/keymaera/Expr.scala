@@ -24,6 +24,23 @@ import scala.math._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
 
 /*******************************
+  * Kinds of expressions
+  */
+sealed trait Kind
+object TermKind extends Kind {
+  override def toString = "Term"
+}
+object FormulaKind extends Kind {
+  override def toString = "Formula"
+}
+object ProgramKind extends Kind {
+  override def toString = "Program"
+}
+object FunctionKind extends Kind {
+  override def toString = "Function"
+}
+
+/*******************************
  * Sorts
  */
 sealed abstract class Sort
@@ -50,13 +67,11 @@ object Real extends Sort
 case class ObjectSort(name : String) extends Sort
 
 
-sealed trait NamedSymbol {}
-
 /**
  * Expressions of differential dynamic logic.
  * @author aplatzer
  */
-sealed trait Expr {
+sealed trait Expr[K<:Kind] {
   override def toString = "(" + prettyString() + ")"
   def prettyString() = ??? //new KeYmaeraPrettyPrinter().stringify(this)
 }
@@ -64,13 +79,15 @@ sealed trait Expr {
 sealed trait Atomic extends Expr
 sealed trait Composite extends Expr
 
+sealed trait NamedSymbol extends Expr {}
+
 /********************************************
  * Terms of differential dynamic logic.
  * @author aplatzer
  * @todo For Term but not the others could move to Term[T<Sort] to statically distinguish Term[Real] from Term[ObjectSort] even if not statically distinguishing Term[ObjectSort("A")] from Term[ObjectSort("B")] :-)
  * @todo Alternatively could duplicate Equals/NotEquals/FuncOf/Function/Variable for non-real sorts :-/
  */
-sealed trait Term[S<:Sort] extends Expr {}
+sealed trait Term[S<:Sort] extends Expr[TermKind.type] {}
 
 // atomic terms
 sealed trait AtomicTerm[S<:Sort] extends Term[S] with Atomic {}
@@ -80,12 +97,12 @@ sealed case class DifferentialSymbol(e: Variable[Real.type]/*NamedSymbol?*/) ext
 
 case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
-sealed case class Function[D<:Sort,R<:Sort](name: String/*, domain: D, sort: R*/) extends NamedSymbol {}
+sealed case class Function[D<:Sort,R<:Sort](name: String/*, domain: D, sort: R*/) extends Expr[FunctionKind.type] with NamedSymbol {}
 
-//@todo require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
+//@todo to check within ObjectSorts add require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
 case class FuncOf[D<:Sort,S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
 
-object DotTerm extends Function[Unit.type,Real.type]("\\cdot") /*with AtomicTerm[Real.type] if conflating?*/
+object DotTerm extends Function[Unit.type,Real.type]("\\cdot")
 
 // composite terms
 sealed trait CompositeTerm[S<:Sort] extends Term[S] with Composite {}
@@ -103,7 +120,7 @@ case class Differential(child: Term[Real.type]) extends CompositeTerm[Real.type]
  * @author aplatzer
  */
 
-sealed trait Formula extends Expr {}
+sealed trait Formula extends Expr[FormulaKind.type]
 
 // atomic formulas
 sealed trait AtomicFormula extends Formula with Atomic {}
@@ -118,7 +135,7 @@ case class Greater(left: Term[Real.type], right: Term[Real.type]) extends Atomic
 case class LessEqual(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 case class Less(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 
-object DotFormula extends Function[Unit.type,Bool.type]("\_") /*with AtomicFormula if conflating?*/
+object DotFormula extends Function[Unit.type,Bool.type]("\\_")
 
 case class PredOf[D<:Sort](pred: Function[D,Bool.type], child: Term[D]) extends AtomicFormula
 case class PredicationalOf(pred: Function[Bool.type,Bool.type], child: Formula) extends AtomicFormula
@@ -132,8 +149,14 @@ case class Or(left: Formula, right:Formula) extends CompositeFormula
 case class Imply(left: Formula, right:Formula) extends CompositeFormula
 case class Equiv(left: Formula, right:Formula) extends CompositeFormula
 
-case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula
-case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula
+case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula {
+  require(!vars.isEmpty, "quantifiers bind at least one variable")
+  require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
+}
+case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula {
+  require(!vars.isEmpty, "quantifiers bind at least one variable")
+  require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
+}
 
 case class Box(program: Program, child: Formula) extends CompositeFormula
 case class Diamond(program: Program, child: Formula) extends CompositeFormula
@@ -145,7 +168,7 @@ case class DifferentialFormula(child: Formula) extends CompositeFormula
   * @author aplatzer
   */
 
-sealed trait Program extends Expr {}
+sealed trait Program extends Expr[ProgramKind.type]
 
 // atomic programs
 sealed trait AtomicProgram extends Program with Atomic {}
@@ -154,7 +177,7 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
 //@todo require(target.sort == e.sort) which in principle could be dead-code eliminated for Real?
 case class Assign[S<:Sort](target: Variable[S], e: Term[S]) extends AtomicProgram
 case class DiffAssign(target: DifferentialSymbol, e: Term[Real.type]) extends AtomicProgram
-case class NonDetAssign[S<:Sort](target: Variable[S]) extends AtomicProgram
+case class AssignAny[S<:Sort](target: Variable[S]) extends AtomicProgram
 case class Test(cond: Formula) extends AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Program
 
