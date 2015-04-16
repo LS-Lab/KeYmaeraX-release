@@ -67,7 +67,7 @@ object StaticSemantics {
    * The set FV(e) of free variables of expression e.
    */
   def freeVars[K<:Expr,S<:Sort](e: Expr[K,S]): SetLattice[NamedSymbol] = e match {
-    case t: Term => freeVars(t)
+    case t: Term[_] => freeVars(t)
     case f: Formula => freeVars(f)
     case a: Program => freeVars(a)
   }
@@ -172,7 +172,7 @@ object StaticSemantics {
     //@NOTE x:=* not mentioned in Definition 9
     case AssignAny(x : Variable) => VCP(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x))
     // TODO system of ODE cases not mentioned in Definition 9
-    case ODESystem(a, h) => val v = SetLattice.bottom; val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
+    case ODESystem(a, h) => val v = SetLattice.bottom[NamedSymbol]; val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
     case DifferentialProduct(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
   }} ensuring(r => { val VCP(_, bv, mbv) = r; mbv.subsetOf(bv) }, "Result MBV(" + p + ") must be a subset of BV(" + p +")")
@@ -183,7 +183,7 @@ object StaticSemantics {
    * The signature of expression e.
    */
   def signature[K<:Expr,S<:Sort](e: Expr[K,S]): Set[NamedSymbol] = e match {
-    case t: Term => signature(t)
+    case t: Term[S] => signature(t)
     case f: Formula => signature(f)
     case a: Program => signature(a)
   }
@@ -271,7 +271,7 @@ object StaticSemantics {
    * Any symbols in expression e.
    */
   def symbols[K<:Expr,S<:Sort](e: Expr[K,S]): Set[NamedSymbol] = e match {
-    case t: Term => symbols(t)
+    case t: Term[S] => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
   }
