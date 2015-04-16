@@ -75,7 +75,7 @@ sealed trait NamedSymbol[+S<:Sort] extends Expr[S] {}
  * @todo For Term but not the others could move to Term[T<Sort] to statically distinguish Term[Real] from Term[ObjectSort] even if not statically distinguishing Term[ObjectSort("A")] from Term[ObjectSort("B")] :-)
  * @todo Alternatively could duplicate Equals/NotEquals/FuncOf/Function/Variable for non-real sorts :-/
  */
-sealed trait Term[S<:Sort] extends Expr[S] {}
+sealed trait Term[+S<:Sort] extends Expr[S] {}
 
 // atomic terms
 sealed trait AtomicTerm[S<:Sort] extends Term[S] with Atomic[S] {}

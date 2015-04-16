@@ -36,7 +36,7 @@ import StaticSemantics._
  *          - DotFormula
  * @param repl the expression to be used in place of what
  */
-final case class SubstitutionPair[K<:Expr,S<:Sort] (what: Expr[K,S], repl: Expr[K,S]) {
+final case class SubstitutionPair[S<:Sort] (what: Expr[S], repl: Expr[S]) {
   applicable
   
   @elidable(ASSERTION) def applicable = {
@@ -56,12 +56,12 @@ final case class SubstitutionPair[K<:Expr,S<:Sort] (what: Expr[K,S], repl: Expr[
    * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
    * @return essentially freeVars(repl) except for special handling of Anything arguments.
    */
-  def freeVars : SetLattice[NamedSymbol] = (repl match {
+  def freeVars : SetLattice[NamedSymbol[Sort]] = (repl match {
         case replt: Term[S] => what match {
           //case DotTerm => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case FuncOf(f: Function[_,S], Anything) => SetLattice.bottom[NamedSymbol] // Anything locally binds all variables
+          case FuncOf(f: Function[_,Real.type], Anything) => SetLattice.bottom[NamedSymbol[Sort]] // Anything locally binds all variables
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
-          case FuncOf(f: Function[_,S], DotTerm) =>
+          case FuncOf(f: Function[_,Real.type], DotTerm) =>
             assert(replt == repl)
             assert(!StaticSemantics(replt).contains(DotTerm) || StaticSemantics(replt).isTop, "DotTerm is no variable")
             assert(!(StaticSemantics(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
@@ -97,7 +97,7 @@ final case class SubstitutionPair[K<:Expr,S<:Sort] (what: Expr[K,S], repl: Expr[
    * @return only the lead / key part that this SubstitutionPair is matching on,
    *         which may not be its head.
    */
-  private[core] def matchKey : NamedSymbol = what match {
+  private[core] def matchKey : NamedSymbol[Sort] = what match {
     case FuncOf(f: Function[_,S], DotTerm | Nothing | Anything) => f
     case PredOf(p: Function[_,S], DotTerm | Nothing | Anything) => p
     case DotTerm => DotTerm
@@ -114,7 +114,7 @@ final case class SubstitutionPair[K<:Expr,S<:Sort] (what: Expr[K,S], repl: Expr[
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    * @TODO Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
-  private[core] def sameHead(right: Expr) = what match {
+  private[core] def sameHead(right: Expr[S]) = what match {
     case FuncOf(lf, DotTerm | Anything | Nothing) => right match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, DotTerm | Anything | Nothing) => right match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, DotFormula) => right match { case PredicationalOf(rf, _) => lf == rf case _ => false }
