@@ -71,7 +71,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
 
         $http.post(uri, dataObj)
             .success(function(data) {
-                if(data.jlinkLibDirExists && data.linkNameExists && data.success) {
+                if (data.success) {
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
 
@@ -85,13 +85,18 @@ keymaeraProofControllers.controller('MathematicaConfig',
                     $rootScope.mathematicaIsConfigured = data.configured;
                 }
                 else {
-                    $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
-                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", data.jlinkLibDirExists);
-                    var modalInstance = $modal.open({
-                      templateUrl: 'partials/mathematicaconfig_failure.html',
-                      controller: 'MathematicaConfig.FailureDialog',
-                      size: 'md'
-                    });
+                    var linkNameExists = $scope.linkName.indexOf($scope.mathKernelName) > -1 && data.linkNamePrefix == $scope.linkName
+                    var jlinkLibDirExists = $scope.jlinkLibPath.indexOf($scope.jlinkLib) > -1 && data.jlinkLibDirPrefix == $scope.jlinkLibPath
+                    $scope.linkNameOkPrefix = data.linkNamePrefix
+                    $scope.linkNameWrong = $scope.linkName.indexOf($scope.mathKernelName) > -1 ?
+                        $scope.linkName.substring(data.linkNamePrefix.length, $scope.linkName.length) :
+                        ".../" + $scope.mathKernelName
+                    $scope.jlinkLibPathOkPrefix = data.jlinkLibDirPrefix
+                    $scope.jlinkLibPathWrong = $scope.jlinkLibPath.indexOf($scope.jlinkLib) > -1 ?
+                      $scope.jlinkLibPath.substring(data.jlinkLibDirPrefix.length, $scope.jlinkLibPath.length) :
+                      ".../" + $scope.jlinkLib
+                    $scope.MathematicaForm.linkName.$setValidity("FileExists", linkNameExists);
+                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", jlinkLibDirExists);
                 }
             })
             .error(function(data) {

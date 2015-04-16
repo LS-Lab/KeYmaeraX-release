@@ -292,10 +292,10 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
-class ConfigureMathematicaResponse(linkNameExists : Boolean, jlinkLibDirExists : Boolean, success : Boolean) extends Response {
+class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : String, success : Boolean) extends Response {
   val json = JsObject(
-    "linkNameExists" -> {if(linkNameExists) JsTrue else JsFalse},
-    "jlinkLibDirExists" -> {if(jlinkLibDirExists) JsTrue else JsFalse},
+    "linkNamePrefix" -> JsString(linkNamePrefix),
+    "jlinkLibDirPrefix" -> JsString(jlinkLibDirPrefix),
     "success" -> {if(success) JsTrue else JsFalse}
   )
 }

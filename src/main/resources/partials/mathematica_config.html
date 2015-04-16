@@ -10,18 +10,6 @@
             <code>{{defaultMathkernelPath}}</code>.
         </div>
 
-        <!--<div class="fileinput fileinput-new input-group" data-provides="fileinput">-->
-            <!--<div class="form-control" data-trigger="fileinput">-->
-                <!--<i class="glyphicon glyphicon-file fileinput-exists" />-->
-                <!--<span class="fileinput-filename" />-->
-            <!--</div>-->
-            <!--<span class="input-group-addon btn btn-default btn-file">-->
-                <!--<span class="fileinput-new">Select file</span>-->
-                <!--<span class="fileinput-exists">Change</span>-->
-                <!--<input type="file" name="linkName" id="linkName" ng-model="linkName" />-->
-            <!--</span>-->
-        <!--</div>-->
-
         <div class="input-group">
             <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
@@ -34,15 +22,13 @@
                         title="{{defaultMathkernelPath}}">
                     <span ng-if="linkName">Reset to </span><span ng-if="linkName === undefined">Use </span> {{osName}} Default
                 </button>
-            <!--<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-expanded="false">Auto-detect <span class="caret"></span></button>-->
-            <!--<ul class="dropdown-menu dropdown-menu-right" role="menu">-->
-                <!--<li><a ng-click="linuxDefaultLinkName()">Linux Default</a></li>-->
-                <!--<li><a ng-click="windowsDefaultLinkName()">Windows Default</a></li>-->
-                <!--<li><a ng-click="macDefaultLinkName()">Mac Default</a></li>-->
-            <!--</ul>-->
             </span>
         </div>
-        <div ng-show="MathematicaForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i> This file does not exist on your system.</div>
+        <div ng-show="MathematicaForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            This file does not exist on your system:
+            <span>{{linkNameOkPrefix}}</span><span><strong><em>{{linkNameWrong}}</em></strong></span><br/>
+            Please double check that it points to {{mathKernelName}}.
+        </div>
     </div>
 
     <div class="form-group">
@@ -56,18 +42,6 @@
             file named <code>{{jlinkLib}}</code>. The path for a default installation of Mathematica is
             <code>{{defaultJLinkLibPath}}</code>.
         </div>
-
-        <!--<div class="fileinput fileinput-new input-group" data-provides="fileinput">-->
-            <!--<div class="form-control" data-trigger="fileinput">-->
-                <!--<i class="glyphicon glyphicon-file fileinput-exists" />-->
-                <!--<span class="fileinput-filename" />-->
-            <!--</div>-->
-            <!--<span class="input-group-addon btn btn-default btn-file">-->
-                <!--<span class="fileinput-new">Select file</span>-->
-                <!--<span class="fileinput-exists">Change</span>-->
-                <!--<input type="file" name="jlinkLibDir" id="jlinkLibDir" ng-model="jlinkLibDir" />-->
-            <!--</span>-->
-        <!--</div>-->
 
         <div class="input-group">
             <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
@@ -83,7 +57,11 @@
                 </button>
             </span>
         </div>
-        <div ng-show="MathematicaForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i> This file does not exist on your system.</div>
+        <div ng-show="MathematicaForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
+            This file does not exist on your system:
+            <span>{{jlinkLibPathOkPrefix}}</span><span><strong><em>{{jlinkLibPathWrong}}</em></strong></span><br/>
+            Please double check that it points to {{jlinkLib}}.
+        </div>
     </div>
 
     <div class="form-group">
