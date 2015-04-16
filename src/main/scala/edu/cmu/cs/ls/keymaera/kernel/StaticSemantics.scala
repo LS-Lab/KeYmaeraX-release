@@ -90,11 +90,20 @@ object StaticSemantics {
     case Power(l, r) => freeVars(l) ++ freeVars(r)
     //case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
-    case Differential(e) => val fv = freeVars(e); fv ++ fv.map[Variable](x=>DifferentialSymbol(x))
+    case Differential(e) => val fv = freeVars(e); fv ++ differentialSymbols(fv)
     //case _: Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
-  
+
+  /**
+   * Add ' to a set, i.e. turn all elements x in the lattice into x'
+   * @return The set of all x' for which x is in s.
+   */
+  private def differentialSymbols(s: SetLattice[NamedSymbol]) = s.map[NamedSymbol](v => v match {
+    case x:Variable[Real.type] => DifferentialSymbol(x)
+    case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v)
+  })
+
   /**
    * The set FV(f) of free variables of formula f.
    */
@@ -148,7 +157,7 @@ object StaticSemantics {
 
     // special cases
     // TODO DifferentialFormula not mentioned in Definition 7 and 8, analogue to Differential
-    case DifferentialFormula(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ vdf.fv.map[NamedSymbol](x=>DifferentialSymbol(x)), bv = vdf.bv) //@todo eisegesis
+    case DifferentialFormula(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ differentialSymbols(vdf.fv), bv = vdf.bv) //@todo eisegesis
     case True | False => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
   }
 

@@ -8,6 +8,8 @@ package edu.cmu.cs.ls.keymaera.kernel
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaera.core.SubstitutionClashException
+
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -148,7 +150,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
 
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
-  def apply(t: Term): Term = usubst(t) ensuring(
+  def apply[S<:Sort](t: Term[S]): Term[S] = usubst(t) ensuring(
     r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
   def apply(f: Formula): Formula = usubst(f) ensuring(
     r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
@@ -369,7 +371,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   /**
    * Is this uniform substitution U-admissible for term t?
    */
-  private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, StaticSemantics.signature(t))
+  private def admissible[S<:Sort](U: SetLattice[NamedSymbol], t: Term[S]) : Boolean = admissible(U, StaticSemantics.signature(t))
   /**
    * Is this uniform substitution U-admissible for formula f?
    */
