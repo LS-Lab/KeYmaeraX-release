@@ -83,7 +83,8 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "description" -> JsString(modelpojo.description),
     "pubLink" -> JsString(modelpojo.pubLink),
     "keyFile" -> JsString(modelpojo.keyFile),
-    "title" -> JsString(modelpojo.title)
+    "title" -> JsString(modelpojo.title),
+    "tactic" -> JsString(modelpojo.tactic.getOrElse(""))
   ))
 
   val json = JsArray(objects)
@@ -138,7 +139,8 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "description" -> JsString(model.description),
     "pubLink" -> JsString(model.pubLink),
     "keyFile" -> JsString(model.keyFile),
-    "title" -> JsString(model.title)
+    "title" -> JsString(model.title),
+    "tactic" -> JsString(model.tactic.getOrElse(""))
   )
 }
 
