@@ -53,6 +53,7 @@ case class ObjectSort(name : String) extends Sort
 /**
  * Expressions of differential dynamic logic.
  * @author aplatzer
+ * @todo add [S<:Sort]
  */
 sealed trait Expr[K<:Expr] extends K {
   override def toString = "(" + prettyString() + ")"
