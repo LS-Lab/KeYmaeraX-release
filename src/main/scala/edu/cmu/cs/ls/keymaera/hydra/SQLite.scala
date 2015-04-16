@@ -49,7 +49,7 @@ object SQLite extends DBAbstraction {
         case e : SQLException => println("Ignoring an exception when dropping DB")//Tables did not exist -- that's find, we create it below anyways. @todo but we are assuming all or no ables exist.
       };
       ddl.create
-      this.initializeForDemo()
+      initializeForDemo()
     })
   }
 
@@ -147,7 +147,7 @@ object SQLite extends DBAbstraction {
     })
 
 
-  private def idgen() = java.util.UUID.randomUUID().toString()
+  private def idgen() : String = java.util.UUID.randomUUID().toString()
 
 
   override def updateDispatchedCLTerm(termToUpdate: DispatchedCLTermPOJO): Unit =
@@ -285,10 +285,11 @@ object SQLite extends DBAbstraction {
                            title:Option[String]=None, tactic:Option[String]=None) : Option[String] =
     sqldb.withSession(implicit session => {
       if(Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
-        def modelId = idgen()
+        val modelId = idgen()
 
         Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
           .insert(modelId, userId, name, fileContents, date, description, publink, title, tactic)
+
         Some(modelId)
       }
       else None
