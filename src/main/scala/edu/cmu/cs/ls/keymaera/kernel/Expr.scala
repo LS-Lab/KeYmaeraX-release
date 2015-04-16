@@ -57,7 +57,7 @@ case class ObjectSort(name : String) extends Sort
  */
 sealed trait Expr[K<:Expr] extends K {
   override def toString = "(" + prettyString() + ")"
-  def prettyString() = ??? //new KeYmaeraPrettyPrinter().stringify(this)
+  def prettyString() : String = "TODOTODO???TODO" //new KeYmaeraPrettyPrinter().stringify(this)
 }
 
 sealed trait Atomic[K<:Expr] extends Expr[K]

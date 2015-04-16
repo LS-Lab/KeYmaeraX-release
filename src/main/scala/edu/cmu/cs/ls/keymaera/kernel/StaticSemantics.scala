@@ -7,6 +7,7 @@ package edu.cmu.cs.ls.keymaera.kernel
 
 // favoring immutable Seqs for soundness
 
+import scala.collection.GenTraversableOnce
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -89,7 +90,7 @@ object StaticSemantics {
     case Power(l, r) => freeVars(l) ++ freeVars(r)
     //case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
     // special cases
-    case Differential(e) => val fv = freeVars(e); fv ++ fv.map(x=>DifferentialSymbol(x))
+    case Differential(e) => val fv = freeVars(e); fv ++ fv.map[Variable](x=>DifferentialSymbol(x))
     //case _: Nothing | Anything => SetLattice.bottom
   }}/*@TODO ensuring (r => r != SetLattice.top,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
@@ -190,7 +191,7 @@ object StaticSemantics {
   /**
    * The signature of a term, i.e., set of function symbols occurring in it.
    * Disregarding number literals.
-   * @TODO Change return type to Set[Function]
+   * @todo Change return type to Set[Function]?
    */
   def signature(t: Term): Set[NamedSymbol] = t match {
     // base cases
@@ -227,7 +228,7 @@ object StaticSemantics {
     case GreaterEqual(l, r) => signature(l) ++ signature(r)
     case Greater(l, r) => signature(l) ++ signature(r)
     case LessEqual(l, r) => signature(l) ++ signature(r)
-    case LessThan(l, r) => signature(l) ++ signature(r)
+    case Less(l, r) => signature(l) ++ signature(r)
 
     // homomorphic cases
     case Not(g) => signature(g)
@@ -298,12 +299,12 @@ object SetLattice {
   def apply[A](s: Seq[A]): SetLattice[A] = new SetLattice(Right(s.toSet))
   def bottom[A] = new SetLattice(Right(Set.empty[A]))
   def top[A]: SetLattice[A] = new SetLattice[A](Left(Set.empty))
-  def topExceptCDot[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(CDot)))
-  def topExceptCDotFormula[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(CDotFormula)))
+  def topExceptCDot[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(DotTerm)))
+  def topExceptCDotFormula[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(DotFormula)))
 }
 /**
  * Lattice of sets. Top includes all elements, except the ones listed. Bottom is the empty set.
- * @TODO s should be private for abstraction purposes.
+ * @todo s should be private for abstraction purposes.
  * @param s Elements in the set: Left[A] elements excluded from the set, Right[A] elements included in the set
  * @tparam A Type of elements in the set
  */

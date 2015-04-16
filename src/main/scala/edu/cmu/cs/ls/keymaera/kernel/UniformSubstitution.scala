@@ -311,7 +311,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case a: ProgramConst if !subsDefs.exists(_.what == a) => a
         case Assign(x: Variable, e) => Assign(x, usubst(e))
         case DiffAssign(xp@DifferentialSymbol, e) => Assign(xp, usubst(e))
-        case a: AssignAny(x: Variable) => a
+        case a: AssignAny => a
         case Test(f) => Test(usubst(f))
         //case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))
         case ode: DifferentialProgram =>
