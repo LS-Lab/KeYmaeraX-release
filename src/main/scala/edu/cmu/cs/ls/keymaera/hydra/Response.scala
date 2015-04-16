@@ -302,6 +302,18 @@ class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : 
   )
 }
 
+class MathematicaConfigSuggestionResponse(os: String, version: String, kernelPath: String, kernelName: String,
+                                          jlinkPath: String, jlinkName: String) extends Response {
+  override protected val json: JsValue = JsObject(
+    "os" -> JsString(os),
+    "version" -> JsString(version),
+    "kernelPath" -> JsString(kernelPath),
+    "kernelName" -> JsString(kernelName),
+    "jlinkPath" -> JsString(jlinkPath),
+    "jlinkName" -> JsString(jlinkName)
+  )
+}
+
 class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) extends Response {
   override protected val json: JsValue = JsObject(
     "linkName" -> JsString(linkName),

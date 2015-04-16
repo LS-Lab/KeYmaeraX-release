@@ -1,33 +1,33 @@
 [
     {
-        "name": "bouncing_ball",
+        "name": "Bouncing Ball",
         "file": "examples/simple/bouncing-ball/bouncing-ball-tout.key",
         "description": "A Bouncing Ball",
         "tactic" : "examples/simple/bouncing-ball/bb_tactic.txt"
     },
     {
-        "name" : "tutorial_sttt_1",
+        "name" : "STTT Tutorial Example 1",
         "file" : "examples/tutorials/sttt/example1.key",
         "description" : "A simple system in which a car starts at some nonnegative velocity and accelerates at a constant rate along a straight lane. The requirement we want to prove is that the car never travels backward in space.",
         "title" : "Uncontrolled continuous car",
         "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=7"
     },
     {
-        "name" : "tutorial_sttt_2",
+        "name" : "STTT Tutorial Example 2",
         "file" : "examples/tutorials/sttt/example2.key",
         "description" : "A hybrid system model of a car with discrete control choices: accelerate, stay stopped, or brake. The requirement to prove is that the car never travels backwards in space.",
         "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=8",
         "title" : "Simple hybrid car"
     },
     {
-        "name" : "tutorial_sttt_5",
+        "name" : "STTT Tutorial Example 5",
         "file" : "examples/tutorials/sttt/example5.key",
         "description" : "A hybrid car model where the controller runs periodically at some maximum time interval between executions. The requirement to prove is that the car never runs the stop sign.",
         "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=13",
         "title" : "Time-triggered car control"
     },
     {
-        "name" : "tutorial_sttt_6",
+        "name" : "STTT Tutorial Example 6",
         "file" : "examples/tutorials/sttt/example6.key",
         "description" : "A hybrid car model where the controller can make non-deterministic decisions on acceleration. The requirement to prove is that the controller never runs the stop sign.",
         "date" : "3-3-2015",
@@ -35,28 +35,28 @@
         "title" : "Non-deterministic acceleration"
     },
     {
-        "name" : "tutorial_sttt_7",
+        "name" : "STTT Tutorial Example 7",
         "file" : "examples/tutorials/sttt/example7.key",
         "description" : "A hybrid car model with non-deterministic braking characteristics. The requirement to prove is that the car never runs a stop sign.",
         "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=15",
         "title" : "Non-deterministic approximation of braking"
     },
     {
-        "name" : "tutorial_sttt_9a",
+        "name" : "STTT Tutorial Example 9a",
         "file" : "examples/tutorials/sttt/example9a.key",
         "description" : "A simple PD control law for regulating the speed of a car. The requirement to prove is that a Lyapunov function found with other means is indeed invariant throughout the system execution.",
         "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=16",
         "title" : "PD controller Lyapunov function"
     },
     {
-        "name" : "tutorial_sttt_9b",
+        "name" : "STTT Tutorial Example 9b",
         "file" : "examples/tutorials/sttt/example9b.key",
         "description" : "A PD controlled car with a trajectory generator for setting target speeds. The requirement to prove is that the car never runs a stop sign.",
         "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=16",
         "title" : "PD controlled car"
     },
     {
-        "name" : "tutorial_lics_4a",
+        "name" : "LICS Tutorial 4a",
         "file" : "examples/tutorials/lics/lics-4a.key"
     }
 ]
