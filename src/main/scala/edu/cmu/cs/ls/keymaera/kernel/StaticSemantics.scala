@@ -50,7 +50,7 @@ object StaticSemantics {
   /**
    * Compute the static semantics of term t, i.e., the set of its free variables.
    */
-  def apply(t: Term): SetLattice[NamedSymbol] = freeVars(t)
+  def apply[S<:Sort](t: Term[S]): SetLattice[NamedSymbol] = freeVars(t)
 
   /**
    * Compute the static semantics of formula f, i.e., its set of free and bound variables.
@@ -66,7 +66,7 @@ object StaticSemantics {
   /**
    * The set FV(e) of free variables of expression e.
    */
-  def freeVars[K<:Expr](e: Expr[K]): SetLattice[NamedSymbol] = e match {
+  def freeVars[K<:Expr,S<:Sort](e: Expr[K,S]): SetLattice[NamedSymbol] = e match {
     case t: Term => freeVars(t)
     case f: Formula => freeVars(f)
     case a: Program => freeVars(a)
@@ -75,7 +75,7 @@ object StaticSemantics {
   /**
    * The set FV(t) of free variables of term t.
    */
-  def freeVars(t: Term): SetLattice[NamedSymbol] = {t match {
+  def freeVars[S<:Sort](t: Term[S]): SetLattice[NamedSymbol] = {t match {
     // base cases
     case x: Variable => SetLattice(x)
     case xp: DifferentialSymbol => SetLattice(xp)
@@ -182,7 +182,7 @@ object StaticSemantics {
   /**
    * The signature of expression e.
    */
-  def signature[K<:Expr](e: Expr[K]): Set[NamedSymbol] = e match {
+  def signature[K<:Expr,S<:Sort](e: Expr[K,S]): Set[NamedSymbol] = e match {
     case t: Term => signature(t)
     case f: Formula => signature(f)
     case a: Program => signature(a)
@@ -193,7 +193,7 @@ object StaticSemantics {
    * Disregarding number literals.
    * @todo Change return type to Set[Function]?
    */
-  def signature(t: Term): Set[NamedSymbol] = t match {
+  def signature[S<:Sort](t: Term[S]): Set[NamedSymbol] = t match {
     // base cases
     case _: Variable | DifferentialSymbol | Number => Set.empty
     case DotTerm => Set(DotTerm)
@@ -270,7 +270,7 @@ object StaticSemantics {
   /**
    * Any symbols in expression e.
    */
-  def symbols[K<:Expr](e: Expr[K]): Set[NamedSymbol] = e match {
+  def symbols[K<:Expr,S<:Sort](e: Expr[K,S]): Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
@@ -279,7 +279,7 @@ object StaticSemantics {
   /**
    * Any symbol occuring in term, whether variable or function
    */
-  def symbols(t : Term): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSet
+  def symbols[S<:Sort](t : Term[S]): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSet
 
   /**
    * Any symbol occuring in formula, whether free or bound variable or function or predicate or program constant

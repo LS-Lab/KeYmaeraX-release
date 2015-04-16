@@ -34,7 +34,7 @@ import StaticSemantics._
  *          - DotFormula
  * @param repl the expression to be used in place of what
  */
-final case class SubstitutionPair[K<:Expr] (what: Expr[K], repl: Expr[K]) {
+final case class SubstitutionPair[K<:Expr,S<:Sort] (what: Expr[K,S], repl: Expr[K,S]) {
   applicable
   
   @elidable(ASSERTION) def applicable = {
