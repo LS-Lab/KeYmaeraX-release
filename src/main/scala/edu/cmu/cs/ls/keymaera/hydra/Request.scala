@@ -191,7 +191,11 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Request 
 class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
   override def getResultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
-    new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")) :: Nil
+    if (config.contains("linkName") && config.contains("jlinkLibDir")) {
+      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")) :: Nil
+    } else {
+      new MathematicaConfigurationResponse("", "") :: Nil
+    }
   }
 }
 
