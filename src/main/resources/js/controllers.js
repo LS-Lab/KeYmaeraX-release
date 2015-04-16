@@ -386,6 +386,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
                 var modalInstance = $modal.open({
                   templateUrl: 'partials/license_dialog.html',
                   controller: 'DashboardCtrl.LicenseDialog',
+                  backdrop: "static",
                   size: 'lg'
                 });
             }
@@ -415,6 +416,14 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
 keymaeraProofControllers.controller('ModelUploadCtrl',
   function ($scope, $http, $cookies, $cookieStore, $route, Models) {
+
+     $scope.runPreloadedProof = function(model) {
+        $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
+            .success(function(data) {
+                alert("yay! Take the user to the proof load page?")
+            })
+     };
+
 
      $scope.addModel = function() {
           var file = keyFile.files[0];
