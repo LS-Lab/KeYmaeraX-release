@@ -83,14 +83,38 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibDir : String) extends Request {
+  private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
+    linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
+  }
+
+  private def isJLinkLibDirCorrect(jlinkFile: java.io.File): Boolean = {
+    jlinkFile.getName == "libJLinkNativeLibrary.jnilib" || jlinkFile.getName == "JLinkNativeLibrary.dll" ||
+      jlinkFile.getName == "libJLinkNativeLibrary.so"
+  }
+
   override def getResultingResponses(): List[Response] = {
     try {
-      //check to make sure the indicated files exist.
-      val linkNameExists = new java.io.File(linkName).exists()
-      val jlinkLibDirExists = new java.io.File(jlinkLibDir).exists()
+      //check to make sure the indicated files exist and point to the correct files.
+      val linkNameFile = new java.io.File(linkName)
+      val jlinkLibDirFile = new java.io.File(jlinkLibDir)
+      val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
+      val jlinkLibDirExists = isJLinkLibDirCorrect(jlinkLibDirFile) && jlinkLibDirFile.exists()
 
       if(!linkNameExists || !jlinkLibDirExists) {
-        new ConfigureMathematicaResponse(linkNameExists, jlinkLibDirExists, false) :: Nil
+        // look for the largest prefix that does exist
+        var linkNamePrefix = linkNameFile
+        while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
+          linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
+        }
+
+        var jlinkLibPathPrefix = jlinkLibDirFile
+        while (!jlinkLibPathPrefix.exists && jlinkLibPathPrefix.getParent != null) {
+          jlinkLibPathPrefix = new java.io.File(jlinkLibPathPrefix.getParent)
+        }
+
+        new ConfigureMathematicaResponse(
+          if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
+          if (jlinkLibPathPrefix.exists()) jlinkLibPathPrefix.toString else "", false) :: Nil
       }
       else {
         val originalConfig = db.getConfiguration("mathematica")
@@ -113,7 +137,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
           }
         }
 
-        new ConfigureMathematicaResponse(linkNameExists, jlinkLibDirExists, success) :: Nil
+        new ConfigureMathematicaResponse(linkName, jlinkLibDir, success) :: Nil
       }
     }
     catch {

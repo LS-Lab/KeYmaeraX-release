@@ -38,11 +38,19 @@ keymaeraProofControllers.controller('MathematicaConfig',
     if (osName == "Windows") $scope.defaultMathkernelPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\MathKernel.exe"
     else if (osName == "MacOS") $scope.defaultMathkernelPath = "/Applications/Mathematica.app/Contents/MacOS/MathKernel"
     else if (osName == "Linux") $scope.defaultMathkernelPath = "/usr/local/Wolfram/Mathematica/10.0/Executables/MathKernel"
+    $scope.mathKernelName = "MathKernel"
+    if (osName == "Windows") $scope.mathKernelName = "MathKernel.exe"
+    else if (osName == "MacOS") $scope.mathKernelName = "MathKernel"
+    else if (osName == "Linux") $scope.mathKernelName = "MathKernel"
 
     $scope.defaultJLinkLibPath = "J/Link Native Library"
     if (osName == "Windows") $scope.defaultJLinkLibPath = "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\JLinkNativeLibrary.dll"
     else if (osName == "MacOS") $scope.defaultJLinkLibPath = "/Applications/Mathematica.app/Contents/SystemFiles/Links/JLink/SystemFiles/Libraries/MacOSX-x86-64/libJLinkNativeLibrary.jnilib"
     else if (osName == "Linux") $scope.defaultJLinkLibPath = "/usr/local/Wolfram/Mathematica/10.0/SystemFiles/Links/JLink/SystemFiles/Libraries/Linux-x86-64/libJLinkNativeLibrary.so"
+    $scope.jlinkLib = "MathKernel"
+    if (osName == "Windows") $scope.jlinkLib = "JLinkNativeLibrary.dll"
+    else if (osName == "MacOS") $scope.jlinkLib = "libJLinkNativeLibrary.jnilib"
+    else if (osName == "Linux") $scope.jlinkLib = "libJLinkNativeLibrary.so"
 
     $http.get("/config/mathematica")
       .success(function(data) {
@@ -63,7 +71,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
 
         $http.post(uri, dataObj)
             .success(function(data) {
-                if(data.jlinkLibDirExists && data.linkNameExists && data.success) {
+                if (data.success) {
                     $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
                     $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
 
@@ -77,13 +85,18 @@ keymaeraProofControllers.controller('MathematicaConfig',
                     $rootScope.mathematicaIsConfigured = data.configured;
                 }
                 else {
-                    $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
-                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", data.jlinkLibDirExists);
-                    var modalInstance = $modal.open({
-                      templateUrl: 'partials/mathematicaconfig_failure.html',
-                      controller: 'MathematicaConfig.FailureDialog',
-                      size: 'md'
-                    });
+                    var linkNameExists = $scope.linkName.indexOf($scope.mathKernelName) > -1 && data.linkNamePrefix == $scope.linkName
+                    var jlinkLibDirExists = $scope.jlinkLibPath.indexOf($scope.jlinkLib) > -1 && data.jlinkLibDirPrefix == $scope.jlinkLibPath
+                    $scope.linkNameOkPrefix = data.linkNamePrefix
+                    $scope.linkNameWrong = $scope.linkName.indexOf($scope.mathKernelName) > -1 ?
+                        $scope.linkName.substring(data.linkNamePrefix.length, $scope.linkName.length) :
+                        ".../" + $scope.mathKernelName
+                    $scope.jlinkLibPathOkPrefix = data.jlinkLibDirPrefix
+                    $scope.jlinkLibPathWrong = $scope.jlinkLibPath.indexOf($scope.jlinkLib) > -1 ?
+                      $scope.jlinkLibPath.substring(data.jlinkLibDirPrefix.length, $scope.jlinkLibPath.length) :
+                      ".../" + $scope.jlinkLib
+                    $scope.MathematicaForm.linkName.$setValidity("FileExists", linkNameExists);
+                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", jlinkLibDirExists);
                 }
             })
             .error(function(data) {
