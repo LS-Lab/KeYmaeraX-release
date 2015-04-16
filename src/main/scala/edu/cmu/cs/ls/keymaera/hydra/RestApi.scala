@@ -376,6 +376,13 @@ trait RestApi extends HttpService {
     }
   }}
 
+
+  val initializeModel = path("models" / "users" / Segment / "model" / Segment / "initialize") { (userId, modelId) => pathEnd {
+    post {
+      complete(standardCompletion(new RunModelInitializationTacticRequest(database, userId, modelId)))
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -414,6 +421,7 @@ trait RestApi extends HttpService {
     mathematicaStatus ::
     mathematicaConfigSuggestion ::
     license ::
+      initializeModel ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

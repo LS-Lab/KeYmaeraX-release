@@ -444,7 +444,7 @@ class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, no
   def getResultingResponses() = {
     try {
       //Make sure that the tactic is going to construct and parse before updating the database.
-      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse.")))
+      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse CL term: " + clTerm)))
 
       val termId = db.createDispatchedCLTerm(proofId, nodeId, clTerm)
       //Update status to running.
@@ -610,6 +610,7 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
     model.tactic match {
       case Some(tactic) => {
         val initializedProofId = db.createProofForModel(modelId, userId, "Default Proof", new java.util.Date().toString)
+        new OpenProofRequest(db, userId, initializedProofId).getResultingResponses() //@todo we should do the rest of this inside of a ???
         new RunCLTermRequest(db, userId, initializedProofId, None, tactic).getResultingResponses();
 
       }

@@ -14,4 +14,5 @@ object ComponentConfig {
   lazy val db = DBAbstractionObj.defaultDatabase
   lazy val tacticLibrary = new TacticLibrary2(this)
   lazy val keymaeraInitializer = new KeYmaeraInitializer(this)
+
 }
