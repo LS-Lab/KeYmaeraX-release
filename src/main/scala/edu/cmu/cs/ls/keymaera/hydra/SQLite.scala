@@ -16,7 +16,7 @@ object SQLite extends DBAbstraction {
 
   import Tables._
 
-  val dblocation = System.getProperty("user.home") + "/keymaerax.sqlite3"
+  val dblocation = System.getProperty("user.home") + "/keymaerax.sqlite"
 
   val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver= "org.sqlite.JDBC")
 
