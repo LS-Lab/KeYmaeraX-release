@@ -74,7 +74,7 @@ object StaticSemantics {
   /**
    * The set FV(t) of free variables of term t.
    */
-  def freeVars[S<:Sort](t: Term[S]): SetLattice[NamedSymbol] = {t match {
+  def freeVars(t: Term): SetLattice[NamedSymbol] = {t match {
     // base cases
     case x: Variable => SetLattice(x)
     case xp: DifferentialSymbol => SetLattice(xp)
@@ -155,11 +155,11 @@ object StaticSemantics {
     // base cases
     case _: ProgramConst => VCP(fv = SetLattice.topExceptCDot, bv = SetLattice.topExceptCDot, mbv = SetLattice.bottom) //@TODO this includes x,x' for all x?
     case _: DifferentialProgramConst => VCP(fv = SetLattice.topExceptCDot, bv = SetLattice.topExceptCDot, mbv = SetLattice.bottom)
-    case Assign(x: Variable, e) => VCP(fv = apply(e), bv = SetLattice(x), mbv = SetLattice(x))
-    case DiffAssign(xp: DifferentialSymbol, e) => VCP(fv = apply(e), bv = SetLattice(xp), mbv = SetLattice(xp))
+    case Assign(x: Variable, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
+    case DiffAssign(xp: DifferentialSymbol, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
     case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     case AtomicODE(xp@DifferentialSymbol(x:Variable), e) =>
-      VCP(fv = SetLattice[NamedSymbol](x) ++ apply(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp))
+      VCP(fv = SetLattice[NamedSymbol](x) ++ freeVars(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp))
     // combinator cases
     case Choice(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
@@ -192,7 +192,7 @@ object StaticSemantics {
    * Disregarding number literals.
    * @TODO Change return type to Set[Function]
    */
-  def signature[S<:Sort](t: Term[S]): Set[NamedSymbol] = t match {
+  def signature(t: Term): Set[NamedSymbol] = t match {
     // base cases
     case _: Variable | DifferentialSymbol | Number => Set.empty
     case DotTerm => Set(DotTerm)
@@ -269,7 +269,7 @@ object StaticSemantics {
   /**
    * Any symbols in expression e.
    */
-  def symbols(e: Expr): Set[NamedSymbol] = e match {
+  def symbols[K<:Expr](e: Expr[K]): Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
