@@ -59,25 +59,25 @@ final case class SubstitutionPair[S<:Sort] (what: Expr[S], repl: Expr[S]) {
   def freeVars : SetLattice[NamedSymbol[Sort]] = (repl match {
         case replt: Term[S] => what match {
           //case DotTerm => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case FuncOf(f: Function[_,Real.type], Anything) => SetLattice.bottom[NamedSymbol[Sort]] // Anything locally binds all variables
+          case FuncOf(f: Function[_,/*Real.type*/_], Anything) => SetLattice.bottom[NamedSymbol[Sort]] // Anything locally binds all variables
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
-          case FuncOf(f: Function[_,Real.type], DotTerm) =>
+          case FuncOf(f: Function[_,/*Real.type*/_], DotTerm) =>
             assert(replt == repl)
             assert(!StaticSemantics(replt).contains(DotTerm) || StaticSemantics(replt).isTop, "DotTerm is no variable")
             assert(!(StaticSemantics(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
             StaticSemantics(replt) -- Set(DotTerm)  // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
-          case _: Term => StaticSemantics(replt)
+          case _: Term[_] => StaticSemantics(replt)
         }
         case replf: Formula => what match {
           //case DotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case PredOf(p: Function[_,S], Anything) => SetLattice.bottom[NamedSymbol] // Anything locally binds all variables
+          case PredOf(p: Function[_,/*Bool.type*/_], Anything) => SetLattice.bottom[NamedSymbol[Sort]] // Anything locally binds all variables
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
-          case PredOf(p: Function[_,S], DotTerm) =>
+          case PredOf(p: Function[_,/*Bool.type*/_], DotTerm) =>
             assert(replf == repl)
             assert(!StaticSemantics(replf).fv.contains(DotTerm) || StaticSemantics(replf).fv.isTop, "DotTerm is no variable")
             if ((StaticSemantics(replf).fv -- Set(DotTerm)).contains(DotTerm)) println("COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotTerm)) + " leading to unnecessary clashes")
             StaticSemantics(replf).fv  -- Set(DotTerm) // since DotTerm shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
-          case PredicationalOf(ctx: Function, DotFormula) =>
+          case PredicationalOf(ctx: Function[_,_], DotFormula) =>
             assert(replf == repl)
 //            assert(!StaticSemantics(replf).fv.contains(DotFormula) || StaticSemantics(replf).fv.isTop, "DotFormula is no variable")
 //            if ((StaticSemantics(replf).fv -- Set(DotFormula)).contains(DotFormula)) println("COMPLETENESS WARNING: removal of DotFormula from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotFormula)) + " leading to unnecessary clashes")
@@ -87,7 +87,7 @@ final case class SubstitutionPair[S<:Sort] (what: Expr[S], repl: Expr[S]) {
           case _: Formula => StaticSemantics(replf).fv
         }
         case replp: Program => what match {
-          case _: ProgramConst | _: DifferentialProgramConst => SetLattice.bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
+          case _: ProgramConst | _: DifferentialProgramConst => SetLattice.bottom[NamedSymbol[Sort]] // program constants are always admissible, since their meaning doesn't depend on state
           case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
         }
       })
