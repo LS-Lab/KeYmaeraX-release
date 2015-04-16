@@ -175,7 +175,7 @@ trait DBAbstraction {
     val file = kvps.get("file").getOrElse(throw new Exception("Expcted a file but found none."))
     val fileContents = getFileContents("/" + file)
     val description = kvps.get("description")
-    val publink = kvps.get("publicnk")
+    val publink = kvps.get("pubLink")
     val title = kvps.get("title")
     val tactic = kvps.get("tactic")
 
