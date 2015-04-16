@@ -210,8 +210,8 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
             )
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
         case app@FuncOf(g:Function[_,S], theta) if !subsDefs.exists(_.sameHead(app)) => FuncOf(g, usubst(theta))
-        case Anything => assert(!subsDefs.exists(_.what == Anything); Anything // TODO check
-        case Nothing => assert(!subsDefs.exists(_.what == Nothing); Nothing // TODO check
+        case Anything => assert(!subsDefs.exists(_.what == Anything)); Anything // TODO check
+        case Nothing => assert(!subsDefs.exists(_.what == Nothing)); Nothing // TODO check
         case DotTerm if  subsDefs.exists(_.what == DotTerm) => // TODO check (should be case x = sigma x for variable x)
           subsDefs.find(_.what == DotTerm).get.repl match {
             case t: Term => t

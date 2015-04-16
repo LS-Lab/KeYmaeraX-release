@@ -21,7 +21,7 @@ import scala.annotation.elidable._
 
 import scala.math._
 
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
+//import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
 
 /*******************************
  * Sorts
@@ -59,15 +59,15 @@ object Trafo extends Sort
  * @author aplatzer
  * @todo add [S<:Sort]
  */
-sealed trait Expr[K<:Expr,S<:Sort] extends K {
+sealed trait Expr[S<:Sort] {
   override def toString = "(" + prettyString() + ")"
   def prettyString() : String = "TODOTODO???TODO" //new KeYmaeraPrettyPrinter().stringify(this)
 }
 
-sealed trait Atomic[K<:Expr,S<:Sort] extends Expr[K,S]
-sealed trait Composite[K<:Expr,S<:Sort] extends Expr[K,S]
+sealed trait Atomic[S<:Sort] extends Expr[S]
+sealed trait Composite[S<:Sort] extends Expr[S]
 
-sealed trait NamedSymbol[K<:Expr,S<:Sort] extends Expr[K,S] {}
+sealed trait NamedSymbol[+S<:Sort] extends Expr[S] {}
 
 /********************************************
  * Terms of differential dynamic logic.
@@ -75,26 +75,26 @@ sealed trait NamedSymbol[K<:Expr,S<:Sort] extends Expr[K,S] {}
  * @todo For Term but not the others could move to Term[T<Sort] to statically distinguish Term[Real] from Term[ObjectSort] even if not statically distinguishing Term[ObjectSort("A")] from Term[ObjectSort("B")] :-)
  * @todo Alternatively could duplicate Equals/NotEquals/FuncOf/Function/Variable for non-real sorts :-/
  */
-sealed trait Term[S<:Sort] extends Expr[Term,S] {}
+sealed trait Term[S<:Sort] extends Expr[S] {}
 
 // atomic terms
-sealed trait AtomicTerm[S<:Sort] extends Term[S] with Atomic[Term,S] {}
+sealed trait AtomicTerm[S<:Sort] extends Term[S] with Atomic[S] {}
 
-sealed case class Variable[S<:Sort](name: String, index: Option[Int] = None/*, sort: S*/) extends NamedSymbol[Term,S] with AtomicTerm[S] {}
-sealed case class DifferentialSymbol(e: Variable[Real.type]/*@todo NamedSymbol[Real.type]?*/) extends NamedSymbol[Term,Real.type] with AtomicTerm[Real.type] {}
+sealed case class Variable[S<:Sort](name: String, index: Option[Int] = None/*, sort: S*/) extends NamedSymbol[S] with AtomicTerm[S] {}
+sealed case class DifferentialSymbol(e: Variable[Real.type]/*@todo NamedSymbol[Real.type]?*/) extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {}
 
 case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
-sealed case class Function[D<:Sort,S<:Sort](name: String/*, domain: D, sort: S*/) extends Expr[Function,S] with NamedSymbol[Function,S] {}
+sealed case class Function[D<:Sort,S<:Sort](name: String/*, domain: D, sort: S*/) extends Expr[S] with NamedSymbol[S] {}
 
-object DotTerm extends NamedSymbol[Term,Real.type] with AtomicTerm[Real.type] {
+object DotTerm extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {
   override def toString = ("\\cdot")
 }
 
-object Nothing extends NamedSymbol[Term,Unit.type] with AtomicTerm[Unit.type] {
+object Nothing extends NamedSymbol[Unit.type] with AtomicTerm[Unit.type] {
   override def toString = ("\\nothing")
 }
-object Anything extends NamedSymbol[Term,Real.type] with AtomicTerm[Real.type] {
+object Anything extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {
   override def toString = ("\\anything")
 }
 
@@ -102,7 +102,7 @@ object Anything extends NamedSymbol[Term,Real.type] with AtomicTerm[Real.type] {
 case class FuncOf[D<:Sort,S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
 
 // composite terms
-sealed trait CompositeTerm[S<:Sort] extends Term[S] with Composite[Term,S] {}
+sealed trait CompositeTerm[S<:Sort] extends Term[S] with Composite[S] {}
 
 case class Plus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
 case class Minus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
@@ -117,10 +117,10 @@ case class Differential(child: Term[Real.type]) extends CompositeTerm[Real.type]
  * @author aplatzer
  */
 
-sealed trait Formula extends Expr[Formula,Bool.type]
+sealed trait Formula extends Expr[Bool.type]
 
 // atomic formulas
-sealed trait AtomicFormula extends Formula with Atomic[Formula,Bool.type] {}
+sealed trait AtomicFormula extends Formula with Atomic[Bool.type] {}
 
 object True extends AtomicFormula
 object False extends AtomicFormula
@@ -135,7 +135,7 @@ case class Greater(left: Term[Real.type], right: Term[Real.type]) extends Atomic
 case class LessEqual(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 case class Less(left: Term[Real.type], right: Term[Real.type]) extends AtomicFormula
 
-object DotFormula extends NamedSymbol[Formula,Bool.type] with AtomicFormula {
+object DotFormula extends NamedSymbol[Bool.type] with AtomicFormula {
   override def toString = "\\_"
 }
 
@@ -143,7 +143,7 @@ case class PredOf[D<:Sort](pred: Function[D,Bool.type], child: Term[D]) extends 
 case class PredicationalOf(pred: Function[Bool.type,Bool.type], child: Formula) extends AtomicFormula
 
 // composite formulas
-sealed trait CompositeFormula extends Formula with Composite[Formula,Bool.type] {}
+sealed trait CompositeFormula extends Formula with Composite[Bool.type] {}
 
 case class Not(child: Formula) extends CompositeFormula
 case class And(left: Formula, right:Formula) extends CompositeFormula
@@ -151,11 +151,11 @@ case class Or(left: Formula, right:Formula) extends CompositeFormula
 case class Imply(left: Formula, right:Formula) extends CompositeFormula
 case class Equiv(left: Formula, right:Formula) extends CompositeFormula
 
-case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula {
+case class Forall[S<:Sort](vars: immutable.Seq[Variable[S]], child: Formula) extends CompositeFormula {
   require(!vars.isEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
 }
-case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula {
+case class Exists[S<:Sort](vars: immutable.Seq[Variable[S]], child: Formula) extends CompositeFormula {
   require(!vars.isEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
 }
@@ -170,12 +170,12 @@ case class DifferentialFormula(child: Formula) extends CompositeFormula
   * @author aplatzer
   */
 
-sealed trait Program extends Expr[Program,Trafo.type]
+sealed trait Program extends Expr[Trafo.type]
 
 // atomic programs
-sealed trait AtomicProgram extends Program with Atomic[Program,Trafo.type] {}
+sealed trait AtomicProgram extends Program with Atomic[Trafo.type] {}
 
-sealed case class ProgramConst(name: String) extends NamedSymbol[Program,Trafo.type] with AtomicProgram {}
+sealed case class ProgramConst(name: String) extends NamedSymbol[Trafo.type] with AtomicProgram {}
 
 //@todo require(target.sort == e.sort) which in principle could be dead-code eliminated for Real?
 case class Assign[S<:Sort](target: Variable[S], e: Term[S]) extends AtomicProgram
@@ -185,7 +185,7 @@ case class Test(cond: Formula) extends AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Program
 
 // composite programs
-sealed trait CompositeProgram extends Program with Composite[Program,Trafo.type] {}
+sealed trait CompositeProgram extends Program with Composite[Trafo.type] {}
 case class Choice(left: Program, right: Program) extends Program {}
 case class Compose(left: Program, right: Program) extends Program {}
 case class Loop(child: Program) extends Program {}
@@ -193,14 +193,15 @@ case class Loop(child: Program) extends Program {}
 
 // differential programs
 sealed trait DifferentialProgram extends Program {}
-sealed case class DifferentialProgramConst(name: String) extends NamedSymbol[Program,Trafo.type] with DifferentialProgram {}
+sealed case class DifferentialProgramConst(name: String) extends NamedSymbol[Trafo.type] with DifferentialProgram {}
 case class AtomicODE(xp: DifferentialSymbol, e: Term[Real.type]) extends DifferentialProgram {}
 case class DifferentialProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
 
 object DifferentialProduct {
   /**
    * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in the data structures.
-   * @note This is important to not get stuck after using axiom "DE differential effect (system)".
+   * @note This is important to not get stuck after using axiom "DE differential effect (system)".\
+   * @todo defined twice. So either demote DifferentialProduct to be a non-case-class. Or convention to call normalDifferentialProduct instead.
    */
   def apply(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = reassociate(left, right)
 

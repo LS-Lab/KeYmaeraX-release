@@ -8,12 +8,8 @@ package edu.cmu.cs.ls.keymaera.kernel
 // favoring immutable Seqs for soundness
 
 import scala.collection.GenTraversableOnce
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable._
 
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.Set
 
 import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
@@ -31,8 +27,8 @@ object StaticSemantics {
    * @param fv Free names (maybe read)
    * @param bv Bound names (maybe written)
    */
-  sealed case class VCF(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol])
+  sealed case class VCF(fv: SetLattice[NamedSymbol[Sort]],
+                        bv: SetLattice[NamedSymbol[Sort]])
 
   /**
    * Structure recording which names are free, bound, or must-bound
@@ -41,16 +37,16 @@ object StaticSemantics {
    * @param bv Bound names (maybe written)
    * @param mbv Must-bound names (certainly written).
    */
-  sealed case class VCP(fv: SetLattice[NamedSymbol],
-                        bv: SetLattice[NamedSymbol],
-                        mbv: SetLattice[NamedSymbol])
+  sealed case class VCP(fv: SetLattice[NamedSymbol[Sort]],
+                        bv: SetLattice[NamedSymbol[Sort]],
+                        mbv: SetLattice[NamedSymbol[Sort]])
   
   // variables
   
   /**
    * Compute the static semantics of term t, i.e., the set of its free variables.
    */
-  def apply[S<:Sort](t: Term[S]): SetLattice[NamedSymbol] = freeVars(t)
+  def apply[S<:Sort](t: Term[S]): SetLattice[NamedSymbol[Sort]] = freeVars(t)
 
   /**
    * Compute the static semantics of formula f, i.e., its set of free and bound variables.
@@ -66,7 +62,7 @@ object StaticSemantics {
   /**
    * The set FV(e) of free variables of expression e.
    */
-  def freeVars[K<:Expr,S<:Sort](e: Expr[K,S]): SetLattice[NamedSymbol] = e match {
+  def freeVars[S<:Sort](e: Expr[S]): SetLattice[NamedSymbol[Sort]] = e match {
     case t: Term[_] => freeVars(t)
     case f: Formula => freeVars(f)
     case a: Program => freeVars(a)
@@ -75,12 +71,12 @@ object StaticSemantics {
   /**
    * The set FV(t) of free variables of term t.
    */
-  def freeVars[S<:Sort](t: Term[S]): SetLattice[NamedSymbol] = {t match {
+  def freeVars[S<:Sort](t: Term[S]): SetLattice[NamedSymbol[Sort]] = {t match {
     // base cases
-    case x: Variable => SetLattice(x)
+    case x: Variable[S] => SetLattice(x)
     case xp: DifferentialSymbol => SetLattice(xp)
-    case Number => SetLattice.bottom
-    case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm is no variable"); SetLattice.bottom
+    case _: Number => SetLattice.bottom
+    case DotTerm => assert(!DotTerm.isInstanceOf[Variable[_]], "DotTerm is no variable"); SetLattice.bottom
     // homomorphic cases
     case FuncOf(f, arg) => freeVars(arg)
     case Plus(l, r) => freeVars(l) ++ freeVars(r)
@@ -99,7 +95,7 @@ object StaticSemantics {
    * Add ' to a set, i.e. turn all elements x in the lattice into x'
    * @return The set of all x' for which x is in s.
    */
-  private def differentialSymbols(s: SetLattice[NamedSymbol]) = s.map[NamedSymbol](v => v match {
+  private def differentialSymbols(s: SetLattice[NamedSymbol[Sort]]) = s.map[NamedSymbol[Sort]](v => v match {
     case x:Variable[Real.type] => DifferentialSymbol(x)
     case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v)
   })
@@ -107,22 +103,22 @@ object StaticSemantics {
   /**
    * The set FV(f) of free variables of formula f.
    */
-  def freeVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).fv
+  def freeVars(f: Formula): SetLattice[NamedSymbol[Sort]] = StaticSemantics(f).fv
 
   /**
    * The set FV(a) of free variables of program a.
    */
-  def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
+  def freeVars(a: Program): SetLattice[NamedSymbol[Sort]] = StaticSemantics(a).fv
 
   /**
    * The set BV(f) of bound variables of formula f.
    */
-  def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
+  def boundVars(f: Formula): SetLattice[NamedSymbol[Sort]] = StaticSemantics(f).bv
 
   /**
    * The set BV(a) of bound variables of program a.
    */
-  def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
+  def boundVars(a: Program): SetLattice[NamedSymbol[Sort]] = StaticSemantics(a).bv
 
   private def fmlVars(f: Formula): VCF = f match {
     // base cases
@@ -169,7 +165,7 @@ object StaticSemantics {
     case DiffAssign(xp: DifferentialSymbol, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
     case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
     case AtomicODE(xp@DifferentialSymbol(x:Variable), e) =>
-      VCP(fv = SetLattice[NamedSymbol](x) ++ freeVars(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp))
+      VCP(fv = SetLattice[NamedSymbol[Sort]](x) ++ freeVars(e), bv = SetLattice[NamedSymbol[Sort]](x) ++ SetLattice[NamedSymbol[Sort]](xp), mbv = SetLattice[NamedSymbol[Sort]](x) ++ SetLattice[NamedSymbol[Sort]](xp))
     // combinator cases
     case Choice(a, b) => val va = progVars(a); val vb = progVars(b)
       VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv.intersect(vb.mbv))
@@ -191,7 +187,7 @@ object StaticSemantics {
   /**
    * The signature of expression e.
    */
-  def signature[K<:Expr,S<:Sort](e: Expr[K,S]): Set[NamedSymbol] = e match {
+  def signature[S<:Sort](e: Expr[S]): Set[NamedSymbol[Sort]] = e match {
     case t: Term[S] => signature(t)
     case f: Formula => signature(f)
     case a: Program => signature(a)
@@ -202,7 +198,7 @@ object StaticSemantics {
    * Disregarding number literals.
    * @todo Change return type to Set[Function]?
    */
-  def signature[S<:Sort](t: Term[S]): Set[NamedSymbol] = t match {
+  def signature[S<:Sort](t: Term[S]): Set[NamedSymbol[Sort]] = t match {
     // base cases
     case _: Variable | DifferentialSymbol | Number => Set.empty
     case DotTerm => Set(DotTerm)
@@ -224,7 +220,7 @@ object StaticSemantics {
    * The signature of a formula, i.e., set of function, predicate, and atomic program 
    * symbols occurring in it.
    */
-  def signature(f: Formula): Set[NamedSymbol] = f match {
+  def signature(f: Formula): Set[NamedSymbol[Sort]] = f match {
     // base cases
     case True | False => Set.empty
     case PredOf(p, arg) => Set(p) ++ signature(arg)
@@ -259,7 +255,7 @@ object StaticSemantics {
    * The signature of a program, i.e., set of function, predicate, and atomic program 
    * symbols occurring in it.
    */
-  def signature(p: Program): Set[NamedSymbol] = p match {
+  def signature(p: Program): Set[NamedSymbol[Sort]] = p match {
     // base cases
     case ap: ProgramConst => Set(ap)
     case ap: DifferentialProgramConst => Set(ap)
@@ -279,7 +275,7 @@ object StaticSemantics {
   /**
    * Any symbols in expression e.
    */
-  def symbols[K<:Expr,S<:Sort](e: Expr[K,S]): Set[NamedSymbol] = e match {
+  def symbols[S<:Sort](e: Expr[S]): Set[NamedSymbol[Sort]] = e match {
     case t: Term[S] => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
@@ -288,17 +284,20 @@ object StaticSemantics {
   /**
    * Any symbol occuring in term, whether variable or function
    */
-  def symbols[S<:Sort](t : Term[S]): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSet
+  def symbols[S<:Sort](t : Term[S]): Set[NamedSymbol[Sort]] = signature(t) ++ freeVars(t).toSet
 
   /**
    * Any symbol occuring in formula, whether free or bound variable or function or predicate or program constant
    */
-  def symbols(f : Formula): Set[NamedSymbol] = {val stat = apply(f); signature(f) ++ stat.fv.toSet ++ stat.bv.toSet}
+  def symbols(f : Formula): Set[NamedSymbol[Sort]] = {val stat = apply(f); signature(f) ++ stat.fv.toSet ++ stat.bv.toSet}
 
   /**
    * Any symbol occuring in program, whether free or bound variable or function or predicate or program constant
    */
-  def symbols(p : Program): Set[NamedSymbol] = {val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet}
+  def symbols(p : Program): Set[NamedSymbol[Sort]] = {val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet}
+
+//  type SetLattice[A] = Set[A]
+//  def SetLattice[A](e: A): Set[A] = Set(e)
 }
 
 
@@ -317,7 +316,7 @@ object SetLattice {
  * @param s Elements in the set: Left[A] elements excluded from the set, Right[A] elements included in the set
  * @tparam A Type of elements in the set
  */
-class SetLattice[A](@deprecated val s: Either[Set[A], Set[A]]) {
+class SetLattice[+A](@deprecated val s: Either[Set[A], Set[A]]) {
   def isTop = s.isLeft
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
     case Left(ts) => other.s match {
@@ -359,7 +358,7 @@ class SetLattice[A](@deprecated val s: Either[Set[A], Set[A]]) {
     case Left(ts) => new SetLattice(Left(ts.map(trafo)))
     case Right(ts) => SetLattice(ts.map(trafo))
   }
-  
+
   def +(elem: A): SetLattice[A] = s match {
     case Left(ts) => new SetLattice(Left(ts - elem)) /* top excludes one element less now */
     case Right(ts) => SetLattice(ts+elem)
