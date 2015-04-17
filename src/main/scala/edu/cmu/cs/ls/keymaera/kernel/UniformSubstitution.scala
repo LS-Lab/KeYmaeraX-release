@@ -70,7 +70,7 @@ final case class SubstitutionPair[S<:Sort] (what: Expr[S], repl: Expr[S]) {
         }
         case replf: Formula => what match {
           //case DotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case PredOf(p: Function[_,/*Bool.type*/_], Anything) => SetLattice.bottom[NamedSymbol[Sort]] // Anything locally binds all variables
+          case ap@PredOf(_, Anything) => SetLattice.bottom[NamedSymbol[Sort]] // Anything locally binds all variables
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case PredOf(p: Function[_,/*Bool.type*/_], DotTerm) =>
             assert(replf == repl)
@@ -133,7 +133,7 @@ final case class SubstitutionPair[S<:Sort] (what: Expr[S], repl: Expr[S]) {
  * Used for UniformSubstitution rule.
  * @author aplatzer
  */
-final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
+final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPair[_]]) {
   applicable()
 
   // unique left hand sides in l

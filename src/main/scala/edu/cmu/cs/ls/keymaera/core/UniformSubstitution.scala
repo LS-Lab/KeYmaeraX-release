@@ -90,6 +90,7 @@ final case class SubstitutionPair (val what: Expr, val repl: Expr) {
   }
 
   //@TODO Isn't there a better way of doing this?
+  //@todo use Expr.kind
   @elidable(ASSERTION) private def kindOf(e: Expr) = e match {
      case _: Term => "Term"
      case _: Formula => "Formula"

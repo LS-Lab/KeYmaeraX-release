@@ -78,14 +78,14 @@ sealed trait NamedSymbol[+S<:Sort] extends Expr[S] {}
 sealed trait Term[+S<:Sort] extends Expr[S] {}
 
 // atomic terms
-sealed trait AtomicTerm[S<:Sort] extends Term[S] with Atomic[S] {}
+sealed trait AtomicTerm[+S<:Sort] extends Term[S] with Atomic[S] {}
 
-sealed case class Variable[S<:Sort](name: String, index: Option[Int] = None/*, sort: S*/) extends NamedSymbol[S] with AtomicTerm[S] {}
+sealed case class Variable[+S<:Sort](name: String, index: Option[Int] = None/*, sort: S*/) extends NamedSymbol[S] with AtomicTerm[S] {}
 sealed case class DifferentialSymbol(e: Variable[Real.type]/*@todo NamedSymbol[Real.type]?*/) extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {}
 
 case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
-sealed case class Function[D<:Sort,S<:Sort](name: String/*, domain: D, sort: S*/) extends Expr[S] with NamedSymbol[S] {}
+sealed case class Function[-D<:Sort,+S<:Sort](name: String/*, domain: D, sort: S*/) extends Expr[S] with NamedSymbol[S] {}
 
 object DotTerm extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {
   override def toString = ("\\cdot")
@@ -99,10 +99,10 @@ object Anything extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {
 }
 
 //@todo to check within ObjectSorts add require(func.domain == child.sort) which in principle could be dead-code eliminated for Real?
-case class FuncOf[D<:Sort,S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
+case class FuncOf[-D<:Sort,+S<:Sort](func: Function[D,S], child: Term[D]) extends AtomicTerm[S]
 
 // composite terms
-sealed trait CompositeTerm[S<:Sort] extends Term[S] with Composite[S] {}
+sealed trait CompositeTerm[+S<:Sort] extends Term[S] with Composite[S] {}
 
 case class Plus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
 case class Minus(left: Term[Real.type], right: Term[Real.type]) extends CompositeTerm[Real.type]
@@ -139,7 +139,7 @@ object DotFormula extends NamedSymbol[Bool.type] with AtomicFormula {
   override def toString = "\\_"
 }
 
-case class PredOf[D<:Sort](pred: Function[D,Bool.type], child: Term[D]) extends AtomicFormula
+case class PredOf[-D<:Sort](pred: Function[D,Bool.type], child: Term[D]) extends AtomicFormula
 case class PredicationalOf(pred: Function[Bool.type,Bool.type], child: Formula) extends AtomicFormula
 
 // composite formulas
@@ -203,7 +203,7 @@ object DifferentialProduct {
    * @note This is important to not get stuck after using axiom "DE differential effect (system)".\
    * @todo defined twice. So either demote DifferentialProduct to be a non-case-class. Or convention to call normalDifferentialProduct instead.
    */
-  def apply(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = reassociate(left, right)
+  def DifferentialProduct/*@TODO apply*/(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = reassociate(left, right)
 
   //@tailrec
   private def reassociate(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = left match {
