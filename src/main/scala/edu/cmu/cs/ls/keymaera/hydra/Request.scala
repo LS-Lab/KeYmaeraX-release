@@ -91,9 +91,9 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
     linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
   }
 
-  private def isJLinkLibFileCorrect(jlinkFile: java.io.File): Boolean = {
-    jlinkFile.getName == "libJLinkNativeLibrary.jnilib" || jlinkFile.getName == "JLinkNativeLibrary.dll" ||
-      jlinkFile.getName == "libJLinkNativeLibrary.so"
+  private def isJLinkLibFileCorrect(jlinkFile: java.io.File, jlinkLibDir : java.io.File): Boolean = {
+    (jlinkFile.getName == "libJLinkNativeLibrary.jnilib" || jlinkFile.getName == "JLinkNativeLibrary.dll" ||
+      jlinkFile.getName == "libJLinkNativeLibrary.so") && jlinkLibDir.exists() && jlinkLibDir.isDirectory
   }
 
   override def getResultingResponses(): List[Response] = {
@@ -103,7 +103,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
       val jlinkLibFile = new java.io.File(jlinkLibFileName)
       val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
       val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
-      val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile) && jlinkLibFile.exists()
+      val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
 
       if(!linkNameExists || !jlinkLibFileExists) {
         // look for the largest prefix that does exist
@@ -119,7 +119,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
       else {
         val originalConfig = db.getConfiguration("mathematica")
 
-        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
+        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibFile.getAbsolutePath)
         val newConfig = new ConfigurationPOJO("mathematica", configMap)
 
         db.updateConfiguration(newConfig)
