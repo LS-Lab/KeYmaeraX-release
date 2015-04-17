@@ -1088,6 +1088,12 @@ object AxiomaticRule {
  *@TODO Review
  */
 object LookupLemma {
+  lazy val lemmadbpath = {
+    val file = java.io.File.createTempFile("" , "lemmadb")
+    file.mkdirs
+    file
+  }
+
   def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
   private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
     def apply(s : Sequent) = {
@@ -1110,8 +1116,6 @@ object LookupLemma {
         //Save the solution to a file.
         //TODO-nrf create an interface for databases.
         def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val lemmadbpath = new java.io.File("lemmadb")
-          lemmadbpath.mkdirs
           val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
@@ -1136,8 +1140,6 @@ object LookupLemma {
         //Save the solution to a file.
         //TODO-nrf create an interface for databases.
         def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val lemmadbpath = new java.io.File("lemmadb")
-          lemmadbpath.mkdirs
           val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
