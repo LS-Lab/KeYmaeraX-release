@@ -122,23 +122,31 @@ class JLinkMathematicaLink extends MathematicaLink {
     ml.waitForAnswer()
     val res = ml.getExpr
     if (res == exceptionExpr) {
+      res.dispose()
       // an exception occurred
       ml.evaluate(fetchMessagesCmd)
       ml.waitForAnswer()
       val msg = ml.getExpr
-      throw new IllegalArgumentException("Input " + input + " cannot be evaluated: " + msg)
+      val txtMsg = msg.toString
+      // msg.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+      throw new IllegalArgumentException("Input " + input + " cannot be evaluated: " + txtMsg)
     } else {
       val head = res.head
       if (head.equals(checkExpr)) {
-        throw new IllegalStateException("Mathematica returned input as answer: " + res.toString)
+        val txtMsg = res.toString
+        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+        throw new IllegalStateException("Mathematica returned input as answer: " + txtMsg)
       }
       if(res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
         val theResult = res.args.last
         val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
-        // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-        (theResult.toString, keymaeraResult)
+        val txtResult = theResult.toString
+        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+        (txtResult, keymaeraResult)
       } else {
-        throw new IllegalStateException("Mathematica returned a stale answer")
+        val txtResult = res.toString
+        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+        throw new IllegalStateException("Mathematica returned a stale answer for " + txtResult)
       }
     }
   }
