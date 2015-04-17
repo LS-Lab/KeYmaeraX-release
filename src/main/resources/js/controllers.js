@@ -219,8 +219,7 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.skolemize" :
             { "name" : "dl.skolemize",
-              "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)",
-              "tooltip" : "s is a new (Skolem) function symbol and \\( X_1,\\ldots,X_n \\) are all free logical variables of \\( \\forall x . \\phi(x) \\)"
+              "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)"
             },
         "dl.decomposeQuan" :
             { "name" : "dl.decomposeQuan",
