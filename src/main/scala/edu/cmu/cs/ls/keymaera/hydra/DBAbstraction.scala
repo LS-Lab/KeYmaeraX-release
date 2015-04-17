@@ -13,6 +13,7 @@ import spray.json.DefaultJsonProtocol._
 //Global setting:
 object DBAbstractionObj {
   def defaultDatabase = SQLite
+  def dblocation = System.getProperty("user.home") + "/keymaerax.sqlite"
 }
 
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
@@ -149,6 +150,15 @@ trait DBAbstraction {
   def getDispatchedCLTerm(id : String) : Option[DispatchedCLTermPOJO]
   def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
   def updateProofOnCLTermCompletion(proofId : String, termId : String)
+
+
+  def initializeForDemo2() : Unit = {
+    val file : java.io.File = new java.io.File(this.getClass.getResource("/keymaerax.sqlite").toURI)
+    val target = new java.io.File(DBAbstractionObj.dblocation)
+    import java.io.{FileInputStream,FileOutputStream}
+    new FileOutputStream(target) getChannel() transferFrom(
+      new FileInputStream(file) getChannel, 0, Long.MaxValue )
+  }
 
   import spray.json._ //allows for .parseJoson on strings.
   def initializeForDemo() : Unit = {
