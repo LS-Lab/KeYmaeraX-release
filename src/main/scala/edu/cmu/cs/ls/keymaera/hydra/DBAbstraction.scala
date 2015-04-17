@@ -12,8 +12,9 @@ import spray.json.DefaultJsonProtocol._
 
 //Global setting:
 object DBAbstractionObj {
-  def defaultDatabase = SQLite
-  def dblocation = System.getProperty("user.home") + "/keymaerax.sqlite"
+  def defaultDatabase = SQLite //this needs to ba a def and not a val because DBAbstractionObj is initialized in SQLite.
+  val dblocation = System.getProperty("user.home") + "/keymaerax.sqlite"
+  println(dblocation)
 }
 
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
