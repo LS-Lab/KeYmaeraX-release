@@ -27,4 +27,15 @@ object Boot extends App {
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   IO(Http) ! Http.Bind(service, interface = "localhost", port = 8090)
+
+  // Finally, print a message indicating that the server was started.
+  println(
+    "**********************************************************\n" +
+    "****                   KeYmaera X                     ****\n" +
+    "****                                                  ****\n" +
+    "**** POINT YOUR WEB BROWSER TO http://localhost:8090/ ****\n" +
+    "****                                                  ****\n" +
+    "**********************************************************\n"
+  )
+
 }
