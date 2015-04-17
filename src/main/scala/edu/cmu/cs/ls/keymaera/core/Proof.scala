@@ -1089,7 +1089,7 @@ object AxiomaticRule {
  */
 object LookupLemma {
   lazy val lemmadbpath = {
-    val file = java.io.File.createTempFile("" , "lemmadb")
+    val file = new java.io.File(System.getProperty("user.home") + "/lemmadb")
     file.mkdirs
     file
   }
