@@ -36,7 +36,7 @@ import StaticSemantics._
  *          - DotFormula
  * @param repl the expression to be used in place of what
  */
-final case class SubstitutionPair (what: Expr, repl: Expr) {
+final case class SubstitutionPair (what: Expression, repl: Expression) {
   applicable
   
   @elidable(ASSERTION) def applicable = {
@@ -114,7 +114,7 @@ final case class SubstitutionPair (what: Expr, repl: Expr) {
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    * @TODO Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
-  private[core] def sameHead(right: Expr) = what match {
+  private[core] def sameHead(right: Expression) = what match {
     case FuncOf(lf, DotTerm | Anything | Nothing) => right match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, DotTerm | Anything | Nothing) => right match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, DotFormula) => right match { case PredicationalOf(rf, _) => lf == rf case _ => false }

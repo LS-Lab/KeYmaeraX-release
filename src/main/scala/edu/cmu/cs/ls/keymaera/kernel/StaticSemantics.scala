@@ -62,7 +62,7 @@ object StaticSemantics {
   /**
    * The set FV(e) of free variables of expression e.
    */
-  def freeVars[S<:Sort](e: Expr[S]): SetLattice[NamedSymbol[Sort]] = e match {
+  def freeVars[S<:Sort](e: Expression[S]): SetLattice[NamedSymbol[Sort]] = e match {
     case t: Term[_] => freeVars(t)
     case f: Formula => freeVars(f)
     case a: Program => freeVars(a)
@@ -187,7 +187,7 @@ object StaticSemantics {
   /**
    * The signature of expression e.
    */
-  def signature[S<:Sort](e: Expr[S]): Set[NamedSymbol[Sort]] = e match {
+  def signature[S<:Sort](e: Expression[S]): Set[NamedSymbol[Sort]] = e match {
     case t: Term[S] => signature(t)
     case f: Formula => signature(f)
     case a: Program => signature(a)
@@ -277,7 +277,7 @@ object StaticSemantics {
   /**
    * Any symbols in expression e.
    */
-  def symbols[S<:Sort](e: Expr[S]): Set[NamedSymbol[Sort]] = e match {
+  def symbols[S<:Sort](e: Expression[S]): Set[NamedSymbol[Sort]] = e match {
     case t: Term[S] => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)

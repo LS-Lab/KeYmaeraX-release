@@ -59,15 +59,15 @@ object Trafo extends Sort
  * @author aplatzer
  * @todo add [S<:Sort]
  */
-sealed trait Expr[S<:Sort] {
+sealed trait Expression[S<:Sort] {
   override def toString = "(" + prettyString() + ")"
   def prettyString() : String = "TODOTODO???TODO" //new KeYmaeraPrettyPrinter().stringify(this)
 }
 
-sealed trait Atomic[S<:Sort] extends Expr[S]
-sealed trait Composite[S<:Sort] extends Expr[S]
+sealed trait Atomic[S<:Sort] extends Expression[S]
+sealed trait Composite[S<:Sort] extends Expression[S]
 
-sealed trait NamedSymbol[+S<:Sort] extends Expr[S] {}
+sealed trait NamedSymbol[+S<:Sort] extends Expression[S] {}
 
 /********************************************
  * Terms of differential dynamic logic.
@@ -75,7 +75,7 @@ sealed trait NamedSymbol[+S<:Sort] extends Expr[S] {}
  * @todo For Term but not the others could move to Term[T<Sort] to statically distinguish Term[Real] from Term[ObjectSort] even if not statically distinguishing Term[ObjectSort("A")] from Term[ObjectSort("B")] :-)
  * @todo Alternatively could duplicate Equals/NotEquals/FuncOf/Function/Variable for non-real sorts :-/
  */
-sealed trait Term[+S<:Sort] extends Expr[S] {}
+sealed trait Term[+S<:Sort] extends Expression[S] {}
 
 // atomic terms
 sealed trait AtomicTerm[+S<:Sort] extends Term[S] with Atomic[S] {}
@@ -85,7 +85,7 @@ sealed case class DifferentialSymbol(e: Variable[Real.type]/*@todo NamedSymbol[R
 
 case class Number(value: BigDecimal) extends AtomicTerm[Real.type]
 
-sealed case class Function[-D<:Sort,+S<:Sort](name: String/*, domain: D, sort: S*/) extends Expr[S] with NamedSymbol[S] {}
+sealed case class Function[-D<:Sort,+S<:Sort](name: String/*, domain: D, sort: S*/) extends Expression[S] with NamedSymbol[S] {}
 
 object DotTerm extends NamedSymbol[Real.type] with AtomicTerm[Real.type] {
   override def toString = ("\\cdot")
@@ -117,7 +117,7 @@ case class Differential(child: Term[Real.type]) extends CompositeTerm[Real.type]
  * @author aplatzer
  */
 
-sealed trait Formula extends Expr[Bool.type]
+sealed trait Formula extends Expression[Bool.type]
 
 // atomic formulas
 sealed trait AtomicFormula extends Formula with Atomic[Bool.type] {}
@@ -170,7 +170,7 @@ case class DifferentialFormula(child: Formula) extends CompositeFormula
   * @author aplatzer
   */
 
-sealed trait Program extends Expr[Trafo.type]
+sealed trait Program extends Expression[Trafo.type]
 
 // atomic programs
 sealed trait AtomicProgram extends Program with Atomic[Trafo.type] {}

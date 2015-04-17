@@ -61,23 +61,23 @@ case class ObjectSort(name : String) extends Sort
  * Expressions of differential dynamic logic.
  * @author aplatzer
  */
-sealed trait Expr {
+sealed trait Expression {
   def kind : Kind
   def sort : Sort
   override def toString = "(" + prettyString() + ")"
   def prettyString() : String = "TODOTODO???TODO" //new KeYmaeraPrettyPrinter().stringify(this)
 }
 
-sealed trait Atomic extends Expr
-sealed trait Composite extends Expr
+sealed trait Atomic extends Expression
+sealed trait Composite extends Expression
 
-sealed trait NamedSymbol extends Expr
+sealed trait NamedSymbol extends Expression
 
 /********************************************
  * Terms of differential dynamic logic.
  * @author aplatzer
  */
-sealed trait Term extends Expr {
+sealed trait Term extends Expression {
   final def kind = TermKind
 }
 
@@ -98,7 +98,7 @@ sealed case class DifferentialSymbol(e: Variable) extends NamedSymbol with Atomi
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
-sealed case class Function(name: String, domain: Sort, sort: Sort) extends Expr with NamedSymbol {
+sealed case class Function(name: String, domain: Sort, sort: Sort) extends Expression with NamedSymbol {
   def kind = FunctionKind
 }
 
@@ -144,7 +144,7 @@ case class Differential(child: Term) extends CompositeTerm with RTerm {
  * @author aplatzer
  */
 
-sealed trait Formula extends Expr {
+sealed trait Formula extends Expression {
   final def kind = FormulaKind
   final def sort = Bool
 }
@@ -215,7 +215,7 @@ case class DifferentialFormula(child: Formula) extends CompositeFormula
   * @author aplatzer
   */
 
-sealed trait Program extends Expr {
+sealed trait Program extends Expression {
   final def kind = ProgramKind
   final def sort = Trafo
 }

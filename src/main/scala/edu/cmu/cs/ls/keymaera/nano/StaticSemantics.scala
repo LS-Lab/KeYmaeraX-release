@@ -64,7 +64,7 @@ object StaticSemantics {
   /**
    * The set FV(e) of free variables of expression e.
    */
-  def freeVars(e: Expr): SetLattice[NamedSymbol] = e match {
+  def freeVars(e: Expression): SetLattice[NamedSymbol] = e match {
     case t: Term => freeVars(t)
     case f: Formula => freeVars(f)
     case a: Program => freeVars(a)
@@ -189,7 +189,7 @@ object StaticSemantics {
   /**
    * The signature of expression e.
    */
-  def signature(e: Expr): Set[NamedSymbol] = e match {
+  def signature(e: Expression): Set[NamedSymbol] = e match {
     case t: Term => signature(t)
     case f: Formula => signature(f)
     case a: Program => signature(a)
@@ -279,7 +279,7 @@ object StaticSemantics {
   /**
    * Any symbols in expression e.
    */
-  def symbols(e: Expr): Set[NamedSymbol] = e match {
+  def symbols(e: Expression): Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
