@@ -37,6 +37,7 @@ object Boot extends App {
     "****                                                  ****\n" +
     "**** OPEN YOUR WEB BROWSER AT  http://localhost:8090/ ****\n" +
     "****                                                  ****\n" +
+    "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
     "**********************************************************\n"
   )
   
