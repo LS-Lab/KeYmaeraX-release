@@ -1,11 +1,10 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-import java.io.{InputStreamReader, BufferedReader}
-import java.util
+import java.nio.channels.Channels
 
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
+
+import java.io.FileOutputStream
 
 import scala.io.Source
 import spray.json.DefaultJsonProtocol._
@@ -153,16 +152,14 @@ trait DBAbstraction {
   def updateProofOnCLTermCompletion(proofId : String, termId : String)
 
 
-  def initializeForDemo2() : Unit = {
-    val file : java.io.File = new java.io.File(this.getClass.getResource("/keymaerax.sqlite").toURI)
+  def initializeForDemo() : Unit = {
+    val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
     val target = new java.io.File(DBAbstractionObj.dblocation)
-    import java.io.{FileInputStream,FileOutputStream}
-    new FileOutputStream(target) getChannel() transferFrom(
-      new FileInputStream(file) getChannel, 0, Long.MaxValue )
+    new FileOutputStream(target).getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
   }
 
   import spray.json._ //allows for .parseJoson on strings.
-  def initializeForDemo() : Unit = {
+  def initializeForDemo2() : Unit = {
     println("Initializing a demo database")
 
     //Add user

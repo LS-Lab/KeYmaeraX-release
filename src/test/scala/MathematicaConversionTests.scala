@@ -1,5 +1,6 @@
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
+import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
@@ -10,7 +11,8 @@ import scala.collection.immutable._
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   type MExpr = com.wolfram.jlink.Expr
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val helper = new ProvabilityTestHelper((x) => println(x))
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
   var ml : JLinkMathematicaLink = null //var so that we can instantiate within a test case.
 
   val x = Variable("x", None, Real)
