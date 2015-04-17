@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import java.io.{FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.util.{Locale, Calendar}
 
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -119,7 +119,7 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
       else {
         val originalConfig = db.getConfiguration("mathematica")
 
-        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibFile.getAbsolutePath)
+        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
         val newConfig = new ConfigurationPOJO("mathematica", configMap)
 
         db.updateConfiguration(newConfig)
@@ -187,8 +187,15 @@ class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Request 
 class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
   override def getResultingResponses(): List[Response] = {
     val config = db.getConfiguration("mathematica").config
+    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+    val jlinkLibFile = {
+      if(osName.contains("win")) "JLinkNativeLibrary.dll"
+      else if(osName.contains("mac")) "libJLinkNativeLibrary.jnilib"
+      else if(osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
+      else "Unknown"
+    }
     if (config.contains("linkName") && config.contains("jlinkLibDir")) {
-      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")) :: Nil
+      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")+"/"+jlinkLibFile) :: Nil
     } else {
       new MathematicaConfigurationResponse("", "") :: Nil
     }
