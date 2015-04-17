@@ -41,16 +41,19 @@ object SQLite extends DBAbstraction {
   /**
    * Initializes a new database.
    */
+//  override def cleanup(): Unit = {
+//    sqldb.withSession(implicit session => {
+//      try {
+//        ddl.drop
+//      } catch {
+//        case e : SQLException => println("Ignoring an exception when dropping DB")//Tables did not exist -- that's find, we create it below anyways. @todo but we are assuming all or no ables exist.
+//      };
+//      ddl.create
+//      initializeForDemo()
+//    })
+//  }
   override def cleanup(): Unit = {
-    sqldb.withSession(implicit session => {
-      try {
-        ddl.drop
-      } catch {
-        case e : SQLException => println("Ignoring an exception when dropping DB")//Tables did not exist -- that's find, we create it below anyways. @todo but we are assuming all or no ables exist.
-      };
-      ddl.create
-      initializeForDemo()
-    })
+    initializeForDemo()
   }
 
   private def blankOk(x : Option[String]):String = x match {
