@@ -33,9 +33,20 @@ object Boot extends App {
     "**********************************************************\n" +
     "****                   KeYmaera X                     ****\n" +
     "****                                                  ****\n" +
-    "**** POINT YOUR WEB BROWSER TO http://localhost:8090/ ****\n" +
+    "**** OPEN YOUR WEB BROWSER AT  http://localhost:8090/ ****\n" +
     "****                                                  ****\n" +
     "**********************************************************\n"
   )
-
+  
+  // Try opening the web browser appropriately
+  try {
+    if (!java.awt.GraphicsEnvironment.isHeadless() &&
+      java.awt.Desktop.isDesktopSupported() &&
+      java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE))
+      java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8090/"))
+    } catch {
+      case exc: java.awt.HeadlessException =>
+      case exc: java.lang.ClassNotFoundException =>
+      case exc: Exception =>
+    }
 }
