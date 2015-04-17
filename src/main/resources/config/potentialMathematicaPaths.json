@@ -52,28 +52,28 @@
         "kernelPath" : "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\",
         "kernelName" : "MathKernel.exe",
         "jlinkPath" : "C:\\Program Files\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\",
-        "linkName" : "JLinkNativeLibrary.dll"
+        "jlinkName" : "JLinkNativeLibrary.dll"
       },
       {
         "version" : "9",
         "kernelPath" : "C:\\Program Files\\Wolfram Research\\Mathematica\\9.0\\",
         "kernelName" : "MathKernel.exe",
         "jlinkPath" : "C:\\Program Files\\Wolfram Research\\Mathematica\\9.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\",
-        "linkName" : "JLinkNativeLibrary.dll"
+        "jlinkName" : "JLinkNativeLibrary.dll"
       },
       {
         "version" : "10",
         "kernelPath" : "C:\\Programme\\Wolfram Research\\Mathematica\\10.0\\",
         "kernelName" : "MathKernel.exe",
         "jlinkPath" : "C:\\Programme\\Wolfram Research\\Mathematica\\10.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\",
-        "linkName" : "JLinkNativeLibrary.dll"
+        "jlinkName" : "JLinkNativeLibrary.dll"
       },
       {
         "version" : "9",
         "kernelPath" : "C:\\Programme\\Wolfram Research\\Mathematica\\9.0\\",
         "kernelName" : "MathKernel.exe",
         "jlinkPath" : "C:\\Programme\\Wolfram Research\\Mathematica\\9.0\\SystemFiles\\Links\\JLink\\SystemFiles\\Libraries\\Windows-x86-64\\",
-        "linkName" : "JLinkNativeLibrary.dll"
+        "jlinkName" : "JLinkNativeLibrary.dll"
       }
     ]
   },
