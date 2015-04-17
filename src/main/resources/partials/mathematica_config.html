@@ -30,9 +30,11 @@ configuration is pre-filled below.
             </span>
         </div>
         <div ng-show="MathematicaForm.linkName.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
-            <span ng-if="!linkNameIncomplete">This file does not exist on your system:
-            {{linkNameOkPrefix}}<strong><em>{{linkNameWrong}}</em></strong><br/>
-            The segment of the path highlighted in bold-face seems wrong.</span>
+            <span ng-if="!linkNameIncomplete">
+                This file does not exist on your system:
+                <span>{{linkNameOkPrefix}}</span><span><strong><em>{{linkNameWrong}}</em></strong></span><br/>
+                The segment of the path highlighted in bold-face seems wrong.
+            </span>
             <span ng-if="linkNameIncomplete">The path exists, but it does not point to {{mathematicaConfigSuggestion.kernelName}}.</span>
         </div>
     </div>
@@ -65,9 +67,11 @@ configuration is pre-filled below.
             </span>
         </div>
         <div ng-show="MathematicaForm.jlinkLibDir.$invalid" class="alert alert-danger"><i class="fa fa-bolt"></i>
-            <span ng-if="!jlinkPathIncomplete">This file does not exist on your system:
-            {{jlinkLibPathOkPrefix}}<strong><em>{{jlinkLibPathWrong}}</em></strong><br/>
-            The segment of the path highlighted in bold-face seems wrong.</span>
+            <span ng-if="!jlinkPathIncomplete">
+                This file does not exist on your system:
+                <span>{{jlinkLibPathOkPrefix}}</span><span><strong><em>{{jlinkLibPathWrong}}</em></strong></span><br/>
+                The segment of the path highlighted in bold-face seems wrong.
+            </span>
             <span ng-if="jlinkPathIncomplete">The path exists, but it does not point to {{mathematicaConfigSuggestion.jlinkName}}.</span>
         </div>
     </div>
