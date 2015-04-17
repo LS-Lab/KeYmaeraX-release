@@ -40,7 +40,8 @@ object Boot extends App {
   
   // Try opening the web browser appropriately
   try {
-    if (java.awt.Desktop.isDesktopSupported() &&
+    if (!java.awt.GraphicsEnvironment.isHeadless() &&
+      java.awt.Desktop.isDesktopSupported() &&
       java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.BROWSE))
       java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8090/"))
     } catch {
