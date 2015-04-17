@@ -87,13 +87,14 @@ sealed trait AtomicTerm extends Term with Atomic {}
 /**
  * real terms
  */
-sealed trait RTerm extends Term {
+private[nano] trait RTerm extends Term {
   final def sort = Real
 }
 
 sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort) extends NamedSymbol with AtomicTerm
-sealed case class RVariable(name: String, index: Option[Int] = None) extends NamedSymbol with AtomicTerm with RTerm
-sealed case class DifferentialSymbol(e: RVariable) extends NamedSymbol with AtomicTerm with RTerm
+sealed case class DifferentialSymbol(e: Variable) extends NamedSymbol with AtomicTerm with RTerm {
+  require(e.sort == Real)
+}
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
@@ -121,13 +122,22 @@ case class FuncOf(func: Function, child: Term) extends AtomicTerm {
 // composite terms
 sealed trait CompositeTerm extends Term with Composite {}
 
-case class Plus(left: RTerm, right: RTerm) extends CompositeTerm with RTerm
-case class Minus(left: RTerm, right: RTerm) extends CompositeTerm with RTerm
-case class Times(left: RTerm, right: RTerm) extends CompositeTerm with RTerm
-case class Divide(left: RTerm, right: RTerm) extends CompositeTerm with RTerm
-case class Power(left: RTerm, right: Number) extends CompositeTerm with RTerm
+/**
+ * Composite Real Terms, i.e. real terms composed of two real terms.
+ */
+private[nano] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
+  require(left.sort == Real && right.sort == Real)
+}
 
-case class Differential(child: RTerm) extends CompositeTerm with RTerm
+case class Plus(left: Term, right: Term) extends RCompositeTerm(left, right)
+case class Minus(left: Term, right: Term) extends RCompositeTerm(left, right)
+case class Times(left: Term, right: Term) extends RCompositeTerm(left, right)
+case class Divide(left: Term, right: Term) extends RCompositeTerm(left, right)
+case class Power(left: Term, right: Number) extends RCompositeTerm(left, right)
+
+case class Differential(child: Term) extends CompositeTerm with RTerm {
+  require(child.sort == Real)
+}
 
 /********************************************
  * Formulas of differential dynamic logic.
@@ -142,6 +152,13 @@ sealed trait Formula extends Expr {
 // atomic formulas
 sealed trait AtomicFormula extends Formula with Atomic {}
 
+/**
+ * Composite Real Terms, i.e. real terms composed of two real terms.
+ */
+private[nano] abstract class RAtomicFormula(left: Term, right: Term) extends AtomicFormula {
+  require(left.sort == Real && right.sort == Real)
+}
+
 object True extends AtomicFormula
 object False extends AtomicFormula
 
@@ -152,10 +169,10 @@ case class NotEqual(left: Term, right: Term) extends AtomicFormula {
   require(left.sort == right.sort)
 }
 
-case class GreaterEqual(left: RTerm, right: RTerm) extends AtomicFormula
-case class Greater(left: RTerm, right: RTerm) extends AtomicFormula
-case class LessEqual(left: RTerm, right: RTerm) extends AtomicFormula
-case class Less(left: RTerm, right: RTerm) extends AtomicFormula
+case class GreaterEqual(left: Term, right: Term) extends RAtomicFormula(left, right)
+case class Greater(left: Term, right: Term) extends RAtomicFormula(left, right)
+case class LessEqual(left: Term, right: Term) extends RAtomicFormula(left, right)
+case class Less(left: Term, right: Term) extends RAtomicFormula(left, right)
 
 object DotFormula extends NamedSymbol with AtomicFormula {
   override def toString = "\\_"
@@ -211,10 +228,11 @@ sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProg
 case class Assign(target: Variable, e: Term) extends AtomicProgram {
   require(e.sort == target.sort)
 }
-case class DiffAssign(target: DifferentialSymbol, e: RTerm) extends AtomicProgram
+case class DiffAssign(target: DifferentialSymbol, e: Term) extends AtomicProgram {
+  require(e.sort == Real)
+}
 case class AssignAny(target: Variable) extends AtomicProgram
 case class Test(cond: Formula) extends AtomicProgram
-case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends Program
 
 // composite programs
 sealed trait CompositeProgram extends Program with Composite {}
@@ -224,9 +242,12 @@ case class Loop(child: Program) extends Program {}
 //case class Dual(child: Program) extends Program {}
 
 // differential programs
-sealed trait DifferentialProgram extends Program {}
+sealed trait DifferentialProgram extends Program/*???*/ {}
+case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends DifferentialProgram
 sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with DifferentialProgram {}
-case class AtomicODE(xp: DifferentialSymbol, e: RTerm) extends DifferentialProgram {}
+case class AtomicODE(xp: DifferentialSymbol, e: Term) extends DifferentialProgram {
+  require(e.sort == Real)
+}
 case class DifferentialProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
 
 object DifferentialProduct {
