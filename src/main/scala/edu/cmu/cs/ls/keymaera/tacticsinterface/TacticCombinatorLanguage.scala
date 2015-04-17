@@ -107,6 +107,7 @@ object CLInterpreter {
     case PosApplyC(term, pos) => constructPositionTactic(term)(pos)
     case BuiltInC(name : String) => {
       val tactic = getBuiltIn(name, None)
+
       //Can't pattern match because tactic maps out to LCA(Tactic, PositionTactic) = Object.
       if(tactic.isLeft) tactic.left.get
       else throw new CombinatorTypeError("Cannot use a built-in position tactic without specifying a position")

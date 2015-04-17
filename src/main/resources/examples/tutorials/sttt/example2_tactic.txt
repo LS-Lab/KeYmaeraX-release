@@ -10,7 +10,7 @@ ImplyRight
       Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
       Choice & AndRight && (
         Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
-        Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT,
+        Assign & Seq & Test & ImplyRight & ODESolve & ImplyRight & ArithmeticT
       )
     )
   )
