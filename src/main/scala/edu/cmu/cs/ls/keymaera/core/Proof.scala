@@ -299,7 +299,7 @@ final case class Provable private (val conclusion: Sequent,
    */
   final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    require(subderivation.conclusion == subgoals(subgoal), "the given derivation concludes " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
+    require(subderivation.conclusion == subgoals(subgoal), "the given derivation needs to conclude " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {  //@TODO Avoid awkward list conversion
       // subderivation proves given subgoal
