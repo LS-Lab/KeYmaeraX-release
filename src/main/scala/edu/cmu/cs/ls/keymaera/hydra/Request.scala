@@ -312,7 +312,6 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
   private def tacticCompleted(steps : Array[AbstractDispatchedPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
                                                                                tacticId: String) {
     if (next < steps.length) {
-      val nextStep = steps(next)
       steps(next) match {
         case nextStep : DispatchedTacticPOJO => {
           KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
@@ -323,6 +322,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
         }
       }
     } else {
+      println("*******************\nFinished loading proof " + proofId + "\n*******************")
       TaskManagement.finishedLoadingTask(proofId)
     }
   }
