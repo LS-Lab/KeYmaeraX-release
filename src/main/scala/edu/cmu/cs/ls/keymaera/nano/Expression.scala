@@ -71,7 +71,10 @@ sealed trait Expression {
 sealed trait Atomic extends Expression
 sealed trait Composite extends Expression
 
-sealed trait NamedSymbol extends Expression
+sealed trait NamedSymbol extends Expression {
+  def name: String
+  override def toString = name
+}
 
 /********************************************
  * Terms of differential dynamic logic.
@@ -94,6 +97,7 @@ private[nano] trait RTerm extends Term {
 sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort) extends NamedSymbol with AtomicTerm
 sealed case class DifferentialSymbol(e: Variable) extends NamedSymbol with AtomicTerm with RTerm {
   require(e.sort == Real)
+  def name = e.name  //@todo eisegesis
 }
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
@@ -103,15 +107,15 @@ sealed case class Function(name: String, domain: Sort, sort: Sort) extends Expre
 }
 
 object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
-  override def toString = ("\\cdot")
+  def name = ("\\cdot")
 }
 
 object Nothing extends NamedSymbol with AtomicTerm {
   def sort = Unit
-  override def toString = ("\\nothing")
+  def name = ("\\nothing")
 }
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
-  override def toString = ("\\anything")
+  def name = ("\\anything")
 }
 
 case class FuncOf(func: Function, child: Term) extends AtomicTerm {
@@ -175,7 +179,7 @@ case class LessEqual(left: Term, right: Term) extends RAtomicFormula(left, right
 case class Less(left: Term, right: Term) extends RAtomicFormula(left, right)
 
 object DotFormula extends NamedSymbol with AtomicFormula {
-  override def toString = "\\_"
+  def name = "\\_"
 }
 
 case class PredOf(pred: Function, child: Term) extends AtomicFormula {
