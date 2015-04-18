@@ -1,7 +1,6 @@
 <h2>Mathematica Configuration</h2>
 
-Your system looks as if you're running Mathematica {{mathematicaConfigSuggestion.version}} on {{mathematicaConfigSuggestion.os}}. The suggested
-configuration is pre-filled below.
+Your system looks as if you're running Mathematica {{mathematicaConfigSuggestion.version}} on {{mathematicaConfigSuggestion.os}}.
 
 <form ng-controller="MathematicaConfig" name="MathematicaForm">
     <div class="form-group">
@@ -10,7 +9,7 @@ configuration is pre-filled below.
         <div>
         Please configure the path to the Mathematica MathKernel. On your operating system
             ({{mathematicaConfigSuggestion.os}}), look for an executable file named
-            <code>{{mathematicaConfigSuggestion.kernelName}}</code>. The path for a default
+            <code>{{mathematicaConfigSuggestion.kernelName}}</code>.</br>The path for a default
             installation of Mathematica {{mathematicaConfigSuggestion.version}} is
             <code>{{mathematicaConfigSuggestion.kernelPath}}{{mathematicaConfigSuggestion.kernelName}}</code>.
         </div>
@@ -18,8 +17,8 @@ configuration is pre-filled below.
         <div class="input-group">
             <span class="input-group-addon" ng-if="linkName"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="linkName === undefined"><i class="fa fa-wrench"></i></span>
-            <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"
-                   placeholder="The default path on {{mathematicaConfigSuggestion.os}} is {{mathematicaConfigSuggestion.kernelPath}}{{mathematicaConfigSuggestion.kernelName}}"/>
+            <input type="text" name="linkName" id="linkName" class="form-control" ng-model="linkName"/>
+                   <!--placeholder="The default path on {{mathematicaConfigSuggestion.os}} is {{mathematicaConfigSuggestion.kernelPath}}{{mathematicaConfigSuggestion.kernelName}}"/>-->
             <span class="input-group-btn">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
                         data-placement="bottom"
@@ -47,7 +46,7 @@ configuration is pre-filled below.
         <div>
             Please configure the path to the J/Link native library.
             On your operating system ({{mathematicaConfigSuggestion.os}}), look for a
-            file named <code>{{mathematicaConfigSuggestion.jlinkName}}</code>. The path for a default installation of
+            file named <code>{{mathematicaConfigSuggestion.jlinkName}}</code>.</br>The path for a default installation of
             Mathematica {{mathematicaConfigSuggestion.version}} is
             <code>{{mathematicaConfigSuggestion.jlinkPath}}{{mathematicaConfigSuggestion.jlinkName}}</code>.
         </div>
@@ -55,8 +54,8 @@ configuration is pre-filled below.
         <div class="input-group">
             <span class="input-group-addon" ng-if="jlinkLibPath"><i class="fa fa-check"></i></span>
             <span class="input-group-addon" ng-if="jlinkLibPath === undefined"><i class="fa fa-wrench"></i></span>
-            <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"
-                   placeholder="The default path on {{mathematicaConfigSuggestion.os}} is {{mathematicaConfigSuggestion.jlinkPath}}{{mathematicaConfigSuggestion.jlinkName}}"/>
+            <input type="text" name="jlinkLibDir" id="jlinkLibDir" class="form-control" ng-model="jlinkLibPath"/>
+                   <!--placeholder="The default path on {{mathematicaConfigSuggestion.os}} is {{mathematicaConfigSuggestion.jlinkPath}}{{mathematicaConfigSuggestion.jlinkName}}"/>-->
             <span class="input-group-btn">
                 <button type="button" class="btn btn-default dropdown-toggle" data-toggle="tooltip"
                         data-placement="bottom"
@@ -77,8 +76,8 @@ configuration is pre-filled below.
     </div>
 
     <div class="form-group">
-        <div class="col-md-4 pull-right">
-        <button ng-click="configureMathematica()" class="form-control btn btn-primary">Reconfigure and Restart Server</button>
+        <div class="col-md-2 pull-right">
+        <button ng-click="configureMathematica()" class="form-control btn btn-primary">Save Configuration</button>
         </div>
     </div>
 </form>

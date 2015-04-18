@@ -25,23 +25,23 @@
                 </tr>
                 <tr>
                     <td>\(x_1'=\theta_1, \ldots x_n'=\theta_n \& F\)</td>
-                    <td><code>x'=y & x >= 0</code></td>
+                    <td><code>x'=y&#160;&amp;&#160;x&#160;&gt;=&#160;0</code></td>
                     <td>continuous evolution of \(x_i\) along the differential equation system \(x_i' = \theta_i\)
-                        restricted to evolution domain \(F\)</td>
+                        restricted to evolution domain described by formula \(F\)</td>
                 </tr>
                 <tr>
                     <td>\(\alpha;~\beta\)</td>
-                    <td><code>x := 5; y := x</code></td>
+                    <td><code>x&#160;:=&#160;5; x'&#160;=&#160;2</code></td>
                     <td>sequential composition where \(\beta\) starts after \(\alpha\) finishes</td>
                 </tr>
                 <tr>
                     <td>\(\alpha \cup \beta\)</td>
-                    <td><code>x := 5 ++ y := x</code></td>
+                    <td><code>x&#160;:=&#160;5 ++ y&#160;:=&#160;x</code></td>
                     <td>nondeterministic choice, following either alternative \(\alpha\) or \(\beta\)</td>
                 </tr>
                 <tr>
                     <td>\(\alpha^*\)</td>
-                    <td><code>{x := x+1}*</code></td>
+                    <td><code>{x&#160;:=&#160;x+1}*</code></td>
                     <td>nondeterministic repetition, repeating \(\alpha\) \(n\) times for any \(n \in \mathbb{N}\)</td>
                 </tr>
             </tbody>
@@ -103,28 +103,28 @@
         </p>
 
         <code><pre>
-        Functions.
-            R A.        /* maximum acceleration */
-            R B.        /* maximum braking */
-            R a().      /* current acceleration: actuated */
-        End.
+Functions.
+    R A.        /* maximum acceleration */
+    R B.        /* maximum braking */
+    R a().      /* current acceleration: actuated */
+End.
 
-        ProgramVariables.
-            R x.        /* position */
-            R v.        /* velocity */
-            R a.        /* current acceleration: controller choice */
-        End.
+ProgramVariables.
+    R x.        /* position */
+    R v.        /* velocity */
+    R a.        /* current acceleration: controller choice */
+End.
 
-        Problem.
-            v >= 0 & A > 0 & B > 0              /* initial condition */
-            ->
-            [                                   /* system dynamics */
-            { {a := A ++ a := 0 ++ a := -B};    /* non-deterministic choice between assignments */
-              ?a()=a;                           /* test for equality */
-              x' = v, v' = a() & v >= 0;        /* differential equation system */
-            }* @invariant(v >= 0)               /* repeat transitions */
-            ] v >= 0                            /* safety/postcondition */
-        End.
+Problem.
+    v >= 0 & A > 0 & B > 0            /* initial condition */
+    ->
+    [                                 /* system dynamics */
+    { {a := A ++ a := 0 ++ a := -B};  /* non-deterministic choice of accelerations */
+      ?a()=a;                         /* test for equality */
+      x' = v, v' = a() & v >= 0;      /* differential equation system */
+    }* @invariant(v >= 0)             /* repeat transitions */
+    ] v >= 0                          /* safety/postcondition */
+End.
         </pre></code>
     </div>
 </div>

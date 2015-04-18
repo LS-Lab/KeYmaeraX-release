@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.launcher
 
-import java.io.{InputStreamReader, BufferedReader, File, FileFilter}
+import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
 
 /**
  * Usage:
@@ -35,6 +35,7 @@ object Main {
 
   private def runCmd(cmd:String) = {
     launcherLog("Running command: " + cmd)
+    //@todo As of 1.5, ProcessBuilder.start() is the preferred way to create a Process.
     val proc = Runtime.getRuntime.exec(cmd)
 
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -45,22 +46,32 @@ object Main {
 
     val errReaderThread = new Thread() {
       override def run() = {
+        try {
         val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream));
         var errLine = ""
         while((errLine = errReader.readLine()) != null) {
 //          errLine = errReader.readLine()
           if(errLine != null) System.err.println(errLine);
         }
+        } catch {
+          case exc: EOFException => System.err.println("Done with log output")
+          case exc: IOException => System.err.println("Done with log output: " + exc)
+        } 
       }
     }
     val stdReaderThread = new Thread() {
       override def run() = {
+        try {
         val reader =
           new BufferedReader(new InputStreamReader(proc.getInputStream()));
         var line = ""
         while((line = reader.readLine()) != null) {
           if(line != null) System.out.println(line);
         }
+        } catch {
+          case exc: EOFException => System.err.println("Done with log output")
+          case exc: IOException => System.err.println("Done with log input: " + exc)
+        } 
       }
     }
 
