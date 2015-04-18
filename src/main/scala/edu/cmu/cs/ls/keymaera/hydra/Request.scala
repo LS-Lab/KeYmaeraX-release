@@ -281,11 +281,11 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
   }
 }
 
-class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait :Boolean = false) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
 
-    new Thread() {
+    val t = new Thread() {
       if (!KeYmaeraInterface.containsTask(proof.proofId)) {
         val model = db.getModel(proof.modelId)
         KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
@@ -304,7 +304,10 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
           TaskManagement.finishedLoadingTask(proofId)
         }
       }
-    }.start()
+    }
+
+    if(!wait) t.start
+    else t.run
 
     val status = KeYmaeraInterface.getTaskStatus(proofId)
     new OpenProofResponse(proof, status.toString) :: Nil
@@ -347,13 +350,21 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
       }
     } else {
       val proof = db.getProofInfo(proofId)
-      val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
+      try {
 
-      val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0, true) match {
-        case Some(proofNode) => (proof, g, proofNode)
-        case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
-      })
-      new ProofAgendaResponse(result) :: Nil
+        val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
+
+        val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0, true) match {
+          case Some(proofNode) => (proof, g, proofNode)
+          case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
+        })
+        new ProofAgendaResponse(result) :: Nil
+      }
+      catch {
+        case e : IllegalStateException => {
+          new ProofAgendaResponse(List()) :: Nil
+        }
+      }
     }
   }
 }
@@ -615,7 +626,7 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
     model.tactic match {
       case Some(tactic) => {
         val initializedProofId = db.createProofForModel(modelId, userId, "Default Proof", new java.util.Date().toString)
-        new OpenProofRequest(db, userId, initializedProofId).getResultingResponses() //@todo we should do the rest of this inside of a ???
+        new OpenProofRequest(db, userId, initializedProofId, wait = true).getResultingResponses() //@todo we should do the rest of this inside of a ???
         new RunCLTermRequest(db, userId, initializedProofId, None, tactic).getResultingResponses();
 
       }
