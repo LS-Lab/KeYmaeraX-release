@@ -230,14 +230,17 @@ import scala.collection.immutable.{List, Map}
     } else {
       // successively merge Provables of all subgoals
       var merged = provable
+      merged = merged(proofStep.rule, subgoal) //@todo is this the right call here?
       for (i <- proofStep.subgoals.length to 1 by -1) {
         assert(proofStep.subgoals(i - 1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
         merged = merged(proofStep.subgoals(i - 1).provableWitness, i - 1)
       }
+      assert(merged.conclusion == provable.conclusion, "unchanged conclusion")
       assert(merged.isProved, "isClosed() should imply that merging gives a closed Provable\n\n" + merged + "\n\nfor\n\n" + this)
       merged
     }
   } ensuring (r => r.conclusion == sequent, "The merged Provable (if any) proves the conclusion this ProofNode sought " + this)
+
     /**
      * Test whether this ProofNode can be proved by merging Provable's of one of its alternatives.
      */
