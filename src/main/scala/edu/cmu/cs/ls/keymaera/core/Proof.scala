@@ -236,7 +236,8 @@ object Provable {
  * @author aplatzer
  * @TODO Subgoals as an immutable list or an immutable IndexedSeq?
  */
-final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
+final case class Provable private (val conclusion: Sequent,
+                                   val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
   if (subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
