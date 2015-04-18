@@ -2,7 +2,7 @@
  * Set Lattices.
  * @author smitsch
  */
-package edu.cmu.cs.ls.keymaera.nano
+package edu.cmu.cs.ls.keymaera.kernel
 
 
 //  type SetLattice[A] = Set[A]

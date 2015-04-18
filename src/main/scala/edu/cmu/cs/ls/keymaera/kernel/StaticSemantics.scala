@@ -3,7 +3,7 @@
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
-package edu.cmu.cs.ls.keymaera.nano
+package edu.cmu.cs.ls.keymaera.kernel
 
 // favoring immutable Seqs for soundness
 

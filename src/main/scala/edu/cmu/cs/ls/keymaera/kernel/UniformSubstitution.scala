@@ -4,11 +4,9 @@
  * @author smitsch
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
-package edu.cmu.cs.ls.keymaera.nano
+package edu.cmu.cs.ls.keymaera.kernel
 
 // require favoring immutable Seqs for soundness
-
-import edu.cmu.cs.ls.keymaera.core.SubstitutionClashException
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
@@ -97,7 +95,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * @return only the lead / key part that this SubstitutionPair is matching on,
    *         which may not be its head.
    */
-  private[core] def matchKey : NamedSymbol = what match {
+  private[kernel] def matchKey : NamedSymbol = what match {
     case FuncOf(f: Function, DotTerm | Nothing | Anything) => f
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
     case DotTerm => DotTerm
@@ -114,7 +112,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    * @TODO Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
-  private[core] def sameHead(right: Expression) = what match {
+  private[kernel] def sameHead(right: Expression) = what match {
     case FuncOf(lf, DotTerm | Anything | Nothing) => right match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, DotTerm | Anything | Nothing) => right match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, DotFormula) => right match { case PredicationalOf(rf, _) => lf == rf case _ => false }
@@ -191,7 +189,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   // implementation of uniform substitution application
       
   // uniform substitution on terms
-  private[core] def usubst(term: Term): Term = {
+  private[kernel] def usubst(term: Term): Term = {
     try {
       term match {
         // uniform substitution base cases
@@ -238,7 +236,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
-  private[core] def usubst(formula: Formula): Formula = {
+  private[kernel] def usubst(formula: Formula): Formula = {
     log(s"Substituting ${formula.prettyString()} using $this")
     try {
       formula match {
@@ -319,7 +317,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   // uniform substitution on programs
-  private[core] def usubst(program: Program): Program = {
+  private[kernel] def usubst(program: Program): Program = {
     try {
       program match {
         case a: ProgramConst if subsDefs.exists(_.what == a) =>

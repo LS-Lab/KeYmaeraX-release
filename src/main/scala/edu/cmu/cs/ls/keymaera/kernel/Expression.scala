@@ -4,7 +4,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-package edu.cmu.cs.ls.keymaera.nano
+package edu.cmu.cs.ls.keymaera.kernel
 
 // require favoring immutable Seqs for soundness
 
@@ -73,6 +73,7 @@ sealed trait Composite extends Expression
 
 sealed trait NamedSymbol extends Expression {
   def name: String
+  def index: Option[Int]
   override def toString = name
 }
 
@@ -90,7 +91,7 @@ sealed trait AtomicTerm extends Term with Atomic {}
 /**
  * real terms
  */
-private[nano] trait RTerm extends Term {
+private[kernel] trait RTerm extends Term {
   final def sort = Real
 }
 
@@ -98,24 +99,28 @@ sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort) 
 sealed case class DifferentialSymbol(e: Variable) extends NamedSymbol with AtomicTerm with RTerm {
   require(e.sort == Real)
   def name = e.name  //@todo eisegesis
+  def index = e.index  //@todo eisegesis
 }
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
-sealed case class Function(name: String, domain: Sort, sort: Sort) extends Expression with NamedSymbol {
+sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort) extends Expression with NamedSymbol {
   def kind = FunctionKind
 }
 
 object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
   def name = ("\\cdot")
+  def index = None
 }
 
 object Nothing extends NamedSymbol with AtomicTerm {
   def sort = Unit
   def name = ("\\nothing")
+  def index = None
 }
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
   def name = ("\\anything")
+  def index = None
 }
 
 case class FuncOf(func: Function, child: Term) extends AtomicTerm {
@@ -129,7 +134,7 @@ sealed trait CompositeTerm extends Term with Composite {}
 /**
  * Composite Real Terms, i.e. real terms composed of two real terms.
  */
-private[nano] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
+private[kernel] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
   require(left.sort == Real && right.sort == Real)
 }
 
@@ -159,7 +164,7 @@ sealed trait AtomicFormula extends Formula with Atomic {}
 /**
  * Composite Real Terms, i.e. real terms composed of two real terms.
  */
-private[nano] abstract class RAtomicFormula(left: Term, right: Term) extends AtomicFormula {
+private[kernel] abstract class RAtomicFormula(left: Term, right: Term) extends AtomicFormula {
   require(left.sort == Real && right.sort == Real)
 }
 
@@ -180,6 +185,7 @@ case class Less(left: Term, right: Term) extends RAtomicFormula(left, right)
 
 object DotFormula extends NamedSymbol with AtomicFormula {
   def name = "\\_"
+  def index = None
 }
 
 case class PredOf(pred: Function, child: Term) extends AtomicFormula {
@@ -227,7 +233,9 @@ sealed trait Program extends Expression {
 // atomic programs
 sealed trait AtomicProgram extends Program with Atomic {}
 
-sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {}
+sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {
+  def index = None
+}
 
 case class Assign(target: Variable, e: Term) extends AtomicProgram {
   require(e.sort == target.sort)
@@ -248,7 +256,9 @@ case class Loop(child: Program) extends Program {}
 // differential programs
 sealed trait DifferentialProgram extends Program/*???*/ {}
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends DifferentialProgram
-sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with DifferentialProgram {}
+sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with DifferentialProgram {
+  def index = None
+}
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends DifferentialProgram {
   require(e.sort == Real)
 }
