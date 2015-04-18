@@ -44,7 +44,6 @@ object Boot extends App {
 
   io ! bind
 
-  //Sorry, couldn't find a better method than this for the moment.
   {
     import scala.concurrent.ExecutionContext.Implicits.global
     val someTime = new FiniteDuration(4, scala.concurrent.duration.SECONDS)

@@ -14,6 +14,7 @@ import edu.cmu.cs.ls.keymaera.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLParser, CLInterpreter}
 
 import scala.io.Source
@@ -633,8 +634,25 @@ class IsLocalInstanceRequest() extends Request {
 
 class ShutdownReqeuest() extends Request {
   override def getResultingResponses() : List[Response] = {
-//    Boot.system.shutdown()
-    System.exit(0)
-    Nil
+    new Thread() {
+      override def run() = {
+        try {
+          //Tell all scheduled tactics to stop.
+          Tactics.MathematicaScheduler.shutdown()
+          Tactics.KeYmaeraScheduler.shutdown()
+          Boot.system.shutdown()
+          this.synchronized {
+            this.wait(4000)
+          }
+          System.exit(0) //should've already stopped the application by now.
+        }
+        catch {
+          case _ : Exception => System.exit(-1)
+        }
+
+      }
+    }.start
+
+    new BooleanResponse(true) :: Nil
   }
 }
