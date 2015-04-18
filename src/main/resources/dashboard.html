@@ -77,7 +77,6 @@
                         <li><a href="dashboard.html?#/usage">Using KeYmaera</a></li>
                         <li><a href="dashboard.html#/mathematica">Mathematica Confguration</a></li>
                         <li><a href="dashboard.html#/license">License</a></li>
-                        <li><a ng-click="shutdown()" ng-show="isLocal">Shutdown KeYmaeraX</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/syntax">Hybrid Program Syntax and Semantics</a></li>
@@ -85,6 +84,12 @@
                         <!--<li><a href="#">Hybrid Program Semantics</a></li>-->
                         <!--<li class="divider"></li>-->
                         <!--<li><a href="dashboard.html?#/dev">Developer Actions</a></li>-->
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-power-off"></i></a>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a ng-click="shutdown()" ng-show="isLocal">Shutdown KeYmaera X</a></li>
                     </ul>
                 </li>
             </ul>
@@ -103,7 +108,7 @@
 
 <div class="footer">
     <div class="container">
-        <p class="text-muted">&copy; <a href="http://www.ls.cs.cmu.edu/">Logical Systems Lab</a>, Carnegie Mellon University 2015</p>
+        <p class="text-muted">&copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2015</p>
     </div>
 </div>
 
