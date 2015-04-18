@@ -91,14 +91,14 @@ import scala.collection.immutable.{List, Map}
                                                     tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
       fitsToProvable
       @elidable(ASSERTION) def fitsToProvable = {
-        require(goal.sequent == provable.conclusion, "ProofStep constructed with goal according to provable's conclusion")
-        require(subgoals.map(_.sequent) == provable.subgoals, "ProofStep constructed with subgoals according to provable's premises")
+        require(conclusion == provable.conclusion, "ProofStep constructed with goal according to provable's conclusion")
+        require(premises == provable.subgoals, "ProofStep constructed with subgoals according to provable's premises")
       }
       ruleJustifiesProvable
       @elidable(ASSERTION) def ruleJustifiesProvable = {
         assert(Provable.startProof(provable.conclusion)(rule, 0) == provable, "The ProofStep's rule is the witness for its provable")
       }
-      justifiedByProofRule
+      //justifiedByProofRule //@note redundant re-check of ruleJustifiesProvable
       @elidable(ASSERTION) def justifiedByProofRule = {
 //        println("Checking " + this)
 //        println("Reapply  " + rule(goal.sequent))
