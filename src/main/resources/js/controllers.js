@@ -114,12 +114,20 @@ keymaeraProofControllers.controller('MathematicaConfig.UpdateDialog', function($
   }
 });
 
-//keymaeraProofControllers.controller('MathematicaConfig.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
-//  $scope.cancel = function() {
-//      alert("Closing your browser window because the server is now off-line!")
-//      $window.close();
-//  }
-//});
+keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+  $scope.cancel = function() {
+      alert("No!")
+      $window.close();
+  }
+});
+
+
+keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+$scope.noModalForHelpDialogHack = true
+});
+
+
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -356,11 +364,20 @@ keymaeraProofControllers.value('cgBusyDefaults',{
     templateUrl: 'partials/running-tactics-indicator.html'
 });
 
-keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $cookies, $modalInstance) {
+keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $modal, $cookies, $modalInstance) {
   $scope.rejectLicense = function() {
-    alert("KeYmaera X cannot be used without accepting the license.")
-      //TODO shut down server? $modalInstance.dismiss('cancel');
-  }
+    alert("KeYmaera X cannot be used without accepting the license -- we are not shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
+    $modalInstance.dismiss('cancel')
+
+    var modalInstance = $modal.open({
+      templateUrl: 'partials/shutdown_dialog.html',
+      controller: 'DashboardCtrl.ShutdownDialog',
+      backdrop: "static",
+      size: 'sm'
+    });
+
+    $http.get("/shutdown")
+  };
 
   $scope.cancel = function() {
     $http.post("/licenseacceptance")
@@ -378,6 +395,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
       $scope.theview = args.theview;
     });
 
+    $scope.noModalForHelpDialogHack = false;
     $http.get("/licenseacceptance")
          .success(function(data) {
             if(!data.success && !$scope.licenseDialogDisplayed) {
@@ -394,6 +412,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
          });
 
+    $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
             $scope.mathematicaIsConfigured = data.configured;
@@ -409,6 +428,24 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.all_models_count = data.all_models_count;
             $scope.proved_models_count = data.proved_models_count;
         })
+
+
+    $scope.isLocal = false;
+    $http.get('/isLocal')
+        .success(function(data) {
+            $scope.isLocal = data.success;
+        })
+
+    $scope.shutdown = function() {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/shutdown_dialog.html',
+          controller: 'DashboardCtrl.ShutdownDialog',
+          backdrop: "static",
+          size: 'sm'
+        });
+
+        $http.get("/shutdown")
+    };
 
     $scope.$emit('routeLoaded', {theview: 'dashboard'});
   });

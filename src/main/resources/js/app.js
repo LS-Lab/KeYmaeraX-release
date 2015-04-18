@@ -73,6 +73,10 @@ keymaeraProofApp.config(['$routeProvider',
         templateUrl: 'partials/mathematica_config.html',
         controller: 'MathematicaConfig'
       }).
+      when('/license', {
+                templateUrl: 'partials/license_dialog.html',
+                controller: 'DashboardCtrl.License'
+      }).
       otherwise({
         redirectTo: '/dashboard'
       });

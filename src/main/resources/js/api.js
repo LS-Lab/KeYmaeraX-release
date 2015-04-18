@@ -20,8 +20,7 @@ var ApiClient = {
    * @return URL to the resource.
    */
   url: function(resource) {
-    return "http://" + ServerInfo.hostname + ":" +
-           ServerInfo.port + "/" + resource;
+    return "/" + resource;
   },
 
   /**
