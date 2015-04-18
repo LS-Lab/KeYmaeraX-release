@@ -310,6 +310,7 @@ class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : 
   )
 }
 
+//@todo these are a mess.
 class MathematicaConfigSuggestionResponse(os: String, version: String, kernelPath: String, kernelName: String,
                                           jlinkPath: String, jlinkName: String) extends Response {
   override protected val json: JsValue = JsObject(

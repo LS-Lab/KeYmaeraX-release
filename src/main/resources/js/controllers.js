@@ -41,6 +41,13 @@ keymaeraProofControllers.controller('MathematicaConfig',
             $scope.linkName = data.linkName;
             $scope.jlinkLibPath = data.jlinkLibDir;
           }
+          else {
+            $http.get("/config/mathematica/suggest")
+                .success(function(data) {
+                    $scope.linkName = data.kernelPath + "/" + data.kernelName;
+                    $scope.jlinkLibPath = data.jlinkPath + "/" + data.jlinkName;
+                })
+          }
       })
       .error(function() {
           alert("Unhandled error when attempting to get Mathematica configuration.")
