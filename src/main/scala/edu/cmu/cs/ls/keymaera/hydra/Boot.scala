@@ -10,10 +10,6 @@ import spray.can.Http
 import scala.concurrent.duration.FiniteDuration
 
 object Boot extends App {
-  val isHosted = false
-  val host     = "localhost"
-  val port     = 8090
-
   def restart(): Unit = {
     this.system.shutdown();
     this.system.awaitTermination();
@@ -24,6 +20,7 @@ object Boot extends App {
     ComponentConfig.keymaeraInitializer.initialize()
     IO(Http) ! Http.Bind(service, interface = host, port = port)
   }
+
   // we need an ActorSystem to host our application in
   implicit var system = ActorSystem("on-spray-can")
 
@@ -32,6 +29,14 @@ object Boot extends App {
 
   // spawn dependency injection framework
   ComponentConfig.keymaeraInitializer.initialize()
+
+  val database = DBAbstractionObj.defaultDatabase
+  val config = database.getAllConfigurations.filter(_.name.equals("serverconfig")).headOption
+  val (isHosted:Boolean, host:String, port:Int) = config match {
+    case Some(c) => (c.config("isHosted").equals("true"), c.config("host"), Integer.parseInt(c.config("port")))
+    case None => (false, "localhost", 8090)
+  }
+
 
   // start a new HTTP server on port 8080 with our service actor as the handler
   val io = IO(Http)
@@ -52,7 +57,7 @@ object Boot extends App {
       "**********************************************************\n" +
         "****                   KeYmaera X                     ****\n" +
         "****                                                  ****\n" +
-        "**** OPEN YOUR WEB BROWSER AT  http://localhost:8090/ ****\n" +
+        "**** OPEN YOUR WEB BROWSER AT  http://"+host+":"+port+"/ ****\n" +
         "****                                                  ****\n" +
         "**** THE BROWSER MAY NEED RELOADS TILL THE PAGE SHOWS ****\n" +
         "**********************************************************\n"
