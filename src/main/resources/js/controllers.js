@@ -122,6 +122,14 @@ keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($sc
 });
 
 
+keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+$scope.noModalForHelpDialogHack = true
+});
+
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -356,11 +364,20 @@ keymaeraProofControllers.value('cgBusyDefaults',{
     templateUrl: 'partials/running-tactics-indicator.html'
 });
 
-keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $cookies, $modalInstance) {
+keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $modal, $cookies, $modalInstance) {
   $scope.rejectLicense = function() {
-    alert("KeYmaera X cannot be used without accepting the license.")
-      //TODO shut down server? $modalInstance.dismiss('cancel');
-  }
+    alert("KeYmaera X cannot be used without accepting the license -- we are not shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
+    $modalInstance.dismiss('cancel')
+
+    var modalInstance = $modal.open({
+      templateUrl: 'partials/shutdown_dialog.html',
+      controller: 'DashboardCtrl.ShutdownDialog',
+      backdrop: "static",
+      size: 'sm'
+    });
+
+    $http.get("/shutdown")
+  };
 
   $scope.cancel = function() {
     $http.post("/licenseacceptance")
@@ -378,6 +395,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
       $scope.theview = args.theview;
     });
 
+    $scope.noModalForHelpDialogHack = false;
     $http.get("/licenseacceptance")
          .success(function(data) {
             if(!data.success && !$scope.licenseDialogDisplayed) {
