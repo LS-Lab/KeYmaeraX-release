@@ -18,6 +18,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
  * These are helper functions for writing tactic tests. Suggested use:
  *    import edu.cmu.cs.ls.keymaera.ProvabilityTestHelper.scala
  * Created by nfulton on 12/6/14.
+ * @author nfulton
+ * @author aplatzer
  */
 class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
 
@@ -118,6 +120,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    * @param tactic
    * @param rootNode
    * @return true just in case the tactic closes the rootNode.
+   * @todo similar augmentations elsewhere
    */
   def tacticClosesProof(tactic : Tactic, rootNode : ProofNode):Boolean = runTactic(tactic, rootNode).isClosed()
 
@@ -189,6 +192,12 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
     logger("Proof is closed: " + rootNode.isClosed())
     if(!rootNode.isClosed()) {
       rootNode.openGoals().map(x => logger("Open Goal: " + x.sequent.toString()))
+    }
+
+    if (rootNode.isClosed()) {
+      assert(rootNode.isProved(), "A correct ProofNode.isClosed should imply ProofNode.isProveD()")
+      assert(rootNode.provableWitness.isProved, "A correct ProofNode.isClosed should imply its provableWitness isProved")
+      assert(rootNode.provableWitness.proved == rootNode.sequent, "A correct provableWitness construction proves the original goal")
     }
 
     rootNode
