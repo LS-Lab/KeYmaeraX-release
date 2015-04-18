@@ -236,8 +236,10 @@ object Provable {
  * @author aplatzer
  * @TODO Subgoals as an immutable list or an immutable IndexedSeq?
  */
-final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
+final case class Provable private (val conclusion: Sequent,
+                                   val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
+  if (subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
@@ -247,6 +249,9 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   /**
    * Checks whether this Provable proves its conclusion.
+   * @return true if conclusion is proved by this Provable,
+   *         false if subgoals are missing that need to be proved first.
+   * @note soundness-critical
    */
   final def isProved : Boolean = (subgoals.isEmpty)
 
@@ -266,11 +271,14 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
+   * @note soundness-critical
    */
   final def apply(rule : Rule, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
+      // subgoal closed by proof rule
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
+      // subgoal replaced by new subgoals fml::rest
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
   } ensuring(r => r.conclusion == conclusion, "Same conclusion after applying proof rules") ensuring (
@@ -287,13 +295,18 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    * @requires(subderivation.conclusion == subgoals(subgoal))
+   * @note soundness-critical
    */
   final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     require(subderivation.conclusion == subgoals(subgoal), "the given derivation concludes " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {  //@TODO Avoid awkward list conversion
-      case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
+      // subderivation proves given subgoal
+      case Nil =>
+        assert(subderivation.isProved && subderivation.proved == subgoals(subgoal), "Subderivation proves the given subgoal " + subgoals(subgoal) + " of\," + this + "\nby subderivation\n" + subderivation)
+        new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
+      // subderivation replaces subgoal by new premises fml::rest
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
   } ensuring(r => r.conclusion == conclusion,
@@ -304,12 +317,14 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
+   * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
+   * @note not soundness-critical only completeness-critical
    */
   def sub(subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     Provable.startProof(subgoals(subgoal))
   } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
-    r => r.subgoals == List(r.conclusion), "sub Provable is unfinished")
+    r => r.subgoals == List(r.conclusion), "sub Provable is an unfinished Provable")
 
   override def toString() = "Provable(conclusion\n" + conclusion + "\nfrom subgoals\n" + subgoals.mkString(",\n") + ")"
 }
