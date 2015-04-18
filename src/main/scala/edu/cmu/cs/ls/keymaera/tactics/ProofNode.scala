@@ -134,12 +134,11 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
       done
     } else {
       // successively merge Provables of all subgoals
-      var merged = provable
+      var merged = provable(orStep.rule, subgoal)
       for (i <- orStep.subgoals.length to 1 by -1) {
         assert(orStep.subgoals(i - 1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
         merged = merged(orStep.subgoals(i - 1).provableWitness, i - 1)
       }
-      merged = merged(orStep.rule, subgoal) //@todo is this the right call here?
       assert(merged.conclusion == provable.conclusion, "unchanged conclusion")
       assert(merged.isProved, "isClosed() should imply that merging gives a closed Provable\n\n" + merged + "\n\nfor\n\n" + this)
       merged
