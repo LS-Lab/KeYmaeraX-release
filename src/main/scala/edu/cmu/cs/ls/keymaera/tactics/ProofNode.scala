@@ -220,18 +220,23 @@ import scala.collection.immutable.{List, Map}
     require(isClosed, "Only ProofNodes that closed have a proved Provable " + this)
     if (fullProvable) throw new UnsupportedOperationException("Not implemented if fullProvable=false")
     // find any closed or-branch alternative
-    val proofStep : ProofNode.ProofStep = children.find(_.isClosed) match {
+    val proofStep: ProofNode.ProofStep = children.find(_.isClosed) match {
       case Some(step) => step
       case None => assert(false, "isClosed() should imply that there is at least one alternative ProofStep that is closed"); ???
     }
-    // successively merge Provables of all subgoals
-    var merged = provable
-    for (i <- proofStep.subgoals.length to 1 by -1) {
-      assert (proofStep.subgoals(i-1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
-      merged = merged(proofStep.subgoals(i-1).provableWitness, i-1)
+    if (proofStep.subgoals.isEmpty) {
+      // apply the closing rule
+      provable.sub(subgoal)(proofStep.rule, 0)
+    } else {
+      // successively merge Provables of all subgoals
+      var merged = provable
+      for (i <- proofStep.subgoals.length to 1 by -1) {
+        assert(proofStep.subgoals(i - 1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
+        merged = merged(proofStep.subgoals(i - 1).provableWitness, i - 1)
+      }
+      assert(merged.isProved, "isClosed() should imply that merging gives a closed Provable\n\n" + merged + "\n\nfor\n\n" + this)
+      merged
     }
-    assert(merged.isProved, "isClosed() should imply that merging gives a closed Provable\n\n" + merged + "\n\nfor\n\n" + this)
-    merged
   } ensuring (r => r.conclusion == sequent, "The merged Provable (if any) proves the conclusion this ProofNode sought " + this)
     /**
      * Test whether this ProofNode can be proved by merging Provable's of one of its alternatives.
