@@ -304,7 +304,7 @@ final case class Provable private (val conclusion: Sequent,
     subderivation.subgoals.toList match {  //@TODO Avoid awkward list conversion
       // subderivation proves given subgoal
       case Nil =>
-        assert(subderivation.isProved && subderivation.proved == subgoals(subgoal), "Subderivation proves the given subgoal " + subgoals(subgoal) + " of\," + this + "\nby subderivation\n" + subderivation)
+        assert(subderivation.isProved && subderivation.proved == subgoals(subgoal), "Subderivation proves the given subgoal " + subgoals(subgoal) + " of\n" + this + "\nby subderivation\n" + subderivation)
         new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
       // subderivation replaces subgoal by new premises fml::rest
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
