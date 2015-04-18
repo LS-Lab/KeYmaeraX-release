@@ -284,27 +284,28 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
 
-    if (!KeYmaeraInterface.containsTask(proof.proofId)) {
-      val model = db.getModel(proof.modelId)
-      KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
-      val steps : List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
-      if (steps.nonEmpty) {
+    new Thread() {
+      if (!KeYmaeraInterface.containsTask(proof.proofId)) {
+        val model = db.getModel(proof.modelId)
+        KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
+        val steps : List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
+        if (steps.nonEmpty) {
           steps.head match {
-          case firstStep : DispatchedTacticPOJO => {
-            KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-              firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
+            case firstStep : DispatchedTacticPOJO => {
+              KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
+                firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
+            }
+            case firstStep : DispatchedCLTermPOJO => {
+              KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)))
+            }
           }
-          case firstStep : DispatchedCLTermPOJO => {
-            KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)))
-          }
+        } else {
+          TaskManagement.finishedLoadingTask(proofId)
         }
-      } else {
-        TaskManagement.finishedLoadingTask(proofId)
       }
-    }
+    }.start()
 
     val status = KeYmaeraInterface.getTaskStatus(proofId)
-
     new OpenProofResponse(proof, status.toString) :: Nil
   }
 
