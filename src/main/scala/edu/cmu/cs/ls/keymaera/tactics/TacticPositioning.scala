@@ -5,7 +5,6 @@ import scala.language.implicitConversions
 
 /**
  */
-  @deprecated("Remove from prover core")
   case class PosInExpr(pos: List[Int] = Nil) {
     require(pos forall(_>=0), "all nonnegative positions")
     def first:  PosInExpr = new PosInExpr(pos :+ 0)
@@ -24,8 +23,8 @@ import scala.language.implicitConversions
    * @param inExpr the position in said formula.
    * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
    * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
+   * @todo use AntePos and SuccPos directly instead of index etc.
    */
-  @deprecated("Use SeqPos instead in prover core")
   abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
     require (index >= 0, "nonnegative index " + index)
     def isAnte: Boolean
@@ -76,7 +75,6 @@ object Position {
   implicit def seqPos2Position(p: SeqPos) : Position = if (p.isAnte) new AntePosition(p.getIndex, HereP) else new SuccPosition(p.getIndex, HereP)
 }
 
-  @deprecated("Use AntePos or SeqPos(-...) instead")
   class AntePosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = true
     protected def clone(i: Int, e: PosInExpr): Position = new AntePosition(i, e)
@@ -90,7 +88,6 @@ object Position {
     def apply(index: Int, inExpr: PosInExpr = HereP): Position = new AntePosition(index, inExpr)
   }
 
-  @deprecated("Use SuccPos or SeqPos instead")
   class SuccPosition(index: Int, inExpr: PosInExpr = HereP) extends Position(index, inExpr) {
     def isAnte = false
     protected def clone(i: Int, e: PosInExpr): Position = new SuccPosition(i, e)

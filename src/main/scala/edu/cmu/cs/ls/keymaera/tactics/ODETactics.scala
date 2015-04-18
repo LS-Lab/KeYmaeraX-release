@@ -239,6 +239,12 @@ object ODETactics {
   }
 
   /**
+   * Whether diffSolution will work on the given Formula, because its differential equation is solvable.
+   * @todo implement in a reliable way
+   */
+  def isDiffSolvable(f: Formula) = false
+
+  /**
    * Returns a tactic to use the solution of an ODE as a differential invariant.
    * @param solution The solution. If None, the tactic uses Mathematica to find a solution.
    * @return The tactic.

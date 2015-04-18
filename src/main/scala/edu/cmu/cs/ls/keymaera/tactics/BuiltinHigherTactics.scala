@@ -40,9 +40,19 @@ object BuiltinHigherTactics {
           case Assign(_, _) => Some(boxAssignT(p))
           case NDetAssign(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
+          case ode@ODESystem(_) if ODETactics.isDiffSolvable(f)=> Some(diffSolutionT(p))
           case _ => None
         }
-        //@TODO case DiamondModality(prog, f)
+          //@todo diamond cases
+        /*case DiamondModality(prog, _) if simplifyProg => prog match {
+          case Sequence(_, _) => Some(diaSeqT(p))
+          case Choice(_, _) => Some(diaChoiceT(p))
+          case Assign(_, _) => Some(diaAssignT(p))
+          case NDetAssign(_) => Some(diaNDetAssign(p))
+          case Test(_) => Some(diaTestT(p))
+          case ode@ODESystem(_) if ODETactics.isDiffSolvable(f)=> Some(diffSolutionT(p))
+          case _ => None
+        }*/
         case Forall(_, _) if quantifiers && !p.isAnte => Some(skolemizeT(p))
         case Exists(_, _) if quantifiers && p.isAnte => Some(skolemizeT(p))
         case _ => None
