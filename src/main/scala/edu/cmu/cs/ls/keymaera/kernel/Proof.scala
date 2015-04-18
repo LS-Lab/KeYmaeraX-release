@@ -131,7 +131,7 @@ final case class Sequent(pref: scala.collection.immutable.Seq[NamedSymbol],
    * A copy of this sequent concatenated with given sequent s.
    * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
-   * @returns a copy of this sequent concatenated with s.
+   * @return a copy of this sequent concatenated with s.
    * Results in a least upper bound with respect to subsets of this and s.
    */
   def glue(s: Sequent) : Sequent = {
