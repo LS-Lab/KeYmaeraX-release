@@ -736,7 +736,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case DotTerm => DotTerm
     case Nothing => Nothing
     case Anything => Anything
-    case x@Number(_, _) => x
+    case x: Number => x
     case FuncOf(f, theta) => FuncOf(f, rename(theta))
     // homomorphic cases
     //case Neg(s, l) => Neg(s, rename(l))
