@@ -195,6 +195,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
     }
 
     if (rootNode.isClosed()) {
+      // test that a Provable proving proofNode can be constructed
       assert(rootNode.isProved(), "A correct ProofNode.isClosed should imply ProofNode.isProveD()")
       assert(rootNode.provableWitness.isProved, "A correct ProofNode.isClosed should imply its provableWitness isProved")
       assert(rootNode.provableWitness.proved == rootNode.sequent, "A correct provableWitness construction proves the original goal")

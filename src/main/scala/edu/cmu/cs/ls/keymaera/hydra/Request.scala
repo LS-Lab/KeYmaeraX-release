@@ -633,7 +633,8 @@ class IsLocalInstanceRequest() extends Request {
 
 class ShutdownReqeuest() extends Request {
   override def getResultingResponses() : List[Response] = {
-    Boot.system.shutdown()
-    new BooleanResponse(true) :: Nil
+//    Boot.system.shutdown()
+    System.exit(0)
+    Nil
   }
 }

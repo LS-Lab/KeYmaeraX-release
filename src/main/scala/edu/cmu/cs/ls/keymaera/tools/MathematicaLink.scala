@@ -80,6 +80,7 @@ class JLinkMathematicaLink extends MathematicaLink {
    * Closes the connection to Mathematica.
    */
   def shutdown() = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.terminateKernel()
     ml.close()
     ml = null
@@ -89,6 +90,7 @@ class JLinkMathematicaLink extends MathematicaLink {
    * Runs the command and then halts program execution until answer is returned.
    */
   def runUnchecked(cmd: String): (String, KExpr) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.synchronized {
       ml.evaluate(cmd)
       ml.waitForAnswer()
@@ -100,6 +102,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   def run(cmd: MExpr): (String, KExpr) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.synchronized {
       queryIndex += 1
       val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
@@ -112,6 +115,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   private def dispatch(cmd: String) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.evaluate(cmd)
   }
 
@@ -119,6 +123,7 @@ class JLinkMathematicaLink extends MathematicaLink {
    * blocks and returns the answer.
    */
   private def getAnswer(input: String, cmdIdx: Long): (String, KExpr) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
     if (res == exceptionExpr) {

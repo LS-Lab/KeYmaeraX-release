@@ -334,6 +334,8 @@ object Tactics {
       this.root = if(t != this && t.root == None) Some(t) else t.root
       require(t.root != Some(this), "Cannot have loops in tactic tree")
       registerRunningTactic(this)
+      if (scheduler == null)
+        throw new IllegalStateException("Cannot schedule tactics " + this + " in absence of an appropriate scheduler")
       scheduler.dispatch(new TacticWrapper(this, node))
     }
 

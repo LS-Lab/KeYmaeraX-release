@@ -215,6 +215,8 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   */
 
 object Provable {
+  private[core] val debugProver = false
+
   /**
    * Begin a new proof for the desired conclusion goal
    * @param goal the desired conclusion.
@@ -242,11 +244,11 @@ object Provable {
 final case class Provable private (val conclusion: Sequent,
                                    val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
-  if (subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
+  if (Provable.debugProver && subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
-   * @TODO Not sure how to make this type visible outside as well
+   * @todo Not sure how to make this type visible outside as well
    */
   type Subgoal = Int
 
@@ -302,7 +304,7 @@ final case class Provable private (val conclusion: Sequent,
    */
   final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    require(subderivation.conclusion == subgoals(subgoal), "the given derivation needs to conclude " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
+    require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the given derivation to conclude " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {  //@TODO Avoid awkward list conversion
       // subderivation proves given subgoal
