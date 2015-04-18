@@ -77,6 +77,13 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                 }
             }
 
+            function escapeUnderscores(name) {
+              var lastUScorePos = name.lastIndexOf("_")
+              var escapedPrefix = name.substring(0, lastUScorePos).replace(/_/g, "\\_")
+              var remainder = name.substring(lastUScorePos)
+              return escapedPrefix + remainder
+            }
+
             // Recursively generate LaTeX
             function parseFormulaHelper(json, depth) {
                 var items = [];
@@ -274,7 +281,7 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                         case "Nothing": content = ""; break;
 
                         case "apply":
-                            var name = c[0]
+                            var name = escapeUnderscores(c[0])
                             if (c[1].name != "Nothing") {
                               content = name + parensIfNeeded(json, c[1], depth + 1);
                             } else {
@@ -287,12 +294,12 @@ angular.module('mathjaxformula', ['ngSanitize','mathjaxbind'])
                             for (var i = 0; i < c.length; i++) {
                                 seqs.push(parseFormulaHelper(c[i]));
                             }
-                            content = json.name + "(" + seqs.join(", ") + ")";
+                            content = escapeUnderscores(json.name) + "(" + seqs.join(", ") + ")";
                             break;
                     }
                     items.push(content);
                 } else {
-                    items.push(json.name);
+                    items.push(escapeUnderscores(json.name));
                 }
                 return items.join("");
             }
