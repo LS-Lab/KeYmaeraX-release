@@ -12,7 +12,7 @@ ImplyRight
           & DiffCut("xm() <= x_0")
           & onLabel(
             ("Use cut",
-              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v_0/2 + v_0^2/4 < ((S() - xm())/2)^2")
+              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2")
               & onLabel(
                 ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
                 ("Show cut", DiffInvariant)
@@ -24,7 +24,7 @@ ImplyRight
           & DiffCut("xm() <= x_0")
           & onLabel(
             ("Use cut",
-              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v_0/2 + v_0^2/4 < ((S() - xm())/2)^2")
+              DiffCut("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2")
               & onLabel(
                 ("Use cut", DiffWeaken & ImplyRight & ArithmeticT),
                 ("Show cut", DiffInvariant)

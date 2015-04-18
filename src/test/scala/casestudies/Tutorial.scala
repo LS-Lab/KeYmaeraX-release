@@ -373,7 +373,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     val plant = debugT("Plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT) & debugT("Before Cut") &
       ls(diffCutT("xm() <= x_0".asFormula)) & onBranch(
       (cutShowLbl, debugT("Show cut 1") & ls(diffInvariant)),
-      (cutUseLbl, debugT("Use cut 1") & ls(diffCutT("5/4*(x_0-xr())^2 + (x_0-xr())*v_0/2 + v_0^2/4 < ((S() - xm())/2)^2".asFormula)) & onBranch(
+      (cutUseLbl, debugT("Use cut 1") & ls(diffCutT("5/4*(x_0-xr())^2 + (x_0-xr())*v/2 + v^2/4 < ((S() - xm())/2)^2".asFormula)) & onBranch(
         (cutShowLbl, debugT("Show cut 2") & ls(diffInvariant)),
         (cutUseLbl, debugT("Use cut 2") & ls(diffWeakenT) & ls(ImplyRightT) & debugT("Result Weaken"))
           )

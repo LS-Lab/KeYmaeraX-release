@@ -269,7 +269,8 @@ object TacticLibrary {
           }
           val qPhi =
             if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi)
-            else vars.foldRight(phi)((v, f) => Forall(v :: Nil, f))
+            else vars.sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+              foldRight(phi)((v, f) => Forall(v :: Nil, f))
 
           Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
             (cutUseLbl, lastAnte(ImplyLeftT) &&(
