@@ -31,7 +31,7 @@
             <td>ID</td>
             <td>Name</td>
             <td>Date</td>
-            <td>Proof Steps</td>
+            <!--<td>Proof Steps</td>-->
             <td>Status</td>
             <td>Actions</td>
         </tr>
@@ -41,7 +41,7 @@
             <td>{{ proof.id }}</td>
             <td>{{ proof.name }}</td>
             <td>{{ proof.date }}</td>
-            <td>{{ proof.stepCount }}</td>
+            <!--<td>{{ proof.stepCount }}</td>-->
             <td><span ng-if="proof.status" class="fa fa-check"></span>
                 <span ng-if="proof.status"> Proved</span>
                 <span ng-if="proof.status === false" class="fa fa-pencil"></span>
