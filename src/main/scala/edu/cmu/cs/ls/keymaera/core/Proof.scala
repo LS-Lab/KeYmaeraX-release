@@ -215,6 +215,8 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
   */
 
 object Provable {
+  private[core] val debugProver = false
+
   /**
    * Begin a new proof for the desired conclusion goal
    * @param goal the desired conclusion.
@@ -242,7 +244,7 @@ object Provable {
 final case class Provable private (val conclusion: Sequent,
                                    val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
-  if (subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
+  if (Provable.debugProver && subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.

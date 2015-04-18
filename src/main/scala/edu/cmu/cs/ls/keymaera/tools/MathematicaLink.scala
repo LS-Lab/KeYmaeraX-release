@@ -112,6 +112,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   private def dispatch(cmd: String) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.evaluate(cmd)
   }
 
