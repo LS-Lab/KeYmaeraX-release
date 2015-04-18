@@ -328,6 +328,10 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
         "keymaera.default":
             { "name" : "keymaera.default",
               "label" : "KeYmaera Master Tactic"
+            },
+        "keymaera.step":
+            { "name": "keymaera.step",
+              "label": "KeYmaera Step Tactic"
             }
     };
     var userTactics = {
