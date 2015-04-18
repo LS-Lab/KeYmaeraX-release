@@ -621,3 +621,18 @@ class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, m
     }
   }
 }
+
+/////
+// Requests for shutting down KeYmaera if KeYmaera is hosted locally.
+/////
+
+class IsLocalInstanceRequest() extends Request {
+  override def getResultingResponses(): List[Response] = new BooleanResponse(!Boot.isHosted) :: Nil
+}
+
+class ShutdownReqeuest() extends Request {
+  override def getResultingResponses() : List[Response] = {
+    Boot.system.shutdown()
+    new BooleanResponse(true) :: Nil
+  }
+}

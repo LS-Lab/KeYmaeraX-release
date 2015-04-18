@@ -364,6 +364,14 @@ trait RestApi extends HttpService {
     }
   }}
 
+  val isLocal = path("isLocal") { pathEnd { get {
+    complete(standardCompletion(new IsLocalInstanceRequest()))
+  }}}
+
+  val shutdown = path("shutdown") { pathEnd { get {
+    complete(standardCompletion(new ShutdownReqeuest()))
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Licensing
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -421,7 +429,7 @@ trait RestApi extends HttpService {
     mathematicaStatus ::
     mathematicaConfigSuggestion ::
     license ::
-      initializeModel ::
+      initializeModel :: isLocal :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

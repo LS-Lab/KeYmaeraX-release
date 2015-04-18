@@ -114,12 +114,12 @@ keymaeraProofControllers.controller('MathematicaConfig.UpdateDialog', function($
   }
 });
 
-//keymaeraProofControllers.controller('MathematicaConfig.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
-//  $scope.cancel = function() {
-//      alert("Closing your browser window because the server is now off-line!")
-//      $window.close();
-//  }
-//});
+keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+  $scope.cancel = function() {
+      alert("No!")
+      $window.close();
+  }
+});
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -394,6 +394,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
          });
 
+    $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
             $scope.mathematicaIsConfigured = data.configured;
@@ -409,6 +410,24 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.all_models_count = data.all_models_count;
             $scope.proved_models_count = data.proved_models_count;
         })
+
+
+    $scope.isLocal = false;
+    $http.get('/isLocal')
+        .success(function(data) {
+            $scope.isLocal = data.success;
+        })
+
+    $scope.shutdown = function() {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/shutdown_dialog.html',
+          controller: 'DashboardCtrl.ShutdownDialog',
+          backdrop: "static",
+          size: 'sm'
+        });
+
+        $http.get("/shutdown")
+    };
 
     $scope.$emit('routeLoaded', {theview: 'dashboard'});
   });
