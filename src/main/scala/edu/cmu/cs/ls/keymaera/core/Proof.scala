@@ -238,6 +238,7 @@ object Provable {
  */
 final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
+  if (subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
@@ -315,6 +316,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
+   * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
    * @note not soundness-critical only completeness-critical
    */
   def sub(subgoal : Subgoal) : Provable = {
