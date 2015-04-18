@@ -68,13 +68,13 @@ object KeYmaeraInterface {
       loading -= taskId
     }
 
-    def addTask(r: ProofNode, taskId: String) = this.synchronized {
+    def addTask(r: ProofNode, taskId: String) = tasks.synchronized {
       assert(r.children.isEmpty)
       tasks += (taskId -> (r, Map()))
       proofNodeIds += (taskId -> Map())
     }
 
-    def addNode(tId: String, nId: String, p: ProofNode) = this.synchronized {
+    def addNode(tId: String, nId: String, p: ProofNode) = tasks.synchronized {
       tasks.get(tId) match {
         case Some(v) =>
           tasks += (tId -> (v._1, v._2 + (nId -> p)))
@@ -93,8 +93,8 @@ object KeYmaeraInterface {
       case None => None
     }
 
-    def getNode(tId: String, nId: String): Option[ProofNode] = {
-      tasks.get(tId).map(_._2.get(nId)).flatten
+    def getNode(tId: String, nId: String): Option[ProofNode] = tasks.synchronized {
+      tasks.get(tId).flatMap(_._2.get(nId))
     }
   }
 
@@ -315,7 +315,7 @@ object KeYmaeraInterface {
             if(fid.startsWith("ante:")) (n, Some(new AntePosition(tail))) else (n, Some(new SuccPosition(tail)))
           case None => (n, None)
         }
-      case None => throw new IllegalArgumentException("Unknown task " + taskId + "/" + nodeId)
+      case None => throw new IllegalArgumentException("Unknown task node " + taskId + "/" + nodeId)
     }
   }
 
