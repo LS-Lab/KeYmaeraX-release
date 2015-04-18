@@ -9,7 +9,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 // require favoring immutable Seqs for soundness
 
-import edu.cmu.cs.ls.keymaera.core.{Provable, Rule, Sequent}
+import edu.cmu.cs.ls.keymaera.core.{CoreException, Provable, Rule, Sequent}
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
@@ -71,16 +71,22 @@ import scala.collection.immutable.{List, Map}
 
   class ProofStepInfo(var infos: Map[String, String])
 
-  @deprecated("Use Provable() instead.")
   object ProofNode {
     /**
-     * Represents a deduction step in a proof using the indicated rule which leads to the given conjunctive list of subgoals.
-     * Note that only ProofNode.apply is allowed to construct proof steps.
-     * @param goal - parent of the step
+     * Represents a deduction step in a proof using the indicated rule
+     * which leads to the given conjunctive list of subgoals.
+     * For soundness, only ProofNode.apply is allowed to construct proof steps.
+     * But Provable is justifying soundness even without that constraint.
+     * @param rule the proof rule used in this proof step
+     * @param goal - the goal that this ProofStep was applied to, i.e. its immediate conclusion.
      * @param subgoals - children of the step
      * @todo could merely use a Provable as evidence rather than remembering the Rule as evidence.
      */
-    sealed case class ProofStep private[ProofNode] (rule : Rule, goal : ProofNode, subgoals : scala.collection.immutable.List[ProofNode], tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
+    //@deprecated("Redundant soundness-checking. Can use Provable() instead.")
+    sealed case class ProofStep private[ProofNode] (rule : Rule,
+                                                    goal : ProofNode,
+                                                    subgoals : scala.collection.immutable.List[ProofNode],
+                                                    tacticInfo: ProofStepInfo = new ProofStepInfo(Map())) {
       justifiedByProofRule
       @elidable(ASSERTION) def justifiedByProofRule = {
 //        println("Checking " + this)
@@ -89,16 +95,31 @@ import scala.collection.immutable.{List, Map}
 //        println("Checked  " + this)
       }
 
+      def conclusion = goal.sequent
+      def premises = subgoals.map(_.sequent)
+
+      private[ProofNode] def isClosed : Boolean = subgoals.foldLeft(true)(_ && _.isClosed())
+
       override def toString() = "ProofStep(" + rule + "\napplied to goal\n\n" + goal + "\n\nexpects subgoals\n" + subgoals.map(_.sequent).mkString(",\n") + ")"
     }
   }
 
+/**
+ * A proof node for the tactics trying to prove the given subgoal of provable.
+ * @param parent The parent's proof node that this ProofNode is trying to help prove.
+ * @param provable The provable that this ProofNode is trying to help prove.
+ * @param subgoal The subgoal of provable that this ProofNode is trying to prove.
+ */
   sealed class ProofNode protected (val parent : ProofNode, val provable: Provable, val subgoal: Int) {
     /**
      * Whether to keep full provables or just local provables around as evidence.
      */
     private val fullProvable = false
 
+  /**
+   * The alternatives that tactics are currently trying to prove this ProofNode, i.e.
+   * the given subgoal of provable.
+   */
     @volatile private[this] var alternatives : List[ProofNode.ProofStep] = Nil
 
 
@@ -157,7 +178,9 @@ import scala.collection.immutable.{List, Map}
           //@TODO assert(all subgoals have the same provable and the same parent)
           ProofNode.ProofStep(rule, this, subgoals)
         } else {  // only keep subProvable around to simplify subsequent merge
+          // conduct a new Provable just for the selected subgoal
           val newProvable = provable.sub(subgoal)(rule, 0)
+          // a new ProofNode for each resulting subgoal
           ProofNode.ProofStep(rule, this, Range(0, newProvable.subgoals.length).
             map(new ProofNode(this, newProvable, _)).toList)
         }
@@ -184,15 +207,39 @@ import scala.collection.immutable.{List, Map}
      * @see #isProved()
      */
     def isClosed(): Boolean =
-      children.map((f: ProofNode.ProofStep) =>  f.subgoals.foldLeft(true)(_ && _.isClosed())).contains(true)
+      !children.find((f: ProofNode.ProofStep) =>  f.isClosed).isEmpty
 
+  /**
+   * The (closed) Provable this ProofNode proves if isClosed.
+   * Finds an alternative that it can successively merge via
+   * Provability.apply(Provable, Int) to yield an isProved().
+   * @requires(isClosed)
+   */
+  final def provableWitness : Provable = {
+    // probably not proved if isClosed status is not even set (may be conservatively incorrect)
+    require(isClosed, "Only ProofNodes that closed have a proved Provable " + this)
+    // find any closed or-branch alternative
+    val proofStep : ProofNode.ProofStep = children.find(_.isClosed) match {
+      case Some(step) => step
+      case None => assert(false, "isClosed() should imply that there is at least one alternative ProofStep that is closed"); ???
+    }
+    // successively merge Provables of all subgoals
+    var merged = provable
+    for (i <- 0 to proofStep.subgoals.length) {
+      assert (proofStep.subgoals(i).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
+      merged = merged(proofStep.subgoals(i).provableWitness, i)
+    }
+    assert(merged.isProved, "isClosed() should imply that there is a closed Provable")
+    merged
+  } ensuring (r => r.conclusion == sequent, "The merged Provable (if any) proves the conclusion this ProofNode sought " + this)
     /**
      * Test whether this ProofNode can be proved by merging Provable's of one of its alternatives.
-     * @TODO The sound version needs to find an alternative
-     *      that it can successively merge via Provability.apply(Provable, Int) to yield an isProved()
-     * @TODO Could return Provable witness too.
      */
-    def isProved(): Boolean = ???
+    def isProved(): Boolean = {
+      // probably not proved if isClosed status is not even set (may be conservatively incorrect)
+      if (!isClosed()) return false
+      provableWitness.isProved
+    }
 
     /**
      * Retrieves a list of open goals.
