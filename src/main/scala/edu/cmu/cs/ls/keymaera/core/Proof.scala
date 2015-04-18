@@ -293,12 +293,12 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
     require(subderivation.conclusion == subgoals(subgoal), "the given derivation concludes " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {  //@TODO Avoid awkward list conversion
-      case Nil => new Provable(conclusion, subgoals.drop(subgoal))
+      case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
   } ensuring(r => r.conclusion == conclusion,
     "Same conclusion\n" + conclusion + " after joining derivations") ensuring (
-    r => subgoals.drop(subgoal).toSet.subsetOf(r.subgoals.toSet),
+    r => subgoals.patch(subgoal, Nil, 1).toSet.subsetOf(r.subgoals.toSet),
     "All previous premises still around except the one replaced by a derivation") ensuring (
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 

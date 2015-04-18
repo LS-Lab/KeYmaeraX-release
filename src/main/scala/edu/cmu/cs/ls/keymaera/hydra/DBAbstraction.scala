@@ -155,7 +155,10 @@ trait DBAbstraction {
   def initializeForDemo() : Unit = {
     val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
     val target = new java.io.File(DBAbstractionObj.dblocation)
-    new FileOutputStream(target).getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
+    val targetStream = new FileOutputStream(target)
+    targetStream.getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
+    targetStream.close()
+    dbFile.close()
   }
 
   import spray.json._ //allows for .parseJoson on strings.
