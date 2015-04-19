@@ -655,12 +655,21 @@ class ShutdownReqeuest() extends Request {
       override def run() = {
         try {
           //Tell all scheduled tactics to stop.
+          //@todo figure out which of these are actually necessary.
+          System.out.flush()
+          System.err.flush()
           Tactics.MathematicaScheduler.shutdown()
           Tactics.KeYmaeraScheduler.shutdown()
+          System.out.flush()
+          System.err.flush()
           Boot.system.shutdown()
+          System.out.flush()
+          System.err.flush()
           this.synchronized {
             this.wait(4000)
           }
+          System.out.flush()
+          System.err.flush()
           System.exit(0) //should've already stopped the application by now.
         }
         catch {
