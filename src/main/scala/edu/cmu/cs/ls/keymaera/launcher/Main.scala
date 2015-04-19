@@ -27,6 +27,17 @@ object Main {
     }
   }
 
+
+
+  def processIsAlive(proc : Process) = {
+    try {
+      proc.exitValue();
+      false
+    } catch {
+      case e : Exception => true
+    }
+  }
+
   private def runCmd(cmd:String) = {
     launcherLog("Running command: " + cmd)
     //@todo As of 1.5, ProcessBuilder.start() is the preferred way to create a Process.
@@ -43,7 +54,7 @@ object Main {
         try {
         val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream));
         var errLine = ""
-        while((errLine = errReader.readLine()) != null && proc.isAlive) {
+        while((errLine = errReader.readLine()) != null && processIsAlive(proc)) {
 //          errLine = errReader.readLine()
           if(errLine != null) System.err.println(errLine);
         }
@@ -59,7 +70,7 @@ object Main {
         val reader =
           new BufferedReader(new InputStreamReader(proc.getInputStream()));
         var line = ""
-        while((line = reader.readLine()) != null && proc.isAlive) {
+        while((line = reader.readLine()) != null && processIsAlive(proc)) {
           if(line != null) System.out.println(line);
         }
         } catch {

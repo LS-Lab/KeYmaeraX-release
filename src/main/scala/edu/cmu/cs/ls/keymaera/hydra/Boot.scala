@@ -34,7 +34,7 @@ class LoadingDialog {
       if(window != null) {
         window.setVisible(false)
         window = null
-        JOptionPane.showMessageDialog(null, "Open a browser to http://localhost:8090 to access KeYmaera X. The server will continue running in the background until it is manually shutdown using the power button in the Web UI.")
+        JOptionPane.showMessageDialog(null, "Open a browser to http://localhost:8090 to access KeYmaera X.\n The server will continue running in the background until it is manually shutdown using the power button in the Web UI.")
       }
 //        label.setText("KeYmaeraX is running at http://localhost:8090")
 //      label.repaint()
