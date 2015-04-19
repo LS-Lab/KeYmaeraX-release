@@ -31,7 +31,12 @@ class ProvabilityExamples extends FlatSpec with Matchers with BeforeAndAfterEach
   }
 
 
-  "The Default Tactic" should "handle assignments" in {
+  "The Default Tactic" should "handle obvious proofs" in {
+    val problem1 = parseFormula("x=1 -> x=1")
+    tacticClosesProof(TacticLibrary.default, formulaToNode(problem1)) should be (true)
+  }
+
+  it should "handle assignments" in {
     val problem1 = parseFormula("[x:=1;]x=1")
     tacticClosesProof(TacticLibrary.default, formulaToNode(problem1)) should be (true)
   }

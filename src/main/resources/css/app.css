@@ -21,6 +21,14 @@ input[readonly] {
   cursor: text !important;
 }
 
+code {
+  padding: 2px 4px;
+  font-size: 90%;
+  color: #428bca;
+  background-color: #f9f2f4;
+  border-radius: 4px;
+}
+
 table .btn{
   padding: 1px 5px 1px;
   border-style: none;

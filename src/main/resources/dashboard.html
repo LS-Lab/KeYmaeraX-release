@@ -76,6 +76,7 @@
                         <li><a href="dashboard.html?#/tutorials">Tutorials</a></li>
                         <li><a href="dashboard.html?#/usage">Using KeYmaera</a></li>
                         <li><a href="dashboard.html#/mathematica">Mathematica Confguration</a></li>
+                        <li><a href="dashboard.html#/license">License</a></li>
                         <!--<li><a href="#">Videos</a></li>-->
                         <li class="divider"></li>
                         <li><a href="dashboard.html?#/syntax">Hybrid Program Syntax and Semantics</a></li>
@@ -85,6 +86,12 @@
                         <!--<li><a href="dashboard.html?#/dev">Developer Actions</a></li>-->
                     </ul>
                 </li>
+                <li class="dropdown">
+                    <a ng-click="shutdown()" ng-show="isLocal"/><!--class="dropdown-toggle" data-toggle="dropdown"--><i class="fa fa-power-off"></i></a>
+                    <!--<ul class="dropdown-menu" role="menu">-->
+                        <!--<li><a  ng-controller="DashboardCtrl">Shutdown KeYmaera X</a></li>-->
+                    <!--</ul>-->
+                </li>
             </ul>
         </div><!--/.navbar-collapse -->
     </div>
@@ -93,7 +100,8 @@
 <div class="container">
     <div class="alert alert-warning"  role="alert" ng-show="!mathematicaIsConfigured" id="mathematicaConfigurationAlert">
         <button type="button" class="close" data-dismiss="alert">&times;</button>
-        <b>Warning:</b> Mathematica is not configured. Most proofs will fail without Mathematica. <a href="dashboard.html#/mathematica"><b>Configure now.</b></a>
+        <b><i class="fa fa-exclamation-triangle"></i> Warning:</b> Mathematica is not configured.
+        Most problems <b>will not be proved</b> and all the existing proofs that use Mathematica <b>will not be reloaded</b>. <a href="dashboard.html#/mathematica"><b>Configure now.</b></a>
     </div>
 </div>
 
@@ -101,7 +109,7 @@
 
 <div class="footer">
     <div class="container">
-        <p class="text-muted">&copy; Logical Systems Lab 2014</p>
+        <p class="text-muted">&copy; <a href="http://www.ls.cs.cmu.edu/" target="_blank">Logical Systems Lab</a>, Carnegie Mellon University 2015</p>
     </div>
 </div>
 

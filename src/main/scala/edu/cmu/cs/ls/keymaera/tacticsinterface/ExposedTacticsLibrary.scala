@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.tacticsinterface
 
 import edu.cmu.cs.ls.keymaera.core.Formula
-import edu.cmu.cs.ls.keymaera.tactics.{NoneGenerate, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tactics.{HybridProgramTacticsImpl, NoneGenerate, Tactics, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 
 /**
@@ -26,7 +26,7 @@ object ExposedTacticsLibrary {
   // Plain tactics
   def ImplyRight              : Tactic = TacticLibrary.locate(TacticLibrary.ImplyRightT)
   def Master                  : Tactic = TacticLibrary.master(new NoneGenerate(), true, "Mathematica")
-  def Master(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
+//  def SpecificMaster(toolId : String) : Tactic = TacticLibrary.master(new NoneGenerate(), true, toolId)
   def Seq                     : Tactic = TacticLibrary.locate(TacticLibrary.boxSeqT)
   def Choice                  : Tactic = TacticLibrary.locate(TacticLibrary.boxChoiceT)
   def AndRight                : Tactic = TacticLibrary.locate(TacticLibrary.AndRightT)
@@ -34,8 +34,14 @@ object ExposedTacticsLibrary {
   def ODESolve                : Tactic = TacticLibrary.locate(TacticLibrary.diffSolutionT)
   def Test                    : Tactic = TacticLibrary.locate(TacticLibrary.boxTestT)
   def AndLeft                 : Tactic = TacticLibrary.locate(TacticLibrary.AndLeftT)
+  def NDetAssign              : Tactic = TacticLibrary.locate(TacticLibrary.boxNDetAssign)
+  def ForallRight             : Tactic = TacticLibrary.locateSucc(TacticLibrary.skolemizeT)
+  def DiffWeaken              : Tactic = TacticLibrary.locateSucc(TacticLibrary.diffWeakenT)
+  def DiffInvariant           : Tactic = TacticLibrary.locate(TacticLibrary.diffInvariant)
+
   //Tactics with input
   def Loop(inv : Option[Formula]) : Tactic = TacticLibrary.locate(TacticLibrary.inductionT(inv))
+  def DiffCut(input : Option[Formula]) : Tactic = TacticLibrary.locate(TacticLibrary.diffCutT(input.getOrElse(throw new Exception("need a defined input"))))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Additional Tactics.
@@ -47,7 +53,7 @@ object ExposedTacticsLibrary {
   def AndRightT                    : PositionTactic = TacticLibrary.AndRightT
   def OrRightT                     : PositionTactic = TacticLibrary.OrRightT
   def ArithmeticT                  : Tactic         = TacticLibrary.arithmeticT
-  def ArithmeticT(toolId : String) : Tactic         = TacticLibrary.arithmeticT(toolId)
+//  def SpecificArithmeticT(toolId : String) : Tactic         = TacticLibrary.arithmeticT(toolId)
   def AxiomCloseT                  : Tactic         = TacticLibrary.AxiomCloseT
 }
 

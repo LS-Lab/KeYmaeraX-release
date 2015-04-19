@@ -3,20 +3,25 @@ package edu.cmu.cs.ls.keymaera.tactics
 // favoring immutable Seqs
 
 import scala.collection.immutable.Seq
-import scala.collection.immutable.List
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import ExpressionTraversal.{FTPG, TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.onesidedCongruenceT
+import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.cohide2T
+import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
 import AxiomaticRuleTactics.boxMonotoneT
 import FOQuantifierTacticsImpl.instantiateT
 import PropositionalTacticsImpl.NonBranchingPropositionalT
 import SearchTacticsImpl.{lastAnte,lastSucc,onBranch}
 import HybridProgramTacticsImpl.boxVacuousT
+import AlphaConversionHelper.replace
 import BranchLabels._
 
 import BuiltinHigherTactics._
-import BindingAssessment.allNames
+
+import scala.collection.immutable.IndexedSeq
+import scala.language.postfixOps
 
 /**
  * In this object we collect wrapper tactics around the basic rules and axioms.
@@ -207,7 +212,7 @@ object TacticLibrary {
    * Use Mathematica
    */
   def arithmeticT = repeatT(locateAnte(NonBranchingPropositionalT) | locateSucc(NonBranchingPropositionalT)) & repeatT(locateAnte(eqThenHideIfChanged)) &
-    ArithmeticTacticsImpl.quantifierEliminationT("Mathematica")
+    (ArithmeticTacticsImpl.quantifierEliminationT("Mathematica") | ArithmeticTacticsImpl.quantifierEliminationT("Z3"))
 
   /**
    * Alternative arithmeticT
@@ -243,17 +248,18 @@ object TacticLibrary {
 
   def universalClosure(f: Formula): Formula = {
     val vars = NameCategorizer.freeVariables(f)
-    if(vars.isEmpty) f else Forall(vars.toList, f)
+    if(vars.isEmpty) f else vars.foldRight(f)((v, fml) => Forall(v :: Nil, fml)) //Forall(vars.toList, f)
   }
 
-  @deprecated("Use [] monotone via boxMonotoneT or <> monotone via diamondMonotoneT or Goedel rule instead.")
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
-    override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
       case BoxModality(_, _) => true
       case _ => false
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      require(!p.isAnte, "No abstraction in antecedent")
+
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case b@BoxModality(prg, phi) =>
@@ -261,25 +267,23 @@ object TacticLibrary {
             case Right(s) => s.to[scala.collection.immutable.Seq]
             case Left(_) => throw new IllegalArgumentException("Cannot handle non-concrete programs")
           }
-          val qPhi = if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi) else Forall(vars, phi)
+          val qPhi =
+            if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi)
+            else vars.sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+              foldRight(phi)((v, f) => Forall(v :: Nil, f))
 
-          if (!p.isAnte) {
-            Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
-              (cutUseLbl, lastAnte(ImplyLeftT) &&(
-                hideT(p) /* result */,
-                (0 until node.sequent.ante.length).map(i => hideT(AntePosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  (p.index + 1 until node.sequent.succ.length).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  (0 until p.index).map(i => hideT(SuccPosition(i))).foldRight(NilT)((t, result) => result & t) &
-                  assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
-                  assertT(1,1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & lastAnte(instantiateT) &
-                  (AxiomCloseT | debugT("Cut use: Axiom close failed unexpectedly") & stopT)
-                )),
-              (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
-                (AxiomCloseT | debugT("Cut show: Axiom close failed unexpectedly") & stopT))
-            ))
-          } else {
-            ???
-          }
+          Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
+            (cutUseLbl, lastAnte(ImplyLeftT) &&(
+              hideT(p) /* result */,
+              cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
+                assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
+                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*) &
+                assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_, _) => false case _ => true }) &
+                (AxiomCloseT | debugT("Abstraction cut use: Axiom close failed unexpectedly") & stopT)
+              )),
+            (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
+              (AxiomCloseT | debugT("Abstraction cut show: Axiom close failed unexpectedly") & stopT))
+          ))
       }
     }
   }
@@ -341,8 +345,6 @@ object TacticLibrary {
    *********************************************/
 
   def skolemizeT = FOQuantifierTacticsImpl.skolemizeT
-  @deprecated
-  def decomposeQuanT = FOQuantifierTacticsImpl.decomposeQuanT
   def instantiateQuanT(q: Variable, t: Term) = FOQuantifierTacticsImpl.instantiateT(q, t)
 
   /*********************************************
@@ -367,8 +369,7 @@ object TacticLibrary {
 
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
       new PositionTactic("Bound Renaming") {
-    import scala.language.postfixOps
-    override def applies(s: Sequent, p: Position): Boolean = /*s(p) match*/ {
+    override def applies(s: Sequent, p: Position): Boolean = {
       var applicable = false
       ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
         override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
@@ -388,11 +389,29 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
+      private def br = new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
+        override def applicable(node: ProofNode): Boolean = true
+      }
+
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        ??? //@TODO implement for Some(p) using CE
-        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx/*, Some(p)*/)) {
-          override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-        } & hideT(p.topLevel))
+        val fml = TacticHelper.getFormula(node.sequent, p)
+        val findResultProof = Provable.startProof(Sequent(node.sequent.pref, IndexedSeq(), IndexedSeq(fml)))
+        val desiredResult = findResultProof(new BoundRenaming(from, fromIdx, to, toIdx), 0).subgoals.head.succ.head
+        if (p.isAnte) {
+          Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
+            (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
+              onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(fml, desiredResult))(SuccPosition(0)) &
+              EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT)),
+            (cutUseLbl, hideT(p.topLevel))
+          ))
+        } else {
+          Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
+            (cutShowLbl, hideT(p.topLevel)),
+            (cutUseLbl, cohide2T(AntePos(node.sequent.ante.length), p.topLevel) &
+              onesidedCongruenceT(p.inExpr) & assertT(0, 1) & assertPT(Equiv(desiredResult, fml))(SuccPosition(0)) &
+              EquivRightT(SuccPosition(0)) & br & (AxiomCloseT | debugT("alpha: AxiomCloseT failed unexpectedly") & stopT))
+              ))
+        }
       }
     }
   }

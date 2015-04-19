@@ -121,9 +121,16 @@ trait RestApi extends HttpService {
         complete(standardCompletion(request))
       }}}}}}}}
 
-  val modelInfo = path("models" / "users" / Segment / "model" / Segment) { (userId, modelId) => pathEnd {
+  val modelTactic = path("user" / Segment / "model" / Segment / "tactic") { (userId, modelId) => pathEnd {
     get {
-      val request = new GetModelRequest(database, userId, modelId)
+      val request = new GetModelTacticRequest(database, userId, modelId)
+      complete(standardCompletion(request))
+    }
+  }}
+
+  val runModelTactic = path("user" / Segment / "model" / Segment / "tactic" / "run") { (userId, modelId) => pathEnd {
+    post {
+      val request = new RunModelInitializationTacticRequest(database, userId, modelId)
       complete(standardCompletion(request))
     }
   }}
@@ -216,9 +223,21 @@ trait RestApi extends HttpService {
     }
   }}}
 
+  val mathematicaConfigSuggestion = path("config" / "mathematica" / "suggest") {
+    pathEnd {
+      get {
+        val request = new GetMathematicaConfigSuggestionRequest(database)
+        complete(standardCompletion(request))
+      }
+    }
+  }
 
   val mathematicaConfig = path("config" / "mathematica") {
     pathEnd {
+      get {
+          val request = new GetMathematicaConfigurationRequest(database)
+          complete(standardCompletion(request))
+      } ~
       post {
         entity(as[String]) { params => {
           val p = JsonParser(params).asJsObject.fields.map(param => param._1.toString -> param._2.asInstanceOf[JsString].value)
@@ -345,6 +364,14 @@ trait RestApi extends HttpService {
     }
   }}
 
+  val isLocal = path("isLocal") { pathEnd { get {
+    complete(standardCompletion(new IsLocalInstanceRequest()))
+  }}}
+
+  val shutdown = path("shutdown") { pathEnd { get {
+    complete(standardCompletion(new ShutdownReqeuest()))
+  }}}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Licensing
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -357,6 +384,13 @@ trait RestApi extends HttpService {
     }
   }}
 
+
+  val initializeModel = path("models" / "users" / Segment / "model" / Segment / "initialize") { (userId, modelId) => pathEnd {
+    post {
+      complete(standardCompletion(new RunModelInitializationTacticRequest(database, userId, modelId)))
+    }
+  }}
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Route precedence
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -366,9 +400,11 @@ trait RestApi extends HttpService {
     homePage              ::
     users                 ::
     modelList             ::
+    modelTactic           ::
     userModel             ::
     userModel2            ::
     cookieecho            ::
+    runModelTactic        ::
     createProof           ::
     proofListForModel     ::
     proofList             ::
@@ -391,7 +427,9 @@ trait RestApi extends HttpService {
     dashInfo              ::
     mathematicaConfig ::
     mathematicaStatus ::
+    mathematicaConfigSuggestion ::
     license ::
+      initializeModel :: isLocal :: shutdown ::
     Nil
   val myRoute = routes.reduce(_ ~ _)
 }

@@ -31,6 +31,8 @@ private object NameConversion {
   private val SEP    = "$beginIndex$"
   private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
 
+  val CONST_FN_PREFIX: String = "constfn_"
+
   private def regexOf(s: String) = {
     s.replace("$", "\\$")
   }
@@ -225,23 +227,18 @@ object MathematicaToKeYmaera {
       case result : Function => {
         val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
         if(arguments.nonEmpty) {
-          if (result.name == "Apply") {
-            arguments(0) match {
-              case Variable(n, i, d) => Apply(Function(n, i, Unit, d), Nothing)
-              case _ => throw new IllegalArgumentException("Unexpected argument type")
-            }
-          } else {
-            val argumentsAsPair = arguments.reduceRight[Term](
-              (l, r) => Pair(TupleT(l.sort, r.sort), l, r)
-            )
-            Apply(result, argumentsAsPair)
-          }
+          val argumentsAsPair = arguments.reduceRight[Term](
+            (l, r) => Pair(TupleT(l.sort, r.sort), l, r)
+          )
+          Apply(result, argumentsAsPair)
         }
         else {
           result
         }
       }
-      case _ => result
+      case _ if  result.name.startsWith(NameConversion.CONST_FN_PREFIX) =>
+        Apply(Function(result.name.substring(NameConversion.CONST_FN_PREFIX.length), result.index, Unit, result.sort), Nothing)
+      case _ if !result.name.startsWith(NameConversion.CONST_FN_PREFIX) => result
     }
   }
 
@@ -384,10 +381,12 @@ object MathematicaToKeYmaera {
         
       //Create the final expression.
       if(isThing(e, MathematicaSymbols.FORALL)) {
-        Forall(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        //Forall(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => Forall(v :: Nil, fml))
       }
       else if(isThing(e, MathematicaSymbols.EXISTS)) {
-        Exists(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        //Exists(IndexedSeq() ++ quantifiedVars, bodyOfQuantifier)
+        quantifiedVars.foldRight(bodyOfQuantifier)((v, fml) => Exists(v :: Nil, fml))
       }
       else {
         throw mathExnMsg(e, "Tried to convert a quantifier-free expression using convertQuantifier. The check in fromMathematica must be wrong.")
@@ -542,7 +541,7 @@ object KeYmaeraToMathematica {
     new MExpr(MathematicaSymbols.EXP, args)
   }
   def convertFnApply(fn: Function, child: Term) = child match {
-    case Nothing => new MExpr(MathematicaSymbols.APPLY, Array[MExpr](convertNS(fn)))
+    case Nothing => convertNS(new Function(NameConversion.CONST_FN_PREFIX + fn.name, fn.index, fn.domain, fn.sort))
     case _ =>
       val args = Array[MExpr](convertNS(fn), new MExpr(Expr.SYM_LIST, Array[MExpr](convertTerm(child))))
       new MExpr(MathematicaSymbols.APPLY, args)

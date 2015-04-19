@@ -17,7 +17,7 @@ class EqualityRewritingTests extends FlatSpec with Matchers with BeforeAndAfterE
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
 
   val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)

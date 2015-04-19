@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS `models` (
   `description` TEXT,
   `fileContents` TEXT,
   `publink` TEXT,
-  `title` TEXT
+  `title` TEXT,
+  `tactic` TEXT
 );
 
 --proofs

@@ -1,8 +1,6 @@
 <div class="row">
     <div class="col-md-10">
-        <h1>Hybrid Program Syntax</h1>
-
-        <h3></h3>
+        <h2 id="HP-syntax">Hybrid Program Syntax</h2>
 
         <table class="table table-hover">
             <thead>
@@ -25,29 +23,31 @@
                 </tr>
                 <tr>
                     <td>\(x_1'=\theta_1, \ldots x_n'=\theta_n \& F\)</td>
-                    <td><code>x'=y & x >= 0</code></td>
+                    <td><code>x'=y&#160;&amp;&#160;x&#160;&gt;=&#160;0</code></td>
                     <td>continuous evolution of \(x_i\) along the differential equation system \(x_i' = \theta_i\)
-                        restricted to evolution domain \(F\)</td>
+                        restricted to evolution domain described by formula \(F\)</td>
                 </tr>
                 <tr>
                     <td>\(\alpha;~\beta\)</td>
-                    <td><code>x := 5; y := x</code></td>
+                    <td><code>x&#160;:=&#160;5; x'&#160;=&#160;2</code></td>
                     <td>sequential composition where \(\beta\) starts after \(\alpha\) finishes</td>
                 </tr>
                 <tr>
                     <td>\(\alpha \cup \beta\)</td>
-                    <td><code>x := 5 ++ y := x</code></td>
+                    <td><code>x&#160;:=&#160;5 ++ y&#160;:=&#160;x</code></td>
                     <td>nondeterministic choice, following either alternative \(\alpha\) or \(\beta\)</td>
                 </tr>
                 <tr>
                     <td>\(\alpha^*\)</td>
-                    <td><code>{x := x+1}*</code></td>
+                    <td><code>{x&#160;:=&#160;x+1}*</code></td>
                     <td>nondeterministic repetition, repeating \(\alpha\) \(n\) times for any \(n \in \mathbb{N}\)</td>
                 </tr>
             </tbody>
         </table>
 
         <p>
+The behavior of hybrid systems is specified as a hybrid program,
+which is a program notation for hybrid systems.
             The syntax of hybrid programs is shown together with an informal semantics in the table above. The basic terms
             (called \(\theta\) in the table) are either rational number constants, real-valued variables or (possibly
             nonlinear) polynomial or rational arithmetic expressions built from those.
@@ -96,38 +96,115 @@
             repeats an arbitrary number of times, including zero.
         </p>
 
+        <h2 id="dL-syntax">Differential Dynamic Logic Syntax</h2>
 
-        <h3>Example</h3>
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <td>Mathematical Syntax</td>
+                <td>ASCII Syntax</td>
+                <td>Meaning</td>
+            </tr>
+            </thead>
+            <tbody>
+  <tr>
+  	<tr><td>\(\theta\geq\eta\)</td> <td><code>x^2&gt;=5</code></td> <td>Greater equals comparison: true iff \(x^2\) is at least 5</td></tr> 
+  	<tr><td>\(\lnot\phi\)</td> <td><code>!(x=5)</code></td> <td>Negation (not), true iff \(\phi\) is not true</td></tr> 
+  	<tr><td>\(\phi\wedge\psi\)</td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both \(\phi\) and \(\psi\) are true</td></tr> 
+  	<tr><td>\(\phi\vee\psi\)</td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff \(\phi\) is true or \(\psi\) is true</td></tr> 
+</tr> 
+  	<tr><td>\(\phi\rightarrow\psi\)</td> <td><code>x&gt;=10 -&gt; v&lt;=1</code></td> <td>Implication (implies), true iff \(\phi\) is false or \(\psi\) is true</td></tr> 
+</tr> 
+  	<tr><td>\(\phi\leftrightarrow\psi\)</td> <td><code>x=0 &lt;-&gt; x^2=0</code></td> <td>Biimplication (equivalent), true iff \(\phi\) and \(\psi\) are both true or both false</td></tr> 
+</tr> 
+  	<tr><td>\(\forall x\, \phi\)</td> <td><code>\forall&#160;x . x^2&gt;=0</code></td> <td>Universal quantifier, true if \(\phi\) is true for all real values of variable \(x\)</td></tr>
+  	<tr><td>\(\exists x\, \phi\)</td> <td><code>\exists&#160;x . x^2&gt;x^4</code></td> <td>Existential quantifier, true if \(\phi\) is true for some real value of variable \(x\)</td></tr>
+  	<tr><td>\([\alpha] \phi\)</td> <td><code>[x:=x^2;] x>=0</code></td> <td>Box modality: \(\phi\) is true after all runs of hybrid program \(\alpha\)</td></tr>
+  	<tr><td>\(\langle\alpha\rangle \phi\)</td> <td><code>&lt;{x:=x+1}*&gt; x&gt;=10</code></td> <td>Diamond modality: \(\phi\) is true after at least one run of hybrid program \(\alpha\)</td></tr>
+</table>
+
+<p>
+<b>Formulas of differential dynamic logic (dL)</b>, with typical names \(\phi\) and \(\psi\), are defined by the syntax shown above.
+The basic idea for <b>dL formulas</b> is to have formulas of the form
+[&#945;]&#966;
+to specify that the hybrid system &#945; always remains within region &#966;, i.e.,
+all states reachable by following the transitions of hybrid system &#945; statisfy the formula &#966;.
+Dually, the dL formula
+&lt;&#945;&gt;&#966;
+expresses that the hybrid system &#945; is able to reach region &#966;, i.e.,
+there is a state reachable by following the transitions of hybrid system &#945; that statisfies the formula &#966;.
+In either case, the hybrid system &#945; is given as a full operational model in terms of a hybrid program.
+Using other propositional connectives, one can state the following dL formula
+  <center>\(\phi \rightarrow [\alpha]\psi\)</center>
+which expresses that, if hybrid program &#945; initially starts in a state satisfying &#966;, then
+it always remains in the region characterised by &#968;.
+For instance, the following dL formula expresses that for the state of a train controller <var>train</var>,
+the property <var>z&#x02264;m</var> always holds true when starting in a state
+where <var>v<sup>2</sup>&#x02264;2b(m-z)</var> is true:
+  <center><code>v^2&lt;=2*b*(m-z) -&gt; [<var>train</var>]z&lt;=m</code></center>
+Here <var>z</var> is the position of the train, <var>v</var> the velocity of the train, <var>b</var> its braking power, and <var>m</var> the current end of its movement authority assigned to the train by the radio block controller (RBC).
+</p>
+
+        <h3 id="Example">Example</h3>
         <p>
 
         </p>
 
         <code><pre>
-        Functions.
-            R A.        /* maximum acceleration */
-            R B.        /* maximum braking */
-            R a().      /* current acceleration: actuated */
-        End.
+Functions.
+    R A.        /* maximum acceleration */
+    R B.        /* maximum braking */
+    R a().      /* current acceleration: actuated */
+End.
 
-        ProgramVariables.
-            R x.        /* position */
-            R v.        /* velocity */
-            R a.        /* current acceleration: controller choice */
-        End.
+ProgramVariables.
+    R x.        /* position */
+    R v.        /* velocity */
+    R a.        /* current acceleration: controller choice */
+End.
 
-        Problem.
-            v >= 0 & A > 0 & B > 0              /* initial condition */
-            ->
-            [                                   /* system dynamics */
-            { {a := A ++ a := 0 ++ a := -B};    /* non-deterministic choice between assignments */
-              ?a()=a;                           /* test for equality */
-              x' = v, v' = a() & v >= 0;        /* differential equation system */
-            }* @invariant(v >= 0)               /* repeat transitions */
-            ] v >= 0                            /* safety/postcondition */
-        End.
+Problem.
+    v >= 0 & A > 0 & B > 0            /* initial condition */
+    ->
+    [                                 /* system dynamics */
+    { {a := A ++ a := 0 ++ a := -B};  /* non-deterministic choice of accelerations */
+      ?a()=a;                         /* test for equality */
+      x' = v, v' = a() & v >= 0;      /* differential equation system */
+    }* @invariant(v >= 0)             /* repeat transitions */
+    ] v >= 0                          /* safety/postcondition */
+End.
         </pre></code>
     </div>
 </div>
+
+<h3 id="More">More Information</h3>
+<ul>
+  <li><a href="http://dx.doi.org/10.1007/s10009-015-0367-0">Jan-David Quesel, Stefan Mitsch, Sarah Loos, Nikos Ar&#233;chiga, and Andr&#233; Platzer.
+How to model and prove hybrid systems with KeYmaera: A tutorial on safety. 
+STTT. 2015</a>
+  <li><a href="http://symbolaris.com/pub/lds-lics.pdf">Andr&#233; Platzer. 
+Logics of dynamical systems (invited tutorial). 
+ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 13-24. IEEE 2012</a></li>
+  <li><a href="http://www.cs.cmu.edu/~aplatzer/course/fcps14.html">Andr&#233; Platzer. 
+Foundations of Cyber-Physical Systems. 
+Lecture Notes, Computer Science Department, Carnegie Mellon University. 2014.</a></li>
+  <li><a href="http://dx.doi.org/10.1007/978-3-642-14509-4">Andr&#233; Platzer. 
+Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics. 
+Springer, 2010.</a></li>
+  <li><a href="http://symbolaris.com/pub/freedL.pdf">Andr&#233; Platzer. 
+Differential dynamic logic for hybrid systems. 
+Journal of Automated Reasoning, 41(2), pages 143-189, 2008.</a></li>
+</ul>
+
+<h3 id="Books">Compendia</h3>
+<ul>
+  <li><a href="http://www.cs.cmu.edu/~aplatzer/course/fcps14.html">Andr&#233; Platzer. 
+Foundations of Cyber-Physical Systems. 
+Lecture Notes, Computer Science Department, Carnegie Mellon University. 2014.</a></li>
+  <li><a href="http://dx.doi.org/10.1007/978-3-642-14509-4">Andr&#233; Platzer. 
+Logical Analysis of Hybrid Systems: Proving Theorems for Complex Dynamics. 
+Springer, 2010.</a></li>
+</ul>
 
 <script>
     MathJax.Hub.Queue(["Typeset",MathJax.Hub]);

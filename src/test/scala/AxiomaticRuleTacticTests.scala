@@ -15,7 +15,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   // TODO mathematica is only necessary because of ProofFactory -> make ProofFactory configurable
 
   val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
@@ -245,5 +245,28 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "a=c".asFormula
+  }
+
+  "CO one-sided congruence" should "work" in {
+    val s = sequent(Nil, "x=1 & a>0".asFormula :: Nil, "x=1 & c>0".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.onesidedCongruenceT(PosInExpr(1::Nil))
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "a>0 <-> c>0".asFormula
+  }
+
+  it should "not be applicable when contexts are not equal" in {
+    val s = sequent(Nil, "x=1 & a>0".asFormula :: Nil, "x=2 & c>0".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.onesidedCongruenceT(PosInExpr(1::Nil))
+    tactic.applicable(new RootNode(s)) shouldBe false
+  }
+
+  it should "not be applicable when antecedent or succedent are not of length 1" in {
+    val s = sequent(Nil, "x=1 & a>0".asFormula :: "a=2".asFormula :: Nil, "x=1 & c>0".asFormula :: Nil)
+    val t = sequent(Nil, "x=1 & a>0".asFormula :: Nil, "x=1 & c>0".asFormula :: "a=2".asFormula :: Nil)
+    val tactic = AxiomaticRuleTactics.onesidedCongruenceT(PosInExpr(1::Nil))
+    tactic.applicable(new RootNode(s)) shouldBe false
+    tactic.applicable(new RootNode(t)) shouldBe false
   }
 }

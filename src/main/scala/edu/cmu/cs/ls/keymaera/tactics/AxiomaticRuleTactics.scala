@@ -44,6 +44,34 @@ object AxiomaticRuleTactics {
   }
 
   /**
+   * Creates a new tactic for CO one-sided congruence rewriting.
+   * @return The newly created tactic.
+   */
+  def onesidedCongruenceT(inEqPos: PosInExpr): Tactic = new ConstructionTactic("CO one-sided congruence") { outer =>
+    override def applicable(node : ProofNode): Boolean = node.sequent.ante.length == 1 && node.sequent.succ.length == 1 &&
+      node.sequent.ante.head.extractContext(inEqPos)._1 == node.sequent.succ.head.extractContext(inEqPos)._1
+
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+      val lhs = node.sequent.ante.head
+      val rhs = node.sequent.succ.head
+
+      val (ctxP, p) = lhs.extractContext(inEqPos)
+      val (ctxQ, q) = rhs.extractContext(inEqPos)
+      assert(ctxP == ctxQ)
+
+      if (ctxP.isFormulaContext) {
+        val pX = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
+        val qX = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
+        val cX = ApplyPredicational(Function("ctx_", None, Bool, Bool), CDotFormula)
+        val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: SubstitutionPair(cX, ctxP.ctx) :: Nil)
+        Some(new ApplyRule(AxiomaticRule("CO one-sided congruence", s)) {
+          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
+        })
+      } else Some(NilT)
+    }
+  }
+
+  /**
    * Creates a new tactic for CQ equation congruence rewriting.
    * @return The newly created tactic.
    */

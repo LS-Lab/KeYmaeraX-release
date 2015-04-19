@@ -27,41 +27,87 @@ keymaeraProofControllers.factory('Models', function () {
 
 keymaeraProofControllers.controller('MathematicaConfig',
   function($scope, $rootScope, $http, $cookies, $modal, $routeParams) {
-        $scope.configureMathematica = function() {
-            var uri     = "/config/mathematica"
-            var linkName = $scope.linkName ? $scope.linkName : "";
-            var jlinkLibDir = $scope.jlinkLibDir ? $scope.jlinkLibDir : "";
-            var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibDir}
+    $http.get("/config/mathematica/suggest")
+      .success(function(data) {
+          $scope.mathematicaConfigSuggestion = data
+      })
+      .error(function() {
+          console.error("Unhandled error when attempting to get Mathematica configuration.")
+      });
 
-            $http.post(uri, dataObj)
-                .success(function(data) {
-                    if(data.jlinkLibDirExists && data.linkNameExists && data.success) {
-                        $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
-                        $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
+    $http.get("/config/mathematica")
+      .success(function(data) {
+          if (data.linkName !== "" && data.jlinkLibPath !== "") {
+            $scope.linkName = data.linkName;
+            $scope.jlinkLibPath = data.jlinkLibDir;
+          }
+//          else {
+//            $http.get("/config/mathematica/suggest")
+//                .success(function(data) {
+//                    $scope.linkName = data.kernelPath + "/" + data.kernelName;
+//                    $scope.jlinkLibPath = data.jlinkPath + "/" + data.jlinkName;
+//                })
+//          }
+      })
+      .error(function() {
+          console.error("Unhandled error when attempting to get Mathematica configuration.")
+      });
 
-                        $modal.open({
-                            templateUrl: 'partials/mathematicaconfig_update.html',
-                            controller: 'MathematicaConfig.UpdateDialog',
-                            size: 'md'
-                        })
+    $scope.configureMathematica = function() {
+        var uri     = "/config/mathematica"
+        var linkName = $scope.linkName ? $scope.linkName : "";
+        var jlinkLibPath = $scope.jlinkLibPath ? $scope.jlinkLibPath : "";
+        var dataObj = {linkName: linkName, jlinkLibDir: jlinkLibPath}
 
-                        $("#mathematicaConfigurationAlert").hide();
-                        $rootScope.mathematicaIsConfigured = data.configured;
-                    }
-                    else {
-                        $scope.MathematicaForm.linkName.$setValidity("FileExists", data.linkNameExists);
-                        $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", data.jlinkLibDirExists);
-                        var modalInstance = $modal.open({
-                          templateUrl: 'partials/mathematicaconfig_failure.html',
-                          controller: 'MathematicaConfig.FailureDialog',
-                          size: 'md'
-                        });
-                    }
-                })
-                .error(function(data) {
-                    alert("error: " + JSON.stringify(data))
-                })
-        }
+        $http.post(uri, dataObj)
+            .success(function(data) {
+                if (data.success) {
+                    $scope.MathematicaForm.linkName.$setValidity("FileExists", true);
+                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", true);
+
+                    $modal.open({
+                        templateUrl: 'partials/mathematicaconfig_update.html',
+                        controller: 'MathematicaConfig.UpdateDialog',
+                        size: 'md'
+                    })
+
+                    $("#mathematicaConfigurationAlert").hide();
+                    $rootScope.mathematicaIsConfigured = data.configured;
+                }
+                else {
+                    var kernelNameExists = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 &&
+                      data.linkNamePrefix == $scope.linkName
+                    var jlinkExists = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) > -1 &&
+                      data.jlinkLibDirPrefix == $scope.jlinkLibPath
+
+                    $scope.linkNameOkPrefix = data.linkNamePrefix
+                    $scope.linkNameWrong = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) > -1 ?
+                        $scope.linkName.substring(data.linkNamePrefix.length, $scope.linkName.length) :
+                        ".../" + $scope.mathematicaConfigSuggestion.kernelName
+                    $scope.linkNameIncomplete = $scope.linkName.indexOf($scope.mathematicaConfigSuggestion.kernelName) == -1
+
+                    $scope.jlinkLibPathOkPrefix = data.jlinkLibDirPrefix
+                    $scope.jlinkLibPathWrong = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) > -1 ?
+                      $scope.jlinkLibPath.substring(data.jlinkLibDirPrefix.length, $scope.jlinkLibPath.length) :
+                      ".../" + $scope.mathematicaConfigSuggestion.jlinkName
+                    $scope.jlinkPathIncomplete = $scope.jlinkLibPath.indexOf($scope.mathematicaConfigSuggestion.jlinkName) == -1
+
+                    $scope.MathematicaForm.linkName.$setValidity("FileExists", kernelNameExists);
+                    $scope.MathematicaForm.jlinkLibDir.$setValidity("FileExists", jlinkExists);
+                }
+            })
+            .error(function(data) {
+                alert("error: " + JSON.stringify(data))
+            })
+    }
+
+    $scope.setDefaultMathKernel = function() {
+      $scope.linkName = $scope.mathematicaConfigSuggestion.kernelPath + $scope.mathematicaConfigSuggestion.kernelName
+    }
+
+    $scope.setDefaultJLinkLibPath = function() {
+      $scope.jlinkLibPath = $scope.mathematicaConfigSuggestion.jlinkPath + $scope.mathematicaConfigSuggestion.jlinkName
+    }
 });
 
 keymaeraProofControllers.controller('MathematicaConfig.FailureDialog', function($scope, $http, $cookies, $modalInstance) {
@@ -75,12 +121,20 @@ keymaeraProofControllers.controller('MathematicaConfig.UpdateDialog', function($
   }
 });
 
-//keymaeraProofControllers.controller('MathematicaConfig.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
-//  $scope.cancel = function() {
-//      alert("Closing your browser window because the server is now off-line!")
-//      $window.close();
-//  }
-//});
+keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+  $scope.cancel = function() {
+      alert("No!")
+      $window.close();
+  }
+});
+
+
+keymaeraProofControllers.controller('DashboardCtrl.ShutdownDialog', function($scope, $http, $cookies, $modalInstance) {
+$scope.noModalForHelpDialogHack = true
+});
+
+
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,8 +234,7 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
             },
         "dl.skolemize" :
             { "name" : "dl.skolemize",
-              "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)",
-              "tooltip" : "s is a new (Skolem) function symbol and \\( X_1,\\ldots,X_n \\) are all free logical variables of \\( \\forall x . \\phi(x) \\)"
+              "label" : "\\( \\left( \\forall r \\right) \\frac{\\Gamma ~\\vdash~ \\phi\\left(s\\left(X_1,\\ldots,X_n\\right)\\right)}{\\Gamma ~\\vdash~ \\forall x . \\phi(x), \\Delta} \\)"
             },
         "dl.decomposeQuan" :
             { "name" : "dl.decomposeQuan",
@@ -282,6 +335,10 @@ keymaeraProofControllers.factory('Tactics', function ($rootScope) {
         "keymaera.default":
             { "name" : "keymaera.default",
               "label" : "KeYmaera Master Tactic"
+            },
+        "keymaera.step":
+            { "name": "keymaera.step",
+              "label": "KeYmaera Step Tactic"
             }
     };
     var userTactics = {
@@ -318,16 +375,25 @@ keymaeraProofControllers.value('cgBusyDefaults',{
     templateUrl: 'partials/running-tactics-indicator.html'
 });
 
-keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $cookies, $modalInstance) {
+keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $modal, $cookies, $modalInstance) {
   $scope.rejectLicense = function() {
-    alert("You must accept the terms to use KeYmaera X.")
-      //TODO shut down server? $modalInstance.dismiss('cancel');
-  }
+    alert("KeYmaera X cannot be used without accepting the license -- we are now shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
+    $modalInstance.dismiss('cancel')
+
+    var modalInstance = $modal.open({
+      templateUrl: 'partials/shutdown_dialog.html',
+      controller: 'DashboardCtrl.ShutdownDialog',
+      backdrop: "static",
+      size: 'sm'
+    });
+
+    $http.get("/shutdown")
+  };
 
   $scope.cancel = function() {
     $http.post("/licenseacceptance")
         .success(function(data) {}) //ok
-        .error(function() { alert("Failed to udpate database after accepting license!")});
+        .error(function() { console.error("Failed to udpate database after accepting license!")});
     $modalInstance.dismiss('cancel');
   }
 });
@@ -340,6 +406,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
       $scope.theview = args.theview;
     });
 
+    $scope.noModalForHelpDialogHack = false;
     $http.get("/licenseacceptance")
          .success(function(data) {
             if(!data.success && !$scope.licenseDialogDisplayed) {
@@ -347,6 +414,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
                 var modalInstance = $modal.open({
                   templateUrl: 'partials/license_dialog.html',
                   controller: 'DashboardCtrl.LicenseDialog',
+                  backdrop: "static",
                   size: 'lg'
                 });
             }
@@ -355,12 +423,13 @@ keymaeraProofControllers.controller('DashboardCtrl',
 
          });
 
+    $scope.mathematicaIsConfigured = true;
     $http.get("/config/mathematicaStatus")
         .success(function(data) {
             $scope.mathematicaIsConfigured = data.configured;
         })
         .error(function() {
-            alert("Unhandled error when attempting to get Mathematica status.")
+            console.error("Unhandled error when attempting to get Mathematica status.")
         });
 
 
@@ -371,11 +440,37 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.proved_models_count = data.proved_models_count;
         })
 
+
+    $scope.isLocal = false;
+    $http.get('/isLocal')
+        .success(function(data) {
+            $scope.isLocal = data.success;
+        })
+
+    $scope.shutdown = function() {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/shutdown_dialog.html',
+          controller: 'DashboardCtrl.ShutdownDialog',
+          backdrop: "static",
+          size: 'sm'
+        });
+
+        $http.get("/shutdown")
+    };
+
     $scope.$emit('routeLoaded', {theview: 'dashboard'});
   });
 
 keymaeraProofControllers.controller('ModelUploadCtrl',
   function ($scope, $http, $cookies, $cookieStore, $route, Models) {
+
+     $scope.runPreloadedProof = function(model) {
+        $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
+            .success(function(data) {
+                console.log("yay! Take the user to the proof load page?")
+            })
+     };
+
 
      $scope.addModel = function() {
           var file = keyFile.files[0];
@@ -437,8 +532,21 @@ keymaeraProofControllers.controller('ModelListCtrl',
         });
     };
 
-    $scope.showPrfs = function(modelId) {
-        $location.path('/models/' + modelId + "/proofs")
+    $scope.openTactic = function (modelid) {
+        var modalInstance = $modal.open({
+          templateUrl: 'partials/modeltacticdialog.html',
+          controller: 'ModelTacticDialogCtrl',
+          size: 'lg',
+          resolve: {
+            modelid: function () { return modelid; }
+          }
+        });
+    };
+
+    $scope.runTactic = function (modelid) {
+      $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run").success(function(data) {
+          console.log("Done running tactic")
+      });
     }
 
     $scope.$watch('models',
@@ -461,6 +569,16 @@ keymaeraProofControllers.controller('ModelDialogCtrl', function ($scope, $http, 
 //  };
 });
 
+keymaeraProofControllers.controller('ModelTacticDialogCtrl', function ($scope, $http, $cookies, $modalInstance, modelid) {
+  $http.get("user/" + $cookies.userId + "/model/" + modelid + "/tactic").success(function(data) {
+      $scope.tactic = data
+  });
+
+  $scope.ok = function () {
+    $modalInstance.close();
+  };
+});
+
 keymaeraProofControllers.controller('ModelProofCreateCtrl',
   function ($scope, $http, $cookies, $routeParams, $location) {
     $scope.createProof = function() {
@@ -476,7 +594,7 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl',
                 $location.path('proofs/' + proofid);
             }).
             error(function(data, status, headers, config) {
-                alert('TODO handle errors properly.')
+                console.log('Error starting new proof for model ' + $routeParams.modelId)
             });
     }
     $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
@@ -491,13 +609,15 @@ var pollProofStatus = function(proof, userId, http) {
       http.get('proofs/user/' + userId + '/' + proof.id + '/status')
               .success(function(data) {
           if (data.status == undefined) {
+            console.log("Continue polling proof status");
             pollProofStatus(proof, userId, http);
           } else {
+            console.log("Received proof status " + data.status);
             proof.loadStatus = data.status
           }
       }).
       error(function(data, status, headers, config) {
-          alert('Unable to poll proof status.')
+          console.log('Unable to poll proof status.')
       });
   }, 1000);
 }
@@ -519,11 +639,13 @@ keymaeraProofControllers.controller('ProofListCtrl',
             proof.loadStatus = data.loadStatus
             // when server loads proof itself asynchronously
             if (data.loadStatus == 'Loading') {
+              console.log("Start polling proof status");
               pollProofStatus(proof, $cookies.userId, $http);
             }
         }).
         error(function(data, status, headers, config) {
           // TODO check that it is a time out
+          console.log("Start polling proof status");
           pollProofStatus(proof, $cookies.userId, $http);
         });
     }
@@ -552,7 +674,7 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
                 $location.path('proofs/' + proofid);
             }).
             error(function(data, status, headers, config) {
-                alert('TODO handle errors properly.')
+                console.log('Error starting new proof for model ' + $routeParams.modelId)
             });
     }
 
@@ -562,11 +684,13 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
         proof.loadStatus = data.loadStatus
         // when server loads proof itself asynchronously
         if (data.loadStatus == 'Loading') {
+          console.log("Start polling proof status");
           pollProofStatus(proof, $cookies.userId, $http);
         }
       }).
       error(function(data, status, headers, config) {
         // TODO check that it is a time out
+        console.log("Start polling proof status");
         pollProofStatus(proof, $cookies.userId, $http);
       });
     }
@@ -605,7 +729,7 @@ $scope.treeContents = "asdf"
                 $scope.treeContents = printNode(data);
             })
             .error(function() {
-                alert("error encountered while trying to retrieve the tree.")
+                console.log("Error encountered while trying to retrieve the tree.")
             })
     }
 
@@ -769,7 +893,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
                   })
                   .error(function() {
                       var msg = "Error: this proof is not on the Agenda and the server could not find it.";
-                      alert(msg);
                       console.error(msg);
                   })
           }
@@ -826,7 +949,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 }
              })
              .error(function() {
-                alert("encountered error during post on runTerm.")
+                console.error("encountered error during post on runTerm.")
              })
     }
     $scope.$on('handleDispatchedTerm', function(event, tId) {
@@ -919,12 +1042,12 @@ keymaeraProofControllers.controller('TaskListCtrl',
               }
               $scope.proofHistory.push(historyItem)
             } else {
-              alert("pretty printing undefined for tactic " + tacticName)
+              console.log("pretty printing undefined for tactic " + tacticName)
             }
           }
         })
         .error(function() {
-          alert("error encountered while trying to retrieve the proof history.")
+          console.error("error encountered while trying to retrieve the proof history.")
         })
     }
 
@@ -936,7 +1059,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.selectedTask = data;
       })
       .error(function() {
-        alert("error encountered while trying to retrieve the proof history details.")
+        console.error("error encountered while trying to retrieve the proof history details.")
       })
     }
 

@@ -83,7 +83,8 @@ class ModelListResponse(models : List[ModelPOJO]) extends Response {
     "description" -> JsString(modelpojo.description),
     "pubLink" -> JsString(modelpojo.pubLink),
     "keyFile" -> JsString(modelpojo.keyFile),
-    "title" -> JsString(modelpojo.title)
+    "title" -> JsString(modelpojo.title),
+    "hasTactic" -> JsBoolean(modelpojo.tactic.isDefined)
   ))
 
   val json = JsArray(objects)
@@ -138,7 +139,16 @@ class GetModelResponse(model : ModelPOJO) extends Response {
     "description" -> JsString(model.description),
     "pubLink" -> JsString(model.pubLink),
     "keyFile" -> JsString(model.keyFile),
-    "title" -> JsString(model.title)
+    "title" -> JsString(model.title),
+    "tactic" -> JsString(model.tactic.getOrElse(""))
+  )
+}
+
+class GetModelTacticResponse(model : ModelPOJO) extends Response {
+  val json = JsObject(
+    "modelId" -> JsString(model.modelId),
+    "modelName" -> JsString(model.name),
+    "tacticBody" -> JsString(model.tactic.getOrElse(""))
   )
 }
 
@@ -292,11 +302,31 @@ class ApplicableTacticsResponse(tactics : List[TacticPOJO]) extends Response {
   val json = JsArray(objects)
 }
 
-class ConfigureMathematicaResponse(linkNameExists : Boolean, jlinkLibDirExists : Boolean, success : Boolean) extends Response {
+class ConfigureMathematicaResponse(linkNamePrefix : String, jlinkLibDirPrefix : String, success : Boolean) extends Response {
   val json = JsObject(
-    "linkNameExists" -> {if(linkNameExists) JsTrue else JsFalse},
-    "jlinkLibDirExists" -> {if(jlinkLibDirExists) JsTrue else JsFalse},
+    "linkNamePrefix" -> JsString(linkNamePrefix),
+    "jlinkLibDirPrefix" -> JsString(jlinkLibDirPrefix),
     "success" -> {if(success) JsTrue else JsFalse}
+  )
+}
+
+//@todo these are a mess.
+class MathematicaConfigSuggestionResponse(os: String, version: String, kernelPath: String, kernelName: String,
+                                          jlinkPath: String, jlinkName: String) extends Response {
+  override protected val json: JsValue = JsObject(
+    "os" -> JsString(os),
+    "version" -> JsString(version),
+    "kernelPath" -> JsString(kernelPath),
+    "kernelName" -> JsString(kernelName),
+    "jlinkPath" -> JsString(jlinkPath),
+    "jlinkName" -> JsString(jlinkName)
+  )
+}
+
+class MathematicaConfigurationResponse(linkName: String, jlinkLibDir: String) extends Response {
+  override protected val json: JsValue = JsObject(
+    "linkName" -> JsString(linkName),
+    "jlinkLibDir" -> JsString(jlinkLibDir)
   )
 }
 

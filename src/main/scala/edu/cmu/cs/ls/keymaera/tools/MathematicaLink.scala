@@ -20,7 +20,7 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
   type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
   type MExpr = com.wolfram.jlink.Expr
 
-  def run(cmd : String) : (String, KExpr)
+  def runUnchecked(cmd : String) : (String, KExpr)
   def run(cmd : MExpr) : (String, KExpr)
 
   /**
@@ -50,6 +50,16 @@ trait MathematicaLink extends QETool with DiffSolutionTool {
 class JLinkMathematicaLink extends MathematicaLink {
   var ml: KernelLink = null
 
+  var queryIndex: Long = 0
+
+  val checkExpr = new MExpr(Expr.SYMBOL, "Check")
+  val exceptionExpr = new MExpr("$Exception")
+  val fetchMessagesCmd = "$MessageList"
+  val listExpr = new MExpr(Expr.SYMBOL, "List")
+  val checkedMessages = (("Reduce", "nsmet") :: ("Reduce", "ratnz") :: Nil).map({ case (s, t) =>
+    new MExpr(new MExpr(Expr.SYMBOL, "MessageName"), Array(new MExpr(Expr.SYMBOL, s), new MExpr(t))) })
+  val checkedMessagesExpr = new MExpr(Expr.SYM_LIST, checkedMessages.toArray)
+
   // HACK assumed to be called before first use of ml
   // TODO replace with constructor and use dependency injection to provide JLinkMathematicaLink whereever needed
   /**
@@ -70,45 +80,80 @@ class JLinkMathematicaLink extends MathematicaLink {
    * Closes the connection to Mathematica.
    */
   def shutdown() = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.terminateKernel()
     ml.close()
     ml = null
   }
 
   /**
-   * Runs the command and then halts program exception until answer is returned.
+   * Runs the command and then halts program execution until answer is returned.
    */
-  def run(cmd: String) = {
+  def runUnchecked(cmd: String): (String, KExpr) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.synchronized {
-      dispatch(cmd)
-      getAnswer
-    }
-  }
-  
-  def run(cmd: MExpr) = {
-    ml.synchronized {
-      dispatch(cmd)
-      getAnswer
+      ml.evaluate(cmd)
+      ml.waitForAnswer()
+      val res = ml.getExpr
+      val keymaeraResult = MathematicaToKeYmaera.fromMathematica(res)
+      // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+      (res.toString, keymaeraResult)
     }
   }
 
-  private def dispatch(cmd: String) : Unit = {
-    ml.evaluate(cmd)
+  def run(cmd: MExpr): (String, KExpr) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
+    ml.synchronized {
+      queryIndex += 1
+      val indexedCmd = new MExpr(Expr.SYM_LIST, Array(new MExpr(queryIndex), cmd))
+      // Check[expr, err, messages] evaluates expr, if one of the specified messages is generated, returns err
+      val checkErrorMsgCmd = new MExpr(checkExpr, Array(indexedCmd, exceptionExpr/*, checkedMessagesExpr*/))
+      println("Sending to Mathematica " + checkErrorMsgCmd)
+      dispatch(checkErrorMsgCmd.toString)
+      getAnswer(indexedCmd.toString, queryIndex)
+    }
   }
 
-  private def dispatch(cmd: MExpr) = {
+  private def dispatch(cmd: String) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.evaluate(cmd)
   }
 
   /**
    * blocks and returns the answer.
    */
-  private def getAnswer = {
+  private def getAnswer(input: String, cmdIdx: Long): (String, KExpr) = {
+    if (ml == null) throw new IllegalStateException("No MathKernel set")
     ml.waitForAnswer()
     val res = ml.getExpr
-    val keymaeraResult = MathematicaToKeYmaera.fromMathematica(res)
-    // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
-    (res.toString, keymaeraResult)
+    if (res == exceptionExpr) {
+      res.dispose()
+      // an exception occurred
+      ml.evaluate(fetchMessagesCmd)
+      ml.waitForAnswer()
+      val msg = ml.getExpr
+      val txtMsg = msg.toString
+      // msg.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+      throw new IllegalArgumentException("Input " + input + " cannot be evaluated: " + txtMsg)
+    } else {
+      val head = res.head
+      if (head.equals(checkExpr)) {
+        val txtMsg = res.toString
+        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+        throw new IllegalStateException("Mathematica returned input as answer: " + txtMsg)
+      }
+      if(res.head == Expr.SYM_LIST && res.args().length == 2 && res.args.head.asInt() == cmdIdx) {
+        val theResult = res.args.last
+        val keymaeraResult = MathematicaToKeYmaera.fromMathematica(theResult)
+        val txtResult = theResult.toString
+        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+        (txtResult, keymaeraResult)
+      } else {
+        val txtResult = res.toString
+        // res.dispose() // toString calls dispose (see Mathematica documentation, so only call it when done with the Expr
+        throw new IllegalStateException("Mathematica returned a stale answer for " + txtResult)
+      }
+    }
   }
 
   def ready = ???
@@ -120,10 +165,11 @@ class JLinkMathematicaLink extends MathematicaLink {
   }
 
   def qeInOut(f : Formula) : (Formula, String, String) = {
-    val input = "Reduce[" + toMathematica(f) + ",{}, Reals" + "]"
+    val input = new MExpr(new MExpr(Expr.SYMBOL,  "Reduce"),
+      Array(toMathematica(f), new MExpr(listExpr, new Array[MExpr](0)), new MExpr(Expr.SYMBOL, "Reals")))
     val (output, result) = run(input)
     result match {
-      case f : Formula => (f, input, output)
+      case f : Formula => (f, input.toString, output)
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }

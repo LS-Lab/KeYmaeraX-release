@@ -1,6 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core.{Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
-import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, RootNode, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohide2T,hideT,kModalModusPonensT,modusPonensT}
 import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ProofFactory._
@@ -16,7 +17,7 @@ import scala.collection.immutable.Map
 class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
@@ -33,23 +34,70 @@ class PropositionalTacticTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "K Modal Modus Ponens" should "be [x:=2;](x>1 -> x>0) on [x:=2;]x>1 -> [x:=2;]x>0" in {
-    import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.kModalModusPonensT
     val tactic = locateSucc(kModalModusPonensT)
     getProofSequent(tactic, new RootNode(sucSequent("[x:=2;]x>1 -> [x:=2;]x>0".asFormula))) should be (
       sucSequent("[x:=2;](x>1 -> x>0)".asFormula))
   }
 
   "Modus ponens" should "work when assumption comes after implication" in {
-    import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.modusPonensT
     val tactic = modusPonensT(AntePosition(1), AntePosition(0))
     getProofSequent(tactic, new RootNode(sequent(Nil, "x>5 -> x>3".asFormula :: "x>5".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "x>3".asFormula :: Nil, Nil))
   }
 
   it should "work when assumption comes before implication" in {
-    import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.modusPonensT
     val tactic = modusPonensT(AntePosition(0), AntePosition(1))
     getProofSequent(tactic, new RootNode(sequent(Nil, "x>5".asFormula :: "x>5 -> x>3".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "x>3".asFormula :: Nil, Nil))
+  }
+
+  "Cohide2" should "hide everything except the specified positions" in {
+    val tactic = cohide2T(AntePosition(1), SuccPosition(1))
+    val s = sequent(Nil,
+      "a>0".asFormula :: "b>1".asFormula :: "c>2".asFormula :: Nil,
+      "x>0".asFormula :: "y>1".asFormula :: "z>2".asFormula :: Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "b>1".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "y>1".asFormula
+  }
+
+  it should "hide nothing when the only positions present are the ones to retain" in {
+    val tactic = cohide2T(AntePosition(0), SuccPosition(0))
+    val s = sequent(Nil,
+      "a>0".asFormula :: Nil,
+      "x>0".asFormula :: Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "a>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
+  }
+
+  it should "set the continuation correctly" in {
+    // TODO mock testing
+    val tactic = cohide2T(AntePosition(0), SuccPosition(0)) & hideT(AntePosition(0))
+    val s = sequent(Nil,
+      "a>0".asFormula :: Nil,
+      "x>0".asFormula :: Nil)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
+  }
+
+  it should "not be applicable when positions do not point to antecedent and succedent" in {
+    val s = sequent(Nil,
+      "a>0".asFormula :: "b>1".asFormula :: "c>2".asFormula :: Nil,
+      "x>0".asFormula :: "y>1".asFormula :: "z>2".asFormula :: Nil)
+    cohide2T(AntePosition(1), AntePosition(2)).applicable(new RootNode(s)) shouldBe false
+    cohide2T(SuccPosition(1), SuccPosition(2)).applicable(new RootNode(s)) shouldBe false
+  }
+
+  it should "not be applicable when positions point outside the sequent" in {
+    val s = sequent(Nil,
+      "a>0".asFormula :: "b>1".asFormula :: "c>2".asFormula :: Nil,
+      "x>0".asFormula :: "y>1".asFormula :: "z>2".asFormula :: Nil)
+    cohide2T(AntePosition(5), SuccPosition(1)).applicable(new RootNode(s)) shouldBe false
+    cohide2T(AntePosition(1), SuccPosition(5)).applicable(new RootNode(s)) shouldBe false
   }
 }

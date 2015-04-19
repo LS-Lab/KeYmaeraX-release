@@ -1,9 +1,59 @@
-bouncing_ball,examples/simple/bouncing-ball/bouncing-ball-tout.key
-tutorial_sttt_1,examples/tutorials/sttt/example1.key
-tutorial_sttt_2,examples/tutorials/sttt/example2.key
-tutorial_sttt_5,examples/tutorials/sttt/example5.key
-tutorial_sttt_6,examples/tutorials/sttt/example6.key
-tutorial_sttt_7,examples/tutorials/sttt/example7.key
-tutorial_sttt_9a,examples/tutorials/sttt/example9a.key
-tutorial_sttt_9b,examples/tutorials/sttt/example9b.key
-tutorial_lics_4a,examples/tutorials/lics/lics-4a.key
+[
+    {
+        "name" : "STTT Tutorial Example 1",
+        "file" : "examples/tutorials/sttt/example1.key",
+        "description" : "A simple system in which a car starts at some nonnegative velocity and accelerates at a constant rate along a straight lane. The requirement we want to prove is that the car never travels backward in space.",
+        "title" : "Uncontrolled continuous car",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=7",
+        "tactic" : "examples/tutorials/sttt/example1_tactic.txt"
+    },
+    {
+        "name" : "STTT Tutorial Example 2",
+        "file" : "examples/tutorials/sttt/example2.key",
+        "description" : "A hybrid system model of a car with discrete control choices: accelerate, stay stopped, or brake. The requirement to prove is that the car never travels backwards in space.",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=8",
+        "title" : "Simple hybrid car",
+        "tactic" : "examples/tutorials/sttt/example2_tactic.txt"
+    },
+    {
+        "name" : "STTT Tutorial Example 5",
+        "file" : "examples/tutorials/sttt/example5.key",
+        "description" : "A hybrid car model where the controller runs periodically at some maximum time interval between executions. The requirement to prove is that the car never runs the stop sign.",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=13",
+        "title" : "Time-triggered car control",
+        "tactic" : "examples/tutorials/sttt/example5_tactic.txt"
+    },
+    {
+        "name" : "STTT Tutorial Example 6",
+        "file" : "examples/tutorials/sttt/example6.key",
+        "description" : "A hybrid car model where the controller can make non-deterministic decisions on acceleration. The requirement to prove is that the controller never runs the stop sign.",
+        "date" : "3-3-2015",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=14",
+        "title" : "Non-deterministic acceleration",
+        "tactic" : "examples/tutorials/sttt/example6_tactic.txt"
+    },
+    {
+        "name" : "STTT Tutorial Example 7",
+        "file" : "examples/tutorials/sttt/example7.key",
+        "description" : "A hybrid car model with non-deterministic braking characteristics. The requirement to prove is that the car never runs a stop sign.",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=15",
+        "title" : "Non-deterministic approximation of braking",
+        "tactic" : "examples/tutorials/sttt/example7_tactic.txt"
+    },
+    {
+        "name" : "STTT Tutorial Example 9a",
+        "file" : "examples/tutorials/sttt/example9a.key",
+        "description" : "A simple PD control law for regulating the speed of a car. The requirement to prove is that a Lyapunov function found with other means is indeed invariant throughout the system execution.",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=16",
+        "title" : "PD controller Lyapunov function",
+        "tactic" : "examples/tutorials/sttt/example9a_tactic.txt"
+    },
+    {
+        "name" : "STTT Tutorial Example 9b",
+        "file" : "examples/tutorials/sttt/example9b.key",
+        "description" : "A PD controlled car with a trajectory generator for setting target speeds. The requirement to prove is that the car never runs a stop sign.",
+        "pubLink" : "http://symbolaris.com/pub/KeYmaera-tutorial.pdf#page=16",
+        "title" : "PD controlled car",
+        "tactic" : "examples/tutorials/sttt/example9b_tactic.txt"
+    }
+]

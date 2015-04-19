@@ -1,16 +1,19 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-import java.io.{InputStreamReader, BufferedReader}
-import java.util
+import java.nio.channels.Channels
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
+
+import java.io.FileOutputStream
 
 import scala.io.Source
+import spray.json.DefaultJsonProtocol._
 
 //Global setting:
 object DBAbstractionObj {
-  def defaultDatabase = SQLite
+  def defaultDatabase = SQLite //this needs to ba a def and not a val because DBAbstractionObj is initialized in SQLite.
+  val dblocation = System.getProperty("user.home") + "/keymaerax.sqlite"
+  println(dblocation)
 }
 
 // POJOs, short for Plain Old Java Objects, are for us just tagged products.
@@ -43,7 +46,7 @@ object DispatchedTacticStatus extends Enumeration {
  * @param pubLink Link to additional information (paper) on the model.
  */
 class ModelPOJO(val modelId:String, val userId:String, val name:String, val date:String, val keyFile:String,
-                val description:String, val pubLink:String, val title:String)
+                val description:String, val pubLink:String, val title:String, val tactic : Option[String]) //the other guys on this linke should also be optional.
 
 /**
  * Data object for proofs. A proof
@@ -115,7 +118,9 @@ trait DBAbstraction {
   def openProofs(userId : String) : List[ProofPOJO]
 
   //Models
-  def createModel(userId: String, name : String, fileContents : String, date:String) : Option[String]
+  def createModel(userId: String, name : String, fileContents : String, date:String,
+                  description : Option[String]=None, publink:Option[String]=None,
+                  title:Option[String]=None, tactic:Option[String]=None) : Option[String]
   def getModel(modelId : String) : ModelPOJO
   def getModelList(userId : String) : List[ModelPOJO] // name, date, fileContents
   //Proofs of models
@@ -146,51 +151,54 @@ trait DBAbstraction {
   def updateDispatchedCLTerm(termToUpdate : DispatchedCLTermPOJO)
   def updateProofOnCLTermCompletion(proofId : String, termId : String)
 
-  protected def initializeForDemo() : Unit = {
+
+  def initializeForDemo() : Unit = {
+    val dbFile = this.getClass.getResourceAsStream("/keymaerax.sqlite")
+    val target = new java.io.File(DBAbstractionObj.dblocation)
+    val targetStream = new FileOutputStream(target)
+    targetStream.getChannel.transferFrom(Channels.newChannel(dbFile), 0, Long.MaxValue)
+    targetStream.close()
+    dbFile.close()
+  }
+
+  import spray.json._ //allows for .parseJoson on strings.
+  def initializeForDemo2() : Unit = {
     println("Initializing a demo database")
 
     //Add user
     this.createUser("guest", "guest")
 
-    //Model name, file
-    val indexFileContents : List[(String, String, Option[String])] = {
-      val r = this.getClass.getResourceAsStream("/examples/index.txt")
-      if(r == null) {
-        throw new Exception("Could not initialize database because examples/index.txt does not exist in this JAR")
-      }
-      val lines = Source.fromInputStream(r).getLines
-      lines.map(line => {
-        val parts = line.split(",")
-        if(parts.length != 2 && parts.length != 3) throw new Exception("Could not parse examples/index.txt")
-        val name = parts(0)
-        val modelFile = parts(1)
-        val proofTacticFile = if(parts.length == 3) Some(parts(2)) else None
-        (name, modelFile, proofTacticFile)
-      }).toList
+    val reader = this.getClass.getResourceAsStream("/examples/index.txt")
+    val contents: String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+    val source: JsArray = contents.parseJson.asInstanceOf[JsArray]
+    source.elements.map(processJsonForSingleModel(_))
+  }
+
+  private def getFileContents(file : String) = {
+    val reader = this.getClass.getResourceAsStream(file)
+    if(reader == null) throw new Exception(s"Could not find problem file $file.")
+    Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+  }
+
+  private def processJsonForSingleModel(element : JsValue) = {
+    val kvps = element.asJsObject.fields.map(kvp =>
+      (kvp._1, kvp._2.convertTo[String])
+    )
+    val name = kvps.getOrElse("name", throw new Exception("Expcted a name but found none."))
+    val file = kvps.getOrElse("file", throw new Exception("Expcted a file but found none."))
+    val fileContents = getFileContents("/" + file)
+    val description = kvps.get("description")
+    val publink = kvps.get("pubLink")
+    val title = kvps.get("title")
+    val tacticContent = kvps.get("tactic") match {
+      case Some(tf) => Some(getFileContents("/" + tf))
+      case None => None
     }
 
-    indexFileContents.map(entry => {
-      val modelName = entry._1
-      val fileContents : String = {
-        val reader = this.getClass.getResourceAsStream("/" + entry._2)
-        if(reader == null) throw new Exception("Could not find problem file for model " + modelName + ": ." + entry._2 + ".")
-        Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
-      }
-      val id = this.createModel("guest", modelName, fileContents, new java.util.Date().toString()) match {
-        case Some(x) => x
-        case None => throw new Exception("Could not retrieve ID generated by insert.")
-      }
-
-      if(entry._3.isDefined) {
-        val tacticReader = this.getClass.getResourceAsStream("/" + entry._3.get)
-        if (tacticReader == null) {
-          println("Skipping tactic execution for " + modelName)
-        }
-        else {
-          val tactic = Source.fromInputStream(tacticReader).getLines().foldLeft("")((file, line) => file + "\n" + line)
-          new RunCLTermRequest(this, "guest", id, None, tactic).getResultingResponses();
-        }
-      }
-    })
+    val id = createModel("guest", name, fileContents, new java.util.Date().toString, description, publink, title,
+                         tacticContent) match {
+      case Some(x) => x
+      case None => throw new Exception("Could not retrieve ID generated by insert.")
+    }
   }
 }

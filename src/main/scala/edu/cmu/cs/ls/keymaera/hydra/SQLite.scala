@@ -16,7 +16,7 @@ object SQLite extends DBAbstraction {
 
   import Tables._
 
-  val dblocation = System.getProperty("user.home") + "/keymaerax.sqlite3"
+  val dblocation = DBAbstractionObj.dblocation
 
   val sqldb = Database.forURL("jdbc:sqlite:" + dblocation, driver= "org.sqlite.JDBC")
 
@@ -41,16 +41,19 @@ object SQLite extends DBAbstraction {
   /**
    * Initializes a new database.
    */
+//  override def cleanup(): Unit = {
+//    sqldb.withSession(implicit session => {
+//      try {
+//        ddl.drop
+//      } catch {
+//        case e : SQLException => println("Ignoring an exception when dropping DB")//Tables did not exist -- that's find, we create it below anyways. @todo but we are assuming all or no ables exist.
+//      };
+//      ddl.create
+//      initializeForDemo()
+//    })
+//  }
   override def cleanup(): Unit = {
-    sqldb.withSession(implicit session => {
-      try {
-        ddl.drop
-      } catch {
-        case e : SQLException => println("Ignoring an exception when dropping DB")//Tables did not exist -- that's find, we create it below anyways. @todo but we are assuming all or no ables exist.
-      };
-      ddl.create
-      this.initializeForDemo()
-    })
+    initializeForDemo()
   }
 
   private def blankOk(x : Option[String]):String = x match {
@@ -62,7 +65,7 @@ object SQLite extends DBAbstraction {
     sqldb.withSession(implicit session => {
       Models.filter(_.userid === userId).list.map(element => new ModelPOJO(element.modelid.get, element.userid.get, element.name.get,
         blankOk(element.date), blankOk(element.filecontents),
-        blankOk(element.description), blankOk(element.publink), blankOk(element.title)))
+        blankOk(element.description), blankOk(element.publink), blankOk(element.title), element.tactic))
     })
   }
 
@@ -147,7 +150,7 @@ object SQLite extends DBAbstraction {
     })
 
 
-  private def idgen() = java.util.UUID.randomUUID().toString()
+  private def idgen() : String = java.util.UUID.randomUUID().toString()
 
 
   override def updateDispatchedCLTerm(termToUpdate: DispatchedCLTermPOJO): Unit =
@@ -280,13 +283,16 @@ object SQLite extends DBAbstraction {
 
 
   //Models
-  override def createModel(userId: String, name: String, fileContents: String, date: String): Option[String] =
+  override def createModel(userId: String, name: String, fileContents: String, date: String,
+                           description : Option[String]=None, publink:Option[String]=None,
+                           title:Option[String]=None, tactic:Option[String]=None) : Option[String] =
     sqldb.withSession(implicit session => {
       if(Models.filter(_.userid === userId).filter(_.name === name).list.length == 0) {
-        def modelId = idgen()
+        val modelId = idgen()
 
-        Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get))
-          .insert(modelId, userId, name, fileContents, date)
+        Models.map(m => (m.modelid.get, m.userid.get, m.name.get, m.filecontents.get, m.date.get, m.description, m.publink, m.title, m.tactic))
+          .insert(modelId, userId, name, fileContents, date, description, publink, title, tactic)
+
         Some(modelId)
       }
       else None
@@ -327,7 +333,7 @@ object SQLite extends DBAbstraction {
         Models.filter(_.modelid === modelId)
             .list
             .map(m => new ModelPOJO(
-              m.modelid.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title)
+              m.modelid.get, m.userid.get, blankOk(m.name), blankOk(m.date), m.filecontents.get, blankOk(m.description), blankOk(m.publink), blankOk(m.title), m.tactic
             ))
 
       if(models.length < 1) throw new Exception("getModel type should be an Option")

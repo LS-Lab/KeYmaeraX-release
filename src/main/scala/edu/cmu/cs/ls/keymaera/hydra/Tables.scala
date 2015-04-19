@@ -123,16 +123,17 @@ trait Tables {
    *  @param description Database column description DBType(TEXT)
    *  @param filecontents Database column fileContents DBType(TEXT)
    *  @param publink Database column publink DBType(TEXT)
-   *  @param title Database column title DBType(TEXT) */
-  case class ModelsRow(modelid: Option[String], userid: Option[String], name: Option[String], date: Option[String], description: Option[String], filecontents: Option[String], publink: Option[String], title: Option[String])
+   *  @param title Database column title DBType(TEXT)
+   *  @param tactic Database column tactic DBType(TEXT) */
+  case class ModelsRow(modelid: Option[String], userid: Option[String], name: Option[String], date: Option[String], description: Option[String], filecontents: Option[String], publink: Option[String], title: Option[String], tactic: Option[String])
   /** GetResult implicit for fetching ModelsRow objects using plain SQL queries */
   implicit def GetResultModelsRow(implicit e0: GR[Option[String]]): GR[ModelsRow] = GR{
     prs => import prs._
-    ModelsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
+    ModelsRow.tupled((<<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String], <<?[String]))
   }
   /** Table description of table models. Objects of this class serve as prototypes for rows in queries. */
   class Models(_tableTag: Tag) extends Table[ModelsRow](_tableTag, "models") {
-    def * = (modelid, userid, name, date, description, filecontents, publink, title) <> (ModelsRow.tupled, ModelsRow.unapply)
+    def * = (modelid, userid, name, date, description, filecontents, publink, title, tactic) <> (ModelsRow.tupled, ModelsRow.unapply)
     
     /** Database column modelId DBType(TEXT), PrimaryKey */
     val modelid: Column[Option[String]] = column[Option[String]]("modelId", O.PrimaryKey)
@@ -150,6 +151,8 @@ trait Tables {
     val publink: Column[Option[String]] = column[Option[String]]("publink")
     /** Database column title DBType(TEXT) */
     val title: Column[Option[String]] = column[Option[String]]("title")
+    /** Database column tactic DBType(TEXT) */
+    val tactic: Column[Option[String]] = column[Option[String]]("tactic")
     
     /** Foreign key referencing Users (database name users_FK_1) */
     lazy val usersFk = foreignKey("users_FK_1", userid, Users)(r => r.email, onUpdate=ForeignKeyAction.NoAction, onDelete=ForeignKeyAction.NoAction)

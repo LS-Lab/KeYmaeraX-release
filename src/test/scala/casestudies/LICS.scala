@@ -21,12 +21,14 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import testHelper.StringConverter._
 import BranchLabels._
 
+import scala.collection.immutable.Map
+
 /**
  * Created by ran on 3/24/15.
  */
 class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)

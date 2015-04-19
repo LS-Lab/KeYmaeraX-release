@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
+import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
@@ -7,7 +8,8 @@ import java.io.File
 import scala.collection.immutable._
 
 class QETests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val helper = new ProvabilityTestHelper((x) => println(x))
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
   var qet : QETool = null
   val x = Variable("x", None, Real)
 

@@ -1,4 +1,5 @@
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._
@@ -21,7 +22,8 @@ object BadassignT extends Tag("BadassignT")
 
 class TacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
-  val mathematicaConfig : Map[String, String] = Map("linkName" -> "/Applications/Mathematica.app/Contents/MacOS/MathKernel")
+  val helper = new ProvabilityTestHelper((x) => println(x))
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   val randomTrials = 10
   val randomFormulaComplexity = 5

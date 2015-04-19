@@ -6,7 +6,7 @@ package edu.cmu.cs.ls.keymaera.hydra
 
 import java.io.{FileNotFoundException, FileReader}
 import java.text.SimpleDateFormat
-import java.util.Calendar
+import java.util.{Locale, Calendar}
 
 import com.github.fge.jackson.JsonLoader
 import com.github.fge.jsonschema.main.JsonSchemaFactory
@@ -14,7 +14,12 @@ import edu.cmu.cs.ls.keymaera.api.{ComponentConfig, KeYmaeraInterface}
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLParser, CLInterpreter}
+
+import scala.io.Source
+import spray.json._
+import spray.json.DefaultJsonProtocol._
 
 /**
  * A Request should handle all expensive computation as well as all
@@ -71,7 +76,7 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
   override def getResultingResponses() : List[Response] = {
     val openProofCount : Int = db.openProofs(userId).length
     val allModelsCount: Int = db.getModelList(userId).length
-    val provedModelsCount: Int = db.getModelList(userId).flatMap(m => db.getProofsForModel(m.modelId)).count(_.closed)
+    val provedModelsCount: Int = db.getModelList(userId).count(m => db.getProofsForModel(m.modelId).exists(_.closed))
 
     new DashInfoResponse(openProofCount, allModelsCount, provedModelsCount) :: Nil
   }
@@ -82,20 +87,40 @@ class DashInfoRequest(db : DBAbstraction, userId : String) extends Request{
 // System Configuration
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibDir : String) extends Request {
+class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLibFileName : String) extends Request {
+  private def isLinkNameCorrect(linkNameFile: java.io.File): Boolean = {
+    linkNameFile.getName == "MathKernel" || linkNameFile.getName == "MathKernel.exe"
+  }
+
+  private def isJLinkLibFileCorrect(jlinkFile: java.io.File, jlinkLibDir : java.io.File): Boolean = {
+    (jlinkFile.getName == "libJLinkNativeLibrary.jnilib" || jlinkFile.getName == "JLinkNativeLibrary.dll" ||
+      jlinkFile.getName == "libJLinkNativeLibrary.so") && jlinkLibDir.exists() && jlinkLibDir.isDirectory
+  }
+
   override def getResultingResponses(): List[Response] = {
     try {
-      //check to make sure the indicated files exist.
-      val linkNameExists = new java.io.File(linkName).exists()
-      val jlinkLibDirExists = new java.io.File(jlinkLibDir).exists()
+      //check to make sure the indicated files exist and point to the correct files.
+      val linkNameFile = new java.io.File(linkName)
+      val jlinkLibFile = new java.io.File(jlinkLibFileName)
+      val jlinkLibDir : java.io.File = jlinkLibFile.getParentFile
+      val linkNameExists = isLinkNameCorrect(linkNameFile) && linkNameFile.exists()
+      val jlinkLibFileExists = isJLinkLibFileCorrect(jlinkLibFile, jlinkLibDir) && jlinkLibFile.exists()
 
-      if(!linkNameExists || !jlinkLibDirExists) {
-        new ConfigureMathematicaResponse(linkNameExists, jlinkLibDirExists, false) :: Nil
+      if(!linkNameExists || !jlinkLibFileExists) {
+        // look for the largest prefix that does exist
+        var linkNamePrefix = linkNameFile
+        while (!linkNamePrefix.exists && linkNamePrefix.getParent != null) {
+          linkNamePrefix = new java.io.File(linkNamePrefix.getParent)
+        }
+
+        new ConfigureMathematicaResponse(
+          if (linkNamePrefix.exists()) linkNamePrefix.toString else "",
+          if (jlinkLibDir.exists()) jlinkLibDir.toString else "", false) :: Nil
       }
       else {
         val originalConfig = db.getConfiguration("mathematica")
 
-        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir)
+        val configMap = scala.collection.immutable.Map("linkName" -> linkName, "jlinkLibDir" -> jlinkLibDir.getAbsolutePath)
         val newConfig = new ConfigurationPOJO("mathematica", configMap)
 
         db.updateConfiguration(newConfig)
@@ -113,11 +138,67 @@ class ConfigureMathematicaRequest(db : DBAbstraction, linkName : String, jlinkLi
           }
         }
 
-        new ConfigureMathematicaResponse(linkNameExists, jlinkLibDirExists, success) :: Nil
+        new ConfigureMathematicaResponse(linkName, jlinkLibDir.getAbsolutePath, success) :: Nil
       }
     }
     catch {
       case e : Exception => new ErrorResponse(e) :: Nil
+    }
+  }
+}
+
+class GetMathematicaConfigSuggestionRequest(db : DBAbstraction) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val reader = this.getClass.getResourceAsStream("/config/potentialMathematicaPaths.json")
+    val contents : String = Source.fromInputStream(reader).getLines().foldLeft("")((file, line) => file + "\n" + line)
+    val source : JsArray = contents.parseJson.asInstanceOf[JsArray]
+
+    // TODO provide classes and spray JSON protocol to convert
+    val os = System.getProperty("os.name")
+    val osKey = osKeyOf(os.toLowerCase)
+    val osPathGuesses = source.elements.find(osCfg => osCfg.asJsObject.getFields("os").head.convertTo[String] == osKey) match {
+      case Some(opg) => opg.asJsObject.getFields("mathematicaPaths").head.convertTo[List[JsObject]]
+      case None => throw new IllegalStateException("No default configuration for Unknown OS")
+    }
+
+    val pathTuples = osPathGuesses.map(osPath =>
+      (osPath.getFields("version").head.convertTo[String],
+       osPath.getFields("kernelPath").head.convertTo[String],
+       osPath.getFields("kernelName").head.convertTo[String],
+       osPath.getFields("jlinkPath").head.convertTo[String],
+       osPath.getFields("jlinkName").head.convertTo[String]))
+
+    val suggestion = pathTuples.find(path => new java.io.File(path._2 + path._3).exists &&
+        new java.io.File(path._4 + path._5).exists) match {
+      case Some(s) => s
+      case None => pathTuples.head // use the first configuration as suggestion when nothing else matches
+    }
+
+    new MathematicaConfigSuggestionResponse(os, suggestion._1, suggestion._2, suggestion._3, suggestion._4, suggestion._5) :: Nil
+  }
+
+  private def osKeyOf(osName: String): String = {
+    if (osName.contains("win")) "Windows"
+    else if (osName.contains("mac")) "MacOS"
+    else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "Unix"
+    else "Unknown"
+  }
+}
+
+class GetMathematicaConfigurationRequest(db : DBAbstraction) extends Request {
+  override def getResultingResponses(): List[Response] = {
+    val config = db.getConfiguration("mathematica").config
+    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+    val jlinkLibFile = {
+      if(osName.contains("win")) "JLinkNativeLibrary.dll"
+      else if(osName.contains("mac")) "libJLinkNativeLibrary.jnilib"
+      else if(osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) "libJLinkNativeLibrary.so"
+      else "Unknown"
+    }
+    if (config.contains("linkName") && config.contains("jlinkLibDir")) {
+      new MathematicaConfigurationResponse(config("linkName"), config("jlinkLibDir")+"/"+jlinkLibFile) :: Nil
+    } else {
+      new MathematicaConfigurationResponse("", "") :: Nil
     }
   }
 }
@@ -168,6 +249,13 @@ class GetModelRequest(db : DBAbstraction, userId : String, modelId : String) ext
   }
 }
 
+class GetModelTacticRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
+  def getResultingResponses() = {
+    val model = db.getModel(modelId)
+    new GetModelTacticResponse(model) :: Nil
+  }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Proofs of models
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -193,31 +281,41 @@ class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request
   }
 }
 
-class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wait : Boolean = false) extends Request {
   def getResultingResponses() = {
     val proof = db.getProofInfo(proofId)
 
-    if (!KeYmaeraInterface.containsTask(proof.proofId)) {
-      val model = db.getModel(proof.modelId)
-      KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
-      val steps : List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
-      if (steps.nonEmpty) {
-          steps.head match {
-          case firstStep : DispatchedTacticPOJO => {
-            KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
-              firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
+    TaskManagement.startLoadingTask(proof.proofId)
+
+    val t = new Thread(new Runnable() {
+      override def run(): Unit = {
+        if (!KeYmaeraInterface.containsTask(proof.proofId)) {
+          val model = db.getModel(proof.modelId)
+          KeYmaeraInterface.addTask(proof.proofId, model.keyFile)
+          val steps: List[AbstractDispatchedPOJO] = db.getProofSteps(proof.proofId).map(step => db.getDispatchedTermOrTactic(step).getOrElse(throw new Exception("Expected to find tactic inst or term with id " + step)))
+          if (steps.nonEmpty) {
+            steps.head match {
+              case firstStep: DispatchedTacticPOJO => {
+                KeYmaeraInterface.runTactic(proof.proofId, firstStep.nodeId, firstStep.tacticsId, firstStep.formulaId,
+                  firstStep.id, Some(tacticCompleted(steps.toArray, 1)), firstStep.input, firstStep.auto)
+              }
+              case firstStep: DispatchedCLTermPOJO => {
+                KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)))
+              }
+            }
+          } else {
+            TaskManagement.finishedLoadingTask(proofId)
           }
-          case firstStep : DispatchedCLTermPOJO => {
-            KeYmaeraInterface.runTerm(firstStep.clTerm, firstStep.proofId, firstStep.nodeId, firstStep.clTerm, Some(tacticCompleted(steps.toArray, 1)))
-          }
+        } else {
+          TaskManagement.finishedLoadingTask(proofId)
         }
-      } else {
-        TaskManagement.finishedLoadingTask(proofId)
       }
-    }
+    })
+
+    if(!wait) t.start()
+    else t.run
 
     val status = KeYmaeraInterface.getTaskStatus(proofId)
-
     new OpenProofResponse(proof, status.toString) :: Nil
   }
 
@@ -225,7 +323,6 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
   private def tacticCompleted(steps : Array[AbstractDispatchedPOJO], next : Int)(tId: String)(proofId: String, nId: Option[String],
                                                                                tacticId: String) {
     if (next < steps.length) {
-      val nextStep = steps(next)
       steps(next) match {
         case nextStep : DispatchedTacticPOJO => {
           KeYmaeraInterface.runTactic(proofId, nextStep.nodeId, nextStep.tacticsId, nextStep.formulaId, nextStep.id,
@@ -236,6 +333,7 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String) ex
         }
       }
     } else {
+      println("*******************\nFinished loading proof " + proofId + "\n*******************")
       TaskManagement.finishedLoadingTask(proofId)
     }
   }
@@ -258,13 +356,21 @@ class GetProofAgendaRequest(db : DBAbstraction, userId : String, proofId : Strin
       }
     } else {
       val proof = db.getProofInfo(proofId)
-      val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
+      try {
 
-      val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0, true) match {
-        case Some(proofNode) => (proof, g, proofNode)
-        case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
-      })
-      new ProofAgendaResponse(result) :: Nil
+        val openGoalIds = KeYmaeraInterface.getOpenGoals(proofId)
+
+        val result = openGoalIds.map(g => KeYmaeraInterface.getSubtree(proof.proofId, Some(g), 0, true) match {
+          case Some(proofNode) => (proof, g, proofNode)
+          case None => throw new IllegalStateException("No subtree for goal " + g + " in proof " + proof.proofId)
+        })
+        new ProofAgendaResponse(result) :: Nil
+      }
+      catch {
+        case e : IllegalStateException => {
+          new ProofAgendaResponse(List()) :: Nil
+        }
+      }
     }
   }
 }
@@ -360,7 +466,7 @@ class RunCLTermRequest(db : DBAbstraction, userId : String, proofId : String, no
   def getResultingResponses() = {
     try {
       //Make sure that the tactic is going to construct and parse before updating the database.
-      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse.")))
+      CLInterpreter.construct(CLParser(clTerm).getOrElse(throw new Exception("Failed to parse CL term: " + clTerm)))
 
       val termId = db.createDispatchedCLTerm(proofId, nodeId, clTerm)
       //Update status to running.
@@ -512,6 +618,67 @@ class AcceptLicenseRequest(db : DBAbstraction) extends Request {
     db.createConfiguration("license")
     val newConfiguration = new ConfigurationPOJO("license", Map("accepted" -> "true"))
     db.updateConfiguration(newConfiguration)
+    new BooleanResponse(true) :: Nil
+  }
+}
+
+/**
+ * Returns either a DispatchedCLTermResponse or else an ErrorResponse (if no initialization tactic exists for the model)
+ * In the latter case, you should wait until the status of the dispatched term is Finished before taking the user to the proof.
+ */
+class RunModelInitializationTacticRequest(db : DBAbstraction, userId : String, modelId : String) extends Request {
+  override def getResultingResponses() : List[Response] = {
+    val model = db.getModel(modelId)
+    model.tactic match {
+      case Some(tactic) => {
+        val initializedProofId = db.createProofForModel(modelId, userId, "Default Proof", new java.util.Date().toString)
+        new OpenProofRequest(db, userId, initializedProofId, wait = true).getResultingResponses() //@todo we should do the rest of this inside of a ???
+        new RunCLTermRequest(db, userId, initializedProofId, None, tactic).getResultingResponses();
+
+      }
+      case None => new ErrorResponse(new Exception("Could not find an initialization tactic")) :: Nil
+    }
+  }
+}
+
+/////
+// Requests for shutting down KeYmaera if KeYmaera is hosted locally.
+/////
+
+class IsLocalInstanceRequest() extends Request {
+  override def getResultingResponses(): List[Response] = new BooleanResponse(!Boot.isHosted) :: Nil
+}
+
+class ShutdownReqeuest() extends Request {
+  override def getResultingResponses() : List[Response] = {
+    new Thread() {
+      override def run() = {
+        try {
+          //Tell all scheduled tactics to stop.
+          //@todo figure out which of these are actually necessary.
+          System.out.flush()
+          System.err.flush()
+          Tactics.MathematicaScheduler.shutdown()
+          Tactics.KeYmaeraScheduler.shutdown()
+          System.out.flush()
+          System.err.flush()
+          Boot.system.shutdown()
+          System.out.flush()
+          System.err.flush()
+          this.synchronized {
+            this.wait(4000)
+          }
+          System.out.flush()
+          System.err.flush()
+          System.exit(0) //should've already stopped the application by now.
+        }
+        catch {
+          case _ : Exception => System.exit(-1)
+        }
+
+      }
+    }.start
+
     new BooleanResponse(true) :: Nil
   }
 }

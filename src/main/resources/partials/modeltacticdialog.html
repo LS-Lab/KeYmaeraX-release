@@ -1,0 +1,19 @@
+<div class="modal-header">
+    <h3 class="modal-title">Tactic for {{tactic.modelName}}</h3>
+</div>
+<div class="modal-body" style="overflow: scroll; height: 500px">
+    KeYmaera X provides automated proof search, as well as proof construction using tactics.
+
+    <h3>Automated Proof Search</h3>
+    <!-- HACK: serve from DB -->
+    Use tactic <code>Auto</code> after loading the model.
+    <span ng-if="tactic.modelName.indexOf('9a') > -1 || tactic.modelName.indexOf('9b') > -1">
+        The automated search will make progress, but may take a long time and remain incomplete on this model.
+    </span>
+
+    <h3>Proof Construction</h3>
+    <pre><code>{{tactic.tacticBody}}</code></pre>
+</div>
+<div class="modal-footer">
+    <button class="btn btn-primary" ng-click="ok()">Close</button>
+</div>
