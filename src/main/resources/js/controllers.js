@@ -32,7 +32,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
           $scope.mathematicaConfigSuggestion = data
       })
       .error(function() {
-          alert("Unhandled error when attempting to get Mathematica configuration.")
+          console.error("Unhandled error when attempting to get Mathematica configuration.")
       });
 
     $http.get("/config/mathematica")
@@ -50,7 +50,7 @@ keymaeraProofControllers.controller('MathematicaConfig',
 //          }
       })
       .error(function() {
-          alert("Unhandled error when attempting to get Mathematica configuration.")
+          console.error("Unhandled error when attempting to get Mathematica configuration.")
       });
 
     $scope.configureMathematica = function() {
@@ -377,7 +377,7 @@ keymaeraProofControllers.value('cgBusyDefaults',{
 
 keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($scope, $http, $modal, $cookies, $modalInstance) {
   $scope.rejectLicense = function() {
-    alert("KeYmaera X cannot be used without accepting the license -- we are not shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
+    alert("KeYmaera X cannot be used without accepting the license -- we are now shutting down KeYmaera X. To accept the license, restart KeYmaera X and click 'Accept'");
     $modalInstance.dismiss('cancel')
 
     var modalInstance = $modal.open({
@@ -393,7 +393,7 @@ keymaeraProofControllers.controller('DashboardCtrl.LicenseDialog', function($sco
   $scope.cancel = function() {
     $http.post("/licenseacceptance")
         .success(function(data) {}) //ok
-        .error(function() { alert("Failed to udpate database after accepting license!")});
+        .error(function() { console.error("Failed to udpate database after accepting license!")});
     $modalInstance.dismiss('cancel');
   }
 });
@@ -429,7 +429,7 @@ keymaeraProofControllers.controller('DashboardCtrl',
             $scope.mathematicaIsConfigured = data.configured;
         })
         .error(function() {
-            alert("Unhandled error when attempting to get Mathematica status.")
+            console.error("Unhandled error when attempting to get Mathematica status.")
         });
 
 
@@ -467,7 +467,7 @@ keymaeraProofControllers.controller('ModelUploadCtrl',
      $scope.runPreloadedProof = function(model) {
         $http.post("/models/users/" + $scope.userId + "/model/" + model.id + "/initialize")
             .success(function(data) {
-                alert("yay! Take the user to the proof load page?")
+                console.log("yay! Take the user to the proof load page?")
             })
      };
 
@@ -545,7 +545,7 @@ keymaeraProofControllers.controller('ModelListCtrl',
 
     $scope.runTactic = function (modelid) {
       $http.post("user/" + $cookies.userId + "/model/" + modelid + "/tactic/run").success(function(data) {
-          alert("Done running tactic")
+          console.log("Done running tactic")
       });
     }
 
@@ -594,7 +594,7 @@ keymaeraProofControllers.controller('ModelProofCreateCtrl',
                 $location.path('proofs/' + proofid);
             }).
             error(function(data, status, headers, config) {
-                alert('TODO handle errors properly.')
+                console.log('Error starting new proof for model ' + $routeParams.modelId)
             });
     }
     $scope.$emit('routeLoaded', {theview: '/models/:modelId/proofs/create'})
@@ -609,13 +609,15 @@ var pollProofStatus = function(proof, userId, http) {
       http.get('proofs/user/' + userId + '/' + proof.id + '/status')
               .success(function(data) {
           if (data.status == undefined) {
+            console.log("Continue polling proof status");
             pollProofStatus(proof, userId, http);
           } else {
+            console.log("Received proof status " + data.status);
             proof.loadStatus = data.status
           }
       }).
       error(function(data, status, headers, config) {
-          alert('Unable to poll proof status.')
+          console.log('Unable to poll proof status.')
       });
   }, 1000);
 }
@@ -637,11 +639,13 @@ keymaeraProofControllers.controller('ProofListCtrl',
             proof.loadStatus = data.loadStatus
             // when server loads proof itself asynchronously
             if (data.loadStatus == 'Loading') {
+              console.log("Start polling proof status");
               pollProofStatus(proof, $cookies.userId, $http);
             }
         }).
         error(function(data, status, headers, config) {
           // TODO check that it is a time out
+          console.log("Start polling proof status");
           pollProofStatus(proof, $cookies.userId, $http);
         });
     }
@@ -670,7 +674,7 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
                 $location.path('proofs/' + proofid);
             }).
             error(function(data, status, headers, config) {
-                alert('TODO handle errors properly.')
+                console.log('Error starting new proof for model ' + $routeParams.modelId)
             });
     }
 
@@ -680,11 +684,13 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
         proof.loadStatus = data.loadStatus
         // when server loads proof itself asynchronously
         if (data.loadStatus == 'Loading') {
+          console.log("Start polling proof status");
           pollProofStatus(proof, $cookies.userId, $http);
         }
       }).
       error(function(data, status, headers, config) {
         // TODO check that it is a time out
+        console.log("Start polling proof status");
         pollProofStatus(proof, $cookies.userId, $http);
       });
     }
@@ -723,7 +729,7 @@ $scope.treeContents = "asdf"
                 $scope.treeContents = printNode(data);
             })
             .error(function() {
-                alert("error encountered while trying to retrieve the tree.")
+                console.log("Error encountered while trying to retrieve the tree.")
             })
     }
 
@@ -887,7 +893,6 @@ keymaeraProofControllers.controller('TaskListCtrl',
                   })
                   .error(function() {
                       var msg = "Error: this proof is not on the Agenda and the server could not find it.";
-                      alert(msg);
                       console.error(msg);
                   })
           }
@@ -944,7 +949,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 }
              })
              .error(function() {
-                alert("encountered error during post on runTerm.")
+                console.error("encountered error during post on runTerm.")
              })
     }
     $scope.$on('handleDispatchedTerm', function(event, tId) {
@@ -1037,12 +1042,12 @@ keymaeraProofControllers.controller('TaskListCtrl',
               }
               $scope.proofHistory.push(historyItem)
             } else {
-              alert("pretty printing undefined for tactic " + tacticName)
+              console.log("pretty printing undefined for tactic " + tacticName)
             }
           }
         })
         .error(function() {
-          alert("error encountered while trying to retrieve the proof history.")
+          console.error("error encountered while trying to retrieve the proof history.")
         })
     }
 
@@ -1054,7 +1059,7 @@ keymaeraProofControllers.controller('TaskListCtrl',
         $scope.selectedTask = data;
       })
       .error(function() {
-        alert("error encountered while trying to retrieve the proof history details.")
+        console.error("error encountered while trying to retrieve the proof history details.")
       })
     }
 
