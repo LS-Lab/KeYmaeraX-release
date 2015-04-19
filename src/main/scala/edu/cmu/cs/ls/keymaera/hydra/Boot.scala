@@ -135,6 +135,7 @@ object Boot extends App {
     } catch {
       case exc: java.awt.HeadlessException =>
       case exc: java.lang.ClassNotFoundException =>
+      case exc: java.lang.NoSuchMethodError =>
       case exc: Exception =>
     }
   }
