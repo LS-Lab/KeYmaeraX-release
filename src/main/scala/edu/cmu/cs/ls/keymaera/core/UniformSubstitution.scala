@@ -298,10 +298,10 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           DifferentialFormula(usubst(g))
 
         // binding cases add bound variables to u
-        case Forall(vars, g) => require(admissible(SetLattice(vars), g),
+        case Forall(vars, g) => require(admissible(SetLattice(vars).toSetLattice[NamedSymbol], g),
           "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             Forall(vars, usubst(g))
-        case Exists(vars, g) => require(admissible(SetLattice(vars), g),
+        case Exists(vars, g) => require(admissible(SetLattice(vars).toSetLattice[NamedSymbol], g),
           "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             Exists(vars, usubst(g))
 
