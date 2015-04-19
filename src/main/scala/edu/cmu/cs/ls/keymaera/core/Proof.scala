@@ -116,7 +116,9 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
     case _ => false
   }
 
-  override def hashCode: Int = HashFn.hash(251, pref, ante, succ)
+  //override def hashCode: Int = HashFn.hash(251, pref, ante, succ)
+
+  // reading information
 
   /**
    * Retrieves the formula in sequent at a given position.
@@ -133,6 +135,31 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
       succ(p.getIndex)
     }
   }
+
+  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from Position.
+//  /**
+//   * Retrieves the formula in sequent at a given succedent position.
+//   * @param pos the succedent position of the formula
+//   * @return the formula at the given position from the succedent
+//   * @note slightly faster version with the same result as #apply(SeqPos)
+//   */
+//  def apply(pos: AntePos): Formula = {
+//    //assert (pos.isAnte)  // @elidable
+//    //require(pos.getIndex < ante.length, "Position " + pos + " is invalid in sequent " + this) // @elidable
+//    ante(pos.getIndex)
+//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+//
+//  /**
+//   * Retrieves the formula in sequent at a given antecedent position.
+//   * @param pos the antecedent position of the formula
+//   * @return the formula at the given position from the antecedent
+//   * @note slightly faster version with the same result as #apply(SeqPos)
+//   */
+//  def apply(pos: SuccPos): Formula = {
+//    //assert (pos.isSucc)  // @elidable
+//    //require(pos.getIndex < succ.length, "Position " + pos + " is invalid in sequent " + this) // @elidable
+//    succ(pos.getIndex)
+//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
 
   // transformations giving copies of sequents
   
@@ -1179,6 +1206,66 @@ object LookupLemma {
 
       case _ => None
     }
+  }
+}
+
+/*********************************************************************************
+  * Derived Sequent Proof Rules, merely for efficiency
+  *********************************************************************************
+  */
+
+//@derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
+object CutRight extends ((Formula, SuccPos) => Rule) {
+  /**
+   * Cut in the given formula c in place of p.
+   * G |- c, D    G |- c->p, D
+   * -------------------------
+   *        G |- p, D
+   */
+  def apply(c: Formula, pos: SuccPos) : Rule = new CutRight(c, pos)
+  //@todo convert all rules to case classes since unmodifiable values and componentwise equality?
+  //@todo convert rules to private[core] to make them easier to change? Ruins access though?
+  private class CutRight(c: Formula, pos: SuccPos) extends Rule("cut Right") {
+    def apply(s: Sequent): List[Sequent] = {
+      val p = s(pos)
+      List(s.updated(pos, c), s.updated(pos, Imply(c, p)))
+    } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
+  }
+}
+
+//@derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
+object CutLeft extends ((Formula, AntePos) => Rule) {
+  /**
+   * Cut in the given formula c in place of p
+   * G, c |- D    G |- p->c, D
+   * -------------------------
+   *        G, p |- D
+   */
+  def apply(c: Formula, pos: AntePos) : Rule = new CutLeft(c, pos)
+  private class CutLeft(c: Formula, pos: AntePos) extends Rule("cut Left") {
+    def apply(s: Sequent): List[Sequent] = {
+      val p = s(pos)
+      List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
+    } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
+  }
+}
+
+// ->2<-> Equivify Right: Equivalencify Implication Right
+//@derived(cut(a<->b) & prop...)
+object EquivifyRight extends (SuccPos => Rule) {
+  /**
+   * Equivify Right: Convert implication to equivalence.
+   * G |- a<->b, D
+   * -------------
+   * G |- a->b,  D
+   */
+  def apply(pos: SuccPos): Rule = new EquivifyRight(pos)
+}
+
+private[core] class EquivifyRight(pos: SuccPos) extends RightRule("->2<-> Equivify Right", pos) {
+  def apply(s: Sequent): List[Sequent] = {
+    val Imply(a,b) = s(pos)
+    List(s.updated(pos, Equiv(a, b)))
   }
 }
 
