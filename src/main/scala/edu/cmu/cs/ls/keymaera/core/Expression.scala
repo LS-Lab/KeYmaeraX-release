@@ -4,7 +4,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
@@ -14,6 +14,7 @@ import scala.collection.immutable.IndexedSeq
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 import scala.annotation.{tailrec, elidable}
@@ -64,7 +65,7 @@ case class ObjectSort(name : String) extends Sort
 sealed trait Expression {
   def kind : Kind
   def sort : Sort
-  override def toString = "(" + prettyString() + ")"
+  override def toString = "(" + prettyString() + ")@" + super.toString
   def prettyString() : String = "TODOTODO???TODO" //new KeYmaeraPrettyPrinter().stringify(this)
 }
 
@@ -91,7 +92,7 @@ sealed trait AtomicTerm extends Term with Atomic {}
 /**
  * real terms
  */
-private[kernel] trait RTerm extends Term {
+private[core] trait RTerm extends Term {
   final def sort = Real
 }
 
@@ -134,7 +135,7 @@ sealed trait CompositeTerm extends Term with Composite {}
 /**
  * Composite Real Terms, i.e. real terms composed of two real terms.
  */
-private[kernel] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
+private[core] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
   require(left.sort == Real && right.sort == Real)
 }
 
@@ -164,7 +165,7 @@ sealed trait AtomicFormula extends Formula with Atomic {}
 /**
  * Composite Real Terms, i.e. real terms composed of two real terms.
  */
-private[kernel] abstract class RAtomicFormula(left: Term, right: Term) extends AtomicFormula {
+private[core] abstract class RAtomicFormula(left: Term, right: Term) extends AtomicFormula {
   require(left.sort == Real && right.sort == Real)
 }
 

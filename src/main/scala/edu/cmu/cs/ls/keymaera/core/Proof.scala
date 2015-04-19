@@ -16,11 +16,11 @@ import scala.collection.immutable.IndexedSeq
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
-import edu.cmu.cs.ls.keymaera.core.Number.NumberObj
 
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser  // external
@@ -104,21 +104,11 @@ object SeqPos {
  * Sequents
  * @author aplatzer
  */
-final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
-                         val ante: scala.collection.immutable.IndexedSeq[Formula],
-                         val succ: scala.collection.immutable.IndexedSeq[Formula]) {
+final case class Sequent(pref: scala.collection.immutable.Seq[NamedSymbol],
+                         ante: scala.collection.immutable.IndexedSeq[Formula],
+                         succ: scala.collection.immutable.IndexedSeq[Formula]) {
   applicable
   @elidable(ASSERTION) def applicable = require(pref.isEmpty, "only empty sequent prefix supported so far " + pref)
-
-  // Could use scala.collection.immutable.Seq instead of IndexedSeq, since equivalent except for performance. But many KeYmaera parts construct Sequents, so safer for performance.
-  override def equals(e: Any): Boolean = e match {
-    case Sequent(p, a, s) => pref == p && ante == a && succ == s
-    case _ => false
-  }
-
-  //override def hashCode: Int = HashFn.hash(251, pref, ante, succ)
-
-  // reading information
 
   /**
    * Retrieves the formula in sequent at a given position.
@@ -167,7 +157,7 @@ final case class Sequent(val pref: scala.collection.immutable.Seq[NamedSymbol],
    * A copy of this sequent concatenated with given sequent s.
    * Sequent(pref, A,S) glue Sequent(pref, B,T) == Sequent(pref, A++B, S++T)
    * @param s the sequent whose antecedent to append to ours and whose succedent to append to ours.
-   * @returns a copy of this sequent concatenated with s.
+   * @return a copy of this sequent concatenated with s.
    * Results in a least upper bound with respect to subsets of this and s.
    */
   def glue(s: Sequent) : Sequent = {
@@ -247,7 +237,7 @@ object Provable {
   /**
    * Begin a new proof for the desired conclusion goal
    * @param goal the desired conclusion.
-   * @result a Provable whose subgoals need to be all proved in order to prove goal.
+   * @return a Provable whose subgoals need to be all proved in order to prove goal.
    * @note soundness-critical
    */
   def startProof(goal : Sequent) = {
@@ -268,14 +258,13 @@ object Provable {
  * @author aplatzer
  * @TODO Subgoals as an immutable list or an immutable IndexedSeq?
  */
-final case class Provable private (val conclusion: Sequent,
-                                   val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
+final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
   if (Provable.debugProver && subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
-   * @todo Not sure how to make this type visible outside as well
+   * @TODO Not sure how to make this type visible outside as well
    */
   type Subgoal = Int
 
@@ -465,7 +454,6 @@ class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p
     List(Sequent(s.pref, IndexedSeq(s.ante(p1.getIndex)), IndexedSeq(s.succ(p2.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
-
 
 // Exchange left rule reorders antecedent
 object ExchangeLeft {
@@ -778,10 +766,10 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
 
   def apply(f: Formula): Formula = {
     if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
-      // allow self renaming to get stuttering
-      if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
-        throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
-      rename(f)
+    // allow self renaming to get stuttering
+    if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
+      throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+    rename(f)
     } else f
   }
 
@@ -808,21 +796,21 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   private def rename(t: Term): Term = t match {
     // base cases
     case x: Variable => renameVar(x)
-    case CDot => CDot
+    case DotTerm => DotTerm
     case Nothing => Nothing
     case Anything => Anything
-    case x@Number(_, _) => x
-    case Apply(f, theta) => Apply(f, rename(theta))
+    case x: Number => x
+    case FuncOf(f, theta) => FuncOf(f, rename(theta))
     // homomorphic cases
-    case Neg(s, l) => Neg(s, rename(l))
-    case Add(s, l, r) => Add(s, rename(l), rename(r))
-    case Subtract(s, l, r) => Subtract(s, rename(l), rename(r))
-    case Multiply(s, l, r) => Multiply(s, rename(l), rename(r))
-    case Divide(s, l, r) => Divide(s, rename(l), rename(r))
-    case Power(s, l, r) => Power(s, rename(l), rename(r))
-    case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
+    //case Neg(s, l) => Neg(s, rename(l))
+    case Plus(l, r) => Plus(rename(l), rename(r))
+    case Minus(l, r) => Minus(rename(l), rename(r))
+    case Times(l, r) => Times(rename(l), rename(r))
+    case Divide(l, r) => Divide(rename(l), rename(r))
+    case Power(l, r:Number) => Power(rename(l), /*rename*/(r))
+    //case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
 
-    case Derivative(s, e) => Derivative(s, rename(e))
+    case Differential(e) => Differential(rename(e))
   }
 
   private def renameVar(e: Variable): Variable =
@@ -841,14 +829,15 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
    */
   private def rename(f: Formula): Formula = f match {
     // homomorphic base cases
-    case Equals(d, l, r) => Equals(d, rename(l), rename(r))
-    case NotEquals(d, l, r) => NotEquals(d, rename(l), rename(r))
-    case GreaterEqual(d, l, r) => GreaterEqual(d, rename(l), rename(r))
-    case GreaterThan(d, l, r) => GreaterThan(d, rename(l), rename(r))
-    case LessEqual(d, l, r) => LessEqual(d, rename(l), rename(r))
-    case LessThan(d, l, r) => LessThan(d, rename(l), rename(r))
+    case Equal(l, r) => Equal(rename(l), rename(r))
+    case NotEqual(l, r) => NotEqual(rename(l), rename(r))
 
-    case ApplyPredicate(fn, theta) => ApplyPredicate(fn, rename(theta))
+    case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))
+    case Greater(l, r) => Greater(rename(l), rename(r))
+    case LessEqual(l, r) => LessEqual(rename(l), rename(r))
+    case Less(l, r) => Less(rename(l), rename(r))
+
+    case PredOf(fn, theta) => PredOf(fn, rename(theta))
 
     // homomorphic cases
     case Not(g) => Not(rename(g))
@@ -857,13 +846,13 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case Imply(l, r) => Imply(rename(l), rename(r))
     case Equiv(l, r) => Equiv(rename(l), rename(r))
 
-    case Forall(vars, phi) => Forall(vars.map(rename), rename(phi))
-    case Exists(vars, phi) => Exists(vars.map(rename), rename(phi))
+    case Forall(vars, phi) => Forall(vars.map(renameVar), rename(phi))
+    case Exists(vars, phi) => Exists(vars.map(renameVar), rename(phi))
 
-    case BoxModality(p, phi) => BoxModality(rename(p), rename(phi))
-    case DiamondModality(p, phi) => DiamondModality(rename(p), rename(phi))
+    case Box(a, phi) => Box(rename(a), rename(phi))
+    case Diamond(a, phi) => Diamond(rename(a), rename(phi))
 
-    case FormulaDerivative(g) => FormulaDerivative(rename(g))
+    case DifferentialFormula(g) => DifferentialFormula(rename(g))
 
     case True | False => f
   }
@@ -873,27 +862,24 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
    */
   private def rename(p: Program): Program = p match {
     case Assign(v: Variable, t) => Assign(renameVar(v), rename(t))
-    case Assign(Derivative(s, v: Variable), t) => Assign(Derivative(s, renameVar(v)), rename(t))
-    case NDetAssign(v: Variable) => NDetAssign(renameVar(v))
+    case DiffAssign(DifferentialSymbol(v: Variable), t) => DiffAssign(DifferentialSymbol(renameVar(v)), rename(t))
+    case AssignAny(v: Variable) => AssignAny(renameVar(v))
     case Test(phi) => Test(rename(phi))
     case ode: DifferentialProgram => renameODE(ode)
-    case Sequence(a, b) => Sequence(rename(a), rename(b))
     case Choice(a, b) => Choice(rename(a), rename(b))
+    case Compose(a, b) => Compose(rename(a), rename(b))
     case Loop(a) => Loop(rename(a))
     // extended cases
-    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
-    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
+//    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
+//    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
   }
 
   private def renameODE(p: DifferentialProgram): DifferentialProgram = p match {
-      case AtomicODE(Derivative(dd, Variable(n, i, d)), t) if n == what && i == wIdx =>
-        AtomicODE(Derivative(dd, Variable(repl, rIdx, d)), rename(t))
-      case AtomicODE(dv@Derivative(_, Variable(n, i, _)), t) if n != what || i != wIdx =>
-        AtomicODE(dv, rename(t))
-      case ODEProduct(a, b) => ODEProduct(renameODE(a), renameODE(b))
-      case ODESystem(d, a, h) => ODESystem(d, renameODE(a), rename(h))
-      case _: EmptyODE => p
-      case _: DifferentialProgramConstant => p
+      case AtomicODE(DifferentialSymbol(Variable(n, i, d)), t) if n == what && i == wIdx =>
+        AtomicODE(DifferentialSymbol(Variable(repl, rIdx, d)), rename(t))
+      case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
+      case ODESystem(a, h) => ODESystem(renameODE(a), rename(h))
+      case _: DifferentialProgramConst => p
   }
 
   /**
@@ -902,66 +888,65 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
    */
   private def allNames(f: Formula): Set[NamedSymbol] = f match {
     // homomorphic cases
-    case Equals(d, l, r) => allNames(l) ++ allNames(r)
-    case NotEquals(d, l, r) => allNames(l) ++ allNames(r)
-    case GreaterEqual(d, l, r) => allNames(l) ++ allNames(r)
-    case GreaterThan(d, l, r) => allNames(l) ++ allNames(r)
-    case LessEqual(d, l, r) => allNames(l) ++ allNames(r)
-    case LessThan(d, l, r) => allNames(l) ++ allNames(r)
+    case Equal(l, r) => allNames(l) ++ allNames(r)
+    case NotEqual(l, r) => allNames(l) ++ allNames(r)
+
+    case GreaterEqual(l, r) => allNames(l) ++ allNames(r)
+    case Greater(l, r) => allNames(l) ++ allNames(r)
+    case LessEqual(l, r) => allNames(l) ++ allNames(r)
+    case Less(l, r) => allNames(l) ++ allNames(r)
 
     case Not(g) => allNames(g)
     case And(l, r) => allNames(l) ++ allNames(r)
     case Or(l, r) => allNames(l) ++ allNames(r)
     case Imply(l, r) => allNames(l) ++ allNames(r)
     case Equiv(l, r) => allNames(l) ++ allNames(r)
-    case FormulaDerivative(df) => allNames(df) ++ allNames(df).map(DifferentialSymbol(_))
+    case DifferentialFormula(df) => allNames(df) ++ allNames(df).map(DifferentialSymbol(_))
 
     case Forall(vars, g) => vars.toSet ++ allNames(g)
     case Exists(vars, g) => vars.toSet ++ allNames(g)
 
-    case BoxModality(p, g) => allNames(p) ++ allNames(g)
-    case DiamondModality(p, g) => allNames(p) ++ allNames(g)
+    case Box(a, g) => allNames(a) ++ allNames(g)
+    case Diamond(a, g) => allNames(a) ++ allNames(g)
 
     // base cases
-    case ApplyPredicate(p, arg) => Set(p) ++ allNames(arg)
+    case PredOf(p, arg) => Set(p) ++ allNames(arg)
     case True | False => Set.empty
     case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
   private def allNames(t: Term): Set[NamedSymbol] = t match {
     // homomorphic cases
-    case Neg(s, l) => allNames(l)
-    case Add(s, l, r) => allNames(l) ++ allNames(r)
-    case Subtract(s, l, r) => allNames(l) ++ allNames(r)
-    case Multiply(s, l, r) => allNames(l) ++ allNames(r)
-    case Divide(s, l, r) => allNames(l) ++ allNames(r)
-    case Power(s, l, r) => allNames(l) ++ allNames(r)
-    case Pair(dom, l, r) => allNames(l) ++ allNames(r)
-    case Derivative(s, e) => allNames(e)
+    //case Neg(s, l) => allNames(l)
+    case Plus(l, r) => allNames(l) ++ allNames(r)
+    case Minus(l, r) => allNames(l) ++ allNames(r)
+    case Times(l, r) => allNames(l) ++ allNames(r)
+    case Divide(l, r) => allNames(l) ++ allNames(r)
+    case Power(l, r) => allNames(l) ++ allNames(r)
+//    case Pair(dom, l, r) => allNames(l) ++ allNames(r)
+    case Differential(e) => allNames(e)
     // base cases
-    case Apply(f, arg) => Set(f) ++ allNames(arg)
+    case FuncOf(f, arg) => Set(f) ++ allNames(arg)
     case x: Variable => Set(x)
-    case CDot => Set(CDot)
+    case DotTerm => Set(DotTerm)
     case nd: DifferentialSymbol => Set(nd)
-    case _: NumberObj | Nothing | Anything => Set.empty
+    case _: Number | Nothing | Anything => Set.empty
   }
 
   private def allNames(p: Program): Set[NamedSymbol] = p match {
     case Assign(x: Variable, e) => Set(x) ++ allNames(e)
-    case Assign(Derivative(_, x : NamedSymbol), e) => Set(x) ++ allNames(e)
-    case Assign(x : DifferentialSymbol, e) => Set(x) ++ allNames(e)
-    case NDetAssign(x: Variable) => Set(x)
+    case Assign(xp@DifferentialSymbol(x:Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
+    case AssignAny(x: Variable) => Set(x)
     case Test(f) => allNames(f)
-    case IfThen(cond, thenT) => allNames(cond) ++ allNames(thenT)
-    case AtomicODE(Derivative(_, x: Variable), e) => Set(x) ++ allNames(e)
-    case ODEProduct(a, b) => allNames(a) ++ allNames(b)
-    case ODESystem(vars, a, h) => allNames(a) ++ allNames(h)
-    case _: EmptyODE => Set()
-    case Sequence(a, b) => allNames(a) ++ allNames(b)
+//    case IfThen(cond, thenT) => allNames(cond) ++ allNames(thenT)
+    case AtomicODE(xp@DifferentialSymbol(x: Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
+    case DifferentialProduct(a, b) => allNames(a) ++ allNames(b)
+    case ODESystem(a, h) => allNames(a) ++ allNames(h)
+    case Compose(a, b) => allNames(a) ++ allNames(b)
     case Choice(a, b) => allNames(a) ++ allNames(b)
     case Loop(a) => allNames(a)
-    case prg: ProgramConstant => Set(prg)
-    case prg: DifferentialProgramConstant  => Set(prg)
+    case prg: ProgramConst => Set(prg)
+    case prg: DifferentialProgramConst  => Set(prg)
     case _ => throw new UnknownOperatorException("Not implemented", p)
   }
 }
@@ -1055,27 +1040,27 @@ object Axiom {
 
   @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x", None, Real)
-    val aP0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val aPn = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-    val aQn = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-    val aC = Apply(Function("c", None, Unit, Real), Nothing)
-    val aF = Apply(Function("f", None, Real, Real), Anything)
-    val aG = Apply(Function("g", None, Real, Real), Anything)
-    val a = ProgramConstant("a")
-    val b = ProgramConstant("b")
+    val aP0 = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val aPn = PredOf(Function("p", None, Real, Bool), Anything)
+    val aQn = PredOf(Function("q", None, Real, Bool), Anything)
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val aF = FuncOf(Function("f", None, Real, Real), Anything)
+    val aG = FuncOf(Function("g", None, Real, Real), Anything)
+    val a = ProgramConst("a")
+    val b = ProgramConst("b")
     // soundness-critical that these are for p() not for p(x) or p(?)
     assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
-    assert(axs("V vacuous") == Imply(aP0, Modality(BoxModality(a), aP0)), "V vacuous")
+    assert(axs("V vacuous") == Imply(aP0, Box(a), aP0), "V vacuous")
     
-    assert(axs("[++] choice") == Equiv(Modality(BoxModality(Choice(a,b)), aPn), And(Modality(BoxModality(a), aPn), Modality(BoxModality(b), aPn))), "[++] choice")
-    assert(axs("[;] compose") == Equiv(Modality(BoxModality(Sequence(a,b)), aPn), Modality(BoxModality(a), Modality(BoxModality(b), aPn))), "[;] compose")
+    assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
+    assert(axs("[;] compose") == Equiv(Box(Compose(a,b), aPn), Box(a, Box(b, aPn))), "[;] compose")
     
-    assert(axs("c()' derive constant fn") == Equals(Real, Derivative(Real, aC), Number(0)), "c()' derive constant fn")
-    assert(axs("-' derive minus") == Equals(Real, Derivative(Real, Subtract(Real, aF, aG)), Subtract(Real, Derivative(Real, aF), Derivative(Real, aG))), "-' derive minus")
-    assert(axs("*' derive product") == Equals(Real, Derivative(Real, Multiply(Real, aF, aG)), Add(Real, Multiply(Real, Derivative(Real, aF), aG), Multiply(Real, aF, Derivative(Real, aG)))), "*' derive product")
-    assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
-    assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
+    assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
+    assert(axs("-' derive minus") == Equal(Differential(Minus(aF, aG)), Minus(Differential(aF), Differential(aG))), "-' derive minus")
+    assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
+    //@todo assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
+    //@todo assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
     true
   }
 }

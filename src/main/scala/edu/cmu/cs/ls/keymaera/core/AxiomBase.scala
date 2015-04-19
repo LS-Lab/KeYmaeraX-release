@@ -15,6 +15,7 @@ import scala.collection.immutable.IndexedSeq
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 /**
@@ -33,32 +34,29 @@ private[core] object AxiomBase {
    */
   private[core] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
-    val px = ApplyPredicate(Function("p_", None, Real, Bool), x)
-    val pny = ApplyPredicate(Function("p_", None, Real, Bool), Anything)
-    val qx = ApplyPredicate(Function("q_", None, Real, Bool), x)
-    val qny = ApplyPredicate(Function("q_", None, Real, Bool), Anything)
-    val fny = Apply(Function("f_", None, Real, Real), Anything)
-    val gny = Apply(Function("g_", None, Real, Real), Anything)
+    val px = PredOf(Function("p_", None, Real, Bool), x)
+    val pny = PredOf(Function("p_", None, Real, Bool), Anything)
+    val qx = PredOf(Function("q_", None, Real, Bool), x)
+    val qny = PredOf(Function("q_", None, Real, Bool), Anything)
+    val fny = FuncOf(Function("f_", None, Real, Real), Anything)
+    val gny = FuncOf(Function("g_", None, Real, Real), Anything)
     val ctxt = Function("ctx_", None, Real, Real)
     val ctxf = Function("ctx_", None, Real, Bool)
     val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis predicational should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
-    val a = ProgramConstant("a_")
-    val fmlny = ApplyPredicate(Function("F_", None, Real, Bool), Anything)
+    val a = ProgramConst("a_")
+    val fmlny = PredOf(Function("F_", None, Real, Bool), Anything)
 
     scala.collection.immutable.Map(
       /* @derived("Could use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
       ("CT term congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Apply(ctxt, fny), Apply(ctxt, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fny, gny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fny), FuncOf(ctxt, gny)))))),
       ("CQ equation congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, fny, gny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicate(ctxf, fny), ApplyPredicate(ctxf, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fny, gny))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fny), PredOf(ctxf, gny)))))),
       ("CE congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(ApplyPredicational(context, pny), ApplyPredicational(context, qny)))))),
-      ("CO one-sided congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(ApplyPredicational(context, pny)), IndexedSeq(ApplyPredicational(context, qny))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pny), PredicationalOf(context, qny)))))),
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
@@ -67,54 +65,14 @@ private[core] object AxiomBase {
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
       ("[] monotone",
         (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(BoxModality(a, pny)), IndexedSeq(BoxModality(a, qny))))),
+          Sequent(Seq(), IndexedSeq(Box(a, pny)), IndexedSeq(Box(a, qny))))),
       ("<> monotone",
         (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(DiamondModality(a, pny)), IndexedSeq(DiamondModality(a, qny))))),
-/* @TODO REMOVE */
-      //@deprecated("Use CE instead.")
-      ("all congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), px), Forall(Seq(x), qx)))))),
-      //@deprecated("Use CE instead.")
-      ("exists congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(px, qx))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Exists(Seq(x), px), Exists(Seq(x), qx)))))),
-      //@deprecated("Use [] monotone twice or just use CE equivalence congruence")
-      //@TODO likewise for the other congruence rules.
-      ("[] congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(BoxModality(a, pny), BoxModality(a, qny)))))),
-      //@deprecated("Use CE instead.")
-      ("<> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(DiamondModality(a, pny), DiamondModality(a, qny)))))),
-      //@deprecated Use "CE equivalence congruence" instead of all these congruence rules.
-      // Derived axiomatic rules
-      ("-> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Imply(fmlny, pny), Imply(fmlny, qny)))))),
-      //@deprecated("Use CE instead.")
-      ("<-> congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Equiv(fmlny, pny), Equiv(fmlny, qny)))))),
-      //@deprecated("Use CE instead.")
-      ("& congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(And(fmlny, pny), And(fmlny, qny)))))),
-      //@deprecated("Use CE instead.")
-      ("| congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Or(fmlny, pny), Or(fmlny, qny)))))),
-      //@deprecated("Use CE instead.")
-      ("! congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Not(pny), Not(qny)))))),
-/* @TODO END REMOVE */
+          Sequent(Seq(), IndexedSeq(Diamond(a, pny)), IndexedSeq(Diamond(a, qny))))),
       /* UNSOUND FOR HYBRID GAMES */
       ("Goedel", /* unsound for hybrid games */
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(a, pny)))))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pny)))))
     )
   }
 

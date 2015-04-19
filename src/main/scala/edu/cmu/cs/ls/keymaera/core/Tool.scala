@@ -10,6 +10,16 @@
 
 package edu.cmu.cs.ls.keymaera.core
 
+// require favoring immutable Seqs for soundness
+
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
+import scala.collection.immutable.Set
+
 import edu.cmu.cs.ls.keymaera.tools.{Z3Solver, DiffSolutionTool, JLinkMathematicaLink, QETool}
 
 /**

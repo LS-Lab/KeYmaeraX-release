@@ -2,7 +2,17 @@
  * Set Lattices.
  * @author smitsch
  */
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
+
+// require favoring immutable Seqs for soundness (probably)
+
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
+import scala.collection.immutable.Set
 
 
 //  type SetLattice[A] = Set[A]
