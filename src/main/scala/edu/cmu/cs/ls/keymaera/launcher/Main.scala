@@ -110,8 +110,8 @@ object Main {
   lazy val jarLocation : String = {
     val execDir  = System.getProperty("user.dir")
     val matchingFiles = new java.io.File(execDir).listFiles(new FileFilter {
-      override def accept(pathname: File): Boolean = pathname.getName.contains("maera") && pathname.getAbsolutePath.endsWith(".jar") //finds *marea*.jar$
+      override def accept(pathname: File): Boolean = pathname.getName.contains("keymaerax.jar") && pathname.getAbsolutePath.endsWith(".jar") //finds *marea*.jar$
     })
-    if(matchingFiles.length == 1) matchingFiles.head.getAbsolutePath else exitWith("Could not find a KeYmaeraX JAR in " + execDir)
+    if(matchingFiles.length >= 1) matchingFiles.head.getAbsolutePath else exitWith("Could not find a KeYmaeraX JAR in " + execDir + " NOTE: the JAR file MUST be named keymaerax.jar!")
   }
 }
