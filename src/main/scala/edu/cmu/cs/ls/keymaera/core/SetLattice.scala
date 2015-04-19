@@ -40,6 +40,7 @@ object SetLattice {
  * @todo s should be private for abstraction purposes.
  * @param s Elements in the set: Left[A] elements excluded from the set, Right[A] elements included in the set
  * @tparam A Type of elements in the set
+ * @todo SetLattice[+A]
  */
 class SetLattice[A](@deprecated val s: Either[Set[A], Set[A]]) {
   def isTop = s.isLeft
