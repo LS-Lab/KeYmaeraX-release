@@ -24,6 +24,8 @@ trait Tool {
    */
   def init(config : Map[String,String])
 
+  def isInitialized: Boolean
+
   /**
    * Check whether the managed tool is still alive and recover it if not.
    * Yes, this is the mathematica kernel dies on interrupt fix-up!
@@ -47,7 +49,11 @@ trait Tool {
  */
 abstract class ToolBase(val name: String) extends Tool {
 
-  def init(config : Map[String,String]) {}
+  protected var initialized = false
+
+  def init(config : Map[String,String]) { initialized = true }
+
+  def isInitialized: Boolean = initialized
 
   /**
    * Check whether the managed tool is still alive and recover it if not.
@@ -77,6 +83,7 @@ class Mathematica extends ToolBase("Mathematica") {
     }
     val libDir = config.get("libDir") // doesn't need to be defined
     jlink.init(linkName, libDir)
+    initialized = libDir.isDefined
   }
 
   override def shutdown() = jlink.shutdown()
