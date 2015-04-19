@@ -83,7 +83,7 @@ object Main {
   }
 
   private def exitWith(err : String) = {
-    launcherLog("ERROR :: See http://www.ls.cs.cmu.edu/KeYmaera4/startup.html for trouble-shooting assistance (Message: " + err + ")")
+    launcherLog("ERROR :: See http://keymaerax.org/startup.html for trouble-shooting assistance (Message: " + err + ")")
     System.exit(-1)
     ???
   }
