@@ -49,7 +49,7 @@ object Main {
         try {
         val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream));
         var errLine = ""
-        while((errLine = errReader.readLine()) != null && !proc.isAlive) {
+        while((errLine = errReader.readLine()) != null && proc.isAlive) {
 //          errLine = errReader.readLine()
           if(errLine != null) System.err.println(errLine);
         }
@@ -65,7 +65,7 @@ object Main {
         val reader =
           new BufferedReader(new InputStreamReader(proc.getInputStream()));
         var line = ""
-        while((line = reader.readLine()) != null && !proc.isAlive) {
+        while((line = reader.readLine()) != null && proc.isAlive) {
           if(line != null) System.out.println(line);
         }
         } catch {
