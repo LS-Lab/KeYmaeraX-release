@@ -119,7 +119,7 @@ object Boot extends App {
       {
         java.awt.Desktop.getDesktop().browse(new java.net.URI("http://localhost:8090/"))
       }
-      else if(!java.awt.GraphicsEnvironment.isHeadless() && java.awt.Desktop.isDesktopSupported()) {
+      else if (!java.awt.GraphicsEnvironment.isHeadless()) {
         JOptionPane.showMessageDialog(null, "Point your browser to http://localhost:8090/")
 
       }

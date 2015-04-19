@@ -79,7 +79,16 @@ object Main {
   private def exitWith(err : String) = {
     val message = "ERROR in loader :: See http://keymaerax.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
     launcherLog(message)
-    JOptionPane.showMessageDialog(null, message)
+    try {
+      if (!java.awt.GraphicsEnvironment.isHeadless()) {
+        JOptionPane.showMessageDialog(null, message)
+      }
+    } catch {
+        case exc: java.awt.HeadlessException =>
+        case exc: java.lang.ClassNotFoundException =>
+        case exc: java.lang.NoSuchMethodError =>
+        case exc: Exception =>
+    }
     System.exit(-1)
     ???
   }
