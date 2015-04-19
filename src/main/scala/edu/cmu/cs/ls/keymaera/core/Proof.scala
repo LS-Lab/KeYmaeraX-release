@@ -1121,6 +1121,7 @@ object AxiomaticRule {
  */
 object LookupLemma {
   lazy val lemmadbpath = {
+    //@todo System.getProperty("user.home") + java.io.File.separator + ".keymaera" + java.io.File.separator + "cache" + java.io.File.separator + "lemmadb"
     val file = new java.io.File(System.getProperty("user.home") + "/lemmadb")
     file.mkdirs
     file
