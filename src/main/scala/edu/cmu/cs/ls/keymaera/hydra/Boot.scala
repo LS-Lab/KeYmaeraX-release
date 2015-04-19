@@ -1,6 +1,9 @@
 package edu.cmu.cs.ls.keymaera.hydra
 
-import javax.swing.JOptionPane
+import java.awt.event.{ActionEvent, ActionListener}
+import java.awt.{GridLayout, Label, BorderLayout}
+import java.util.EventListener
+import javax.swing._
 
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
@@ -8,6 +11,40 @@ import edu.cmu.cs.ls.keymaera.api.ComponentConfig
 import spray.can.Http
 
 import scala.concurrent.duration.FiniteDuration
+
+class LoadingDialog {
+  val progressBar = new JProgressBar()
+//  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)
+  val label = new JLabel("KeYmaeraX is Loading...")
+
+  val window = new JWindow()
+  window.setLayout(new GridLayout(2,1))
+  window.getContentPane.add(label)
+  window.getContentPane.add(progressBar)
+  window.setSize(300,100)
+  window.setLocationRelativeTo(null) //needs java 1.4 or newer
+  window.setVisible(true)
+
+  def addToStatus(x : Int) = {
+    val newValue = progressBar.getValue() + x
+    progressBar.setValue(newValue)
+//    progressMonitor.setProgress(newValue)
+    progressBar.repaint()
+    if(progressBar.getValue >= 100) {
+      label.setText("KeYmaeraX is running at http://localhost:8090")
+      label.repaint()
+      window.remove(progressBar)
+      progressBar.repaint()
+      val button = new java.awt.Button("Shutdown KeYmaeraX") {
+        this.addActionListener(new ActionListener {
+          override def actionPerformed(e: ActionEvent): Unit = JOptionPane.showMessageDialog(null, "To exit KeYmaeraX, login to the web UI and press the power button.")
+        })
+      }
+      window.getContentPane.add(button)
+      button.repaint()
+    }
+  }
+}
 
 object Boot extends App {
   def restart(): Unit = {
@@ -44,10 +81,17 @@ object Boot extends App {
 
   io ! bind
 
+  val dialog = new LoadingDialog;
+
   {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val someTime = new FiniteDuration(4, scala.concurrent.duration.SECONDS)
-    this.system.scheduler.scheduleOnce(someTime)(onLoad)
+
+    def someTime(x:Int) = new FiniteDuration(x, scala.concurrent.duration.SECONDS)
+    this.system.scheduler.scheduleOnce(someTime(1))(dialog.addToStatus(25))
+    this.system.scheduler.scheduleOnce(someTime(2))(dialog.addToStatus(25))
+    this.system.scheduler.scheduleOnce(someTime(3))(dialog.addToStatus(25))
+    this.system.scheduler.scheduleOnce(someTime(4))(dialog.addToStatus(25))
+    this.system.scheduler.scheduleOnce(someTime(4))(onLoad())
   }
 
   def onLoad() : Unit = {
