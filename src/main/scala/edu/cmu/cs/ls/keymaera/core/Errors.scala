@@ -45,4 +45,4 @@ class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends C
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
 }
 
-class UnknownOperatorException(msg: String, e:Expr) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
+class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}

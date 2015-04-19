@@ -14,6 +14,8 @@ import scala.collection.immutable.Map
 import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
+import scala.collection.GenTraversableOnce
+
 
 //  type SetLattice[A] = Set[A]
 //  private def topExceptDotFormula[A]: Set[A] = ???

@@ -21,6 +21,8 @@ import scala.annotation.elidable._
 
 import StaticSemantics._
 
+import scala.collection.GenTraversableOnce
+
 /**
  * Representation of a substitution replacing n with t.
  *
@@ -150,11 +152,11 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
   def apply(t: Term): Term = usubst(t) ensuring(
-    r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
   def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
   def apply(p: Program): Program = usubst(p) ensuring(
-    r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
 
   /**
    * Apply uniform substitution everywhere in the sequent.
@@ -184,7 +186,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
    * @return union of the matchKeys of all our substitution pairs.
    */
   def matchKeys : List[NamedSymbol] = {
-    subsDefs.foldLeft(Nil)((a,b)=>a ++ List(b.matchKey))
+    subsDefs.foldLeft(List[NamedSymbol]())((a,b)=>a ++ List(b.matchKey))
   }
 
   // implementation of uniform substitution application
@@ -325,7 +327,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
         case a: ProgramConst if !subsDefs.exists(_.what == a) => a
         case Assign(x: Variable, e) => Assign(x, usubst(e))
-        case DiffAssign(xp@DifferentialSymbol, e) => Assign(xp, usubst(e))
+        case DiffAssign(xp@DifferentialSymbol, e) => DiffAssign(xp, usubst(e))
         case a: AssignAny => a
         case Test(f) => Test(usubst(f))
         //case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))

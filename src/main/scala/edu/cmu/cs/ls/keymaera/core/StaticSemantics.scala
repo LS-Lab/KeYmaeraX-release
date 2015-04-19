@@ -16,11 +16,7 @@ import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 
-import scala.collection.GenTraversableOnce
-
-
-import scala.annotation.{unspecialized, elidable}
-import scala.annotation.elidable._
+import scala.annotation.elidable
 
 /**
  * The static semantics of differential dynamic logic.
@@ -210,6 +206,7 @@ object StaticSemantics {
 
   /**
    * The signature of expression e.
+   * @todo change return types or at least implementation types to SortedSet for order stability?
    */
   def signature(e: Expression): Set[NamedSymbol] = e match {
     case t: Term => signature(t)

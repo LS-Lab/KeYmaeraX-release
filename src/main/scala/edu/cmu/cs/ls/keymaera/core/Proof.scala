@@ -173,7 +173,7 @@ final case class Sequent(pref: scala.collection.immutable.Seq[NamedSymbol],
    * A copy of this sequent with the indicated position replaced by the formula f.
    * @param p the position of the replacement
    * @param f the replacing formula
-   * @returns a copy of this sequent with the formula at position p replaced by f.
+   * @return a copy of this sequent with the formula at position p replaced by f.
    */
   def updated(p: SeqPos, f: Formula) : Sequent = {
     if (p.isAnte) {
@@ -256,7 +256,6 @@ object Provable {
  * @note soundness-critical
  * @note Only private constructor calls for soundness
  * @author aplatzer
- * @TODO Subgoals as an immutable list or an immutable IndexedSeq?
  */
 final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
@@ -780,9 +779,9 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
       case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
       case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
-      case BoxModality(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case DiamondModality(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case _ => BoxModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+      case Box(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case Diamond(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case _ => Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
     } else f
 
   /**
@@ -901,7 +900,8 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case Or(l, r) => allNames(l) ++ allNames(r)
     case Imply(l, r) => allNames(l) ++ allNames(r)
     case Equiv(l, r) => allNames(l) ++ allNames(r)
-    case DifferentialFormula(df) => allNames(df) ++ allNames(df).map(DifferentialSymbol(_))
+    //@todo asInstanceOf may cause type errors, but that's also a conceptual error in the code. Should only be for variables.
+    case DifferentialFormula(df) => allNames(df) ++ allNames(df).map(x=>DifferentialSymbol(x.asInstanceOf[Variable]))
 
     case Forall(vars, g) => vars.toSet ++ allNames(g)
     case Exists(vars, g) => vars.toSet ++ allNames(g)
@@ -935,7 +935,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
 
   private def allNames(p: Program): Set[NamedSymbol] = p match {
     case Assign(x: Variable, e) => Set(x) ++ allNames(e)
-    case Assign(xp@DifferentialSymbol(x:Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
+    case DiffAssign(xp@DifferentialSymbol(x:Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
     case AssignAny(x: Variable) => Set(x)
     case Test(f) => allNames(f)
 //    case IfThen(cond, thenT) => allNames(cond) ++ allNames(thenT)
@@ -1051,7 +1051,7 @@ object Axiom {
     // soundness-critical that these are for p() not for p(x) or p(?)
     assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
-    assert(axs("V vacuous") == Imply(aP0, Box(a), aP0), "V vacuous")
+    assert(axs("V vacuous") == Imply(aP0, Box(a, aP0)), "V vacuous")
     
     assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), aPn), Box(a, Box(b, aPn))), "[;] compose")
@@ -1059,8 +1059,8 @@ object Axiom {
     assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
     assert(axs("-' derive minus") == Equal(Differential(Minus(aF, aG)), Minus(Differential(aF), Differential(aG))), "-' derive minus")
     assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
-    //@todo assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
-    //@todo assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
+    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
     true
   }
 }
@@ -1142,6 +1142,7 @@ object LookupLemma {
     //Find the solution
     t match {
       case x: Mathematica if x.isInitialized =>
+        //@TODO illegal access to out of core. Fix!
         val (solution, input, output) = x.cricitalQE.qeInOut(f)
         val result = Equiv(f,solution)
 

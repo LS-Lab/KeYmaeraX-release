@@ -81,7 +81,9 @@ abstract class ToolBase(val name: String) extends Tool {
 object KeYmaera extends ToolBase("KeYmaera") {}
 
 class Mathematica extends ToolBase("Mathematica") {
+  //@TODO illegal access to out of core. Fix!
   private val jlink = new JLinkMathematicaLink
+  //@TODO illegal access to out of core. Fix!
   private[core] val cricitalQE: QETool = jlink
   val diffSolver: DiffSolutionTool = jlink
 
