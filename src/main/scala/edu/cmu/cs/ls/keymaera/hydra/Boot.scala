@@ -86,16 +86,22 @@ object Boot extends App {
 
   io ! bind
 
-  val dialog = new LoadingDialog;
+  val dialogOpt = if (!java.awt.GraphicsEnvironment.isHeadless()) Some(new LoadingDialog) else None;
 
   {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     def someTime(x:Int) = new FiniteDuration(x, scala.concurrent.duration.SECONDS)
-    this.system.scheduler.scheduleOnce(someTime(1))(dialog.addToStatus(25))
-    this.system.scheduler.scheduleOnce(someTime(2))(dialog.addToStatus(25))
-    this.system.scheduler.scheduleOnce(someTime(3))(dialog.addToStatus(25))
-    this.system.scheduler.scheduleOnce(someTime(4))(dialog.addToStatus(25))
+    dialogOpt match {
+      case Some(dialog) => {
+
+        this.system.scheduler.scheduleOnce(someTime(1))(dialog.addToStatus(25))
+        this.system.scheduler.scheduleOnce(someTime(2))(dialog.addToStatus(25))
+        this.system.scheduler.scheduleOnce(someTime(3))(dialog.addToStatus(25))
+        this.system.scheduler.scheduleOnce(someTime(4))(dialog.addToStatus(25))
+      }
+      case None => //...
+    }
     this.system.scheduler.scheduleOnce(someTime(4))(onLoad())
   }
 
