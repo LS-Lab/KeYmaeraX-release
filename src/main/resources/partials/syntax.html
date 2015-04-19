@@ -111,7 +111,7 @@ which is a program notation for hybrid systems.
   	<tr><td>\(\theta\geq\eta\)</td> <td><code>x^2&gt;=5</code></td> <td>Greater equals comparison: true iff \(x^2\) is at least 5</td></tr> 
   	<tr><td>\(\lnot\phi\)</td> <td><code>!(x=5)</code></td> <td>Negation (not), true iff \(\phi\) is not true</td></tr> 
   	<tr><td>\(\phi\wedge\psi\)</td> <td><code>x&lt;=10 &amp; v&gt;=0</code></td> <td>Conjunction (and), true iff both \(\phi\) and \(\psi\) are true</td></tr> 
-  	<tr><td>\(\phi\vee\psi\)</td> <td><code>v&lt;=30 | a&lt;-2</code></td> <td>Disjunction (or), true iff \(\phi\) is true or \(\psi\) is true</td></tr> 
+  	<tr><td>\(\phi\vee\psi\)</td> <td><code>v&lt;=30 | a&lt;2-b</code></td> <td>Disjunction (or), true iff \(\phi\) is true or \(\psi\) is true</td></tr> 
 </tr> 
   	<tr><td>\(\phi\rightarrow\psi\)</td> <td><code>x&gt;=10 -&gt; v&lt;=1</code></td> <td>Implication (implies), true iff \(\phi\) is false or \(\psi\) is true</td></tr> 
 </tr> 
@@ -141,7 +141,7 @@ it always remains in the region characterised by &#968;.
 For instance, the following dL formula expresses that for the state of a train controller <var>train</var>,
 the property <var>z&#x02264;m</var> always holds true when starting in a state
 where <var>v<sup>2</sup>&#x02264;2b(m-z)</var> is true:
-  <center>\(v^2&lt;=2*b*(m-z) -&gt; [<var>train</var>]z&lt;=;m\)</center>
+  <center><code>v^2&lt;=2*b*(m-z) -&gt; [<var>train</var>]z&lt;=m</code></center>
 Here <var>z</var> is the position of the train, <var>v</var> the velocity of the train, <var>b</var> its braking power, and <var>m</var> the current end of its movement authority assigned to the train by the radio block controller (RBC).
 </p>
 
