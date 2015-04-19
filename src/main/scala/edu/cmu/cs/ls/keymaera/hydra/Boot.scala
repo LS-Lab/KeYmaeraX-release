@@ -17,11 +17,11 @@ class LoadingDialog {
 //  val progressMonitor = new ProgressMonitor(progressBar, "Initializing HyDRA..", "Binding port 8090", 0, 100)
   val label = new JLabel("KeYmaeraX is Loading...")
 
-  val window = new JWindow()
+  var window = new JWindow()
   window.setLayout(new GridLayout(2,1))
   window.getContentPane.add(label)
   window.getContentPane.add(progressBar)
-  window.setSize(300,100)
+  window.setSize(500,100)
   window.setLocationRelativeTo(null) //needs java 1.4 or newer
   window.setVisible(true)
 
@@ -31,17 +31,22 @@ class LoadingDialog {
 //    progressMonitor.setProgress(newValue)
     progressBar.repaint()
     if(progressBar.getValue >= 100) {
-      label.setText("KeYmaeraX is running at http://localhost:8090")
-      label.repaint()
-      window.remove(progressBar)
-      progressBar.repaint()
-      val button = new java.awt.Button("Shutdown KeYmaeraX") {
-        this.addActionListener(new ActionListener {
-          override def actionPerformed(e: ActionEvent): Unit = JOptionPane.showMessageDialog(null, "To exit KeYmaeraX, login to the web UI and press the power button.")
-        })
+      if(window != null) {
+        window.setVisible(false)
+        window = null
+        JOptionPane.showMessageDialog(null, "Open a browser to http://localhost:8090 to access KeYmaera X. The server will continue running in the background until it is manually shutdown using the power button in the Web UI.")
       }
-      window.getContentPane.add(button)
-      button.repaint()
+//        label.setText("KeYmaeraX is running at http://localhost:8090")
+//      label.repaint()
+//      window.remove(progressBar)
+//      progressBar.repaint()
+//      val button = new java.awt.Button("Shutdown KeYmaeraX") {
+//        this.addActionListener(new ActionListener {
+//          override def actionPerformed(e: ActionEvent): Unit = JOptionPane.showMessageDialog(null, "To exit KeYmaeraX, login to the web UI and press the power button.")
+//        })
+//      }
+//      window.getContentPane.add(button)
+//      button.repaint()
     }
   }
 }
