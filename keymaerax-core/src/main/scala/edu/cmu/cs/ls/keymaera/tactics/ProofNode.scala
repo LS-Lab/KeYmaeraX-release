@@ -132,7 +132,7 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
     // probably not proved if isClosed status is not even set (may be conservatively incorrect)
     require(isClosed, "Only ProofNodes that closed have a proved Provable " + this)
     if (fullProvable) throw new UnsupportedOperationException("Not implemented if fullProvable=false")
-    assert(!provable.isProved && IndexedSeq(provable.conclusion) == provable.subgoals, "!fullProvable gives trivial identity Provables only\n" + provable + "\nfor " + this)
+    //@elidable assert(!provable.isProved && IndexedSeq(provable.conclusion) == provable.subgoals, "!fullProvable gives trivial identity Provables only\n" + provable + "\nfor " + this)
     // find any closed or-branch alternative
     val orStep: ProofNode.ProofStep = children.find(_.isClosed) match {
       case Some(step) => step
@@ -143,17 +143,17 @@ sealed class ProofNode protected (val parent : ProofNode, val provable: Provable
     if (orStep.subgoals.isEmpty) {
       // apply the closing rule
       val done = provable(orStep.rule, subgoal)
-      assert(done.isProved, "ProofNodes with a ProofStep without subgoals are provable directly")
+      //@elidable assert(done.isProved, "ProofNodes with a ProofStep without subgoals are provable directly")
       done
     } else {
       // successively merge Provables of all subgoals
       var merged = provable(orStep.rule, subgoal)
       for (i <- orStep.subgoals.length to 1 by -1) {
-        assert(orStep.subgoals(i - 1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
+        //@elidable assert(orStep.subgoals(i - 1).provableWitness.isProved, "isClosed() should imply that there is a closed Provable")
         merged = merged(orStep.subgoals(i - 1).provableWitness, i - 1)
       }
       //assert(merged.conclusion == provable.conclusion, "unchanged conclusion")
-      assert(merged.isProved, "isClosed() should imply that merging gives a closed Provable\n\n" + merged + "\n\nfor\n\n" + this)
+      //@elidable assert(merged.isProved, "isClosed() should imply that merging gives a closed Provable\n\n" + merged + "\n\nfor\n\n" + this)
       merged
     }
   } //ensuring (r => r.conclusion == sequent, "The merged Provable (if any) proves the conclusion this ProofNode sought " + this)
