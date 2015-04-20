@@ -39,7 +39,7 @@ class BoundRenamingClashException(msg: String, s: String/*AlphaConversion*/, inf
   def inContext(context: String) = new BoundRenamingClashException(msg, s, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
 }
 
-class SkolemClashException(msg: String, clashedNames:Set[NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
+class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 
 class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
