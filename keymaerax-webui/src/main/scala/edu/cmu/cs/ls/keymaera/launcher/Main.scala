@@ -124,7 +124,10 @@ object Main {
    * @return The location of the .JAR file that's currently running.
    */
   lazy val jarLocation : String = {
-    new File(Main.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).toString()
+    "\"" +
+      new File(Main.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).toString() +
+      "\""
+    
 //    val execDir  = System.getProperty("user.dir")
 //    val matchingFiles = new java.io.File(execDir).listFiles(new FileFilter {
 //      override def accept(pathname: File): Boolean = pathname.getName.contains("keymaerax.jar") && pathname.getAbsolutePath.endsWith(".jar") //finds *marea*.jar$
