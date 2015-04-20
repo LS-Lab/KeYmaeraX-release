@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.boxNDetAssign
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{debugT, skolemizeT, ImplyRightT}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
 import testHelper.SequentFactory._

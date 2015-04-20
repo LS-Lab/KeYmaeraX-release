@@ -9,7 +9,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.stopT
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaera.tactics.ODETactics.diffSolution

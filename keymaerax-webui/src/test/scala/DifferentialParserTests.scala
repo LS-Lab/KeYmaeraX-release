@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.{LoadedKnowledge, ParseSymbols, LoadedAxiom, KeYmaeraParser}
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**

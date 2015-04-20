@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, ApplyRule, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}

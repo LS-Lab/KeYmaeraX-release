@@ -4,7 +4,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Position
 import edu.cmu.cs.ls.keymaera.tactics.PosInExpr
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{ProofNode, Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 /**

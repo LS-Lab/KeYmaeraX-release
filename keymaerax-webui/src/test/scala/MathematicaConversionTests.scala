@@ -1,6 +1,6 @@
 import com.wolfram.jlink.Expr
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
