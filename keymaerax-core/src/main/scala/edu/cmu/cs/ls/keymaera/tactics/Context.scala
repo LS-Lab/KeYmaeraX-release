@@ -9,15 +9,15 @@ import edu.cmu.cs.ls.keymaera.core.StaticSemantics.signature
  */
 sealed case class Context(ctx: Formula) {
   // either a term or a formula context, not both
-  assert(!(signature(ctx).contains(CDotFormula) && signature(ctx).contains(CDot)))
+  assert(!(signature(ctx).contains(DotFormula) && signature(ctx).contains(DotTerm)))
 
-  def apply(e: Expr) = e match {
+  def apply(e: Expression) = e match {
     case f: Formula => instantiate(f)
     case t: Term => instantiate(t)
   }
 
-  def isFormulaContext = signature(ctx).contains(CDotFormula)
-  def isTermContext = signature(ctx).contains(CDot)
+  def isFormulaContext = signature(ctx).contains(DotFormula)
+  def isTermContext = signature(ctx).contains(DotTerm)
 
   /**
    * Instantiates the context fml with the formula withF
@@ -26,7 +26,7 @@ sealed case class Context(ctx: Formula) {
    */
   def instantiate(withF: Formula): Formula = {
     val context = Function("dottingC__", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC__", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
-    USubst(SubstitutionPair(ApplyPredicational(context, CDotFormula), ctx) :: Nil)(ApplyPredicational(context, withF))
+    USubst(SubstitutionPair(PredicationalOf(context, DotFormula), ctx) :: Nil)(PredicationalOf(context, withF))
   }
 
   /**
@@ -36,6 +36,6 @@ sealed case class Context(ctx: Formula) {
    */
   def instantiate(withT: Term): Formula = {
     val context = Function("dottingC__", None, Real, Bool)
-    USubst(SubstitutionPair(ApplyPredicate(context, CDot), ctx) :: Nil)(ApplyPredicate(context, withT))
+    USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
   }
 }
