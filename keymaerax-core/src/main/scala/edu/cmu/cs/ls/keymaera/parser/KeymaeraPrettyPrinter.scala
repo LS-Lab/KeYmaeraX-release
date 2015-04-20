@@ -26,7 +26,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   }
 
   private def endsWithColon(e:Expression, parent:Expression)  = e match {
-    case Assign(_) => !needsParens(e,parent, false )
+    case Assign(_, _) => !needsParens(e,parent, false )
     case Test(_) => !needsParens(e,parent, false )
     case AssignAny(_) => !needsParens(e,parent, false)
     case _: DifferentialProgram => !needsParens(e,parent, false)
@@ -115,7 +115,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     case FuncOf(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
-      case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
       case Nothing => prettyPrinter(function) + "()"
       case Anything => prettyPrinter(function) + "(?)"
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
@@ -123,7 +122,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     case PredOf(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
-      case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
       case Nothing => prettyPrinter(function)
       case Anything => prettyPrinter(function) + "(?)"
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
@@ -139,7 +137,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Diamond(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint, false)
     case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV, Some(RightAssoc()))
 
-    case Power(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP, None)
+    case Power(l, r) => recInfix(l,r,expressionToPrint,symbolTable.EXP, None)
     
     //BinaryProgram
     case c@Choice(l,r) => {
@@ -402,7 +400,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Diamond(p,f) => true
     case Equiv(l,r) => false
     
-    case Power(s,l,r) => false
+    case Power(l,r) => false
     
     
     //BinaryProgram
@@ -410,14 +408,12 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Compose(l,r) => false
     
     //BinaryRelation
-    case Equal(s,l,r) => false
-    case GreaterEqual(s,l,r) => false
-    case LessEqual(s,l,r) => false
-    case Less(s,l,r) => false
-    case Greater(s,l,r) => false
-    case NotEqual(s,l,r) => false
-    
-    case Pair(s,l,r) => false
+    case Equal(l,r) => false
+    case GreaterEqual(l,r) => false
+    case LessEqual(l,r) => false
+    case Less(l,r) => false
+    case Greater(l,r) => false
+    case NotEqual(l,r) => false
     
     case Function(name,index,domain,argSorts) => false
     
