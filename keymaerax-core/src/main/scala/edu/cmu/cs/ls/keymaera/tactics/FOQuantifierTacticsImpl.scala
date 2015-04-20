@@ -47,8 +47,8 @@ object FOQuantifierTacticsImpl {
         case Equiv(Forall(vv, pp), _) => (pp, vv)
         case Equiv(Not(Exists(vv, Not(pp))), _) => (pp, vv)
       }
-      val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], CDot)) :: Nil
+      val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], DotTerm)) :: Nil
     }
     axiomLookupBaseT("all dual", subst, _ => NilPT, (f, ax) => ax)
   }
@@ -75,8 +75,8 @@ object FOQuantifierTacticsImpl {
         case Equiv(Exists(vv, pp), _) => (pp, vv)
         case Equiv(Not(Forall(vv, Not(pp))), _) => (pp, vv)
       }
-      val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], CDot)) :: Nil
+      val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+      SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(v.head.asInstanceOf[Variable], DotTerm)) :: Nil
     }
     axiomLookupBaseT("exists dual", subst, _ => NilPT, (f, ax) => ax)
   }
@@ -136,8 +136,8 @@ object FOQuantifierTacticsImpl {
         if (quantified.name != "$abstraction_dummy") {
           ExpressionTraversal.traverse(new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-              case BoxModality(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
-              case DiamondModality(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+              case Box(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
+              case Diamond(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)
               case _ => Left(None)
             }
           }, getFormula(s, pos))
@@ -172,10 +172,10 @@ object FOQuantifierTacticsImpl {
     override def apply(pos: Position): Tactic = new ConstructionTactic("Universal Quantifier Instantiation") {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
-      def replace(f: Formula)(o: NamedSymbol, n: Term): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+      def replace(f: Formula)(o: NamedSymbol, n: Variable): Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-          case Forall(v, fa) => Right(Forall(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), fa))
-          case Exists(v, fa) => Right(Exists(v.map((name: NamedSymbol) => if(name == o) { require(n.isInstanceOf[NamedSymbol]); n.asInstanceOf[NamedSymbol] } else name ), fa))
+          case Forall(v, fa) => Right(Forall(v.map(name => if(name == o) n else name ), fa))
+          case Exists(v, fa) => Right(Exists(v.map(name => if(name == o) n else name ), fa))
           case _ => Left(None)
         }
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = if (e == o) Right(n) else Left(None)
@@ -189,10 +189,10 @@ object FOQuantifierTacticsImpl {
           def forall(h: Formula) = if (x.length > 1) Forall(x.filter(_ != quantified), h) else h
           // construct substitution
           val aX = Variable("x", None, Real)
-          val aT = Apply(Function("t", None, Unit, Real), Nothing)
+          val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
           val aP = Function("p", None, Real, Bool)
-          val l = List(SubstitutionPair(aT, instance), SubstitutionPair(ApplyPredicate(aP, CDot),
-            forall(SubstitutionHelper.replaceFree(qf)(quantified, CDot))))
+          val l = List(SubstitutionPair(aT, instance), SubstitutionPair(PredOf(aP, DotTerm),
+            forall(SubstitutionHelper.replaceFree(qf)(quantified, DotTerm))))
           // construct axiom instance: \forall x. p(x) -> p(t)
           val g = SubstitutionHelper.replaceFree(qf)(quantified, instance)
           val axiomInstance = Imply(f, forall(g))
@@ -237,7 +237,7 @@ object FOQuantifierTacticsImpl {
                   case Imply(lhs, rhs) => Imply(decompose(lhs), rhs)
                 }
 
-                val replMap = Map(axInstance -> renAxiom)
+                val replMap = Map[Formula, Formula](axInstance -> renAxiom)
                 val branch2Tactic = cohideT(SuccPosition(node.sequent.succ.length)) ~
                   (uniformSubstT(subst, replMap) & (axiomT(axiomName) & alpha & AxiomCloseT))
                 Some(cutT(Some(axiomInstance)) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
@@ -321,9 +321,9 @@ object FOQuantifierTacticsImpl {
   private def existentialGenBaseT(x: Variable, t: Term): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Imply(p, Exists(_, _)) =>
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(t, CDot)) :: Nil
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+        val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(t, DotTerm)) :: Nil
     }
 
     val aX = Variable("x", None, Real)
@@ -362,12 +362,12 @@ object FOQuantifierTacticsImpl {
    * @param quantFactory Creates the quantifier.
    */
   def vacuousQuantificationT(x: Option[Variable], axiomName: String,
-                             quantFactory: (Seq[NamedSymbol], Formula) => Quantifier): PositionTactic = {
+                             quantFactory: (Seq[Variable], Formula) => Quantifier): PositionTactic = {
 
     def axiomInstance(fml: Formula): Formula = x match {
       case Some(v) if !allNames(fml).contains(v) => Equiv(fml, quantFactory(v :: Nil, fml))
       case _ => fml match {
-        case q: Quantifier if q.variables.size == 1 && allNames(q.child.asInstanceOf[Formula]).intersect(q.variables.toSet).isEmpty =>
+        case q: Quantifier if q.vars.size == 1 && allNames(q.child.asInstanceOf[Formula]).intersect(q.vars.toSet).isEmpty =>
           Equiv(q.child.asInstanceOf[Formula], fml)
         case _ => False
       }
@@ -376,11 +376,11 @@ object FOQuantifierTacticsImpl {
   }
 
   private def vacuousQuantificationBaseT(x: Option[Variable], axiomName: String,
-                                         quantFactory: (Seq[NamedSymbol], Formula) => Quantifier): PositionTactic = {
+                                         quantFactory: (Seq[Variable], Formula) => Quantifier): PositionTactic = {
 
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(p, _) =>
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
         SubstitutionPair(aP, p) :: Nil
     }
 
@@ -388,8 +388,8 @@ object FOQuantifierTacticsImpl {
       case Some(vv) => vv
       case None => fml match {
         case Equiv(_, q: Quantifier) =>
-          require(q.variables.size == 1 && q.variables.head.isInstanceOf[Variable])
-          q.variables.head.asInstanceOf[Variable]
+          require(q.vars.size == 1 && q.vars.head.isInstanceOf[Variable])
+          q.vars.head.asInstanceOf[Variable]
       }
     }
 
@@ -476,12 +476,12 @@ object FOQuantifierTacticsImpl {
             val futureVars =
               if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) vars.map(v => freshNamedSymbol(v, node.sequent))
               else vars
-            val subst = futureVars.map(v => SubstitutionPair(Apply(Function(v.name, v.index, Unit, v.sort), Nothing), v)).toList
+            val subst = futureVars.map(v => SubstitutionPair(FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing), v)).toList
             val futurePhi =
               if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty)
                 vars.foldRight(phi)((a, b) => replace(b)(a.asInstanceOf[Term], freshNamedSymbol(a, node.sequent).asInstanceOf[Term]))
               else phi
-            val desiredResult = futureVars.foldRight(futurePhi)((a, b) => replace(b)(a.asInstanceOf[Term], Apply(Function(a.name, a.index, Unit, a.sort), Nothing)))
+            val desiredResult = futureVars.foldRight(futurePhi)((a, b) => replace(b)(a.asInstanceOf[Term], FuncOf(Function(a.name, a.index, Unit, a.sort), Nothing)))
             uniformSubstT(subst, Map(futurePhi -> desiredResult))
           } else NilT
 
@@ -497,12 +497,12 @@ object FOQuantifierTacticsImpl {
             val futureVars =
               if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty) vars.map(v => freshNamedSymbol(v, node.sequent))
               else vars
-            val subst = futureVars.map(v => SubstitutionPair(Apply(Function(v.name, v.index, Unit, v.sort), Nothing), v)).toList
+            val subst = futureVars.map(v => SubstitutionPair(FuncOf(Function(v.name, v.index, Unit, v.sort), Nothing), v)).toList
             val futurePhi =
               if (forceUniquify || allNamesExceptAt(node.sequent, p).intersect(vars.toSet).nonEmpty)
                 vars.foldRight(phi)((a, b) => replace(b)(a.asInstanceOf[Term], freshNamedSymbol(a, node.sequent).asInstanceOf[Term]))
               else phi
-            val desiredResult = futureVars.foldRight(futurePhi)((a, b) => replace(b)(a.asInstanceOf[Term], Apply(Function(a.name, a.index, Unit, a.sort), Nothing)))
+            val desiredResult = futureVars.foldRight(futurePhi)((a, b) => replace(b)(a.asInstanceOf[Term], FuncOf(Function(a.name, a.index, Unit, a.sort), Nothing)))
             uniformSubstT(subst, Map(futurePhi -> desiredResult))
           } else NilT
 
@@ -520,18 +520,16 @@ object FOQuantifierTacticsImpl {
     def getBoundVariables(s: Sequent, p: Position): Option[Seq[(String, Option[Int])]] = s(p) match {
       case Forall(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
-        case DifferentialSymbol(Variable(n, i, _)) => (n, i)
         case _ => ???
       })
       case Exists(v, _) => Some(v.map {
         case Variable(n, i, _) => (n, i)
-        case DifferentialSymbol(Variable(n, i, _)) => (n, i)
         case _ => ???
       })
-      case BoxModality(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
-      case BoxModality(NDetAssign(Variable(n, i, _)), _) => Some(Seq((n, i)))
-      case DiamondModality(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
-      case DiamondModality(NDetAssign(Variable(n, i, _)), _) => Some(Seq((n, i)))
+      case Box(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
+      case Box(AssignAny(Variable(n, i, _)), _) => Some(Seq((n, i)))
+      case Diamond(Assign(Variable(n, i, _), e), _) => Some(Seq((n, i)))
+      case Diamond(AssignAny(Variable(n, i, _)), _) => Some(Seq((n, i)))
       case a => None
     }
 
