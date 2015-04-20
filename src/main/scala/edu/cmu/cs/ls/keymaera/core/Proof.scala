@@ -1061,11 +1061,11 @@ class Skolemize(p: SeqPos) extends PositionRule("Skolemize", p) {
          else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.getIndex, phi)))*/
   }
 
-  private def allNamesExceptAt(s: Sequent, p: SeqPos) = {
-    val fs = if (p.isAnte) s.ante.slice(0, p.getIndex) ++ s.ante.slice(p.getIndex + 1, s.ante.length) ++ s.succ
-    else s.ante ++ s.succ.slice(0, p.getIndex) ++ s.succ.slice(p.getIndex + 1, s.ante.length)
+  private def allNamesExceptAt(s: Sequent, pos: SeqPos) = {
+    val fs = if (pos.isAnte) s.ante.slice(0, pos.getIndex) ++ s.ante.slice(pos.getIndex + 1, s.ante.length) ++ s.succ
+    else s.ante ++ s.succ.slice(0, pos.getIndex) ++ s.succ.slice(pos.getIndex + 1, s.ante.length)
     fs.flatMap(StaticSemantics.symbols).toSet
-  }
+  } ensuring (r => r == StaticSemantics.symbols(s.updated(pos, True)), "Same as symbols after replacing by true")
 }
 
 /*********************************************************************************
