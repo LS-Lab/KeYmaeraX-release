@@ -27,11 +27,10 @@ object BindingAssessment {
   def catVars(p: Program) = StaticSemantics(p)
 
   def primedVariables(ode: DifferentialProgram): Set[NamedSymbol] = ode match {
-    case ODEProduct(a, b) => primedVariables(a) ++ primedVariables(b)
-    case ODESystem(_, child, _) => primedVariables(child)
-    case AtomicODE(Derivative(_, x: Variable), _) => Set(x)
-    case _: EmptyODE => Set.empty
-    case _: DifferentialProgramConstant => Set.empty
+    case DifferentialProduct(a, b) => primedVariables(a) ++ primedVariables(b)
+    case ODESystem(child, _) => primedVariables(child)
+    case AtomicODE(DifferentialSymbol(x), _) => Set(x)
+    case _: DifferentialProgramConst => Set.empty
   }
 
   @deprecated("Use StaticSemantics.symbols(t) instead.")
