@@ -16,11 +16,13 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.Z3Scheduler = new Interpreter(new Z3)
+    Tactics.Z3Scheduler.init(Map())
     smt = new Z3Solver
   }
 
   override def afterEach() = {
     smt = null
+    Tactics.Z3Scheduler.shutdown()
     Tactics.Z3Scheduler = null
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.KeYmaeraScheduler = null

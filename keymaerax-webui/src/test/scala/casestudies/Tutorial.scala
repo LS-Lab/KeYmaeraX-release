@@ -38,12 +38,14 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
     Tactics.Z3Scheduler = new Interpreter(new Z3)
+    Tactics.Z3Scheduler.init(Map())
   }
 
   override def afterEach() = {
-    Tactics.Z3Scheduler = null
+    Tactics.Z3Scheduler.shutdown()
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.Z3Scheduler = null
     Tactics.MathematicaScheduler = null
     Tactics.KeYmaeraScheduler = null
   }
