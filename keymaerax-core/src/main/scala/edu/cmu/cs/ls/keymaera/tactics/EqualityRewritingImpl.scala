@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import ExpressionTraversal.{TraverseToPosition, StopTraversal, ExpressionTraversalFunction}
+import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.replaceInContext
@@ -64,16 +64,16 @@ object EqualityRewritingImpl {
 
   def constFormulaCongruenceT(eqPos: Position, left: Boolean, exhaustive: Boolean = true): PositionTactic = new PositionTactic("const formula congruence") {
     override def applies(s: Sequent, p: Position): Boolean = eqPos.isAnte && eqPos.isTopLevel && (s(eqPos) match {
-      case Equals(_, lhs, rhs) if !exhaustive &&  left => getTerm(s, p) == lhs
-      case Equals(_, lhs, rhs) if !exhaustive && !left => getTerm(s, p) == rhs
-      case Equals(_, lhs, rhs) if  exhaustive => true
+      case Equal(lhs, rhs) if !exhaustive &&  left => getTerm(s, p) == lhs
+      case Equal(lhs, rhs) if !exhaustive && !left => getTerm(s, p) == rhs
+      case Equal(lhs, rhs) if  exhaustive => true
       case _ => false
     })
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(eqPos) match {
-        case Equals(_, lhs, rhs) =>
+        case Equal(lhs, rhs) =>
           if (exhaustive) {
             def axiomInstance(f: Formula): Formula = {
               val cond = node.sequent(eqPos)
@@ -109,18 +109,18 @@ object EqualityRewritingImpl {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         def subst(fml: Formula): List[SubstitutionPair] = fml match {
-          case Imply(Equals(_, s, t), Equiv(lhs, rhs)) =>
-            val aS = Apply(Function("s", None, Unit, Real), Nothing)
-            val aT = Apply(Function("t", None, Unit, Real), Nothing)
-            val aCtx = ApplyPredicate(Function("ctxF_", None, Real, Bool), CDot)
+          case Imply(Equal(s, t), Equiv(lhs, rhs)) =>
+            val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+            val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+            val aCtx = PredOf(Function("ctxF_", None, Real, Bool), DotTerm)
 
             if (exhaustive) {
               val substF = if (isLeft) lhs else rhs
               SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) ::
-                SubstitutionPair(aCtx, SubstitutionHelper.replaceFree(substF)(if (isLeft) s else t, CDot)) :: Nil
+                SubstitutionPair(aCtx, SubstitutionHelper.replaceFree(substF)(if (isLeft) s else t, DotTerm)) :: Nil
             } else {
               // does not check whether substituting is admissible! use with caution, tactic will result in substitution clashes
-              val ctx = if (isLeft) lhs.replaceAt(s, where, CDot) else rhs.replaceAt(t, where, CDot)
+              val ctx = if (isLeft) lhs.replaceAt(s, where, DotTerm) else rhs.replaceAt(t, where, DotTerm)
               SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: SubstitutionPair(aCtx, ctx) :: Nil
             }
         }
@@ -139,11 +139,11 @@ object EqualityRewritingImpl {
   private def eqPos(name: String, left: Boolean, exhaustive: Boolean): PositionTactic = new PositionTactic(name) {
     import scala.language.postfixOps
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (s(p) match {
-      case Equals(_, lhs, rhs) =>
+      case Equal(lhs, rhs) =>
         val what = if (left) lhs else rhs
         val repl = if (left) rhs else lhs
         // prevent endless self rewriting -> compute dependencies first to figure out what to rewrite when
-        (what.isInstanceOf[Variable] || what.isInstanceOf[Apply]) &&
+        (what.isInstanceOf[Variable] || what.isInstanceOf[FuncOf]) &&
         StaticSemantics.symbols(what).intersect(StaticSemantics.symbols(repl)).isEmpty &&
           positionsOf(what, s).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index).nonEmpty
       case _ => false
@@ -152,10 +152,10 @@ object EqualityRewritingImpl {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case eq@Equals(_, lhs, rhs) =>
+        case eq@Equal(lhs, rhs) =>
           val what = if (left) lhs else rhs
           val repl = if (left) rhs else lhs
-          assert(what.isInstanceOf[Variable] || what.isInstanceOf[Apply])
+          assert(what.isInstanceOf[Variable] || what.isInstanceOf[FuncOf])
           // positions are not stable, so we need to search over and over again (we even need to search eqPos, since it
           // may shift)
           val occurrences = positionsOf(what, node.sequent).filter(pos => pos.isAnte != p.isAnte || pos.index != p.index)
