@@ -29,57 +29,57 @@ object AlphaConversionHelper {
       new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
           case fa@Forall(v, fo) => n match {
-            case nname: Variable => Right(Forall(v.map((name: NamedSymbol) => if (name == o) nname else name),
+            case nname: Variable => Right(Forall(v.map(name => if (name == o) nname else name),
               replaceFree(fo)(o, n, Some(maybeFreeVariables(fo)))))
             case _ => Right(fa)
           }
           case ex@Exists(v, fo) => n match {
-            case nname: Variable => Right(Exists(v.map((name: NamedSymbol) => if (name == o) nname else name),
+            case nname: Variable => Right(Exists(v.map(name => if (name == o) nname else name),
               replaceFree(fo)(o, n, Some(maybeFreeVariables(fo)))))
             case _ => Right(ex)
           }
-          case BoxModality(Assign(x: Variable, t), pred) => free match {
-            case Some(freeVars) => Right(BoxModality(Assign(x, replaceFree(t)(o, n, free)),
+          case Box(Assign(x: Variable, t), pred) => free match {
+            case Some(freeVars) => Right(Box(Assign(x, replaceFree(t)(o, n, free)),
               replaceFree(pred)(o, n, Some(freeVars - x))))
-            case None => Right(BoxModality(Assign(replaceFree(x)(o, n, None), replaceFree(t)(o, n, None)),
+            case None => Right(Box(Assign(replaceFree(x)(o, n, None).asInstanceOf[Variable], replaceFree(t)(o, n, None)),
               replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(AtomicODE(xprime@Derivative(d, x: Variable), t), pred) => free match {
-            case Some(freeVars) => Right(BoxModality(AtomicODE(xprime, replaceFree(t)(o, n, Some(freeVars - x))),
+          case Box(AtomicODE(xprime@DifferentialSymbol(x), t), pred) => free match {
+            case Some(freeVars) => Right(Box(AtomicODE(xprime, replaceFree(t)(o, n, Some(freeVars - x))),
               replaceFree(pred)(o, n, Some(freeVars - x))))
-            case None => Right(BoxModality(AtomicODE(Derivative(d, n), replaceFree(t)(o, n, None)),
+            case None => Right(Box(AtomicODE(DifferentialSymbol(n.asInstanceOf[Variable]), replaceFree(t)(o, n, None)),
               replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(ODEProduct(lode, rode), pred) => free match {
-            case Some(freeVars) => Right(BoxModality(ODEProduct(
+          case Box(DifferentialProduct(lode, rode), pred) => free match {
+            case Some(freeVars) => Right(Box(DifferentialProduct(
               replaceFree(lode)(o, n, Some(certainlyFreeVariables(lode, freeVars))),
               replaceFree(rode)(o, n, Some(certainlyFreeVariables(rode, freeVars)))),
               replaceFree(pred)(o, n, Some(certainlyFreeVariables(lode, freeVars).intersect(certainlyFreeVariables(rode, freeVars))))))
-            case None => Right(BoxModality(ODEProduct(
+            case None => Right(Box(DifferentialProduct(
               replaceFree(lode)(o, n, None),
               replaceFree(rode)(o, n, None)), replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(ODESystem(v, a, h), pred) => free match {
+          case Box(ODESystem(a, h), pred) => free match {
             case Some(freeVars) =>
               val primed = BindingAssessment.primedVariables(a)
-              Right(BoxModality(ODESystem(v, replaceFree(a)(o, n, Some(certainlyFreeVariables(a, freeVars))),
+              Right(Box(ODESystem(replaceFree(a)(o, n, Some(certainlyFreeVariables(a, freeVars))),
               replaceFree(h)(o, n, Some(freeVars -- primed))), replaceFree(pred)(o, n, Some(freeVars -- primed))))
-            case None => Right(BoxModality(ODESystem(v, replaceFree(a)(o, n, None),
+            case None => Right(Box(ODESystem(replaceFree(a)(o, n, None),
               replaceFree(h)(o, n, None)), replaceFree(pred)(o, n, None)))
           }
-          case BoxModality(Loop(a), pred) => free match {
-            case Some(freeVars) => Right(BoxModality(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
+          case Box(Loop(a), pred) => free match {
+            case Some(freeVars) => Right(Box(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
               replaceFree(pred)(o, n, Some(certainlyFreeVariables(a, freeVars)))))
             case None => Left(None)
           }
-          case DiamondModality(Assign(x: Variable, t), pred) => free match {
-            case Some(freeVars) => Right(DiamondModality(Assign(x, replaceFree(t)(o, n, free)),
+          case Diamond(Assign(x: Variable, t), pred) => free match {
+            case Some(freeVars) => Right(Diamond(Assign(x, replaceFree(t)(o, n, free)),
               replaceFree(pred)(o, n, Some(freeVars - x))))
-            case None => Right(DiamondModality(Assign(replaceFree(x)(o, n, None), replaceFree(t)(o, n, None)),
+            case None => Right(Diamond(Assign(replaceFree(x)(o, n, None).asInstanceOf[Variable], replaceFree(t)(o, n, None)),
               replaceFree(pred)(o, n, None)))
           }
-          case DiamondModality(Loop(a), pred) => free match {
-            case Some(freeVars) => Right(DiamondModality(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
+          case Diamond(Loop(a), pred) => free match {
+            case Some(freeVars) => Right(Diamond(Loop(replaceFree(a)(o, n, Some(freeVariables(a)))),
               replaceFree(pred)(o, n, Some(certainlyFreeVariables(a, freeVars)))))
             case None => Left(None)
           }
@@ -167,8 +167,8 @@ object AlphaConversionHelper {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
           if (o.isInstanceOf[NamedSymbol] && n.isInstanceOf[NamedSymbol]) {
             e match {
-              case Forall(vars, phi) => Right(Forall(vars.map(v => if (v == o) n.asInstanceOf[NamedSymbol] else v), replace(phi)(o, n)))
-              case Exists(vars, phi) => Right(Exists(vars.map(v => if (v == o) n.asInstanceOf[NamedSymbol] else v), replace(phi)(o, n)))
+              case Forall(vars, phi) => Right(Forall(vars.map(v => if (v == o) n.asInstanceOf[Variable] else v), replace(phi)(o, n)))
+              case Exists(vars, phi) => Right(Exists(vars.map(v => if (v == o) n.asInstanceOf[Variable] else v), replace(phi)(o, n)))
               case _ => Left(None)
             }
           } else {
