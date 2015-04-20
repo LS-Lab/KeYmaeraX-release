@@ -34,13 +34,13 @@ object BuiltinHigherTactics {
         case Or(_, _) => if(p.isAnte) if(beta) Some(OrLeftT(p)) else None else Some(OrRightT(p))
         case Imply(_, _) => if(p.isAnte) if(beta) Some(ImplyLeftT(p)) else None else Some(ImplyRightT(p))
         case Equiv(_, _) => if(equiv) if(p.isAnte) Some(EquivLeftT(p)) else Some(EquivRightT(p)) else None
-        case BoxModality(prog, _) if simplifyProg => prog match {
-          case Sequence(_, _) => Some(boxSeqT(p))
+        case Box(prog, _) if simplifyProg => prog match {
+          case Compose(_, _) => Some(boxSeqT(p))
           case Choice(_, _) => Some(boxChoiceT(p))
           case Assign(_, _) => Some(boxAssignT(p))
-          case NDetAssign(_) => Some(boxNDetAssign(p))
+          case AssignAny(_) => Some(boxNDetAssign(p))
           case Test(_) => Some(boxTestT(p))
-          case ode@ODESystem(_) if ODETactics.isDiffSolvable(f)=> Some(diffSolutionT(p))
+          case ode@ODESystem(_, _) if ODETactics.isDiffSolvable(f)=> Some(diffSolutionT(p))
           case _ => None
         }
           //@todo diamond cases
