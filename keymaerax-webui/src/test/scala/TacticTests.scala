@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics._

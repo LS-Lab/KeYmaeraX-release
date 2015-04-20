@@ -1,9 +1,9 @@
-package edu.cmu.cs.ls.keymaera.tests
 
 // favoring immutable Seqs
 
 import edu.cmu.cs.ls.keymaera.tactics._
 import ProofNode.ProofStep
+import org.scalatest.{Matchers, FlatSpec}
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
@@ -21,7 +21,7 @@ import scala.language.postfixOps
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticWrapper, TacticLibrary, Tactics}
 
-object TermTests {
+class TermTests extends FlatSpec with Matchers{
 
   def getTautology2: Formula = {
     val x = Variable("x", None, Real)

@@ -11,7 +11,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Interpreter
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import edu.cmu.cs.ls.keymaera.tools.Z3Solver
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._

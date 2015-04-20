@@ -1,4 +1,4 @@
-package edu.cmu.cs.ls.keymaera.tests
+package testHelper
 
 import java.io.File
 import java.util.Locale

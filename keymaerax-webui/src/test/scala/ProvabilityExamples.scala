@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.core.{KeYmaera, Mathematica}
 import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, Config, TacticLibrary}
-import edu.cmu.cs.ls.keymaera.tests.ProvabilityTestHelper
+import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
 import scala.collection.immutable.Map
