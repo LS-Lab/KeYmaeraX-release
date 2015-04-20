@@ -36,8 +36,9 @@ object ArithmeticTacticsImpl {
       val fn = new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
           e match {
-            case Modality(_, _) => qeAble = false
-            case ApplyPredicate(_, _) => qeAble = false
+            case Box(_, _) => qeAble = false
+            case Diamond(_, _) => qeAble = false
+            case PredOf(_, _) => qeAble = false
             case _ =>
           }
           if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
@@ -45,11 +46,9 @@ object ArithmeticTacticsImpl {
 
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
           e match {
-            case Pair(_, _, _) => qeAble = false
-            case Apply(Function(_, _, Unit, _), Nothing) => true
-            case Apply(fun, _) => qeAble = false // check if fun is an external function
-            case Derivative(_, _) => qeAble = false
-            case IfThenElseTerm(_, _, _) => qeAble = false
+            case FuncOf(Function(_, _, Unit, _), Nothing) => true
+            case FuncOf(fun, _) => qeAble = false // check if fun is an external function
+            case Differential(_) => qeAble = false
             case _ =>
           }
           if (qeAble) Left(None) else Left(Some(new StopTraversal {}))
@@ -166,8 +165,8 @@ object ArithmeticTacticsImpl {
   def NegateEqualsT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: s=t <-> !(s!=t)
-      case Equals(sort, f, g) => Equiv(fml, Not(NotEquals(sort, f, g)))
-      case Not(NotEquals(sort, f, g)) => Equiv(Equals(sort, f, g), fml)
+      case Equal(f, g) => Equiv(fml, Not(NotEqual(f, g)))
+      case Not(NotEqual(f, g)) => Equiv(Equal(f, g), fml)
       case _ => False
     }
     uncoverAxiomT("= negate", axiomInstance, _ => NegateEqualsBaseT)
@@ -176,12 +175,12 @@ object ArithmeticTacticsImpl {
   private def NegateEqualsBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(Equals(s, ff, gg), _) => (s, ff, gg)
-        case Not(NotEquals(s, ff, gg)) => (s, ff, gg)
+        case Equiv(Equal(ff, gg), _) => (ff.sort, ff, gg)
+        case Not(NotEqual(ff, gg)) => (ff.sort, ff, gg)
       }
       // TODO check that axiom is of the expected form s=t <-> !(s != t)
-      val aF = Apply(Function("f", None, sort, sort), Anything)
-      val aG = Apply(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, sort, sort), Anything)
+      val aG = FuncOf(Function("g", None, sort, sort), Anything)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("= negate", subst, _ => NilPT, (f, ax) => ax)
@@ -194,8 +193,8 @@ object ArithmeticTacticsImpl {
   def NegateLessThanT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: s<t <-> !(s>=t)
-      case LessThan(sort, f, g) => Equiv(fml, Not(GreaterEqual(sort, f, g)))
-      case Not(GreaterEqual(sort, f, g)) => Equiv(LessThan(sort, f, g), fml)
+      case Less(f, g) => Equiv(fml, Not(GreaterEqual(f, g)))
+      case Not(GreaterEqual(f, g)) => Equiv(Less(f, g), fml)
       case _ => False
     }
     uncoverAxiomT("< negate", axiomInstance, _ => NegateLessThanBaseT)
@@ -204,11 +203,11 @@ object ArithmeticTacticsImpl {
   def NegateLessThanBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(LessThan(s, ff, gg), _) => (s, ff, gg)
-        case Equiv(Not(GreaterEqual(s, ff, gg)), _) => (s, ff, gg)
+        case Equiv(Less(ff, gg), _) => (ff.sort, ff, gg)
+        case Equiv(Not(GreaterEqual(ff, gg)), _) => (ff.sort, ff, gg)
       }
-      val aF = Apply(Function("f", None, sort, sort), Anything)
-      val aG = Apply(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, sort, sort), Anything)
+      val aG = FuncOf(Function("g", None, sort, sort), Anything)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("< negate", subst, _ => NilPT, (f, ax) => ax)
@@ -221,8 +220,8 @@ object ArithmeticTacticsImpl {
   def LessEqualSplitT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: s<=t <-> (s < t | s=t)
-      case LessEqual(sort, f, g) => Equiv(fml, Or(LessThan(sort, f, g), Equals(sort, f, g)))
-      case Or(LessThan(sort, f, g), Equals(sort2, f2, g2)) if sort == sort2 && f == f2 && g == g2 => Equiv(LessEqual(sort, f, g), fml)
+      case LessEqual(f, g) => Equiv(fml, Or(Less(f, g), Equal(f, g)))
+      case Or(Less(f, g), Equal(f2, g2)) if f == f2 && g == g2 => Equiv(LessEqual(f, g), fml)
       case _ => False
     }
     uncoverAxiomT("<=", axiomInstance, _ => LessEqualSplitBaseT)
@@ -231,11 +230,11 @@ object ArithmeticTacticsImpl {
   private def LessEqualSplitBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(LessEqual(s, ff, gg), _) => (s, ff, gg)
-        case Equiv(Or(LessThan(s, ff, gg), Equals(s2, f2, g2)), _) if s == s2 && ff == f2 && gg == g2 => (s, ff, gg)
+        case Equiv(LessEqual(ff, gg), _) => (ff.sort, ff, gg)
+        case Equiv(Or(Less(ff, gg), Equal(f2, g2)), _) if ff == f2 && gg == g2 => (ff.sort, ff, gg)
       }
-      val aF = Apply(Function("f", None, sort, sort), Anything)
-      val aG = Apply(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, sort, sort), Anything)
+      val aG = FuncOf(Function("g", None, sort, sort), Anything)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("<=", subst, _ => NilPT, (f, ax) => ax)
@@ -247,8 +246,8 @@ object ArithmeticTacticsImpl {
    */
   def GreaterEqualFlipT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case GreaterEqual(sort, f, g) => Equiv(fml, LessEqual(sort, g, f))
-      case LessEqual(sort, f, g) => Equiv(GreaterEqual(sort, g, f), fml)
+      case GreaterEqual(f, g) => Equiv(fml, LessEqual(g, f))
+      case LessEqual(f, g) => Equiv(GreaterEqual(g, f), fml)
       case _ => False
     }
     uncoverAxiomT(">= flip", axiomInstance, _ => GreaterEqualFlipBaseT)
@@ -257,11 +256,11 @@ object ArithmeticTacticsImpl {
   def GreaterEqualFlipBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(GreaterEqual(s, ff, gg), _) => (s, ff, gg)
-        case Equiv(LessEqual(s, ff, gg), _) => (s, ff, gg)
+        case Equiv(GreaterEqual(ff, gg), _) => (ff.sort, ff, gg)
+        case Equiv(LessEqual(ff, gg), _) => (ff.sort, ff, gg)
       }
-      val aF = Apply(Function("f", None, sort, sort), Anything)
-      val aG = Apply(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, sort, sort), Anything)
+      val aG = FuncOf(Function("g", None, sort, sort), Anything)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT(">= flip", subst, _ => NilPT, (f, ax) => ax)
@@ -273,8 +272,8 @@ object ArithmeticTacticsImpl {
    */
   def GreaterThanFlipT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case GreaterThan(sort, f, g) => Equiv(fml, LessThan(sort, g, f))
-      case LessThan(sort, f, g) => Equiv(GreaterThan(sort, g, f), fml)
+      case Greater(f, g) => Equiv(fml, Less(g, f))
+      case Less(f, g) => Equiv(Greater(g, f), fml)
     }
     uncoverAxiomT("> flip", axiomInstance, _ => GreaterThanFlipBaseT)
   }
@@ -282,11 +281,11 @@ object ArithmeticTacticsImpl {
   private def GreaterThanFlipBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = {
       val (sort, f, g) = fml match {
-        case Equiv(GreaterThan(s, ff, gg), _) => (s, ff, gg)
-        case Equiv(LessThan(s, ff, gg), _) => (s, ff, gg)
+        case Equiv(Greater(ff, gg), _) => (ff.sort, ff, gg)
+        case Equiv(Less(ff, gg), _) => (ff.sort, ff, gg)
       }
-      val aF = Apply(Function("f", None, sort, sort), Anything)
-      val aG = Apply(Function("g", None, sort, sort), Anything)
+      val aF = FuncOf(Function("f", None, sort, sort), Anything)
+      val aG = FuncOf(Function("g", None, sort, sort), Anything)
       SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
     }
     axiomLookupBaseT("> flip", subst, _ => NilPT, (f, ax) => ax)
@@ -294,8 +293,8 @@ object ArithmeticTacticsImpl {
 
   def NegateGreaterThanT: PositionTactic = new PositionTactic("> negate") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case GreaterThan(_, _, _) => true
-      case Not(LessEqual(_, _, _)) => true
+      case Greater(_, _) => true
+      case Not(LessEqual(_, _)) => true
       case _ => false
     }
 
@@ -303,9 +302,9 @@ object ArithmeticTacticsImpl {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case GreaterThan(sort, s, t) =>
+        case Greater(s, t) =>
           Some(GreaterThanFlipT(p) & NegateLessThanT(p) & GreaterEqualFlipT(p.first))
-        case Not(LessEqual(sort, s, t)) =>
+        case Not(LessEqual(s, t)) =>
           Some(GreaterEqualFlipT(p.first) & NegateLessThanT(p) & GreaterThanFlipT(p))
         case _ => None
       }
@@ -314,8 +313,8 @@ object ArithmeticTacticsImpl {
 
   def NegateLessEqualsT: PositionTactic = new PositionTactic("<= negate") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case LessEqual(_, _, _) => true
-      case Not(GreaterThan(_, _, _)) => true
+      case LessEqual(_, _) => true
+      case Not(Greater(_, _)) => true
       case _ => false
     }
 
@@ -323,22 +322,22 @@ object ArithmeticTacticsImpl {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
 
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case LessEqual(sort, s, t) =>
+        case LessEqual(s, t) =>
           Some(GreaterEqualFlipT(p) & NegateGreaterEqualsT(p) & GreaterThanFlipT(p.first))
-        case Not(GreaterThan(sort, s, t)) =>
+        case Not(Greater(s, t)) =>
           Some(GreaterThanFlipT(p.first) & NegateGreaterEqualsT(p) & GreaterEqualFlipT(p))
         case _ => None
       }
     }
   }
 
-  def NegateBinaryRelationT[T: Manifest](name: String, rel: T => Option[(Sort, Term, Term)],
-                                         neg: T => Option[(Sort, Term, Term)],
-                                         relFactory: (Sort, Term, Term) => Formula,
-                                         negFactory: (Sort, Term, Term) => Formula,
+  def NegateBinaryRelationT[T: Manifest](name: String, rel: T => Option[(Term, Term)],
+                                         neg: T => Option[(Term, Term)],
+                                         relFactory: (Term, Term) => Formula,
+                                         negFactory: (Term, Term) => Formula,
                                          baseTactic: PositionTactic) = new PositionTactic(name) {
-    class Unapplyer(f: T => Option[(Sort, Term, Term)]) {
-      def unapply(a: Any): Option[(Sort, Term, Term)] = {
+    class Unapplyer(f: T => Option[(Term, Term)]) {
+      def unapply(a: Any): Option[(Term, Term)] = {
         if (manifest[T].runtimeClass.isInstance(a)) f(a.asInstanceOf[T]) else None
       }
     }
@@ -347,8 +346,8 @@ object ArithmeticTacticsImpl {
     val Neg = new Unapplyer(neg)
 
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-        case Rel(_, _, _) => true
-        case Not(Neg(_, _, _)) => true
+        case Rel(_, _) => true
+        case Not(Neg(_, _)) => true
         case _ => false
       }
 
@@ -358,18 +357,18 @@ object ArithmeticTacticsImpl {
       def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         def prepareKMP = new ConstructionTactic("Prepare KMP") {
           override def applicable(node : ProofNode): Boolean = {
-            val antePrgs = node.sequent.ante.filter({ case BoxModality(_, _) => true case _ => false }).
-              map({ case BoxModality(prg, _) => prg })
-            val succPrgs = node.sequent.succ.filter({ case BoxModality(_, _) => true case _ => false }).
-              map({ case BoxModality(prg, _) => prg })
+            val antePrgs = node.sequent.ante.filter({ case Box(_, _) => true case _ => false }).
+              map({ case Box(prg, _) => prg })
+            val succPrgs = node.sequent.succ.filter({ case Box(_, _) => true case _ => false }).
+              map({ case Box(prg, _) => prg })
             antePrgs.intersect(succPrgs).nonEmpty
           }
 
           def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-            val (f, fPrg) = node.sequent.ante.filter({ case BoxModality(_, _) => true case _ => false }).
-              map({ case b@BoxModality(prg, _) => (b, prg) }).last
-            val g = node.sequent.succ.filter({ case BoxModality(prg, _) => prg == fPrg case _ => false }).
-              map({ case b@BoxModality(_, _) => b }).last
+            val (f, fPrg) = node.sequent.ante.filter({ case Box(_, _) => true case _ => false }).
+              map({ case b@Box(prg, _) => (b, prg) }).last
+            val g = node.sequent.succ.filter({ case Box(prg, _) => prg == fPrg case _ => false }).
+              map({ case b@Box(_, _) => b }).last
 
             val pa = AntePosition(node.sequent.ante.length)
             val ps = SuccPosition(node.sequent.succ.length)
@@ -393,10 +392,10 @@ object ArithmeticTacticsImpl {
 
         val pa = AntePosition(node.sequent.ante.length)
         getFormula(node.sequent, p) match {
-          case Rel(sort, s, t) =>
+          case Rel(s, t) =>
             val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
               override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
-                Right(Not(negFactory(sort, s, t)))
+                Right(Not(negFactory(s, t)))
               }
             }), node.sequent(p)) match {
               case Some(f) => f
@@ -416,10 +415,10 @@ object ArithmeticTacticsImpl {
                   (cutUseLbl, ImplyT(pa) && (hideT(p.topLevel), AxiomCloseT | debugT("BAD 3") & stopT)))
               )
             }
-          case Not(Neg(sort, s, t)) =>
+          case Not(Neg(s, t)) =>
             val replFormula = ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
               override def preF(p: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
-                Right(relFactory(sort, s, t))
+                Right(relFactory(s, t))
               }
             }), node.sequent(p)) match {
               case Some(f) => f
@@ -445,14 +444,14 @@ object ArithmeticTacticsImpl {
    * Creates a new tactic for negating =: s!=t <-> !(s=t)
    * @return The tactic.
    */
-  def NegateNotEqualsT = NegateBinaryRelationT("!= negate", NotEquals.unapply, Equals.unapply, NotEquals.apply,
-    Equals.apply, NegateEqualsT)
+  def NegateNotEqualsT = NegateBinaryRelationT("!= negate", NotEqual.unapply, Equal.unapply, NotEqual.apply,
+    Equal.apply, NegateEqualsT)
 
   /**
    * Creates a new tactic for negating >=: s < t <-> !(s>=t)
    * @return The tactic.
    */
-  def NegateGreaterEqualsT = NegateBinaryRelationT(">= negate", GreaterEqual.unapply, LessThan.unapply,
-    GreaterEqual.apply, LessThan.apply, NegateLessThanT)
+  def NegateGreaterEqualsT = NegateBinaryRelationT(">= negate", GreaterEqual.unapply, Less.unapply,
+    GreaterEqual.apply, Less.apply, NegateLessThanT)
 
 }
