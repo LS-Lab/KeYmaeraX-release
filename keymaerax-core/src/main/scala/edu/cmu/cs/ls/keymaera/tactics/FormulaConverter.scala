@@ -159,20 +159,20 @@ class FormulaConverter(val fml: Formula) {
    * @param pos The position pointing to the expression.
    * @return A tuple (p(.), e) of context p(.) and sub-expression e, where p(e) is equivalent to fml.
    */
-  def extractContext(pos: PosInExpr): (Context, Expr) = {
-    var eInCtx: Option[Expr] = None
+  def extractContext(pos: PosInExpr): (Context, Expression) = {
+    var eInCtx: Option[Expression] = None
     ExpressionTraversal.traverse(TraverseToPosition(pos, new ExpressionTraversalFunction {
       override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
         if (p == pos) {
           eInCtx = Some(e)
-          Right(CDotFormula)
+          Right(DotFormula)
         } else {
           Left(None)
         }
       override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
         if (p == pos) {
           eInCtx = Some(e)
-          Right(CDot)
+          Right(DotTerm)
         } else {
           Left(None)
         }
@@ -189,14 +189,14 @@ class FormulaConverter(val fml: Formula) {
   def dottify: Formula = ExpressionTraversal.traverse(new ExpressionTraversalFunction {
 
     override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
-      case Forall(vars, phi) => Right(Forall(vars.map(_ => CDot), new FormulaConverter(phi).dottify))
-      case Exists(vars, phi) => Right(Exists(vars.map(_ => CDot), new FormulaConverter(phi).dottify))
+//      case Forall(vars, phi) => Right(Forall(vars.map(_ => DotTerm), new FormulaConverter(phi).dottify))
+//      case Exists(vars, phi) => Right(Exists(vars.map(_ => DotTerm), new FormulaConverter(phi).dottify))
       case _ => Left(None)
     }
 
     override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-      case _: Variable => Right(CDot)
-      case _: Apply => Right(CDot)
+      case _: Variable => Right(DotTerm)
+      case _: FuncOf => Right(DotTerm)
       case _ => Left(None)
     }
   }, fml) match {
