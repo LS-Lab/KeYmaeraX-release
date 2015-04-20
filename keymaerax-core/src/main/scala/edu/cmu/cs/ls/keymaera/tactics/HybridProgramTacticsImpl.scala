@@ -38,17 +38,17 @@ object HybridProgramTacticsImpl {
 
   class ByDualityAxiomTactic(base: PositionTactic) extends PositionTactic(base.name) {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case f@DiamondModality(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, BoxModality(prg, Not(phi)), p.inExpr)), p)
-      case f@BoxModality(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, DiamondModality(prg, Not(phi)), p.inExpr)), p)
+      case f@Diamond(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, Box(prg, Not(phi)), p.inExpr)), p)
+      case f@Box(prg, phi) => base.applies(s.updated(p, replaceAtPos(f, Diamond(prg, Not(phi)), p.inExpr)), p)
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       def applicable(node : ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case DiamondModality(prg, phi) =>
+        case Diamond(prg, phi) =>
           Some(diamondDualityT(p) & base(p.first) & boxDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
-        case BoxModality(prg, phi) =>
+        case Box(prg, phi) =>
           Some(boxDualityT(p) & base(p.first) & diamondDualityT(p.first) & rewriteDoubleNegationEliminationT(p))
         case _ => None
       }
@@ -68,8 +68,8 @@ object HybridProgramTacticsImpl {
 
   def boxDualityT: PositionTactic = {
     def g(f: Formula): Formula = f match {
-      case BoxModality(prg, phi) => Equiv(f, Not(DiamondModality(prg, Not(phi))))
-      case Not(DiamondModality(prg, Not(phi))) => Equiv(BoxModality(prg, phi), f)
+      case Box(prg, phi) => Equiv(f, Not(Diamond(prg, Not(phi))))
+      case Not(Diamond(prg, Not(phi))) => Equiv(Box(prg, phi), f)
       case _ => False
     }
 
@@ -78,13 +78,13 @@ object HybridProgramTacticsImpl {
   /* Base tactic for boxDualityT */
   private def boxDualityBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(prg, phi), _) =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(Box(prg, phi), _) =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
-      case Equiv(Not(DiamondModality(prg, Not(phi))), _) =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(Not(Diamond(prg, Not(phi))), _) =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
 
@@ -93,15 +93,15 @@ object HybridProgramTacticsImpl {
 
   def boxSeqGenT(q: Formula): PositionTactic = new PositionTactic("[;] generalize") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case BoxModality(Sequence(_, _), _) => true
+      case Box(Compose(_, _), _) => true
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case BoxModality(Sequence(a, b), phi) =>
-          Some(boxSeqT(p) & cutT(Some(BoxModality(a, q))) & onBranch(
+        case Box(Compose(a, b), phi) =>
+          Some(boxSeqT(p) & cutT(Some(Box(a, q))) & onBranch(
             // boxSeqT will move its result into last succ, cut later moves one behind
             (cutShowLbl, hideT(SuccPosition(node.sequent.succ.length - 1))),
             (cutUseLbl,
@@ -118,8 +118,8 @@ object HybridProgramTacticsImpl {
 
   def diamondDualityT: PositionTactic = {
     def g(f: Formula): Formula = f match {
-      case DiamondModality(prg, phi) => Equiv(f, Not(BoxModality(prg, Not(phi))))
-      case Not(BoxModality(prg, Not(phi))) => Equiv(DiamondModality(prg, phi), f)
+      case Diamond(prg, phi) => Equiv(f, Not(Box(prg, Not(phi))))
+      case Not(Box(prg, Not(phi))) => Equiv(Diamond(prg, phi), f)
       case _ => False
     }
 
@@ -128,13 +128,13 @@ object HybridProgramTacticsImpl {
   /* Base tactic for diamondDualityT */
   private def diamondDualityBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(DiamondModality(prg, phi), _) =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(Diamond(prg, phi), _) =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
-      case Equiv(Not(BoxModality(prg, Not(phi))), _) =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(Not(Box(prg, Not(phi))), _) =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
 
@@ -151,7 +151,8 @@ object HybridProgramTacticsImpl {
    */
   def boxDerivativeAssignT: PositionTactic = {
     def g(f: Formula): Formula = f match {
-      case BoxModality(Assign(d@Derivative(_, _: Variable), t), p) =>
+      // TODO DifferentialSymbols should be variables?
+      case Box(Assign(d@Derivative(_, _: Variable), t), p) =>
         Equiv(f, SubstitutionHelper.replaceFree(p)(d, t))
       case _ => False
     }
@@ -161,19 +162,19 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box derivative assignment */
   private def boxDerivativeAssignBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
-        val aT = Apply(Function("t", None, Unit, vSort), Nothing)
-        val aP = ApplyPredicate(Function("p", None, vSort, Bool), CDot) //(p(t)
-        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(d, CDot)) :: Nil
+      case Equiv(Box(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
+        val aT = FuncOf(Function("t", None, Unit, vSort), Nothing)
+        val aP = PredOf(Function("p", None, vSort, Bool), DotTerm) //(p(t)
+        SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(d, DotTerm)) :: Nil
     }
 
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
+      case Equiv(Box(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
         val aV = Variable("v", None, vSort)
         if (v.name != aV.name || v.index != aV.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(BoxModality(Assign(Derivative(_), _), _), _) => true
+              case Equiv(Box(Assign(Derivative(_), _), _), _) => true
               case _ => false
             }
 
@@ -188,7 +189,7 @@ object HybridProgramTacticsImpl {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(BoxModality(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
+      case Equiv(Box(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
         val aV = Variable("v", None, vSort)
         if (v.name == aV.name && v.index == aV.index) axiom
         else replace(axiom)(aV, v)
@@ -207,7 +208,7 @@ object HybridProgramTacticsImpl {
   def boxAssignT(skolemizeHow: Boolean => PositionTactic): PositionTactic =
       new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
-      case BoxModality(Assign(Variable(_, _, _), _), _) => true
+      case Box(Assign(Variable(_, _, _), _), _) => true
       case _ => false
     })
 
@@ -215,13 +216,13 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       def assignEqualMandatory(v: Variable, t: Term, rest: Formula) = allNames(t).contains(v) || (rest match {
-        case BoxModality(_: DifferentialProgram, _) => true
-        case BoxModality(_: Loop, _) => true
+        case Box(_: DifferentialProgram, _) => true
+        case Box(_: Loop, _) => true
         case _ => /* false requires substitution of variables */ true
       })
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case BoxModality(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
+        case Box(Assign(v: Variable, t: Term), phi) if assignEqualMandatory(v, t, phi) =>
           if (p.isAnte) Some(boxAssignEqualT(p))
           // TODO could use v2vAssignT without Skolemize and ImplyRight first
           else Some(boxAssignEqualT(p) & skolemizeHow(true)(p) & ImplyRightT(p) &
@@ -229,9 +230,9 @@ object HybridProgramTacticsImpl {
             // already present in the original model.
             // (still not perfect, i.e., may handle multiple assignments at once: e.g., x:=x;x:=x;)
             ifElseT(n => getFormula(n.sequent, p) match {
-              case BoxModality(Assign(v2: Variable, v3: Variable), _) => v.name == v2.name && v.name == v3.name
+              case Box(Assign(v2: Variable, v3: Variable), _) => v.name == v2.name && v.name == v3.name
               case _ => false }, v2vAssignT(p), NilT))
-        case BoxModality(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) =>
+        case Box(Assign(v: Variable, t: Term), phi) if !assignEqualMandatory(v, t, phi) =>
           Some(substitutionBoxAssignT(p))
         }
       }
@@ -245,7 +246,7 @@ object HybridProgramTacticsImpl {
    */
   def boxAssignEqualT: PositionTactic = new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = p.inExpr == HereP && (s(p) match {
-      case BoxModality(Assign(Variable(_, _,_), _), _) => true
+      case Box(Assign(Variable(_, _,_), _), _) => true
       case _ => false
     })
 
@@ -258,19 +259,19 @@ object HybridProgramTacticsImpl {
         val f = node.sequent(p)
         // construct a new name for the quantified variable
         val (newV1, newV2) = f match {
-          case BoxModality(Assign(v: Variable, _), _) =>
+          case Box(Assign(v: Variable, _), _) =>
             val tIdx = TacticHelper.freshIndexInFormula(v.name, f)
             (Variable(v.name, tIdx, v.sort), Variable(v.name, Some(tIdx.get + 1), v.sort))
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
         node.sequent(p) match {
-          case BoxModality(Assign(v: Variable, _), BoxModality(prg: Loop, _))
+          case Box(Assign(v: Variable, _), Box(prg: Loop, _))
             if allNames(prg).contains(v) && !NameCategorizer.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
           )
-          case BoxModality(Assign(v: Variable, _), BoxModality(prg: DifferentialProgram, _))
+          case Box(Assign(v: Variable, _), Box(prg: DifferentialProgram, _))
             if allNames(prg).contains(v) && !NameCategorizer.freeVariables(prg).contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV1.name, newV1.index)(p.second) &
               boxAssignWithoutAlphaT(newV2, checkNewV = false)(p)
@@ -288,8 +289,8 @@ object HybridProgramTacticsImpl {
    */
   private def boxAssignWithoutAlphaT(newV: Variable, checkNewV: Boolean = true): PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(Assign(v: Variable, t), p) if !checkNewV || !allNames(fml).contains(newV) =>
-        val g = Forall(Seq(newV), Imply(Equals(Real, newV, t), SubstitutionHelper.replaceFree(p)(v, newV)))
+      case Box(Assign(v: Variable, t), p) if !checkNewV || !allNames(fml).contains(newV) =>
+        val g = Forall(Seq(newV), Imply(Equal(newV, t), SubstitutionHelper.replaceFree(p)(v, newV)))
         Equiv(fml, g)
       case _ => False
     }
@@ -298,19 +299,19 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box assign without alpha */
   private def boxAssignWithoutAlphaBaseT(newV: Variable): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+      case Equiv(Box(Assign(v: Variable, t), p), _) =>
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
         val aP = Function("p", None, Real, Bool)
-        SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+        SubstitutionPair(aT, t) :: SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
+      case Equiv(Box(Assign(v: Variable, t), p), _) =>
         val left = v.name != aV.name || v.index != aV.index
         new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(_, _), _), Forall(_, _)) => true
+            case Equiv(Box(Assign(_, _), _), Forall(_, _)) => true
             case _ => false
           }
 
@@ -328,7 +329,7 @@ object HybridProgramTacticsImpl {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(BoxModality(Assign(v: Variable, t), p), _) =>
+      case Equiv(Box(Assign(v: Variable, t), p), _) =>
         val Equiv(left, right) = axiom
         if (v.name == aV.name && v.index == aV.index) Equiv(left, replaceFree(right)(aV, newV))
         else Equiv(replaceFree(left)(aV, v, None), replaceFree(right)(aV, newV))
@@ -352,7 +353,7 @@ object HybridProgramTacticsImpl {
       }
     }
 
-    def g(f: Formula) = Equiv(BoxModality(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f))), f)
+    def g(f: Formula) = Equiv(Box(Assign(ghostV(f), t), SubstitutionHelper.replaceFree(f)(t, ghostV(f))), f)
 
     uncoverAxiomT("[:=] assign", g, f => discreteGhostBaseT(ghostV(f), t))
   }
@@ -360,9 +361,9 @@ object HybridProgramTacticsImpl {
   private def discreteGhostBaseT(v: Variable, t: Term): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(g, f) =>
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
         val aP = Function("p", None, Real, Bool)
-        SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(f)(t, CDot)) :: Nil
+        SubstitutionPair(aT, t) :: SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(f)(t, DotTerm)) :: Nil
     }
 
     def alpha(fml: Formula): PositionTactic = {
@@ -370,7 +371,7 @@ object HybridProgramTacticsImpl {
       if (v.name != aV.name || v.index != aV.index) {
         new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(_, _), _), _) => true
+            case Equiv(Box(Assign(_, _), _), _) => true
             case _ => false
           }
 
@@ -407,7 +408,7 @@ object HybridProgramTacticsImpl {
       }
     }
 
-    def g(f: Formula) = Equiv(BoxModality(Assign(ghostV(f), t), f), f)
+    def g(f: Formula) = Equiv(Box(Assign(ghostV(f), t), f), f)
 
     uncoverAxiomT("[:=] vacuous assign", g, f => nonAbbrvDiscreteGhostBaseT(ghostV(f), t))
   }
@@ -415,8 +416,8 @@ object HybridProgramTacticsImpl {
   private def nonAbbrvDiscreteGhostBaseT(v: Variable, t: Term): PositionTactic = {
     def subst(fml: Formula) = fml match {
       case Equiv(g, f) =>
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
+        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
         SubstitutionPair(aT, t) :: SubstitutionPair(aP, f) :: Nil
     }
 
@@ -425,7 +426,7 @@ object HybridProgramTacticsImpl {
       if (v.name != aV.name || v.index != aV.index) {
         new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Equiv(BoxModality(Assign(_, _), _), _) => true
+            case Equiv(Box(Assign(_, _), _), _) => true
             case _ => false
           }
 
@@ -455,8 +456,8 @@ object HybridProgramTacticsImpl {
    */
   def v2vAssignT: PositionTactic = new PositionTactic("[:=]/<:=> assign") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case BoxModality(Assign(_: Variable, v: Variable), pred) => true
-      case DiamondModality(Assign(_: Variable, v: Variable), pred) => true
+      case Box(Assign(_: Variable, v: Variable), pred) => true
+      case Diamond(Assign(_: Variable, v: Variable), pred) => true
       case _ => false
     }
 
@@ -485,8 +486,8 @@ object HybridProgramTacticsImpl {
         )
 
         getFormula(node.sequent, p) match {
-          case b@BoxModality(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
-          case d@DiamondModality(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
+          case b@Box(Assign(v: Variable, t: Variable), pred) => createTactic(b, pred, v, t)
+          case d@Diamond(Assign(v: Variable, t: Variable), pred) => createTactic(d, pred, v, t)
         }
       }
     }
@@ -499,7 +500,7 @@ object HybridProgramTacticsImpl {
    */
   def selfAssignmentT: PositionTactic = new PositionTactic("[:=] self-assign") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case BoxModality(Assign(v: Variable, t: Variable), _) => v == t
+      case Box(Assign(v: Variable, t: Variable), _) => v == t
       case _ => false
     }
 
@@ -507,7 +508,7 @@ object HybridProgramTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-          case b@BoxModality(Assign(v: Variable, t: Variable), _) if v == t => Some(
+          case b@Box(Assign(v: Variable, t: Variable), _) if v == t => Some(
             abstractionT(p) & skolemizeT(p))
           case _ => throw new IllegalArgumentException("Checked by applicable to not happen")
       }
@@ -519,14 +520,14 @@ object HybridProgramTacticsImpl {
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  def substitutionBoxAssignT = substitutionAssignT("[:=] assign", BoxModality.unapply)
+  def substitutionBoxAssignT = substitutionAssignT("[:=] assign", Box.unapply)
 
   /**
    * Creates a new axiom tactic for box assignment [x := t;]
    * @return The axiom tactic.
    * @author Stefan Mitsch
    */
-  def substitutionDiamondAssignT = substitutionAssignT("<:=> assign", DiamondModality.unapply)
+  def substitutionDiamondAssignT = substitutionAssignT("<:=> assign", Diamond.unapply)
 
   /**
    * Creates a new axiom tactic for box/diamond assignment [x := t;], < x := t;>.
@@ -542,19 +543,19 @@ object HybridProgramTacticsImpl {
         val instance = Equiv(fml, g)
         pred match {
           // loop and ODE are probably a little too strict here, but we have v2vBoxAssignT to handle those
-          case BoxModality(_: DifferentialProgram, _) => t match {
+          case Box(_: DifferentialProgram, _) => t match {
             case tv: Variable if v == tv => instance
             case _ => False
           }
-          case BoxModality(_: Loop, _) => t match {
+          case Box(_: Loop, _) => t match {
             case tv: Variable if v == tv => instance
             case _ => False
           }
-          case DiamondModality(_: DifferentialProgram, _) => t match {
+          case Diamond(_: DifferentialProgram, _) => t match {
             case tv: Variable if v == tv => instance
             case _ => False
           }
-          case DiamondModality(_: Loop, _) => t match {
+          case Diamond(_: Loop, _) => t match {
             case tv: Variable if v == tv => instance
             case _ => False
           }
@@ -571,9 +572,9 @@ object HybridProgramTacticsImpl {
 
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(BDModality(Assign(v: Variable, t: Term), p), _) =>
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
         val aP = Function("p", None, Real, Bool)
-        SubstitutionPair(aT, t) :: SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+        SubstitutionPair(aT, t) :: SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
     val aV = Variable("v", None, Real)
@@ -612,7 +613,7 @@ object HybridProgramTacticsImpl {
    */
   def boxVacuousT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(prg, phi) => Imply(phi, fml)
+      case Box(prg, phi) => Imply(phi, fml)
       case _ => False
     }
     uncoverAxiomT("V vacuous", axiomInstance, _ => boxVacuousBaseT)
@@ -620,9 +621,9 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box vacuous */
   private def boxVacuousBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, BoxModality(prg, phi)) =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+      case Imply(_, Box(prg, phi)) =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
         SubstitutionPair(aA, prg) :: SubstitutionPair(aP, phi) :: Nil
     }
     axiomLookupBaseT("V vacuous", subst, _ => NilPT, (f, ax) => ax)
@@ -634,7 +635,7 @@ object HybridProgramTacticsImpl {
    */
   def boxTestT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(Test(h), p) => Equiv(fml, Imply(h, p))
+      case Box(Test(h), p) => Equiv(fml, Imply(h, p))
       case _ => False
     }
     uncoverAxiomT("[?] test", axiomInstance, _ => boxTestBaseT)
@@ -642,10 +643,10 @@ object HybridProgramTacticsImpl {
   /** Base tactic for boxTestT */
   private def boxTestBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(Test(h), p), _) =>
+      case Equiv(Box(Test(h), p), _) =>
         // construct substitution
-        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aH = PredOf(Function("H", None, Unit, Bool), Nothing)
+        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
         SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
     }
     axiomLookupBaseT("[?] test", subst, _ => NilPT, (f, ax) => ax)
@@ -658,7 +659,7 @@ object HybridProgramTacticsImpl {
    */
   def diamondTestT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case DiamondModality(Test(h), p) => Equiv(fml, And(h, p))
+      case Diamond(Test(h), p) => Equiv(fml, And(h, p))
       case _ => False
     }
     uncoverAxiomT("<?> test", axiomInstance, _ => diamondTestBaseT)
@@ -666,10 +667,10 @@ object HybridProgramTacticsImpl {
   /** Base tactic for diamondTestT */
   private def diamondTestBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(DiamondModality(Test(h), p), _) =>
+      case Equiv(Diamond(Test(h), p), _) =>
         // construct substitution
-        val aH = ApplyPredicate(Function("H", None, Unit, Bool), Nothing)
-        val aP = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+        val aH = PredOf(Function("H", None, Unit, Bool), Nothing)
+        val aP = PredOf(Function("p", None, Unit, Bool), Nothing)
         SubstitutionPair(aH, h) :: SubstitutionPair(aP, p) :: Nil
     }
     axiomLookupBaseT("<?> test", subst, _ => NilPT, (f, ax) => ax)
@@ -682,7 +683,7 @@ object HybridProgramTacticsImpl {
    */
   def boxNDetAssign: PositionTactic = new PositionTactic("[:=] assign equational") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && (s(p) match {
-      case BoxModality(NDetAssign(v: Variable), _) => true
+      case Box(AssignAny(v: Variable), _) => true
       case _ => false
     })
 
@@ -693,12 +694,12 @@ object HybridProgramTacticsImpl {
         val f = node.sequent(p)
         // construct a new name for renaming in ODE
         val newV = f match {
-          case BoxModality(NDetAssign(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
+          case Box(AssignAny(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
         node.sequent(p) match {
-          case BoxModality(NDetAssign(v: Variable), BoxModality(prg, _))
+          case Box(AssignAny(v: Variable), Box(prg, _))
             if StaticSemantics(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
               boxNDetAssignWithoutAlphaT(p) & v2vAssignT(p.first)
@@ -717,7 +718,7 @@ object HybridProgramTacticsImpl {
   private def boxNDetAssignWithoutAlphaT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: [v:=*]p(v) <-> \forall v. p(v).
-      case BoxModality(NDetAssign(v: Variable), p) => Equiv(fml, Forall(Seq(v), p))
+      case Box(AssignAny(v: Variable), p) => Equiv(fml, Forall(Seq(v), p))
       case _ => False
     }
     uncoverAxiomT("[:*] assign nondet", axiomInstance, _ => boxNDetAssignWithoutAlphaBaseT)
@@ -725,18 +726,18 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box nondeterministic assignment without alpha renaming */
   private def boxNDetAssignWithoutAlphaBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
+      case Equiv(Box(AssignAny(v: Variable), p), _) =>
         val aP = Function("p", None, Real, Bool)
-        SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+        SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
+      case Equiv(Box(AssignAny(v: Variable), p), _) =>
         if (v.name != aV.name || v.index != aV.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(BoxModality(NDetAssign(_), _), Forall(_, _)) => true
+              case Equiv(Box(AssignAny(_), _), Forall(_, _)) => true
               case _ => false
             }
 
@@ -751,7 +752,7 @@ object HybridProgramTacticsImpl {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(BoxModality(NDetAssign(v: Variable), p), _) =>
+      case Equiv(Box(AssignAny(v: Variable), p), _) =>
         if (v.name != aV.name || v.index != None) replaceFree(axiom)(aV, v, None)
         else axiom
     }
@@ -766,7 +767,7 @@ object HybridProgramTacticsImpl {
    */
   def diamondNDetAssign: PositionTactic = new PositionTactic("<:=> assign nondet") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case DiamondModality(NDetAssign(v: Variable), _) => true
+      case Diamond(AssignAny(v: Variable), _) => true
       case _ => false
     }
 
@@ -777,12 +778,12 @@ object HybridProgramTacticsImpl {
         val f = getFormula(node.sequent, p)
         // construct a new name for renaming in ODE
         val newV = f match {
-          case DiamondModality(NDetAssign(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
+          case Diamond(AssignAny(v: Variable), _) => TacticHelper.freshNamedSymbol(v, f)
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
         f match {
-          case DiamondModality(NDetAssign(v: Variable), DiamondModality(prg, _))
+          case Diamond(AssignAny(v: Variable), Diamond(prg, _))
             if StaticSemantics(prg).bv.contains(v) => Some(
             alphaRenamingT(v.name, v.index, newV.name, newV.index)(p.second) &
               diamondNDetAssignWithoutAlphaT(p) & v2vAssignT(p.first)
@@ -801,7 +802,7 @@ object HybridProgramTacticsImpl {
   private def diamondNDetAssignWithoutAlphaT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: <v:=*>p(v) <-> \exists v. p(v).
-      case DiamondModality(NDetAssign(v: Variable), p) => Equiv(fml, Exists(Seq(v), p))
+      case Diamond(AssignAny(v: Variable), p) => Equiv(fml, Exists(Seq(v), p))
       case _ => False
     }
     uncoverAxiomT("<:*> assign nondet", axiomInstance, _ => diamondNDetAssignWithoutAlphaBaseT)
@@ -809,18 +810,18 @@ object HybridProgramTacticsImpl {
   /** Base tactic for diamond nondeterministic assignment without alpha renaming */
   private def diamondNDetAssignWithoutAlphaBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
+      case Equiv(Diamond(AssignAny(v: Variable), p), _) =>
         val aP = Function("p", None, Real, Bool)
-        SubstitutionPair(ApplyPredicate(aP, CDot), SubstitutionHelper.replaceFree(p)(v, CDot)) :: Nil
+        SubstitutionPair(PredOf(aP, DotTerm), SubstitutionHelper.replaceFree(p)(v, DotTerm)) :: Nil
     }
 
     val aV = Variable("v", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
+      case Equiv(Diamond(AssignAny(v: Variable), p), _) =>
         if (v.name != aV.name || v.index != aV.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(DiamondModality(NDetAssign(_), _), Exists(_, _)) => true
+              case Equiv(Diamond(AssignAny(_), _), Exists(_, _)) => true
               case _ => false
             }
 
@@ -835,7 +836,7 @@ object HybridProgramTacticsImpl {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(DiamondModality(NDetAssign(v: Variable), p), _) =>
+      case Equiv(Diamond(AssignAny(v: Variable), p), _) =>
         if (v.name != aV.name || v.index != None) replaceFree(axiom)(aV, v, None)
         else axiom
     }
@@ -848,14 +849,14 @@ object HybridProgramTacticsImpl {
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  def boxSeqT = seqT("[;] compose", BoxModality.unapply, BoxModality.apply)
+  def boxSeqT = seqT("[;] compose", Box.unapply, Box.apply)
 
   /**
    * Creates a new axiom tactic for diamond sequential composition <;>
    * @return The new tactic.
    * @author Stefan Mitsch
    */
-  def diamondSeqT = seqT("<;> compose", DiamondModality.unapply, DiamondModality.apply)
+  def diamondSeqT = seqT("<;> compose", Diamond.unapply, Diamond.apply)
 
   /**
    * Creates a new axiom tactic for box/diamond sequential composition
@@ -870,7 +871,7 @@ object HybridProgramTacticsImpl {
     val BDModality = new ModalityUnapplyer(mod)
 
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BDModality(Sequence(a, b), p) => Equiv(fml, factory(a, factory(b, p)))
+      case BDModality(Compose(a, b), p) => Equiv(fml, factory(a, factory(b, p)))
       case _ => False
     }
     uncoverAxiomT(name, axiomInstance, _ => seqBaseT(name, mod))
@@ -880,10 +881,10 @@ object HybridProgramTacticsImpl {
     val BDModality = new ModalityUnapplyer(mod)
 
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BDModality(Sequence(a, b), p), _) =>
-        val aA = ProgramConstant("a")
-        val aB = ProgramConstant("b")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(BDModality(Compose(a, b), p), _) =>
+        val aA = ProgramConst("a")
+        val aB = ProgramConst("b")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
     }
     axiomLookupBaseT(name, subst, _ => NilPT, (f, ax) => ax)
@@ -896,7 +897,7 @@ object HybridProgramTacticsImpl {
   def boxInductionT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: (p & [a*](p -> [a] p)) -> [a*]p
-      case BoxModality(Loop(a), p) => Imply(And(p, BoxModality(Loop(a), Imply(p, BoxModality(a, p)))), fml)
+      case Box(Loop(a), p) => Imply(And(p, Box(Loop(a), Imply(p, Box(a, p)))), fml)
       case _ => False
     }
     uncoverAxiomT("I induction", axiomInstance, _ => boxInductionBaseT)
@@ -904,9 +905,9 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box induction */
   private def boxInductionBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(And(p, BoxModality(Loop(a), Imply(_, BoxModality(_, _)))), _) =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Imply(And(p, Box(Loop(a), Imply(_, Box(_, _)))), _) =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: Nil
     }
 
@@ -920,7 +921,7 @@ object HybridProgramTacticsImpl {
   def boxChoiceT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: [ a ++ b ]p <-> [a]p & [b]p.
-      case BoxModality(Choice(a, b), p) => Equiv(fml, And(BoxModality(a, p), BoxModality(b, p)))
+      case Box(Choice(a, b), p) => Equiv(fml, And(Box(a, p), Box(b, p)))
       case _ => False
     }
     uncoverAxiomT("[++] choice", axiomInstance, _ => boxChoiceBaseT)
@@ -928,10 +929,10 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box choice */
   private def boxChoiceBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(Choice(a, b), p), _) =>
-        val aA = ProgramConstant("a")
-        val aB = ProgramConstant("b")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(Box(Choice(a, b), p), _) =>
+        val aA = ProgramConst("a")
+        val aB = ProgramConst("b")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
     }
     axiomLookupBaseT("[++] choice", subst, _ => NilPT, (f, ax) => ax)
@@ -945,7 +946,7 @@ object HybridProgramTacticsImpl {
   def diamondChoiceT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       // construct axiom instance: < a ++ b >p <-> <a>p | <b>p.
-      case DiamondModality(Choice(a, b), p) => Equiv(fml, Or(DiamondModality(a, p), DiamondModality(b, p)))
+      case Diamond(Choice(a, b), p) => Equiv(fml, Or(Diamond(a, p), Diamond(b, p)))
       case _ => False
     }
     uncoverAxiomT("<++> choice", axiomInstance, _ => diamondChoiceBaseT)
@@ -953,10 +954,10 @@ object HybridProgramTacticsImpl {
   /** Base tactic for diamond choice */
   private def diamondChoiceBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(DiamondModality(Choice(a, b), p), _) =>
-        val aA = ProgramConstant("a")
-        val aB = ProgramConstant("b")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(Diamond(Choice(a, b), p), _) =>
+        val aA = ProgramConst("a")
+        val aB = ProgramConst("b")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aA, a) :: SubstitutionPair(aB, b) :: SubstitutionPair(aP, p) :: Nil
     }
     axiomLookupBaseT("<++> choice", subst, _ => NilPT, (f, ax) => ax)
@@ -969,7 +970,7 @@ object HybridProgramTacticsImpl {
    */
   def inductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
     def getBody(g: Formula): Option[Program] = g match {
-      case BoxModality(Loop(a), _) => Some(a)
+      case Box(Loop(a), _) => Some(a)
       case _ => None
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
@@ -985,11 +986,11 @@ object HybridProgramTacticsImpl {
           val cutAPos = AntePosition(node.sequent.ante.length, HereP)
           val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-              case x@BoxModality(a, _) =>
+              case x@Box(a, _) =>
                 val cPos = AntePosition(node.sequent.ante.length)
                 val b1 = ImplyLeftT(cPos) & AxiomCloseT
                 val b2 = hideT(p)
-                Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
+                Some(cutT(Some(Imply(Box(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
               case _ => None
             }
             override def applicable(node: ProofNode): Boolean = true
@@ -1004,7 +1005,7 @@ object HybridProgramTacticsImpl {
             onBranch(("Close Next", AxiomCloseT))
           getBody(node.sequent(p)) match {
             case Some(a) =>
-              Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) &
+              Some(cutT(Some(Imply(f, Box(Loop(a), f)))) &
                 onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
             case None => None
           }
@@ -1021,7 +1022,7 @@ object HybridProgramTacticsImpl {
    */
   def wipeContextInductionT(inv: Option[Formula]): PositionTactic = new PositionTactic("induction") {
     def getBody(g: Formula): Option[Program] = g match {
-      case BoxModality(Loop(a), _) => Some(a)
+      case Box(Loop(a), _) => Some(a)
       case _ => None
     }
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.inExpr == HereP && getBody(s(p)).isDefined
@@ -1060,11 +1061,11 @@ object HybridProgramTacticsImpl {
 
           val prepareKMP = new ConstructionTactic("Prepare K modus ponens") {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-              case x@BoxModality(a, _) =>
+              case x@Box(a, _) =>
                 val cPos = AntePosition(node.sequent.ante.length)
                 val b1 = ImplyLeftT(cPos) & AxiomCloseT
                 val b2 = hideT(p)
-                Some(cutT(Some(Imply(BoxModality(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
+                Some(cutT(Some(Imply(Box(a, f), x))) & onBranch((cutUseLbl, b1), (cutShowLbl, b2)))
               case _ => None
             }
             override def applicable(node: ProofNode): Boolean = true
@@ -1079,7 +1080,7 @@ object HybridProgramTacticsImpl {
             onBranch(("Close Next", AxiomCloseT))
           getBody(node.sequent(p)) match {
             case Some(a) =>
-              Some(cutT(Some(Imply(f, BoxModality(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
+              Some(cutT(Some(Imply(f, Box(Loop(a), f)))) & onBranch((cutUseLbl, branch1Tactic), (cutShowLbl, branch2Tactic)))
             case None => None
           }
         case None => Some(ind(p, NilT) & LabelBranch(indStepLbl))
