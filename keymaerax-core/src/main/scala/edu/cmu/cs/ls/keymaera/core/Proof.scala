@@ -7,7 +7,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
@@ -16,6 +16,7 @@ import scala.collection.immutable.IndexedSeq
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 import scala.annotation.{unspecialized, elidable}
@@ -72,7 +73,7 @@ sealed trait SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in antecedent.
  */
-case class AntePos(private[kernel] val index: Int) extends SeqPos {
+case class AntePos(private[core] val index: Int) extends SeqPos {
   def isAnte = true
   def isSucc = false
   def getIndex = index
@@ -82,7 +83,7 @@ case class AntePos(private[kernel] val index: Int) extends SeqPos {
  * Antecedent Positions of formulas in a sequent.
  * @param index the position base 0 in antecedent.
  */
-case class SuccPos(private[kernel] val index: Int) extends SeqPos {
+case class SuccPos(private[core] val index: Int) extends SeqPos {
   def isAnte = false
   def isSucc = true
   def getIndex = index
@@ -125,6 +126,31 @@ final case class Sequent(pref: scala.collection.immutable.Seq[NamedSymbol],
     }
   }
 
+  //@todo enable quicker apply(AntePos) and apply(SeqPos) after resolving ambiguous implicit conversion from Position.
+//  /**
+//   * Retrieves the formula in sequent at a given succedent position.
+//   * @param pos the succedent position of the formula
+//   * @return the formula at the given position from the succedent
+//   * @note slightly faster version with the same result as #apply(SeqPos)
+//   */
+//  def apply(pos: AntePos): Formula = {
+//    //assert (pos.isAnte)  // @elidable
+//    //require(pos.getIndex < ante.length, "Position " + pos + " is invalid in sequent " + this) // @elidable
+//    ante(pos.getIndex)
+//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+//
+//  /**
+//   * Retrieves the formula in sequent at a given antecedent position.
+//   * @param pos the antecedent position of the formula
+//   * @return the formula at the given position from the antecedent
+//   * @note slightly faster version with the same result as #apply(SeqPos)
+//   */
+//  def apply(pos: SuccPos): Formula = {
+//    //assert (pos.isSucc)  // @elidable
+//    //require(pos.getIndex < succ.length, "Position " + pos + " is invalid in sequent " + this) // @elidable
+//    succ(pos.getIndex)
+//  } ensuring (r => r == apply(pos.asInstanceOf[SeqPos]), "consistent retrieving")
+
   // transformations giving copies of sequents
   
   /**
@@ -147,7 +173,7 @@ final case class Sequent(pref: scala.collection.immutable.Seq[NamedSymbol],
    * A copy of this sequent with the indicated position replaced by the formula f.
    * @param p the position of the replacement
    * @param f the replacing formula
-   * @returns a copy of this sequent with the formula at position p replaced by f.
+   * @return a copy of this sequent with the formula at position p replaced by f.
    */
   def updated(p: SeqPos, f: Formula) : Sequent = {
     if (p.isAnte) {
@@ -206,13 +232,18 @@ final case class Sequent(pref: scala.collection.immutable.Seq[NamedSymbol],
   */
 
 object Provable {
+  private[core] val debugProver = false
+
   /**
    * Begin a new proof for the desired conclusion goal
    * @param goal the desired conclusion.
    * @return a Provable whose subgoals need to be all proved in order to prove goal.
    * @note soundness-critical
    */
-  def startProof(goal : Sequent) = Provable(goal, scala.collection.immutable.IndexedSeq(goal))
+  def startProof(goal : Sequent) = {
+    Provable(goal, scala.collection.immutable.IndexedSeq(goal))
+  } ensuring(
+    r => !r.isProved && r.subgoals == IndexedSeq(r.conclusion), "correct initial proof start")
 }
 
 /**
@@ -225,10 +256,10 @@ object Provable {
  * @note soundness-critical
  * @note Only private constructor calls for soundness
  * @author aplatzer
- * @TODO Subgoals as an immutable list or an immutable IndexedSeq?
  */
 final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
+  if (Provable.debugProver && subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)
 
   /**
    * Position types for the subgoals of a Provable.
@@ -238,6 +269,9 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
 
   /**
    * Checks whether this Provable proves its conclusion.
+   * @return true if conclusion is proved by this Provable,
+   *         false if subgoals are missing that need to be proved first.
+   * @note soundness-critical
    */
   final def isProved : Boolean = (subgoals.isEmpty)
 
@@ -257,11 +291,14 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * @return A Provable derivation that proves the premise subgoal by using the given proof rule.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
+   * @note soundness-critical
    */
   final def apply(rule : Rule, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
+      // subgoal closed by proof rule
       case Nil => new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
+      // subgoal replaced by new subgoals fml::rest
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
   } ensuring(r => r.conclusion == conclusion, "Same conclusion after applying proof rules") ensuring (
@@ -278,29 +315,36 @@ final case class Provable private (val conclusion: Sequent, val subgoals: scala.
    * Will return a Provable with the same conclusion but an updated set of premises.
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    * @requires(subderivation.conclusion == subgoals(subgoal))
+   * @note soundness-critical
    */
   final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    require(subderivation.conclusion == subgoals(subgoal), "the given derivation concludes " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
+    require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the given derivation to conclude " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {  //@TODO Avoid awkward list conversion
-      case Nil => new Provable(conclusion, subgoals.drop(subgoal))
+      // subderivation proves given subgoal
+      case Nil =>
+        assert(subderivation.isProved && subderivation.proved == subgoals(subgoal), "Subderivation proves the given subgoal " + subgoals(subgoal) + " of\n" + this + "\nby subderivation\n" + subderivation)
+        new Provable(conclusion, subgoals.patch(subgoal, Nil, 1))
+      // subderivation replaces subgoal by new premises fml::rest
       case fml :: rest => new Provable(conclusion, subgoals.updated(subgoal, fml) ++ rest)
     }
   } ensuring(r => r.conclusion == conclusion,
     "Same conclusion\n" + conclusion + " after joining derivations") ensuring (
-    r => subgoals.drop(subgoal).toSet.subsetOf(r.subgoals.toSet),
+    r => subgoals.patch(subgoal, Nil, 1).toSet.subsetOf(r.subgoals.toSet),
     "All previous premises still around except the one replaced by a derivation") ensuring (
     r => subderivation.subgoals.toSet.subsetOf(r.subgoals.toSet), "All premises in joined derivation are new subgoals")
 
   /**
    * Sub-Provable: Get a sub-Provable corresponding to a Provable with the given subgoal as conclusion.
+   * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
+   * @note not soundness-critical only completeness-critical
    */
   def sub(subgoal : Subgoal) : Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     Provable.startProof(subgoals(subgoal))
   } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
-    r => r.subgoals == List(r.conclusion), "sub Provable is unfinished")
+    r => r.subgoals == List(r.conclusion), "sub Provable is an unfinished Provable")
 
   override def toString() = "Provable(conclusion\n" + conclusion + "\nfrom subgoals\n" + subgoals.mkString(",\n") + ")"
 }
@@ -360,11 +404,17 @@ abstract class TwoPositionRule(name: String, val pos1: SeqPos, val pos2: SeqPos)
 // remove duplicate antecedent (this should be a tactic)
 //@TODO Change type to LeftRule: AntePos => Rule
 object HideLeft extends (AntePos => Rule) {
-  def apply(p: AntePos): Rule = new HideLeft(p)
+  /**
+   * Hide left.
+   *    G  |- D
+   * -------------
+   *   G, p |- D
+   */
+  def apply(pos: AntePos): Rule = new HideLeft(pos)
 }
-class HideLeft(p: AntePos) extends LeftRule("HideLeft", p) {
+class HideLeft(pos: AntePos) extends LeftRule("HideLeft", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, s.ante.patch(p.getIndex, Nil, 1), s.succ))
+    List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
@@ -372,34 +422,19 @@ class HideLeft(p: AntePos) extends LeftRule("HideLeft", p) {
 // remove duplicate succedent (this should be a tactic)
 //@TODO Change type to RightRule: SuccPos => Rule
 object HideRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new HideRight(p)
+  /**
+   * Hide right.
+   *    G |- D
+   * -------------
+   *   G |- p, D
+   */
+  def apply(pos: SuccPos): Rule = new HideRight(pos)
 }
-class HideRight(p: SuccPos) extends RightRule("HideRight", p) {
+class HideRight(pos: SuccPos) extends RightRule("HideRight", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, s.ante, s.succ.patch(p.getIndex, Nil, 1)))
+    List(Sequent(s.pref, s.ante, s.succ.patch(pos.getIndex, Nil, 1)))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
-
-// co-weakening left = co-hide left (all but indicated position)
-object CoHideLeft extends (AntePos => Rule) {
-  def apply(p: AntePos): Rule = new CoHideLeft(p)
-}
-class CoHideLeft(p: AntePos) extends LeftRule("CoHideLeft", p) {
-  def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, IndexedSeq(s.ante(p.getIndex)), IndexedSeq()))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-// co-weakening right = co-hide right (all but indicated position)
-object CoHideRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new CoHideRight(p)
-}
-class CoHideRight(p: SuccPos) extends RightRule("CoHideRight", p) {
-  def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(p.getIndex))))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
 
 // Exchange left rule reorders antecedent
 object ExchangeLeft {
@@ -457,52 +492,76 @@ object ContractionLeft {
 
 // Ax Axiom close / Identity rule
 object Close extends ((AntePos, SuccPos) => Rule) {
-  def apply(assume: AntePos, p: SuccPos): Rule = new Close(assume, p)
+  /**
+   * Close identity.
+   *        *
+   * ------------------
+   *   G, p |- p, D
+   */
+  def apply(assume: AntePos, pos: SuccPos): Rule = new Close(assume, pos)
 }
 
 
-class Close(assume: AntePos, p: SuccPos) extends AssumptionRule("Axiom", assume, p) with ClosingRule {
+class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule("Axiom", assume, pos) with ClosingRule {
   def apply(s: Sequent): List[Sequent] = {
-    if (s(assume) == s(p)) {
-        assert (assume.isAnte && p.isSucc)
+    if (s(assume) == s(pos)) {
+        assert (assume.isAnte && pos.isSucc)
         // close goal
         Nil
     } else {
-        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(p), this, s)
+        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
     }
   } ensuring (_.isEmpty, "closed if applicable")
 }
 
 // close by true
 object CloseTrue {
-  def apply(p: SuccPos): RightRule = new CloseTrue(p)
+  /**
+   * close true.
+   *        *
+   * ------------------
+   *   G |- true, D
+   */
+  def apply(pos: SuccPos): RightRule = new CloseTrue(pos)
 }
 
-class CloseTrue(p: SuccPos) extends RightRule("CloseTrue", p) with ClosingRule {
+class CloseTrue(pos: SuccPos) extends RightRule("CloseTrue", pos) with ClosingRule {
   override def apply(s: Sequent): List[Sequent] = {
-    require(s.succ.length > p.getIndex, "Position " + p + " invalid in " + s) // @elidable
-    if (s(p) == True) Nil
-    else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + p, this, s)
-  } ensuring (_.isEmpty, "closed if applicable")
+    require(s.succ.length > pos.getIndex, "Position " + pos + " invalid in " + s) // @elidable
+    if (s(pos) == True) Nil
+    else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + pos, this, s)
+  } ensuring (s(pos) == True && pos.isSucc && _.isEmpty, "closed if applicable")
 }
 
 // close by false
 object CloseFalse {
-  def apply(p: AntePos): LeftRule = new CloseFalse(p)
+  /**
+   * close false.
+   *        *
+   * ------------------
+   *   G, false |- D
+   */
+  def apply(pos: AntePos): LeftRule = new CloseFalse(pos)
 }
 
-class CloseFalse(p: AntePos) extends LeftRule("CloseFalse", p) with ClosingRule {
+class CloseFalse(pos: AntePos) extends LeftRule("CloseFalse", pos) with ClosingRule {
   override def apply(s: Sequent): List[Sequent] = {
-    require(s.ante.length > p.getIndex, "Position " + p + " invalid in " + s) //@elidable
-    if (s(p) == False) Nil
-    else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + p, this, s)
-  } ensuring (_.isEmpty, "closed if applicable")
+    require(s.ante.length > pos.getIndex, "Position " + pos + " invalid in " + s) //@elidable
+    if (s(pos) == False) Nil
+    else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + pos, this, s)
+  } ensuring (s(pos) == False && pos.isAnte && _.isEmpty, "closed if applicable")
 }
 
 
 // cut
 object Cut {
   // Cut in the given formula c
+  /**
+   * cut in the given formula c.
+   * G, c |- D     G |- D, c
+   * -----------------------
+   *   G |- D
+   */
   def apply(c: Formula) : Rule = new Cut(c)
   private class Cut(c: Formula) extends Rule("cut") {
     def apply(s: Sequent): List[Sequent] = {
@@ -510,7 +569,12 @@ object Cut {
       val show = new Sequent(s.pref, s.ante, s.succ :+ c)
       //@TODO Switch branches around to (show, use) and reformulate using glue()
       List(use, show)
-    } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts")
+    } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)),
+      "subsequent of subgoals of cuts"
+      ) ensuring (r => r == List(
+      s.glue(Sequent(s.pref, IndexedSeq(c), IndexedSeq())),
+      s.glue(Sequent(s.pref, IndexedSeq(), IndexedSeq(c)))),
+      "same as glueing construction")
   }
 }
 
@@ -521,115 +585,175 @@ object Cut {
 
 // !R Not right
 object NotRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new NotRight(p)
+  /**
+   * !R Not right.
+   *   G, p |- D
+   * ------------
+   *   G |- !p, D
+   */
+  def apply(pos: SuccPos): Rule = new NotRight(pos)
 }
 
-class NotRight(p: SuccPos) extends RightRule("Not Right", p) {
+class NotRight(pos: SuccPos) extends RightRule("Not Right", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Not(a) = s(p)
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq())))
+    val Not(p) = s(pos)
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(p), IndexedSeq())))
   }
 }
 
 // !L Not left
 object NotLeft extends (AntePos => Rule) {
-  def apply(p: AntePos): Rule = new NotLeft(p)
+  /**
+   * !L Not left.
+   *   G |- D, p
+   * ------------
+   *   G, !p |- D
+   */
+  def apply(pos: AntePos): Rule = new NotLeft(pos)
 }
 
-class NotLeft(p: AntePos) extends LeftRule("Not Left", p) {
+class NotLeft(pos: AntePos) extends LeftRule("Not Left", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Not(a) = s(p)
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))))
+    val Not(p) = s(pos)
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(p))))
   }
 }
 
 // |R Or right
 object OrRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new OrRight(p)
+  /**
+   * |R Or right.
+   *   G |- D, p,q
+   * ---------------
+   *   G |- p|q, D
+   */
+  def apply(pos: SuccPos): Rule = new OrRight(pos)
 }
-class OrRight(p: SuccPos) extends RightRule("Or Right", p) {
+class OrRight(pos: SuccPos) extends RightRule("Or Right", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Or(a,b) = s(p)
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a,b))))
+    val Or(p,q) = s(pos)
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(p,q))))
   }
 }
 
 // |L Or left
 object OrLeft extends (AntePos => Rule) {
-  def apply(p: AntePos): Rule = new OrLeft(p)
+  /**
+   * |L Or left.
+   * G, p |- D     G, q |- D
+   * -----------------------
+   *   G, p|q |- D
+   */
+  def apply(pos: AntePos): Rule = new OrLeft(pos)
 }
 
-class OrLeft(p: AntePos) extends LeftRule("Or Left", p) {
+class OrLeft(pos: AntePos) extends LeftRule("Or Left", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Or(a,b) = s(p)
-    List(s.updated(p, a), s.updated(p, b))
+    val Or(p,q) = s(pos)
+    List(s.updated(pos, p), s.updated(pos, q))
   }
 }
 
 // &R And right
 object AndRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new AndRight(p)
+  /**
+   * &R And right.
+   * G |- p, D    G |- q, D
+   * ----------------------
+   *   G |- p&q, D
+   */
+  def apply(pos: SuccPos): Rule = new AndRight(pos)
 }
-class AndRight(p: SuccPos) extends RightRule("And Right", p) {
+class AndRight(pos: SuccPos) extends RightRule("And Right", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val And(a,b) = s(p)
-    List(s.updated(p, a), s.updated(p, b))
+    val And(p,q) = s(pos)
+    List(s.updated(pos, p), s.updated(pos, q))
   }
 }
 
 // &L And left
 object AndLeft extends (AntePos => Rule) {
-  def apply(p: AntePos): Rule = new AndLeft(p)
+  /**
+   * &L And left.
+   *   G, p, q |- D
+   * ---------------
+   *   G, p&q |- D
+   */
+  def apply(pos: AntePos): Rule = new AndLeft(pos)
 }
 
-class AndLeft(p: AntePos) extends LeftRule("And Left", p) {
+class AndLeft(pos: AntePos) extends LeftRule("And Left", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val And(a,b) = s(p)
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b), IndexedSeq())))
+    val And(p,q) = s(pos)
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(p,q), IndexedSeq())))
   }
 }
 
-// ->R Implication right
+// ->R Imply right
 object ImplyRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new ImplyRight(p)
+  /**
+   * ->R Imply right.
+   *   G, p |- D, q
+   * ---------------
+   *   G |- p->q, D
+   */
+  def apply(pos: SuccPos): Rule = new ImplyRight(pos)
 }
 
-class ImplyRight(p: SuccPos) extends RightRule("Imply Right", p) {
+class ImplyRight(pos: SuccPos) extends RightRule("Imply Right", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Imply(a,b) = s(p)
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(a), IndexedSeq(b))))
+    val Imply(p,q) = s(pos)
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(p), IndexedSeq(q))))
   }
 }
 
 
-// ->L Implication left
+// ->L Imply left
 object ImplyLeft extends (AntePos => Rule) {
-  def apply(p: AntePos): Rule = new ImplyLeft(p)
+  /**
+   * ->L Imply left.
+   * G |- D, p    G, q |- D
+   * ----------------------
+   *   G, p->q |- D
+   */
+  def apply(pos: AntePos): Rule = new ImplyLeft(pos)
 }
-class ImplyLeft(p: AntePos) extends LeftRule("Imply Left", p) {
+class ImplyLeft(pos: AntePos) extends LeftRule("Imply Left", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Imply(a,b) = s(p)
-    //@TODO Surprising that both positions change.
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(), IndexedSeq(a))),
-         s.updated(p, Sequent(s.pref, IndexedSeq(b), IndexedSeq())))
+    val Imply(p,q) = s(pos)
+    //@TODO Perhaps surprising that both positions change.
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(p))),
+         s.updated(pos, Sequent(s.pref, IndexedSeq(q), IndexedSeq())))
   }
 }
 
 // <->R Equiv right
 object EquivRight extends (SuccPos => Rule) {
-  def apply(p: SuccPos): Rule = new EquivRight(p)
+  /**
+   * <->R Equiv right.
+   * G, p |- D, q    G, q |- D, p
+   * -----------------------------
+   *   G |- p<->q, D
+   */
+  def apply(pos: SuccPos): Rule = new EquivRight(pos)
 }
-class EquivRight(p: SuccPos) extends RightRule("Equiv Right", p) {
+class EquivRight(pos: SuccPos) extends RightRule("Equiv Right", pos) {
   def apply(s: Sequent): List[Sequent] = {
-    val Equiv(a,b) = s(p)
+    val Equiv(p,q) = s(pos)
     //List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
-    List(s.updated(p, Sequent(s.pref, IndexedSeq(a),IndexedSeq(b))),
-         s.updated(p, Sequent(s.pref, IndexedSeq(b),IndexedSeq(a))))
+    List(s.updated(pos, Sequent(s.pref, IndexedSeq(p),IndexedSeq(q))),
+         s.updated(pos, Sequent(s.pref, IndexedSeq(q),IndexedSeq(p))))
   }
 }
 
 // <->L Equiv left
 object EquivLeft extends (AntePos => Rule) {
+  /**
+   * <->L Equiv left.
+   * G, p&q |- D    G, !p&!q |- D
+   * -----------------------------
+   *   G, p<->q |- D
+   */
   def apply(p: AntePos): Rule = new EquivLeft(p)
 }
 
@@ -663,6 +787,12 @@ class EquivLeft(p: AntePos) extends LeftRule("Equiv Left", p) {
 // uniform substitution
 // this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
 object UniformSubstitutionRule {
+  /**
+   * US uniform substitution.
+   *        G |- D
+   * --------------------
+   * subst(G) |- subst(D)
+   */
   def apply(subst: USubst, origin: Sequent) : Rule = new UniformSubstitutionRule(subst, origin)
 
   @elidable(FINEST) private def log(msg: =>Any) = {} //println(msg)
@@ -691,7 +821,7 @@ object UniformSubstitutionRule {
 
 
 /**
- * Performs alpha conversion renaming all occurrences of symbol name_idx
+ * Performs bound renaming renaming all occurrences of symbol name_idx
  * to a symbol target_tIdx.
  * @param what What name to replace.
  * @param wIdx What index of the name to replace.
@@ -711,16 +841,25 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
 
   def apply(f: Formula): Formula = {
+    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
     // allow self renaming to get stuttering
     if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
       throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     rename(f)
+    } else f
   }
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
-  private def ghostify(f: Formula) = Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+  private def ghostify(f: Formula) =
+    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
+      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
+      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
+      case Box(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case Diamond(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case _ => Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
+    } else f
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
@@ -838,7 +977,8 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case Or(l, r) => allNames(l) ++ allNames(r)
     case Imply(l, r) => allNames(l) ++ allNames(r)
     case Equiv(l, r) => allNames(l) ++ allNames(r)
-    case DifferentialFormula(df) => allNames(df) ++ allNames(df).map(DifferentialSymbol(_))
+    //@todo asInstanceOf may cause type errors, but that's also a conceptual error in the code. Should only be for variables.
+    case DifferentialFormula(df) => allNames(df) ++ allNames(df).map(x=>DifferentialSymbol(x.asInstanceOf[Variable]))
 
     case Forall(vars, g) => vars.toSet ++ allNames(g)
     case Exists(vars, g) => vars.toSet ++ allNames(g)
@@ -872,7 +1012,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
 
   private def allNames(p: Program): Set[NamedSymbol] = p match {
     case Assign(x: Variable, e) => Set(x) ++ allNames(e)
-    case Assign(xp@DifferentialSymbol(x:Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
+    case DiffAssign(xp@DifferentialSymbol(x:Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
     case AssignAny(x: Variable) => Set(x)
     case Test(f) => allNames(f)
 //    case IfThen(cond, thenT) => allNames(cond) ++ allNames(thenT)
@@ -921,11 +1061,11 @@ class Skolemize(p: SeqPos) extends PositionRule("Skolemize", p) {
          else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.getIndex, phi)))*/
   }
 
-  private def allNamesExceptAt(s: Sequent, p: SeqPos) = {
-    val fs = if (p.isAnte) s.ante.slice(0, p.getIndex) ++ s.ante.slice(p.getIndex + 1, s.ante.length) ++ s.succ
-    else s.ante ++ s.succ.slice(0, p.getIndex) ++ s.succ.slice(p.getIndex + 1, s.ante.length)
+  private def allNamesExceptAt(s: Sequent, pos: SeqPos) = {
+    val fs = if (pos.isAnte) s.ante.slice(0, pos.getIndex) ++ s.ante.slice(pos.getIndex + 1, s.ante.length) ++ s.succ
+    else s.ante ++ s.succ.slice(0, pos.getIndex) ++ s.succ.slice(pos.getIndex + 1, s.ante.length)
     fs.flatMap(StaticSemantics.symbols).toSet
-  }
+  } ensuring (r => r == StaticSemantics.symbols(s.updated(pos, True)), "Same as symbols after replacing by true")
 }
 
 /*********************************************************************************
@@ -988,7 +1128,7 @@ object Axiom {
     // soundness-critical that these are for p() not for p(x) or p(?)
     assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
     assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
-    assert(axs("V vacuous") == Imply(aP0, Box(a), aP0), "V vacuous")
+    assert(axs("V vacuous") == Imply(aP0, Box(a, aP0)), "V vacuous")
     
     assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
     assert(axs("[;] compose") == Equiv(Box(Compose(a,b), aPn), Box(a, Box(b, aPn))), "[;] compose")
@@ -996,8 +1136,8 @@ object Axiom {
     assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
     assert(axs("-' derive minus") == Equal(Differential(Minus(aF, aG)), Minus(Differential(aF), Differential(aG))), "-' derive minus")
     assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
-    //@todo assert(axs("!=' derive !=") == Equiv(FormulaDerivative(NotEquals(Real, aF, aG)), Equals(Real, Derivative(Real, aF), Derivative(Real, aG))), "!=' derive !=")
-    //@todo assert(axs("|' derive or") == Equiv(FormulaDerivative(Or(aPn, aQn)), And(FormulaDerivative(aPn), FormulaDerivative(aQn))), "|' derive or")
+    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
     true
   }
 }
@@ -1057,6 +1197,13 @@ object AxiomaticRule {
  *@TODO Review
  */
 object LookupLemma {
+  lazy val lemmadbpath = {
+    //@todo System.getProperty("user.home") + java.io.File.separator + ".keymaera" + java.io.File.separator + "cache" + java.io.File.separator + "lemmadb"
+    val file = new java.io.File(System.getProperty("user.home") + "/lemmadb")
+    file.mkdirs
+    file
+  }
+
   def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
   private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
     def apply(s : Sequent) = {
@@ -1072,15 +1219,14 @@ object LookupLemma {
   def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
     //Find the solution
     t match {
-      case x: Mathematica =>
+      case x: Mathematica if x.isInitialized =>
+        //@TODO illegal access to out of core. Fix!
         val (solution, input, output) = x.cricitalQE.qeInOut(f)
         val result = Equiv(f,solution)
 
         //Save the solution to a file.
         //TODO-nrf create an interface for databases.
         def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val lemmadbpath = new java.io.File("lemmadb")
-          lemmadbpath.mkdirs
           val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
@@ -1098,15 +1244,13 @@ object LookupLemma {
         //Return the file where the result is saved, together with the result.
         Some((file, file.getName, result))
 
-      case x: Z3 =>
+      case x: Z3 if x.isInitialized =>
         val (solution, input, output) = x.cricitalQE.qeInOut(f)
         val result = Equiv(f,solution)
 
         //Save the solution to a file.
         //TODO-nrf create an interface for databases.
         def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val lemmadbpath = new java.io.File("lemmadb")
-          lemmadbpath.mkdirs
           val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
           if(f.exists()) getUniqueLemmaFile(idx+1)
           else f
@@ -1126,6 +1270,118 @@ object LookupLemma {
 
       case _ => None
     }
+  }
+}
+
+/*********************************************************************************
+  * Derived Sequent Proof Rules, for efficiency
+  *********************************************************************************
+  */
+
+// co-weakening left = co-hide left (all but indicated position)
+//@derived
+object CoHideLeft extends (AntePos => Rule) {
+  /**
+   * CoHide left.
+   *      p |-
+   * -------------
+   *   G, p |- D
+   */
+  def apply(pos: AntePos): Rule = new CoHideLeft(pos)
+}
+class CoHideLeft(pos: AntePos) extends LeftRule("CoHideLeft", pos) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(s.ante(pos.getIndex)), IndexedSeq()))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+// co-weakening right = co-hide right (all but indicated position)
+//@derived
+object CoHideRight extends (SuccPos => Rule) {
+  /**
+   * CoHide right.
+   *     |- p
+   * -------------
+   *   G |- p, D
+   */
+  def apply(pos: SuccPos): Rule = new CoHideRight(pos)
+}
+class CoHideRight(pos: SuccPos) extends RightRule("CoHideRight", pos) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(pos.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+// co-weakening = co-hide all but the indicated positions
+//2derived
+object CoHide2 extends ((AntePos, SuccPos) => Rule) {
+  /**
+   * CoHide2.
+   *      p |- q
+   * ---------------
+   *   G, p |- q, D
+   */
+  def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
+}
+class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p2) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(s.ante(p1.getIndex)), IndexedSeq(s.succ(p2.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+
+//@derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
+object CutRight extends ((Formula, SuccPos) => Rule) {
+  /**
+   * Cut in the given formula c in place of p.
+   * G |- c, D    G |- c->p, D
+   * -------------------------
+   *        G |- p, D
+   */
+  def apply(c: Formula, pos: SuccPos) : Rule = new CutRight(c, pos)
+  //@todo convert all rules to case classes since unmodifiable values and componentwise equality?
+  //@todo convert rules to private[core] to make them easier to change? Ruins access though?
+  private class CutRight(c: Formula, pos: SuccPos) extends Rule("cut Right") {
+    def apply(s: Sequent): List[Sequent] = {
+      val p = s(pos)
+      List(s.updated(pos, c), s.updated(pos, Imply(c, p)))
+    } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
+  }
+}
+
+//@derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
+object CutLeft extends ((Formula, AntePos) => Rule) {
+  /**
+   * Cut in the given formula c in place of p
+   * G, c |- D    G |- p->c, D
+   * -------------------------
+   *        G, p |- D
+   */
+  def apply(c: Formula, pos: AntePos) : Rule = new CutLeft(c, pos)
+  private class CutLeft(c: Formula, pos: AntePos) extends Rule("cut Left") {
+    def apply(s: Sequent): List[Sequent] = {
+      val p = s(pos)
+      List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
+    } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
+  }
+}
+
+// ->2<-> Equivify Right: Equivalencify Implication Right
+//@derived(cut(a<->b) & prop...)
+object EquivifyRight extends (SuccPos => Rule) {
+  /**
+   * Equivify Right: Convert implication to equivalence.
+   * G |- a<->b, D
+   * -------------
+   * G |- a->b,  D
+   */
+  def apply(pos: SuccPos): Rule = new EquivifyRight(pos)
+}
+
+private[core] class EquivifyRight(pos: SuccPos) extends RightRule("->2<-> Equivify Right", pos) {
+  def apply(s: Sequent): List[Sequent] = {
+    val Imply(a,b) = s(pos)
+    List(s.updated(pos, Equiv(a, b)))
   }
 }
 

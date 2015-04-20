@@ -3,16 +3,20 @@
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
 
-// favoring immutable Seqs for soundness
+// require favoring immutable Seqs for soundness
 
-import scala.collection.GenTraversableOnce
-import scala.collection.immutable._
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
+import scala.collection.immutable.Set
 
 
-import scala.annotation.{unspecialized, elidable}
-import scala.annotation.elidable._
+import scala.annotation.elidable
 
 /**
  * The static semantics of differential dynamic logic.
@@ -118,6 +122,13 @@ object StaticSemantics {
   def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
 
   /**
+   * The set FV(a) of free variables of a sequent.
+   */
+  def freeVars(s: Sequent): SetLattice[NamedSymbol] =
+    s.ante.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ freeVars(b)) ++
+      s.succ.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
+
+  /**
    * The set BV(f) of bound variables of formula f.
    */
   def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
@@ -126,6 +137,13 @@ object StaticSemantics {
    * The set BV(a) of bound variables of program a.
    */
   def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
+
+  /**
+   * The set BV(a) of bound variables of a sequent.
+   */
+  def boundVars(s: Sequent): SetLattice[NamedSymbol] =
+    s.ante.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ boundVars(b)) ++
+      s.succ.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
 
   private def fmlVars(f: Formula): VCF = f match {
     // base cases
@@ -202,6 +220,7 @@ object StaticSemantics {
 
   /**
    * The signature of expression e.
+   * @todo change return types or at least implementation types to SortedSet for order stability?
    */
   def signature(e: Expression): Set[NamedSymbol] = e match {
     case t: Term => signature(t)
@@ -292,6 +311,13 @@ object StaticSemantics {
   }
 
   /**
+   * The signature of a sequent.
+   */
+  def signature(s: Sequent): SetLattice[NamedSymbol] =
+    s.ante.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ signature(b)) ++
+      s.succ.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ signature(b))
+
+  /**
    * Any symbols in expression e.
    */
   def symbols(e: Expression): Set[NamedSymbol] = e match {
@@ -318,4 +344,11 @@ object StaticSemantics {
   def symbols(p: Program): Set[NamedSymbol] = {
     val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet
   }
+
+  /**
+   * Any symbol occurring in a sequent, whether free or bound variable or function or predicate or program constant
+   */
+  def symbols(s: Sequent): Set[NamedSymbol] =
+    s.ante.foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b)) ++
+      s.succ.foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b))
 }

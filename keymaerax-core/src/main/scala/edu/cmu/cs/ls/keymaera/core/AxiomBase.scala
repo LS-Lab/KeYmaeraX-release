@@ -6,7 +6,7 @@
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  */
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
@@ -15,6 +15,7 @@ import scala.collection.immutable.IndexedSeq
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 /**
@@ -23,7 +24,7 @@ import scala.collection.immutable.Set
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author aplatzer
  */
-private[kernel] object AxiomBase {
+private[core] object AxiomBase {
   /**
    * KeYmaera X Axiomatic Proof Rules.
    * @note Soundness-critical: Only return locally sound proof rules.
@@ -31,7 +32,7 @@ private[kernel] object AxiomBase {
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
    * @author aplatzer
    */
-  private[kernel] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
+  private[core] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
     val px = PredOf(Function("p_", None, Real, Bool), x)
     val pny = PredOf(Function("p_", None, Real, Bool), Anything)
@@ -79,7 +80,7 @@ private[kernel] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[kernel] def loadAxioms() : String =
+  private[core] def loadAxioms() : String =
 """
 /**
  * KeYmaera Axioms.

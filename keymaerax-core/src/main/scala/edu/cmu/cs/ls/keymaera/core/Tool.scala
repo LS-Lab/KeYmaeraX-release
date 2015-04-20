@@ -8,7 +8,17 @@
  *   this tool's scheduler.
  */
 
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
+
+// require favoring immutable Seqs for soundness
+
+import scala.collection.immutable.Seq
+import scala.collection.immutable.IndexedSeq
+
+import scala.collection.immutable.List
+import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
+import scala.collection.immutable.Set
 
 import edu.cmu.cs.ls.keymaera.tools.{Z3Solver, DiffSolutionTool, JLinkMathematicaLink, QETool}
 
@@ -23,6 +33,8 @@ trait Tool {
    * @param config The tool configuration.
    */
   def init(config : Map[String,String])
+
+  def isInitialized: Boolean
 
   /**
    * Check whether the managed tool is still alive and recover it if not.
@@ -47,7 +59,11 @@ trait Tool {
  */
 abstract class ToolBase(val name: String) extends Tool {
 
-  def init(config : Map[String,String]) {}
+  protected var initialized = false
+
+  def init(config : Map[String,String]) { initialized = true }
+
+  def isInitialized: Boolean = initialized
 
   /**
    * Check whether the managed tool is still alive and recover it if not.
@@ -65,7 +81,9 @@ abstract class ToolBase(val name: String) extends Tool {
 object KeYmaera extends ToolBase("KeYmaera") {}
 
 class Mathematica extends ToolBase("Mathematica") {
+  //@TODO illegal access to out of core. Fix!
   private val jlink = new JLinkMathematicaLink
+  //@TODO illegal access to out of core. Fix!
   private[core] val cricitalQE: QETool = jlink
   val diffSolver: DiffSolutionTool = jlink
 
@@ -77,6 +95,7 @@ class Mathematica extends ToolBase("Mathematica") {
     }
     val libDir = config.get("libDir") // doesn't need to be defined
     jlink.init(linkName, libDir)
+    initialized = libDir.isDefined
   }
 
   override def shutdown() = jlink.shutdown()

@@ -4,7 +4,7 @@
  * @author smitsch
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
-package edu.cmu.cs.ls.keymaera.kernel
+package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
@@ -13,12 +13,15 @@ import scala.collection.immutable.IndexedSeq
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Map
+import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 import scala.annotation.{unspecialized, elidable}
 import scala.annotation.elidable._
 
 import StaticSemantics._
+
+import scala.collection.GenTraversableOnce
 
 /**
  * Representation of a substitution replacing n with t.
@@ -95,7 +98,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * @return only the lead / key part that this SubstitutionPair is matching on,
    *         which may not be its head.
    */
-  private[kernel] def matchKey : NamedSymbol = what match {
+  private[core] def matchKey : NamedSymbol = what match {
     case FuncOf(f: Function, DotTerm | Nothing | Anything) => f
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
     case DotTerm => DotTerm
@@ -112,7 +115,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
    * @TODO Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
-  private[kernel] def sameHead(right: Expression) = what match {
+  private[core] def sameHead(right: Expression) = what match {
     case FuncOf(lf, DotTerm | Anything | Nothing) => right match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, DotTerm | Anything | Nothing) => right match { case PredOf(rf, _) => lf == rf case _ => false }
     case PredicationalOf(lf, DotFormula) => right match { case PredicationalOf(rf, _) => lf == rf case _ => false }
@@ -149,11 +152,11 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
   def apply(t: Term): Term = usubst(t) ensuring(
-    r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
   def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
   def apply(p: Program): Program = usubst(p) ensuring(
-    r => matchKeys.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
 
   /**
    * Apply uniform substitution everywhere in the sequent.
@@ -183,13 +186,13 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
    * @return union of the matchKeys of all our substitution pairs.
    */
   def matchKeys : List[NamedSymbol] = {
-    subsDefs.foldLeft(Nil)((a,b)=>a ++ List(b.matchKey))
+    subsDefs.foldLeft(List[NamedSymbol]())((a,b)=>a ++ List(b.matchKey))
   }
 
   // implementation of uniform substitution application
       
   // uniform substitution on terms
-  private[kernel] def usubst(term: Term): Term = {
+  private[core] def usubst(term: Term): Term = {
     try {
       term match {
         // uniform substitution base cases
@@ -236,7 +239,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
-  private[kernel] def usubst(formula: Formula): Formula = {
+  private[core] def usubst(formula: Formula): Formula = {
     log(s"Substituting ${formula.prettyString()} using $this")
     try {
       formula match {
@@ -295,10 +298,10 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           DifferentialFormula(usubst(g))
 
         // binding cases add bound variables to u
-        case Forall(vars, g) => require(admissible(SetLattice(vars), g),
+        case Forall(vars, g) => require(admissible(SetLattice(vars).toSetLattice[NamedSymbol], g),
           "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             Forall(vars, usubst(g))
-        case Exists(vars, g) => require(admissible(SetLattice(vars), g),
+        case Exists(vars, g) => require(admissible(SetLattice(vars).toSetLattice[NamedSymbol], g),
           "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
             Exists(vars, usubst(g))
 
@@ -317,14 +320,14 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
 
   // uniform substitution on programs
-  private[kernel] def usubst(program: Program): Program = {
+  private[core] def usubst(program: Program): Program = {
     try {
       program match {
         case a: ProgramConst if subsDefs.exists(_.what == a) =>
           subsDefs.find(_.what == a).get.repl.asInstanceOf[Program]
         case a: ProgramConst if !subsDefs.exists(_.what == a) => a
         case Assign(x: Variable, e) => Assign(x, usubst(e))
-        case DiffAssign(xp@DifferentialSymbol, e) => Assign(xp, usubst(e))
+        case DiffAssign(xp:DifferentialSymbol, e) => DiffAssign(xp, usubst(e))
         case a: AssignAny => a
         case Test(f) => Test(usubst(f))
         //case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))

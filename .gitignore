@@ -79,3 +79,6 @@ lemmadb/
 *.xml
 .idea/modules/root-4keymaera-build.iml
 .idea/modules/root-4keymaera.iml
+
+# Nathan-specific
+deploy.sh

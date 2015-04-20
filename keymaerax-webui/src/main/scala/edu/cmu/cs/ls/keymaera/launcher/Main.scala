@@ -1,6 +1,7 @@
 package edu.cmu.cs.ls.keymaera.launcher
 
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
+import javax.swing.JOptionPane
 
 /**
  * Usage:
@@ -9,11 +10,6 @@ import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,
  * Created by nfulton on 4/17/15.
  */
 object Main {
-  def launcherLog(s : String, isError:Boolean = false) = {
-    val prefix = if(isError) "[launcher][ERROR] " else "[launcher] "
-    println(prefix + s)
-  }
-
   def main(args : Array[String]) : Unit = {
     val isFirstLaunch = if(args.length > 0) {
       !args.head.equals("LAUNCH")
@@ -21,15 +17,24 @@ object Main {
 
     if(isFirstLaunch) {
       val java : String = javaLocation
-
       val keymaera : String = jarLocation
-
       val cmd = java + " -Xss20M -jar " + keymaera + " LAUNCH"
       runCmd(cmd)
     }
     else {
       launcherLog("Detected LAUNCH flag -- starting HyDRA.")
       edu.cmu.cs.ls.keymaera.hydra.Boot.main(Array[String]()) //@todo not sure.
+    }
+  }
+
+
+
+  def processIsAlive(proc : Process) = {
+    try {
+      proc.exitValue();
+      false
+    } catch {
+      case e : Exception => true
     }
   }
 
@@ -49,7 +54,7 @@ object Main {
         try {
         val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream));
         var errLine = ""
-        while((errLine = errReader.readLine()) != null && proc.isAlive) {
+        while((errLine = errReader.readLine()) != null && processIsAlive(proc)) {
 //          errLine = errReader.readLine()
           if(errLine != null) System.err.println(errLine);
         }
@@ -65,7 +70,7 @@ object Main {
         val reader =
           new BufferedReader(new InputStreamReader(proc.getInputStream()));
         var line = ""
-        while((line = reader.readLine()) != null && proc.isAlive) {
+        while((line = reader.readLine()) != null && processIsAlive(proc)) {
           if(line != null) System.out.println(line);
         }
         } catch {
@@ -83,7 +88,18 @@ object Main {
   }
 
   private def exitWith(err : String) = {
-    launcherLog("ERROR :: See http://keymaerax.org/startup.html for trouble-shooting assistance (Message: " + err + ")")
+    val message = "ERROR in loader :: See http://keymaerax.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
+    launcherLog(message)
+    try {
+      if (!java.awt.GraphicsEnvironment.isHeadless()) {
+        JOptionPane.showMessageDialog(null, message)
+      }
+    } catch {
+        case exc: java.awt.HeadlessException =>
+        case exc: java.lang.ClassNotFoundException =>
+        case exc: java.lang.NoSuchMethodError =>
+        case exc: Exception =>
+    }
     System.exit(-1)
     ???
   }
@@ -108,10 +124,17 @@ object Main {
    * @return The location of the .JAR file that's currently running.
    */
   lazy val jarLocation : String = {
-    val execDir  = System.getProperty("user.dir")
-    val matchingFiles = new java.io.File(execDir).listFiles(new FileFilter {
-      override def accept(pathname: File): Boolean = pathname.getName.contains("keymaerax.jar") && pathname.getAbsolutePath.endsWith(".jar") //finds *marea*.jar$
-    })
-    if(matchingFiles.length >= 1) matchingFiles.head.getAbsolutePath else exitWith("Could not find a KeYmaeraX JAR in " + execDir + " NOTE: the JAR file MUST be named keymaerax.jar!")
+    new File(Main.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).toString()
+//    val execDir  = System.getProperty("user.dir")
+//    val matchingFiles = new java.io.File(execDir).listFiles(new FileFilter {
+//      override def accept(pathname: File): Boolean = pathname.getName.contains("keymaerax.jar") && pathname.getAbsolutePath.endsWith(".jar") //finds *marea*.jar$
+//    })
+//    if(matchingFiles.length == 1) matchingFiles.head.getAbsolutePath else exitWith("Could not find a KeYmaeraX JAR in " + execDir + " NOTE: the JAR file MUST be named keymaerax.jar!")
   }
+
+  def launcherLog(s : String, isError:Boolean = false) = {
+    val prefix = if(isError) "[launcher][ERROR] " else "[launcher] "
+    println(prefix + s)
+  }
+
 }
