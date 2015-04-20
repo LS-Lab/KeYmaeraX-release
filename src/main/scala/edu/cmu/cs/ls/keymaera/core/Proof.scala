@@ -436,57 +436,6 @@ class HideRight(pos: SuccPos) extends RightRule("HideRight", pos) {
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-// co-weakening left = co-hide left (all but indicated position)
-//@derived
-object CoHideLeft extends (AntePos => Rule) {
-  /**
-   * CoHide left.
-   *      p |-
-   * -------------
-   *   G, p |- D
-   */
-  def apply(pos: AntePos): Rule = new CoHideLeft(pos)
-}
-class CoHideLeft(pos: AntePos) extends LeftRule("CoHideLeft", pos) {
-  def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, IndexedSeq(s.ante(pos.getIndex)), IndexedSeq()))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-// co-weakening right = co-hide right (all but indicated position)
-//@derived
-object CoHideRight extends (SuccPos => Rule) {
-  /**
-   * CoHide right.
-   *     |- p
-   * -------------
-   *   G |- p, D
-   */
-  def apply(pos: SuccPos): Rule = new CoHideRight(pos)
-}
-class CoHideRight(pos: SuccPos) extends RightRule("CoHideRight", pos) {
-  def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(pos.getIndex))))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
-// co-weakening = co-hide all but the indicated positions
-//2derived
-object CoHide2 extends ((AntePos, SuccPos) => Rule) {
-  /**
-   * CoHide2.
-   *      p |- q
-   * ---------------
-   *   G, p |- q, D
-   */
-  def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
-}
-class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p2) {
-  def apply(s: Sequent): List[Sequent] = {
-    List(Sequent(s.pref, IndexedSeq(s.ante(p1.getIndex)), IndexedSeq(s.succ(p2.getIndex))))
-  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
-}
-
 // Exchange left rule reorders antecedent
 object ExchangeLeft {
   def apply(p1: AntePos, p2: AntePos): Rule = new ExchangeLeftRule(p1, p2)
@@ -1325,9 +1274,61 @@ object LookupLemma {
 }
 
 /*********************************************************************************
-  * Derived Sequent Proof Rules, merely for efficiency
+  * Derived Sequent Proof Rules, for efficiency
   *********************************************************************************
   */
+
+// co-weakening left = co-hide left (all but indicated position)
+//@derived
+object CoHideLeft extends (AntePos => Rule) {
+  /**
+   * CoHide left.
+   *      p |-
+   * -------------
+   *   G, p |- D
+   */
+  def apply(pos: AntePos): Rule = new CoHideLeft(pos)
+}
+class CoHideLeft(pos: AntePos) extends LeftRule("CoHideLeft", pos) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(s.ante(pos.getIndex)), IndexedSeq()))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+// co-weakening right = co-hide right (all but indicated position)
+//@derived
+object CoHideRight extends (SuccPos => Rule) {
+  /**
+   * CoHide right.
+   *     |- p
+   * -------------
+   *   G |- p, D
+   */
+  def apply(pos: SuccPos): Rule = new CoHideRight(pos)
+}
+class CoHideRight(pos: SuccPos) extends RightRule("CoHideRight", pos) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(), IndexedSeq(s.succ(pos.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
+// co-weakening = co-hide all but the indicated positions
+//2derived
+object CoHide2 extends ((AntePos, SuccPos) => Rule) {
+  /**
+   * CoHide2.
+   *      p |- q
+   * ---------------
+   *   G, p |- q, D
+   */
+  def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
+}
+class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p2) {
+  def apply(s: Sequent): List[Sequent] = {
+    List(Sequent(s.pref, IndexedSeq(s.ante(p1.getIndex)), IndexedSeq(s.succ(p2.getIndex))))
+  } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
+}
+
 
 //@derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
 object CutRight extends ((Formula, SuccPos) => Rule) {
