@@ -154,12 +154,6 @@ class SetLattice[A](@deprecated val s: Either[Set[A], Set[A]]) {
     case Left(ts) => new SetLattice(Left(ts.toSet))
   }
 
-
-  def toSet: Set[A] = s match {
-    case Right(ts) => ts
-    case Left(_) => throw new IllegalStateException("SetLattice.top has no set representation")
-  }
-
   def toSet[B >: A]: Set[B] = s match {
     case Right(ts) => ts.toSet
     case Left(_) => throw new IllegalStateException("SetLattice.top has no set representation")
