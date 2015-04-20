@@ -29,6 +29,7 @@ object AxiomTactic {
    * @param axiomInstance The axiom instance that should be used in context (an equivalence or equality).
    * @param baseT The base tactic to show the axiom instance once uncovered.
    * @return The new tactic.
+   * @todo use CutLeft+CutRight+EquivifyRight for efficiency instead of cut etc.
    */
   def uncoverAxiomT(axiomName: String,
                     axiomInstance: Formula => Formula,
