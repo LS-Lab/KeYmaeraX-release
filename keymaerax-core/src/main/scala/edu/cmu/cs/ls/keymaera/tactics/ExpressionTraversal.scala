@@ -213,7 +213,7 @@ object ExpressionTraversal {
         case DifferentialFormula(a) => matchOne(p, DifferentialFormula.apply, f, a)
 
         // Terms
-        case Number(_, _) => matchZero(p, f, e)
+        case Number(_) => matchZero(p, f, e)
         case _: Variable => matchZero(p, f, e)
         case FuncOf(a, b) => matchOne(p, FuncOf.apply(a, _: Term), f, b)
         case Differential(a) => matchOne(p, Differential.apply(_: Term), f, a)
@@ -224,8 +224,8 @@ object ExpressionTraversal {
         case Power(a, b) => matchTwo(p, Power.apply(_: Term, _: Number), f, a, b)
 
         // Programs
-        case ProgramConst(_, _) => matchZero(p, f, e)
-        case DifferentialProgramConst(_, _) => matchZero(p, f, e)
+        case ProgramConst(_) => matchZero(p, f, e)
+        case DifferentialProgramConst(_) => matchZero(p, f, e)
         case DotTerm => matchZero(p, f, e)
         case Nothing => matchZero(p, f, e)
         case Anything => matchZero(p, f, e)
