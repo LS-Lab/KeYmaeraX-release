@@ -12,10 +12,19 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
  */
 object ParserFactory {
 
+  def parseToSequent(is : java.io.InputStream) = {
+    val content = io.Source.fromInputStream(is).mkString
+    new KeYmaeraParser(false, ComponentConfig).runParser(content) match {
+      case f: Formula => Sequent(List(), collection.immutable.IndexedSeq[Formula](), collection.immutable.IndexedSeq[Formula](f))
+      case a => throw new IllegalArgumentException("Parsing the input did not result in a formula but in: " + a)
+    }
+  }
+
   /**
    * return the sequent from a .key file
    * @param file
    * @return
+   *         @deprecated
    */
   def parseToSequent(file : File) = {
     val content = io.Source.fromFile(file).mkString

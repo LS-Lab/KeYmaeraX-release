@@ -102,7 +102,9 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
   
   it should "parse all examples/t/positive files" in {
-    val positiveTestsDir = new File("examples/dev/t/parsing/positive")
+    val positiveTestResource = this.getClass.getResource("/examples/dev/t/parsing/positive").getFile
+    val positiveTestsDir : java.io.File = new java.io.File(positiveTestResource)
+
     positiveTestsDir.isDirectory() should be (true)
     for(testFile <- positiveTestsDir.listFiles().filter(f => f.getName.endsWith(".key"))) {
       val src = io.Source.fromFile(testFile).mkString
@@ -119,12 +121,15 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
 
   it should "parse predicates using functions" in {
-    val src = io.Source.fromFile(new File("examples/dev/t/parsing/positive/functions.key")).mkString
+
+    val src : String = io.Source.fromURL(this.getClass.getResource("/examples/dev/t/parsing/positive/functions.key")).mkString
     parser.runParser(src)
   }
 
   it should "not parse any examples/t/negative files" in {
-    val negativeTestsDir = new File("examples/dev/t/parsing/negative")
+    val negativeTestsResource = this.getClass.getResource("/examples/dev/t/parsing/negative").getFile
+    val negativeTestsDir : java.io.File = new java.io.File(negativeTestsResource)
+
     negativeTestsDir.isDirectory() should be (true)
     for(testFile <- negativeTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
@@ -158,7 +163,9 @@ class ParserParenTests extends FlatSpec with Matchers {
   //////////////////////////////////////////////////////////////////////////////
   
   "The ALP Parser" should "parse all examples/t/positiveALP files" in {
-    val positiveTestsDir = new File("examples/dev/t/parsing/positiveALP")
+    val r = this.getClass.getResource("/examples/dev/t/parsing/positiveALP").getFile
+    val positiveTestsDir : java.io.File = new java.io.File(r)
+
     positiveTestsDir.isDirectory() should be (true)
     for(testFile <- positiveTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
@@ -167,7 +174,9 @@ class ParserParenTests extends FlatSpec with Matchers {
   }
   
   it should "not parse any examples/t/negativeALP files" in {
-    val negativeTestsDir = new File("examples/dev/t/parsing/negativeALP")
+    val r = this.getClass.getResource("/examples/dev/t/parsing/negativeALP").getFile
+    val negativeTestsDir : java.io.File = new java.io.File(r)
+
     negativeTestsDir.isDirectory() should be (true)
     for(testFile <- negativeTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString

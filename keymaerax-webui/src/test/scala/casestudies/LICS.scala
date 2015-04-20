@@ -50,7 +50,7 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   def la(t: PositionTactic) = locateAnte(t)
 
   "LICS 4a" should "be provable" in {
-    val file = new File("examples/tutorials/lics/lics-4a.key")
+    val file = this.getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key")
     val s = parseToSequent(file)
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
@@ -70,14 +70,14 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/lics/lics-4a.key")
+    val file = this.getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key")
     val s = parseToSequent(file)
 
     helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/lics/lics-4a.key")
+    val file = this.getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key")
     val s = parseToSequent(file)
 
     helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed

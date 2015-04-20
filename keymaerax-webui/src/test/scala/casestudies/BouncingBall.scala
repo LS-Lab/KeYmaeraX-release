@@ -50,7 +50,7 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   "bouncing ball tout" should "be provable" in {
 
-    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
+    val file = this.getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key")
     val s = parseToSequent(file)
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(wipeContextInductionT(Some("v^2<=2*g()*(H-h) & h>=0".asFormula))) & onBranch(
@@ -78,14 +78,14 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
+    val file = this.getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key")
     val s = parseToSequent(file)
 
     helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
+    val file = this.getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key")
     val s = parseToSequent(file)
 
     helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed

@@ -50,7 +50,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   def l(t: PositionTactic) = locate(t)
 
   "No Delay" should "be provable" in {
-    val file = new File("examples/casestudies/acasx/nodelay.key")
+    val file = this.getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay.key")
     val s = parseToSequent(file)
 
     val invariant = ("( (w=-1 | w=1) & " +
