@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.core._
 
 /**
  * Created by smitsch on 12/23/14.
+ * @author Stefan Mitsch
  */
 
 /**
@@ -26,15 +27,15 @@ class NoneGenerate[A] extends Generator[A] {
 }
 
 class ConfigurableGenerate[A] extends Generator[A] {
-  var products = Map[Expr,A]()
+  var products = Map[Expression,A]()
   def apply(s: Sequent, p: Position) = s.apply(p) match {
-    case BoxModality(prg, _) => products.get(prg)
-    case DiamondModality(prg, _) => products.get(prg)
+    case Box(prg, _) => products.get(prg)
+    case Diamond(prg, _) => products.get(prg)
     case _ => products.get(s.apply(p))
   }
   def peek(s: Sequent, p: Position) = s.apply(p) match {
-    case BoxModality(prg, _) => products.get(prg)
-    case DiamondModality(prg, _) => products.get(prg)
+    case Box(prg, _) => products.get(prg)
+    case Diamond(prg, _) => products.get(prg)
     case _ => products.get(s.apply(p))
   }
 }
