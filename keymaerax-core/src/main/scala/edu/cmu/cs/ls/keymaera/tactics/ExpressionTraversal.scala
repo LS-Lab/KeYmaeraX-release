@@ -4,6 +4,11 @@ import edu.cmu.cs.ls.keymaera.core._
 
 /**
  * Created by jdq on 3/17/14.
+ * @author Nathan Fulton
+ * @author Ran Ji
+ * @author Stefan Mitsch
+ * @author Jan-David Quesel
+ *
  */
 object ExpressionTraversal {
   type N[A] = A => Nothing
@@ -18,10 +23,10 @@ object ExpressionTraversal {
   // for convenience
   type union[T] = { type and[S] = UnionType[N[T]]#and[S] }
 
-  type FTPG[T] = union[Term]#and[Formula]#and[Program]#and[ModalOp]#andProvideEvidence[T]
+  type FTPG[T] = union[Term]#and[Formula]#and[Program]#andProvideEvidence[T]
 
-  def fail(x: Expr) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expr])
-  def failFTPG[T, A : FTPG](x: A) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expr])
+  def fail(x: Expression) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expression])
+  def failFTPG[T, A : FTPG](x: A) = throw new UnknownOperatorException("Unimplemented case in Expr traversal", x.asInstanceOf[Expression])
 
   trait StopTraversal
   val stop = new StopTraversal {}
@@ -33,15 +38,12 @@ object ExpressionTraversal {
     def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
     def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
-    def preG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = Left(None)
     def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
     def inP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def inT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
-    def inG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = Left(None)
     def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = Left(None)
     def postP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = Left(None)
     def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = Left(None)
-    def postG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = Left(None)
   }
 
   /**
@@ -59,10 +61,10 @@ object ExpressionTraversal {
           case _ => Left(Some(stop))
         }
       else e match {
-        case Forall(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case Exists(v, phi) if(blacklist.map(v.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case BoxModality(a, c) if(blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_||_)) => Left(Some(stop))
-        case DiamondModality(a, c) if(blacklist.map(BindingAssessment.catVars(a).bv.contains).foldLeft(false)(_||_)) =>  Left(Some(stop))
+        case Forall(v, phi) if blacklist.map(v.contains).foldLeft(false)(_||_) => Left(Some(stop))
+        case Exists(v, phi) if blacklist.map(v.contains).foldLeft(false)(_||_) => Left(Some(stop))
+        case Box(a, c) if blacklist.map(StaticSemantics(a).bv.contains).foldLeft(false)(_||_) => Left(Some(stop))
+        case Diamond(a, c) if blacklist.map(StaticSemantics(a).bv.contains).foldLeft(false)(_||_) =>  Left(Some(stop))
         case _ =>
           if (p.isPrefixOf(t))
           // proceed
@@ -87,14 +89,6 @@ object ExpressionTraversal {
     else
     // return id to ignore this branch
       Right(e)
-    override def preG(p: PosInExpr, e: ModalOp): Either[Option[StopTraversal], ModalOp] = if(p == t)
-      traverse(p, cont, e) match { case Some(x: ModalOp) => Right(x) case _ => Left(Some(stop))}
-    else if(p.isPrefixOf(t))
-    // proceed
-      Left(None)
-    else
-    // return id to ignore this branch
-      Right(e)
   }
 
   final def pre[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
@@ -109,11 +103,6 @@ object ExpressionTraversal {
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Term => f.preT(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
-      case Left(None) => Left(None)
-      case Right(a) => Right(a.asInstanceOf[A])
-    }
-    case x: ModalOp => f.preG(p, x) match {
       case a@Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
@@ -136,11 +125,6 @@ object ExpressionTraversal {
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
     }
-    case x: ModalOp => f.inG(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
-      case Left(None) => Left(None)
-      case Right(a) => Right(a.asInstanceOf[A])
-    }
   }
 
   final def post[A : FTPG](f: ExpressionTraversalFunction, p: PosInExpr, e: A): Either[Option[StopTraversal], A] = e match {
@@ -155,11 +139,6 @@ object ExpressionTraversal {
       case Right(a) => Right(a.asInstanceOf[A])
     }
     case x: Term => f.postT(p, x) match {
-      case a@Left(Some(_)) => Left(Some(stop))
-      case Left(None) => Left(None)
-      case Right(a) => Right(a.asInstanceOf[A])
-    }
-    case x: ModalOp => f.postG(p, x) match {
       case a@Left(Some(_)) => Left(Some(stop))
       case Left(None) => Left(None)
       case Right(a) => Right(a.asInstanceOf[A])
@@ -215,62 +194,50 @@ object ExpressionTraversal {
         // Formulas
         case True => matchZero(p, f, e)
         case False => matchZero(p, f, e)
-        case ApplyPredicate(a, b) => matchOne(p, ApplyPredicate.apply(a, _: Term), f, b)
-        case Equals(d, a, b) => matchTwo(p, Equals.apply(d, _: Term, _: Term), f, a, b)
-        case NotEquals(d, a, b) => matchTwo(p, NotEquals.apply(d, _: Term, _: Term), f, a, b)
-        case ProgramEquals(a, b) => matchTwo(p, ProgramEquals.apply, f, a, b)
-        case ProgramNotEquals(a, b) => matchTwo(p, ProgramNotEquals.apply, f, a, b)
-        case LessThan(d, a, b) => matchTwo(p, LessThan.apply(d, _: Term, _: Term), f, a, b)
-        case LessEqual(d, a, b) => matchTwo(p, LessEqual.apply(d, _: Term, _: Term), f, a, b)
-        case GreaterEqual(d, a, b) => matchTwo(p, GreaterEqual.apply(d, _: Term, _: Term), f, a, b)
-        case GreaterThan(d, a, b) => matchTwo(p, GreaterThan.apply(d, _: Term, _: Term), f, a, b)
+        case PredOf(a, b) => matchOne(p, PredOf.apply(a, _: Term), f, b)
+        case Equal(a, b) => matchTwo(p, Equal.apply(_: Term, _: Term), f, a, b)
+        case NotEqual(a, b) => matchTwo(p, NotEqual.apply(_: Term, _: Term), f, a, b)
+        case Less(a, b) => matchTwo(p, Less.apply(_: Term, _: Term), f, a, b)
+        case LessEqual(a, b) => matchTwo(p, LessEqual.apply(_: Term, _: Term), f, a, b)
+        case GreaterEqual(a, b) => matchTwo(p, GreaterEqual.apply(_: Term, _: Term), f, a, b)
+        case Greater(a, b) => matchTwo(p, Greater.apply(_: Term, _: Term), f, a, b)
         case Not(a) => matchOne(p, Not.apply, f, a)
         case And(a, b) => matchTwo(p, And.apply, f, a, b)
         case Or(a, b) => matchTwo(p, Or.apply, f, a, b)
         case Imply(a, b) => matchTwo(p, Imply.apply, f, a, b)
         case Equiv(a, b) => matchTwo(p, Equiv.apply, f, a, b)
-        case Modality(a, b) => matchTwo(p, Modality.apply, f, a, b)
+        case Box(a, b) => matchTwo(p, Box.apply, f, a, b)
+        case Diamond(a, b) => matchTwo(p, Diamond.apply, f, a, b)
         case Forall(v, a) => matchOne(p, Forall(v, _: Formula), f, a)
         case Exists(v, a) => matchOne(p, Exists(v, _: Formula), f, a)
-        case FormulaDerivative(a) => matchOne(p, FormulaDerivative.apply, f, a)
+        case DifferentialFormula(a) => matchOne(p, DifferentialFormula.apply, f, a)
 
         // Terms
         case Number(_, _) => matchZero(p, f, e)
         case _: Variable => matchZero(p, f, e)
-        case Apply(a, b) => matchOne(p, Apply.apply(a, _: Term), f, b)
-        case Derivative(d, a) => matchOne(p, Derivative.apply(d, _: Term), f, a)
-        case Neg(d, a) => matchOne(p, Neg.apply(d, _: Term), f, a)
-        case Add(d, a, b) => matchTwo(p, Add.apply(d, _: Term, _: Term), f, a, b)
-        case Subtract(d, a, b) => matchTwo(p, Subtract.apply(d, _: Term, _: Term), f, a, b)
-        case Multiply(d, a, b) => matchTwo(p, Multiply.apply(d, _: Term, _: Term), f, a, b)
-        case Divide(d, a, b) => matchTwo(p, Divide.apply(d, _: Term, _: Term), f, a, b)
-        case Power(d, a, b) => matchTwo(p, Power.apply(d, _: Term, _: Term), f, a, b)
-        case IfThenElseTerm(a, b, c) => matchThree(p, IfThenElseTerm.apply, f, a, b, c)
-        case Pair(d, a, b) => matchTwo(p, Pair.apply(d, _: Term, _: Term), f, a, b)
-
-        // ModalOps
-        case x: BoxModality => matchOne(p, BoxModality(_: Program), f, x.child.asInstanceOf[Program])
-        case x: DiamondModality => matchOne(p, DiamondModality(_: Program), f, x.child.asInstanceOf[Program])
+        case FuncOf(a, b) => matchOne(p, FuncOf.apply(a, _: Term), f, b)
+        case Differential(a) => matchOne(p, Differential.apply(_: Term), f, a)
+        case Plus(a, b) => matchTwo(p, Plus.apply(_: Term, _: Term), f, a, b)
+        case Minus(a, b) => matchTwo(p, Minus.apply(_: Term, _: Term), f, a, b)
+        case Times(a, b) => matchTwo(p, Times.apply(_: Term, _: Term), f, a, b)
+        case Divide(a, b) => matchTwo(p, Divide.apply(_: Term, _: Term), f, a, b)
+        case Power(a, b) => matchTwo(p, Power.apply(_: Term, _: Number), f, a, b)
 
         // Programs
-        case ProgramConstant(_, _) => matchZero(p, f, e)
-        case DifferentialProgramConstant(_, _) => matchZero(p, f, e)
-        case CDot => matchZero(p, f, e)
+        case ProgramConst(_, _) => matchZero(p, f, e)
+        case DifferentialProgramConst(_, _) => matchZero(p, f, e)
+        case DotTerm => matchZero(p, f, e)
         case Nothing => matchZero(p, f, e)
         case Anything => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
-        case NDetAssign(a) => matchOne(p, NDetAssign.apply, f, a)
+        case AssignAny(a) => matchOne(p, AssignAny.apply, f, a)
         case Test(a) => matchOne(p, Test.apply, f, a)
-        case IfThen(a, b) => matchTwo(p, IfThen.apply, f, a, b)
-        case IfThenElse(a, b, c) => matchThree(p, IfThenElse.apply, f, a, b, c)
-        case Sequence(a, b) => matchTwo(p, Sequence.apply, f, a, b)
+        case Compose(a, b) => matchTwo(p, Compose.apply, f, a, b)
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
-        case Parallel(a, b) => matchTwo(p, Parallel.apply, f, a, b)
         case Loop(a) => matchOne(p, Loop.apply, f, a)
         case AtomicODE(x, t) => matchTwo(p, AtomicODE.apply, f, x, t)
-        case ODEProduct(a, b) => matchTwo(p, ODEProduct.apply, f, a, b)
-        case ODESystem(v, a, h) => matchTwo(p, ODESystem(v, _: DifferentialProgram, _: Formula), f, a, h)
-        case _: EmptyODE => matchZero(p, f, e)
+        case DifferentialProduct(a, b) => matchTwo(p, DifferentialProduct.apply, f, a, b)
+        case ODESystem(a, h) => matchTwo(p, ODESystem(_: DifferentialProgram, _: Formula), f, a, h)
 
         case _ => failFTPG(e)
       }) match {
