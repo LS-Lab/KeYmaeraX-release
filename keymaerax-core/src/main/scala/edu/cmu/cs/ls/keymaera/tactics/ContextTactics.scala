@@ -29,13 +29,13 @@ object ContextTactics {
    */
   def showEquivInContext(baseF: Formula, baseT: Tactic): Tactic = new ConstructionTactic("Show Equivalence in Context") {
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
+      (node.sequent.succ.head match {
         case eq@Equiv(_, _) => eq == baseF || congruenceT.applicable(node)
         case _ => false
       })
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-      if (node.sequent.succ(0) == baseF) Some(baseT)
+      if (node.sequent.succ.head == baseF) Some(baseT)
       else Some(congruenceT & showEquivInContext(baseF, baseT))
   }
 
@@ -54,7 +54,7 @@ object ContextTactics {
     }
   }
 
-  def peelT(context: Formula, f: Expr, g: Expr, counterPart: Position, baseT: PositionTactic): PositionTactic = new PositionTactic("Peel") {
+  def peelT(context: Formula, f: Expression, g: Expression, counterPart: Position, baseT: PositionTactic): PositionTactic = new PositionTactic("Peel") {
     override def applies(s: Sequent, p: Position): Boolean = true
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
@@ -64,10 +64,10 @@ object ContextTactics {
         // TODO use once uniform substitution of CDotFormula is fixed
         //        assert(context.instantiateContext(f) == node.sequent(p), s"Context $context with formula $f, which is\n   ${context.instantiateContext(f)}\n not found at position $p\n   ${node.sequent(p)}")
         //        assert(context.instantiateContext(g) == node.sequent(counterPart), s"Context $context with formula $g, which is\n   ${context.instantiateContext(g)}\n not found at position $counterPart\n   ${node.sequent(counterPart)}")
-        if (!signature(context).contains(CDotFormula) && !signature(context).contains(CDot))
+        if (!signature(context).contains(DotFormula) && !signature(context).contains(DotTerm))
           Some(AxiomCloseT | debugT(s"Unexpected peeling result: ${node.sequent} did not close by axiom") & stopT)
         else context match {
-          case CDotFormula => Some(debugT(s"Finished peeling, now calling base tactic ${baseT.name}") & baseT(p))
+          case DotFormula => Some(debugT(s"Finished peeling, now calling base tactic ${baseT.name}") & baseT(p))
           case Not(phi) => Some(NotLeftT(counterPart) & NotRightT(p) & lastSucc(peelT(phi, f, g, AntePosition(node.sequent.ante.length - 1), baseT)))
           case And(lhs, rhs) => Some(AndLeftT(counterPart) & AndRightT(p) &&(
             peelT(lhs, f, g, counterPart, baseT)(p),
@@ -110,8 +110,8 @@ object ContextTactics {
    *         if rhs replaced by lhs: equivalence fml after the replacement <-> fml.
    */
   def replaceInContext(fml: Formula, eq: Formula, where: PosInExpr): Formula = eq match {
-    case Equals(_, lhs, rhs) if fml.termAt(where) == lhs => Equiv(fml, fml.replaceAt(lhs, where, rhs))
-    case Equals(_, lhs, rhs) if fml.termAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
+    case Equal(lhs, rhs) if fml.termAt(where) == lhs => Equiv(fml, fml.replaceAt(lhs, where, rhs))
+    case Equal(lhs, rhs) if fml.termAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
     case Equiv(lhs, rhs) if fml.subFormulaAt(where) == Some(lhs) => Equiv(fml, fml.replaceAt(lhs, where, rhs))
     case Equiv(lhs, rhs) if fml.subFormulaAt(where) == Some(rhs) => Equiv(fml.replaceAt(rhs, where, lhs), fml)
   }
@@ -126,7 +126,7 @@ object ContextTactics {
   def cutInContext(f: Formula, ctx: Position): Tactic = cutInContext(_ => f, ctx)
   def cutInContext(g: ProofNode => Formula, ctx: Position): Tactic = new ConstructionTactic("Cut in Context") {
     def applicable(pn: ProofNode): Boolean = g(pn) match {
-      case Equals(_, lhs, rhs) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
+      case Equal(lhs, rhs) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
       case Equiv(lhs, rhs) => val f = getFormula(pn.sequent, ctx); f == lhs || f == rhs
       case _ => false
     }
