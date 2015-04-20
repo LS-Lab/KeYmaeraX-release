@@ -13,25 +13,22 @@ object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
  * @author Nathan Fulton
  */
 class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
-  def stringify(e:Expr) = prettyPrinter(e)
+  def stringify(e:Expression) = prettyPrinter(e)
       
   def header(ns : List[NamedSymbol]) : String = ??? 
     
   private def sortPrinter(s:Sort):String = s match {
     case Bool        => "B"
-    case s : EnumT   => s.name
-    case ProgramSort => "P"
+    case Trafo       => "P"
     case Real        => "R"
     case Unit        => ???
-    case ModalOpSort => ???
-    case s:UserSort  => ???
-    case s:TupleT    => ???
+    case _: ObjectSort  => ???
   }
 
-  private def endsWithColon(e:Expr, parent:Expr)  = e match {
+  private def endsWithColon(e:Expression, parent:Expression)  = e match {
     case Assign(_) => !needsParens(e,parent, false )
     case Test(_) => !needsParens(e,parent, false )
-    case NDetAssign(_) => !needsParens(e,parent, false)
+    case AssignAny(_) => !needsParens(e,parent, false)
     case _: DifferentialProgram => !needsParens(e,parent, false)
     case _ => false
   }
@@ -45,18 +42,18 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   /**
    * This is extracted from the pretty printer because it is used in both the
    */
-  private def processNFContEvolve(x:Derivative, theta:Term, eqSymbol:String) =
+  private def processNFContEvolve(x: DifferentialSymbol, theta:Term, eqSymbol:String) =
     groupIfNotAtomic(x, prettyPrinter(x)) + eqSymbol + groupIfNotAtomic(theta, prettyPrinter(theta))
 
-  private def prettyPrinter(expressionToPrint:Expr):String = expressionToPrint match {
+  private def prettyPrinter(expressionToPrint:Expression):String = expressionToPrint match {
     //arith
-  	case Add(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS, Some(LeftAssoc()))
-    case Multiply(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY, Some(LeftAssoc()))
-    case Divide(s,l,r) => {
+  	case Plus(l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS, Some(LeftAssoc()))
+    case Times(l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY, Some(LeftAssoc()))
+    case Divide(l,r) => {
       //This is a recursive infix.
       symbolTable.divide(parensIfNeeded(l,expressionToPrint, false), parensIfNeeded(r,expressionToPrint, true))
     }
-    case Subtract(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.MINUS, Some(LeftAssoc()))
+    case Minus(l,r) => recInfix(l,r,expressionToPrint,symbolTable.MINUS, Some(LeftAssoc()))
     
     //quantifiers
     case Forall(variables, child) => {
@@ -116,7 +113,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
-    case Apply(function,child) => child match {
+    case FuncOf(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
       case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
       case Nothing => prettyPrinter(function) + "()"
@@ -124,7 +121,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
     }
     
-    case ApplyPredicate(function,child) => child match {
+    case PredOf(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
       case Pair(_, _, _) => prettyPrinter (function) + prettyPrinter (child)
       case Nothing => prettyPrinter(function)
@@ -132,16 +129,15 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
     }
 
-    case ApplyPredicational(predicational,child) => prettyPrinter(predicational) + "{" + prettyPrinter(child) + "}"
+    case PredicationalOf(predicational,child) => prettyPrinter(predicational) + "{" + prettyPrinter(child) + "}"
 
     case Assign(l,r) => recInfix(l,r,expressionToPrint, symbolTable.ASSIGN, None) + symbolTable.SCOLON
-    case NDetAssign(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
+    case AssignAny(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     
-    case BoxModality(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint, false)
-    case Derivative(s, child) => recPostfix(child, symbolTable.PRIME)
-    case DiamondModality(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint, false)
+    case Box(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint, false)
+    case Differential(child) => recPostfix(child, symbolTable.PRIME)
+    case Diamond(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint, false)
     case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV, Some(RightAssoc()))
-    
 
     case Power(s,l,r) => recInfix(l,r,expressionToPrint,symbolTable.EXP, None)
     
@@ -158,23 +154,11 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       }
       leftString + symbolTable.CHOICE + rightString
     }
-    
-    case Parallel(l,r) => {
-      val leftString = l match {
-        case Parallel(ll,lr) => prettyPrinter(l)
-        case _ => recurse(l)
-      }
-      val rightString = r match {
-        case Parallel(rl,rr) => prettyPrinter(r)
-        case _ => recurse(r)
-      }
-      leftString + symbolTable.PARALLEL + rightString
-    } 
-    
-    case s@Sequence(l,r) => {
+
+    case s@Compose(l,r) => {
       val leftString = l match {
         // left sequence in a sequence needs parens, because ; is right-associative
-        case Sequence(_, _) => "{" + parensIfNeeded(l, s, false) + "}"
+        case Compose(_, _) => "{" + parensIfNeeded(l, s, false) + "}"
         case _ => parensIfNeeded(l, s, false)
       }
       val rightString = parensIfNeeded(r, s, false)
@@ -184,38 +168,25 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     //BinaryRelation
     //TODO is this OK?
-    case Equals(s,l,r) => prettyPrinter(l) + symbolTable.EQ + prettyPrinter(r)
-    case GreaterEqual(s,l,r) => prettyPrinter(l) + symbolTable.GEQ + prettyPrinter(r)
-    case LessEqual(s,l,r) => prettyPrinter(l) +symbolTable. LEQ + prettyPrinter(r)
-    case LessThan(s,l,r) => prettyPrinter(l) + symbolTable.LT + prettyPrinter(r)
-    case GreaterThan(s,l,r) => prettyPrinter(l) + symbolTable.GT + prettyPrinter(r)
-    case NotEquals(s,l,r) => prettyPrinter(l) + symbolTable.NEQ + prettyPrinter(r)
-    
-    case IfThen(l,r) => "if " + "(" + prettyPrinter(l) + ") then " + prettyPrinter(r) + " fi"
-    case IfThenElse(test,l,r) => 
-      "if " + "(" + prettyPrinter(test) + ") then " + 
-      prettyPrinter(l) + " else " + prettyPrinter(r) + " fi"
-      
-    case Pair(s,l,r) => symbolTable.PAIR_OPEN + recInfix(l,r,expressionToPrint,symbolTable.COMMA, None) + symbolTable.PAIR_CLOSE
-    
-    case False() => symbolTable.FALSE
-    case True() => symbolTable.TRUE
-    case ProgramConstant(name, i) => name + (i match {
-      case Some(idx) => "_" + idx
-      case None => ""
-    })
+    case Equal(l,r) => prettyPrinter(l) + symbolTable.EQ + prettyPrinter(r)
+    case GreaterEqual(l,r) => prettyPrinter(l) + symbolTable.GEQ + prettyPrinter(r)
+    case LessEqual(l,r) => prettyPrinter(l) +symbolTable. LEQ + prettyPrinter(r)
+    case Less(l,r) => prettyPrinter(l) + symbolTable.LT + prettyPrinter(r)
+    case Greater(l,r) => prettyPrinter(l) + symbolTable.GT + prettyPrinter(r)
+    case NotEqual(l,r) => prettyPrinter(l) + symbolTable.NEQ + prettyPrinter(r)
+
+    case False => symbolTable.FALSE
+    case True => symbolTable.TRUE
+    case ProgramConst(name) => name
     case Variable(name, i,_) => name + (i match {
       case Some(idx) => "_" + idx
       case None => ""
     })
-    case DifferentialProgramConstant(name, i) => name + (i match {
-      case Some(idx) => "_" + idx
-      case None => ""
-    })
-    case CDot => "•"
+    case DifferentialProgramConst(name) => name
+    case DotTerm => "•"
     case Anything => "?"
     case Nothing => ""
-    case CDotFormula => "_"
+    case DotFormula => "_"
 
     case Function(name,index,domain,argSorts) => name + (index match {
       case Some(idx) => "_" + idx
@@ -224,54 +195,29 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 
     case AtomicODE(x, theta) => processNFContEvolve(x, theta, symbolTable.EQ)
 
-    case p@ODEProduct(l, r) => {
+    case p@DifferentialProduct(l, r) => {
       val leftString = parensIfNeeded(l, p, false,
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
-      r match {
-        case prg: EmptyODE => leftString
-        case _ => val rightString = parensIfNeeded(r, p, false,
+      val rightString = parensIfNeeded(r, p, false,
           c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
           leftString + symbolTable.COMMA + rightString
-      }
     }
 
-    case ODESystem(d, a, f) if d.size > 0 =>
-      def printEvolDom(f: Formula) = f match {
-        case True => ""
-        case _ => " " + symbolTable.AND + " " + groupIfNotAtomic(f, prettyPrinter(f))
-      }
-      symbolTable.EXISTS + " "
-      d.map(v => groupIfNotAtomic(v, prettyPrinter(v))).mkString(",") +
-        "." + prettyPrinter(a) + printEvolDom(f) + symbolTable.SCOLON
-    case ODESystem(d, a, f) if d.size == 0 =>
+    case ODESystem(a, f) =>
       def printEvolDom(f: Formula) = f match {
         case True => ""
         case _ => " " + symbolTable.AND + " " + groupIfNotAtomic(f, prettyPrinter(f))
       }
       prettyPrinter(a) + printEvolDom(f) + symbolTable.SCOLON
-    case p: EmptyODE => ""
 
-    
-    case Number(n) => Number.unapply(expressionToPrint) match {
-      case Some((ty, number:BigDecimal)) => number.toString()
-      case _ => ???
-      
-    }
+    case Number(n) => n.toString()
 
-    case IfThen(cond, thenT) => {
-      "if (" + prettyPrinter(cond) + ") then {" + prettyPrinter(thenT) + "} fi"
-    }
-
-    case IfThenElse(cond, thenT, elseT) => {
-      "if (" + prettyPrinter(cond) + ") then {" + prettyPrinter(thenT) + "} else " + prettyPrinter(elseT) + " fi"
-    }
-
-    case Neg(s,e) => symbolTable.NEGATIVE + recurse(e)
+    case Not(e) => symbolTable.NEGATIVE + recurse(e)
     case Test(e) => symbolTable.TEST + prettyPrinter(e) + symbolTable.SCOLON
     
     case Loop(p) => recurse(p) + symbolTable.KSTAR
    
-    case FormulaDerivative(f) => recPostfix(f, symbolTable.PRIME)
+    case DifferentialFormula(f) => recPostfix(f, symbolTable.PRIME)
     //These we cannot pattern match on...
 //    case edu.cmu.cs.ls.keymaera.core.Quantifier(variables, child)
 //    case edu.cmu.cs.ls.keymaera.core.Finally(f) => BOX + recurse(e)
@@ -280,7 +226,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 //    case Right(domain,child) => ???
     
     //And these we can pattern match on but are not implemented yet.
-    case Modality(_,_) => ???
     case Exists(_,_) => ???
 
     case DifferentialSymbol(x : NamedSymbol) => "(" + prettyPrinter(x) + ")" + symbolTable.PRIME //@todo these parens are probably excessive, but DifferentialSymbol is not in the prec. list.
@@ -288,9 +233,9 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case _ => throw new Exception("Ended up in the _ case of the pretty printer for: " + expressionToPrint.getClass())
   }
   
-  private def recurse(e:Expr) = groupIfNotAtomic(e, prettyPrinter(e))
+  private def recurse(e:Expression) = groupIfNotAtomic(e, prettyPrinter(e))
   
-  private def recPrefix(e:Expr, sign:String):String = 
+  private def recPrefix(e:Expression, sign:String):String =
     sign + groupIfNotAtomic(e,prettyPrinter(e))
 
 
@@ -298,15 +243,15 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   case class LeftAssoc() extends Assoc
   case class RightAssoc() extends Assoc
 
-  private def recInfix(l:Expr,r:Expr,parent:Expr,sign:String, assoc : Option[Assoc]):String =
+  private def recInfix(l:Expression,r:Expression,parent:Expression,sign:String, assoc : Option[Assoc]):String =
     parensIfNeeded(l,parent, assoc.getOrElse(false).isInstanceOf[RightAssoc]) + //sic
     sign + 
     parensIfNeeded(r,parent, assoc.getOrElse(false).isInstanceOf[LeftAssoc]) //sic
   
-  private def recPostfix(e:Expr, sign:String):String = 
+  private def recPostfix(e:Expression, sign:String):String =
     groupIfNotAtomic(e, prettyPrinter(e)) + sign
   
-  private def groupIfNotAtomic(e:Expr,s:String):String = {
+  private def groupIfNotAtomic(e:Expression,s:String):String = {
     val parens = 
       if(e.isInstanceOf[Program]) {
         ("{","}")
@@ -317,7 +262,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     if(isAtomic(e)) s else parens._1+s+parens._2
   }
 
-  private def parensIfNeeded(child:Expr, parent:Expr, enforceAssociativity : Boolean, printer: Expr=>String = prettyPrinter) = {
+  private def parensIfNeeded(child:Expression, parent:Expression, enforceAssociativity : Boolean, printer: Expression=>String = prettyPrinter) = {
     val parens = 
       if(child.isInstanceOf[Program]) {
         ("{","}")
@@ -336,21 +281,21 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   /**
    * @todo this is incredible hacky and needs to be replaced!
    */
-  private def needsParens(child : Expr, parent : Expr, enforceAssociativity : Boolean) = {
+  private def needsParens(child : Expression, parent : Expression, enforceAssociativity : Boolean) = {
     val precedenceDS =
       //Terms.
       //TODO expP?
-      Add.getClass.getCanonicalName ::
-      Subtract.getClass.getCanonicalName ::
-      Multiply.getClass.getCanonicalName ::
+      Plus.getClass.getCanonicalName ::
+      Minus.getClass.getCanonicalName ::
+      Times.getClass.getCanonicalName ::
       Divide.getClass.getCanonicalName ::
       Power.getClass.getCanonicalName ::
-      Neg.getClass.getCanonicalName ::
-      Derivative.getClass.getCanonicalName ::
-      Apply.getClass.getCanonicalName ::
+      Not.getClass.getCanonicalName ::
+      Differential.getClass.getCanonicalName ::
+      FuncOf.getClass.getCanonicalName ::
       Function.getClass.getCanonicalName ::
       Pair.getClass.getCanonicalName ::
-      ProgramConstant.getClass.getCanonicalName :: //real-valued.
+      ProgramConst.getClass.getCanonicalName :: //real-valued.
       Number.getClass.getCanonicalName   ::
       //Formulas
       Equiv.getClass.getCanonicalName ::
@@ -358,42 +303,37 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Or.getClass.getCanonicalName ::
       And.getClass.getCanonicalName ::
       Not.getClass.getCanonicalName ::
-      BoxModality.getClass.getCanonicalName   ::
-      DiamondModality.getClass.getCanonicalName ::
-      Modality.getClass.getCanonicalName ::
+      Box.getClass.getCanonicalName   ::
+      Diamond.getClass.getCanonicalName ::
       Forall.getClass.getCanonicalName ::
       Exists.getClass.getCanonicalName ::
-      Equals.getClass.getCanonicalName ::
-      NotEquals.getClass.getCanonicalName ::
-      LessThan.getClass.getCanonicalName    ::
+      Equal.getClass.getCanonicalName ::
+      NotEqual.getClass.getCanonicalName ::
+      Less.getClass.getCanonicalName    ::
       LessEqual.getClass.getCanonicalName    ::
       GreaterEqual.getClass.getCanonicalName    ::
-      GreaterThan.getClass.getCanonicalName    ::
-      FormulaDerivative.getClass.getCanonicalName ::
-      ApplyPredicate.getClass.getCanonicalName ::
-      ApplyPredicational.getClass.getCanonicalName :: //@TODO Check
-      CDotFormula.getClass.getCanonicalName :: //@TODO Check
+      Greater.getClass.getCanonicalName    ::
+      DifferentialFormula.getClass.getCanonicalName ::
+      PredOf.getClass.getCanonicalName ::
+      PredicationalOf.getClass.getCanonicalName :: //@TODO Check
+      DotFormula.getClass.getCanonicalName :: //@TODO Check
       True.getClass.getCanonicalName ::
       False.getClass.getCanonicalName ::
       //Programs.
       Choice.getClass.getCanonicalName     ::
-      IfThenElse.getClass.getCanonicalName ::
-      Sequence.getClass.getCanonicalName   ::
+      Compose.getClass.getCanonicalName   ::
       Loop.getClass.getCanonicalName ::
       Assign.getClass.getCanonicalName ::
-      NDetAssign.getClass.getCanonicalName ::
+      AssignAny.getClass.getCanonicalName ::
       Test.getClass.getCanonicalName ::
-      IfThen.getClass.getCanonicalName ::
-      IfThenElse.getClass.getCanonicalName ::
-      EmptyODE.getClass.getCanonicalName ::
-      ODEProduct.getClass.getCanonicalName ::
+      DifferentialProduct.getClass.getCanonicalName ::
       ODESystem.getClass.getCanonicalName ::
       AtomicODE.getClass.getCanonicalName ::
-      ProgramConstant.getClass.getCanonicalName ::
-      DifferentialProgramConstant.getClass.getCanonicalName ::
-      CDot.getClass.getCanonicalName ::
+      ProgramConst.getClass.getCanonicalName ::
+      DifferentialProgramConst.getClass.getCanonicalName ::
+      DotTerm.getClass.getCanonicalName ::
       Variable.getClass.getCanonicalName ::
-      Number.NumberObj.getClass.getCanonicalName ::
+      Number.getClass.getCanonicalName ::
       Nil
     val precedence = precedenceDS.map(_.replace("$",""))
     
@@ -418,30 +358,28 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   /**
    * Returns true if this expression does NOT need to be placed in parens.
    */
-  private def isAtomic(e:Expr):Boolean = e match {
+  private def isAtomic(e:Expression):Boolean = e match {
     case False => true
     case True => true
-    case CDot => true
-    case CDotFormula => true
-    case ProgramConstant(name, _) => true
+    case DotTerm => true
+    case DotFormula => true
+    case ProgramConst(name) => true
     case Variable(name, _,_) => true
-    case _: EmptyODE  => true
     case AtomicODE(_, _) => true
-    case ODEProduct(_, _) => false
-    case ODESystem(_, a, _) => isAtomic(a)
+    case DifferentialProduct(_, _) => false
+    case ODESystem(a, _) => isAtomic(a)
     case Number(_) => true
-    case Number(_,_) => true
-    case Loop(p) => true 
-    case Neg(s,e) => isAtomic(e)
+    case Loop(p) => true
+    case Not(e) => isAtomic(e)
     case Test(e) => isAtomic(e)
     case Not(e) => isAtomic(e)
-    case FormulaDerivative(f) => isAtomic(f)
+    case DifferentialFormula(f) => isAtomic(f)
     
       //arith
-  	case Add(s,l,r) => false
-    case Multiply(s,l,r) => false
-    case Divide(s,l,r) => false
-    case Subtract(s,l,r) => false
+  	case Plus(l,r) => false
+    case Times(l,r) => false
+    case Divide(l,r) => false
+    case Minus(l,r) => false
     
     //boolean ops
     case And(l,r) => false
@@ -451,17 +389,17 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //Now, alphabetically down the type hierarchy (TODO clean this up so that things
     //are grouped in a reasonable way.)
     
-    case Apply(function,child) => false
-    case ApplyPredicate(function,child) => false
+    case FuncOf(function,child) => false
+    case PredOf(function,child) => false
     
     case Assign(l,r) => false
-    case NDetAssign(l) => false //@TODO check
+    case AssignAny(l) => false //@TODO check
 
     case Forall(_,_) => true
     case Exists(_,_) => true
-    case BoxModality(p,f) => true
-    case Derivative(s, child) => true
-    case DiamondModality(p,f) => true
+    case Box(p,f) => true
+    case Differential(child) => true
+    case Diamond(p,f) => true
     case Equiv(l,r) => false
     
     case Power(s,l,r) => false
@@ -469,20 +407,16 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     //BinaryProgram
     case Choice(l,r) => false
-    case Parallel(l,r) => false
-    case Sequence(l,r) => false
+    case Compose(l,r) => false
     
     //BinaryRelation
-    case Equals(s,l,r) => false
+    case Equal(s,l,r) => false
     case GreaterEqual(s,l,r) => false
     case LessEqual(s,l,r) => false
-    case LessThan(s,l,r) => false
-    case GreaterThan(s,l,r) => false
-    case NotEquals(s,l,r) => false
+    case Less(s,l,r) => false
+    case Greater(s,l,r) => false
+    case NotEqual(s,l,r) => false
     
-    case IfThen(l,r) => false
-    case IfThenElse(test,l,r) => false
-      
     case Pair(s,l,r) => false
     
     case Function(name,index,domain,argSorts) => false
@@ -501,8 +435,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 //    case Right(domain,child) => ???
     
     //And these we can pattern match on but are not implemented yet.
-    case Modality(_,_) => false
-    case Exists(_,_) => false    
+    case Exists(_,_) => false
   }
   
   
@@ -548,13 +481,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 
   private def sortProofPrinter(s:Sort):String = s match {
     case Bool        => "T"
-    case s : EnumT   => s.name
-    case ModalOpSort => ???
-    case ProgramSort => "P"
+    case Trafo       => "P"
     case Real        => "T"
-    case s:TupleT    => ???
-    case s:UserSort  => ???
     case Unit        => "Void"
+    case _: ObjectSort => ???
   }
 
 }
