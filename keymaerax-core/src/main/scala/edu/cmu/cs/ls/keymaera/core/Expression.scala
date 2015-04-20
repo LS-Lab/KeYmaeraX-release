@@ -205,12 +205,16 @@ case class Or(left: Formula, right:Formula) extends CompositeFormula
 case class Imply(left: Formula, right:Formula) extends CompositeFormula
 case class Equiv(left: Formula, right:Formula) extends CompositeFormula
 
-case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula {
+trait Quantifier extends CompositeFormula {
+  def vars: immutable.Seq[Variable]
+  def child: Formula
+}
+case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantifier {
   require(!vars.isEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   //@todo require all vars have the same sort?
 }
-case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula {
+case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantifier {
   require(!vars.isEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   //@todo require all vars have the same sort?
