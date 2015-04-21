@@ -197,7 +197,7 @@ object PropositionalTacticsImpl {
 
   def CloseTrueT: PositionTactic = new PositionTactic("CloseTrue") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && (getFormula(s, p) match {
-      case True() => true
+      case True => true
       case _ => false
     })
 
@@ -208,7 +208,7 @@ object PropositionalTacticsImpl {
 
   def CloseFalseT: PositionTactic = new PositionTactic("CloseFalse") {
     override def applies(s: Sequent, p: Position): Boolean = p.isAnte && (getFormula(s, p) match {
-      case False() => true
+      case False => true
       case _ => false
     })
 
@@ -279,7 +279,7 @@ object PropositionalTacticsImpl {
 
   def kModalModusPonensT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case Imply(BoxModality(a, p), BoxModality(b, q)) if a == b => Imply(BoxModality(a, Imply(p, q)), fml)
+      case Imply(Box(a, p), Box(b, q)) if a == b => Imply(Box(a, Imply(p, q)), fml)
       case _ => False
     }
     uncoverAxiomT("K modal modus ponens", axiomInstance, _ => kModalModusPonensBaseT)
@@ -287,10 +287,10 @@ object PropositionalTacticsImpl {
   /** Base tactic for k modal modus ponens */
   private def kModalModusPonensBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Imply(BoxModality(a, p), BoxModality(b, q))) if a == b =>
-        val aA = ProgramConstant("a")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+      case Imply(_, Imply(Box(a, p), Box(b, q))) if a == b =>
+        val aA = ProgramConst("a")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
         SubstitutionPair(aA, a) :: SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: Nil
     }
     axiomLookupBaseT("K modal modus ponens", subst, _ => NilPT, (f, ax) => ax)
