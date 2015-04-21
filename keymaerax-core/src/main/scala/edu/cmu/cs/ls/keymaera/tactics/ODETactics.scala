@@ -191,9 +191,10 @@ object ODETactics {
    */
   def diffEffectT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(ode@ODESystem(_, ODEProduct(AtomicODE(dx@Derivative(Real, x: Variable), t), _: EmptyODE), q), p) =>
+      case Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), t), q), p) =>
         // [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)
-        Equiv(fml, BoxModality(ode, BoxModality(Assign(dx, t), p)))
+        // TODO DiffSymbol :=
+        Equiv(fml, Box(ode, Box(DiffAssign(dx, t), p)))
       case _ => False
     }
     uncoverAxiomT("DE differential effect", axiomInstance, _ => diffEffectBaseT)
@@ -201,22 +202,23 @@ object ODETactics {
   /** Base tactic for diff effect */
   private def diffEffectBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(ode@ODESystem(_, ODEProduct(AtomicODE(dx@Derivative(Real, x: Variable), t), _: EmptyODE), q), p), _) =>
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), CDot)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), CDot)
-        val aF = Apply(Function("f", None, Real, Real), CDot)
-        SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, CDot)) ::
-          SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, CDot)) ::
-          SubstitutionPair(aF, SubstitutionHelper.replaceFree(t)(x, CDot)) :: Nil
+      case Equiv(Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), t), q), p), _) =>
+        val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+        val aQ = PredOf(Function("q", None, Real, Bool), DotTerm)
+        val aF = FuncOf(Function("f", None, Real, Real), DotTerm)
+        SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, DotTerm)) ::
+          SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, DotTerm)) ::
+          SubstitutionPair(aF, SubstitutionHelper.replaceFree(t)(x, DotTerm)) :: Nil
     }
 
     val aX = Variable("x", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(BoxModality(ode@ODESystem(_, ODEProduct(AtomicODE(dx@Derivative(Real, x: Variable), t), _: EmptyODE), q), p), _) =>
+      case Equiv(Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), t), q), p), _) =>
         if (x.name != aX.name || x.index != aX.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(BoxModality(ODESystem(_, _, _), _), BoxModality(ODESystem(_, _, _), BoxModality(Assign(Derivative(_, _), _), _))) => true
+              // TODO DiffSymbol :=
+              case Equiv(Box(ODESystem(_, _), _), Box(ODESystem(_, _), Box(Assign(DifferentialSymbol(_), _), _))) => true
               case _ => false
             }
 
@@ -231,7 +233,7 @@ object ODETactics {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(BoxModality(ode@ODESystem(_, ODEProduct(AtomicODE(dx@Derivative(Real, x: Variable), _), _: EmptyODE), _), _), _) =>
+      case Equiv(Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), _), _), _), _) =>
         if (x.name != aX.name || x.index != aX.index) replace(axiom)(aX, x)
         else axiom
     }
@@ -251,7 +253,7 @@ object ODETactics {
    */
   def diffSolution(solution: Option[Formula]): PositionTactic = new PositionTactic("differential solution") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      case BoxModality(odes: DifferentialProgram, _) => odes != EmptyODE()
+      case Box(odes: DifferentialProgram, _) => true
       case _ => false
     }) && (solution match {
       case Some(f) => true
@@ -265,7 +267,7 @@ object ODETactics {
      */
     private def findTimeInOdes(f: Formula): Option[Variable] = {
       val odes = f match {
-        case BoxModality(prg: DifferentialProgram, _) => prg
+        case Box(prg: DifferentialProgram, _) => prg
         case _ => throw new IllegalStateException("Checked by applies to never happen")
       }
 
@@ -274,7 +276,7 @@ object ODETactics {
         import ExpressionTraversal.stop
         override def preP(p: PosInExpr, prg: Program): Either[Option[StopTraversal], Program] = prg match {
           // TODO could be complicated 1
-          case AtomicODE(Derivative(_, v: Variable), theta) if theta == Number(1) =>
+          case AtomicODE(DifferentialSymbol(v), theta) if theta == Number(1) =>
             timeInOde = Some(v); Left(Some(stop))
           case _ => Left(None)
         }
@@ -325,8 +327,8 @@ object ODETactics {
         var primedSymbols = Set[Variable]()
         ExpressionTraversal.traverse(new ExpressionTraversalFunction {
           override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-            case Derivative(_, ps: Variable) => primedSymbols += ps; Left(None)
-            case Derivative(_, _) => throw new IllegalArgumentException("Only derivatives of variables supported")
+            case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
+            case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
             case _ => Left(None)
           }
         }, ode)
@@ -370,7 +372,7 @@ object ODETactics {
         }
 
         val diffEq = node.sequent(p) match {
-          case BoxModality(ode: DifferentialProgram, _) => ode
+          case Box(ode: DifferentialProgram, _) => ode
           case _ => throw new IllegalStateException("Checked by applies to never happen")
         }
 
@@ -391,8 +393,8 @@ object ODETactics {
           // add relation to initial time
           case Some(s) =>
             val sol = And(if (tIsZero) s
-                          else SubstitutionHelper.replaceFree(s)(time, Subtract(time.sort, time, Apply(ivm(time), Nothing))),
-                          GreaterEqual(time.sort, time, Apply(ivm(time), Nothing)))
+                          else SubstitutionHelper.replaceFree(s)(time, Minus(time, FuncOf(ivm(time), Nothing))),
+                          GreaterEqual(time, FuncOf(ivm(time), Nothing)))
             createTactic(diffEq, sol, time, iv, diffEqPos)
           case None => None
         }
@@ -410,14 +412,14 @@ object ODETactics {
    */
   def diffWeakenT: PositionTactic = new PositionTactic("DW differential weakening") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      case BoxModality(ODESystem(_, _, _), _) => true
+      case Box(ODESystem(_, _, _), _) => true
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case BoxModality(ODESystem(_, _, _), _) =>
+        case Box(ODESystem(_, _, _), _) =>
           Some(diffWeakenAxiomT(p) & abstractionT(p) & debugT("Skolemize in DiffWeaken") & (skolemizeT(p)*)
             & assertT(s => s(p) match { case Forall(_, _) => false case _ => true }, "Diff. weaken did not skolemize all quantifiers"))
         case _ => None
@@ -429,7 +431,7 @@ object ODETactics {
 
   def diffWeakenAxiomT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(ode@ODESystem(_, c, h), p) => Equiv(fml, BoxModality(ode, Imply(h, p)))
+      case Box(ode@ODESystem(_, c, h), p) => Equiv(fml, Box(ode, Imply(h, p)))
       case _ => False
     }
     uncoverAxiomT("DW differential weakening", axiomInstance, _ => diffWeakenAxiomBaseT)
@@ -437,10 +439,10 @@ object ODETactics {
   /** Base tactic for diff weaken */
   private def diffWeakenAxiomBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(BoxModality(ode@ODESystem(_, c, h), p), _) =>
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aC = DifferentialProgramConstant("c")
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+      case Equiv(Box(ode@ODESystem(_, c, h), p), _) =>
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
         SubstitutionPair(aP, p) :: SubstitutionPair(aC, c) :: SubstitutionPair(aH, h) :: Nil
     }
     axiomLookupBaseT("DW differential weakening", subst, _ => NilPT, (f, ax) => ax)
@@ -456,14 +458,14 @@ object ODETactics {
    */
   def diffCutT(diffcut: Formula): PositionTactic = new PositionTactic("DC differential cut") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      case BoxModality(_: ODESystem, _) => true
+      case Box(_: ODESystem, _) => true
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case BoxModality(ODESystem(_, _, _), _) =>
+        case Box(ODESystem(_, _, _), _) =>
           val anteLength = node.sequent.ante.length
           Some(diffCutAxiomT(diffcut)(p) & onBranch(
             (axiomUseLbl,
@@ -484,9 +486,9 @@ object ODETactics {
    */
   private def diffCutAxiomT(diffcut: Formula): PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(ODESystem(dist, c, h), p) =>
-        val showDC = Modality(BoxModality(ODESystem(dist, c, h)), diffcut)
-        val useDC = Modality(BoxModality(ODESystem(dist, c, And(h,diffcut))), p)
+      case Box(ODESystem(c, h), p) =>
+        val showDC = Box(ODESystem(c, h), diffcut)
+        val useDC = Box(ODESystem(c, And(h,diffcut)), p)
         Imply(showDC, Equiv(fml, useDC))
       case _ => False
     }
@@ -501,11 +503,11 @@ object ODETactics {
   /** Base tactic for differential cuts */
   private def diffCutAxiomBaseT(diffcut: Formula): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Equiv(BoxModality(ODESystem(dist, c, h), p), _)) =>
-        val aC = DifferentialProgramConstant("c")
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aR = ApplyPredicate(Function("r", None, Real, Bool), Anything)
+      case Imply(_, Equiv(Box(ODESystem(dist, c, h), p), _)) =>
+        val aC = DifferentialProgramConst("c")
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aR = PredOf(Function("r", None, Real, Bool), Anything)
         SubstitutionPair(aC, c) :: SubstitutionPair(aH, h) :: SubstitutionPair(aP, p):: SubstitutionPair(aR, diffcut) :: Nil
     }
     axiomLookupBaseT("DC differential cut", subst, _ => NilPT, (f, ax) => ax)
@@ -516,12 +518,12 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   def diffAuxiliaryT(x: Variable, t: Term, s: Term, psi: Option[Formula] = None): PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(ode@ODESystem(vars, c, h), p) if !StaticSemantics(ode).bv.contains(x) &&
+      case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(x) &&
           !StaticSemantics.symbols(t).contains(x) && !StaticSemantics.symbols(s).contains(x) =>
         // construct instance
         val q = psi match { case Some(pred) => pred case None => p }
-        val lhs = And(Equiv(p, Exists(x :: Nil, q)), BoxModality(ODESystem(vars, ODEProduct(c,
-          AtomicODE(Derivative(x.sort, x), Add(x.sort, Multiply(x.sort, t, x), s))), h), q))
+        val lhs = And(Equiv(p, Exists(x :: Nil, q)), Box(ODESystem(DifferentialProduct(c,
+          AtomicODE(DifferentialSymbol(x), Plus(Times(t, x), s))), h), q))
         Imply(lhs, fml)
       case _ => False
     }
@@ -530,14 +532,14 @@ object ODETactics {
 
   private def diffAuxiliaryBaseT(x: Variable, t: Term, s: Term, psi: Option[Formula]): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, BoxModality(ode@ODESystem(vars, c, h), p)) =>
+      case Imply(_, Box(ode@ODESystem(vars, c, h), p)) =>
         val q = psi match { case Some(pred) => pred case None => p }
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-        val aC = DifferentialProgramConstant("c")
-        val aS = Apply(Function("s", None, Unit, Real), Nothing)
-        val aT = Apply(Function("t", None, Unit, Real), Nothing)
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
+        val aC = DifferentialProgramConst("c")
+        val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
+        val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
         SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: SubstitutionPair(aH, h) ::
           SubstitutionPair(aC, c) :: SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: Nil
     }
@@ -573,12 +575,12 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   def diffInvariantAxiomT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case BoxModality(ode@ODESystem(d, c, h), p) =>
+      case Box(ode@ODESystem(c, h), p) =>
         //[c&H]p <- (p & [{c}&H](H->p')
         val g = Imply(h,
           And(p,
-            BoxModality(
-              ode, FormulaDerivative(p)
+            Box(
+              ode, DifferentialFormula(p)
             )
           ))
         Imply(g, fml)
@@ -589,10 +591,10 @@ object ODETactics {
   /** Base tactic for diff invariant */
   private def diffInvariantAxiomBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(Imply(_, And(_, BoxModality(ODESystem(d, c, h), FormulaDerivative(p)))), _) =>
-        val aC = DifferentialProgramConstant("c")
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
+      case Imply(Imply(_, And(_, Box(ODESystem(c, h), DifferentialFormula(p)))), _) =>
+        val aC = DifferentialProgramConst("c")
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aH = PredOf(Function("H", None, Real, Bool), Anything)
         SubstitutionPair(aC, c) :: SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) :: Nil
     }
     axiomLookupBaseT("DI differential invariant", subst, _ => NilPT, (f, ax) => ax)
@@ -600,10 +602,10 @@ object ODETactics {
 
   def differentialEffectSystemT: PositionTactic = new PositionTactic("DE differential effect (system)") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (getFormula(s, p) match {
-      //        case BoxModality(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
-      case BoxModality(ODESystem(_, cp: ODEProduct, _),_) => cp.normalize() match {
+      //        case Box(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
+      case Box(ODESystem(cp: DifferentialProduct, _),_) => cp/*.normalize()*/ match {
         //@TODO Why restrict to ODEProduct? AtomicODE should also be fine, right?
-        case ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _) => true
+        case DifferentialProduct(AtomicODE(DifferentialSymbol(_), _), _) => true
         case _ => false
       }
       case f => println("Does not apply to: " + f.prettyString()); false
@@ -612,26 +614,21 @@ object ODETactics {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case f@BoxModality(ODESystem(vars, a, h), phi) => a match {
+        case f@Box(ODESystem(a, h), phi) => a match {
           //@TODO If it's an AtomicODE right away, shouldn't the same thing work, too?
-          case cp: ODEProduct => cp.normalize() match {
-            case ODEProduct(AtomicODE(d@Derivative(Real, x: Variable), t: Term), c: DifferentialProgram) =>
-              val g = BoxModality(
-                ODESystem(vars,
-                    ODEProduct(
-                      c,
-                      ODEProduct(AtomicODE(d, t))
-                    )
-                  , h),
-                BoxModality(Assign(d, t), phi)
+          case cp: DifferentialProduct => cp/*.normalize()*/ match {
+            case DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t: Term), c: DifferentialProgram) =>
+              val g = Box(
+                ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
+                Box(DiffAssign(d, t), phi)
               )
               val instance = Equiv(f, g)
 
               //construct substitution
-              val aF = Apply(Function("f", None, Real, Real), Anything)
-              val aH = ApplyPredicate(Function("H", None, Real, Bool), Anything)
-              val aC = DifferentialProgramConstant("c")
-              val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+              val aF = FuncOf(Function("f", None, Real, Real), Anything)
+              val aH = PredOf(Function("H", None, Real, Bool), Anything)
+              val aC = DifferentialProgramConst("c")
+              val aP = PredOf(Function("p", None, Real, Bool), Anything)
 
               val subst = SubstitutionPair(aF, t) :: SubstitutionPair(aC, c) :: SubstitutionPair(aP, phi) ::
                 SubstitutionPair(aH, h) :: Nil
@@ -641,8 +638,8 @@ object ODETactics {
               val alpha =
                 if (x.name != aX.name || x.index != aX.index) new PositionTactic("Alpha") {
                   override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-                    case Equiv(BoxModality(ODESystem(_, _, _), _),
-                               BoxModality(ODESystem(_, _, _), BoxModality(Assign(_: Derivative, _), _))) => true
+                    case Equiv(Box(ODESystem(_, _), _),
+                               Box(ODESystem(_, _), Box(DiffAssign(_: DifferentialSymbol, _), _))) => true
                     case _ => false
                   }
 
@@ -682,7 +679,7 @@ object ODETactics {
    */
   def diffInvariantT: PositionTactic = new PositionTactic("DI differential invariant") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      case BoxModality(_: ODESystem, _) => true
+      case Box(_: ODESystem, _) => true
       case _ => false
     })
 
@@ -691,7 +688,7 @@ object ODETactics {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         node.sequent(p) match {
-          case BoxModality(ODESystem(_, ode, _), _) => {
+          case Box(ODESystem(_, ode, _), _) => {
             val n = {
               var numAtomics = 0
               ExpressionTraversal.traverse(new ExpressionTraversalFunction {
