@@ -379,6 +379,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Not(e) => isAtomic(e)
     case Test(e) => isAtomic(e)
     case Not(e) => isAtomic(e)
+    case DifferentialSymbol(_) => true
     case DifferentialFormula(f) => isAtomic(f)
     
       //arith
