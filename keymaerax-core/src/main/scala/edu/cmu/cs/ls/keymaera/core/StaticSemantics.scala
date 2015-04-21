@@ -87,6 +87,7 @@ object StaticSemantics {
       case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm is no variable"); SetLattice.bottom
       // homomorphic cases
       case FuncOf(f, arg) => freeVars(arg)
+      case Neg(e) => freeVars(e)
       case Plus(l, r) => freeVars(l) ++ freeVars(r)
       case Minus(l, r) => freeVars(l) ++ freeVars(r)
       case Times(l, r) => freeVars(l) ++ freeVars(r)
@@ -95,6 +96,8 @@ object StaticSemantics {
       //case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
       // special cases
       case Differential(e) => val fv = freeVars(e); fv ++ differentialSymbols(fv)
+      // unofficial
+      case Pair(l, r) => freeVars(l) ++ freeVars(r)
       //case _: Nothing | Anything => SetLattice.bottom
     }
   }
@@ -241,13 +244,15 @@ object StaticSemantics {
     case DotTerm => Set(DotTerm)
     case FuncOf(f, arg) => Set(f) ++ signature(arg)
     // homomorphic cases
+    case Neg(e) => signature(e)
     case Plus(l, r) => signature(l) ++ signature(r)
     case Minus(l, r) => signature(l) ++ signature(r)
     case Times(l, r) => signature(l) ++ signature(r)
     case Divide(l, r) => signature(l) ++ signature(r)
     case Power(l, r) => signature(l) ++ signature(r)
-    //case Pair(dom, l, r) => signature(l) ++ signature(r)
     case Differential(e) => signature(e)
+    // unofficial
+    case Pair(l, r) => signature(l) ++ signature(r)
     // special
     //case _: NumberObj | Nothing | Anything => Set.empty
   }

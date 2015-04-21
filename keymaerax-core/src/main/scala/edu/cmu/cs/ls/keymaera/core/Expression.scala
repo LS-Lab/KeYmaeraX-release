@@ -54,9 +54,14 @@ object Real extends Sort
  */
 object Trafo extends Sort
 /**
+ * Tuple sort
+ */
+case class Tuple(left: Sort, right: Sort) extends Sort
+/**
  * User-defined object sort
  */
 case class ObjectSort(name : String) extends Sort
+
 
 /**
  * Expressions of differential dynamic logic.
@@ -133,20 +138,30 @@ case class FuncOf(func: Function, child: Term) extends AtomicTerm {
 sealed trait CompositeTerm extends Term with Composite {}
 
 /**
+ * Unary Composite Real Terms, i.e. real terms composed of one real term.
+ */
+private[core] abstract class RUnaryCompositeTerm(child: Term) extends RTerm with Composite {
+  require(child.sort == Real)
+}
+
+/**
  * Composite Real Terms, i.e. real terms composed of two real terms.
  */
 private[core] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
   require(left.sort == Real && right.sort == Real)
 }
 
+case class Neg(child: Term) extends RUnaryCompositeTerm(child)
 case class Plus(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Minus(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Times(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Divide(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Power(left: Term, right: Number) extends RCompositeTerm(left, right)
 
-case class Differential(child: Term) extends CompositeTerm with RTerm {
-  require(child.sort == Real)
+case class Differential(child: Term) extends RUnaryCompositeTerm(child)
+
+case class Pair(left: Term, right: Term) extends CompositeTerm {
+  def sort = Tuple(left.sort, right.sort)
 }
 
 /********************************************
