@@ -197,7 +197,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case DiffAssign(x, theta) => x.name + (x.index match {
       case Some(idx) => "_" + idx
       case None => ""
-    }) + symbolTable.PRIME + prettyPrinter(theta)
+    }) + symbolTable.PRIME + symbolTable.ASSIGN + prettyPrinter(theta)
 
     case p@DifferentialProduct(l, r) => {
       val leftString = parensIfNeeded(l, p, false,
