@@ -116,6 +116,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     case FuncOf(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
+      case Pair(_, _) => prettyPrinter (function) + prettyPrinter (child)
       case Nothing => prettyPrinter(function) + "()"
       case Anything => prettyPrinter(function) + "(?)"
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
@@ -123,6 +124,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     
     case PredOf(function,child) => child match {
       // cannot use parensIfNeeded, because that suppresses parentheses for variables and numbers
+      case Pair(_, _) => prettyPrinter (function) + prettyPrinter (child)
       case Nothing => prettyPrinter(function)
       case Anything => prettyPrinter(function) + "(?)"
       case _ => prettyPrinter (function) + "(" + prettyPrinter (child) + ")"
@@ -173,6 +175,8 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Less(l,r) => prettyPrinter(l) + symbolTable.LT + prettyPrinter(r)
     case Greater(l,r) => prettyPrinter(l) + symbolTable.GT + prettyPrinter(r)
     case NotEqual(l,r) => prettyPrinter(l) + symbolTable.NEQ + prettyPrinter(r)
+
+    case Pair(l,r) => symbolTable.PAIR_OPEN + recInfix(l,r,expressionToPrint,symbolTable.COMMA, None) + symbolTable.PAIR_CLOSE
 
     case False => symbolTable.FALSE
     case True => symbolTable.TRUE
@@ -423,7 +427,9 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Less(l,r) => false
     case Greater(l,r) => false
     case NotEqual(l,r) => false
-    
+
+    case Pair(l,r) => false
+
     case Function(name,index,domain,argSorts) => false
     
     /** Normal form ODE data structures
