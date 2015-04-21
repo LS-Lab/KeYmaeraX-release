@@ -31,7 +31,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
 
   "x'=1" should "x=x0+y*t with AtomicODE" in {
     val eq = AtomicODE(DifferentialSymbol(x), one)
-    val expected = Some("x=1*t+x0()".asFormula)
+    val expected = Some("x=x0()+t".asFormula)
     link.diffSol(eq, t,  Map(x->x0)) should be (expected)
   }
 
@@ -39,7 +39,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
     val eq = DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(y), z))
-    val expected = Some("x=1/2*(t^2*z + 2*x0() + 2*t*y0()) & y=t*z + y0()".asFormula)
+    val expected = Some("x=1/2*(2*x0() + 2*y0()*t + t^2*z) & y=y0() + t*z".asFormula)
     link.diffSol(eq, t, Map(x->x0, y->y0)) should be (expected)
   }
 
@@ -48,7 +48,7 @@ class JLinkMathematicaLinkTests extends FlatSpec with Matchers with BeforeAndAft
     val eq = DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(t), one))
-    val expected = Some("x=t*y+x0()".asFormula)
+    val expected = Some("x=x0() + t*y".asFormula)
     link.diffSol(eq, t, Map(x->x0)) should be (expected)
   }
 }
