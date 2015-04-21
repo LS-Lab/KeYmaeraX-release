@@ -151,8 +151,7 @@ object HybridProgramTacticsImpl {
    */
   def boxDerivativeAssignT: PositionTactic = {
     def g(f: Formula): Formula = f match {
-      // TODO DifferentialSymbols should be variables?
-      case Box(Assign(d@Derivative(_, _: Variable), t), p) =>
+      case Box(DiffAssign(d : DifferentialSymbol, t), p) =>
         Equiv(f, SubstitutionHelper.replaceFree(p)(d, t))
       case _ => False
     }
@@ -162,19 +161,19 @@ object HybridProgramTacticsImpl {
   /** Base tactic for box derivative assignment */
   private def boxDerivativeAssignBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
-        val aT = FuncOf(Function("t", None, Unit, vSort), Nothing)
-        val aP = PredOf(Function("p", None, vSort, Bool), DotTerm) //(p(t)
+      case Equiv(Box(DiffAssign(d@DifferentialSymbol(v), t), p), _) =>
+        val aT = FuncOf(Function("t", None, Unit, v.sort), Nothing)
+        val aP = PredOf(Function("p", None, v.sort, Bool), DotTerm) //(p(t)
         SubstitutionPair(aT, t) :: SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(d, DotTerm)) :: Nil
     }
 
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(Box(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
-        val aV = Variable("v", None, vSort)
+      case Equiv(Box(DiffAssign(DifferentialSymbol(v), t), p), _) =>
+        val aV = Variable("v", None, v.sort)
         if (v.name != aV.name || v.index != aV.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(Box(Assign(Derivative(_), _), _), _) => true
+              case Equiv(Box(DiffAssign(DifferentialSymbol(_), _), _), _) => true
               case _ => false
             }
 
@@ -189,8 +188,8 @@ object HybridProgramTacticsImpl {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(Box(Assign(d@Derivative(vSort, v:Variable), t), p), _) =>
-        val aV = Variable("v", None, vSort)
+      case Equiv(Box(DiffAssign(DifferentialSymbol(v), t), p), _) =>
+        val aV = Variable("v", None, v.sort)
         if (v.name == aV.name && v.index == aV.index) axiom
         else replace(axiom)(aV, v)
     }
