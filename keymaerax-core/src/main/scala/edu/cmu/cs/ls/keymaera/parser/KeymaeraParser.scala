@@ -908,9 +908,9 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     lazy val diffAssignP : SubprogramParser = {
-      lazy val pattern = (variableDerivativeP <~  PRIME) ~ ASSIGN ~ termParser
+      lazy val pattern = variableDerivativeP ~ (ASSIGN ~> termParser)
       log(pattern)("x' := theta") ^^ {
-        case pvar ~ ASSIGN ~ term => new DiffAssign(pvar, term)
+        case pvar ~ term => new DiffAssign(pvar, term)
       }
     }
 
