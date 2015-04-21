@@ -132,7 +132,7 @@ private object NameConversion {
  */
 object MathematicaToKeYmaera {
   type MExpr = com.wolfram.jlink.Expr
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
+  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
 
   /**
    * Converts a Mathematica expression to a KeYmaera expression.
@@ -142,7 +142,7 @@ object MathematicaToKeYmaera {
     if(e.numberQ() && !e.rationalQ()) {
       try {
         val number = e.asBigDecimal()
-        Number(Real, BigDecimal(number))
+        Number(BigDecimal(number))
       }
       catch {
         case exn : NumberFormatException => throw mathExnMsg(e, "Could not convert number: " + e.toString)
@@ -210,13 +210,13 @@ object MathematicaToKeYmaera {
 
   def convertRule(e: MExpr): Formula = {
     // TODO is Equals correct for rules?
-    Equals(Real, fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
+    Equal(fromMathematica(e.args()(0)).asInstanceOf[Term], fromMathematica(e.args()(1)).asInstanceOf[Term])
   }
   
-  def convertQuantifiedVariable(e : MExpr) : edu.cmu.cs.ls.keymaera.core.NamedSymbol = {
+  def convertQuantifiedVariable(e : MExpr) : edu.cmu.cs.ls.keymaera.core.Variable = {
     val result = NameConversion.toKeYmaera(e)
     result match {
-      case result : NamedSymbol => result
+      case result : Variable => result
       case _ => throw new ConversionException("Expected variables but found non-variable:" + result.getClass.toString)
     }
   }
@@ -227,17 +227,19 @@ object MathematicaToKeYmaera {
       case result : Function => {
         val arguments = e.args().map(fromMathematica).map(_.asInstanceOf[Term])
         if(arguments.nonEmpty) {
-          val argumentsAsPair = arguments.reduceRight[Term](
-            (l, r) => Pair(TupleT(l.sort, r.sort), l, r)
-          )
-          Apply(result, argumentsAsPair)
+          assert(arguments.length == 1)
+//          val argumentsAsPair = arguments.reduceRight[Term](
+//            (l, r) => Pair(TupleT(l.sort, r.sort), l, r)
+//          )
+//          FuncOf(result, argumentsAsPair)
+          FuncOf(result, arguments.head)
         }
         else {
           result
         }
       }
       case _ if  result.name.startsWith(NameConversion.CONST_FN_PREFIX) =>
-        Apply(Function(result.name.substring(NameConversion.CONST_FN_PREFIX.length), result.index, Unit, result.sort), Nothing)
+        FuncOf(Function(result.name.substring(NameConversion.CONST_FN_PREFIX.length), result.index, Unit, result.sort), Nothing)
       case _ if !result.name.startsWith(NameConversion.CONST_FN_PREFIX) => result
     }
   }
@@ -245,27 +247,27 @@ object MathematicaToKeYmaera {
   def convertAddition(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Add(Real,l,r))
+    asTerms.reduce((l,r) => Plus(l,r))
   }
   def convertDivision(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Divide(Real,l,r))
+    asTerms.reduce((l,r) => Divide(l,r))
   }
   def convertSubtraction(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Subtract(Real,l,r))
+    asTerms.reduce((l,r) => Minus(l,r))
   }
   def convertMultiplication(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Multiply(Real,l,r))
+    asTerms.reduce((l,r) => Times(l,r))
   }
   def convertExponentiation(e : MExpr) = {
     val subexpressions = e.args().map(fromMathematica)
     val asTerms = subexpressions.map(_.asInstanceOf[Term])
-    asTerms.reduce((l,r) => Power(Real,l,r))
+    asTerms.reduce((l,r) => Power(l,r.asInstanceOf[Number]))
   }
   
   def convertAnd(e : MExpr) = {
@@ -299,42 +301,42 @@ object MathematicaToKeYmaera {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => Equals(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => Equal(pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertNotEquals(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => NotEquals(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => NotEqual(pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertGreaterEqual(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => GreaterEqual(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => GreaterEqual(pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertLessEqual(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => LessEqual(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => LessEqual(pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertLessThan(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => LessThan(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => Less(pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def convertGreaterThan(e : MExpr) : Formula = {
     val subterms = e.args().map(fromMathematica(_).asInstanceOf[Term])
     val staggeredPairs = makeOverlappingPairs(IndexedSeq() ++ subterms)
     val staggeredFormauls : Seq[Formula] = 
-      staggeredPairs.map(pair => GreaterThan(Real,pair._1,pair._2))
+      staggeredPairs.map(pair => Greater(pair._1,pair._2))
     staggeredFormauls.reduce((l,r) => And(l,r))
   }
   def makeOverlappingPairs[T](s : Seq[T]):Seq[(T,T)] = {
@@ -452,7 +454,7 @@ object MathematicaToKeYmaera {
  */
 object KeYmaeraToMathematica {
   type MExpr = com.wolfram.jlink.Expr
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
+  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
 
   /**
    * Converts KeYmaera expressions into Mathematica expressions.
@@ -460,7 +462,6 @@ object KeYmaeraToMathematica {
   def fromKeYmaera(e : KExpr) = e match {
     case t : Term => convertTerm(t)
     case t : Formula => convertFormula(t)
-    case _ => ???
   }
 
   /** 
@@ -469,21 +470,14 @@ object KeYmaeraToMathematica {
   def convertTerm(t : Term) : MExpr = {
     require(t.sort == Real || t.sort == Unit, "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
-      case Apply(fn, child) => convertFnApply(fn, child)
-      case t: IfThenElseTerm => ???
-      case t: Pair => ???
-      case t: Right => ???
-      case t: Left => ???
-      case Add(s, l, r) => convertAdd(l, r)
-      case Subtract(s, l, r) => convertSubtract(l, r)
-      case Multiply(s, l, r) => convertMultiply(l, r)
-      case Divide(s, l, r) => convertDivide(l, r)
-      case Power(s, l, r) => convertExp(l, r)
-      case Derivative(s, c) => convertDerivative(c)
-      case False() => MathematicaSymbols.FALSE
-      case True() => MathematicaSymbols.TRUE
-      case Neg(s, c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
-      case Number(s, n) => new MExpr(n.underlying())
+      case FuncOf(fn, child) => convertFnApply(fn, child)
+      case Plus(l, r) => convertAdd(l, r)
+      case Minus(l, r) => convertSubtract(l, r)
+      case Times(l, r) => convertMultiply(l, r)
+      case Divide(l, r) => convertDivide(l, r)
+      case Power(l, r) => convertExp(l, r)
+      case Differential(c) => convertDerivative(c)
+      case Number(n) => new MExpr(n.underlying())
       case t: Variable => convertNS(t)
     }
   }
@@ -492,32 +486,21 @@ object KeYmaeraToMathematica {
    * Converts KeYmaera formulas into Mathematica objects
    */
   def convertFormula(f : Formula) : MExpr = f match {
-    case f : ApplyPredicate => ???
-    case f : BinaryFormula => f match {
-      case And(l,r) => convertAnd(l,r)
-      case Equiv(l,r) => convertEquiv(l,r)
-      case Imply(l,r) => convertImply(l,r)
-      case Or(l,r) => convertOr(l,r)
-    }
-    case f : BinaryRelation => f match {
-      case f : ProgramEquals => ???
-      case f : ProgramNotEquals => ???
-      case Equals(s,l,r) => convertEquals(l,r)
-      case NotEquals(s,l,r) => convertNotEquals(l,r)
-      case LessEqual(s,l,r) => convertLessEqual(l,r)
-      case LessThan(s,l,r) => convertLessThan(l,r)
-      case GreaterEqual(s,l,r) => convertGreaterEqual(l,r)
-      case GreaterThan(s,l,r) => convertGreaterThan(l,r)      
-    }
-    case t : Modality => ???
-    // case t : Finally => ???
-    case t : FormulaDerivative => ??? //of?
-    // case t : Globally => ???
-    case False() => MathematicaSymbols.FALSE
-    case True() => MathematicaSymbols.TRUE
-    case Not(f) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(f)))
-    case Exists(vs, f) => convertExists(vs,f)
-    case Forall(vs, f) => convertForall(vs,f)
+    case And(l,r) => convertAnd(l,r)
+    case Equiv(l,r) => convertEquiv(l,r)
+    case Imply(l,r) => convertImply(l,r)
+    case Or(l,r) => convertOr(l,r)
+    case Equal(l,r) => convertEquals(l,r)
+    case NotEqual(l,r) => convertNotEquals(l,r)
+    case LessEqual(l,r) => convertLessEqual(l,r)
+    case Less(l,r) => convertLessThan(l,r)
+    case GreaterEqual(l,r) => convertGreaterEqual(l,r)
+    case Greater(l,r) => convertGreaterThan(l,r)
+    case False => MathematicaSymbols.FALSE
+    case True => MathematicaSymbols.TRUE
+    case Not(phi) => new MExpr(MathematicaSymbols.NOT, Array[MExpr](convertFormula(phi)))
+    case Exists(vs, phi) => convertExists(vs,phi)
+    case Forall(vs, phi) => convertForall(vs,phi)
   }
   
   def convertAdd(l : Term, r : Term) = {
@@ -629,6 +612,6 @@ object KeYmaeraToMathematica {
     new MExpr(MathematicaSymbols.OR, args)
   }
   
-  def keyExn(e:edu.cmu.cs.ls.keymaera.core.Expr) : Exception = 
+  def keyExn(e: KExpr) : Exception =
     new ConversionException("conversion not defined for KeYmaera expr: " + KeYmaeraPrettyPrinter.stringify(e))
 }
