@@ -236,7 +236,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //And these we can pattern match on but are not implemented yet.
     case Exists(_,_) => ???
 
-    case DifferentialSymbol(x : NamedSymbol) => "(" + prettyPrinter(x) + ")" + symbolTable.PRIME //@todo these parens are probably excessive, but DifferentialSymbol is not in the prec. list.
+    case DifferentialSymbol(x : NamedSymbol) => prettyPrinter(x) + symbolTable.PRIME
     
     case _ => throw new Exception("Ended up in the _ case of the pretty printer for: " + expressionToPrint.getClass())
   }
@@ -271,7 +271,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   }
 
   private def parensIfNeeded(child:Expression, parent:Expression, enforceAssociativity : Boolean, printer: Expression=>String = prettyPrinter) = {
-    val parens = 
+    val parens =
       if(child.isInstanceOf[Program]) {
         ("{","}")
       }
