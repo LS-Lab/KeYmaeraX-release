@@ -362,12 +362,12 @@ object FOQuantifierTacticsImpl {
    * @param quantFactory Creates the quantifier.
    */
   def vacuousQuantificationT(x: Option[Variable], axiomName: String,
-                             quantFactory: (Seq[Variable], Formula) => Quantifier): PositionTactic = {
+                             quantFactory: (Seq[Variable], Formula) => Quantified): PositionTactic = {
 
     def axiomInstance(fml: Formula): Formula = x match {
       case Some(v) if !allNames(fml).contains(v) => Equiv(fml, quantFactory(v :: Nil, fml))
       case _ => fml match {
-        case q: Quantifier if q.vars.size == 1 && allNames(q.child.asInstanceOf[Formula]).intersect(q.vars.toSet).isEmpty =>
+        case q: Quantified if q.vars.size == 1 && allNames(q.child.asInstanceOf[Formula]).intersect(q.vars.toSet).isEmpty =>
           Equiv(q.child.asInstanceOf[Formula], fml)
         case _ => False
       }
@@ -376,7 +376,7 @@ object FOQuantifierTacticsImpl {
   }
 
   private def vacuousQuantificationBaseT(x: Option[Variable], axiomName: String,
-                                         quantFactory: (Seq[Variable], Formula) => Quantifier): PositionTactic = {
+                                         quantFactory: (Seq[Variable], Formula) => Quantified): PositionTactic = {
 
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(p, _) =>
@@ -387,7 +387,7 @@ object FOQuantifierTacticsImpl {
     def v(fml: Formula) = x match {
       case Some(vv) => vv
       case None => fml match {
-        case Equiv(_, q: Quantifier) =>
+        case Equiv(_, q: Quantified) =>
           require(q.vars.size == 1 && q.vars.head.isInstanceOf[Variable])
           q.vars.head.asInstanceOf[Variable]
       }
@@ -397,7 +397,7 @@ object FOQuantifierTacticsImpl {
     def alpha(fml: Formula): PositionTactic = {
       new PositionTactic("Alpha") {
         override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-          case Equiv(_, _: Quantifier) => true
+          case Equiv(_, _: Quantified) => true
           case _ => false
         }
 
