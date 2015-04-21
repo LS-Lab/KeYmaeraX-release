@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaera.tactics.PosInExpr
  * @author Stefan Mitsch
  */
 trait MathematicaLink extends QETool with DiffSolutionTool {
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
+  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
   type MExpr = com.wolfram.jlink.Expr
 
   def runUnchecked(cmd : String) : (String, KExpr)
@@ -189,8 +189,10 @@ class JLinkMathematicaLink extends MathematicaLink {
     diffSys match {
       // do not solve time for now (assumed to be there but should not be solved for)
       // TODO remove restriction on t once ghost time is introduced
-      case Equals(_, Derivative(_, x: Variable), theta) if x != diffArg =>  (x, theta) :: Nil
-      case Equals(_, Derivative(_, x: Variable), theta) if x == diffArg =>  Nil
+      case Equal(Differential(x: Variable), theta) if x != diffArg =>  (x, theta) :: Nil
+      case Equal(DifferentialSymbol(x), theta) if x != diffArg =>  (x, theta) :: Nil
+      case Equal(Differential(x: Variable), theta) if x == diffArg =>  Nil
+      case Equal(DifferentialSymbol(x), theta) if x == diffArg =>  Nil
       case And(lhs, rhs) => toDiffSys(lhs, diffArg) ::: toDiffSys(rhs, diffArg)
       case _ => ???
     }
@@ -206,11 +208,10 @@ class JLinkMathematicaLink extends MathematicaLink {
     var result = List[(Variable, Term)]()
     ExpressionTraversal.traverse(new ExpressionTraversalFunction {
       override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] = e match {
-        case AtomicODE(Derivative(_, x: Variable), theta) if x != diffArg => result = result :+ (x, theta); Left(None)
-        case AtomicODE(Derivative(_, x: Variable), theta) if x == diffArg => Left(None)
-        case ODESystem(_, _, _) => Left(None)
-        case ODEProduct(_, _) => Left(None)
-        case _: EmptyODE => Left(None)
+        case AtomicODE(DifferentialSymbol(x), theta) if x != diffArg => result = result :+ (x, theta); Left(None)
+        case AtomicODE(DifferentialSymbol(x), theta) if x == diffArg => Left(None)
+        case ODESystem(_, _) => Left(None)
+        case DifferentialProduct(_, _) => Left(None)
       }
     }, diffSys)
     result
@@ -226,14 +227,14 @@ class JLinkMathematicaLink extends MathematicaLink {
     val primedVars = diffSys.map(_._1)
     val functionalizedTerms = diffSys.map{ case (x, theta) => ( x, functionalizeVars(theta, diffArg, primedVars:_*)) }
     val mathTerms = functionalizedTerms.map{case (x, theta) =>
-      (new MExpr(toMathematica(Derivative(Real, x)), Array[MExpr](toMathematica(diffArg))), toMathematica(theta))}
+      (new MExpr(toMathematica(DifferentialSymbol(x)), Array[MExpr](toMathematica(diffArg))), toMathematica(theta))}
     val convertedDiffSys = mathTerms.map{case (x, theta) =>
       new MExpr(MathematicaSymbols.EQUALS, Array[MExpr](x, theta))}
 
     val functions = diffSys.map(t => toMathematica(functionalizeVars(t._1, diffArg)))
 
     val initialValues = diffSys.map(t => toMathematica(
-      Equals(Real, functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), Apply(iv(t._1), Nothing))))
+      Equal(functionalizeVars(t._1, Number(BigDecimal(0)), primedVars:_*), FuncOf(iv(t._1), Nothing))))
 
     val input = new MExpr(new MExpr(Expr.SYMBOL, "DSolve"),
       Array[MExpr](
@@ -258,7 +259,7 @@ class JLinkMathematicaLink extends MathematicaLink {
     new ExpressionTraversalFunction {
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
         case v@Variable(name, idx, sort) if vars.isEmpty || vars.contains(v) =>
-          Right(Apply(Function(name, idx, arg.sort, sort), arg))
+          Right(FuncOf(Function(name, idx, arg.sort, sort), arg))
         case _ => Left(None)
       }
     }, t) match {
@@ -275,7 +276,7 @@ class JLinkMathematicaLink extends MathematicaLink {
   private def defunctionalize(f: Formula, arg: Term, fnNames: String*) = ExpressionTraversal.traverse(
     new ExpressionTraversalFunction {
       override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
-        case Apply(Function(name, idx, _, range), fnArg) if arg == fnArg
+        case FuncOf(Function(name, idx, _, range), fnArg) if arg == fnArg
           && (fnNames.isEmpty || fnNames.contains(name)) => Right(Variable(name, idx, range))
         case _ => Left(None)
       }
