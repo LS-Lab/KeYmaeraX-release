@@ -218,7 +218,7 @@ object ODETactics {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
               // TODO DiffSymbol :=
-              case Equiv(Box(ODESystem(_, _), _), Box(ODESystem(_, _), Box(Assign(DifferentialSymbol(_), _), _))) => true
+              case Equiv(Box(ODESystem(_, _), _), Box(ODESystem(_, _), Box(DiffAssign(DifferentialSymbol(_), _), _))) => true
               case _ => false
             }
 
@@ -412,14 +412,14 @@ object ODETactics {
    */
   def diffWeakenT: PositionTactic = new PositionTactic("DW differential weakening") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (s(p) match {
-      case Box(ODESystem(_, _, _), _) => true
+      case Box(ODESystem(_, _), _) => true
       case _ => false
     })
 
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Box(ODESystem(_, _, _), _) =>
+        case Box(ODESystem(_, _), _) =>
           Some(diffWeakenAxiomT(p) & abstractionT(p) & debugT("Skolemize in DiffWeaken") & (skolemizeT(p)*)
             & assertT(s => s(p) match { case Forall(_, _) => false case _ => true }, "Diff. weaken did not skolemize all quantifiers"))
         case _ => None
@@ -431,7 +431,7 @@ object ODETactics {
 
   def diffWeakenAxiomT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
-      case Box(ode@ODESystem(_, c, h), p) => Equiv(fml, Box(ode, Imply(h, p)))
+      case Box(ode@ODESystem(c, h), p) => Equiv(fml, Box(ode, Imply(h, p)))
       case _ => False
     }
     uncoverAxiomT("DW differential weakening", axiomInstance, _ => diffWeakenAxiomBaseT)
@@ -439,7 +439,7 @@ object ODETactics {
   /** Base tactic for diff weaken */
   private def diffWeakenAxiomBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(Box(ode@ODESystem(_, c, h), p), _) =>
+      case Equiv(Box(ode@ODESystem(c, h), p), _) =>
         val aP = PredOf(Function("p", None, Real, Bool), Anything)
         val aC = DifferentialProgramConst("c")
         val aH = PredOf(Function("H", None, Real, Bool), Anything)
@@ -465,7 +465,7 @@ object ODETactics {
     def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node : ProofNode) = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Box(ODESystem(_, _, _), _) =>
+        case Box(ODESystem(_, _), _) =>
           val anteLength = node.sequent.ante.length
           Some(diffCutAxiomT(diffcut)(p) & onBranch(
             (axiomUseLbl,
@@ -503,7 +503,7 @@ object ODETactics {
   /** Base tactic for differential cuts */
   private def diffCutAxiomBaseT(diffcut: Formula): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Equiv(Box(ODESystem(dist, c, h), p), _)) =>
+      case Imply(_, Equiv(Box(ODESystem(c, h), p), _)) =>
         val aC = DifferentialProgramConst("c")
         val aH = PredOf(Function("H", None, Real, Bool), Anything)
         val aP = PredOf(Function("p", None, Real, Bool), Anything)
@@ -532,7 +532,7 @@ object ODETactics {
 
   private def diffAuxiliaryBaseT(x: Variable, t: Term, s: Term, psi: Option[Formula]): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Box(ode@ODESystem(vars, c, h), p)) =>
+      case Imply(_, Box(ode@ODESystem(c, h), p)) =>
         val q = psi match { case Some(pred) => pred case None => p }
         val aP = PredOf(Function("p", None, Real, Bool), Anything)
         val aQ = PredOf(Function("q", None, Real, Bool), Anything)
@@ -688,7 +688,7 @@ object ODETactics {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         node.sequent(p) match {
-          case Box(ODESystem(_, ode, _), _) => {
+          case Box(ODESystem(ode, _), _) => {
             val n = {
               var numAtomics = 0
               ExpressionTraversal.traverse(new ExpressionTraversalFunction {
