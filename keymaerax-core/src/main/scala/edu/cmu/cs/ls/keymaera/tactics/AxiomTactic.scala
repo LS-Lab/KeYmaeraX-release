@@ -75,7 +75,7 @@ object AxiomTactic {
                 AxiomCloseT)
                 )
             ))
-          case Equals(sort, lhs, rhs) => ???
+          case Equal(lhs, rhs) => ???
         }
     }
   }
