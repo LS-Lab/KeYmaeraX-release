@@ -33,30 +33,26 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
     t match {
       // homomorphic cases
-      case Neg(s, e) if t != what => Neg(s, usubst(o, u, e))
-      case Neg(s, e) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Add(s, l, r) if t != what => Add(s, usubst(o, u, l), usubst(o, u, r))
-      case Add(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Subtract(s, l, r) if t != what => Subtract(s, usubst(o, u, l), usubst(o, u, r))
-      case Subtract(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Multiply(s, l, r) if t != what => Multiply(s, usubst(o, u, l), usubst(o, u, r))
-      case Multiply(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Divide(s, l, r) if t != what => Divide(s, usubst(o, u, l), usubst(o, u, r))
-      case Divide(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Power(s, l, r) if t != what => Power(s, usubst(o, u, l), usubst(o, u, r))
-      case Power(s, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
-      case Pair(dom, l, r) if t != what => Pair(dom, usubst(o, u, l), usubst(o, u, r))
-      case Pair(dom, l, r) if t == what && u.intersect(BindingAssessment.freeVariables(t)).isEmpty => repl
+      case Plus(l, r) if t != what => Plus(usubst(o, u, l), usubst(o, u, r))
+      case Plus(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Minus(l, r) if t != what => Minus(usubst(o, u, l), usubst(o, u, r))
+      case Minus(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Times(l, r) if t != what => Times(usubst(o, u, l), usubst(o, u, r))
+      case Times(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Divide(l, r) if t != what => Divide(usubst(o, u, l), usubst(o, u, r))
+      case Divide(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
+      case Power(l, r) if t != what => Power(usubst(o, u, l), usubst(o, u, r).asInstanceOf[Number])
+      case Power(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
-      case d: Derivative if d == what => repl
-      case d: Derivative if d != what => d
-      case app@Apply(fn, theta) if !u.contains(fn) && app == what => repl
-      case app@Apply(fn, theta) if  u.contains(fn) || app != what => Apply(fn, usubst(o, u, theta))
+      case d: Differential if d == what => repl
+      case d: Differential if d != what => d
+      case app@FuncOf(fn, theta) if !u.contains(fn) && app == what => repl
+      case app@FuncOf(fn, theta) if  u.contains(fn) || app != what => FuncOf(fn, usubst(o, u, theta))
       case Nothing => Nothing
-      case Number(_, _) if t == what => repl
-      case x: Atom => x
+      case Number(_) if t == what => repl
+      case x: Atomic => x
       case _ => throw new UnknownOperatorException("Not implemented yet", t)
     }
   }
@@ -69,35 +65,34 @@ class SubstitutionHelper(what: Term, repl: Term) {
     case Imply(l, r) => Imply(usubst(o, u, l), usubst(o, u, r))
     case Equiv(l, r) => Equiv(usubst(o, u, l), usubst(o, u, r))
 
-    case Equals(d, l, r) => Equals(d, usubst(o, u, l), usubst(o, u, r))
-    case NotEquals(d, l, r) => NotEquals(d, usubst(o, u, l), usubst(o, u, r))
-    case GreaterEqual(d, l, r) => GreaterEqual(d, usubst(o, u, l), usubst(o, u, r))
-    case GreaterThan(d, l, r) => GreaterThan(d, usubst(o, u, l), usubst(o, u, r))
-    case LessEqual(d, l, r) => LessEqual(d, usubst(o, u, l), usubst(o, u, r))
-    case LessThan(d, l, r) => LessThan(d, usubst(o, u, l), usubst(o, u, r))
+    case Equal(l, r) => Equal(usubst(o, u, l), usubst(o, u, r))
+    case NotEqual(l, r) => NotEqual(usubst(o, u, l), usubst(o, u, r))
+    case GreaterEqual(l, r) => GreaterEqual(usubst(o, u, l), usubst(o, u, r))
+    case Greater(l, r) => Greater(usubst(o, u, l), usubst(o, u, r))
+    case LessEqual(l, r) => LessEqual(usubst(o, u, l), usubst(o, u, r))
+    case Less(l, r) => Less(usubst(o, u, l), usubst(o, u, r))
 
     // binding cases add bound variables to u
     case Forall(vars, g) => Forall(vars, usubst(o ++ vars, u ++ vars, g))
     case Exists(vars, g) => Exists(vars, usubst(o ++ vars, u ++ vars, g))
 
-    case BoxModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); BoxModality(sp, usubst(q, v, g))
-    case DiamondModality(p, g) => val USR(q, v, sp) = usubst(o, u, p); DiamondModality(sp, usubst(q, v, g))
+    case Box(p, g) => val USR(q, v, sp) = usubst(o, u, p); Box(sp, usubst(q, v, g))
+    case Diamond(p, g) => val USR(q, v, sp) = usubst(o, u, p); Diamond(sp, usubst(q, v, g))
 
     // uniform substitution base cases
-    case ApplyPredicate(fn, theta) => ApplyPredicate(fn, usubst(o, u, theta))
-    case FormulaDerivative(g) => FormulaDerivative(usubst(o, u, g))
-    case x: Atom => x
+    case PredOf(fn, theta) => PredOf(fn, usubst(o, u, theta))
+    case DifferentialFormula(g) => DifferentialFormula(usubst(o, u, g))
+    case x: Atomic => x
     case _ => throw new UnknownOperatorException("Not implemented yet", f)
   }
 
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], p: Program): USR = p match {
-    case Assign(x: Variable, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
-    case Assign(d@Derivative(_, x: Variable), e) => USR(o+x, u+x, Assign(d, usubst(o, u, e)))
-    case NDetAssign(x: Variable) => USR(o+x, u+x, p)
+    case Assign(x, e) => USR(o+x, u+x, Assign(x, usubst(o, u, e)))
+    case DiffAssign(d@DifferentialSymbol(x), e) => USR(o+x, u+x, DiffAssign(d, usubst(o, u, e)))
+    case AssignAny(x) => USR(o+x, u+x, p)
     case Test(f) => USR(o, u, Test(usubst(o, u, f)))
-    case IfThen(cond, thenT) => USR(o, u, IfThen(usubst(o,u,cond), thenT)) //@todo eisegesis.
     case ode: DifferentialProgram => val x = primedVariables(ode); val sode = usubst(o, u, x, ode); USR(o++SetLattice(x), u++SetLattice(x), sode)
-    case Sequence(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Sequence(as, bs))
+    case Compose(a, b) => val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(q, v, b); USR(r, w, Compose(as, bs))
     case Choice(a, b) =>
       val USR(q, v, as) = usubst(o, u, a); val USR(r, w, bs) = usubst(o, u, b)
       USR(q.intersect(r), v++w, Choice(as, bs))
@@ -115,11 +110,9 @@ class SubstitutionHelper(what: Term, repl: Term) {
    */
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], primed: Set[NamedSymbol], p: DifferentialProgram):
       DifferentialProgram = p match {
-    case ODEProduct(a, b) => ODEProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
-    case ODESystem(d, a, h) if d.isEmpty => ODESystem(d, usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
-    case ODESystem(d, _, _) if d.nonEmpty => throw new UnknownOperatorException("Check implementation whether passing v is correct.", p)
-    case AtomicODE(d@Derivative(_, x: Variable), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
-    case _: EmptyODE => p
-    case _: DifferentialProgramConstant => p
+    case DifferentialProduct(a, b) => DifferentialProduct(usubst(o, u, primed, a), usubst(o, u, primed, b))
+    case ODESystem(a, h) => ODESystem(usubst(o, u, primed, a), usubst(o++SetLattice(primed), u++SetLattice(primed), h))
+    case AtomicODE(d@DifferentialSymbol(x), e) => AtomicODE(d, usubst(o++SetLattice(primed), u++SetLattice(primed), e))
+    case _: DifferentialProgramConst => p
   }
 }
