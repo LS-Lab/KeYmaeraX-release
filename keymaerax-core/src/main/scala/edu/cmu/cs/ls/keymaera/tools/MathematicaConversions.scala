@@ -471,6 +471,7 @@ object KeYmaeraToMathematica {
     require(t.sort == Real || t.sort == Unit, "Mathematica can only deal with reals not with sort " + t.sort)
     t match {
       case FuncOf(fn, child) => convertFnApply(fn, child)
+      case Neg(c) => new MExpr(MathematicaSymbols.MINUSSIGN, Array[MExpr](convertTerm(c)))
       case Plus(l, r) => convertAdd(l, r)
       case Minus(l, r) => convertSubtract(l, r)
       case Times(l, r) => convertMultiply(l, r)
