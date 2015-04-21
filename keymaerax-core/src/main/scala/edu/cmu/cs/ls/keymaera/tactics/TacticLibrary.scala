@@ -111,7 +111,7 @@ object TacticLibrary {
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = e match {
           case v: Variable => symbols += v; Left(None)
-          case Apply(fn: Function, _) => symbols += fn; Left(None)
+          case FuncOf(fn: Function, _) => symbols += fn; Left(None)
           case _ => Left(None)
         }
       }, f)
@@ -248,12 +248,12 @@ object TacticLibrary {
 
   def universalClosure(f: Formula): Formula = {
     val vars = NameCategorizer.freeVariables(f)
-    if(vars.isEmpty) f else vars.foldRight(f)((v, fml) => Forall(v :: Nil, fml)) //Forall(vars.toList, f)
+    if(vars.isEmpty) f else vars.foldRight(f)((v, fml) => Forall(v.asInstanceOf[Variable] :: Nil, fml)) //Forall(vars.toList, f)
   }
 
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
-      case BoxModality(_, _) => true
+      case Box(_, _) => true
       case _ => false
     })
 
@@ -262,7 +262,7 @@ object TacticLibrary {
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case b@BoxModality(prg, phi) =>
+        case b@Box(prg, phi) =>
           val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).s match {
             case Right(s) => s.to[scala.collection.immutable.Seq]
             case Left(_) => throw new IllegalArgumentException("Cannot handle non-concrete programs")
@@ -270,13 +270,13 @@ object TacticLibrary {
           val qPhi =
             if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi)
             else vars.sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
-              foldRight(phi)((v, f) => Forall(v :: Nil, f))
+              foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
-          Some(cutT(Some(Imply(qPhi, BoxModality(prg, qPhi)))) & onBranch(
+          Some(cutT(Some(Imply(qPhi, Box(prg, qPhi)))) & onBranch(
             (cutUseLbl, lastAnte(ImplyLeftT) &&(
               hideT(p) /* result */,
               cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
-                assertT(1, 1) & lastAnte(assertPT(BoxModality(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
+                assertT(1, 1) & lastAnte(assertPT(Box(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
                 assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*) &
                 assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_, _) => false case _ => true }) &
                 (AxiomCloseT | debugT("Abstraction cut use: Axiom close failed unexpectedly") & stopT)
@@ -376,8 +376,8 @@ object TacticLibrary {
           f match {
             case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
             case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
-            case BoxModality(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == fromIdx)
-            case DiamondModality(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == fromIdx)
+            case Box(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == fromIdx)
+            case Diamond(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == fromIdx)
             case _ => applicable = false
           }
           Left(Some(ExpressionTraversal.stop))
