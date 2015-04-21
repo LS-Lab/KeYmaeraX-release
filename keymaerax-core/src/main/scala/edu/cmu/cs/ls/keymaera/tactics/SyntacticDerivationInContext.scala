@@ -47,7 +47,7 @@ object SyntacticDerivationInContext {
    */
   def ImplyDerivativeT: PositionTactic with ApplicableAtFormula =
     BinaryFormulaDerivativeT("->' derive imply", Imply.unapply, deriveImply)
-  private def deriveImply(p: Formula, q: Formula) = FormulaDerivative(Or(Not(p), q))
+  private def deriveImply(p: Formula, q: Formula) = DifferentialFormula(Or(Not(p), q))
 
   /*
    * Axiom "forall' derive forall".
@@ -56,7 +56,7 @@ object SyntacticDerivationInContext {
    */
   def ForallDerivativeT: PositionTactic with ApplicableAtFormula = new PositionTactic("forall' derive forall") with ApplicableAtFormula {
     def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Forall(_, _)) => true
+      case DifferentialFormula(Forall(_, _)) => true
       case _ => false
     }
 
@@ -64,7 +64,7 @@ object SyntacticDerivationInContext {
 
     override def apply(p: Position): Tactic = {
       def axiomInstance(fml: Formula): Formula = fml match {
-        case FormulaDerivative(Forall(vars, phi)) => Equiv(fml, Forall(vars, FormulaDerivative(phi)))
+        case DifferentialFormula(Forall(vars, phi)) => Equiv(fml, Forall(vars, DifferentialFormula(phi)))
         case _ => False
       }
       uncoverAxiomT("forall' derive forall", axiomInstance, _ => ForallDerivativeBaseT)(p)
@@ -73,19 +73,19 @@ object SyntacticDerivationInContext {
   /** Base tactic for forall derivative */
   private def ForallDerivativeBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(FormulaDerivative(Forall(vars, p)), _) =>
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(DifferentialFormula(Forall(vars, p)), _) =>
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aP, p) :: Nil
     }
 
     val aX = Variable("x", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(FormulaDerivative(Forall(vars, p)), _) =>
+      case Equiv(DifferentialFormula(Forall(vars, p)), _) =>
         assert(vars.length == 1, "Only quantifiers over single variable supported")
         if (vars.head.name != aX.name || vars.head.index != aX.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(FormulaDerivative(Forall(_, _)), _) => true
+              case Equiv(DifferentialFormula(Forall(_, _)), _) => true
               case _ => false
             }
 
@@ -100,7 +100,7 @@ object SyntacticDerivationInContext {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(FormulaDerivative(Forall(vars, p)), _) =>
+      case Equiv(DifferentialFormula(Forall(vars, p)), _) =>
         assert(vars.length == 1, "Only quantifiers over single variable supported")
         if (vars.head.name != aX.name || vars.head.index != aX.index) replace(axiom)(aX, vars.head.asInstanceOf[Variable])
         else axiom
@@ -115,7 +115,7 @@ object SyntacticDerivationInContext {
    */
   def ExistsDerivativeT: PositionTactic with ApplicableAtFormula = new PositionTactic("exists' derive exists") with ApplicableAtFormula {
     def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(Exists(_, _)) => true
+      case DifferentialFormula(Exists(_, _)) => true
       case _ => false
     }
 
@@ -125,7 +125,7 @@ object SyntacticDerivationInContext {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         def axiomInstance(fml: Formula): Formula = fml match {
-          case FormulaDerivative(Exists(vars, phi)) => Equiv(fml, Forall(vars, FormulaDerivative(phi)))
+          case DifferentialFormula(Exists(vars, phi)) => Equiv(fml, Forall(vars, DifferentialFormula(phi)))
           case _ => False
         }
         Some(uncoverAxiomT("exists' derive exists", axiomInstance, _ => ExistsDerivativeBaseT)(p))
@@ -135,19 +135,19 @@ object SyntacticDerivationInContext {
   /** Base tactic for exists derivative */
   private def ExistsDerivativeBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(FormulaDerivative(Exists(vars, p)), _) =>
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+      case Equiv(DifferentialFormula(Exists(vars, p)), _) =>
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         SubstitutionPair(aP, p) :: Nil
     }
 
     val aX = Variable("x", None, Real)
     def alpha(fml: Formula): PositionTactic = fml match {
-      case Equiv(FormulaDerivative(Exists(vars, p)), _) =>
+      case Equiv(DifferentialFormula(Exists(vars, p)), _) =>
         assert(vars.length == 1, "Only quantifiers over single variable supported")
         if (vars.head.name != aX.name || vars.head.index != aX.index) {
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-              case Equiv(FormulaDerivative(Exists(_, _)), _) => true
+              case Equiv(DifferentialFormula(Exists(_, _)), _) => true
               case _ => false
             }
 
@@ -162,7 +162,7 @@ object SyntacticDerivationInContext {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
-      case Equiv(FormulaDerivative(Exists(vars, p)), _) =>
+      case Equiv(DifferentialFormula(Exists(vars, p)), _) =>
         assert(vars.length == 1, "Only quantifiers over single variable supported")
         if (vars.head.name != aX.name || vars.head.index != aX.index) replace(axiom)(aX, vars.head.asInstanceOf[Variable])
         else axiom
@@ -177,7 +177,7 @@ object SyntacticDerivationInContext {
    */
   def AndDerivativeT: PositionTactic with ApplicableAtFormula =
     BinaryFormulaDerivativeT("&' derive and", And.unapply, deriveAnd)
-  private def deriveAnd(p: Formula, q: Formula) = And(FormulaDerivative(p), FormulaDerivative(q))
+  private def deriveAnd(p: Formula, q: Formula) = And(DifferentialFormula(p), DifferentialFormula(q))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -188,7 +188,7 @@ object SyntacticDerivationInContext {
    */
   def OrDerivativeT: PositionTactic with ApplicableAtFormula =
     BinaryFormulaDerivativeT("|' derive or", Or.unapply, deriveOr)
-  private def deriveOr(p: Formula, q: Formula) = And(FormulaDerivative(p), FormulaDerivative(q))
+  private def deriveOr(p: Formula, q: Formula) = And(DifferentialFormula(p), DifferentialFormula(q))
 
   /**
    * Unapplies binary formula &, |, ->, <->
@@ -208,8 +208,8 @@ object SyntacticDerivationInContext {
     val BFUnapplier = new BinaryFormulaUnapplyer(bin)
 
     override def applies(f: Formula): Boolean = f match {
-      case FormulaDerivative(BFUnapplier(_,_)) => true
-      //      case BFUnapplier(FormulaDerivative(_), FormulaDerivative(_)) => true
+      case DifferentialFormula(BFUnapplier(_,_)) => true
+      //      case BFUnapplier(DifferentialFormula(_), DifferentialFormula(_)) => true
       case _ => false
     }
 
@@ -217,7 +217,7 @@ object SyntacticDerivationInContext {
 
     override def apply(pos: Position): Tactic = {
       def axiomInstance(fml: Formula): Formula = fml match {
-        case FormulaDerivative(BFUnapplier(p, q)) => Equiv(fml, derive(p, q))
+        case DifferentialFormula(BFUnapplier(p, q)) => Equiv(fml, derive(p, q))
         case _ => False
       }
       uncoverAxiomT(axiomName, axiomInstance, _ => BinaryFormulaDerivativeBaseT(axiomName, bin))(pos)
@@ -228,9 +228,9 @@ object SyntacticDerivationInContext {
                                                         bin: T => Option[(Formula, Formula)]) = {
     val BFUnapplier = new BinaryFormulaUnapplyer(bin)
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(FormulaDerivative(BFUnapplier(p, q)), _) =>
-        val aP = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-        val aQ = ApplyPredicate(Function("q", None, Real, Bool), Anything)
+      case Equiv(DifferentialFormula(BFUnapplier(p, q)), _) =>
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
+        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
         SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: Nil
     }
     axiomLookupBaseT(axiomName, subst, _ => NilPT, (f, ax) => ax)
@@ -246,8 +246,8 @@ object SyntacticDerivationInContext {
    * End.
    */
   def EqualsDerivativeT: PositionTactic with ApplicableAtFormula =
-    BinaryRelationDerivativeT("=' derive =", Equals.unapply, deriveEquals)
-  private def deriveEquals(s: Sort, f: Term, g: Term) = Equals(s, Derivative(f.sort, f), Derivative(g.sort, g))
+    BinaryRelationDerivativeT("=' derive =", Equal.unapply, deriveEquals)
+  private def deriveEquals(f: Term, g: Term) = Equal(Differential(f), Differential(g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -258,7 +258,7 @@ object SyntacticDerivationInContext {
    */
   def GreaterEqualDerivativeT: PositionTactic with ApplicableAtFormula =
     BinaryRelationDerivativeT(">=' derive >=", GreaterEqual.unapply, deriveGreaterEqual)
-  private def deriveGreaterEqual(s: Sort, f: Term, g: Term) = GreaterEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
+  private def deriveGreaterEqual(f: Term, g: Term) = GreaterEqual(Differential(f), Differential(g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -268,8 +268,8 @@ object SyntacticDerivationInContext {
    * End.
    */
   def GreaterThanDerivativeT: PositionTactic with ApplicableAtFormula =
-    BinaryRelationDerivativeT(">' derive >", GreaterThan.unapply, deriveGreaterThan)
-  private def deriveGreaterThan(s: Sort, f: Term, g: Term) = GreaterEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
+    BinaryRelationDerivativeT(">' derive >", Greater.unapply, deriveGreaterThan)
+  private def deriveGreaterThan(f: Term, g: Term) = GreaterEqual(Differential(f), Differential(g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -280,7 +280,7 @@ object SyntacticDerivationInContext {
    */
   def LessEqualDerivativeT: PositionTactic with ApplicableAtFormula =
     BinaryRelationDerivativeT("<=' derive <=", LessEqual.unapply, deriveLessEqual)
-  private def deriveLessEqual(s: Sort, f: Term, g: Term) = LessEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
+  private def deriveLessEqual(f: Term, g: Term) = LessEqual(Differential(f), Differential(g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -290,8 +290,8 @@ object SyntacticDerivationInContext {
    * End.
    */
   def LessThanDerivativeT : PositionTactic with ApplicableAtFormula =
-    BinaryRelationDerivativeT("<' derive <", LessThan.unapply, deriveLessThan)
-  private def deriveLessThan(s: Sort, f: Term, g: Term) = LessEqual(s, Derivative(f.sort, f), Derivative(g.sort, g))
+    BinaryRelationDerivativeT("<' derive <", Less.unapply, deriveLessThan)
+  private def deriveLessThan(f: Term, g: Term) = LessEqual(Differential(f), Differential(g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -301,8 +301,8 @@ object SyntacticDerivationInContext {
    * End.
    */
   def NotEqualsDerivativeT: PositionTactic with ApplicableAtFormula =
-    BinaryRelationDerivativeT("!=' derive !=", NotEquals.unapply, deriveNotEquals)
-  private def deriveNotEquals(s: Sort, f: Term, g: Term) = Equals(s, Derivative(f.sort, f), Derivative(g.sort, g))
+    BinaryRelationDerivativeT("!=' derive !=", NotEqual.unapply, deriveNotEquals)
+  private def deriveNotEquals(f: Term, g: Term) = Equal(Differential(f), Differential(g))
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -311,8 +311,8 @@ object SyntacticDerivationInContext {
    * @param m The unapply method, one of <, <=, =, !=, >=, or >.unapply
    * @tparam T The manifest (implicit by m).
    */
-  class BinaryRelationUnapplyer[T: Manifest](m: T => Option[(Sort, Term, Term)]) {
-    def unapply(a: Any): Option[(Sort, Term, Term)] = {
+  class BinaryRelationUnapplyer[T: Manifest](m: T => Option[(Term, Term)]) {
+    def unapply(a: Any): Option[(Term, Term)] = {
       if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
     }
   }
@@ -326,13 +326,13 @@ object SyntacticDerivationInContext {
    * @return The tactic.
    */
   def BinaryRelationDerivativeT[T: Manifest](axiomName: String,
-                                             bin: T => Option[(Sort, Term, Term)],
-                                             derive: (Sort, Term, Term) => Formula) =
+                                             bin: T => Option[(Term, Term)],
+                                             derive: (Term, Term) => Formula) =
     new PositionTactic(axiomName) with ApplicableAtFormula {
       val BRUnapplier = new BinaryRelationUnapplyer(bin)
 
       override def applies(f: Formula): Boolean = f match {
-        case FormulaDerivative(BRUnapplier(eqSort, s, t)) => true
+        case DifferentialFormula(BRUnapplier(_, _)) => true
         //      case BRDUnapplier(eqSort, Derivative(sSort, s), Derivative(tSort, t)) => true
         case _ => false
       }
@@ -343,8 +343,8 @@ object SyntacticDerivationInContext {
         override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
           def axiomInstance(fml: Formula): Formula = fml match {
-            case FormulaDerivative(BRUnapplier(eqSort, s, t)) =>
-              Equiv(fml, derive(eqSort, s, t))
+            case DifferentialFormula(BRUnapplier(s, t)) =>
+              Equiv(fml, derive(s, t))
             case _ => False
           }
           Some(uncoverAxiomT(axiomName, axiomInstance, _ => BinaryRelationDerivativeBaseT(axiomName, bin))(p))
@@ -353,12 +353,12 @@ object SyntacticDerivationInContext {
     }
   /** Base tactic for binary relation derivative */
   private def BinaryRelationDerivativeBaseT[T: Manifest](axiomName: String,
-                                                         bin: T => Option[(Sort, Term, Term)]): PositionTactic = {
+                                                         bin: T => Option[(Term, Term)]): PositionTactic = {
     val BRUnapplier = new BinaryRelationUnapplyer(bin)
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Equiv(FormulaDerivative(BRUnapplier(sort, s, t)), _) =>
-        val aF = Apply(Function("f", None, sort, sort), Anything)
-        val aG = Apply(Function("g", None, sort, sort), Anything)
+      case Equiv(DifferentialFormula(BRUnapplier(s, t)), _) =>
+        val aF = FuncOf(Function("f", None, s.sort, s.sort), Anything)
+        val aG = FuncOf(Function("g", None, t.sort, t.sort), Anything)
         SubstitutionPair(aF, s) :: SubstitutionPair(aG, t) :: Nil
 
     }
@@ -380,31 +380,31 @@ object SyntacticDerivationInContext {
   def ConstantDerivativeT = new PositionTactic("c()' derive constant fn") with ApplicableAtTerm {
     override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
     override def applies(t: Term): Boolean = t match {
-      case Derivative(Real, Number(_, _)) => true
-      case Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) => true
+      case Differential(Number(_)) => true
+      case Differential(FuncOf(Function(_, _, Unit, Real), Nothing)) => true
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
-        case t@Derivative(Real, Number(_, _)) =>
+        case t@Differential(Number(_)) =>
           val r = Number(0)
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutInContext(Equals(Real, t, r), p) & onBranch(
+          Some(cutInContext(Equal(t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(ConstantDerivativeBaseT)),
             (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
           ))
-        case t@Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)) =>
+        case t@Differential(FuncOf(Function(_, _, Unit, Real), Nothing)) =>
           val r = Number(0)
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutInContext(Equals(Real, t, r), p) & onBranch(
+          Some(cutInContext(Equal(t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(ConstantDerivativeBaseT)),
@@ -416,16 +416,16 @@ object SyntacticDerivationInContext {
 
   def ConstantDerivativeBaseT = new PositionTactic("c()' derive constant fn") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Equals(_, Derivative(Real, Number(_, _)), _) => true
-      case Equals(_, Derivative(Real, Apply(Function(_, _, Unit, Real), Nothing)), _) => true
+      case Equal(Differential(Number(_)), _) => true
+      case Equal(Differential(FuncOf(Function(_, _, Unit, Real), Nothing)), _) => true
       case _ => false
     }
 
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case fml@Equals(_, Derivative(Real, s@Number(_, _)), _) =>
-          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+        case fml@Equal(Differential(s@Number(_)), _) =>
+          val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
           val subst = List(SubstitutionPair(aC, s))
           val axiom = Axiom.axioms.get("c()' derive constant fn") match { case Some(ax) => ax }
 
@@ -434,8 +434,8 @@ object SyntacticDerivationInContext {
               lastSucc(assertPT(axiom)) &
               AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
               AxiomCloseT)
-        case fml@Equals(_, Derivative(Real, s@Apply(Function(_, _, Unit, Real), Nothing)), _) =>
-          val aC = Apply(Function("c", None, Unit, Real), Nothing)
+        case fml@Equal(Differential(s@FuncOf(Function(_, _, Unit, Real), Nothing)), _) =>
+          val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
           val subst = List(SubstitutionPair(aC, s))
           val axiom = Axiom.axioms.get("c()' derive constant fn") match { case Some(ax) => ax }
 
@@ -454,102 +454,28 @@ object SyntacticDerivationInContext {
   }
 
   /*
-   * Axiom "-' derive neg".
-   *   (-s)' = -(s')
-   * End.
-   */
-  def NegativeDerivativeT = new PositionTactic("-' derive neg") with ApplicableAtTerm {
-    override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
-    override def applies(t: Term): Boolean = t match {
-      case Derivative(_,Neg(_,_)) => true
-      //      case Neg(_,Derivative(_,_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
-      case _ => false
-    }
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
-        case t@Derivative(dSort, Neg(nSort, s)) =>
-          val r = Neg(nSort, Derivative(dSort, s))
-          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
-          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
-
-          Some(cutInContext(Equals(nSort, t, r), p) & onBranch(
-            (cutShowLbl, lastSucc(cohideT) &
-              equivalenceCongruenceT(formulaCtxPos) &
-              equationCongruenceT(termCtxPos) & lastSucc(NegativeDerivativeBaseT)),
-            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
-          ))
-      }
-    }
-  }
-
-  def NegativeDerivativeBaseT = new PositionTactic("-' derive neg") {
-    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Equals(_, Derivative(_,Neg(_,_)), _) => true
-      //      case Neg(_,Derivative(_,_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
-      case _ => false
-    }
-
-
-    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
-      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
-      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case fml@Equals(_, t@Derivative(dSort, Neg(nSort, s)), _) => {
-          val sort = nSort; assert(nSort == dSort)
-
-          val aF = Apply(Function("f", None, sort, sort), Anything)
-          val subst = List(SubstitutionPair(aF, s))
-          val axiom = Axiom.axioms.get("-' derive neg") match { case Some(f) => f }
-
-          // return tactic
-          Some(
-            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
-              lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
-        }
-        case fml@Equals(_, Neg(nSort, Derivative(dSort, s)), _) => {
-          val sort = nSort; assert(nSort == dSort)
-
-          val aF = Apply(Function("f", None, sort, sort), Anything)
-          val subst = List(SubstitutionPair(aF, s))
-          val axiom = Axiom.axioms.get("-' derive neg") match { case Some(f) => f }
-
-          // return tactic
-          Some(
-            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
-              lastSucc(assertPT(axiom)) &
-              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
-              AxiomCloseT)
-        }
-      }
-    }
-  }
-
-  /*
    * Axiom "+' derive sum".
    *  (s + t)' = (s') + (t')
    * End.
    */
-  def AddDerivativeT = BinaryDerivativeT("+' derive sum", Add.unapply, deriveSum)
-  def deriveSum(s: Sort, lhs: Term, rhs: Term): Term = Add(s, Derivative(s, lhs), Derivative(s, rhs))
+  def AddDerivativeT = BinaryDerivativeT("+' derive sum", Plus.unapply, deriveSum)
+  def deriveSum(lhs: Term, rhs: Term): Term = Plus(Differential(lhs), Differential(rhs))
 
   /*
    * Axiom "-' derive minus".
    *   (s - t)' = (s') - (t')
    * End.
    */
-  def SubtractDerivativeT = BinaryDerivativeT("-' derive minus", Subtract.unapply, deriveMinus)
-  def deriveMinus(s: Sort, lhs: Term, rhs: Term): Term = Subtract(s, Derivative(s, lhs), Derivative(s, rhs))
+  def SubtractDerivativeT = BinaryDerivativeT("-' derive minus", Minus.unapply, deriveMinus)
+  def deriveMinus(lhs: Term, rhs: Term): Term = Minus(Differential(lhs), Differential(rhs))
 
   /*
    * Axiom "*' derive product".
    * (s * t)' = ((s')*t) + (s*(t'))
    * End.
    */
-  def MultiplyDerivativeT = BinaryDerivativeT("*' derive product", Multiply.unapply, deriveProduct)
-  def deriveProduct(s: Sort, lhs: Term, rhs: Term): Term = Add(s, Multiply(s, Derivative(s, lhs), rhs), Multiply(s, lhs, Derivative(s, rhs)))
+  def MultiplyDerivativeT = BinaryDerivativeT("*' derive product", Times.unapply, deriveProduct)
+  def deriveProduct(lhs: Term, rhs: Term): Term = Plus(Times(Differential(lhs), rhs), Times(lhs, Differential(rhs)))
 
   /*
    * Axiom "/' derive quotient".
@@ -557,29 +483,29 @@ object SyntacticDerivationInContext {
    * End.
    */
   def DivideDerivativeT = BinaryDerivativeT("/' derive quotient", Divide.unapply, deriveDivision)
-  def deriveDivision(s: Sort, lhs: Term, rhs: Term): Term = Divide(s, Subtract(s, Multiply(s, Derivative(s, lhs), rhs), Multiply(s, lhs, Derivative(s, rhs))), Power(s, rhs, Number(2)))
+  def deriveDivision(lhs: Term, rhs: Term): Term = Divide(Minus(Times(Differential(lhs), rhs), Times(lhs, Differential(rhs))), Power(rhs, Number(2)))
 
   def PowerDerivativeT = BinaryDerivativeT("^' derive power", Power.unapply, deriveExponential)
-  def deriveExponential(s: Sort, lhs: Term, rhs: Term): Term = {
-    assert(rhs != Number(0), "not power 0")
-    Multiply(Real, Multiply(Real, rhs, Power(Real, lhs, Subtract(Real, rhs, Number(1)))), Derivative(Real, lhs))
+  def deriveExponential(lhs: Term, rhs: Term): Term = rhs match {
+    case Number(n) if n != BigDecimal(0) => Times(Times(rhs, Power(lhs, Number(n-1))), Differential(lhs))
+    case _ => throw new IllegalArgumentException("Cannot derive exponential with exponent " + rhs)
   }
 
-  class BinaryUnapplyer[T: Manifest](m: T => Option[(Sort, Term, Term)]) {
-    def unapply(a: Any): Option[(Sort, Term, Term)] = {
+  class BinaryUnapplyer[T: Manifest](m: T => Option[(Term, Term)]) {
+    def unapply(a: Any): Option[(Term, Term)] = {
       if (manifest[T].runtimeClass.isInstance(a)) m(a.asInstanceOf[T]) else None
     }
   }
 
   def BinaryDerivativeT[T: Manifest](axiomName: String,
-                                     bin: T => Option[(Sort, Term, Term)],
-                                     derive: (Sort, Term, Term) => Term) =
+                                     bin: T => Option[(Term, Term)],
+                                     derive: (Term, Term) => Term) =
       new PositionTactic(axiomName) with ApplicableAtTerm {
     val BUnapplyer = new BinaryUnapplyer(bin)
 
     override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
     override def applies(t: Term): Boolean = t match {
-      case Derivative(sort, BUnapplyer(sort2, _, _)) => true
+      case Differential(BUnapplyer(_, _)) => true
       //      case BUnapplyer(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
     }
@@ -587,12 +513,12 @@ object SyntacticDerivationInContext {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
-        case t@Derivative(sort, BUnapplyer(sort2, f, g)) =>
-          val r = derive(sort, f, g)
+        case t@Differential(BUnapplyer(f, g)) =>
+          val r = derive(f, g)
           val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
           val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
 
-          Some(cutInContext(Equals(sort, t, r), p) & onBranch(
+          Some(cutInContext(Equal(t, r), p) & onBranch(
             (cutShowLbl, lastSucc(cohideT) &
               equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) & lastSucc(BinaryDerivativeBaseT(axiomName, bin))),
@@ -603,10 +529,10 @@ object SyntacticDerivationInContext {
   }
 
   def BinaryDerivativeBaseT[T: Manifest](axiomName: String,
-                                         bin: T => Option[(Sort, Term, Term)]) = new PositionTactic(axiomName) {
+                                         bin: T => Option[(Term, Term)]) = new PositionTactic(axiomName) {
     val BUnapplyer = new BinaryUnapplyer(bin)
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
-      case Equals(_, Derivative(sort, BUnapplyer(sort2, _, _)), _) => sort == sort2
+      case Equal(Differential(BUnapplyer(_, _)), _) => true
       //      case BUnapplyer(_, Derivative(_,_), Derivative(_,_)) => true //@todo need tests when added.
       case _ => false
     }
@@ -615,14 +541,12 @@ object SyntacticDerivationInContext {
     override def apply(p: Position): Tactic = new ConstructionTactic(name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
-        case fml@Equals(_, Derivative(dSort, BUnapplyer(aSort, f, g)), _) => {
-          val sort = aSort; assert(dSort == aSort)
-
-          val aF = Apply(Function("f", None, sort, sort), Anything)
+        case fml@Equal(Differential(BUnapplyer(f, g)), _) => {
+          val aF = FuncOf(Function("f", None, f.sort, f.sort), Anything)
           // HACK
           val aG =
-            if (axiomName == "^' derive power") Apply(Function("c", None, Unit, Real), Nothing)
-            else Apply(Function("g", None, sort, sort), Anything)
+            if (axiomName == "^' derive power") FuncOf(Function("c", None, Unit, Real), Nothing)
+            else FuncOf(Function("g", None, g.sort, g.sort), Anything)
           val subst = SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
 
           val axiom = Axiom.axioms.get(axiomName) match { case Some(ax) => ax }
@@ -634,14 +558,12 @@ object SyntacticDerivationInContext {
               AxiomTactic.axiomT(axiomName) & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
               AxiomCloseT)
         }
-        case fml@Equals(_, BUnapplyer(aSort, Derivative(fSort, f), Derivative(gSort, g)), _) => {
-          val sort = aSort; assert(aSort == fSort && aSort == gSort)
-
-          val aF = Apply(Function("f", None, sort, sort), Anything)
+        case fml@Equal(BUnapplyer(Differential(f), Differential(g)), _) => {
+          val aF = FuncOf(Function("f", None, f.sort, f.sort), Anything)
           // HACK
           val aG =
-            if (axiomName == "^' derive power") Apply(Function("c", None, Unit, Real), Nothing)
-            else Apply(Function("g", None, sort, sort), Anything)
+            if (axiomName == "^' derive power") FuncOf(Function("c", None, Unit, Real), Nothing)
+            else FuncOf(Function("g", None, g.sort, g.sort), Anything)
           val subst = SubstitutionPair(aF, f) :: SubstitutionPair(aG, g) :: Nil
 
           val axiom = Axiom.axioms.get(axiomName) match { case Some(ax) => ax }
@@ -677,7 +599,6 @@ object SyntacticDerivationInContext {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //@todo So that when this gets refactored we're not stuck changing a bunch of stuff.
-  def NegativeDerivativeAtomizeT = NegativeDerivativeT
   def AddDerivativeAtomizeT      = AddDerivativeT
   def SubtractDerivativeAtomizeT = SubtractDerivativeT
   def MultiplyDerivativeAtomizeT = MultiplyDerivativeT
@@ -693,7 +614,6 @@ object SyntacticDerivationInContext {
    * This list of *all* the atomizing TermAxiomTactics is used in the implementation of wrapper tactics.
    */
   val termDerivativeTactics : List[PositionTactic with ApplicableAtTerm] =
-    NegativeDerivativeAtomizeT ::
       AddDerivativeAtomizeT ::
       SubtractDerivativeAtomizeT ::
       MultiplyDerivativeAtomizeT ::
@@ -723,7 +643,7 @@ object SyntacticDerivationInContext {
    * @param expression
    * @param tactic
    */
-  def findApplicablePositionForTermAxiom(expression : Expr, tactic : ApplicableAtTerm) : Option[(PosInExpr, Term)] = {
+  def findApplicablePositionForTermAxiom(expression : Expression, tactic : ApplicableAtTerm) : Option[(PosInExpr, Term)] = {
     val traversal = new ExpressionTraversalFunction {
       var mPosition : Option[PosInExpr] = None
       var mTerm : Option[Term] = None
@@ -760,9 +680,8 @@ object SyntacticDerivationInContext {
       var thePair : Option[(PosInExpr, Formula)] = None
       override def preF(p : PosInExpr, f : Formula) = {
         val matches : Boolean = f match {
-          case Modality(_,_) => true
-          case BoxModality(_,_) => true
-          case DiamondModality(_,_) => true
+          case Box(_,_) => true
+          case Diamond(_,_) => true
           case _ => false
         }
         if(matches) {thePair = Some( (p,f) ); Left(Some(ExpressionTraversal.stop))}
@@ -904,15 +823,15 @@ object SyntacticDerivationInContext {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
 
-    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expr, tactic : PositionTactic with ApplicableAtFormula) : Option[(PosInExpr, Formula)] = {
+    def findApplicablePositionForFormulaDerivativeAxiom(expression : Expression, tactic : PositionTactic with ApplicableAtFormula) : Option[(PosInExpr, Formula)] = {
       val traversal = new ExpressionTraversalFunction {
         var mPosition : Option[PosInExpr] = None
         var mFormula : Option[Formula]    = None
 
         override def preF(p:PosInExpr, f:Formula) = {
           if(tactic.applies(f)) {
-            mPosition = Some(p);
-            mFormula  = Some(f);
+            mPosition = Some(p)
+            mFormula  = Some(f)
 
             Left(Some(ExpressionTraversal.stop)) //stop once we find one applicable location.
           }
@@ -961,8 +880,8 @@ object SyntacticDerivationInContext {
 
   def MonomialAndConstantDerivationT = new PositionTactic("Derive monomial and constant") {
     override def applies(s: Sequent, p: Position): Boolean = !formulaContainsModality(s(p)).isDefined && {getTermAtPosition(s,p) match {
-      case Some(Derivative(_, Number(_))) => true
-      case Some(Derivative(_, exp:Power)) => true
+      case Some(Differential(Number(_))) => true
+      case Some(Differential(Power(_, _))) => true
       case _ => false
     }}
 
@@ -972,8 +891,8 @@ object SyntacticDerivationInContext {
   def MonomialAndConstantInContextDerivationT = new PositionTactic("Derive monomial and context in context") {
     override def applies(s: Sequent, p: Position): Boolean = {
       formulaContainsModality(s(p)).isDefined && {getTermAtPosition(s,p) match {
-        case Some(Derivative(_, Number(_))) => true
-        case Some(Derivative(_, exp:Power)) => true
+        case Some(Differential(Number(_))) => true
+        case Some(Differential(Power(_, _))) => true
         case _ => false
       }}
     }
@@ -1016,7 +935,7 @@ object SyntacticDerivationInContext {
       var containsFd = false
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preF(p: PosInExpr, frm: Formula): Either[Option[StopTraversal], Formula] = frm match {
-          case FormulaDerivative(_) => containsFd = true; Left(Some(ExpressionTraversal.stop))
+          case DifferentialFormula(_) => containsFd = true; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }
       }, f)
@@ -1030,9 +949,10 @@ object SyntacticDerivationInContext {
       var containsTd = false
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-          case Derivative(_, _: Variable) => Left(None)
-          case Derivative(_, _: Power) => Left(None)
-          case Derivative(_, _) => containsTd = true; Left(Some(ExpressionTraversal.stop))
+          case Differential(_: Variable) => Left(None)
+          case DifferentialSymbol(_) => Left(None)
+          case Differential(_: Power) => Left(None)
+          case Differential(_) => containsTd = true; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }
       }, f)
@@ -1046,8 +966,9 @@ object SyntacticDerivationInContext {
       var onlyPrimitiveDerivatives = true
       ExpressionTraversal.traverse(new ExpressionTraversalFunction {
         override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
-          case Derivative(_, _: Variable) => Left(None)
-          case Derivative(_, _) => onlyPrimitiveDerivatives = false; Left(Some(ExpressionTraversal.stop))
+          case Differential(_: Variable) => Left(None)
+          case DifferentialSymbol(_) => Left(None)
+          case Differential(_) => onlyPrimitiveDerivatives = false; Left(Some(ExpressionTraversal.stop))
           case _ => Left(None)
         }
       }, f)

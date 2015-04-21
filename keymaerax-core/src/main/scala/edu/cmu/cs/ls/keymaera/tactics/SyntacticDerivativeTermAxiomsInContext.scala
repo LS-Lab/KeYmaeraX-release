@@ -23,7 +23,6 @@ object SyntacticDerivativeTermAxiomsInContext {
       PowerDerivativeT ::
       SubtractDerivativeT ::
       AddDerivativeT ::
-      NegativeDerivativeT ::
       MultiplyDerivativeT ::
       DivideDerivativeT :: Nil
 
