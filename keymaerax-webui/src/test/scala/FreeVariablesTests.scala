@@ -22,7 +22,7 @@ class FreeVariablesTests extends FlatSpec with Matchers {
   }
 
   "Free variables of x^y" should "be {x,y}" in {
-    StaticSemantics("x^y".asTerm) should be (Set(V("x"),V("y")))
+    StaticSemantics("x^3".asTerm) should be (Set(V("x")))
   }
 
   "Free variables of x'" should "be {x}" in {

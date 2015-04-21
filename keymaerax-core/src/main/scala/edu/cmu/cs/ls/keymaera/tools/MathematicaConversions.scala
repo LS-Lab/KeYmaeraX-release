@@ -477,6 +477,7 @@ object KeYmaeraToMathematica {
       case Divide(l, r) => convertDivide(l, r)
       case Power(l, r) => convertExp(l, r)
       case Differential(c) => convertDerivative(c)
+      case DifferentialSymbol(c) => convertDerivative(c)
       case Number(n) => new MExpr(n.underlying())
       case t: Variable => convertNS(t)
     }

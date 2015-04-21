@@ -217,6 +217,7 @@ object ExpressionTraversal {
         case _: Variable => matchZero(p, f, e)
         case FuncOf(a, b) => matchOne(p, FuncOf.apply(a, _: Term), f, b)
         case Differential(a) => matchOne(p, Differential.apply(_: Term), f, a)
+        case DifferentialSymbol(a) => matchOne(p, DifferentialSymbol.apply(_: Variable), f, a)
         case Plus(a, b) => matchTwo(p, Plus.apply(_: Term, _: Term), f, a, b)
         case Minus(a, b) => matchTwo(p, Minus.apply(_: Term, _: Term), f, a, b)
         case Times(a, b) => matchTwo(p, Times.apply(_: Term, _: Term), f, a, b)
