@@ -787,21 +787,41 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       closureP    ::
       assignP     ::
       ndassignP   ::
-      normalFormEvolutionSystemP :: //@todo document this.
       testP       ::
       pvarP       ::
+      differentialSystemP ::
       contEvolvePVarP ::
       groupPseq :: groupP      ::
       Nil
 
-    //@todo after some refactoring this is now only used with normalFormEvolutionSystemP, with the actual system filtered out.
-    //If that's really the only place we need this, maybe we should move it into local scope.
-    val DifferentialProgramPPrecedence =
-      normalFormEvolutionSystemP ::
-      contEvolvePVarP            ::
-      Nil
 
-    val DifferentialProgramP : Parser[DifferentialProgram] = DifferentialProgramPPrecedence.reduce(_|_)
+    lazy val variableDerivativeP  : PackratParser[DifferentialSymbol] = {
+      log(theTermParser.variableP ~ PRIME)(PRIME + " parser") ^^ {
+        case t ~ PRIME => new DifferentialSymbol(t)
+      }
+    }
+
+    private def computeProduct(elements : List[(DifferentialSymbol, Term)]) : DifferentialProgram = {
+      if(elements.length == 1) {
+        AtomicODE(elements.head._1, elements.head._2)
+      }
+      else {
+        DifferentialProduct(AtomicODE(elements.head._1, elements.head._2), computeProduct(elements.tail))
+      }
+    }
+
+    lazy val differentialSystemP : PackratParser[DifferentialProgram] = {
+      val pattern = rep1sep(variableDerivativeP ~ (EQ ~> theTermParser.parser), COMMA) ~ (AND ~> theFormulaParser.parser).?
+      log(pattern)("Differential equation system") ^^ {
+        case elements ~ constraint => {
+          val diffProgram = computeProduct(elements.map(x => (x._1, x._2)))
+          constraint match {
+            case Some(c) => ODESystem(diffProgram, c)
+            case None => ODESystem(diffProgram, True)
+          }
+        }
+      }
+    }
 
     lazy val pvarP:PackratParser[ProgramConst] = {
       lazy val pattern = {
@@ -909,27 +929,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       lazy val pattern = variableParser ~ ASSIGN ~ KSTAR
       log(pattern)("Non-det assign") ^^ {
         case t ~ ASSIGN ~ KSTAR => new AssignAny(t)
-      }
-    }
-
-    lazy val normalFormEvolutionSystemP : PackratParser[DifferentialProgram] = {
-      /* cannot use AND ~> formulaParser because then x' = y & y' = x because "normal form", even though y' = x is not
-       * intended as an ev. dom. constraint
-       */
-      lazy val pattern = evolutionSystemP ~ (AND ~> theFormulaParser.nonDerivativeFormulaP).?
-      log(pattern)("DifferentialProgram (" + COMMA + " DifferentialProgram)*") ^^ {
-        case odes ~ f => f match {
-          case Some(h) => ODESystem(odes, h)
-          case None => ODESystem(odes, True)
-        }
-      }
-    }
-
-    lazy val evolutionSystemP : PackratParser[DifferentialProgram] = {
-      // the pattern is "everything except for another system"
-      lazy val pattern = rep1sep(DifferentialProgramPPrecedence.filter(_ != normalFormEvolutionSystemP).reduce(_|_), COMMA)
-      log(pattern)("DifferentialProgram (" + COMMA + " DifferentialProgram)*") ^^ {
-        case odes => odes.reduce((a, b) => DifferentialProduct(a, b))
       }
     }
 
