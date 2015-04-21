@@ -8,7 +8,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
  * Implementation of search tactics.
  */
 object SearchTacticsImpl {
-  def locateSubposition(p : Position, cond: Expr => Boolean = _ => true)(pT : PositionTactic) : Tactic =
+  def locateSubposition(p : Position, cond: Expression => Boolean = _ => true)(pT : PositionTactic) : Tactic =
       new ApplyPositionTactic("LocateSubposition(" + pT.name + ")", pT) {
     override def findPosition(s: Sequent): Option[Position] = {
       val fn = new ExpressionTraversalFunction {
