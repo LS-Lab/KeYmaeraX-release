@@ -68,7 +68,7 @@ class SMTLib {
 
 object SMTLib {
   def apply(desc : String, varList : String, formula : String) = {
-    var smt = new SMTLib
+    val smt = new SMTLib
     smt.setDescription(desc)
     smt.setVariableList(varList)
     smt.setFormula(formula)
@@ -79,7 +79,7 @@ object SMTLib {
 class SMTConversionException(s:String) extends Exception(s)
 
 class KeYmaeraToSMT {
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
+  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
   type SExpr = SMTLib
   private val smtLib : SExpr = new SExpr // Result
   private var existingVars : Seq[String] = Nil // List of existing variables
@@ -99,20 +99,14 @@ class KeYmaeraToSMT {
   def convertTerm(t : Term) : String = {
     require(t.sort == Real || t.sort == Unit, "SMT can only deal with reals not with sort " + t.sort)
     t match {
-      case Neg(s, c) => "(- " + convertTerm(c) + ")"
-      case Add(s, l, r) => "(+ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Subtract(s, l, r) => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Multiply(s, l, r) => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Divide(s, l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case Power(s, l, r) => convertExp(s, l, r)
-//      case Derivative(s, c) => ???
-//      case t: IfThenElseTerm => ???
-      case Number(s, n) => n.underlying().toString
-//      case t: Pair => ???
-//      case t: Right => ???
-//      case t: Left => ???
+      case Plus(l, r) => "(+ " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Minus(l, r) => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Times(l, r) => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Divide(l, r) => "(/ " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Power(l, r) => convertExp(l, r)
+      case Number(n) => n.underlying().toString
       case t: Variable => convertVariable(t)
-      case Apply(fn, _) => convertConstantFunction(fn)
+      case FuncOf(fn, _) => convertConstantFunction(fn)
       case _ => throw new SMTConversionException("Conversion of term " + t.prettyString() + " is not defined")
     }
   }
@@ -137,35 +131,28 @@ class KeYmaeraToSMT {
 
   /**
    * Convert exponentials
-   * @param s
    * @param l
    * @param r
    * @return
    */
-  def convertExp(s : Sort, l : Term, r : Term) : String = {
+  def convertExp(l : Term, r : Number) : String = {
     val base = simplifyTerm(l)
-    val index = simplifyTerm(r)
     if(base.equals(Number(0))) {
       "0"
     } else {
-      index match {
-        case Number(ss, n) =>
-          if(n.isValidInt) {
-            if(n.intValue() == 0) {
-              "1"
-            } else if(n.intValue() > 0 ) {
-              val ba : String = convertTerm(base)
-              var res : String = "(*"
-              for (i <- 0 to n.intValue()-1) {
-                res += " " + ba
-              }
-              res += ")"
-              res
-            } else throw new SMTConversionException("Cannot convert exponential " + Power(s,l,r).prettyString() + " with negative index")
-          } else throw new SMTConversionException("Cannot convert exponential " + Power(s,l,r).prettyString() + " with non-integer index")
-        case Neg(ns, Number(ss, n)) => "(/ 1. " + convertExp(s, base, Number(ss, n)) + ")"
-        case _ => throw new SMTConversionException("Conversion of exponential " + Power(s,l,r).prettyString() + " is not defined")
-      }
+      if(r.value.isValidInt) {
+        if(r.value.intValue() == 0) {
+          "1"
+        } else if (r.value.intValue() > 0 ) {
+          val ba : String = convertTerm(base)
+          var res : String = "(*"
+          for (i <- 0 to r.value.intValue()-1) {
+            res += " " + ba
+          }
+          res += ")"
+          res
+        } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString() + " with negative index")
+      } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString() + " with non-integer index")
     }
   }
 
@@ -181,12 +168,12 @@ class KeYmaeraToSMT {
       case Or(l, r) => "(or " + convertFormula(l) + " " + convertFormula(r) + ")"
       case Imply(l, r) => "(=> " + convertFormula(l) + " " + convertFormula(r) + ")"
       case Equiv(l, r) => "(equiv " + convertFormula(l) + " " + convertFormula(r) + ")"
-      case Equals(s, l, r) => "(= " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case NotEquals(s, l, r) => "(not (= " + convertTerm(l) + " " + convertTerm(r) + "))"
-      case GreaterThan(s,l,r) => "(> " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case GreaterEqual(s,l,r) => "(>= " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case LessThan(s,l,r) => "(< " + convertTerm(l) + " " + convertTerm(r) + ")"
-      case LessEqual(s,l,r) => "(<= " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Equal(l, r) => "(= " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case NotEqual(l, r) => "(not (= " + convertTerm(l) + " " + convertTerm(r) + "))"
+      case Greater(l,r) => "(> " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case GreaterEqual(l,r) => "(>= " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case Less(l,r) => "(< " + convertTerm(l) + " " + convertTerm(r) + ")"
+      case LessEqual(l,r) => "(<= " + convertTerm(l) + " " + convertTerm(r) + ")"
       case True => "true"
       case False => "false"
       case Forall(vs, ff) => convertForall(vs, ff)

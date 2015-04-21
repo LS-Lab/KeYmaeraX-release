@@ -6,7 +6,7 @@ import edu.cmu.cs.ls.keymaera.core.Term
  * Created by ran on 3/17/15.
  */
 trait SMTSolver extends QETool {
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
+  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
   type SExpr = SMTLib
 
   val k2s = new KeYmaeraToSMT
