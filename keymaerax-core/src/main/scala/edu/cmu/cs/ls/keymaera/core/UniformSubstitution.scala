@@ -222,6 +222,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case n: Number => n
         //@TODO any way of ensuring for the following that top-level(t)==top-level(\result)
          // homomorphic cases
+        case Neg(e) => Neg(usubst(e))
         case Plus(l, r) => Plus(usubst(l), usubst(r))
         case Minus(l, r) => Minus(usubst(l), usubst(r))
         case Times(l, r) => Times(usubst(l), usubst(r))
@@ -231,6 +232,8 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           require(admissible(SetLattice.top[NamedSymbol], e),
             "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")
           Differential(usubst(e))
+        // unofficial
+        case Pair(l, r) => Pair(usubst(l), usubst(r))  
       }
     } catch {
       case ex: IllegalArgumentException =>
