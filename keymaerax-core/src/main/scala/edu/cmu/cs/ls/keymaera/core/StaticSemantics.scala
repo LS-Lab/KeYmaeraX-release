@@ -95,7 +95,7 @@ object StaticSemantics {
       //case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
       // special cases
       case Differential(e) => val fv = freeVars(e); fv ++ differentialSymbols(fv)
-      //case _: Nothing | Anything => SetLattice.bottom
+      case Nothing | Anything => SetLattice.bottom
     }
   }
 
@@ -249,7 +249,7 @@ object StaticSemantics {
     //case Pair(dom, l, r) => signature(l) ++ signature(r)
     case Differential(e) => signature(e)
     // special
-    //case _: NumberObj | Nothing | Anything => Set.empty
+    case /*_: NumberObj |*/ Nothing | Anything => Set.empty
   }
 
   //ensuring (r => r.forall(f => isInstanceOf[Function](f)), "signature of term " + t + " can only be functions")
