@@ -47,6 +47,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 
   private def prettyPrinter(expressionToPrint:Expression):String = expressionToPrint match {
     //arith
+    case Neg(e) => symbolTable.NEGATIVE + recurse(e)
   	case Plus(l,r) => recInfix(l,r,expressionToPrint,symbolTable.PLUS, Some(LeftAssoc()))
     case Times(l,r) => recInfix(l,r,expressionToPrint,symbolTable.MULTIPLY, Some(LeftAssoc()))
     case Divide(l,r) => {
@@ -288,6 +289,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     val precedenceDS =
       //Terms.
       //TODO expP?
+      Neg.getClass.getCanonicalName ::
       Plus.getClass.getCanonicalName ::
       Minus.getClass.getCanonicalName ::
       Times.getClass.getCanonicalName ::

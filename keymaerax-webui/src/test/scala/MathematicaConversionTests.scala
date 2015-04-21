@@ -1,12 +1,11 @@
 import com.wolfram.jlink.Expr
-import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import testHelper.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tools._
-import java.io.File
 import java.math.BigDecimal
 import scala.collection.immutable._
+import testHelper.StringConverter._
 
 class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
@@ -93,15 +92,18 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   it should "convert arithmetic expressions correctly" in {
     ml.runUnchecked("x+y")._2 should be (Plus(x,y))
     ml.runUnchecked("x*y")._2 should be (Times(x,y))
-    ml.runUnchecked("x-1")._2 should be (Plus(Times(Number(-1), Number(1)), x)) //TODO-nrf these two tests are nasty.
+    ml.runUnchecked("x-1")._2 should be (Plus(Number(-1), x)) //TODO-nrf these three tests are nasty.
+    ml.runUnchecked("x-y")._2 should be (Plus(x, Times(Number(-1), y)))
     ml.runUnchecked("x/y")._2 should be (Times(x, Power(y,num(-1))))
     ml.runUnchecked("ForAll[{x}, x/4 == 4]")._2 shouldBe
       Forall(Seq(x),
         Equal(
-          Divide(
-            x,
-            num(4)
-          ),
+          Times(
+            Divide(
+              num(1),
+              num(4)
+            ),
+            x),
           num(4)
         )
       )
@@ -148,14 +150,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "not fail on a grab-bag of previous errors" in {
-    ml.runUnchecked("x^2 + 2x + 4")._2 shouldBe
-      Plus(
-        num(4),
-        Plus(
-          Times(num(2),x),
-          Power(x,num(2))
-        )
-      )
+    ml.runUnchecked("x^2 + 2x + 4")._2 shouldBe "4 + 2*x + x^2".asTerm
   }
 
 
@@ -206,9 +201,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   it should "convert parameterless Apply()" in {
     val in = FuncOf(Function("y", None, Unit, Real), Nothing)
-    val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
-      Array[MExpr](
-        new MExpr(Expr.SYMBOL, "KeYmaera`y")))
+    val expected = new MExpr(Expr.SYMBOL, "KeYmaera`constfn$underscore$y")
     KeYmaeraToMathematica.fromKeYmaera(in) should be (expected)
   }
 }

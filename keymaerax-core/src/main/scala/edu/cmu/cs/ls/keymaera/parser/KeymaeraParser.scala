@@ -405,7 +405,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     lazy val negativeP:SubtermParser = {
       lazy val pattern = NEGATIVE ~ asTightAsParsers(precedence, negativeP).reduce(_|_)
       log(pattern)("negate") ^^ {
-        case NEGATIVE ~ term => Times(Number(-1), term)
+        case NEGATIVE ~ term => Neg(term)
       }
     }
     
@@ -794,7 +794,6 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       contEvolvePVarP ::
       groupPseq :: groupP      ::
       Nil
-
 
     lazy val variableDerivativeP  : PackratParser[DifferentialSymbol] = {
       log(theTermParser.variableP ~ PRIME)(PRIME + " parser") ^^ {
