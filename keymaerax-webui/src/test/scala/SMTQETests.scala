@@ -1,14 +1,15 @@
 import edu.cmu.cs.ls.keymaera.core.{Z3, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tools.{SMTConversionException, Z3Solver, SMTLib}
+import edu.cmu.cs.ls.keymaera.tools.{Z3Solver, SMTLib}
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
 
 /**
  * Created by ran on 3/27/15.
+ * @author Ran Ji
  */
 class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expr
+  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
   type SExpr = SMTLib
   var smt: Z3Solver = null
 

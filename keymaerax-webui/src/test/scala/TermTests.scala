@@ -27,16 +27,16 @@ class TermTests extends FlatSpec with Matchers{
     val x = Variable("x", None, Real)
     val a = Assign(x, Number(0))
     val b = Assign(x, Number(1))
-    val p = GreaterThan(Real, x, Number(0))
-    Equiv(BoxModality(Choice(a, b), p),And(BoxModality(a, p), BoxModality(b, p)))
+    val p = Greater(x, Number(0))
+    Equiv(Box(Choice(a, b), p),And(Box(a, p), Box(b, p)))
   }
 
   def getSubst = {
     val x = Variable("x", None, Real)
     val a = Assign(x, Number(0))
     val b = Assign(x, Number(1))
-    val p = GreaterThan(Real, x, Number(0))
-    val substPairs = Seq(new SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), p), new SubstitutionPair(ProgramConstant("a"), a), new SubstitutionPair(ProgramConstant("b"), b))
+    val p = Greater(x, Number(0))
+    val substPairs = Seq(new SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), p), new SubstitutionPair(ProgramConst("a"), a), new SubstitutionPair(ProgramConst("b"), b))
     val subst = USubst(substPairs)
     Axiom.axioms.get("[++] choice") match {
       case Some(f) => (subst, Map((getTautology2, f)))
@@ -96,13 +96,13 @@ class TermTests extends FlatSpec with Matchers{
     //r.isClosed
   }
 
-  def test5(input: String, output: String) {
-    val parse = new KeYmaeraParser()
-    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
-    println(KeYmaeraPrettyPrinter.stringify(i2))
-    val form = printForm(i2)
-    writeToFile(new File(output), form)
-  }
+//  def test5(input: String, output: String) {
+//    val parse = new KeYmaeraParser()
+//    val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
+//    println(KeYmaeraPrettyPrinter.stringify(i2))
+//    val form = printForm(i2)
+//    writeToFile(new File(output), form)
+//  }
 
   def test6(input: String, output: String) {
     import TacticLibrary._
@@ -132,9 +132,9 @@ class TermTests extends FlatSpec with Matchers{
     // x>0,y=x+1,x>0&y=x+1->x+1>0 ==> x+1>0
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
-    val xp1 = Add(Real, x, Number(1))
+    val xp1 = Plus(x, Number(1))
     val zero = Number(0)
-    val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
+    val r = new RootNode(new Sequent(Nil, Vector(Greater(x, zero), Equal(y, xp1), Imply(And(Greater(x, zero), Equal(y, xp1)), Greater(xp1, zero))), Vector(Greater(xp1, zero))))
     val tactic = ((AxiomCloseT | locateSucc(indecisive(true, false, true)) | locateAnte(indecisive(true, false, true, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
 //    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -150,9 +150,9 @@ class TermTests extends FlatSpec with Matchers{
     // x>0,y=x+1,x>0&y=x+1->x+1>0 ==> x+1>0
     val x = Variable("x", None, Real)
     val y = Variable("y", None, Real)
-    val xp1 = Add(Real, x, Number(1))
+    val xp1 = Plus(x, Number(1))
     val zero = Number(0)
-    val r = new RootNode(new Sequent(Nil, Vector(GreaterThan(Real, x, zero), Equals(Real, y, xp1), Imply(And(GreaterThan(Real, x, zero), Equals(Real, y, xp1)), GreaterThan(Real, xp1, zero))), Vector(GreaterThan(Real, xp1, zero))))
+    val r = new RootNode(new Sequent(Nil, Vector(Greater(x, zero), Equal(y, xp1), Imply(And(Greater(x, zero), Equal(y, xp1)), Greater(xp1, zero))), Vector(Greater(xp1, zero))))
     val tactic = ((AxiomCloseT ~ locateSucc(indecisive(true, false, true)) ~ locateAnte(indecisive(true, false, true, true)))*)
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
 //    while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -172,7 +172,7 @@ class TermTests extends FlatSpec with Matchers{
     val master = ((AxiomCloseT | locateSucc(indecisive(false, true, true)) | locateAnte(indecisive(false, true, true))
       | locateSucc(indecisive(true, true, true)) | locateAnte(indecisive(true, true, true))
       | locateAnte(eqLeft(false)) )*) ~ quantifierEliminationT("Mathematica")
-    val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(ApplyPredicate(Function("inv", None, Unit, Bool), Nothing)))) & master
+    val tactic = locateAnte(ImplyRightT) & locateSucc(inductionT(Some(PredOf(Function("inv", None, Unit, Bool), Nothing)))) & master
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
     /*while(!(Tactics.KeYmaeraScheduler.blocked == Tactics.KeYmaeraScheduler.maxThreads && Tactics.KeYmaeraScheduler.prioList.isEmpty)) {
@@ -251,7 +251,7 @@ class TermTests extends FlatSpec with Matchers{
     val i2: Formula = parse.runParser(readFile(input)).asInstanceOf[Formula]
     println(KeYmaeraPrettyPrinter.stringify(i2))
     val r = new RootNode(new Sequent(Nil, Vector(), Vector(i2)))
-    val inv = GreaterThan(Real, Variable("x", None, Real), Number(0))
+    val inv = Greater(Variable("x", None, Real), Number(0))
     val tactic = master(new Generate(inv), true, "Mathematica")
     Tactics.KeYmaeraScheduler.dispatch(new TacticWrapper(tactic, r))
     Thread.sleep(3000)
@@ -310,105 +310,105 @@ class TermTests extends FlatSpec with Matchers{
 
   def printNamedSymbol(n: NamedSymbol): String = "\"" + n.name + (n.index match { case Some(j) => "_" + j case _ => "" }) + "\""
 
-  def printForm(formula: Formula): String = {
-    var jsonResult: String = ""
-    val fn = new ExpressionTraversalFunction {
-
-      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        jsonResult += (e match {
-          case True() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"true\"}"
-          case False() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"false\"}"
-          case ApplyPredicate(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
-          case Equals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equals\"" + ", \"children\": [ "
-          case NotEquals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"notEquals\"" + ", \"children\": [ "
-          case ProgramEquals(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"programEquals\"" + ", \"children\": [ "
-          case ProgramNotEquals(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"programNotEquals\"" + ", \"children\": [ "
-          case LessThan(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"lt\"" + ", \"children\": [ "
-          case LessEqual(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"leq\"" + ", \"children\": [ "
-          case GreaterEqual(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"geq\"" + ", \"children\": [ "
-          case GreaterThan(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"gt\"" + ", \"children\": [ "
-          case Not(a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"not\"" + ", \"children\": [ "
-          case And(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"and\"" + ", \"children\": [ "
-          case Or(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"or\"" + ", \"children\": [ "
-          case Imply(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"imply\"" + ", \"children\": [ "
-          case Equiv(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equiv\"" + ", \"children\": [ "
-          case Modality(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"modality\"" + ", \"children\": [ "
-          case Forall(v, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"forall\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
-          case Exists(v, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"exists\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
-        })
-        Left(None)
-      }
-
-      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        jsonResult += (e match {
-          case Number(s, i) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"" + i + "\"}"
-          case x@Variable(_, _, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":" + printNamedSymbol(x.asInstanceOf[Variable]) + "}"
-          case Apply(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
-          case Neg(_, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"neg\"" + ", \"children\": [ "
-          case Derivative(_, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"derivative\"" + ", \"children\": [ "
-          case Add(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"add\"" + ", \"children\": [ "
-          case Subtract(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"subtract\"" + ", \"children\": [ "
-          case Multiply(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
-          case Divide(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
-          case Power(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
-          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
-        })
-        Left(None)
-      }
-
-      override def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        jsonResult += ", "
-        Left(None)
-      }
-
-      override def inT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        jsonResult += ", "
-        Left(None)
-      }
-
-      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
-        jsonResult += (e match {
-          case ApplyPredicate(a, b) => "]}"
-          case Equals(d, a, b) => "]}"
-          case NotEquals(d, a, b) => "]}"
-          case ProgramEquals(a, b) => "]}"
-          case ProgramNotEquals(a, b) => "]}"
-          case LessThan(d, a, b) => "]}"
-          case LessEqual(d, a, b) => "]}"
-          case GreaterEqual(d, a, b) => "]}"
-          case GreaterThan(d, a, b) => "]}"
-          case Not(a) => "]}"
-          case And(a, b) => "]}"
-          case Or(a, b) => "]}"
-          case Imply(a, b) => "]}"
-          case Equiv(a, b) => "]}"
-          case Modality(a, b) => "]}"
-          case Forall(v, a) => "]}"
-          case Exists(v, a) => "]}"
-          case _ => ""
-        })
-        Left(None)
-      }
-
-      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
-        jsonResult += (e match {
-          case Apply(a, b) => "]}"
-          case Neg(_, a) => "]}"
-          case Derivative(_, a) => "]}"
-          case Add(_, a, b) => "]}"
-          case Subtract(_, a, b) => "]}"
-          case Multiply(_, a, b) => "]}"
-          case Divide(_, a, b) => "]}"
-          case Power(_, a, b) => "]}"
-          case _ =>""
-        })
-        Left(None)
-      }
-    }
-    ExpressionTraversal.traverse(fn, formula)
-    jsonResult
-  }
+//  def printForm(formula: Formula): String = {
+//    var jsonResult: String = ""
+//    val fn = new ExpressionTraversalFunction {
+//
+//      override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+//        jsonResult += (e match {
+//          case True() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"true\"}"
+//          case False() => "{ \"id\": \"" + printPos(p) + "\", \"name\": \"false\"}"
+//          case PredOf(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
+//          case Equals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equals\"" + ", \"children\": [ "
+//          case NotEquals(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"notEquals\"" + ", \"children\": [ "
+//          case ProgramEquals(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"programEquals\"" + ", \"children\": [ "
+//          case ProgramNotEquals(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"programNotEquals\"" + ", \"children\": [ "
+//          case LessThan(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"lt\"" + ", \"children\": [ "
+//          case LessEqual(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"leq\"" + ", \"children\": [ "
+//          case GreaterEqual(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"geq\"" + ", \"children\": [ "
+//          case GreaterThan(d, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"gt\"" + ", \"children\": [ "
+//          case Not(a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"not\"" + ", \"children\": [ "
+//          case And(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"and\"" + ", \"children\": [ "
+//          case Or(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"or\"" + ", \"children\": [ "
+//          case Imply(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"imply\"" + ", \"children\": [ "
+//          case Equiv(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"equiv\"" + ", \"children\": [ "
+//          case Modality(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"modality\"" + ", \"children\": [ "
+//          case Forall(v, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"forall\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
+//          case Exists(v, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"exists\", \"variables\": [" + v.map(printNamedSymbol).mkString(",") + "], \"children\": [ "
+//          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
+//        })
+//        Left(None)
+//      }
+//
+//      override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+//        jsonResult += (e match {
+//          case Number(s, i) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"" + i + "\"}"
+//          case x@Variable(_, _, _) => "{ \"id\": \"" + printPos(p) + "\", \"name\":" + printNamedSymbol(x.asInstanceOf[Variable]) + "}"
+//          case Apply(a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"apply\", \"children\": [ " + printNamedSymbol(a) + ", "
+//          case Neg(_, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"neg\"" + ", \"children\": [ "
+//          case Derivative(_, a) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"derivative\"" + ", \"children\": [ "
+//          case Add(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"add\"" + ", \"children\": [ "
+//          case Subtract(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"subtract\"" + ", \"children\": [ "
+//          case Multiply(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"multiply\"" + ", \"children\": [ "
+//          case Divide(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"divide\"" + ", \"children\": [ "
+//          case Power(_, a, b) => "{ \"id\": \"" + printPos(p) + "\", \"name\":\"Exp\"" + ", \"children\": [ "
+//          case _ => throw new UnsupportedOperationException("not implemented yet for " + KeYmaeraPrettyPrinter.stringify(e) + " type " + e.getClass)
+//        })
+//        Left(None)
+//      }
+//
+//      override def inF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+//        jsonResult += ", "
+//        Left(None)
+//      }
+//
+//      override def inT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+//        jsonResult += ", "
+//        Left(None)
+//      }
+//
+//      override def postF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+//        jsonResult += (e match {
+//          case PredOf(a, b) => "]}"
+//          case Equals(d, a, b) => "]}"
+//          case NotEquals(d, a, b) => "]}"
+//          case ProgramEquals(a, b) => "]}"
+//          case ProgramNotEquals(a, b) => "]}"
+//          case LessThan(d, a, b) => "]}"
+//          case LessEqual(d, a, b) => "]}"
+//          case GreaterEqual(d, a, b) => "]}"
+//          case GreaterThan(d, a, b) => "]}"
+//          case Not(a) => "]}"
+//          case And(a, b) => "]}"
+//          case Or(a, b) => "]}"
+//          case Imply(a, b) => "]}"
+//          case Equiv(a, b) => "]}"
+//          case Modality(a, b) => "]}"
+//          case Forall(v, a) => "]}"
+//          case Exists(v, a) => "]}"
+//          case _ => ""
+//        })
+//        Left(None)
+//      }
+//
+//      override def postT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+//        jsonResult += (e match {
+//          case Apply(a, b) => "]}"
+//          case Neg(_, a) => "]}"
+//          case Derivative(_, a) => "]}"
+//          case Add(_, a, b) => "]}"
+//          case Subtract(_, a, b) => "]}"
+//          case Multiply(_, a, b) => "]}"
+//          case Divide(_, a, b) => "]}"
+//          case Power(_, a, b) => "]}"
+//          case _ =>""
+//        })
+//        Left(None)
+//      }
+//    }
+//    ExpressionTraversal.traverse(fn, formula)
+//    jsonResult
+//  }
 
   def print(l: Seq[Formula]): String = (for(f <- l) yield KeYmaeraPrettyPrinter.stringify(f).replaceAll("\\\\", "\\\\\\\\")).mkString(",")
   def print(s: Sequent): String = print(s.ante) + " ==> " + print(s.succ)

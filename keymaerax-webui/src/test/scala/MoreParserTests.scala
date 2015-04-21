@@ -5,6 +5,7 @@ import testHelper.StringConverter._
 
 /**
  * Created by nfulton on 2/23/15.
+ * @author Nathan Fulton
  */
 class AirthmeticParserTests extends FlatSpec with Matchers {
 
@@ -15,69 +16,69 @@ class AirthmeticParserTests extends FlatSpec with Matchers {
 
 
   "Add" should "print/parse correctly -- left" in {
-    val t = Add(Real, one, Add(Real, two, three))
-    t.prettyString().asTerm.asInstanceOf[Add].left shouldBe one
+    val t = Plus(one, Plus(two, three))
+    t.prettyString().asTerm.asInstanceOf[Plus].left shouldBe one
   }
 
   it should "print/parse correctly -- right" in {
-    val t = Add(Real, Add(Real, two, three), one)
-    t.prettyString().asTerm.asInstanceOf[Add].left shouldBe Add(Real, two, three)
+    val t = Plus(Plus(two, three), one)
+    t.prettyString().asTerm.asInstanceOf[Plus].left shouldBe Plus(two, three)
   }
 
   "-" should "print/parse correctly -- left" in {
-    val t = Subtract(Real, one, Subtract(Real, two, three))
-    t.prettyString().asTerm.asInstanceOf[Subtract].left shouldBe one
+    val t = Minus(one, Minus(two, three))
+    t.prettyString().asTerm.asInstanceOf[Minus].left shouldBe one
   }
 
   it should "print/parse correctly -- right" in {
-    val t = Subtract(Real, Subtract(Real, two, three), one)
-    t.prettyString().asTerm.asInstanceOf[Subtract].left shouldBe Subtract(Real, two, three)
+    val t = Minus(Minus(two, three), one)
+    t.prettyString().asTerm.asInstanceOf[Minus].left shouldBe Minus(two, three)
   }
 
 
 
   "*" should "print/parse correctly -- left" in {
-    val t = Multiply(Real, one, Multiply(Real, two, three))
-    t.prettyString().asTerm.asInstanceOf[Multiply].left shouldBe one
+    val t = Times(one, Times(two, three))
+    t.prettyString().asTerm.asInstanceOf[Times].left shouldBe one
   }
 
   it should "print/parse correctly -- right" in {
-    val t = Multiply(Real, Multiply(Real, two, three), one)
-    t.prettyString().asTerm.asInstanceOf[Multiply].left shouldBe Multiply(Real, two, three)
+    val t = Times(Times(two, three), one)
+    t.prettyString().asTerm.asInstanceOf[Times].left shouldBe Times(two, three)
   }
 
   "/" should "print/parse correctly -- left" in {
-    val t = Divide(Real, one, Divide(Real, two, three))
+    val t = Divide(one, Divide(two, three))
     t.prettyString().asTerm.asInstanceOf[Divide].left shouldBe one
   }
 
   "-+" should "print/parse correctly -- left" in {
-    val t = Subtract(Real, one, Add(Real, one, two))
-    t.prettyString().asTerm.asInstanceOf[Subtract].left shouldBe one
+    val t = Minus(one, Plus(one, two))
+    t.prettyString().asTerm.asInstanceOf[Minus].left shouldBe one
   }
 
   "+*" should "print/parse correctly" in {
-    val t = Multiply(Real, one, Add(Real, two, three))
-    t.prettyString().asTerm.asInstanceOf[Multiply].left shouldBe one
+    val t = Times(one, Plus(two, three))
+    t.prettyString().asTerm.asInstanceOf[Times].left shouldBe one
   }
 
   it should "print/parse correctly 2" in {
-    val t = Multiply(Real, Add(Real, two, three), one)
-    t.prettyString().asTerm.asInstanceOf[Multiply].left shouldBe Add(Real, two, three)
+    val t = Times(Plus(two, three), one)
+    t.prettyString().asTerm.asInstanceOf[Times].left shouldBe Plus(two, three)
   }
 
   "1-1+x" should "print/parse correctly" in {
     val t = "1-1+x".asTerm
-    t.prettyString().asTerm.asInstanceOf[Add].left shouldBe Subtract(Real,one,one)
+    t.prettyString().asTerm.asInstanceOf[Plus].left shouldBe Minus(one,one)
   }
 
   it should "print/parse correctly -- right" in {
-    val t = Divide(Real, Divide(Real, two, three), one)
-    t.prettyString().asTerm.asInstanceOf[Divide].left shouldBe Divide(Real, two, three)
+    val t = Divide(Divide(two, three), one)
+    t.prettyString().asTerm.asInstanceOf[Divide].left shouldBe Divide(two, three)
   }
 
   it should "print/parse left assoc correctly" in {
-    val add = Divide(Real, Divide(Real, one, two), three)
+    val add = Divide(Divide(one, two), three)
     add.right should be (three)
     add.prettyString().asTerm.asInstanceOf[Divide].right shouldBe three
   }
@@ -88,17 +89,17 @@ class AirthmeticParserTests extends FlatSpec with Matchers {
 
   "pp" should "parse Add (none) correctly" in {
     val f = "1 + 2 + 3 = 6".asFormula
-    val expected = Equals(Real, Add(Real, Add(Real, one, two), three), six)
+    val expected = Equal(Plus(Plus(one, two), three), six)
     f.equals(expected) shouldBe true
   }
 
   it should "print Add (left) correctly" in {
-    val f = Equals(Real, Add(Real, Add(Real, one, two), three), six)
-    f.prettyString() shouldBe ("1+2+3=6")
+    val f = Equal(Plus(Plus(one, two), three), six)
+    f.prettyString() shouldBe "1+2+3=6"
   }
 
   it should "print Add (right) correctly" in {
-    val f = Equals(Real, Add(Real, one, Add(Real, two, three)), six)
-    f.prettyString() shouldBe ("1+(2+3)=6")
+    val f = Equal(Plus(one, Plus(two, three)), six)
+    f.prettyString() shouldBe "1+(2+3)=6"
   }
 }

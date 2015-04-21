@@ -8,8 +8,8 @@ import scala.collection.immutable._
 
 class CoreTests extends FlatSpec with Matchers {
   
-  val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-  val q = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+  val p = PredOf(Function("p", None, Unit, Bool), Nothing)
+  val q = PredOf(Function("q", None, Unit, Bool), Nothing)
 
   val sPos = SuccPosition(0)
   val aPos = AntePosition(0)
@@ -28,8 +28,8 @@ class CoreTests extends FlatSpec with Matchers {
   }
 
   "Core (Expressions)" should "yield equality" in {
-    FormulaDerivative(Equals(Real, Variable("x", None, Real), Number(0))) should be (FormulaDerivative(Equals(Real, Variable("x", None, Real), Number(0))))
-    Power(Real, Variable("x", None, Real), Number(2)) should be (Power(Real, Variable("x", None, Real), Number(Real, 2)))
+    DifferentialFormula(Equal(Variable("x", None, Real), Number(0))) should be (DifferentialFormula(Equal(Variable("x", None, Real), Number(0))))
+    Power(Variable("x", None, Real), Number(2)) should be (Power(Variable("x", None, Real), Number(2)))
   }
 
   def rootSucc(f: Formula) = new RootNode(Sequent(Nil, IndexedSeq(), IndexedSeq(f)))

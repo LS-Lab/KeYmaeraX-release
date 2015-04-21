@@ -70,25 +70,6 @@ class TermDerivationInContextTests extends TacticTestSuite {
     containsOnlyExactlyOpenGoal(node, expected) shouldBe true
   }
 
-
-  "neg" should "replace" in {
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.NegativeDerivativeT)
-    val node = helper.formulaToNode("[x':=1;](-1)'=0".asFormula)
-    val result = helper.runTactic(tactic, node)
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]-(1')=0".asFormula
-  }
-
-  it should "replace in context" in {
-    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.NegativeDerivativeT)
-    val node = helper.formulaToNode("a=b & [x':=1;](-x)'=0".asFormula)
-    val result = helper.runTactic(tactic, node)
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "a=b & [x':=1;]-(x')=0".asFormula
-  }
-
   "multiply" should "replace" in {
     val orig = helper.parseFormula("[x':=1;](a*b)'=0");
     val expected = helper.parseFormula("[x':=1;](a'*b + a*b')=0");

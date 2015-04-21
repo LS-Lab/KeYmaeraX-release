@@ -79,14 +79,14 @@ class ParserParenTests extends FlatSpec with Matchers {
       Nil
 
     for(pair <- equalPairs) {
-      val left : Expr = parser.runParser(makeInput(pair._1))
-      val right : Expr = parser.runParser(makeInput(pair._2))
+      val left : Expression = parser.runParser(makeInput(pair._1))
+      val right : Expression = parser.runParser(makeInput(pair._2))
       left should be (right)
     }
   }
 
   it should "be the case that r_0 becomes Variable(r, Some(0), Real)" in {
-    parser.runParser(makeInput("r_0 > 0")) should be (GreaterThan(Real, Variable("r", Some(0), Real), Number(0)))
+    parser.runParser(makeInput("r_0 > 0")) should be (Greater(Variable("r", Some(0), Real), Number(0)))
   }
 
   it should "fail to parse bad input" in {
@@ -182,23 +182,8 @@ class ParserParenTests extends FlatSpec with Matchers {
   val y = Variable("y", None, Real)
 
   "Random test cases from development" should "reduce systems of diffEqs correctly." in {
-    val f = helper.parseFormula("[x'=y, y'=x;]true")
-    f match {
-      case BoxModality(pi, phi) => {
-        require(phi.equals(True))
-        pi match {
-          case ODESystem(_, ODEProduct(l,r), True) => {
-            require(l.equals(AtomicODE(Derivative(Real, x), y)), "found " + l.prettyString() + " instead.")
-            r match {
-              case ODEProduct(r1, r2:EmptyODE) => {
-                require(r1.equals(AtomicODE(Derivative(Real, y), x)), "found " + r1.prettyString() + " of " + r1.getClass + " instead")
-              } //ok
-              case _ => fail()
-            }
-          }
-          case _ => fail()
-        }
-      };
-    }
+    helper.parseFormula("[x'=y, y'=x;]true") shouldBe Box(ODESystem(DifferentialProduct(
+      AtomicODE(DifferentialSymbol(x), y),
+      AtomicODE(DifferentialSymbol(y), x)), True), True)
   }
 }

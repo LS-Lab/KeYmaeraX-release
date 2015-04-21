@@ -24,15 +24,15 @@ class USubstTests extends FlatSpec with Matchers {
 
   val x = Variable("x", None, Real)
   val z = Variable("z", None, Real)
-  val p0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+  val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
   val p1 = Function("p", None, Real, Bool)
   val p1_ = Function("p_", None, Real, Bool)
   val pn = Function("p", None, Real, Bool)
   val pn_ = Function("p_", None, Real, Bool)
   val qn = Function("q", None, Real, Bool)
   val qn_ = Function("q_", None, Real, Bool)
-  val ap = ProgramConstant("a")
-  val ap_ = ProgramConstant("a_")
+  val ap = ProgramConst("a")
+  val ap_ = ProgramConst("a_")
   //val f1 = Function("f", None, Real, Real)
   val f1_ = Function("f_", None, Real, Real)
   //val g1 = Function("g", None, Real, Real)
@@ -43,12 +43,12 @@ class USubstTests extends FlatSpec with Matchers {
   val ctxf = Function("ctx_", None, Real, Bool)
 
   "Uniform substitution" should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
-    val fn = Apply(Function("f", None, Unit, Real), Nothing)
+    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
-      BoxModality("x:=f();".asProgram, ApplyPredicate(p1, "x".asTerm)),
-      ApplyPredicate(p1, fn)) // axioms.axiom("[:=])
+      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
+      PredOf(p1, fn)) // axioms.axiom("[:=])
     val conc = "[x:=x+1;]x!=x <-> x+1!=x".asFormula
-    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), NotEquals(Real, CDot, "x".asTerm)),
+    val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm), NotEqual(DotTerm, "x".asTerm)),
       SubstitutionPair(fn, "x+1".asTerm)))
     a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
@@ -56,12 +56,12 @@ class USubstTests extends FlatSpec with Matchers {
   }
   
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable for constants" taggedAs USubstTest in {
-    val fn = Apply(Function("f", None, Unit, Real), Nothing)
+    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
-      BoxModality("x:=f();".asProgram, ApplyPredicate(p1, "x".asTerm)),
-      ApplyPredicate(p1, fn)) // axioms.axiom("[:=])
+      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
+      PredOf(p1, fn)) // axioms.axiom("[:=])
     val conc = "[x:=0;]x=x <-> 0=x".asFormula
-    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1, CDot), Equals(Real, CDot, "x".asTerm)),
+    val s = USubst(Seq(SubstitutionPair(PredOf(p1, DotTerm), Equal(DotTerm, "x".asTerm)),
       SubstitutionPair(fn, "0".asTerm)))
     a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
@@ -70,30 +70,30 @@ class USubstTests extends FlatSpec with Matchers {
 
   /* TODO programs where not all branches write the same variables are not yet supported */
   ignore should "handle nontrivial binding structures" taggedAs USubstTest in {
-    val fn = Apply(Function("f", None, Unit, Real), Nothing)
+    val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
-      BoxModality("x:=f();".asProgram, ApplyPredicate(p1, "x".asTerm)),
-      ApplyPredicate(p1, fn)) // axioms.axiom("[:=])
+      Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
+      PredOf(p1, fn)) // axioms.axiom("[:=])
     val conc = "[x:=x^2;][{y:=y+1++{z:=x+z;}*}; z:=x+y*z;]y>x <-> [{y:=y+1++{z:=x^2+z;}*}; z:=x^2+y*z;]y>x^2".asFormula
 
     val y = Variable("y", None, Real)
     val z = Variable("z", None, Real)
     val s = USubst(Seq(
       // [{y:=y+1++{z:=.+z}*}; z:=.+y*z]y>.
-      SubstitutionPair(ApplyPredicate(p1, CDot), BoxModality(
-        Sequence(
+      SubstitutionPair(PredOf(p1, DotTerm), Box(
+        Compose(
           Choice(
-            Assign(y, Add(Real, y, Number(1))),
-            Loop(Assign(z, Add(Real, CDot, z)))
+            Assign(y, Plus(y, Number(1))),
+            Loop(Assign(z, Plus(DotTerm, z)))
           ),
-          Assign(z, Add(Real, CDot, Multiply(Real, y, z)))),
-        GreaterThan(Real, y, CDot))),
+          Assign(z, Plus(DotTerm, Times(y, z)))),
+        Greater(y, DotTerm))),
       SubstitutionPair(fn, "x^2".asTerm)))
     UniformSubstitutionRule(s, Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
 
   it should "clash when using vacuous all quantifier \\forall x . for a postcondition x>=0 with a free occurrence of the bound variable" taggedAs USubstTest in {
-    val fml = GreaterEqual(Real, x, Number(0))
+    val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("vacuous all quantifier")
     val conc = Forall(Seq(x), fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml)))
@@ -103,10 +103,10 @@ class USubstTests extends FlatSpec with Matchers {
   }
   
   it should "clash when using V on x:=x-1 for a postcondition x>=0 with a free occurrence of a bound variable" taggedAs USubstTest in {
-    val fml = GreaterEqual(Real, x, Number(0))
+    val fml = GreaterEqual(x, Number(0))
     val prem = Axiom.axioms("V vacuous")
-    val prog = Assign(x, Subtract(Real, x, Number(1)))
-    val conc = BoxModality(prog, fml)
+    val prog = Assign(x, Minus(x, Number(1)))
+    val conc = Box(prog, fml)
     val s = USubst(Seq(SubstitutionPair(p0, fml),
       SubstitutionPair(ap, prog)))
     a [SubstitutionClashException] should be thrownBy UniformSubstitutionRule(s,
@@ -115,7 +115,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
   
   it should "clash when using \"c()' derive constant fn\" for a substitution with free occurrences" taggedAs USubstTest in {
-    val aC = Apply(Function("c", None, Unit, Real), Nothing)
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x)'=0".asFormula
     val s = USubst(Seq(SubstitutionPair(aC, "x".asTerm)))
@@ -125,7 +125,7 @@ class USubstTests extends FlatSpec with Matchers {
   }
   
   it should "clash when using \"c()' derive constant fn\" for a substitution with free differential occurrences" taggedAs USubstTest in {
-    val aC = Apply(Function("c", None, Unit, Real), Nothing)
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
     val prem = "(c())'=0".asFormula // axioms.axiom("c()' derive constant fn")
     val conc = "(x')'=0".asFormula
     val s = USubst(Seq(SubstitutionPair(aC, "x'".asTerm)))
@@ -137,10 +137,10 @@ class USubstTests extends FlatSpec with Matchers {
   // uniform substitution of rules
 
   "Uniform substitution of rules" should "instantiate Goedel from (-x)^2>=0 (I)" taggedAs USubstTest in {
-    val fml = GreaterEqual(Real, Power(Real, Neg(Real, x), Number(2)), Number(0))
-    val prog = Assign(x, Subtract(Real, x, Number(1)))
-    val conc = BoxModality(prog, fml)
-    val s = USubst(Seq(SubstitutionPair(ApplyPredicate(p1_, Anything), fml),
+    val fml = GreaterEqual(Power(Times(Number(-1), x), Number(2)), Number(0))
+    val prog = Assign(x, Minus(x, Number(1)))
+    val conc = Box(prog, fml)
+    val s = USubst(Seq(SubstitutionPair(PredOf(p1_, Anything), fml),
       SubstitutionPair(ap_, prog)))
     AxiomaticRule("Goedel", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
@@ -150,10 +150,10 @@ class USubstTests extends FlatSpec with Matchers {
     val fml = "(-x)^2>=0".asFormula
     val prog = "x:=x-1;".asProgram
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(p1_, Anything), fml) ::
+      SubstitutionPair(PredOf(p1_, Anything), fml) ::
       SubstitutionPair(ap_, prog) :: Nil)
     AxiomaticRule("Goedel", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(BoxModality(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(prog, fml)))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
   
   it should "instantiate nontrivial binding structures in [] congruence" taggedAs USubstTest in {
@@ -164,8 +164,8 @@ class USubstTests extends FlatSpec with Matchers {
       val q_ = Function("q_", None, Real, Bool)
       val s = USubst(Seq(
         SubstitutionPair(ap_, prog),
-        SubstitutionPair(ApplyPredicate(pn_, Anything), "(-x)^2>=y".asFormula),
-        SubstitutionPair(ApplyPredicate(q_, Anything), "x^2>=y".asFormula)
+        SubstitutionPair(PredOf(pn_, Anything), "(-x)^2>=y".asFormula),
+        SubstitutionPair(PredOf(q_, Anything), "x^2>=y".asFormula)
          ))
         AxiomaticRule("[] congruence", s)(
           Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
@@ -176,15 +176,15 @@ class USubstTests extends FlatSpec with Matchers {
         val prem1 = "(-z1)^2>=z4".asFormula
         val prem2 = "z4<=z1^2".asFormula
         val prog = rand.nextProgram(randomComplexity)
-        val concLhs = BoxModality(prog, prem1)
-        val concRhs = BoxModality(prog, prem2)
+        val concLhs = Box(prog, prem1)
+        val concRhs = Box(prog, prem2)
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
            ))
           AxiomaticRule("[] monotone", s)(Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only
             Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
@@ -197,14 +197,14 @@ class USubstTests extends FlatSpec with Matchers {
         val prem2 = "z4<=z1^2".asFormula
         val prem = Equiv(prem1, prem2)
         val prog = rand.nextProgram(randomComplexity)
-        val conc = Equiv(BoxModality(prog, prem1), BoxModality(prog, prem2))
+        val conc = Equiv(Box(prog, prem1), Box(prog, prem2))
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
            ))
           AxiomaticRule("[] congruence", s)(
             Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
@@ -217,14 +217,14 @@ class USubstTests extends FlatSpec with Matchers {
         val prem2 = "z4<=z1^2".asFormula
         val prem = Equiv(prem1, prem2)
         val prog = rand.nextProgram(randomComplexity)
-        val conc = Equiv(DiamondModality(prog, prem1), DiamondModality(prog, prem2))
+        val conc = Equiv(Diamond(prog, prem1), Diamond(prog, prem2))
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
            ))
           AxiomaticRule("<> congruence", s)(
             Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
@@ -236,15 +236,15 @@ class USubstTests extends FlatSpec with Matchers {
         val prem1 = "(-z1)^2>=z4".asFormula
         val prem2 = "z4<=z1^2".asFormula
         val prog = rand.nextProgram(randomComplexity)
-        val concLhs = DiamondModality(prog, prem1)
-        val concRhs = DiamondModality(prog, prem2)
+        val concLhs = Diamond(prog, prem1)
+        val concRhs = Diamond(prog, prem2)
         println("Random precontext " + prog.prettyString)
 
         val q_ = Function("q_", None, Real, Bool)
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(ApplyPredicate(pn_, Anything), prem1),
-          SubstitutionPair(ApplyPredicate(q_, Anything), prem2)
+          SubstitutionPair(PredOf(pn_, Anything), prem1),
+          SubstitutionPair(PredOf(q_, Anything), prem2)
            ))
           AxiomaticRule("<> monotone", s)(
             Sequent(Seq(), IndexedSeq(concLhs), IndexedSeq(concRhs))) should contain only Sequent(Seq(), IndexedSeq(prem1), IndexedSeq(prem2))
@@ -255,12 +255,12 @@ class USubstTests extends FlatSpec with Matchers {
       for (i <- 1 to randomTrials) {
         val prem = "(-z1)^2>=0".asFormula
         val prog = rand.nextProgram(randomComplexity)
-        val conc = BoxModality(prog, prem)
+        val conc = Box(prog, prem)
         println("Random precontext " + prog.prettyString)
 
         val s = USubst(Seq(
           SubstitutionPair(ap_, prog),
-          SubstitutionPair(ApplyPredicate(pn_, Anything), prem)
+          SubstitutionPair(PredOf(pn_, Anything), prem)
            ))
           AxiomaticRule("Goedel", s)(
             Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
@@ -270,28 +270,28 @@ class USubstTests extends FlatSpec with Matchers {
   "Congruence rules" should "instantiate CT from y+z=z+y" taggedAs USubstTest in {
         val term1 = "y+z".asTerm
         val term2 = "z+y".asTerm
-        val fml = Equals(Real, term1, term2)
+        val fml = Equal(term1, term2)
         val s = USubst(
-          SubstitutionPair(Apply(f1_, Anything), term1) ::
-          SubstitutionPair(Apply(g1_, Anything), term2) ::
-          SubstitutionPair(Apply(ctxt, CDot), Subtract(Real, CDot, Number(5))) :: Nil)
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(FuncOf(ctxt, DotTerm), Minus(DotTerm, Number(5))) :: Nil)
         AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Subtract(Real, term1, Number(5)),
-          Subtract(Real, term2, Number(5)))))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Minus(term1, Number(5)),
+          Minus(term2, Number(5)))))
           ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
     it should "instantiate CT from y+z=z+y in more context" taggedAs USubstTest in {
         val term1 = "y+z".asTerm
         val term2 = "z+y".asTerm
-        val fml = Equals(Real, term1, term2)
+        val fml = Equal(term1, term2)
         val s = USubst(
-          SubstitutionPair(Apply(f1_, Anything), term1) ::
-          SubstitutionPair(Apply(g1_, Anything), term2) ::
-          SubstitutionPair(Apply(ctxt, CDot), Multiply(Real, Power(Real, x, Number(3)), CDot)) :: Nil)
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
         AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Multiply(Real, Power(Real, x, Number(3)), term1),
-          Multiply(Real, Power(Real, x, Number(3)), term2))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
+          Times(Power(x, Number(3)), term2))
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
@@ -299,15 +299,15 @@ class USubstTests extends FlatSpec with Matchers {
         for (i <- 1 to randomTrials) {
           val term1 = "y+z".asTerm
           val term2 = "z+y".asTerm
-          val fml = Equals(Real, term1, term2)
+          val fml = Equal(term1, term2)
           val context = rand.nextDotTerm(randomComplexity)
           println("Random context " + context.prettyString)
           val s = USubst(
-            SubstitutionPair(Apply(f1_, Anything), term1) ::
-            SubstitutionPair(Apply(g1_, Anything), term2) ::
-            SubstitutionPair(Apply(ctxt, CDot), context) :: Nil)
+            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
           AxiomaticRule("CT term congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, contextapp(context, term1), contextapp(context, term2))))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
             ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
@@ -316,15 +316,15 @@ class USubstTests extends FlatSpec with Matchers {
         for (i <- 1 to randomTrials) {
           val term1 = "z1+z3*z2".asTerm
           val term2 = "z2*z3+z1".asTerm
-          val fml = Equals(Real, term1, term2)
+          val fml = Equal(term1, term2)
           val context = rand.nextDotTerm(randomComplexity)
           println("Random context " + context.prettyString)
           val s = USubst(
-            SubstitutionPair(Apply(f1_, Anything), term1) ::
-            SubstitutionPair(Apply(g1_, Anything), term2) ::
-            SubstitutionPair(Apply(ctxt, CDot), context) :: Nil)
+            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
           AxiomaticRule("CT term congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, contextapp(context, term1), contextapp(context, term2))))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
             ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
@@ -333,15 +333,15 @@ class USubstTests extends FlatSpec with Matchers {
         for (i <- 1 to randomTrials) {
           val term1 = "z1*z3-z2".asTerm
           val term2 = "z2-z4/z1".asTerm
-          val fml = Equals(Real, term1, term2)
+          val fml = Equal(term1, term2)
           val context = rand.nextDotTerm(randomComplexity)
           println("Random context " + context.prettyString)
           val s = USubst(
-            SubstitutionPair(Apply(f1_, Anything), term1) ::
-            SubstitutionPair(Apply(g1_, Anything), term2) ::
-            SubstitutionPair(Apply(ctxt, CDot), context) :: Nil)
+            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(FuncOf(ctxt, DotTerm), context) :: Nil)
           AxiomaticRule("CT term congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, contextapp(context, term1), contextapp(context, term2))))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(contextapp(context, term1), contextapp(context, term2))))
             ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
       }
@@ -349,75 +349,75 @@ class USubstTests extends FlatSpec with Matchers {
     it should "instantiate CQ from y+z=z+y in context y>1&.<=5" taggedAs USubstTest in {
           val term1 = "y+z".asTerm
           val term2 = "z+y".asTerm
-          val fml = Equals(Real, term1, term2)
+          val fml = Equal(term1, term2)
           val y = Variable("y", None, Real)
           val s = USubst(
-            SubstitutionPair(Apply(f1_, Anything), term1) ::
-            SubstitutionPair(Apply(g1_, Anything), term2) ::
-            SubstitutionPair(ApplyPredicate(ctxf, CDot), And(GreaterThan(Real, y, Number(1)), LessEqual(Real, CDot, Number(5)))) :: Nil)
+            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(PredOf(ctxf, DotTerm), And(Greater(y, Number(1)), LessEqual(DotTerm, Number(5)))) :: Nil)
           AxiomaticRule("CQ equation congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( And(GreaterThan(Real, y, Number(1)), LessEqual(Real, term1, Number(5))),
-            And(GreaterThan(Real, y, Number(1)), LessEqual(Real, term2, Number(5)))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( And(Greater(y, Number(1)), LessEqual(term1, Number(5))),
+            And(Greater(y, Number(1)), LessEqual(term2, Number(5)))
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
         
         it should "instantiate CQ from y+z=z+y in context \\forall x .<=5" taggedAs USubstTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
-              val fml = Equals(Real, term1, term2)
+              val fml = Equal(term1, term2)
               val y = Variable("x", None, Real)
               val s = USubst(
-                SubstitutionPair(Apply(f1_, Anything), term1) ::
-                SubstitutionPair(Apply(g1_, Anything), term2) ::
-                SubstitutionPair(ApplyPredicate(ctxf, CDot), Forall(Seq(y),  LessEqual(Real, CDot, Number(5)))) :: Nil)
+                SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+                SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+                SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
               AxiomaticRule("CQ equation congruence", s)(
-                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(Real, term1, Number(5))),
-                Forall(Seq(y),  LessEqual(Real, term2, Number(5)))
+                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
+                Forall(Seq(y),  LessEqual(term2, Number(5)))
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
         ignore should "?instantiate CQ from y+z=z+y in context \\forall y .<=5" taggedAs OptimisticTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
-              val fml = Equals(Real, term1, term2)
+              val fml = Equal(term1, term2)
               val y = Variable("y", None, Real)
               val s = USubst(
-                SubstitutionPair(Apply(f1_, Anything), term1) ::
-                SubstitutionPair(Apply(g1_, Anything), term2) ::
-                SubstitutionPair(ApplyPredicate(ctxf, CDot), Forall(Seq(y),  LessEqual(Real, CDot, Number(5)))) :: Nil)
+                SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+                SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+                SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y),  LessEqual(DotTerm, Number(5)))) :: Nil)
               AxiomaticRule("CQ equation congruence", s)(
-                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(Real, term1, Number(5))),
-                Forall(Seq(y),  LessEqual(Real, term2, Number(5)))
+                Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y),  LessEqual(term1, Number(5))),
+                Forall(Seq(y),  LessEqual(term2, Number(5)))
                 )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
             }
 
             it should "instantiate CQ from y+z=z+y in context [x:=x-1]" taggedAs USubstTest in {
               val term1 = "y+z".asTerm
               val term2 = "z+y".asTerm
-                val fml = Equals(Real, term1, term2)
+                val fml = Equal(term1, term2)
                 val prog = "x:=x-1;".asProgram
                 val s = USubst(
-                  SubstitutionPair(Apply(f1_, Anything), term1) ::
-                  SubstitutionPair(Apply(g1_, Anything), term2) ::
-                  SubstitutionPair(ApplyPredicate(ctxf, CDot), Modality(BoxModality(prog), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+                  SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+                  SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+                  SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
                 AxiomaticRule("CQ equation congruence", s)(
-                  Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Modality(BoxModality(prog), GreaterEqual(Real, term1, Number(0))),
-                  Modality(BoxModality(prog), GreaterEqual(Real, term2, Number(0)))
+                  Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Box(prog, GreaterEqual(term1, Number(0))),
+                  Box(prog, GreaterEqual(term2, Number(0)))
                   )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
               }
 
   ignore should "?instantiate CQ from y+z=z+y in context [y:=y-1]" taggedAs OptimisticTest in {
     val term1 = "y+z".asTerm
     val term2 = "z+y".asTerm
-      val fml = Equals(Real, term1, term2)
+      val fml = Equal(term1, term2)
       val prog = "y:=y-1;".asProgram
       val s = USubst(
-        SubstitutionPair(Apply(f1_, Anything), term1) ::
-        SubstitutionPair(Apply(g1_, Anything), term2) ::
-        SubstitutionPair(ApplyPredicate(ctxf, CDot), Modality(BoxModality(prog), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+        SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+        SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+        SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
       AxiomaticRule("CQ equation congruence", s)(
-        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Modality(BoxModality(prog), GreaterEqual(Real, term1, Number(0))),
-        Modality(BoxModality(prog), GreaterEqual(Real, term2, Number(0)))
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
+        Box(prog, GreaterEqual(term2, Number(0)))
         )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
     }
 
@@ -425,44 +425,44 @@ class USubstTests extends FlatSpec with Matchers {
   it should "instantiate CT from z^2*y=-(-z)^2*-y+0" taggedAs USubstTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
-        val fml = Equals(Real, term1, term2)
+        val fml = Equal(term1, term2)
         val s = USubst(
-          SubstitutionPair(Apply(f1_, Anything), term1) ::
-          SubstitutionPair(Apply(g1_, Anything), term2) ::
-          SubstitutionPair(Apply(ctxt, CDot), Multiply(Real, Power(Real, x, Number(3)), CDot)) :: Nil)
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(FuncOf(ctxt, DotTerm), Times(Power(x, Number(3)), DotTerm)) :: Nil)
         AxiomaticRule("CT term congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equals(Real, Multiply(Real, Power(Real, x, Number(3)), term1),
-          Multiply(Real, Power(Real, x, Number(3)), term2))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(Times(Power(x, Number(3)), term1),
+          Times(Power(x, Number(3)), term2))
           ))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
     
       ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context \\forall y" taggedAs OptimisticTest in {
           val term1 = "z^2*y".asTerm
           val term2 = "-(-z)^2*-y+0".asTerm
-          val fml = Equals(Real, term1, term2)
+          val fml = Equal(term1, term2)
           val y = Variable("y", None, Real)
           val s = USubst(
-            SubstitutionPair(Apply(f1_, Anything), term1) ::
-            SubstitutionPair(Apply(g1_, Anything), term2) ::
-            SubstitutionPair(ApplyPredicate(ctxf, CDot), Forall(Seq(y), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+            SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+            SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+            SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(y), GreaterEqual(DotTerm, Number(0)))) :: Nil)
           AxiomaticRule("CQ equation congruence", s)(
-            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(Real, term1, Number(0))),
-            Forall(Seq(y), GreaterEqual(Real, term2, Number(0)))
+            Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Forall(Seq(y), GreaterEqual(term1, Number(0))),
+            Forall(Seq(y), GreaterEqual(term2, Number(0)))
             )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
         }
   
     ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in context [y:=y-1]" taggedAs OptimisticTest in {
         val term1 = "z^2*y".asTerm
         val term2 = "-(-z)^2*-y+0".asTerm
-        val fml = Equals(Real, term1, term2)
+        val fml = Equal(term1, term2)
         val prog = "y:=y-1;".asProgram
         val s = USubst(
-          SubstitutionPair(Apply(f1_, Anything), term1) ::
-          SubstitutionPair(Apply(g1_, Anything), term2) ::
-          SubstitutionPair(ApplyPredicate(ctxf, CDot), Modality(BoxModality(prog), GreaterEqual(Real, CDot, Number(0)))) :: Nil)
+          SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+          SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+          SubstitutionPair(PredOf(ctxf, DotTerm), Box(prog, GreaterEqual(DotTerm, Number(0)))) :: Nil)
         AxiomaticRule("CQ equation congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv( Modality(BoxModality(prog), GreaterEqual(Real, term1, Number(0))),
-          Modality(BoxModality(prog), GreaterEqual(Real, term2, Number(0)))
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, GreaterEqual(term1, Number(0))),
+          Box(prog, GreaterEqual(term2, Number(0)))
           )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
       }
   
@@ -470,11 +470,11 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
-    val context = Forall(Seq(x), CDotFormula)
+    val context = Forall(Seq(x), DotFormula)
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
-      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
-      SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
+      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     AxiomaticRule("CE congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
@@ -484,11 +484,11 @@ class USubstTests extends FlatSpec with Matchers {
     val fml1 = "x=0".asFormula
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
-    val context = Forall(Seq(x), CDotFormula)
+    val context = Forall(Seq(x), DotFormula)
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
-      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
-      SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
+      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     AxiomaticRule("CE congruence", s)(
       Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(x), fml1), Forall(Seq(x), fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
@@ -499,13 +499,13 @@ class USubstTests extends FlatSpec with Matchers {
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
     val prog = "x:=5;".asProgram
-    val context = Modality(BoxModality(prog), CDotFormula)
+    val context = Box(prog, DotFormula)
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
-      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
-      SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
+      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     AxiomaticRule("CE congruence", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Modality(BoxModality(prog), fml1), Modality(BoxModality(prog), fml2))))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -514,13 +514,13 @@ class USubstTests extends FlatSpec with Matchers {
     val fml2 = "x^2=0".asFormula
     val fml = Equiv(fml1, fml2)
     val prog = "x'=5;".asProgram  //ODESystem(Seq(), AtomicODE(Derivative(Real, x), Number(5)), True)
-    val context = Modality(BoxModality(prog), CDotFormula)
+    val context = Box(prog, DotFormula)
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
-      SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
-      SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
+      SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+      SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+      SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
     AxiomaticRule("CE congruence", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Modality(BoxModality(prog), fml1), Modality(BoxModality(prog), fml2))))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Box(prog, fml1), Box(prog, fml2))))
       ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
   }
 
@@ -528,29 +528,29 @@ class USubstTests extends FlatSpec with Matchers {
   ignore should "?instantiate CQ from z^2*y=-(-z)^2*-y+0 in complex contexts" taggedAs OptimisticTest in {
     val term1 = "z^2*y".asTerm
     val term2 = "-(-z)^2*-y+0".asTerm
-    val fml = Equals(Real, term1, term2)
+    val fml = Equal(term1, term2)
     val prog = "y:=y-1;{z:=-z+2++z:=0}".asProgram
     val u = Variable("u", None, Real)
     val s = USubst(
-      SubstitutionPair(Apply(f1_, Anything), term1) ::
-      SubstitutionPair(Apply(g1_, Anything), term2) ::
-      SubstitutionPair(ApplyPredicate(ctxf, CDot), Forall(Seq(u), Modality(BoxModality(prog), GreaterEqual(Real, CDot, u)))) :: Nil)
+      SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+      SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+      SubstitutionPair(PredOf(ctxf, DotTerm), Forall(Seq(u), Box(prog, GreaterEqual(DotTerm, u)))) :: Nil)
     AxiomaticRule("CQ equation congruence", s)(
-      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(u), Modality(BoxModality(prog), GreaterEqual(Real, term1, u))),
-      Forall(Seq(u), Modality(BoxModality(prog), GreaterEqual(Real, term2, u)))
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(Forall(Seq(u), Box(prog, GreaterEqual(term1, u))),
+      Forall(Seq(u), Box(prog, GreaterEqual(term2, u)))
       )))) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
      }
   
    it should "instantiate CQ from z^2*y=-(-z)^2*-y+0 in random contexts" taggedAs USubstTest in {
        val term1 = "z^2*y".asTerm
        val term2 = "-(-z)^2*-y+0".asTerm
-       val fml = Equals(Real, term1, term2)
+       val fml = Equal(term1, term2)
        val context = rand.nextDotFormula(randomComplexity)
        println("Random context " + context.prettyString)
        val s = USubst(
-         SubstitutionPair(Apply(f1_, Anything), term1) ::
-         SubstitutionPair(Apply(g1_, Anything), term2) ::
-         SubstitutionPair(ApplyPredicate(ctxf, CDot), context) :: Nil)
+         SubstitutionPair(FuncOf(f1_, Anything), term1) ::
+         SubstitutionPair(FuncOf(g1_, Anything), term2) ::
+         SubstitutionPair(PredOf(ctxf, DotTerm), context) :: Nil)
        AxiomaticRule("CQ equation congruence", s)(
          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, term1), contextapp(context, term2))))
          ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
@@ -563,9 +563,9 @@ class USubstTests extends FlatSpec with Matchers {
       val context = rand.nextDotFormula(randomComplexity)
       println("Random context " + context.prettyString)
       val s = USubst(
-        SubstitutionPair(ApplyPredicate(pn_, Anything), fml1) ::
-        SubstitutionPair(ApplyPredicate(qn_, Anything), fml2) ::
-        SubstitutionPair(ApplyPredicational(ctx, CDotFormula), context) :: Nil)
+        SubstitutionPair(PredOf(pn_, Anything), fml1) ::
+        SubstitutionPair(PredOf(qn_, Anything), fml2) ::
+        SubstitutionPair(PredicationalOf(ctx, DotFormula), context) :: Nil)
       AxiomaticRule("CE congruence", s)(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(contextapp(context, fml1), contextapp(context, fml2))))
         ) should be (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(fml))))
@@ -573,14 +573,14 @@ class USubstTests extends FlatSpec with Matchers {
 
  // apply given context to the given argument
   def contextapp(context: Term, arg: Term) : Term =
-   USubst(SubstitutionPair(CDot, arg) :: Nil)(context)
+   USubst(SubstitutionPair(DotTerm, arg) :: Nil)(context)
 
   def contextapp(context: Formula, arg: Term) : Formula =
-    USubst(SubstitutionPair(CDot, arg) :: Nil)(context)
+    USubst(SubstitutionPair(DotTerm, arg) :: Nil)(context)
   
   def contextapp(context: Formula, arg: Formula) : Formula = {
     val mycontext = Function("dottingC__", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC__", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
 
-    USubst(SubstitutionPair(ApplyPredicational(mycontext, CDotFormula), context) :: Nil)(ApplyPredicational(mycontext, arg))
+    USubst(SubstitutionPair(PredicationalOf(mycontext, DotFormula), context) :: Nil)(PredicationalOf(mycontext, arg))
   }
 }

@@ -23,7 +23,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
   val zero = Number(new BigDecimal("0"))
 
-  def num(n : Integer) = Number(new BigDecimal(n.toString()))
+  def num(n : Integer) = Number(new BigDecimal(n.toString))
   def snum(n : String) = Number(new BigDecimal(n))
 
   override def beforeEach() = {
@@ -43,30 +43,30 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
    "Mathematica -> KeYmaera" should "convert simple quantifiers" in {
     val f = True //TODO handle true and false!
     ml.runUnchecked("ForAll[{x}, x==x]")._2 should be (True)
-    ml.runUnchecked("Exists[{x}, x==0]")._2 should be (Exists(Seq(x), Equals(Real,x,zero)))
-    ml.runUnchecked("ForAll[x, x==0]")._2 should be (Forall(Seq(x), Equals(Real, x, zero)))
+    ml.runUnchecked("Exists[{x}, x==0]")._2 should be (Exists(Seq(x), Equal(x,zero)))
+    ml.runUnchecked("ForAll[x, x==0]")._2 should be (Forall(Seq(x), Equal(x, zero)))
     //TODO-nrf polynomials?
     //TODO-nrf truth functions?
   }
 
   it should "convert equalities and inequalities" in {
-    ml.runUnchecked("x == y")._2 should be (Equals(Real, x, y))
-    ml.runUnchecked("x == 0")._2 should be (Equals(Real, x, zero))
+    ml.runUnchecked("x == y")._2 should be (Equal(x, y))
+    ml.runUnchecked("x == 0")._2 should be (Equal(x, zero))
 
-    ml.runUnchecked("x != y")._2 should be (NotEquals(Real, x, y))
-    ml.runUnchecked("x != 0")._2 should be (NotEquals(Real, x, zero))
+    ml.runUnchecked("x != y")._2 should be (NotEqual(x, y))
+    ml.runUnchecked("x != 0")._2 should be (NotEqual(x, zero))
 
-    ml.runUnchecked("x > y")._2 should be (GreaterThan(Real, x, y))
-    ml.runUnchecked("x > 0")._2 should be (GreaterThan(Real, x, zero))
+    ml.runUnchecked("x > y")._2 should be (Greater(x, y))
+    ml.runUnchecked("x > 0")._2 should be (Greater(x, zero))
 
-    ml.runUnchecked("x >= y")._2 should be (GreaterEqual(Real, x, y))
-    ml.runUnchecked("x >= 0")._2 should be (GreaterEqual(Real, x, zero))
+    ml.runUnchecked("x >= y")._2 should be (GreaterEqual(x, y))
+    ml.runUnchecked("x >= 0")._2 should be (GreaterEqual(x, zero))
 
-    ml.runUnchecked("x < y")._2 should be (LessThan(Real, x, y))
-    ml.runUnchecked("x < 0")._2 should be (LessThan(Real, x, zero))
+    ml.runUnchecked("x < y")._2 should be (Less(x, y))
+    ml.runUnchecked("x < 0")._2 should be (Less(x, zero))
 
-    ml.runUnchecked("x <= y")._2 should be (LessEqual(Real, x, y))
-    ml.runUnchecked("x <= 0")._2 should be (LessEqual(Real, x, zero))
+    ml.runUnchecked("x <= y")._2 should be (LessEqual(x, y))
+    ml.runUnchecked("x <= 0")._2 should be (LessEqual(x, zero))
   }
 
   it should "do math" in {
@@ -77,12 +77,12 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "not choke on rationals" in {
-    ml.runUnchecked("2/5")._2 should be (Divide(Real, num(2), num(5)))
+    ml.runUnchecked("2/5")._2 should be (Divide(num(2), num(5)))
   }
 
   //The second thing causes a choke.
   ignore should "not choke on other reasonable numbers" in {
-    ml.runUnchecked("Rationalize[0.5/10]")._2 should be (Divide(Real,num(1),num(20)))
+    ml.runUnchecked("Rationalize[0.5/10]")._2 should be (Divide(num(1),num(20)))
     ml.runUnchecked(".25/10")._2
   }
 
@@ -91,24 +91,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert arithmetic expressions correctly" in {
-    ml.runUnchecked("x+y")._2 should be (Add(Real,x,y))
-    ml.runUnchecked("x*y")._2 should be (Multiply(Real,x,y))
-    ml.runUnchecked("x-1")._2 should be (Add(Real,Neg(Real,num(1)),x)) //TODO-nrf these two tests are nasty.
-    ml.runUnchecked("x/y")._2 should be (Multiply(Real, x, Power(Real, y,num(-1))))
-    ml.runUnchecked("ForAll[{x}, x/4 == 4]")._2 should be
-    (
+    ml.runUnchecked("x+y")._2 should be (Plus(x,y))
+    ml.runUnchecked("x*y")._2 should be (Times(x,y))
+    ml.runUnchecked("x-1")._2 should be (Plus(Times(Number(-1), Number(1)), x)) //TODO-nrf these two tests are nasty.
+    ml.runUnchecked("x/y")._2 should be (Times(x, Power(y,num(-1))))
+    ml.runUnchecked("ForAll[{x}, x/4 == 4]")._2 shouldBe
       Forall(Seq(x),
-        Equals(
-          Real,
+        Equal(
           Divide(
-            Real,
             x,
             num(4)
           ),
           num(4)
         )
       )
-    )
   }
 
   ignore should "convert inverse functions correctly" in {
@@ -120,20 +116,20 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert rules correctly" in {
-    ml.runUnchecked("Rule[x,y]")._2 should be (Equals(Real, x, y))
-    ml.runUnchecked("Rule[x[y],y]")._2 should be (Equals(Real, Apply(xFn, y), y))
-    ml.runUnchecked("{{Rule[x,y]}}")._2 should be (Equals(Real, x, y))
-    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")._2 should be (And(Equals(Real, x, y), Equals(Real, y, x)))
-    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}, {Rule[x[y],y]}}")._2 should be
-      (Or(And(Equals(Real, x, y), Equals(Real, y, x)), Equals(Real, Apply(xFn, y), y)))
+    ml.runUnchecked("Rule[x,y]")._2 should be (Equal(x, y))
+    ml.runUnchecked("Rule[x[y],y]")._2 should be (Equal(FuncOf(xFn, y), y))
+    ml.runUnchecked("{{Rule[x,y]}}")._2 should be (Equal(x, y))
+    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}}")._2 should be (And(Equal(x, y), Equal(y, x)))
+    ml.runUnchecked("{{Rule[x,y], Rule[y,x]}, {Rule[x[y],y]}}")._2 shouldBe
+      Or(And(Equal(x, y), Equal(y, x)), Equal(FuncOf(xFn, y), y))
   }
 
   it should "convert names correctly" in {
     ml.runUnchecked("x")._2 should be (x)
-    ml.runUnchecked("x[y]")._2 should be (Apply(Function("x", None, Real, Real), Variable("y", None, Real)))
+    ml.runUnchecked("x[y]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y", None, Real)))
     ml.runUnchecked("x$underscore$0")._2 should be (Variable("x_0", None, Real))
     ml.runUnchecked("x$underscore$0$underscore$1")._2 should be (Variable("x_0_1", None, Real))
-    ml.runUnchecked("x[y$underscore$0]")._2 should be (Apply(Function("x", None, Real, Real), Variable("y_0", None, Real)))
+    ml.runUnchecked("x[y$underscore$0]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real)))
   }
 
   it should "convert Boolean Algebra correctly" in {
@@ -143,53 +139,49 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     //any reduction, but Mathematica's semantics are from from clear and in
     //future versions (or previous versions) these expressions might actually
     //evaluate
-    ml.runUnchecked("x==y && y==x")._2 should be (And(Equals(Real,x,y),Equals(Real, y,x))) //TODO-nrf what about sorts?!
-    ml.runUnchecked("x==y || y==x")._2 should be (Or(Equals(Real,x,y),Equals(Real,y,x)))
-    ml.runUnchecked("!(x==y && y==x)")._2 should be (Not(And(Equals(Real,x,y),Equals(Real,y,x))))
+    ml.runUnchecked("x==y && y==x")._2 should be (And(Equal(x,y),Equal(y,x)))
+    ml.runUnchecked("x==y || y==x")._2 should be (Or(Equal(x,y),Equal(y,x)))
+    ml.runUnchecked("!(x==y && y==x)")._2 should be (Not(And(Equal(x,y),Equal(y,x))))
 
     //ml.runUnchecked("x==y -> y==z") should be (Imply(Equals(Real,x,y),Equals(Real,y,z)))
     //ml.runUnchecked("x==y <-> y==z") should be(Equiv(Equals(Real,x,y),Equals(Real,y,z)))
   }
 
   it should "not fail on a grab-bag of previous errors" in {
-    ml.runUnchecked("x^2 + 2x + 4")._2 should be
-    (
-      Add(
-        Real,
+    ml.runUnchecked("x^2 + 2x + 4")._2 shouldBe
+      Plus(
         num(4),
-        Add(
-          Real,
-          Multiply(Real,num(2),x),
-          Power(Real,x,num(2))
+        Plus(
+          Times(num(2),x),
+          Power(x,num(2))
         )
       )
-    )
   }
 
 
   object round {
-    def trip(e: edu.cmu.cs.ls.keymaera.core.Expr) = roundTrip(e) should be (e)
+    def trip(e: edu.cmu.cs.ls.keymaera.core.Expression) = roundTrip(e) should be (e)
 
-    def roundTrip(e : edu.cmu.cs.ls.keymaera.core.Expr) = {
+    def roundTrip(e : edu.cmu.cs.ls.keymaera.core.Expression) = {
       val math = KeYmaeraToMathematica.fromKeYmaera(e)
       ml.run(math)._2
     }
   }
 
   "Mathematica -> KeYmaera" should "convert inequalities" in {
-    round trip Forall(Seq(x), GreaterThan(Real,x,y))
-    round trip Forall(Seq(x), GreaterEqual(Real,x,y))
-    round trip Forall(Seq(x), LessEqual(Real,x,y))
-    round trip Forall(Seq(x), LessThan(Real,x,y))
+    round trip Forall(Seq(x), Greater(x,y))
+    round trip Forall(Seq(x), GreaterEqual(x,y))
+    round trip Forall(Seq(x), LessEqual(x,y))
+    round trip Forall(Seq(x), Less(x,y))
   }
 
   it should "convert parameterless Apply()" in {
-    round trip Apply(Function("x", None, Unit, Real), Nothing)
+    round trip FuncOf(Function("x", None, Unit, Real), Nothing)
   }
 
   it should "convert Apply()" in {
-    round trip Apply(Function("x", None, Real, Real), Number(0))
-    round trip Apply(Function("x", None, Real, Real), Variable("y", None, Real))
+    round trip FuncOf(Function("x", None, Real, Real), Number(0))
+    round trip FuncOf(Function("x", None, Real, Real), Variable("y", None, Real))
   }
 
   "KeYmaera <-> Mathematica converters" should "commute" in {
@@ -200,11 +192,11 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
     round trip Variable("_", None, Real)
     round trip Variable("x_0_1", None, Real)
     round trip Variable("_x_0", None, Real)
-    round trip Apply(Function("x", None, Real, Real), Variable("y_0", None, Real))
+    round trip FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real))
   }
 
   "KeYmaera -> Mathematica" should "convert Apply" in {
-    val in = Apply(Function("y", None, Real, Real), Variable("x", None, Real))
+    val in = FuncOf(Function("y", None, Real, Real), Variable("x", None, Real))
     val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
       Array[MExpr](
         new MExpr(Expr.SYMBOL, "KeYmaera`y"),
@@ -213,7 +205,7 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   }
 
   it should "convert parameterless Apply()" in {
-    val in = Apply(Function("y", None, Unit, Real), Nothing)
+    val in = FuncOf(Function("y", None, Unit, Real), Nothing)
     val expected = new MExpr(new MExpr(Expr.SYMBOL, "Apply"),
       Array[MExpr](
         new MExpr(Expr.SYMBOL, "KeYmaera`y")))

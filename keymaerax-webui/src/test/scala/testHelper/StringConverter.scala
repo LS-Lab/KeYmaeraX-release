@@ -14,7 +14,7 @@ object StringConverter {
 }
 
 class StringConverter(val s: String) {
-  def asExpr: Expr = new KeYmaeraParser().parseBareExpression(s) match {
+  def asExpr: Expression = new KeYmaeraParser().parseBareExpression(s) match {
     case Some(e) => e
     case None => throw new IllegalArgumentException(s + " is not an Expr")
   }
@@ -26,10 +26,14 @@ class StringConverter(val s: String) {
     case Some(t) => t.asInstanceOf[NamedSymbol]
     case None => throw new IllegalArgumentException(s + " is not a Term")
   }
+  def asVariable: Variable = new KeYmaeraParser().parseBareTerm(s) match {
+    case Some(t) => t.asInstanceOf[Variable]
+    case None => throw new IllegalArgumentException(s + " is not a Variable")
+  }
   def asFormula: Formula = new KeYmaeraParser().parseBareFormulaUnquantified(s)
 
   def asProgram: Program = new KeYmaeraParser().parseBareExpression("[" + s + "] true") match {
-    case Some(BoxModality(p, f)) => p
+    case Some(Box(p, f)) => p
     case None => throw new IllegalArgumentException(s + " is not a Program")
   }
 }

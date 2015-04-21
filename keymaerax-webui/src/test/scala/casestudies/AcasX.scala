@@ -97,12 +97,12 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               // goal 90
               la(instantiateT(Variable("t", None, Real),
                 // t_22+t_23: k4_t_5 == t_22, t_0 == t_23
-                Add(Real, Variable("k4_t", Some(5), Real), Variable("t", Some(0), Real)))) &
+                Plus(Variable("k4_t", Some(5), Real), Variable("t", Some(0), Real)))) &
               la(instantiateT(Variable("ro", None, Real),
                 // rv*(t_22+t_23)
-                Multiply(Real,
+                Times(
                   Variable("rv", None, Real),
-                  Add(Real, Variable("k4_t", Some(5), Real), Variable("t", Some(0), Real)))
+                  Plus(Variable("k4_t", Some(5), Real), Variable("t", Some(0), Real)))
                 )) &
               // here we'd also want to access symbols created during the proof
               // CUT 1: (0 <= t_0+k4_t_5 & t_0+k4_t_5 < Max(0, w*(dhf-dhd))/a) | t_0+k4_t_5 >= Max(0, w*(dhf-dhd))/a

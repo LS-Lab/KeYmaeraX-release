@@ -32,7 +32,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    * @param s
    * @return Some result of parse on success, or None
    */
-  def parse(s:String) : Option[Expr] = new KeYmaeraParser().parseBareExpression(s)
+  def parse(s:String) : Option[Expression] = new KeYmaeraParser().parseBareExpression(s)
 
 
   /**
@@ -44,7 +44,7 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
     parse(s) match {
       case Some(e) => e match {
         case t:Term => t
-        case _ => throw new Exception("Expected to find a term but found something else: " + e.getClass())
+        case _ => throw new Exception("Expected to find a term but found something else: " + e.getClass)
       }
       case None => throw new Exception("Parse failed. Tried to parse: " + s)
     }
@@ -57,9 +57,9 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    */
   def parseBareProgram(s : String) : Option[Program] = {
     //approach: add a modality around the bare program, parse the valid expression, extract the program.
-    val result = new KeYmaeraParser().parseBareExpression("[" + s + "] 1>0");
+    val result = new KeYmaeraParser().parseBareExpression("[" + s + "] 1>0")
     result match {
-      case Some(BoxModality(program, formula)) => Some(program)
+      case Some(Box(program, formula)) => Some(program)
       case _ => None
     }
   }
@@ -70,15 +70,11 @@ class ProvabilityTestHelper(logger : String => Unit = (x:String) => ()) {
    * @return
    */
   def parseFormula(s:String) = {
-    val parseResult : Option[Expr] = parse(s);
+    val parseResult : Option[Expression] = parse(s)
     parseResult match {
-      case Some(expr) => {
-        if(expr.isInstanceOf[Formula]) {
-          expr.asInstanceOf[Formula]
-        }
-        else {
-          throw new Exception("Expected a formula but found something else.")
-        }
+      case Some(expr) => expr match {
+        case f: Formula => f
+        case _ =>  throw new Exception("Expected a formula but found something else.")
       }
       case None => throw new Exception("Failed to parse.")
     }

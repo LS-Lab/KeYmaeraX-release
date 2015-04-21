@@ -23,10 +23,10 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val zero = Number(new BigDecimal("0"))
   val one = Number(new BigDecimal("1"))
 
-  val xgeq0 = GreaterEqual(Real, x, zero)
-  val xgt0 = GreaterThan(Real, x, zero)
-  val xplus1 = Add(Real, x, one)
-  val xplus1gtx = GreaterThan(Real, xplus1, x)
+  val xgeq0 = GreaterEqual(x, zero)
+  val xgt0 = Greater(x, zero)
+  val xplus1 = Plus(x, one)
+  val xplus1gtx = Greater(xplus1, x)
 
   override def beforeEach() = {
     math = new Mathematica
@@ -39,7 +39,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Tactics (Lemma)" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
-    val f = TacticLibrary.universalClosure(Imply(And(xgt0, GreaterThan(Real, y, x)), xgeq0))
+    val f = TacticLibrary.universalClosure(Imply(And(xgt0, Greater(y, x)), xgeq0))
     LookupLemma.addRealArithLemma(math, f) match {
       case Some((file, id, res)) =>
         (res match {
@@ -55,7 +55,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)" in {
-    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, y, x)), And(xgeq0, GreaterThan(Real, y, zero))))
+    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equal(y, xplus1)), Greater(y, x)), And(xgeq0, Greater(y, zero))))
     LookupLemma.addRealArithLemma(math, f) match {
       case Some((file, id, res)) =>
         (res match {
@@ -71,7 +71,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (y > 0)" in {
-    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, y, x)), GreaterThan(Real, y, zero)))
+    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equal(y, xplus1)), Greater(y, x)), Greater(y, zero)))
     LookupLemma.addRealArithLemma(math, f) match {
       case Some((file, id, res)) =>
         (res match {
@@ -87,7 +87,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)" in {
-    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equals(Real, y, xplus1)), GreaterThan(Real, xplus1, x)), GreaterThan(Real, xplus1, zero)))
+    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equal(y, xplus1)), Greater(xplus1, x)), Greater(xplus1, zero)))
     LookupLemma.addRealArithLemma(math, f) match {
       case Some((file, id, res)) =>
         (res match {

@@ -32,11 +32,11 @@ class SubstitutionTests extends FlatSpec with Matchers {
     val axiom:Formula = knowledge.last.formula
 
     val x = Variable("x", None, Real)
-    val aT = Apply(Function("t", None, Real, Real), CDot)
-    val aH = ApplyPredicate(Function("H", None, Real, Bool), CDot)
+    val aT = FuncOf(Function("t", None, Real, Real), DotTerm)
+    val aH = PredOf(Function("H", None, Real, Bool), DotTerm)
 
     axiom match {
-      case Imply(BoxModality(_, Imply(theH, _)), _) => theH should be (ApplyPredicate(Function("H", None, Real, Bool), x))
+      case Imply(Box(_, Imply(theH, _)), _) => theH should be (PredOf(Function("H", None, Real, Bool), x))
       case _ => fail("axiom has wrong form.")
     }
     NameCategorizer.maybeFreeVariables(axiom) should contain only x
@@ -48,7 +48,7 @@ class SubstitutionTests extends FlatSpec with Matchers {
 
     val result = substitution(axiom)
     result match {
-      case Imply(BoxModality(_, Imply(theH, _)), _) => theH should be ("true & 1=1".asFormula)
+      case Imply(Box(_, Imply(theH, _)), _) => theH should be ("true & 1=1".asFormula)
       case _ => fail("axiom has wrong form.")
     }
   }

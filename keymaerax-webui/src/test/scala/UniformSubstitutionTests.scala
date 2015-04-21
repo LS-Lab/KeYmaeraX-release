@@ -65,61 +65,61 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,y)(f(.),.+1) |-> f(x)" should "be y+1" in {
     val f = Function("f", None, Real, Real)
-    val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(Apply(f, CDot), Add(Real, CDot, Number(1))))
-    s(Apply(f, "x()".asTerm)) should be ("y+1".asTerm)
+    val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(FuncOf(f, DotTerm), Plus(DotTerm, Number(1))))
+    s(FuncOf(f, "x()".asTerm)) should be ("y+1".asTerm)
   }
 
   ignore /*"Uniform substitution f(x)"*/ should "be y+1 with (x,y)(f(x),x+1)" in {
     val f = Function("f", None, Real, Real)
-    val s = create(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair(Apply(f, "x".asTerm), "x+1".asTerm))
-    s(Apply(f, "x".asTerm)) should be ("y+1".asTerm)
+    val s = create(SubstitutionPair("x".asTerm, "y".asTerm), SubstitutionPair(FuncOf(f, "x".asTerm), "x+1".asTerm))
+    s(FuncOf(f, "x".asTerm)) should be ("y+1".asTerm)
   }
 
   ignore /*"Uniform substitution of f(x)"*/ should "be y+z+1 with (x,y+z)(f(x),x+1)" in {
     val f = Function("f", None, Real, Real)
-    val s = create(SubstitutionPair("x".asTerm, "y+z".asTerm), SubstitutionPair(Apply(f, "x".asTerm), "x+1".asTerm))
-    s(Apply(f, "x".asTerm)) should be ("y+z+1".asTerm)
+    val s = create(SubstitutionPair("x".asTerm, "y+z".asTerm), SubstitutionPair(FuncOf(f, "x".asTerm), "x+1".asTerm))
+    s(FuncOf(f, "x".asTerm)) should be ("y+z+1".asTerm)
   }
   "Uniform substitution of f(x)" should "be y+z+1 with (x,y+z)(f(.),.+1)" in {
     val f = Function("f", None, Real, Real)
-    val s = create(SubstitutionPair("x()".asTerm, "y+z".asTerm), SubstitutionPair(Apply(f, CDot), Add(Real, CDot, "1".asTerm)))
-    s(Apply(f, "x()".asTerm)) should be ("y+z+1".asTerm)
+    val s = create(SubstitutionPair("x()".asTerm, "y+z".asTerm), SubstitutionPair(FuncOf(f, DotTerm), Plus(DotTerm, "1".asTerm)))
+    s(FuncOf(f, "x()".asTerm)) should be ("y+z+1".asTerm)
   }
 
   "Uniform substitution of (x,y)(f(.),.+x+1) |-> f(x)" should "be y+x+1" in {
     val f = Function("f", None, Real, Real)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm),
-      SubstitutionPair(Apply(f, CDot), Add(Real, Add(Real, CDot, "x".asTerm), Number(1))))
-    s(Apply(f, "x()".asTerm)) should be ("y+x+1".asTerm)
+      SubstitutionPair(FuncOf(f, DotTerm), Plus(Plus(DotTerm, "x".asTerm), Number(1))))
+    s(FuncOf(f, "x()".asTerm)) should be ("y+x+1".asTerm)
   }
 
   ignore /*"Uniform substitution of f(x)"*/ should "be y+y+1 with (x,y)(f(x),x+x+1)" in {
     val f = Function("f", None, Real, Real)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm),
-      SubstitutionPair(Apply(f, "x()".asTerm), Add(Real, Add(Real, "x".asTerm, "x".asTerm), Number(1))))
-    s(Apply(f, "x()".asTerm)) should be ("y+y+1".asTerm)
+      SubstitutionPair(FuncOf(f, "x()".asTerm), Plus(Plus("x".asTerm, "x".asTerm), Number(1))))
+    s(FuncOf(f, "x()".asTerm)) should be ("y+y+1".asTerm)
   }
   "Uniform substitution of f(x)" should "be y+y+1 with (x,y)(f(.),.+.+1)" in {
     val f = Function("f", None, Real, Real)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm),
-      SubstitutionPair(Apply(f, CDot), Add(Real, Add(Real, CDot, CDot), Number(1))))
-    s(Apply(f, "x()".asTerm)) should be ("y+y+1".asTerm)
+      SubstitutionPair(FuncOf(f, DotTerm), Plus(Plus(DotTerm, DotTerm), Number(1))))
+    s(FuncOf(f, "x()".asTerm)) should be ("y+y+1".asTerm)
   }
 
   "Uniform substitution of  p(x)" should "be [x:=y+1;]x>0 with (x,y)(p(.),[x:=.+1;]x>0)" in {
     val p = Function("p", None, Real, Bool)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm),
-      SubstitutionPair(ApplyPredicate(p, CDot), BoxModality(Assign("x".asTerm,
-        Add(Real, CDot, Number(1))), GreaterThan(Real, "x".asTerm, Number(0)))))
-    s(ApplyPredicate(p, "x()".asTerm)) should be ("[x:=y+1;]x>0".asFormula)
+      SubstitutionPair(PredOf(p, DotTerm), Box(Assign("x".asVariable,
+        Plus(DotTerm, Number(1))), Greater("x".asTerm, Number(0)))))
+    s(PredOf(p, "x()".asTerm)) should be ("[x:=y+1;]x>0".asFormula)
   }
 
   ignore should "be [x:=y+1;]x>0 with (x,y)(p(x),[x:=x+1;]x>0)" in {
     val p = Function("p", None, Real, Bool)
     val s = create(SubstitutionPair("x".asTerm, "y".asTerm),
-      SubstitutionPair(ApplyPredicate(p, "x".asTerm), BoxModality(Assign("x".asTerm,
-        Add(Real, "x".asTerm, Number(1))), GreaterThan(Real, "x".asTerm, Number(0)))))
-    s(ApplyPredicate(p, "x".asTerm)) should be ("[x:=y+1;]x>0".asFormula)
+      SubstitutionPair(PredOf(p, "x".asTerm), Box(Assign("x".asVariable,
+        Plus("x".asTerm, Number(1))), Greater("x".asTerm, Number(0)))))
+    s(PredOf(p, "x".asTerm)) should be ("[x:=y+1;]x>0".asFormula)
   }
 
   // g(\theta) apply on \theta
@@ -127,28 +127,28 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of (x,1)(y,x) |-> g(x)" should "be g(1)" in {
     val g = Function("g", None, Real, Real)
     val s = create(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm))
-    s(Apply(g, "x()".asTerm)) should be (Apply(g, Number(1)))
+    s(FuncOf(g, "x()".asTerm)) should be (FuncOf(g, Number(1)))
   }
 
   "Uniform substitution of (x,1)(y,x) |-> g(x) where {x} is bound" should "not be permitted" in {
     val g = Function("g", None, Real, Bool)
 //    val s = FastUSubst(List(SubstitutionPair("y()".asTerm, "x".asTerm)))
-//    a [SubstitutionClashException] should be thrownBy applySubstitutionT(s, Set.empty, Set(V("x")), Apply(g, "y()".asTerm))
+//    a [SubstitutionClashException] should be thrownBy applySubstitutionT(s, Set.empty, Set(V("x")), FuncOf(g, "y()".asTerm))
     // TODO USUbst case
   }
 
   "Uniform substitution of (x,y)(y,x) |-> g(x)" should "be g(y)" in {
     val g = Function("g", None, Real, Bool)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm))
-    s(Apply(g, "x()".asTerm)) should be (Apply(g, "y".asTerm))
+    s(FuncOf(g, "x()".asTerm)) should be (FuncOf(g, "y".asTerm))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> f(x)=g(y)" should "be f(y)=g(x)" in {
     val f = Function("f", None, Real, Bool)
     val g = Function("g", None, Real, Bool)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm))
-    s(Equals(Bool, Apply(f, "x()".asTerm), Apply(g, "y()".asTerm))) should be (
-      Equals(Bool, Apply(f, "y".asTerm), Apply(g, "x".asTerm)))
+    s(Equal(FuncOf(f, "x()".asTerm), FuncOf(g, "y()".asTerm))) should be (
+      Equal(FuncOf(f, "y".asTerm), FuncOf(g, "x".asTerm)))
   }
 
   // x substituable
@@ -196,21 +196,21 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Uniform substitution of [a ++ b]p" should "throw a clash exception when a, b, and p are substituted simultaneously" in {
-//    val s = FastUSubst(List(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
-//      SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram),
-//      SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), "x*y>5".asFormula)))
+//    val s = FastUSubst(List(SubstitutionPair(ProgramConst("a"), "x:=2;".asProgram),
+//      SubstitutionPair(ProgramConst("b"), "y:=3;".asProgram),
+//      SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x*y>5".asFormula)))
 //    a [SubstitutionClashException] should be thrownBy
-//      s(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")), ApplyPredicate(Function("p", None, Unit, Bool), Nothing)))
+//      s(Box(Choice(ProgramConst("a"), ProgramConst("b")), PredOf(Function("p", None, Unit, Bool), Nothing)))
     // TODO USUbst case
   }
 
   it should "work when cascaded" in {
-    val s = create(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
-      SubstitutionPair(ProgramConstant("b"), "y:=3;".asProgram))
-    val t = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), Anything), "x*y>5".asFormula))
+    val s = create(SubstitutionPair(ProgramConst("a"), "x:=2;".asProgram),
+      SubstitutionPair(ProgramConst("b"), "y:=3;".asProgram))
+    val t = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), Anything), "x*y>5".asFormula))
 
-    t(s(BoxModality(Choice(ProgramConstant("a"), ProgramConstant("b")),
-        ApplyPredicate(Function("p", None, Real, Bool), Anything)))) should be (
+    t(s(Box(Choice(ProgramConst("a"), ProgramConst("b")),
+        PredOf(Function("p", None, Real, Bool), Anything)))) should be (
       "[x:=2 ++ y:=3]x*y>5".asFormula
     )
   }
@@ -228,9 +228,9 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Uniform substitution of (a,x:=2),(b,?x>1) |-> [a b]1>0" should "be [x:=2 ?x>1]1>0" in {
-    val s = create(SubstitutionPair(ProgramConstant("a"), "x:=2;".asProgram),
-                   SubstitutionPair(ProgramConstant("b"), "?x>1;".asProgram))
-    s(BoxModality(Sequence(ProgramConstant("a"), ProgramConstant("b")), "1>0".asFormula)) should be (
+    val s = create(SubstitutionPair(ProgramConst("a"), "x:=2;".asProgram),
+                   SubstitutionPair(ProgramConst("b"), "?x>1;".asProgram))
+    s(Box(Compose(ProgramConst("a"), ProgramConst("b")), "1>0".asFormula)) should be (
       "[x:=2; ?x>1;]1>0".asFormula)
   }
 
@@ -469,14 +469,14 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution of (x,y)(p(t),t<1) |-> p(x)" should "be y<1" in {
     val p = Function("p", None, Real, Bool)
-    val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), LessThan(Real, CDot, Number(1))))
-    s(ApplyPredicate(p, "x()".asTerm)) should be ("y<1".asFormula)
+    val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(PredOf(p, DotTerm), Less(DotTerm, Number(1))))
+    s(PredOf(p, "x()".asTerm)) should be ("y<1".asFormula)
   }
 
   "Uniform substitution of (x,y)(p(t),t>x) |-> p(x)" should "be y>x" in {
     val p = Function("p", None, Real, Bool)
-    val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, "x".asTerm)))
-    s(ApplyPredicate(p, "x()".asTerm)) should be ("y>x".asFormula)
+    val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair(PredOf(p, DotTerm), Greater(DotTerm, "x".asTerm)))
+    s(PredOf(p, "x()".asTerm)) should be ("y>x".asFormula)
   }
 
   // q(\theta) apply on \theta
@@ -484,20 +484,20 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   "Uniform substitution of (x,1)(y,x) |-> q(x)" should "be q(1)" in {
     val q = Function("q", None, Real, Bool)
     val s = create(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm))
-    s(ApplyPredicate(q, "x()".asTerm)) should be (ApplyPredicate(q, Number(1)))
+    s(PredOf(q, "x()".asTerm)) should be (PredOf(q, Number(1)))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> q(x)" should "be q(y)" in {
     val q = Function("q", None, Real, Bool)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm))
-    s(ApplyPredicate(q, "x()".asTerm)) should be (ApplyPredicate(q, "y".asTerm))
+    s(PredOf(q, "x()".asTerm)) should be (PredOf(q, "y".asTerm))
   }
 
   "Uniform substitution of (x,y)(y,x) |-> p(x)=q(y)" should "be p(y)=q(x)" in {
     val p = Function("p", None, Real, Bool)
     val q = Function("q", None, Real, Bool)
     val s = create(SubstitutionPair("x()".asTerm, "y".asTerm), SubstitutionPair("y()".asTerm, "x".asTerm))
-    s(Equals(Bool,Apply(p, "x()".asTerm), Apply(q, "y()".asTerm))) should be (Equals(Bool,Apply(p,"y".asTerm), Apply(q,"x".asTerm)))
+    s(Equal(FuncOf(p, "x()".asTerm), FuncOf(q, "y()".asTerm))) should be (Equal(FuncOf(p,"y".asTerm), FuncOf(q,"x".asTerm)))
   }
 
   // \theta =/>/< \eta
@@ -627,32 +627,32 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Uniform substitution of [y:=t;]p(y) <-> p(t)" should "[y:=t;]y>0 <-> z>0" in {
-    def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
+    def p(x: Term) = PredOf(Function("p", None, Real, Bool), x)
     val s = create(SubstitutionPair("t()".asTerm, "z".asTerm),
-      SubstitutionPair(p(CDot), GreaterThan(Real, CDot, Number(0))))
+      SubstitutionPair(p(DotTerm), Greater(DotTerm, Number(0))))
 
     // [x:=t;]p(x) <-> p(t)
-    val o = Equiv(BoxModality("y:=t();".asProgram, p("y".asTerm)), p("t()".asTerm))
+    val o = Equiv(Box("y:=t();".asProgram, p("y".asTerm)), p("t()".asTerm))
     s(o) should be ("[y:=z;]y>0 <-> z>0".asFormula)
   }
 
   "Uniform substitution (p(.) |-> .>0),z |-> 2) of [x:=2y+1;]p(3x+z)" should "[x:=2y+1;]3x+2>0" in {
-    def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
+    def p(x: Term) = PredOf(Function("p", None, Real, Bool), x)
     val s = create(SubstitutionPair("z()".asTerm, "2".asTerm),
-      SubstitutionPair(p(CDot), GreaterThan(Real, CDot, Number(0))))
+      SubstitutionPair(p(DotTerm), Greater(DotTerm, Number(0))))
 
     // [x:=2y+1;]p(3x+z)
-    val o = BoxModality("x:=2*y+1;".asProgram, p("3*x+z()".asTerm))
+    val o = Box("x:=2*y+1;".asProgram, p("3*x+z()".asTerm))
     s(o) should be ("[x:=2*y+1;]3*x+2>0".asFormula)
   }
 
   "Uniform substitution (p(.) |-> .>0),z |-> x+2) of [x:=2y+1;]p(3x+z)" should "throw a clash exception" in {
-    def p(x: Term) = ApplyPredicate(Function("p", None, Real, Bool), x)
+    def p(x: Term) = PredOf(Function("p", None, Real, Bool), x)
     val s = create(SubstitutionPair("z()".asTerm, "2+x".asTerm),
-      SubstitutionPair(p(CDot), GreaterThan(Real, CDot, Number(0))))
+      SubstitutionPair(p(DotTerm), Greater(DotTerm, Number(0))))
 
     // [x:=2y+1;]p(3x+z)
-    val o = BoxModality("x:=2*y+1;".asProgram, p("3*x+z()".asTerm))
+    val o = Box("x:=2*y+1;".asProgram, p("3*x+z()".asTerm))
     a [SubstitutionClashException] should be thrownBy  s(o)
   }
 
@@ -665,93 +665,93 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
 //  "Uniform substitution of p(x)"
   ignore should "alpha rename x to any other variable in modalities" in {
-    val s = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=2;]x>5".asFormula))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=2;]y>5".asFormula)
-    val t = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    s(PredOf(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=2;]y>5".asFormula)
+    val t = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=y;][x:=z;]x>5".asFormula))
-    t(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;]y>5".asFormula)
-    val u = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    t(PredOf(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;]y>5".asFormula)
+    val u = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=y;][x:=z;][{x:=x+1;}*;]x>5".asFormula))
-    u(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;][{y:=y+1;}*;]y>5".asFormula)
+    u(PredOf(Function("p", None, Real, Bool), "y".asTerm)) should be ("[y:=z;][{y:=y+1;}*;]y>5".asFormula)
 
-    val v = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val v = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "<x:=2;>x>5".asFormula))
-    v(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("<y:=2;>y>5".asFormula)
+    v(PredOf(Function("p", None, Real, Bool), "y".asTerm)) should be ("<y:=2;>y>5".asFormula)
   }
 
   ignore should "not alpha rename to arbitrary terms in modalities" in {
-    val s = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "[x:=2;]true".asFormula))
 
-    val o = ApplyPredicate(Function("p", None, Real, Bool), "a+1".asTerm)
+    val o = PredOf(Function("p", None, Real, Bool), "a+1".asTerm)
     s(o) should be ("[x:=2;]true".asFormula)
     s(o) should not be "[(a+1):=2;]true".asFormula
   }
 
   ignore should "substitute to arbitrary terms in simple formulas" in {
-    val s = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), "x>5".asFormula))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "a+1".asTerm)) should be ("a+1>5".asFormula)
+    val s = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm), "x>5".asFormula))
+    s(PredOf(Function("p", None, Real, Bool), "a+1".asTerm)) should be ("a+1>5".asFormula)
   }
 
   ignore should "not rename bound variables before substitution except in modalities" in {
-    val s = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val s = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula))
-    s(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
+    s(PredOf(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\forall x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
 
-    val t = create(SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm),
+    val t = create(SubstitutionPair(PredOf(Function("p", None, Real, Bool), "x".asTerm),
       "\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula))
-    t(ApplyPredicate(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
+    t(PredOf(Function("p", None, Real, Bool), "y".asTerm)) should be ("\\exists x. (x = 1 -> [x:=x+2;]x>0)".asFormula)
   }
 
   "Uniform substitution of (p,x>5) on p & y!=1" should "substitute predicate constants" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
     val s = create(SubstitutionPair(p, "x>5".asFormula))
     s(And(p, "y!=1".asFormula)) should be ("x>5 & y!=1".asFormula)
   }
 
   it should "not be permitted to substitute predicate constants with bound names" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
     val s = create(SubstitutionPair(p, "x>5".asFormula))
-    a [SubstitutionClashException] should be thrownBy s(Forall("x".asNamedSymbol::Nil, p))
-    a [SubstitutionClashException] should be thrownBy s(BoxModality("x:=1 ++ y:=3".asProgram, p))
+    a [SubstitutionClashException] should be thrownBy s(Forall("x".asVariable::Nil, p))
+    a [SubstitutionClashException] should be thrownBy s(Box("x:=1 ++ y:=3".asProgram, p))
   }
 
   "Uniform substitution of predicates in \\forall x. (p(x) | q) <-> (\\forall x. p(x)) | q" should "be allowed" in {
-    val q = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+    val q = PredOf(Function("q", None, Unit, Bool), Nothing)
 
     val s = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), GreaterThan(Real, CDot, Number(0))),
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, Number(0))),
       SubstitutionPair(q, "y>5".asFormula))
     // \forall x. (p(x) | q) <-> (\forall x. p(x)) | q
     val f = Equiv(
-      Forall("x".asNamedSymbol::Nil, Or(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), q)),
-      Or(Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)), q))
+      Forall("x".asVariable::Nil, Or(PredOf(Function("p", None, Real, Bool), "x".asTerm), q)),
+      Or(Forall("x".asVariable::Nil, PredOf(Function("p", None, Real, Bool), "x".asTerm)), q))
     s(f) should be ("\\forall x. (x>0 | y>5) <-> (\\forall x. x>0) | y>5".asFormula)
 
     val t = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), "z>0".asFormula),
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), "z>0".asFormula),
       SubstitutionPair(q, "y>5".asFormula))
     t(f) should be ("\\forall x. (z>0 | y>5) <-> (\\forall x. z>0) | y>5".asFormula)
   }
 
   it should "not be permitted" in {
-    val q = ApplyPredicate(Function("q", None, Unit, Bool), Nothing)
+    val q = PredOf(Function("q", None, Unit, Bool), Nothing)
 
     val s = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), GreaterThan(Real, CDot, Number(0))),
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, Number(0))),
       SubstitutionPair(q, "x>5".asFormula))
     // \forall x. (p(x) | q)
-    val f = Forall("x".asNamedSymbol::Nil, Or(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), q))
+    val f = Forall("x".asVariable::Nil, Or(PredOf(Function("p", None, Real, Bool), "x".asTerm), q))
     a [SubstitutionClashException] should be thrownBy s(f)
     // \forall x. (p(x) | q) <-> (\forall x. p(x)) | q
     val h = Equiv(
-      Forall("x".asNamedSymbol::Nil, Or(ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm), q)),
-      Or(Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)), q))
+      Forall("x".asVariable::Nil, Or(PredOf(Function("p", None, Real, Bool), "x".asTerm), q)),
+      Or(Forall("x".asVariable::Nil, PredOf(Function("p", None, Real, Bool), "x".asTerm)), q))
     a [SubstitutionClashException] should be thrownBy s(h)
 
     val t = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), "z>0".asFormula),
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), "z>0".asFormula),
       SubstitutionPair(q, "x>5".asFormula))
     a [SubstitutionClashException] should be thrownBy t(f)
     a [SubstitutionClashException] should be thrownBy t(h)
@@ -759,13 +759,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution in converse-Barcan " should "be allowed" in {
     val s = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), GreaterThan(Real, CDot, Number(0))),
-      SubstitutionPair(ProgramConstant("a"), "y:=5;".asProgram))
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, Number(0))),
+      SubstitutionPair(ProgramConst("a"), "y:=5;".asProgram))
 
     //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
     val f = Imply(
-      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm))),
-      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)))
+      Box(ProgramConst("a"), Forall("x".asVariable::Nil, PredOf(Function("p", None, Real, Bool), "x".asTerm))),
+      Forall("x".asVariable::Nil, Box(ProgramConst("a"), PredOf(Function("p", None, Real, Bool), "x".asTerm)))
     )
     s(f) should be ("[y:=5;]\\forall x. x>0 -> \\forall x. [y:=5;]x>0".asFormula)
   }
@@ -774,13 +774,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   ignore should "not be permitted" in {
     //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
     val f = Imply(
-      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm))),
-      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(Function("p", None, Real, Bool), "x".asTerm)))
+      Box(ProgramConst("a"), Forall("x".asVariable::Nil, PredOf(Function("p", None, Real, Bool), "x".asTerm))),
+      Forall("x".asVariable::Nil, Box(ProgramConst("a"), PredOf(Function("p", None, Real, Bool), "x".asTerm)))
     )
 
     val s = create(
-      SubstitutionPair(ApplyPredicate(Function("p", None, Real, Bool), CDot), GreaterThan(Real, CDot, Number(0))),
-      SubstitutionPair(ProgramConstant("a"), "x:=5;".asProgram))
+      SubstitutionPair(PredOf(Function("p", None, Real, Bool), DotTerm), Greater(DotTerm, Number(0))),
+      SubstitutionPair(ProgramConst("a"), "x:=5;".asProgram))
 
     a [SubstitutionClashException] should be thrownBy s(f)
   }
@@ -789,25 +789,25 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     //([a;] \forall x. p(x)) -> \forall x. [a;] p(x)
     val p = Function("p", None, Real, Bool)
     val h = Imply(
-      BoxModality(ProgramConstant("a"), Forall("x".asNamedSymbol::Nil, ApplyPredicate(p, "x".asTerm))),
-      Forall("x".asNamedSymbol::Nil, BoxModality(ProgramConstant("a"), ApplyPredicate(p, "x".asTerm)))
+      Box(ProgramConst("a"), Forall("x".asVariable::Nil, PredOf(p, "x".asTerm))),
+      Forall("x".asVariable::Nil, Box(ProgramConst("a"), PredOf(p, "x".asTerm)))
     )
 
     val s = create(
-      SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, Number(0))),
-      SubstitutionPair(ProgramConstant("a"), "x:=0;".asProgram))
+      SubstitutionPair(PredOf(p, DotTerm), Greater(DotTerm, Number(0))),
+      SubstitutionPair(ProgramConst("a"), "x:=0;".asProgram))
     // no clash, but derived conclusion is wrong
     s(h) should be ("[x:=0;]\\forall x. x>0 -> \\forall x. [x:=0;]x>0".asFormula)
   }
 
   "Uniform substitution in vacuous quantification" should "work when FV(p) is disjoint from newly quantified variable x" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val f = Equiv(p, Forall("x".asNamedSymbol::Nil, p))
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val f = Equiv(p, Forall("x".asVariable::Nil, p))
 
     val s = create(SubstitutionPair(p, "y>0".asFormula))
     s(f) should be ("y>0 <-> \\forall x. y>0".asFormula)
 
-    val h = Equiv(p, Exists("x".asNamedSymbol::Nil, p))
+    val h = Equiv(p, Exists("x".asVariable::Nil, p))
     s(h) should be ("y>0 <-> \\exists x. y>0".asFormula)
 
     val t = create(SubstitutionPair(p, "[x:=5;]x>0".asFormula))
@@ -816,13 +816,13 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   it should "not be permitted on p->[a]p with FV(p) not being disjoint from newly quantified variable x" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val f = Equiv(p, Forall("x".asNamedSymbol::Nil, p))
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val f = Equiv(p, Forall("x".asVariable::Nil, p))
 
     val s = create(SubstitutionPair(p, "[y:=x;]y>0".asFormula))
     a [SubstitutionClashException] should be thrownBy s(f)
 
-    val h = Equiv(p, Exists("x".asNamedSymbol::Nil, p))
+    val h = Equiv(p, Exists("x".asVariable::Nil, p))
     a [SubstitutionClashException] should be thrownBy s(h)
 
     val t = create(SubstitutionPair(p, "x>0".asFormula))
@@ -831,8 +831,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Uniform substitution in vacuous assignment [v:=t]p <-> p" should "work with FV(p) being disjoint from newly assigned variable v" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val f = Equiv(BoxModality(Assign("v".asTerm, "t".asTerm), p), p)
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val f = Equiv(Box(Assign("v".asVariable, "t".asTerm), p), p)
 
     val s = create(SubstitutionPair(p, "y>0".asFormula))
     s(f) should be ("[v:=t;]y>0 <-> y>0".asFormula)
@@ -840,94 +840,94 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val t = create(SubstitutionPair(p, "[x:=y;]x>0".asFormula))
     t(f) should be ("[v:=t;][x:=y;]x>0 <-> [x:=y;]x>0".asFormula)
 
-    val h = Equiv(DiamondModality(Assign("v".asTerm, "t".asTerm), p), p)
+    val h = Equiv(Diamond(Assign("v".asVariable, "t".asTerm), p), p)
     s(h) should be ("<v:=t;>y>0 <-> y>0".asFormula)
     t(h) should be ("<v:=t;>[x:=y;]x>0 <-> [x:=y;]x>0".asFormula)
   }
 
   it should "not be permitted with FV(p) not being disjoint from newly assigned variable v" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val f = Equiv(BoxModality(Assign("v".asTerm, "t".asTerm), p), p)
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val f = Equiv(Box(Assign("v".asVariable, "t".asTerm), p), p)
 
     val s = create(SubstitutionPair(p, "v>0".asFormula))
     a [SubstitutionClashException] should be thrownBy s(f)
 
-    val h = Equiv(DiamondModality(Assign("v".asTerm, "t".asTerm), p), p)
+    val h = Equiv(Diamond(Assign("v".asVariable, "t".asTerm), p), p)
     a [SubstitutionClashException] should be thrownBy s(h)
   }
 
   // p(), p(.), and p(?) tests
   "Substitution of predicate constant p()" should "work" in {
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
 
     val s = create(SubstitutionPair(p, "v>0".asFormula))
 
-    val f = BoxModality(Assign("x".asTerm, "0".asTerm), p)
+    val f = Box(Assign("x".asVariable, "0".asTerm), p)
     s(f) should be ("[x:=0;]v>0".asFormula)
 
-    val g = BoxModality(Assign("v".asTerm, "0".asTerm), p)
+    val g = Box(Assign("v".asVariable, "0".asTerm), p)
     a [SubstitutionClashException] should be thrownBy s(g)
   }
 
   "Substitution of single-argument predicate p(.)" should "work" in {
     val p = Function("p", None, Real, Bool)
 
-    val s = create(SubstitutionPair(ApplyPredicate(p, CDot), GreaterThan(Real, CDot, Number(0))))
+    val s = create(SubstitutionPair(PredOf(p, DotTerm), Greater(DotTerm, Number(0))))
 
-    val f = BoxModality("x:=0;".asProgram, ApplyPredicate(p, "x".asTerm))
+    val f = Box("x:=0;".asProgram, PredOf(p, "x".asTerm))
     s(f) should be ("[x:=0;]x>0".asFormula)
 
-    val g = BoxModality(ProgramConstant("a"), ApplyPredicate(p, "x".asTerm))
-    s(g) shouldBe BoxModality(ProgramConstant("a"), "x>0".asFormula)
+    val g = Box(ProgramConst("a"), PredOf(p, "x".asTerm))
+    s(g) shouldBe Box(ProgramConst("a"), "x>0".asFormula)
   }
 
   "Substitution of wildcard predicate p(?)" should "work" in {
-    val p = ApplyPredicate(Function("p", None, Real, Bool), Anything)
+    val p = PredOf(Function("p", None, Real, Bool), Anything)
 
     val s = create(SubstitutionPair(p, "x>0".asFormula))
 
-    val f = BoxModality(Assign("x".asTerm, "0".asTerm), p)
+    val f = Box(Assign("x".asVariable, "0".asTerm), p)
     s(f) should be ("[x:=0;]x>0".asFormula)
 
-    val g = BoxModality(ProgramConstant("a"), p)
-    s(g) should be (BoxModality(ProgramConstant("a"), "x>0".asFormula))
+    val g = Box(ProgramConst("a"), p)
+    s(g) should be (Box(ProgramConst("a"), "x>0".asFormula))
   }
 
   // f(), f(.), and f(?) tests
   "Substitution of function constant f()" should "work" in {
-    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val f = FuncOf(Function("f", None, Unit, Real), Nothing)
 
     val s = create(SubstitutionPair(f, "v+2".asTerm))
 
-    val h = BoxModality(Assign("x".asTerm, "0".asTerm), GreaterThan(Real, "x".asTerm, f))
+    val h = Box(Assign("x".asVariable, "0".asTerm), Greater("x".asTerm, f))
     s(h) should be ("[x:=0;]x>v+2".asFormula)
 
-    val g = BoxModality(Assign("v".asTerm, "0".asTerm), GreaterThan(Real, "x".asTerm, f))
+    val g = Box(Assign("v".asVariable, "0".asTerm), Greater("x".asTerm, f))
     a [SubstitutionClashException] should be thrownBy s(g)
   }
 
   "Substitution of single-argument function f(.)" should "work" in {
     val f = Function("f", None, Real, Real)
 
-    val s = create(SubstitutionPair(Apply(f, CDot), Add(Real, CDot, Number(2))))
+    val s = create(SubstitutionPair(FuncOf(f, DotTerm), Plus(DotTerm, Number(2))))
 
-    val h = BoxModality(Assign("x".asTerm, "0".asTerm), GreaterThan(Real, "v".asTerm, Apply(f, "x".asTerm)))
+    val h = Box(Assign("x".asVariable, "0".asTerm), Greater("v".asTerm, FuncOf(f, "x".asTerm)))
     s(h) should be ("[x:=0;]v>x+2".asFormula)
 
-    val g = BoxModality(ProgramConstant("a"), GreaterThan(Real, "v".asTerm, Apply(f, "x".asTerm)))
-    s(g) shouldBe BoxModality(ProgramConstant("a"), "v>x+2".asFormula)
+    val g = Box(ProgramConst("a"), Greater("v".asTerm, FuncOf(f, "x".asTerm)))
+    s(g) shouldBe Box(ProgramConst("a"), "v>x+2".asFormula)
   }
 
   "Substitution of wildcard function f(?)" should "work" in {
-    val f = Apply(Function("f", None, Real, Real), Anything)
+    val f = FuncOf(Function("f", None, Real, Real), Anything)
 
     val s = create(SubstitutionPair(f, "x+2".asTerm))
 
-    val h = BoxModality(Assign("x".asTerm, "0".asTerm), GreaterThan(Real, "x".asTerm, f))
+    val h = Box(Assign("x".asVariable, "0".asTerm), Greater("x".asTerm, f))
     s(h) should be ("[x:=0;]x>x+2".asFormula)
 
-    val g = BoxModality(ProgramConstant("a"), GreaterThan(Real, "x".asTerm, f))
-    s(g) should be (BoxModality(ProgramConstant("a"), "x>x+2".asFormula))
+    val g = Box(ProgramConst("a"), Greater("x".asTerm, f))
+    s(g) should be (Box(ProgramConst("a"), "x>x+2".asFormula))
   }
 
   /*
@@ -939,7 +939,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     def rndSubstDefs(max: Int) = {
       val rnd = new Random()
       val numSubsts = rnd.nextInt(max)
-      val names = new RandomFormula(rnd).nextNames("lhs", numSubsts).map(v => Apply(Function(v.name, v.index, Unit, Real), Nothing))
+      val names = new RandomFormula(rnd).nextNames("lhs", numSubsts).map(v => FuncOf(Function(v.name, v.index, Unit, Real), Nothing))
       names.map(SubstitutionPair(_, rndTerm(rnd.nextInt(10), rnd)))
     }
     def rndTerm(size: Int, rnd: Random = new Random()) = {
@@ -1010,56 +1010,56 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // Tests from uniform substitution writeup
 
   "Substitution of [x:=f]p(x) <-> p(f) with p(.) |-> .!=x and f |-> x+1" should "result in a substitution clash" in {
-    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val f = FuncOf(Function("f", None, Unit, Real), Nothing)
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
-    val s = create(SubstitutionPair(f, "x+1".asTerm), SubstitutionPair(ApplyPredicate(p, CDot), NotEquals(Real, CDot, x)))
+    val s = create(SubstitutionPair(f, "x+1".asTerm), SubstitutionPair(PredOf(p, DotTerm), NotEqual(DotTerm, x)))
 
-    val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
+    val h = Equiv(Box(Assign(x, f), PredOf(p, x)), PredOf(p, f))
     a [SubstitutionClashException] should be thrownBy s(h)
   }
 
   "Substitution of p -> \\forall x. p with p |-> x>=0" should "result in a substitution clash" in {
-    val s = create(SubstitutionPair(ApplyPredicate(Function("p", None, Unit, Bool), Nothing), "x>=0".asFormula))
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val s = create(SubstitutionPair(PredOf(Function("p", None, Unit, Bool), Nothing), "x>=0".asFormula))
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
     a [SubstitutionClashException] should be thrownBy s(Imply(p, Forall(Variable("x", None, Real)::Nil, p)))
   }
 
   "Substitution of p -> [a]p with a |-> x:=x-1 and p |-> x>=0" should "result in a substitution clash" in {
-    val ca = ProgramConstant("a")
-    val p = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
+    val ca = ProgramConst("a")
+    val p = PredOf(Function("p", None, Unit, Bool), Nothing)
     val s = create(SubstitutionPair(ca, "x:=x-1;".asProgram), SubstitutionPair(p, "x>=0".asFormula))
-    a [SubstitutionClashException] should be thrownBy s(Imply(p, BoxModality(ca, p)))
+    a [SubstitutionClashException] should be thrownBy s(Imply(p, Box(ca, p)))
   }
 
   "Substitution in Barcan" should "should illustrate why axiom Barcan is unsound" in {
-    val ca = ProgramConstant("a")
+    val ca = ProgramConst("a")
     val x = Variable("x", None, Real)
     val p = Function("p", None, Real, Bool)
 
-    val f = Imply(Forall(x::Nil, BoxModality(ca, ApplyPredicate(p, x))),
-      BoxModality(ca, Forall(x::Nil, ApplyPredicate(p, x))))
+    val f = Imply(Forall(x::Nil, Box(ca, PredOf(p, x))),
+      Box(ca, Forall(x::Nil, PredOf(p, x))))
 
     val s = create(SubstitutionPair(ca, "x:=0;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), GreaterEqual(Real, CDot, Number(0))))
+      SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(0))))
     // no clash, but derived conclusion is wrong
     s(f) should be ("\\forall x. [x:=0;]x>=0 -> [x:=0;]\\forall x. x>=0".asFormula)
 
     val t = create(SubstitutionPair(ca, "y:=x^2;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Power(Real, CDot, Number(2)))))
+      SubstitutionPair(PredOf(p, DotTerm), Equal(Variable("y", None, Real), Power(DotTerm, Number(2)))))
     a [SubstitutionClashException] should be thrownBy t(f)
 
     val u = create(SubstitutionPair(ca, "?y=x^2;".asProgram),
-      SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, Variable("y", None, Real), Power(Real, CDot, Number(2)))))
+      SubstitutionPair(PredOf(p, DotTerm), Equal(Variable("y", None, Real), Power(DotTerm, Number(2)))))
     // no clash, but derived conclusion is wrong
     u(f) should be ("\\forall x. [?y=x^2;]y=x^2 -> [?y=x^2;]\\forall x. y=x^2".asFormula)
   }
 
   "Substitution of choice axiom" should "work" in {
-    val ca = ProgramConstant("a")
-    val cb = ProgramConstant("b")
-    val p = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-    val f = Equiv(BoxModality(Choice(ca, cb), p), And(BoxModality(ca, p), BoxModality(cb, p)))
+    val ca = ProgramConst("a")
+    val cb = ProgramConst("b")
+    val p = PredOf(Function("p", None, Real, Bool), Anything)
+    val f = Equiv(Box(Choice(ca, cb), p), And(Box(ca, p), Box(cb, p)))
 
     val s = create(SubstitutionPair(ca, "x:=0;".asProgram), SubstitutionPair(cb, "y:=1;".asProgram),
       SubstitutionPair(p, "x>=0".asFormula))
@@ -1071,10 +1071,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Substitution of sequence axiom" should "work" in {
-    val ca = ProgramConstant("a")
-    val cb = ProgramConstant("b")
-    val p = ApplyPredicate(Function("p", None, Real, Bool), Anything)
-    val f = Equiv(BoxModality(Sequence(ca, cb), p), BoxModality(ca, BoxModality(cb, p)))
+    val ca = ProgramConst("a")
+    val cb = ProgramConst("b")
+    val p = PredOf(Function("p", None, Real, Bool), Anything)
+    val f = Equiv(Box(Compose(ca, cb), p), Box(ca, Box(cb, p)))
 
     val u = create(SubstitutionPair(ca, "x:=x+1 ++ y:=0".asProgram), SubstitutionPair(cb, "y:=y+1;".asProgram),
       SubstitutionPair(p, "x>=y".asFormula))
@@ -1082,70 +1082,70 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   }
 
   "Substitution of primed terms" should "work" in {
-    val f = Apply(Function("f", None, Real, Real), Anything)
-    val g = Apply(Function("g", None, Real, Real), Anything)
-    val h = Equals(Real, Derivative(Real, Multiply(Real, f, g)),
-      Add(Real, Multiply(Real, Derivative(Real, f), g), Multiply(Real, f, Derivative(Real, g))))
+    val f = FuncOf(Function("f", None, Real, Real), Anything)
+    val g = FuncOf(Function("g", None, Real, Real), Anything)
+    val h = Equal(Differential(Times(f, g)),
+      Plus(Times(Differential(f), g), Times(f, Differential(g))))
 
     val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
     s(h) should be ("(x*x)' = x'*x + x*x'".asFormula)
   }
 
-  it should "work with CDot" in {
+  it should "work with DotTerm" in {
     val f = Function("f", None, Real, Real)
     val x = Variable("x", None, Real)
     // f(x)' = 1
-    val h = Equals(Real, Derivative(Real, Apply(f, x)), Number(1))
-    val s = create(SubstitutionPair(Apply(f, CDot), Add(Real, "c()".asTerm, CDot)))
+    val h = Equal(Differential(FuncOf(f, x)), Number(1))
+    val s = create(SubstitutionPair(FuncOf(f, DotTerm), Plus("c()".asTerm, DotTerm)))
     s(h) should be ("(c() + x)' = 1".asFormula)
   }
 
   "Substitution of primed formulas" should "work" in {
-    val f = Apply(Function("p", None, Real, Real), Anything)
-    val g = Apply(Function("q", None, Real, Real), Anything)
-    val h = Equiv(FormulaDerivative(Equals(Real, f, g)),
-      Equals(Real, Derivative(Real, f), Derivative(Real, g)))
+    val f = FuncOf(Function("p", None, Real, Real), Anything)
+    val g = FuncOf(Function("q", None, Real, Real), Anything)
+    val h = Equiv(DifferentialFormula(Equal(f, g)),
+      Equal(Differential(f), Differential(g)))
 
     val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
     s(h) should be ("(x=x)' <-> x'=x'".asFormula)
   }
 
-  it should "work with CDot" in {
+  it should "work with DotTerm" in {
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
     // p(x)'
-    val h = Equiv(FormulaDerivative(ApplyPredicate(p, x)), True)
+    val h = Equiv(DifferentialFormula(PredOf(p, x)), True)
 
-    val s = create(SubstitutionPair(ApplyPredicate(p, CDot), Equals(Real, "c()".asTerm, CDot)))
+    val s = create(SubstitutionPair(PredOf(p, DotTerm), Equal("c()".asTerm, DotTerm)))
     s(h) should be ("(c()=x)' <-> true".asFormula)
   }
 
   ignore /*"Substitution of programs where not all branches write the same variables"*/ should "work too" in {
-    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val f = FuncOf(Function("f", None, Unit, Real), Nothing)
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
 
     val s = create(
       SubstitutionPair(f, "x^2".asTerm),
-      SubstitutionPair(ApplyPredicate(p, CDot),
-        SubstitutionHelper.replaceFree("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x".asFormula)(x, CDot)))
+      SubstitutionPair(PredOf(p, DotTerm),
+        SubstitutionHelper.replaceFree("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x".asFormula)(x, DotTerm)))
 
-    val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
+    val h = Equiv(Box(Assign(x, f), PredOf(p, x)), PredOf(p, f))
 
     s(h) should be ("[x:=x^2;][{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]y>x <-> [{y:=y+1 ++ {z:=z+y;}*}; z:=x^2+y*z;]y>x^2".asFormula)
   }
 
   ignore should "work with a simpler predicate" in {
-    val f = Apply(Function("f", None, Unit, Real), Nothing)
+    val f = FuncOf(Function("f", None, Unit, Real), Nothing)
     val p = Function("p", None, Real, Bool)
     val x = Variable("x", None, Real)
 
     val s = create(
       SubstitutionPair(f, "x^2".asTerm),
-      SubstitutionPair(ApplyPredicate(p, CDot),
-        SubstitutionHelper.replaceFree("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]x>0".asFormula)(x, CDot)))
+      SubstitutionPair(PredOf(p, DotTerm),
+        SubstitutionHelper.replaceFree("[{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]x>0".asFormula)(x, DotTerm)))
 
-    val h = Equiv(BoxModality(Assign(x, f), ApplyPredicate(p, x)), ApplyPredicate(p, f))
+    val h = Equiv(Box(Assign(x, f), PredOf(p, x)), PredOf(p, f))
 
     s(h) should be ("[x:=x^2;][{y:=y+1 ++ {z:=z+y;}*}; z:=x+y*z;]x>0 <-> [{y:=y+1 ++ {z:=z+y;}*}; z:=x^2+y*z;]x^2>0".asFormula)
   }
@@ -1216,7 +1216,7 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   it should "occur on y() when BV={x}" in {
     val q = Function("q", None, Real, Bool)
 //    val s = FastUSubst(Seq(SubstitutionPair("x()".asTerm, Number(1)), SubstitutionPair("y()".asTerm, "x".asTerm)))
-//    a [SubstitutionClashException] should be thrownBy applySubstitutionF(s, Set.empty, Set(V("x")), ApplyPredicate(q, "y()".asTerm))
+//    a [SubstitutionClashException] should be thrownBy applySubstitutionF(s, Set.empty, Set(V("x")), PredOf(q, "y()".asTerm))
     // TODO USUbst case
   }
 
@@ -1229,14 +1229,14 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Uniform substitution" should "clash when using V on x:=x-1 for x>=0" in {
     val x = Variable("x", None, Real)
-    val f = GreaterEqual(Real, x, Number(0))
-    val p0 = ApplyPredicate(Function("p", None, Unit, Bool), Nothing)
-    val aA = ProgramConstant("a")
+    val f = GreaterEqual(x, Number(0))
+    val p0 = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val aA = ProgramConst("a")
     //@TODO val prem = Axioms.axioms("V vacuous")
-    val prem = Imply(p0, BoxModality(aA, p0))
+    val prem = Imply(p0, Box(aA, p0))
     val premseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
-    val prog = Assign(x, Subtract(Real, x, Number(1)))
-    val conc = BoxModality(prog, f)
+    val prog = Assign(x, Minus(x, Number(1)))
+    val conc = Box(prog, f)
     val concseq = Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))
     val s = USubst(
       SubstitutionPair(p0, f) ::
@@ -1249,10 +1249,10 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
   // TODO Goedel not in AxiomaticRule yet
   ignore /*"Uniform substitution of rules"*/ should "instantiate Goedel from (-x)^2>=0" in {
     val p = Function("p", None, Real, Bool)
-    val a = ProgramConstant("a")
+    val a = ProgramConst("a")
     val conc = Sequent(Seq(), IndexedSeq(), IndexedSeq("[x:=x-1;](-x)^2>=0".asFormula))
     val s = USubst(
-      SubstitutionPair(ApplyPredicate(p, Anything), "(-x)^2>=0".asFormula) ::
+      SubstitutionPair(PredOf(p, Anything), "(-x)^2>=0".asFormula) ::
       SubstitutionPair(a, "x:=x-1;".asProgram) :: Nil)
     AxiomaticRule("Goedel", s)(conc) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq("(-x)^2>=0".asFormula))
   }

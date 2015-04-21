@@ -33,7 +33,7 @@ class QETests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Quantifier Eliminator" should "verify that there exists x > 0" in {
-    val f = Exists(Seq(x), GreaterThan(Real, x, zero))
+    val f = Exists(Seq(x), Greater(x, zero))
     qet.qe(f) should be (True)
   }
 }
