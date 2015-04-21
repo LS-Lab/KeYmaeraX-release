@@ -193,6 +193,11 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
 
     case AtomicODE(x, theta) => processNFContEvolve(x, theta, symbolTable.EQ)
 
+    case DiffAssign(x, theta) => x.name + (x.index match {
+      case Some(idx) => "_" + idx
+      case None => ""
+    }) + symbolTable.PRIME + prettyPrinter(theta)
+
     case p@DifferentialProduct(l, r) => {
       val leftString = parensIfNeeded(l, p, false,
         c => { val s = prettyPrinter(c); if (s.endsWith(symbolTable.SCOLON)) s.substring(0, s.length - 1) else s })
@@ -322,6 +327,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       Compose.getClass.getCanonicalName   ::
       Loop.getClass.getCanonicalName ::
       Assign.getClass.getCanonicalName ::
+      DiffAssign.getClass.getCanonicalName ::
       AssignAny.getClass.getCanonicalName ::
       Test.getClass.getCanonicalName ::
       DifferentialProduct.getClass.getCanonicalName ::
