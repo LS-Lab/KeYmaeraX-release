@@ -334,16 +334,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
 
     //variable parser
     lazy val variableP:PackratParser[Variable] = {
-      lazy val pattern = {
-        val stringList =  variables.map(Variable.unapply(_) match {
-          case Some((n, i, _)) => n + (i match {case Some(idx) => "_" + idx case None => ""})
-          case None => ???
-        })
-        if(stringList.isEmpty) { """$^""".r/*match nothing.*/ }
-        else new scala.util.matching.Regex( stringList.sortWith(_.length > _.length).reduce(_+"|"+_) )
-      }
-      
-      log(pattern)("Variable") ^^ {
+      log(ident)("Variable") ^^ {
         case name => {
           val (n, i) = nameAndIndex(name)
           variables.find(Variable.unapply(_) match {
@@ -351,9 +342,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
             case None => false
           }) match {
             case Some(p) => p
-            case None =>
-              throw new Exception("Variable was mentioned out of context: " + nameAndIndex(name) + " context: " +
-                variables.map(Variable.unapply(_) match { case Some((n, i, _)) => "(" + n + ", " + i + ")" case None => ??? }))
+            case None => System.err.println("WARNING: undeclared identifier " + name); Variable(n, i, Real)
           }
         }
       } 
@@ -420,11 +409,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
           args match {
             case termArgs: List[Term] =>
               if (termArgs.isEmpty) FuncOf(functionFromName(name.toString, functions), Nothing)
-              else {
-                // TODO list of sorts
-                assert(termArgs.size == 1)
-                FuncOf(functionFromName(name.toString, functions), termArgs.head)
-              }
+              else FuncOf(functionFromName(name.toString, functions), termArgs.reduce((l,r) => Pair(l, r)))
             case _: String => FuncOf(functionFromName(name.toString, functions), Anything)
           }},
         { case name ~ args => "Can only use identifier of sort Real in function application, but " + name + " has sort " +
@@ -580,11 +565,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       log(pattern)("Predicate Application") ^? (
         { case name ~ args if !functions.exists(_.name == name) || functionFromName(name, functions).sort == Bool =>
           args match {
-            case termArgs: List[Term] => {
-              // TODO list of arguments
-              assert(termArgs.size == 1)
-              PredOf(functionFromName(name.toString, functions), termArgs.head)
-            }
+            case termArgs: List[Term] =>
+              PredOf(functionFromName(name.toString, functions), termArgs.reduce( (l,r) => Pair(l, r) ) )
             case _: String => PredOf(functionFromName(name.toString, functions), Anything)
           }},
         { case name ~ args => "Can only use identifier of sort Bool in predicate application, but " + name + " has sort " +
@@ -1014,9 +996,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       Unit
     } else {
       val sortList = idents.map(ident => identToSort(ident))
-      // TODO list of sorts
-      assert(sortList.size == 1)
-      sortList.head
+      sortList.reduceRight((l, r) => Tuple.apply(l, r))
     }
   }
   
