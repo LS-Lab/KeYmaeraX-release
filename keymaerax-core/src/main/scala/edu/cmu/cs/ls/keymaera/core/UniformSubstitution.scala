@@ -113,7 +113,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
 
   /**
    * Check whether the function in right matches with the function in left, i.e. they have the same head.
-   * @TODO Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
+   * @todo Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
   private[core] def sameHead(right: Expression) = what match {
     case FuncOf(lf, DotTerm | Anything | Nothing) => right match { case FuncOf(rf, _) => lf == rf case _ => false }
@@ -227,7 +227,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Minus(l, r) => Minus(usubst(l), usubst(r))
         case Times(l, r) => Times(usubst(l), usubst(r))
         case Divide(l, r) => Divide(usubst(l), usubst(r))
-        case Power(l, r:Number) => Power(usubst(l), /*usubst*/(r))
+        case Power(l, r) => Power(usubst(l), usubst(r))
         case der@Differential(e) =>
           require(admissible(SetLattice.top[NamedSymbol], e),
             "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")

@@ -156,7 +156,8 @@ case class Plus(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Minus(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Times(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Divide(left: Term, right: Term) extends RCompositeTerm(left, right)
-case class Power(left: Term, right: Number) extends RCompositeTerm(left, right)
+//@note axiom("^' derive power") needs right to be a Term not just a Number
+case class Power(left: Term, right: Term) extends RCompositeTerm(left, right)
 
 case class Differential(child: Term) extends RUnaryCompositeTerm(child)
 

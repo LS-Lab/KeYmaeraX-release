@@ -93,7 +93,6 @@ object StaticSemantics {
       case Times(l, r) => freeVars(l) ++ freeVars(r)
       case Divide(l, r) => freeVars(l) ++ freeVars(r)
       case Power(l, r) => freeVars(l) ++ freeVars(r)
-      //case Pair(dom, l, r) => freeVars(l) ++ freeVars(r)
       // special cases
       case Differential(e) => val fv = freeVars(e); fv ++ differentialSymbols(fv)
       // unofficial
