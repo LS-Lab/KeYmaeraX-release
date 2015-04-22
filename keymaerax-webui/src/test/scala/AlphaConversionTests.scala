@@ -137,7 +137,8 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  it should "be forall t. [y'=t+1;]t>0 with (x,t) on forall x. [y'=x+1;]x>0" in {
+  // TODO removed case from bound renaming to be on the conservative side - introduce when necessary for case studies
+  ignore should "be forall t. [y'=t+1;]t>0 with (x,t) on forall x. [y'=x+1;]x>0" in {
     val s = sucSequent("\\forall x. [y'=x+1;]x>0".asFormula)
     helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y'=t+1;]t>0".asFormula)
@@ -355,7 +356,8 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     ))
   }
 
-  it should "not store initial value if variable to rename does not occur in ODE" in {
+  // TODO removed case from bound renaming to be on the conservative side - introduce when necessary for case studies
+  ignore should "not store initial value if variable to rename does not occur in ODE" in {
     val s = sucSequent("\\forall x. [y'=1;]true".asFormula)
     helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y'=1;]true".asFormula)))
@@ -363,7 +365,8 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       sucSequent("\\forall t. [y'=1;]true".asFormula)))
   }
 
-  it should "not store initial value when variable to rename is constant in ODE" in {
+  // TODO removed case from bound renaming to be on the conservative side - introduce when necessary for case studies
+  ignore should "not store initial value when variable to rename is constant in ODE" in {
     val s = sucSequent("\\forall x. [y'=x+1;]true".asFormula)
     helper.runTactic(locateSucc(alphaRule("x", "t")), new RootNode(s)).openGoals().foreach(_.sequent should be (
       sucSequent("\\forall t. [y'=t+1;]true".asFormula)
