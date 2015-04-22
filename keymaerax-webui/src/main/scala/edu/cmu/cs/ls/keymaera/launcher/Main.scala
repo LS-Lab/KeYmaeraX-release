@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.launcher
 
 import java.io.{InputStreamReader, BufferedReader, File, FileFilter,IOException,EOFException}
 import javax.swing.JOptionPane
+import scala.collection.JavaConversions._
 
 /**
  * Usage:
@@ -18,8 +19,7 @@ object Main {
     if(isFirstLaunch) {
       val java : String = javaLocation
       val keymaera : String = jarLocation
-      val cmd = java + " -Xss20M -jar " + keymaera + " LAUNCH"
-      runCmd(cmd)
+      runCmd(java :: "-Xss20M" :: "-jar" :: keymaera :: "LAUNCH" :: Nil)
     }
     else {
       launcherLog("Detected LAUNCH flag -- starting HyDRA.")
@@ -31,59 +31,69 @@ object Main {
 
   def processIsAlive(proc : Process) = {
     try {
-      proc.exitValue();
+      proc.exitValue()
       false
     } catch {
       case e : Exception => true
     }
   }
 
-  private def runCmd(cmd:String) = {
+  private def runCmd(cmd: List[String]) = {
     launcherLog("Running command: " + cmd)
-    //@todo As of 1.5, ProcessBuilder.start() is the preferred way to create a Process.
-    val proc = Runtime.getRuntime.exec(cmd)
 
-    Runtime.getRuntime().addShutdownHook(new Thread() {
+    val pb = new ProcessBuilder(cmd)
+    var pollOnStd = false
+    try {
+      pb.redirectError(File.createTempFile("keymaera-error-stream", ".txt"))
+      pb.redirectOutput(File.createTempFile("keymaera-output-stream", ".txt"))
+    } catch {
+      case ex: NoSuchMethodError => pollOnStd = true
+    }
+    val proc = pb.start()
+
+    Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = {
         proc.destroy()
       }
     })
 
-    val errReaderThread = new Thread() {
-      override def run() = {
-        try {
-        val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream));
-        var errLine = ""
-        while((errLine = errReader.readLine()) != null && processIsAlive(proc)) {
-//          errLine = errReader.readLine()
-          if(errLine != null) System.err.println(errLine);
+    if (pollOnStd) {
+      val errReaderThread = new Thread() {
+        override def run() = {
+          try {
+            val errReader = new BufferedReader(new InputStreamReader(proc.getErrorStream))
+            while (processIsAlive(proc)) {
+              val errLine = errReader.readLine()
+              if (errLine != null) System.err.println(errLine)
+            }
+            errReader.close()
+          } catch {
+            case exc: EOFException => System.err.println("Done with log output")
+            case exc: IOException => System.err.println("Done with log output: " + exc)
+          }
         }
-        } catch {
-          case exc: EOFException => System.err.println("Done with log output")
-          case exc: IOException => System.err.println("Done with log output: " + exc)
-        } 
       }
-    }
-    val stdReaderThread = new Thread() {
-      override def run() = {
-        try {
-        val reader =
-          new BufferedReader(new InputStreamReader(proc.getInputStream()));
-        var line = ""
-        while((line = reader.readLine()) != null && processIsAlive(proc)) {
-          if(line != null) System.out.println(line);
+      val stdReaderThread = new Thread() {
+        override def run() = {
+          try {
+            val reader = new BufferedReader(new InputStreamReader(proc.getInputStream))
+            while (processIsAlive(proc)) {
+              val line = reader.readLine()
+              if (line != null) System.out.println(line)
+            }
+            reader.close()
+          } catch {
+            case exc: EOFException => System.err.println("Done with log output")
+            case exc: IOException => System.err.println("Done with log input: " + exc)
+          }
         }
-        } catch {
-          case exc: EOFException => System.err.println("Done with log output")
-          case exc: IOException => System.err.println("Done with log input: " + exc)
-        } 
       }
+
+      stdReaderThread.start()
+      errReaderThread.start()
     }
 
-    stdReaderThread.start()
-    errReaderThread.start()
-
-    proc.waitFor();
+    proc.waitFor()
     println("")
   }
 
@@ -91,7 +101,7 @@ object Main {
     val message = "ERROR in loader :: See http://keymaerax.org/startup.html for trouble-shooting assistance (Message: " + err + ")"
     launcherLog(message)
     try {
-      if (!java.awt.GraphicsEnvironment.isHeadless()) {
+      if (!java.awt.GraphicsEnvironment.isHeadless) {
         JOptionPane.showMessageDialog(null, message)
       }
     } catch {
@@ -124,15 +134,7 @@ object Main {
    * @return The location of the .JAR file that's currently running.
    */
   lazy val jarLocation : String = {
-    "\"" +
-      new File(Main.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath()).toString() +
-      "\""
-    
-//    val execDir  = System.getProperty("user.dir")
-//    val matchingFiles = new java.io.File(execDir).listFiles(new FileFilter {
-//      override def accept(pathname: File): Boolean = pathname.getName.contains("keymaerax.jar") && pathname.getAbsolutePath.endsWith(".jar") //finds *marea*.jar$
-//    })
-//    if(matchingFiles.length == 1) matchingFiles.head.getAbsolutePath else exitWith("Could not find a KeYmaeraX JAR in " + execDir + " NOTE: the JAR file MUST be named keymaerax.jar!")
+      new File(Main.getClass.getProtectionDomain.getCodeSource.getLocation.toURI.getPath).toString
   }
 
   def launcherLog(s : String, isError:Boolean = false) = {
