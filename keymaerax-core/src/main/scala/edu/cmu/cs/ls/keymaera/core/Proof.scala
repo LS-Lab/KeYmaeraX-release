@@ -799,6 +799,9 @@ object UniformSubstitutionRule {
   @elidable(FINEST) private def log(msg: =>Any) = {} //println(msg)
 
   private class UniformSubstitutionRule(val subst: USubst, val origin: Sequent) extends Rule("Uniform Substitution") {
+
+    override def toString = name + "(" + subst + ")"
+
     /**
      * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
      * require explicit rule applications)
