@@ -963,7 +963,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
    * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice.
    * @TODO Or let .symbols only return literally occurring symbols without tops? Unlike free variables.
    */
-  private def allNames(f: Formula): Set[NamedSymbol] = f match {
+  private def allNames(f: Formula): Set[NamedSymbol] = StaticSemantics.symbols(f) /*f match {
     // homomorphic cases
     case Equal(l, r) => allNames(l) ++ allNames(r)
     case NotEqual(l, r) => allNames(l) ++ allNames(r)
@@ -990,9 +990,9 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case PredOf(p, arg) => Set(p) ++ allNames(arg)
     case True | False => Set.empty
     case _ => throw new UnknownOperatorException("Not implemented", f)
-  }
+  }*/
 
-  private def allNames(t: Term): Set[NamedSymbol] = StaticSemantics.freeVars(t).toSet
+  private def allNames(t: Term): Set[NamedSymbol] = StaticSemantics.symbols(t)
     /*t match {
     // homomorphic cases
     case Neg(l) => allNames(l)
@@ -1011,7 +1011,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case _: Number | Nothing | Anything => Set.empty
   }*/
 
-  private def allNames(p: Program): Set[NamedSymbol] = p match {
+  private def allNames(p: Program): Set[NamedSymbol] = StaticSemantics.symbols(p) /*p match {
     case Assign(x: Variable, e) => Set(x) ++ allNames(e)
     case DiffAssign(xp@DifferentialSymbol(x:Variable), e) => Set(x,xp) ++ allNames(e) //@todo eisegesis
     case AssignAny(x: Variable) => Set(x)
@@ -1026,7 +1026,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case prg: ProgramConst => Set(prg)
     case prg: DifferentialProgramConst  => Set(prg)
     case _ => throw new UnknownOperatorException("Not implemented", p)
-  }
+  }*/
 }
 
 

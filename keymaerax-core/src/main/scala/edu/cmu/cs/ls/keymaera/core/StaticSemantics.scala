@@ -99,9 +99,7 @@ object StaticSemantics {
       case Pair(l, r) => freeVars(l) ++ freeVars(r)
       case Nothing | Anything => SetLattice.bottom
     }
-  }
-
-  /*@TODO ensuring (r => r != SetLattice.top,
+  } /*ensuring (r => true /*r != SetLattice.top*/,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
 
   /**
@@ -332,19 +330,19 @@ object StaticSemantics {
   }
 
   /**
-   * Any symbol occuring in term, whether variable or function
+   * Any symbol occurring in term, whether variable or function
    */
   def symbols(t: Term): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSet
 
   /**
-   * Any symbol occuring in formula, whether free or bound variable or function or predicate or program constant
+   * Any symbol occurring in formula, whether free or bound variable or function or predicate or program constant
    */
   def symbols(f: Formula): Set[NamedSymbol] = {
     val stat = apply(f); signature(f) ++ stat.fv.toSet ++ stat.bv.toSet
   }
 
   /**
-   * Any symbol occuring in program, whether free or bound variable or function or predicate or program constant
+   * Any symbol occurring in program, whether free or bound variable or function or predicate or program constant
    */
   def symbols(p: Program): Set[NamedSymbol] = {
     val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet
