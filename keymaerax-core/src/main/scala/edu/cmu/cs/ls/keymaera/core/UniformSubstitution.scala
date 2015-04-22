@@ -96,6 +96,12 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
       })
 
   /**
+   * The signature of the replacement introduced by this substitution.
+   * @todo remove DotTerm and DotFormula arguments
+   */
+  def signature : Set[NamedSymbol] = StaticSemantics.signature(repl)
+
+  /**
    * The key characteristic expression constituent that this SubstitutionPair is matching on.
    * @return only the lead / key part that this SubstitutionPair is matching on,
    *         which may not be its head.
@@ -161,11 +167,14 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
   def apply(t: Term): Term = usubst(t) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this + "\non" + t + "\ngave " + usubst(t))
+    r => !matchKeys.toSet.intersect(signature).isEmpty
+      || matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
   def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this + "\non" + f + "\ngave " + usubst(f))
+    r => !matchKeys.toSet.intersect(signature).isEmpty
+      || matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
   def apply(p: Program): Program = usubst(p) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this + "\non" + p + "\ngave " + usubst(p))
+    r => !matchKeys.toSet.intersect(signature).isEmpty
+      || matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
   /**
    * Apply uniform substitution everywhere in the sequent.
@@ -189,6 +198,15 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     subsDefs.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ (b.freeVars))
   } ensuring(r => r == subsDefs.map(_.freeVars).
       foldLeft(bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
+
+  /**
+   * The signature of the replacement introduced by this substitution.
+   * @return union of the freeVars of all our substitution pairs.
+   */
+  def signature : Set[NamedSymbol] = {
+    subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ (b.signature))
+  } ensuring(r => r == subsDefs.map(_.signature).
+    foldLeft(Set.empty[NamedSymbol])((a,b)=>a++b), "signature identical, whether computed with map or with fold")
 
   /**
    * The key characteristic expression constituents that this Substitution is matching on.
