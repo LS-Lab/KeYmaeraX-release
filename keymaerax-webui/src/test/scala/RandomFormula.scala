@@ -103,6 +103,7 @@ class RandomFormula(val rand : Random = new Random()) {
     }
 
     def nextODE(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : DifferentialProgram = {
+      if (n == 0 || rand.nextFloat()<=shortProbability) return AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, 0, dots))
       val r = rand.nextInt(20)
         r match {
           case it if 1 until 10 contains it => AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots))
