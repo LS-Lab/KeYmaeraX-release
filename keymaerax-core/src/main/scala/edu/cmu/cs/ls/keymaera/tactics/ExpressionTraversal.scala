@@ -222,7 +222,7 @@ object ExpressionTraversal {
         case Minus(a, b) => matchTwo(p, Minus.apply(_: Term, _: Term), f, a, b)
         case Times(a, b) => matchTwo(p, Times.apply(_: Term, _: Term), f, a, b)
         case Divide(a, b) => matchTwo(p, Divide.apply(_: Term, _: Term), f, a, b)
-        case Power(a, b) => matchTwo(p, Power.apply(_: Term, _: Number), f, a, b)
+        case Power(a, b) => matchTwo(p, Power.apply(_: Term, _: Term), f, a, b)
 
         // Programs
         case ProgramConst(_) => matchZero(p, f, e)

@@ -135,24 +135,30 @@ class KeYmaeraToSMT {
    * @param r
    * @return
    */
-  def convertExp(l : Term, r : Number) : String = {
+  def convertExp(l : Term, r : Term) : String = {
     val base = simplifyTerm(l)
+    val index = simplifyTerm(r)
     if(base.equals(Number(0))) {
       "0"
     } else {
-      if(r.value.isValidInt) {
-        if(r.value.intValue() == 0) {
-          "1"
-        } else if (r.value.intValue() > 0 ) {
-          val ba : String = convertTerm(base)
-          var res : String = "(*"
-          for (i <- 0 to r.value.intValue()-1) {
-            res += " " + ba
-          }
-          res += ")"
-          res
-        } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString() + " with negative index")
-      } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString() + " with non-integer index")
+      index match {
+        case Number(n) =>
+          if(n.isValidInt) {
+            if(n.intValue() == 0) {
+              "1"
+            } else if(n.intValue() > 0 ) {
+              val ba : String = convertTerm(base)
+              var res : String = "(*"
+              for (i <- 0 to n.intValue()-1) {
+                res += " " + ba
+              }
+              res += ")"
+              res
+            } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString() + " with negative index")
+          } else throw new SMTConversionException("Cannot convert exponential " + Power(l,r).prettyString() + " with non-integer index")
+        case Neg(Number(n)) => "(/ 1. " + convertExp(base, Number(n)) + ")"
+        case _ => throw new SMTConversionException("Conversion of exponential " + Power(l,r).prettyString() + " is not defined")
+      }
     }
   }
 
