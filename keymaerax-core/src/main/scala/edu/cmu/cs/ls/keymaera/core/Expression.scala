@@ -8,6 +8,8 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
+
 import scala.collection.immutable
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
@@ -71,7 +73,7 @@ sealed trait Expression {
   def kind : Kind
   def sort : Sort
   override def toString = "(" + prettyString() + ")@" + super.toString
-  def prettyString() : String = "TODOTODO???TODO" //new KeYmaeraPrettyPrinter().stringify(this)
+  def prettyString() : String = new KeYmaeraPrettyPrinter().stringify(this)
 }
 
 sealed trait Atomic extends Expression
