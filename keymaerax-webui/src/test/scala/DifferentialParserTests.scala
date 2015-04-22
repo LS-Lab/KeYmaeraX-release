@@ -111,7 +111,7 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
    */
   "The formula parser" should "parse [x:=1;][x:=1;]1=1 as Box(program, Box(program, formula))" in {
     helper.parseFormula("[x:=1;][x:=1;]1=1") shouldBe
-      Some(Box(Assign(x, one), Box(Assign(x, one), Equal(one, one))))
+      Box(Assign(x, one), Box(Assign(x, one), Equal(one, one)))
   }
 
 }

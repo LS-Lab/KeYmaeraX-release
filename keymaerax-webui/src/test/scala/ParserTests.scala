@@ -70,7 +70,6 @@ class ParserParenTests extends FlatSpec with Matchers {
       ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0") ::
       ("1^2 + 3^2 = s^2", "(1^2) + (3^2) = (s^2)") ::
       ("p^5 * p^3 * q^2 >= 0", "(p^5) * (p^3) * (q^2) >= 0")::
-      ("p^2^5 >= 0", "p^(2^5) >= 0")::
       // implicit {} either assumed correctly or rejected
       ("[ p:=1; p:=2; ++ p:=3] p>0", "[ {p:=1; p:=2;} ++ p:=3] p>0") ::
       ("[ p:=1; ++ p:=2; p:=3] p>0", "[ p:=1; ++ {p:=2; p:=3;}] p>0") ::
@@ -106,15 +105,7 @@ class ParserParenTests extends FlatSpec with Matchers {
     positiveTestsDir.isDirectory() should be (true)
     for(testFile <- positiveTestsDir.listFiles().filter(f => f.getName.endsWith(".key"))) {
       val src = io.Source.fromFile(testFile).mkString
-      try {
-        parser.runParser(src) //test fails on exception.
-      }
-      catch {
-        case e : Exception => {
-          fail("This file should have parsed correctly: " + testFile.getName() + " BECAUSE: " + e.getMessage(), e)
-        }
-      }
-
+      parser.runParser(src) //test fails on exception.
     }
   }
 
@@ -159,10 +150,14 @@ class ParserParenTests extends FlatSpec with Matchers {
   
   "The ALP Parser" should "parse all examples/t/positiveALP files" in {
     val positiveTestsDir = new File("examples/dev/t/parsing/positiveALP")
-    positiveTestsDir.isDirectory() should be (true)
+    positiveTestsDir.isDirectory shouldBe true
     for(testFile <- positiveTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
-      alpParser.runParser(src) //test fails on exception.
+      try {
+        alpParser.runParser(src) //test fails on exception.
+      } catch {
+        case ex: Exception => fail("Unable to parse " + testFile.getName, ex)
+      }
     }
   }
   
@@ -171,8 +166,10 @@ class ParserParenTests extends FlatSpec with Matchers {
     negativeTestsDir.isDirectory() should be (true)
     for(testFile <- negativeTestsDir.listFiles()) {
       val src = io.Source.fromFile(testFile).mkString
-      a [Exception] should be thrownBy {
-        alpParser.runParser(src)
+      withClue(testFile.getName) {
+        a[Exception] should be thrownBy {
+          alpParser.runParser(src)
+        }
       }
     }
   }
