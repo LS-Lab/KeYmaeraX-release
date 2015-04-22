@@ -31,16 +31,6 @@ class ContextTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach 
     Tactics.KeYmaeraScheduler = null
   }
 
-  "Show equivalence in context" should "congruence rewrite until done" in {
-    val s = sucSequent("(x>5 | y<2 & z=3 -> \\forall x. \\exists y. <?y>5;>[x:=1;](x<=1 & x>=1)) <-> (x>5 | y<2 & z=3 -> \\forall x. \\exists y. <?y>5;>[x:=1;]x=1)".asFormula)
-    val tactic = ContextTactics.showEquivInContext("(x<=1 & x>=1) <-> x=1".asFormula, Tactics.NilT)
-
-    val result = helper.runTactic(tactic, new RootNode(s))
-    result.openGoals() should have size 1
-    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "(x<=1 & x>=1) <-> x=1".asFormula
-  }
-
   "Cut equivalence in context" should "cut in an equivalence in context if lhs is present" in {
     val s = sucSequent("(x>5 | y<2 & z=3 -> \\forall x. \\exists y. <?y>5;>[x:=1;](x<=1 & x>=1))".asFormula)
     val tactic = ContextTactics.cutInContext("(x<=1 & x>=1) <-> x=1".asFormula, SuccPosition(0, PosInExpr(1::0::0::1::1::Nil)))

@@ -21,24 +21,6 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula,fre
  */
 object ContextTactics {
 
-  /**
-   * Creates a new tactic to uncover an equivalence inside context, and execute a base tactic on that uncovered formula.
-   * @param baseF The base formula to uncover.
-   * @param baseT The base tactic to execute on the base formula once uncovering is completed.
-   * @return The newly created tactic.
-   */
-  def showEquivInContext(baseF: Formula, baseT: Tactic): Tactic = new ConstructionTactic("Show Equivalence in Context") {
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ.head match {
-        case eq@Equiv(_, _) => eq == baseF || equivalenceCongruenceT(HereP).applicable(node)
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-      if (node.sequent.succ.head == baseF) Some(baseT)
-      else Some(equivalenceCongruenceT(HereP) & showEquivInContext(baseF, baseT))
-  }
-
   def peelT(counterPart: Position, inCtx: PosInExpr, baseT: PositionTactic): PositionTactic = new PositionTactic("Peel") {
     override def applies(s: Sequent, p: Position): Boolean =
       s(p).extractContext(inCtx)._1 == s(counterPart).extractContext(inCtx)._1
