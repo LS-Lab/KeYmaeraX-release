@@ -202,13 +202,14 @@ class USubstTests extends FlatSpec with Matchers {
       println("Random precontext " + prog.prettyString)
 
       val q_ = Function("q_", None, Real, Bool)
-      val s = USubst(Seq(
-        SubstitutionPair(ap_, prog),
-        SubstitutionPair(PredOf(pn_, Anything), prem1),
-        SubstitutionPair(PredOf(q_, Anything), prem2)
-         ))
-        AxiomaticRule("[] congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val ctx_ = Function("ctx_", None, Bool, Bool)
+
+      val s = USubst(SubstitutionPair(ap_, prog) ::
+        SubstitutionPair(PredOf(pn_, Anything), prem1) ::
+        SubstitutionPair(PredOf(q_, Anything), prem2) ::
+        SubstitutionPair(PredicationalOf(ctx_, DotFormula), Box(prog, DotFormula)) :: Nil)
+      AxiomaticRule("CE congruence", s)(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
 
@@ -222,13 +223,14 @@ class USubstTests extends FlatSpec with Matchers {
       println("Random precontext " + prog.prettyString)
 
       val q_ = Function("q_", None, Real, Bool)
-      val s = USubst(Seq(
-        SubstitutionPair(ap_, prog),
-        SubstitutionPair(PredOf(pn_, Anything), prem1),
-        SubstitutionPair(PredOf(q_, Anything), prem2)
-         ))
-        AxiomaticRule("<> congruence", s)(
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
+      val ctx_ = Function("ctx_", None, Bool, Bool)
+
+      val s = USubst(SubstitutionPair(ap_, prog) ::
+        SubstitutionPair(PredOf(pn_, Anything), prem1) ::
+        SubstitutionPair(PredOf(q_, Anything), prem2) ::
+        SubstitutionPair(PredicationalOf(ctx_, DotFormula), Diamond(prog, DotFormula)) :: Nil)
+      AxiomaticRule("CE congruence", s)(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should contain only Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))
     }
   }
 

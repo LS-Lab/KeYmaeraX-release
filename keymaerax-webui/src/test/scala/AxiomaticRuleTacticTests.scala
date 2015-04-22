@@ -1,5 +1,5 @@
 import edu.cmu.cs.ls.keymaera.core.{Mathematica, KeYmaera}
-import edu.cmu.cs.ls.keymaera.tactics.{RootNode, AxiomaticRuleTactics, Interpreter, Tactics, PosInExpr}
+import edu.cmu.cs.ls.keymaera.tactics._
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
@@ -33,7 +33,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Box congruence" should "congruence rewrite with primes" in {
     val s = sucSequent("[x':=1;](x*y())'<=0 <-> [x':=1;]x'*y()<=0".asFormula)
-    val tactic = AxiomaticRuleTactics.boxCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -43,7 +43,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Diamond congruence" should "congruence rewrite with primes" in {
     val s = sucSequent("<x':=1;>(x*y())'<=0 <-> <x':=1;>x'*y()<=0".asFormula)
-    val tactic = AxiomaticRuleTactics.diamondCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -113,7 +113,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Forall congruence" should "work" in {
     val s = sucSequent("(\\forall x. x>5) <-> (\\forall x . x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.forallCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -123,7 +123,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "alpha rename" in {
     val s = sucSequent("(\\forall y. y>5) <-> (\\forall y. y>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.forallCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -133,7 +133,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   it should "alpha rename complicated" in {
     val s = sucSequent("(\\forall x. [x:=2;]x>1) <-> (\\forall x. [x:=2;]x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.forallCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -143,7 +143,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Exists congruence" should "work" in {
     val s = sucSequent("(\\exists x. x>5) <-> (\\exists x . x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.existsCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -153,7 +153,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Exists congruence" should "alpha rename" in {
     val s = sucSequent("(\\exists y. y>5) <-> (\\exists y. y>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.existsCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -163,7 +163,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Imply congruence" should "work" in {
     val s = sucSequent("(x>5 -> x>2) <-> (x>5 -> x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.implyCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -173,7 +173,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Equiv congruence" should "work" in {
     val s = sucSequent("(x>5 <-> x>2) <-> (x>5 <-> x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.equivCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -183,7 +183,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "And congruence" should "work" in {
     val s = sucSequent("(x>5 & x>2) <-> (x>5 & x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.andCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -193,7 +193,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Or congruence" should "work" in {
     val s = sucSequent("(x>5 | x>2) <-> (x>5 | x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.orCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(1::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1
@@ -203,7 +203,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
 
   "Not congruence" should "work" in {
     val s = sucSequent("(!x>2) <-> (!x>0)".asFormula)
-    val tactic = AxiomaticRuleTactics.notCongruenceT
+    val tactic = AxiomaticRuleTactics.equivalenceCongruenceT(PosInExpr(0::Nil))
 
     val result = helper.runTactic(tactic, new RootNode(s))
     result.openGoals() should have size 1

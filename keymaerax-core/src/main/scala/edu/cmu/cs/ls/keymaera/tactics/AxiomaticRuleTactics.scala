@@ -99,91 +99,22 @@ object AxiomaticRuleTactics {
   }
 
   /**
-   * Creates a new tactic for congruence rewriting.
-   * @return The newly created tactic.
-   */
-  def congruenceT: Tactic =
-    boxCongruenceT |
-    diamondCongruenceT |
-    forallCongruenceT |
-    existsCongruenceT |
-    equivCongruenceT |
-    implyCongruenceT |
-    andCongruenceT |
-    orCongruenceT |
-    notCongruenceT
-
-  /**
-   * Creates a new tactic for box congruence rewriting. Expects a sequent with a sole formula in the succedent, of
-   * the form [a]p <-> [a]q.
-   * @return The newly created tactic.
-   */
-  def boxCongruenceT: Tactic = new ConstructionTactic("[] congruence") { outer =>
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Equiv(Box(a, p), Box(b, q)) => a == b
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
-      case Equiv(Box(a, p), Box(b, q)) if a == b =>
-        val aX = ProgramConst("a_")
-        val pX = Function("p_", None, Real, Bool)
-        val qX = Function("q_", None, Real, Bool)
-        val s = USubst(SubstitutionPair(aX, a) ::
-          SubstitutionPair(PredOf(pX, Anything), p) ::
-          SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("[] congruence", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
-      case _ => None
-    }
-  }
-
-  /**
-   * Creates a new tactic for box congruence rewriting. Expects a sequent with a sole formula in the succedent, of
-   * the form < a >p <-> < a >q.
-   * @return The newly created tactic.
-   */
-  def diamondCongruenceT: Tactic = new ConstructionTactic("<> congruence") { outer =>
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Equiv(Diamond(a, p), Diamond(b, q)) => a == b
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
-      case Equiv(Diamond(a, p), Diamond(b, q)) if a == b =>
-        val aX = ProgramConst("a_")
-        val pX = Function("p_", None, Real, Bool)
-        val qX = Function("q_", None, Real, Bool)
-        val s = USubst(SubstitutionPair(aX, a) ::
-          SubstitutionPair(PredOf(pX, Anything), p) ::
-          SubstitutionPair(PredOf(qX, Anything), q) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("<> congruence", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
-      case _ => None
-    }
-  }
-
-  /**
    * Creates a new tactic for box monotone. Expects a sequent with a sole formula in the antecedent of the form [a]p
    * and a sole formula in the succedent of the form [a]q.
    * @return The newly created tactic.
    */
   def boxMonotoneT: Tactic = new ConstructionTactic("[] monotone") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.length == 1 && node.sequent.succ.length == 1 &&
-      (node.sequent.ante(0) match {
-        case Box(a, _) => node.sequent.succ(0) match {
+      (node.sequent.ante.head match {
+        case Box(a, _) => node.sequent.succ.head match {
           case Box(b, _) => a == b
           case _ => false
         }
         case _ => false
       })
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.ante(0) match {
-      case Box(a, p) => node.sequent.succ(0) match {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.ante.head match {
+      case Box(a, p) => node.sequent.succ.head match {
         case Box(b, q) =>
           val aX = ProgramConst("a_")
           val pX = Function("p_", None, Real, Bool)
@@ -207,16 +138,16 @@ object AxiomaticRuleTactics {
    */
   def diamondMonotoneT: Tactic = new ConstructionTactic("<> monotone") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.length == 1 && node.sequent.succ.length == 1 &&
-      (node.sequent.ante(0) match {
-        case Diamond(a, _) => node.sequent.succ(0) match {
+      (node.sequent.ante.head match {
+        case Diamond(a, _) => node.sequent.succ.head match {
           case Diamond(b, _) => a == b
           case _ => false
         }
         case _ => false
       })
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.ante(0) match {
-      case Diamond(a, p) => node.sequent.succ(0) match {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.ante.head match {
+      case Diamond(a, p) => node.sequent.succ.head match {
         case Diamond(b, q) =>
           val aX = ProgramConst("a_")
           val pX = Function("p_", None, Real, Bool)
@@ -239,12 +170,12 @@ object AxiomaticRuleTactics {
    */
   def goedelT: Tactic = new ConstructionTactic("Goedel") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
+      (node.sequent.succ.head match {
           case Box(_, _) => true
           case _ => false
         })
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
       case Box(a, p) =>
         val aX = ProgramConst("a_")
         val pX = Function("p_", None, Real, Bool)
@@ -263,15 +194,15 @@ object AxiomaticRuleTactics {
    */
   def forallGeneralizationT: Tactic = new ConstructionTactic("all generalization") { outer =>
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Forall(_, _) => true
+      (node.sequent.succ.head match {
+        case Forall(vars, _) => vars.length == 1
         case _ => false
       })
 
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
+    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ.head match {
       case Forall(vars, p) =>
         assert(vars.length == 1, "forall generalization only supported for one variable")
-        val x = vars(0) match {
+        val x = vars.head match {
           case v: Variable => v
           case _ => throw new UnsupportedOperationException("forall generalization only supported for variables")
         }
@@ -285,162 +216,6 @@ object AxiomaticRuleTactics {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
           } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
         )
-    }
-  }
-
-  /**
-   * Creates a new tactic for universal congruence. Expects a sequent with a sole formula in the succedent of the
-   * form \forall x. p(x) <-> \forall x. q(x).
-   * @return The newly created tactic.
-   */
-  def forallCongruenceT: Tactic = new ConstructionTactic("all congruence") { outer =>
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Equiv(Forall(lvars, _), Forall(rvars, _)) => lvars == rvars
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
-      case Equiv(Forall(lvars, p), Forall(rvars, q)) if lvars == rvars =>
-        assert(lvars.length == 1, "forall congruence only supported for one variable")
-        val x = lvars(0) match {
-          case v: Variable => v
-          case _ => throw new UnsupportedOperationException("forall congruence only supported for variables")
-        }
-        val pX = PredOf(Function("p_", None, Real, Bool), DotTerm)
-        val qX = PredOf(Function("q_", None, Real, Bool), DotTerm)
-
-        val aX = Variable("x_", None, Real)
-        val s = USubst(
-          SubstitutionPair(pX, replaceFree(replace(p)(x, aX))(aX, DotTerm)) ::
-          SubstitutionPair(qX, replaceFree(replace(q)(x, aX))(aX, DotTerm)) :: Nil)
-
-        Some(
-          globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
-          new ApplyRule(AxiomaticRule("all congruence", s)) {
-            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
-        )
-    }
-  }
-
-  /**
-   * Creates a new tactic for existential congruence. Expects a sequent with a sole formula in the succedent of the
-   * form \exists x. p(x) <-> \exists x. q(x).
-   * @return The newly created tactic.
-   */
-  def existsCongruenceT: Tactic = new ConstructionTactic("exists congruence") { outer =>
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Equiv(Exists(lvars, _), Exists(rvars, _)) => lvars == rvars
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
-      case Equiv(Exists(lvars, p), Exists(rvars, q)) if lvars == rvars =>
-        assert(lvars.length == 1, "exists congruence only supported for one variable")
-        val x = lvars(0) match {
-          case v: Variable => v
-          case _ => throw new UnsupportedOperationException("exists congruence only supported for variables")
-        }
-        val pX = PredOf(Function("p_", None, Real, Bool), DotTerm)
-        val qX = PredOf(Function("q_", None, Real, Bool), DotTerm)
-        val aX = Variable("x_", None, Real)
-        val s = USubst(
-          SubstitutionPair(pX, replaceFree(replace(p)(x, aX))(aX, DotTerm)) ::
-          SubstitutionPair(qX, replaceFree(replace(q)(x, aX))(aX, DotTerm)) :: Nil)
-
-        Some(
-          globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
-          new ApplyRule(AxiomaticRule("exists congruence", s)) {
-            override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
-        )
-    }
-  }
-
-  /**
-   * Creates a new tactic for ! congruence. Expects a sequent with a sole formula in the succedent of the
-   * form !p <-> !q.
-   * @return The newly created tactic.
-   */
-  def notCongruenceT: Tactic = new ConstructionTactic("! congruence") { outer =>
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Equiv(Not(_), Not(_)) => true
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
-      case Equiv(Not(p), Not(q)) =>
-        val pX = PredOf(Function("p_", None, Real, Bool), Anything)
-        val qX = PredOf(Function("q_", None, Real, Bool), Anything)
-        val s = USubst(SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: Nil)
-        Some(new ApplyRule(AxiomaticRule("! congruence", s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
-    }
-  }
-
-  /**
-   * Creates a new tactic for -> congruence. Expects a sequent with a sole formula in the succedent of the
-   * form (F -> p) <-> (F -> q).
-   * @return The newly created tactic.
-   */
-  def implyCongruenceT: Tactic = binaryPropositionalCongruenceT("-> congruence", Imply.unapply)
-
-  /**
-   * Creates a new tactic for <-> congruence. Expects a sequent with a sole formula in the succedent of the
-   * form (F <-> p) <-> (F <-> q).
-   * @return The newly created tactic.
-   */
-  def equivCongruenceT: Tactic = binaryPropositionalCongruenceT("<-> congruence", Equiv.unapply)
-
-  /**
-   * Creates a new tactic for & congruence. Expects a sequent with a sole formula in the succedent of the
-   * form (F & p) <-> (F & q).
-   * @return The newly created tactic.
-   */
-  def andCongruenceT: Tactic = binaryPropositionalCongruenceT("& congruence", And.unapply)
-
-  /**
-   * Creates a new tactic for | congruence. Expects a sequent with a sole formula in the succedent of the
-   * form (F | p) <-> (F | q).
-   * @return The newly created tactic.
-   */
-  def orCongruenceT: Tactic = binaryPropositionalCongruenceT("| congruence", Or.unapply)
-
-  private class BinaryRelationUnapplyer[T: Manifest](unapply: T => Option[(Formula, Formula)]) {
-    def unapply(a: Any): Option[(Formula, Formula)] = {
-      if (manifest[T].runtimeClass.isInstance(a)) unapply(a.asInstanceOf[T]) else None
-    }
-  }
-
-  /**
-   * Creates a new tactic for propositional congruence. Expects a sequent with a sole formula in the succedent of the
-   * form (F ~ p) <-> (F ~ q). Basis for concrete binary propositional congruence tactics.
-   * @param ruleName The name of the propositional axiomatic rule.
-   * @param rel The unapply method of the relation.
-   * @return The newly created tactic.
-   */
-  private def binaryPropositionalCongruenceT[T: Manifest](ruleName: String, rel: T => Option[(Formula, Formula)]): Tactic =
-      new ConstructionTactic(ruleName) { outer =>
-    val BinRel = new BinaryRelationUnapplyer(rel)
-    override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
-      (node.sequent.succ(0) match {
-        case Equiv(BinRel(lf, _), BinRel(rf, _)) => lf == rf
-        case _ => false
-      })
-
-    override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent.succ(0) match {
-      case Equiv(BinRel(lf, p), BinRel(rf, q)) if lf == rf =>
-        val fX = PredOf(Function("F_", None, Real, Bool), Anything)
-        val pX = PredOf(Function("p_", None, Real, Bool), Anything)
-        val qX = PredOf(Function("q_", None, Real, Bool), Anything)
-        val s = USubst(SubstitutionPair(fX, lf) :: SubstitutionPair(pX, p) :: SubstitutionPair(qX, q) :: Nil)
-        Some(new ApplyRule(AxiomaticRule(ruleName, s)) {
-          override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-        })
     }
   }
 }

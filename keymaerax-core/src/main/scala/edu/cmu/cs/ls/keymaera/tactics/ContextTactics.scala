@@ -30,13 +30,13 @@ object ContextTactics {
   def showEquivInContext(baseF: Formula, baseT: Tactic): Tactic = new ConstructionTactic("Show Equivalence in Context") {
     override def applicable(node : ProofNode): Boolean = node.sequent.ante.isEmpty && node.sequent.succ.length == 1 &&
       (node.sequent.succ.head match {
-        case eq@Equiv(_, _) => eq == baseF || congruenceT.applicable(node)
+        case eq@Equiv(_, _) => eq == baseF || equivalenceCongruenceT(HereP).applicable(node)
         case _ => false
       })
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
       if (node.sequent.succ.head == baseF) Some(baseT)
-      else Some(congruenceT & showEquivInContext(baseF, baseT))
+      else Some(equivalenceCongruenceT(HereP) & showEquivInContext(baseF, baseT))
   }
 
   def peelT(counterPart: Position, inCtx: PosInExpr, baseT: PositionTactic): PositionTactic = new PositionTactic("Peel") {
