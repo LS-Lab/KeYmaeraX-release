@@ -878,13 +878,13 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case x: Number => x
     case FuncOf(f, theta) => FuncOf(f, rename(theta))
     // homomorphic cases
-    //case Neg(s, l) => Neg(s, rename(l))
+    case Neg(l) => Neg(rename(l))
     case Plus(l, r) => Plus(rename(l), rename(r))
     case Minus(l, r) => Minus(rename(l), rename(r))
     case Times(l, r) => Times(rename(l), rename(r))
     case Divide(l, r) => Divide(rename(l), rename(r))
-    case Power(l, r:Number) => Power(rename(l), /*rename*/(r))
-    //case Pair(dom, l, r) => Pair(dom, rename(l), rename(r))
+    case Power(l, r) => Power(rename(l), rename(r))
+    case Pair(l, r) => Pair(rename(l), rename(r))
 
     case Differential(e) => Differential(rename(e))
   }
@@ -994,19 +994,19 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
 
   private def allNames(t: Term): Set[NamedSymbol] = t match {
     // homomorphic cases
-    //case Neg(s, l) => allNames(l)
+    case Neg(l) => allNames(l)
     case Plus(l, r) => allNames(l) ++ allNames(r)
     case Minus(l, r) => allNames(l) ++ allNames(r)
     case Times(l, r) => allNames(l) ++ allNames(r)
     case Divide(l, r) => allNames(l) ++ allNames(r)
     case Power(l, r) => allNames(l) ++ allNames(r)
-//    case Pair(dom, l, r) => allNames(l) ++ allNames(r)
     case Differential(e) => allNames(e)
     // base cases
     case FuncOf(f, arg) => Set(f) ++ allNames(arg)
     case x: Variable => Set(x)
     case DotTerm => Set(DotTerm)
     case nd: DifferentialSymbol => Set(nd)
+    case Pair(l, r) => allNames(l) ++ allNames(r)
     case _: Number | Nothing | Anything => Set.empty
   }
 
