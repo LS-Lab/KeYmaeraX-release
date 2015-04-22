@@ -10,6 +10,10 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+
+import scala.annotation.elidable
+import scala.annotation.elidable._
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -35,44 +39,47 @@ private[core] object AxiomBase {
   private[core] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
     val px = PredOf(Function("p_", None, Real, Bool), x)
-    val pny = PredOf(Function("p_", None, Real, Bool), Anything)
+    val pany = PredOf(Function("p_", None, Real, Bool), Anything)
     val qx = PredOf(Function("q_", None, Real, Bool), x)
-    val qny = PredOf(Function("q_", None, Real, Bool), Anything)
-    val fny = FuncOf(Function("f_", None, Real, Real), Anything)
-    val gny = FuncOf(Function("g_", None, Real, Real), Anything)
+    val qany = PredOf(Function("q_", None, Real, Bool), Anything)
+    val fany = FuncOf(Function("f_", None, Real, Real), Anything)
+    val gany = FuncOf(Function("g_", None, Real, Real), Anything)
     val ctxt = Function("ctx_", None, Real, Real)
     val ctxf = Function("ctx_", None, Real, Bool)
     val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis predicational should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     val a = ProgramConst("a_")
-    val fmlny = PredOf(Function("F_", None, Real, Bool), Anything)
+    val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
-    scala.collection.immutable.Map(
-      /* @derived("Could use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
+    Map(
+      /* @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
       ("CT term congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fny, gny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fny), FuncOf(ctxt, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       ("CQ equation congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fny, gny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fny), PredOf(ctxf, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       ("CE congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pny), PredicationalOf(context, qny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pany, qany))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
       ("all monotone",
         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+      ("exists monotone",
+        (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
+          Sequent(Seq(), IndexedSeq(Exists(Seq(x), px)), IndexedSeq(Exists(Seq(x), qx))))),
       ("[] monotone",
-        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(Box(a, pny)), IndexedSeq(Box(a, qny))))),
+        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
+          Sequent(Seq(), IndexedSeq(Box(a, pany)), IndexedSeq(Box(a, qany))))),
       ("<> monotone",
-        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(Diamond(a, pny)), IndexedSeq(Diamond(a, qny))))),
+        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
+          Sequent(Seq(), IndexedSeq(Diamond(a, pany)), IndexedSeq(Diamond(a, qany))))),
       /* UNSOUND FOR HYBRID GAMES */
       ("Goedel", /* unsound for hybrid games */
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pny)))))
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pany)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pany)))))
     )
   }
 
@@ -80,20 +87,65 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] = {
-    val x = Variable("x_", None, Real)
+  private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] =
+    loadAxiomFile ++ loadConstructedAxioms
 
-    scala.collection.immutable.Map(
+  private def loadConstructedAxioms() : scala.collection.immutable.Map[String, Formula] = {
+    val x = Variable("x_", None, Real)
+    Map(
       ("x' derive variable",
         Equal(Differential(x), DifferentialSymbol(x)))
     )
   }
 
   /**
+   * parse the axiom file and add all loaded knowledge to the axioms map.
+   * @todo In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+   */
+  private def loadAxiomFile: scala.collection.immutable.Map[String, Formula] = {
+    val parser = new KeYmaeraParser(false)
+    val alp = parser.ProofFileParser
+    val res = alp.runParser(loadAxiomString())
+    val constructedAxioms = loadConstructedAxioms()
+
+    assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
+    assert(res.forall(k => !constructedAxioms.contains(k.name)), "No duplicate axiom names across")
+
+    (for(k <- res)
+      yield (k.name -> k.formula)).toMap
+  } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
+
+  @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+    val x = Variable("x", None, Real)
+    val aP0 = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val aPn = PredOf(Function("p", None, Real, Bool), Anything)
+    val aQn = PredOf(Function("q", None, Real, Bool), Anything)
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val aF = FuncOf(Function("f", None, Real, Real), Anything)
+    val aG = FuncOf(Function("g", None, Real, Real), Anything)
+    val a = ProgramConst("a")
+    val b = ProgramConst("b")
+    // soundness-critical that these are for p() not for p(x) or p(?)
+    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
+    assert(axs("V vacuous") == Imply(aP0, Box(a, aP0)), "V vacuous")
+
+    assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
+    assert(axs("[;] compose") == Equiv(Box(Compose(a,b), aPn), Box(a, Box(b, aPn))), "[;] compose")
+
+    assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
+    assert(axs("-' derive minus") == Equal(Differential(Minus(aF, aG)), Minus(Differential(aF), Differential(aG))), "-' derive minus")
+    assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
+    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
+    true
+  }
+
+  /**
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[core] def loadAxiomString() : String =
+  private def loadAxiomString() : String =
 """
 /**
  * KeYmaera Axioms.
