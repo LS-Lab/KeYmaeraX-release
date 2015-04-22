@@ -28,7 +28,7 @@ import scala.collection.GenTraversableOnce
  *
  * @param what the expression to be replaced. what can have one of the following forms:
  *          - DotTerm
- *          - Nothing/Anything
+ *          - Anything
  *          - ApplyPredicate(p:Function, DotTerm/Nothing/Anything)
  *          - Apply(f:Function, DotTerm/Nothing/Anything)
  *          - ProgramConstant/DifferentialProgramConstant
@@ -51,7 +51,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
      case _: Formula => repl.isInstanceOf[Formula]
      case _: Program => repl.isInstanceOf[Program]
     }, "(redundant test) substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
-    require(matchKey != null, "Substitutable expression required, found " + what + " in " + this)
+    require(matchKey != None, "Substitutable expression required, found " + what + " in " + this) // matchKey computation did not throw exception!
   }
 
   /**
@@ -111,7 +111,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
     case DotTerm => DotTerm
     case Anything => Anything
-    case Nothing => Nothing
+    //case Nothing => Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst => a
     case PredicationalOf(p: Function, DotFormula) => p
@@ -436,7 +436,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       def intersectsU(sigma: SubstitutionPair): Boolean =
         sigma.freeVars.intersect(U) != bottom
 
-    subsDefs.filter(intersectsU).flatMap(sigma => signature(sigma.what)).forall(fn => !occurrences.contains(fn))
+    subsDefs.filter(intersectsU).flatMap(sigma => StaticSemantics.signature(sigma.what)).forall(fn => !occurrences.contains(fn))
   } ensuring(r =>
     // U-admissible iff FV(restrict sigma to occurrences) /\ U = empty
     r == projection(occurrences).freeVars.intersect(U).isEmpty,
