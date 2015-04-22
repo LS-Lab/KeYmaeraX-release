@@ -35,44 +35,47 @@ private[core] object AxiomBase {
   private[core] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
     val px = PredOf(Function("p_", None, Real, Bool), x)
-    val pny = PredOf(Function("p_", None, Real, Bool), Anything)
+    val pany = PredOf(Function("p_", None, Real, Bool), Anything)
     val qx = PredOf(Function("q_", None, Real, Bool), x)
-    val qny = PredOf(Function("q_", None, Real, Bool), Anything)
-    val fny = FuncOf(Function("f_", None, Real, Real), Anything)
-    val gny = FuncOf(Function("g_", None, Real, Real), Anything)
+    val qany = PredOf(Function("q_", None, Real, Bool), Anything)
+    val fany = FuncOf(Function("f_", None, Real, Real), Anything)
+    val gany = FuncOf(Function("g_", None, Real, Real), Anything)
     val ctxt = Function("ctx_", None, Real, Real)
     val ctxf = Function("ctx_", None, Real, Bool)
     val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis predicational should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     val a = ProgramConst("a_")
-    val fmlny = PredOf(Function("F_", None, Real, Bool), Anything)
+    val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
-    scala.collection.immutable.Map(
-      /* @derived("Could use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
+    Map(
+      /* @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
       ("CT term congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fny, gny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fny), FuncOf(ctxt, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       ("CQ equation congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fny, gny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fny), PredOf(ctxf, gny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       ("CE congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pny, qny))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pny), PredicationalOf(context, qny)))))),
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pany, qany))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
       ("all monotone",
         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+      ("exists monotone",
+        (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
+          Sequent(Seq(), IndexedSeq(Exists(Seq(x), px)), IndexedSeq(Exists(Seq(x), qx))))),
       ("[] monotone",
-        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(Box(a, pny)), IndexedSeq(Box(a, qny))))),
+        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
+          Sequent(Seq(), IndexedSeq(Box(a, pany)), IndexedSeq(Box(a, qany))))),
       ("<> monotone",
-        (Sequent(Seq(), IndexedSeq(pny), IndexedSeq(qny)),
-          Sequent(Seq(), IndexedSeq(Diamond(a, pny)), IndexedSeq(Diamond(a, qny))))),
+        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
+          Sequent(Seq(), IndexedSeq(Diamond(a, pany)), IndexedSeq(Diamond(a, qany))))),
       /* UNSOUND FOR HYBRID GAMES */
       ("Goedel", /* unsound for hybrid games */
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pny)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pny)))))
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pany)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pany)))))
     )
   }
 
@@ -83,7 +86,7 @@ private[core] object AxiomBase {
   private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] = {
     val x = Variable("x_", None, Real)
 
-    scala.collection.immutable.Map(
+    Map(
       ("x' derive variable",
         Equal(Differential(x), DifferentialSymbol(x)))
     )
