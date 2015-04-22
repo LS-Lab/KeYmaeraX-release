@@ -842,12 +842,17 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
 
   def apply(f: Formula): Formula = {
-    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
-    // allow self renaming to get stuttering
-    if ((what != repl || wIdx != rIdx) && allNames(f).exists(v => v.name == repl && v.index == rIdx))
-      throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
-    rename(f)
-    } else f
+    if (!StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
+      // new name is not bound anywhere in f, so no bound renaming needed/possible
+      f
+    } else {
+      // new name is bound somewhere in f
+      if ((what == repl && wIdx == rIdx) // allow self renaming to get stuttering
+        || !allNames(f).exists(v => v.name == repl && v.index == rIdx))
+        rename(f)
+      else
+        throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+    }
   }
 
   /**
