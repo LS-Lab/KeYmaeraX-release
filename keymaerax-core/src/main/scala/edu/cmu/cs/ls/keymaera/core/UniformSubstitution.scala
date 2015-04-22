@@ -106,21 +106,25 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case DotTerm => DotTerm
     case Anything => Anything
     case Nothing => Nothing
-    case a: ProgramConst => a
     case a: DifferentialProgramConst => a
+    case a: ProgramConst => a
     case PredicationalOf(p: Function, DotFormula) => p
     case DotFormula => DotFormula
     case _ => throw new IllegalArgumentException("Nonsubstitutable expression " + this)
   }
 
   /**
-   * Check whether the function in right matches with the function in left, i.e. they have the same head.
+   * Check whether we match on the term other, i.e. both have the same head.
    * @todo Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
-  private[core] def sameHead(right: Expression) = what match {
-    case FuncOf(lf, DotTerm | Anything | Nothing) => right match { case FuncOf(rf, _) => lf == rf case _ => false }
-    case PredOf(lf, DotTerm | Anything | Nothing) => right match { case PredOf(rf, _) => lf == rf case _ => false }
-    case PredicationalOf(lf, DotFormula) => right match { case PredicationalOf(rf, _) => lf == rf case _ => false }
+  private[core] def sameHead(other: Expression) = what match {
+    case FuncOf(lf, DotTerm | Anything | Nothing) => other match { case FuncOf(rf, _) => lf == rf case _ => false }
+    case PredOf(lf, DotTerm | Anything | Nothing) => other match { case PredOf(rf, _) => lf == rf case _ => false }
+    case PredicationalOf(lf, DotFormula) => other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
+    case DotTerm => other == DotTerm
+    case DotFormula => other == DotFormula
+    case a: DifferentialProgramConst => other == a
+    case a: ProgramConst => other == a
     case _ => false
   }
 
@@ -194,6 +198,12 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     subsDefs.foldLeft(List[NamedSymbol]())((a,b)=>a ++ List(b.matchKey))
   }
 
+  /**
+   * Whether this substitution matches to replace the given expression e.
+   */
+  private def matchHead(e: Expression) : Boolean = subsDefs.exists(sp => sp.sameHead(e))
+
+
   // implementation of uniform substitution application
       
   // uniform substitution on terms
@@ -204,7 +214,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case x: Variable => assert(!subsDefs.exists(_.what == x), "Substitution of variables not supported: " + x); x
         case xp@DifferentialSymbol(x: Variable) => assert(!subsDefs.exists(_.what == xp),
           "Substitution of differential symbols not supported: " + xp); xp
-        case app@FuncOf(_:Function, theta) if subsDefs.exists(_.sameHead(app)) =>
+        case app@FuncOf(_:Function, theta) if matchHead(app) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
           val (rArg, rTerm) =
             (subs.what match { case FuncOf(_:Function, v: NamedSymbol) => v
@@ -215,7 +225,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
                               "Can only substitute terms for " + app.prettyString())}
             )
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
-        case app@FuncOf(g:Function, theta) if !subsDefs.exists(_.sameHead(app)) => FuncOf(g, usubst(theta))
+        case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
         case Anything => assert(!subsDefs.exists(_.what == Anything)); Anything // TODO check
         case Nothing => assert(!subsDefs.exists(_.what == Nothing)); Nothing // TODO check
         case DotTerm if  subsDefs.exists(_.what == DotTerm) => // TODO check (should be case x = sigma x for variable x)
@@ -251,7 +261,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
     log(s"Substituting ${formula.prettyString()} using $this")
     try {
       formula match {
-        case app@PredOf(_, theta) if subsDefs.exists(_.sameHead(app)) =>
+        case app@PredOf(_, theta) if matchHead(app) =>
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
           val (rArg, rFormula) = (
             subs.what match { case PredOf(_, v: NamedSymbol) => v
@@ -262,8 +272,8 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
                              s"Can only substitute formulas for ${app.prettyString()}")
             })
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
-        case app@PredOf(q, theta) if !subsDefs.exists(_.sameHead(app)) => PredOf(q, usubst(theta))
-        case app@PredicationalOf(_, fml) if subsDefs.exists(_.sameHead(app)) =>
+        case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
+        case app@PredicationalOf(_, fml) if matchHead(app) =>
           require(admissible(topVarsDiffVars[NamedSymbol], fml),
             "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " FV(" + fml + ") = " + StaticSemantics(fml).fv.prettyString + " is not empty")
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
@@ -276,7 +286,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
                              s"Can only substitute formulas for ${app.prettyString()}")
             })
           USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(rFormula)
-        case app@PredicationalOf(q, fml) if !subsDefs.exists(_.sameHead(app)) => PredicationalOf(q, usubst(fml))
+        case app@PredicationalOf(q, fml) if !matchHead(app) => PredicationalOf(q, usubst(fml))
         case DotFormula if !subsDefs.exists(_.what == DotFormula) => DotFormula // TODO check (should be case x = sigma x for variable x)
         case DotFormula if  subsDefs.exists(_.what == DotFormula) => // TODO check (should be case x = sigma x for variable x)
           subsDefs.find(_.what == DotFormula).get.repl match {

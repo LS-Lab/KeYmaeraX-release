@@ -103,10 +103,11 @@ class RandomFormula(val rand : Random = new Random()) {
     }
 
     def nextODE(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : DifferentialProgram = {
+      require(n>=0)
       if (n == 0 || rand.nextFloat()<=shortProbability) return AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, 0, dots))
       val r = rand.nextInt(20)
         r match {
-          case it if 1 until 10 contains it => AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots))
+          case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots))
           case it if 10 until 20 contains it => DifferentialProduct(nextODE(vars, n-1, dots), nextODE(vars, n-1, dots))
           case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
         }
