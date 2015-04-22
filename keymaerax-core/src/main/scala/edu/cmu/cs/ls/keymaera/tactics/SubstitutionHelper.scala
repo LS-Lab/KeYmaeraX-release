@@ -46,6 +46,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl
       case x: Variable if  u.contains(x) || x != what => x
+      case d: DifferentialSymbol if d == what => repl
+      case d: DifferentialSymbol if d != what => d
       case d: Differential if d == what => repl
       case d: Differential if d != what => d
       case app@FuncOf(fn, theta) if !u.contains(fn) && app == what => repl
