@@ -87,14 +87,15 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] = {
-    val x = Variable("x_", None, Real)
+  private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] =
+    loadAxiomFile ++ loadConstructedAxioms
 
-    loadAxiomFile ++
-      Map(
-        ("x' derive variable",
-          Equal(Differential(x), DifferentialSymbol(x)))
-      )
+  private def loadConstructedAxioms() : scala.collection.immutable.Map[String, Formula] = {
+    val x = Variable("x_", None, Real)
+    Map(
+      ("x' derive variable",
+        Equal(Differential(x), DifferentialSymbol(x)))
+    )
   }
 
   /**
@@ -104,12 +105,11 @@ private[core] object AxiomBase {
   private def loadAxiomFile: scala.collection.immutable.Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = AxiomBase.loadAxiomString()
-    val res = alp.runParser(src)
+    val res = alp.runParser(loadAxiomString())
+    val constructedAxioms = loadConstructedAxioms()
 
-    //Ensure that there are no doubly named axioms.
-    val distinctAxiomNames = res.map(k => k.name).distinct
-    assert(res.length == distinctAxiomNames.length)
+    assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
+    assert(res.forall(k => !constructedAxioms.contains(k.name)), "No duplicate axiom names across")
 
     (for(k <- res)
       yield (k.name -> k.formula)).toMap
