@@ -39,7 +39,9 @@ import scala.collection.GenTraversableOnce
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
   applicable
-  
+
+  import SetLattice.bottom
+
   @elidable(ASSERTION) def applicable = {
     require(what.kind == repl.kind,
         "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
@@ -59,8 +61,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   def freeVars : SetLattice[NamedSymbol] = (repl match {
         case replt: Term => what match {
-          //case DotTerm => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case FuncOf(f: Function, Anything) => SetLattice.bottom[NamedSymbol] // Anything locally binds all variables
+          //case DotTerm => bottom[NamedSymbol] //@TODO eisegesis check!
+          case FuncOf(f: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
           case FuncOf(f: Function, DotTerm) =>
             assert(replt == repl)
@@ -70,8 +72,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
           case _: Term => StaticSemantics(replt)
         }
         case replf: Formula => what match {
-          //case DotFormula => SetLattice.bottom[NamedSymbol] //@TODO eisegesis check!
-          case PredOf(p: Function, Anything) => SetLattice.bottom[NamedSymbol] // Anything locally binds all variables
+          //case DotFormula => bottom[NamedSymbol] //@TODO eisegesis check!
+          case PredOf(p: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case PredOf(p: Function, DotTerm) =>
             assert(replf == repl)
@@ -82,13 +84,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
             assert(replf == repl)
 //            assert(!StaticSemantics(replf).fv.contains(DotFormula) || StaticSemantics(replf).fv.isTop, "DotFormula is no variable")
 //            if ((StaticSemantics(replf).fv -- Set(DotFormula)).contains(DotFormula)) println("COMPLETENESS WARNING: removal of DotFormula from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotFormula)) + " leading to unnecessary clashes")
-            SetLattice.bottom // predicationals are not function nor predicate symbols
+            bottom // predicationals are not function nor predicate symbols
             // StaticSemantics(replf).fv  -- Set(DotFormula) // since DotFormula shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
-          case DotFormula => SetLattice.bottom // DotFormula is a nullary Predicational
+          case DotFormula => bottom // DotFormula is a nullary Predicational
           case _: Formula => StaticSemantics(replf).fv
         }
         case replp: Program => what match {
-          case _: ProgramConst | _: DifferentialProgramConst => SetLattice.bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
+          case _: ProgramConst | _: DifferentialProgramConst => bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
           case _ => throw new IllegalStateException("Disallowed substitution shape " + this)
         }
       })
@@ -137,6 +139,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
 final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
   applicable()
 
+  import SetLattice.bottom
+  import SetLattice.topVarsDiffVars
+
   // unique left hand sides in l
   @elidable(ASSERTION) def applicable() = {
     // check that we never replace n by something and then again replacing the same n by something
@@ -177,9 +182,9 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
    * @return union of the freeVars of all our substitution pairs.
    */
   def freeVars : SetLattice[NamedSymbol] = {
-    subsDefs.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ (b.freeVars))
+    subsDefs.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ (b.freeVars))
   } ensuring(r => r == subsDefs.map(_.freeVars).
-      foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
+      foldLeft(bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
 
   /**
    * The key characteristic expression constituents that this Substitution is matching on.
@@ -229,7 +234,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Divide(l, r) => Divide(usubst(l), usubst(r))
         case Power(l, r) => Power(usubst(l), usubst(r))
         case der@Differential(e) =>
-          require(admissible(SetLattice.top[NamedSymbol], e),
+          require(admissible(topVarsDiffVars[NamedSymbol], e),
             "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")
           Differential(usubst(e))
         // unofficial
@@ -259,7 +264,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@PredOf(q, theta) if !subsDefs.exists(_.sameHead(app)) => PredOf(q, usubst(theta))
         case app@PredicationalOf(_, fml) if subsDefs.exists(_.sameHead(app)) =>
-          require(admissible(SetLattice.top[NamedSymbol], fml),
+          require(admissible(topVarsDiffVars[NamedSymbol], fml),
             "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " FV(" + fml + ") = " + StaticSemantics(fml).fv.prettyString + " is not empty")
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
           val (rArg, rFormula) = (
@@ -296,7 +301,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
         case der@DifferentialFormula(g) =>
-          require(admissible(SetLattice.top[NamedSymbol], g),
+          require(admissible(topVarsDiffVars[NamedSymbol], g),
             "Substitution clash when substituting " + this + " in derivative " +  der.prettyString() + ": FV(" + g + ") = " + StaticSemantics(g).fv.prettyString + " is not empty")
           DifferentialFormula(usubst(g))
 
@@ -401,7 +406,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
       // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
       // occurs in theta (or phi or alpha)
       def intersectsU(sigma: SubstitutionPair): Boolean =
-        sigma.freeVars.intersect(U) != SetLattice.bottom
+        sigma.freeVars.intersect(U) != bottom
 
     subsDefs.filter(intersectsU).flatMap(sigma => signature(sigma.what)).forall(fn => !occurrences.contains(fn))
   } ensuring(r =>
