@@ -107,15 +107,15 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    *         which may not be its head.
    */
   private[core] def matchKey : NamedSymbol = what match {
+    case DotTerm => DotTerm
     case FuncOf(f: Function, DotTerm | Nothing | Anything) => f
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
-    case DotTerm => DotTerm
     case Anything => Anything
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst => a
-    case PredicationalOf(p: Function, DotFormula) => p
     case DotFormula => DotFormula
+    case PredicationalOf(p: Function, DotFormula) => p
     case _ => throw new IllegalArgumentException("Nonsubstitutable expression " + this)
   }
 
@@ -124,13 +124,15 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * @todo Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
   private[core] def sameHead(other: Expression) = what match {
+    case DotTerm => other == DotTerm
     case FuncOf(lf, DotTerm | Anything | Nothing) => other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, DotTerm | Anything | Nothing) => other match { case PredOf(rf, _) => lf == rf case _ => false }
-    case PredicationalOf(lf, DotFormula) => other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
-    case DotTerm => other == DotTerm
-    case DotFormula => other == DotFormula
+    case Anything => ???
+    case Nothing => false // Nothing never matches anything
     case a: DifferentialProgramConst => other == a
     case a: ProgramConst => other == a
+    case DotFormula => other == DotFormula
+    case PredicationalOf(lf, DotFormula) => other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
