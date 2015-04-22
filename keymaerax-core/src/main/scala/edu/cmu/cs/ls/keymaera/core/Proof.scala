@@ -256,6 +256,7 @@ object Provable {
  * @note soundness-critical
  * @note Only private constructor calls for soundness
  * @author aplatzer
+ * @todo probably split into different locality levels of subgoals
  */
 final case class Provable private (val conclusion: Sequent, val subgoals: scala.collection.immutable.IndexedSeq[Sequent]) {
   //override def hashCode: Int = HashFn.hash(271, conclusion, subgoals)
@@ -406,9 +407,9 @@ abstract class TwoPositionRule(name: String, val pos1: SeqPos, val pos2: SeqPos)
 object HideLeft extends (AntePos => Rule) {
   /**
    * Hide left.
-   *    G  |- D
+   *     G |- D
    * -------------
-   *   G, p |- D
+   *  p, G |- D
    */
   def apply(pos: AntePos): Rule = new HideLeft(pos)
 }
@@ -496,7 +497,7 @@ object Close extends ((AntePos, SuccPos) => Rule) {
    * Close identity.
    *        *
    * ------------------
-   *   G, p |- p, D
+   *   p, G |- p, D
    */
   def apply(assume: AntePos, pos: SuccPos): Rule = new Close(assume, pos)
 }
@@ -539,7 +540,7 @@ object CloseFalse {
    * close false.
    *        *
    * ------------------
-   *   G, false |- D
+   *   false, G |- D
    */
   def apply(pos: AntePos): LeftRule = new CloseFalse(pos)
 }
@@ -567,7 +568,7 @@ object Cut {
     def apply(s: Sequent): List[Sequent] = {
       val use = new Sequent(s.pref, s.ante :+ c, s.succ)
       val show = new Sequent(s.pref, s.ante, s.succ :+ c)
-      //@TODO Switch branches around to (show, use) and reformulate using glue()
+      //@TODO Switch branches around to (show, use) and possibly use the reformulation using glue() from ensuring
       List(use, show)
     } ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)),
       "subsequent of subgoals of cuts"
@@ -607,7 +608,7 @@ object NotLeft extends (AntePos => Rule) {
    * !L Not left.
    *   G |- D, p
    * ------------
-   *   G, !p |- D
+   *  !p, G |- D
    */
   def apply(pos: AntePos): Rule = new NotLeft(pos)
 }
@@ -640,9 +641,9 @@ class OrRight(pos: SuccPos) extends RightRule("Or Right", pos) {
 object OrLeft extends (AntePos => Rule) {
   /**
    * |L Or left.
-   * G, p |- D     G, q |- D
+   * p, G |- D     q, G |- D
    * -----------------------
-   *   G, p|q |- D
+   *   p|q, G |- D
    */
   def apply(pos: AntePos): Rule = new OrLeft(pos)
 }
@@ -677,7 +678,7 @@ object AndLeft extends (AntePos => Rule) {
    * &L And left.
    *   G, p, q |- D
    * ---------------
-   *   G, p&q |- D
+   *   p&q, G |- D
    */
   def apply(pos: AntePos): Rule = new AndLeft(pos)
 }
@@ -714,14 +715,14 @@ object ImplyLeft extends (AntePos => Rule) {
    * ->L Imply left.
    * G |- D, p    G, q |- D
    * ----------------------
-   *   G, p->q |- D
+   *   p->q, G |- D
    */
   def apply(pos: AntePos): Rule = new ImplyLeft(pos)
 }
 class ImplyLeft(pos: AntePos) extends LeftRule("Imply Left", pos) {
   def apply(s: Sequent): List[Sequent] = {
     val Imply(p,q) = s(pos)
-    //@TODO Perhaps surprising that both positions change.
+    //@TODO Perhaps surprising that both positions change but at least consistent for this rule.
     List(s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(p))),
          s.updated(pos, Sequent(s.pref, IndexedSeq(q), IndexedSeq())))
   }
@@ -750,9 +751,9 @@ class EquivRight(pos: SuccPos) extends RightRule("Equiv Right", pos) {
 object EquivLeft extends (AntePos => Rule) {
   /**
    * <->L Equiv left.
-   * G, p&q |- D    G, !p&!q |- D
+   * p&q, G |- D    !p&!q, G |- D
    * -----------------------------
-   *   G, p<->q |- D
+   *   p<->q, G |- D
    */
   def apply(p: AntePos): Rule = new EquivLeft(p)
 }
@@ -1241,7 +1242,7 @@ object CoHideLeft extends (AntePos => Rule) {
    * CoHide left.
    *      p |-
    * -------------
-   *   G, p |- D
+   *   p, G |- D
    */
   def apply(pos: AntePos): Rule = new CoHideLeft(pos)
 }
@@ -1275,7 +1276,7 @@ object CoHide2 extends ((AntePos, SuccPos) => Rule) {
    * CoHide2.
    *      p |- q
    * ---------------
-   *   G, p |- q, D
+   *   p, G |- q, D
    */
   def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
 }
@@ -1311,13 +1312,21 @@ object CutLeft extends ((Formula, AntePos) => Rule) {
    * Cut in the given formula c in place of p
    * G, c |- D    G |- p->c, D
    * -------------------------
-   *        G, p |- D
+   *        p, G |- D
    */
   def apply(c: Formula, pos: AntePos) : Rule = new CutLeft(c, pos)
   private class CutLeft(c: Formula, pos: AntePos) extends Rule("cut Left") {
     def apply(s: Sequent): List[Sequent] = {
       val p = s(pos)
-      List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
+      /**
+       * Cut in the given formula c in place of p
+       * c, G |- D    G |- p->c, D
+       * -------------------------
+       *        p, G |- D
+       * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
+       */
+      //List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
+      List(s.updated(pos, Sequent(s.pref, IndexedSeq(c), IndexedSeq())), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
     } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
   }
 }
