@@ -233,6 +233,7 @@ object ExpressionTraversal {
         case Anything => matchZero(p, f, e)
         case Assign(a, b) => matchTwo(p, Assign.apply, f, a, b)
         case AssignAny(a) => matchOne(p, AssignAny.apply, f, a)
+        case DiffAssign(a, b) => matchTwo(p, DiffAssign.apply, f, a, b)
         case Test(a) => matchOne(p, Test.apply, f, a)
         case Compose(a, b) => matchTwo(p, Compose.apply, f, a, b)
         case Choice(a, b) => matchTwo(p, Choice.apply, f, a, b)
