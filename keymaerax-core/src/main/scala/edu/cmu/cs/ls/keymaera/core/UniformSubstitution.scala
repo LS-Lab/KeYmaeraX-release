@@ -111,7 +111,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
     case DotTerm => DotTerm
     case Anything => Anything
-    //case Nothing => Nothing // it makes no sense to substitute Nothing
+    case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst => a
     case PredicationalOf(p: Function, DotFormula) => p
@@ -245,7 +245,10 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
         case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
         case Anything => assert(!subsDefs.exists(_.what == Anything)); Anything // TODO check
-        case Nothing => assert(!subsDefs.exists(_.what == Nothing)); Nothing // TODO check
+        case Nothing => {
+          assert(!subsDefs.exists(sp => sp.what == Nothing && sp.repl != Nothing), "can replace Nothing only by Nothing, and nothing else");
+          Nothing
+        }
         case DotTerm if  subsDefs.exists(_.what == DotTerm) => // TODO check (should be case x = sigma x for variable x)
           subsDefs.find(_.what == DotTerm).get.repl match {
             case t: Term => t
