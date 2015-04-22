@@ -992,7 +992,8 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case _ => throw new UnknownOperatorException("Not implemented", f)
   }
 
-  private def allNames(t: Term): Set[NamedSymbol] = t match {
+  private def allNames(t: Term): Set[NamedSymbol] = StaticSemantics.freeVars(t).toSet
+    /*t match {
     // homomorphic cases
     case Neg(l) => allNames(l)
     case Plus(l, r) => allNames(l) ++ allNames(r)
@@ -1008,7 +1009,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case nd: DifferentialSymbol => Set(nd)
     case Pair(l, r) => allNames(l) ++ allNames(r)
     case _: Number | Nothing | Anything => Set.empty
-  }
+  }*/
 
   private def allNames(p: Program): Set[NamedSymbol] = p match {
     case Assign(x: Variable, e) => Set(x) ++ allNames(e)
