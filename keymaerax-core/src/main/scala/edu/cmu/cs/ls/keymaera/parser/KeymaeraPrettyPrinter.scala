@@ -342,6 +342,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
       ProgramConst.getClass.getCanonicalName ::
       DifferentialProgramConst.getClass.getCanonicalName ::
       DotTerm.getClass.getCanonicalName ::
+      DifferentialSymbol.getClass.getCanonicalName ::
       Variable.getClass.getCanonicalName ::
       Number.getClass.getCanonicalName ::
       Nil
