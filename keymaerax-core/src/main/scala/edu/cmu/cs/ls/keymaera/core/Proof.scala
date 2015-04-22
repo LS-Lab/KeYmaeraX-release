@@ -977,8 +977,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case Or(l, r) => allNames(l) ++ allNames(r)
     case Imply(l, r) => allNames(l) ++ allNames(r)
     case Equiv(l, r) => allNames(l) ++ allNames(r)
-    //@todo asInstanceOf may cause type errors, but that's also a conceptual error in the code. Should only be for variables.
-    case DifferentialFormula(df) => allNames(df) ++ allNames(df).map(x=>DifferentialSymbol(x.asInstanceOf[Variable]))
+    case DifferentialFormula(df) => allNames(df) ++ StaticSemantics.differentialSymbols(StaticSemantics.freeVars(df)).toSet
 
     case Forall(vars, g) => vars.toSet ++ allNames(g)
     case Exists(vars, g) => vars.toSet ++ allNames(g)
