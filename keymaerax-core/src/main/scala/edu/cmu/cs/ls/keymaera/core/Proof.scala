@@ -1100,11 +1100,12 @@ object Axiom {
   /**
    * parse the axiom file and add all loaded knowledge to the axioms map.
    * @TODO In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+   * @todo move to AxiomBase?
    */
   private def loadAxiomFile: Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
-    val src = AxiomBase.loadAxioms()   //io.Source.fromInputStream(getClass.getResourceAsStream("axioms.txt")).mkString
+    val src = AxiomBase.loadAxiomString()
     val res = alp.runParser(src)
 
     //Ensure that there are no doubly named axioms.
@@ -1112,7 +1113,7 @@ object Axiom {
     assert(res.length == distinctAxiomNames.length)
 
     (for(k <- res)
-      yield (k.name -> k.formula)).toMap
+      yield (k.name -> k.formula)).toMap ++ AxiomBase.loadAxioms()
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
   @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {

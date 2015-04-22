@@ -80,7 +80,20 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[core] def loadAxioms() : String =
+  private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] = {
+    val x = Variable("x_", None, Real)
+
+    scala.collection.immutable.Map(
+      ("x' derive variable",
+        Equal(Differential(x), DifferentialSymbol(x)))
+    )
+  }
+
+  /**
+   * Look up an axiom of KeYmaera X,
+   * i.e. sound axioms are valid formulas of differential dynamic logic.
+   */
+  private[core] def loadAxiomString() : String =
 """
 /**
  * KeYmaera Axioms.
@@ -489,6 +502,11 @@ Axiom "^' derive power".
 	(f(?)^c())' = (c()*(f(?)^(c()-1)))*(f(?)') /*<- c() != 0*/
 End.
 
+/*
+Axiom "x' derive variable".
+  (x)' = x'
+End.
+*/
 
 /**
  * EXCLUSIVELY FOR HYBRID PROGRAMS.
