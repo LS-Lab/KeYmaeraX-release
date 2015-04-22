@@ -21,6 +21,7 @@ object SyntacticDerivativeTermAxiomsInContext {
     def tactics : List[PositionTactic] =
       ConstantDerivativeT ::
       PowerDerivativeT ::
+      NegativeDerivativeT ::
       SubtractDerivativeT ::
       AddDerivativeT ::
       MultiplyDerivativeT ::

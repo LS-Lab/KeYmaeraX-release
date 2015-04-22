@@ -454,6 +454,76 @@ object SyntacticDerivationInContext {
   }
 
   /*
+   * Axiom "-' derive neg".
+   *   (-s)' = -(s')
+   * End.
+   */
+  def NegativeDerivativeT = new PositionTactic("-' derive neg") with ApplicableAtTerm {
+    override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
+    override def applies(t: Term): Boolean = t match {
+      case Differential(Neg(_)) => true
+      //      case Neg(Differential(_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
+        case t@Differential(Neg(s)) =>
+          val r = Neg(Differential(s))
+          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
+
+          Some(cutInContext(Equal(t, r), p) & onBranch(
+            (cutShowLbl, lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
+              equationCongruenceT(termCtxPos) & lastSucc(NegativeDerivativeBaseT)),
+            (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+          ))
+      }
+    }
+  }
+
+  def NegativeDerivativeBaseT = new PositionTactic("-' derive neg") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Equal(Differential(Neg(_)), _) => true
+      //      case Neg(Differential(_)) => true //@todo add term position derivatives and re-enable this case, then uncomment test cases.
+      case _ => false
+    }
+
+
+    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
+        case fml@Equal(t@Differential(Neg(s)), _) => {
+          val aF = FuncOf(Function("f", None, s.sort, s.sort), Anything)
+          val subst = List(SubstitutionPair(aF, s))
+          val axiom = Axiom.axioms.get("-' derive neg") match { case Some(f) => f }
+
+          // return tactic
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
+        }
+        case fml@Equal(Neg(Differential(s)), _) => {
+          val aF = FuncOf(Function("f", None, s.sort, s.sort), Anything)
+          val subst = List(SubstitutionPair(aF, s))
+          val axiom = Axiom.axioms.get("-' derive neg") match { case Some(f) => f }
+
+          // return tactic
+          Some(
+            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+              lastSucc(assertPT(axiom)) &
+              AxiomTactic.axiomT("-' derive neg") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
+              AxiomCloseT)
+        }
+      }
+    }
+  }
+
+  /*
    * Axiom "+' derive sum".
    *  (s + t)' = (s') + (t')
    * End.
@@ -599,6 +669,7 @@ object SyntacticDerivationInContext {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //@todo So that when this gets refactored we're not stuck changing a bunch of stuff.
+  def NegativeDerivativeAtomizeT = NegativeDerivativeT
   def AddDerivativeAtomizeT      = AddDerivativeT
   def SubtractDerivativeAtomizeT = SubtractDerivativeT
   def MultiplyDerivativeAtomizeT = MultiplyDerivativeT
@@ -614,6 +685,7 @@ object SyntacticDerivationInContext {
    * This list of *all* the atomizing TermAxiomTactics is used in the implementation of wrapper tactics.
    */
   val termDerivativeTactics : List[PositionTactic with ApplicableAtTerm] =
+      NegativeDerivativeAtomizeT ::
       AddDerivativeAtomizeT ::
       SubtractDerivativeAtomizeT ::
       MultiplyDerivativeAtomizeT ::
