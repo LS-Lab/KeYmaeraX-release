@@ -834,6 +834,8 @@ object UniformSubstitutionRule {
 class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int])
   extends Rule("Bound Renaming") {
 
+  override def toString = name + "(" + what + "_" + wIdx + "~>" + repl + "_" + rIdx + ")"
+
   //@TODO Unclear. Remove?
   @unspecialized
   override def compose[A](g: (A) => _root_.edu.cmu.cs.ls.keymaera.core.Sequent): (A) => scala.List[_root_.edu.cmu.cs.ls.keymaera.core.Sequent] = super.compose(g)
@@ -851,7 +853,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
         || !allNames(f).exists(v => v.name == repl && v.index == rIdx))
         rename(f)
       else
-        throw new BoundRenamingClashException("Bound renaming only to fresh names but " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+        throw new BoundRenamingClashException("Bound renaming only to fresh names but name " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     }
   }
 
