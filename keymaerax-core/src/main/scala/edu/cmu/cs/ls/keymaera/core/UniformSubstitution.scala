@@ -157,11 +157,11 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
   def apply(t: Term): Term = usubst(t) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this + "\non" + t + "\ngave " + usubst(t))
   def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this + "\non" + f + "\ngave " + usubst(f))
   def apply(p: Program): Program = usubst(p) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this)
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences " + this + "\non" + p + "\ngave " + usubst(p))
 
   /**
    * Apply uniform substitution everywhere in the sequent.
