@@ -1000,7 +1000,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     case Times(l, r) => allNames(l) ++ allNames(r)
     case Divide(l, r) => allNames(l) ++ allNames(r)
     case Power(l, r) => allNames(l) ++ allNames(r)
-    case Differential(e) => allNames(e)
+    case Differential(e) => allNames(e) ++ StaticSemantics.differentialSymbols(StaticSemantics.freeVars(e)).toSet
     // base cases
     case FuncOf(f, arg) => Set(f) ++ allNames(arg)
     case x: Variable => Set(x)
@@ -1154,9 +1154,10 @@ object AxiomaticRule {
  *@TODO Review
  */
 object LookupLemma {
-  lazy val lemmadbpath = {
-    //@todo System.getProperty("user.home") + java.io.File.separator + ".keymaera" + java.io.File.separator + "cache" + java.io.File.separator + "lemmadb"
-    val file = new java.io.File(System.getProperty("user.home") + "/lemmadb")
+  //import java.io.File
+  private lazy val lemmadbpath = {
+    val file = new java.io.File(System.getProperty("user.home") + java.io.File.separator +
+      ".keymaera" + java.io.File.separator + "cache" + java.io.File.separator + "lemmadb")
     file.mkdirs
     file
   }
