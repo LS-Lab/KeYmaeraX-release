@@ -852,9 +852,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
       f
     } else {
       // new name is bound somewhere in f
-      if ((what == repl && wIdx == rIdx) // allow self renaming to get stuttering
-        || !allNames(f).exists(v => v.name == repl && v.index == rIdx))
-        rename(f)
+      if (admissible(f)) rename(f)
       else
         throw new BoundRenamingClashException("Bound renaming only to fresh names but name " + repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
     }
@@ -883,6 +881,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   private def rename(t: Term): Term = t match {
     // base cases
     case x: Variable => renameVar(x)
+    case DifferentialSymbol(x: Variable) => DifferentialSymbol(renameVar(x))
     case DotTerm => DotTerm
     case Nothing => Nothing
     case Anything => Anything
@@ -904,12 +903,6 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
     //@TODO Comparison without sort is intended?
     if (e.name == what && e.index == wIdx) Variable(repl, rIdx, e.sort)
     else e
-
-  private def rename(e: NamedSymbol): NamedSymbol = e match {
-    case v: Variable => renameVar(v)
-    case DifferentialSymbol(v: Variable) => DifferentialSymbol(renameVar(v))
-    case _ => throw new IllegalArgumentException("Bound renaming only supported for variables so far")
-  }
 
   /**
    * Performing alpha conversion renaming in a formula
@@ -948,9 +941,11 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
    * Performing alpha conversion renaming in a program
    */
   private def rename(p: Program): Program = p match {
-    case Assign(v: Variable, t) => Assign(renameVar(v), rename(t))
-    case DiffAssign(DifferentialSymbol(v: Variable), t) => DiffAssign(DifferentialSymbol(renameVar(v)), rename(t))
-    case AssignAny(v: Variable) => AssignAny(renameVar(v))
+    case Assign(v: Variable, t) => assert(admissible(v) && admissible(t)); Assign(renameVar(v), rename(t))
+    case DiffAssign(DifferentialSymbol(v: Variable), t) =>
+      assert(admissible(v) && admissible(t))
+      DiffAssign(DifferentialSymbol(renameVar(v)), rename(t))
+    case AssignAny(v: Variable) => assert(admissible(v)); AssignAny(renameVar(v))
     case Test(phi) => Test(rename(phi))
     case ode: DifferentialProgram => renameODE(ode)
     case Choice(a, b) => Choice(rename(a), rename(b))
@@ -962,12 +957,19 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   }
 
   private def renameODE(p: DifferentialProgram): DifferentialProgram = p match {
-      case AtomicODE(DifferentialSymbol(Variable(n, i, d)), t) if n == what && i == wIdx =>
-        AtomicODE(DifferentialSymbol(Variable(repl, rIdx, d)), rename(t))
+      case AtomicODE(DifferentialSymbol(v@Variable(n, i, Real)), t) =>
+        assert(admissible(v) && admissible(t))
+        AtomicODE(DifferentialSymbol(renameVar(v)), rename(t))
       case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
       case ODESystem(a, h) => ODESystem(renameODE(a), rename(h))
       case _: DifferentialProgramConst => p
   }
+
+  // allow self-renaming for stuttering
+  private def admissible(t: Term) =
+    (what == repl && wIdx == rIdx) || !StaticSemantics.freeVars(t).exists(v => v.name == repl && v.index == rIdx)
+  private def admissible(f: Formula) =
+    (what == repl && wIdx == rIdx) || !StaticSemantics.symbols(f).exists(v => v.name == repl && v.index == rIdx)
 
   /**
    * @TODO Difference to StaticSemantics? Could possibly converge, for example by tracking names in SetLattice even after isTop() and then providing a way of getting the literally occurring symbols from the SetLattice.
