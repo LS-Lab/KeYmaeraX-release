@@ -783,20 +783,21 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       }
     }
 
-    private def computeProduct(elements : List[(DifferentialSymbol, Term)]) : DifferentialProgram = {
-      if(elements.length == 1) {
-        AtomicODE(elements.head._1, elements.head._2)
-      }
-      else {
-        DifferentialProduct(AtomicODE(elements.head._1, elements.head._2), computeProduct(elements.tail))
-      }
+    private def computeProduct(elements : List[DifferentialProgram]) : DifferentialProgram = {
+      if(elements.length == 1) elements.head
+      else DifferentialProduct(elements.head, computeProduct(elements.tail))
+    }
+
+    lazy val atomicODEP : PackratParser[AtomicODE] = {
+      val pattern = variableDerivativeP ~ (EQ ~> theTermParser.parser)
+      log(pattern)("Atomic ODE") ^^ { case v ~ t => AtomicODE(v, t) }
     }
 
     lazy val differentialSystemP : PackratParser[DifferentialProgram] = {
-      val pattern = rep1sep(variableDerivativeP ~ (EQ ~> theTermParser.parser), COMMA) ~ (AND ~> theFormulaParser.parser).?
+      val pattern = rep1sep(atomicODEP | contEvolvePVarP, COMMA) ~ (AND ~> theFormulaParser.parser).?
       log(pattern)("Differential equation system") ^^ {
         case elements ~ constraint => {
-          val diffProgram = computeProduct(elements.map(x => (x._1, x._2)))
+          val diffProgram = computeProduct(elements)
           constraint match {
             case Some(c) => ODESystem(diffProgram, c)
             case None => ODESystem(diffProgram, True)
