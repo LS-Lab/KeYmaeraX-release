@@ -25,8 +25,8 @@ import scala.annotation.elidable
  */
 object StaticSemantics {
 
-  import SetLattice.topExceptDotTerm
-  import SetLattice.topExceptDotFormula
+  import SetLattice.topVarsDiffVars
+  import SetLattice.bottom
 
   /**
    * Structure recording which names are free or bound
@@ -83,8 +83,8 @@ object StaticSemantics {
       // base cases
       case x: Variable => SetLattice(x)
       case xp: DifferentialSymbol => SetLattice(xp)
-      case _: Number => SetLattice.bottom
-      case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm is no variable"); SetLattice.bottom
+      case _: Number => bottom
+      case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm is no variable"); bottom
       // homomorphic cases
       case FuncOf(f, arg) => freeVars(arg)
       case Neg(e) => freeVars(e)
@@ -97,7 +97,7 @@ object StaticSemantics {
       case Differential(e) => val fv = freeVars(e); fv ++ differentialSymbols(fv)
       // unofficial
       case Pair(l, r) => freeVars(l) ++ freeVars(r)
-      case Nothing | Anything => SetLattice.bottom
+      case Nothing | Anything => bottom
     }
   } /*ensuring (r => true /*r != SetLattice.top*/,
     "terms cannot have top as free variables, since they cannot mention all free variables but only some")*/
@@ -109,7 +109,7 @@ object StaticSemantics {
   private[core] def differentialSymbols(s: SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] =
     s.map[NamedSymbol](v => v match {
     case x: Variable => DifferentialSymbol(x)
-    case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v)
+    case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v + " of type " + v.getClass)
   })
 
   /**
@@ -126,8 +126,8 @@ object StaticSemantics {
    * The set FV(a) of free variables of a sequent.
    */
   def freeVars(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ freeVars(b)) ++
-      s.succ.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
+    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b)) ++
+      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
 
   /**
    * The set BV(f) of bound variables of formula f.
@@ -143,22 +143,22 @@ object StaticSemantics {
    * The set BV(a) of bound variables of a sequent.
    */
   def boundVars(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ boundVars(b)) ++
-      s.succ.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
+    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b)) ++
+      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
 
   private def fmlVars(f: Formula): VCF = f match {
     // base cases
-    case Equal(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
-    case NotEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
+    case Equal(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
+    case NotEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
-    case GreaterEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
-    case Greater(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
-    case LessEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
-    case Less(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = SetLattice.bottom)
+    case GreaterEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
+    case Greater(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
+    case LessEqual(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
+    case Less(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
-    case DotFormula => VCF(fv = topExceptDotFormula, bv = SetLattice.bottom)
-    case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = SetLattice.bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topExceptDotFormula, bv = SetLattice.bottom)
+    case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
+    case DotFormula => VCF(fv = topVarsDiffVars, bv = bottom)
+    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars, bv = bottom) //@todo eisegesis bv=topVarsDiffVars?
 
     // homomorphic cases
     case Not(g) => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
@@ -182,17 +182,17 @@ object StaticSemantics {
     // special cases
     // TODO DifferentialFormula not mentioned in Definition 7 and 8, analogue to Differential
     case DifferentialFormula(df) => val vdf = fmlVars(df); VCF(fv = vdf.fv ++ differentialSymbols(vdf.fv), bv = vdf.bv) //@todo eisegesis
-    case True | False => VCF(fv = SetLattice.bottom, bv = SetLattice.bottom)
+    case True | False => VCF(fv = bottom, bv = bottom)
   }
 
   private def progVars(p: Program): VCP = {
     p match {
       // base cases
-      case _: ProgramConst => VCP(fv = topExceptDotTerm, bv = topExceptDotTerm, mbv = SetLattice.bottom) //@TODO this includes x,x' for all x?
-      case _: DifferentialProgramConst => VCP(fv = topExceptDotTerm, bv = topExceptDotTerm, mbv = SetLattice.bottom)
+      case _: ProgramConst => VCP(fv = topVarsDiffVars, bv = topVarsDiffVars, mbv = bottom)
+      case _: DifferentialProgramConst => VCP(fv = topVarsDiffVars, bv = topVarsDiffVars, mbv = bottom)
       case Assign(x: Variable, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case DiffAssign(xp: DifferentialSymbol, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
-      case Test(f) => VCP(fv = apply(f).fv, bv = SetLattice.bottom, mbv = SetLattice.bottom)
+      case Test(f) => VCP(fv = apply(f).fv, bv = bottom, mbv = bottom)
       case AtomicODE(xp@DifferentialSymbol(x: Variable), e) =>
         VCP(fv = SetLattice[NamedSymbol](x) ++ freeVars(e), bv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp), mbv = SetLattice[NamedSymbol](x) ++ SetLattice[NamedSymbol](xp))
       // combinator cases
@@ -202,13 +202,13 @@ object StaticSemantics {
       case Compose(a, b) => val va = progVars(a);
         val vb = progVars(b)
         VCP(fv = va.fv ++ (vb.fv -- va.mbv), bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
-      case Loop(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = SetLattice.bottom)
+      case Loop(a) => val va = progVars(a); VCP(fv = va.fv, bv = va.bv, mbv = bottom)
 
       // special cases //@TODO check all special cases
       //@NOTE x:=* not mentioned in Definition 9
-      case AssignAny(x: Variable) => VCP(fv = SetLattice.bottom, bv = SetLattice(x), mbv = SetLattice(x))
+      case AssignAny(x: Variable) => VCP(fv = bottom, bv = SetLattice(x), mbv = SetLattice(x))
       // TODO system of ODE cases not mentioned in Definition 9
-      case ODESystem(a, h) => val v = SetLattice.bottom[NamedSymbol]; val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
+      case ODESystem(a, h) => val v = bottom[NamedSymbol]; val va = progVars(a); VCP(fv = (va.fv ++ apply(h).fv) -- v, bv = va.bv ++ v, mbv = va.mbv ++ v)
       case DifferentialProduct(a, b) => val va = progVars(a);
         val vb = progVars(b)
         VCP(fv = va.fv ++ vb.fv, bv = va.bv ++ vb.bv, mbv = va.mbv ++ vb.mbv)
@@ -316,9 +316,9 @@ object StaticSemantics {
   /**
    * The signature of a sequent.
    */
-  def signature(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ signature(b)) ++
-      s.succ.foldLeft(SetLattice.bottom[NamedSymbol])((a,b)=>a ++ signature(b))
+  def signature(s: Sequent): Set[NamedSymbol] =
+    s.ante.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b)) ++
+      s.succ.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
 
   /**
    * Any symbols in expression e.
@@ -336,6 +336,7 @@ object StaticSemantics {
 
   /**
    * Any symbol occurring in formula, whether free or bound variable or function or predicate or program constant
+   * @todo return SetLattice instead?
    */
   def symbols(f: Formula): Set[NamedSymbol] = {
     val stat = apply(f); signature(f) ++ stat.fv.toSet ++ stat.bv.toSet

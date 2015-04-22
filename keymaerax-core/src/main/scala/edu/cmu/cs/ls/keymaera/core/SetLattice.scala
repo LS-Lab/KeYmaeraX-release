@@ -32,6 +32,8 @@ object SetLattice {
   def apply[A](s: Seq[A]): SetLattice[A] = new SetLattice(Right(s.toSet))
   def bottom[A] = new SetLattice(Right(Set.empty[A]))
   def top[A]: SetLattice[A] = new SetLattice[A](Left(Set.empty))
+  //@todo careful: this is an overapproximation of V\cup V'
+  def topVarsDiffVars[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(DotTerm, DotFormula)))
   def topExceptDotTerm[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(DotTerm)))
   def topExceptDotFormula[A >: NamedSymbol]: SetLattice[A] = new SetLattice[A](Left(Set(DotFormula)))
 }
