@@ -24,6 +24,7 @@ import scala.language.implicitConversions
    * @TODO this position class will be unnecessary after removal of deprecated rules. Or rather: the PosInExpr part is irrelevant for rules, merely for tactics.
    * Thus simplify into just a positive or negative integer type with some antecedent/succedent accessor sugar for isAnte etc around.
    * @todo use AntePos and SuccPos directly instead of index etc.
+   * @todo Position should essentially become a nice name for a pair of a SeqPos and a PosInExpr.
    */
   abstract class Position(val index: Int, val inExpr: PosInExpr = HereP) {
     require (index >= 0, "nonnegative index " + index)
@@ -67,6 +68,9 @@ import scala.language.implicitConversions
 object Position {
   //@deprecated("Move as implicit definition to tactics and then ultimately remove")
   implicit def position2SeqPos[T <: SeqPos](p: Position): T = if (p.isAnte) new AntePos(p.index).asInstanceOf[T] else new SuccPos(p.index).asInstanceOf[T]
+
+  //implicit def antePosition2AntePos(p: AntePosition) : AntePos = assert(p.isAnte); new AntePos(p.index)
+  //implicit def succPosition2AntePos(p: SuccPosition) : SuccPos = assert(!p.isAnte); new SuccPos(p.index)
 
   //implicit def position2AntePos(p: Position) : AntePos = if (p.isAnte) new AntePos(p.index) else throw new IllegalArgumentException("Wrong position side " + p)
 
