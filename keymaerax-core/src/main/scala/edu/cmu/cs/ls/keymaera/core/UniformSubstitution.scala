@@ -61,33 +61,33 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    */
   def freeVars : SetLattice[NamedSymbol] = (repl match {
         case replt: Term => what match {
-          //case DotTerm => bottom[NamedSymbol] //@TODO eisegesis check!
           case FuncOf(f: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
           case FuncOf(f: Function, DotTerm) =>
             assert(replt == repl)
-            assert(!StaticSemantics(replt).contains(DotTerm) || StaticSemantics(replt).isTop, "DotTerm is no variable")
-            assert(!(StaticSemantics(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
-            StaticSemantics(replt) -- Set(DotTerm)  // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
-          case _: Term => StaticSemantics(replt)
+            assert(!StaticSemantics.freeVars(replt).contains(DotTerm)/* || StaticSemantics(replt).isTop*/, "DotTerm is no variable")
+            assert(!(StaticSemantics.freeVars(replt) -- Set(DotTerm)).contains(DotTerm), "COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replt) -- Set(DotTerm)) + " leading to unnecessary clashes")
+            assert(StaticSemantics.freeVars(replt) -- Set(DotTerm) == StaticSemantics.freeVars(replt), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+            StaticSemantics.freeVars(replt)
+          case _: Term => StaticSemantics.freeVars(replt)
         }
         case replf: Formula => what match {
-          //case DotFormula => bottom[NamedSymbol] //@TODO eisegesis check!
           case PredOf(p: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
           // if ever extended with p(x,y,z): StaticSemantics(f) -- {x,y,z}
           case PredOf(p: Function, DotTerm) =>
             assert(replf == repl)
-            assert(!StaticSemantics(replf).fv.contains(DotTerm) || StaticSemantics(replf).fv.isTop, "DotTerm is no variable")
-            if ((StaticSemantics(replf).fv -- Set(DotTerm)).contains(DotTerm)) println("COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotTerm)) + " leading to unnecessary clashes")
-            StaticSemantics(replf).fv  -- Set(DotTerm) // since DotTerm shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
+            assert(!StaticSemantics.freeVars(replf).contains(DotTerm) /*|| StaticSemantics(replf).fv.isTop*/, "DotTerm is no variable")
+            if ((StaticSemantics.freeVars(replf) -- Set(DotTerm)).contains(DotTerm)) println("COMPLETENESS WARNING: removal of DotTerm from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotTerm)) + " leading to unnecessary clashes")
+            assert(StaticSemantics.freeVars(replf) -- Set(DotTerm) == StaticSemantics.freeVars(replf), "DotTerm is no free variable, so removing it won't change") // since DotTerm shouldn't be in, could be changed to StaticSemantics(replt) if lattice would know that.
+            StaticSemantics.freeVars(replf)
           case PredicationalOf(ctx: Function, DotFormula) =>
-            assert(replf == repl)
+            //assert(replf == repl)
 //            assert(!StaticSemantics(replf).fv.contains(DotFormula) || StaticSemantics(replf).fv.isTop, "DotFormula is no variable")
 //            if ((StaticSemantics(replf).fv -- Set(DotFormula)).contains(DotFormula)) println("COMPLETENESS WARNING: removal of DotFormula from freeVars unsuccessful " + (StaticSemantics(replf).fv -- Set(DotFormula)) + " leading to unnecessary clashes")
             bottom // predicationals are not function nor predicate symbols
             // StaticSemantics(replf).fv  -- Set(DotFormula) // since DotFormula shouldn't be in, could be changed to StaticSemantics(replf).fv if lattice would know that.
           case DotFormula => bottom // DotFormula is a nullary Predicational
-          case _: Formula => StaticSemantics(replf).fv
+          case _: Formula => StaticSemantics.freeVars(replf)
         }
         case replp: Program => what match {
           case _: ProgramConst | _: DifferentialProgramConst => bottom[NamedSymbol] // program constants are always admissible, since their meaning doesn't depend on state
@@ -107,15 +107,15 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    *         which may not be its head.
    */
   private[core] def matchKey : NamedSymbol = what match {
+    case DotTerm => DotTerm
     case FuncOf(f: Function, DotTerm | Nothing | Anything) => f
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
-    case DotTerm => DotTerm
     case Anything => Anything
     case Nothing => assert(repl == Nothing, "can replace Nothing only by Nothing, and nothing else"); Nothing // it makes no sense to substitute Nothing
     case a: DifferentialProgramConst => a
     case a: ProgramConst => a
-    case PredicationalOf(p: Function, DotFormula) => p
     case DotFormula => DotFormula
+    case PredicationalOf(p: Function, DotFormula) => p
     case _ => throw new IllegalArgumentException("Nonsubstitutable expression " + this)
   }
 
@@ -124,13 +124,15 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * @todo Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
   private[core] def sameHead(other: Expression) = what match {
+    case DotTerm => other == DotTerm
     case FuncOf(lf, DotTerm | Anything | Nothing) => other match { case FuncOf(rf, _) => lf == rf case _ => false }
     case PredOf(lf, DotTerm | Anything | Nothing) => other match { case PredOf(rf, _) => lf == rf case _ => false }
-    case PredicationalOf(lf, DotFormula) => other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
-    case DotTerm => other == DotTerm
-    case DotFormula => other == DotFormula
+    case Anything => ???
+    case Nothing => false // Nothing never matches anything
     case a: DifferentialProgramConst => other == a
     case a: ProgramConst => other == a
+    case DotFormula => other == DotFormula
+    case PredicationalOf(lf, DotFormula) => other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
