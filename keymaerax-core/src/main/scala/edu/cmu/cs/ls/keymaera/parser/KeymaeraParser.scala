@@ -348,10 +348,13 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       } 
     }
     
-    lazy val termDerivativeP:PackratParser[Differential] = {
+    lazy val termDerivativeP:PackratParser[Term] = {
       lazy val pattern = tighterParsers(precedence, termDerivativeP).reduce(_|_)
       log(pattern ~ PRIME)(PRIME + " parser") ^^ {
-        case t ~ PRIME => new Differential(t)
+        case t ~ PRIME => t match {
+          case v: Variable => new DifferentialSymbol(v)
+          case _ => new Differential(t)
+        }
       }
     }
     
