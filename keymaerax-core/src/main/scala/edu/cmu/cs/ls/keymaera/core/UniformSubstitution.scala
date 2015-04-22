@@ -167,14 +167,11 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
   override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
 
   def apply(t: Term): Term = usubst(t) ensuring(
-    r => !matchKeys.toSet.intersect(signature).isEmpty
-      || matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
   def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => !matchKeys.toSet.intersect(signature).isEmpty
-      || matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
   def apply(p: Program): Program = usubst(p) ensuring(
-    r => !matchKeys.toSet.intersect(signature).isEmpty
-      || matchKeys.toSet.intersect(StaticSemantics.signature(r)).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
+    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
   /**
    * Apply uniform substitution everywhere in the sequent.
