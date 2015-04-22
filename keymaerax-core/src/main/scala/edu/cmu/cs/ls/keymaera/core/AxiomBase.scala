@@ -10,6 +10,10 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+
+import scala.annotation.elidable
+import scala.annotation.elidable._
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -86,17 +90,62 @@ private[core] object AxiomBase {
   private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] = {
     val x = Variable("x_", None, Real)
 
-    Map(
-      ("x' derive variable",
-        Equal(Differential(x), DifferentialSymbol(x)))
-    )
+    loadAxiomFile ++
+      Map(
+        ("x' derive variable",
+          Equal(Differential(x), DifferentialSymbol(x)))
+      )
+  }
+
+  /**
+   * parse the axiom file and add all loaded knowledge to the axioms map.
+   * @todo In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
+   */
+  private def loadAxiomFile: scala.collection.immutable.Map[String, Formula] = {
+    val parser = new KeYmaeraParser(false)
+    val alp = parser.ProofFileParser
+    val src = AxiomBase.loadAxiomString()
+    val res = alp.runParser(src)
+
+    //Ensure that there are no doubly named axioms.
+    val distinctAxiomNames = res.map(k => k.name).distinct
+    assert(res.length == distinctAxiomNames.length)
+
+    (for(k <- res)
+      yield (k.name -> k.formula)).toMap
+  } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
+
+  @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+    val x = Variable("x", None, Real)
+    val aP0 = PredOf(Function("p", None, Unit, Bool), Nothing)
+    val aPn = PredOf(Function("p", None, Real, Bool), Anything)
+    val aQn = PredOf(Function("q", None, Real, Bool), Anything)
+    val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+    val aF = FuncOf(Function("f", None, Real, Real), Anything)
+    val aG = FuncOf(Function("g", None, Real, Real), Anything)
+    val a = ProgramConst("a")
+    val b = ProgramConst("b")
+    // soundness-critical that these are for p() not for p(x) or p(?)
+    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
+    assert(axs("V vacuous") == Imply(aP0, Box(a, aP0)), "V vacuous")
+
+    assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
+    assert(axs("[;] compose") == Equiv(Box(Compose(a,b), aPn), Box(a, Box(b, aPn))), "[;] compose")
+
+    assert(axs("c()' derive constant fn") == Equal(Differential(aC), Number(0)), "c()' derive constant fn")
+    assert(axs("-' derive minus") == Equal(Differential(Minus(aF, aG)), Minus(Differential(aF), Differential(aG))), "-' derive minus")
+    assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
+    assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
+    assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
+    true
   }
 
   /**
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[core] def loadAxiomString() : String =
+  private def loadAxiomString() : String =
 """
 /**
  * KeYmaera Axioms.
