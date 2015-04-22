@@ -556,9 +556,9 @@ object SyntacticDerivationInContext {
   def deriveDivision(lhs: Term, rhs: Term): Term = Divide(Minus(Times(Differential(lhs), rhs), Times(lhs, Differential(rhs))), Power(rhs, Number(2)))
 
   def PowerDerivativeT = BinaryDerivativeT("^' derive power", Power.unapply, deriveExponential)
-  def deriveExponential(lhs: Term, rhs: Term): Term = rhs match {
-    case Number(n) if n != BigDecimal(0) => Times(Times(rhs, Power(lhs, Number(n-1))), Differential(lhs))
-    case _ => throw new IllegalArgumentException("Cannot derive exponential with exponent " + rhs)
+  def deriveExponential(lhs: Term, rhs: Term): Term = {
+    assert(rhs != Number(0), "not power 0")
+    Times(Times(rhs, Power(lhs, Minus(rhs, Number(1)))), Differential(lhs))
   }
 
   class BinaryUnapplyer[T: Manifest](m: T => Option[(Term, Term)]) {
