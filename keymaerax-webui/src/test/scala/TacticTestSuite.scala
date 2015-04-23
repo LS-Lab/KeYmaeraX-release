@@ -33,16 +33,7 @@ trait TacticTestSuite extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.KeYmaeraScheduler = null
     Tactics.MathematicaScheduler = null
   }
-
-  protected def containsOpenGoal(node:ProofNode, f:Formula) =
-    !node.openGoals().find(_.sequent.succ.contains(f)).isEmpty
-
-  protected def containsOnlyOpenGoal(node : ProofNode, f : Formula) =
-    containsOpenGoal(node, f) && node.openGoals().length == 1
-
-  protected def containsOnlyExactlyOpenGoal(node : ProofNode, f : Formula) =
-    !node.openGoals().find(n => n.sequent.succ.contains(f) && n.sequent.succ.length==1 && n.sequent.ante.length==0).isEmpty
-
+  
   protected def formulaAtExpr(node : ProofNode, position : Position) : Option[Formula] = {
     var formula : Option[Formula] = None
     val fn = new ExpressionTraversalFunction {
