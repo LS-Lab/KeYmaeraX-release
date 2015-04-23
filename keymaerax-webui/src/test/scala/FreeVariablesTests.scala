@@ -22,11 +22,14 @@ class FreeVariablesTests extends FlatSpec with Matchers {
   }
 
   "Free variables of x^y" should "be {x,y}" in {
-    StaticSemantics("x^3".asTerm) should be (Set(V("x")))
+    StaticSemantics("x^y".asTerm) should be (Set(V("x"),V("y")))
   }
 
   "Free variables of x'" should "be {x}" in {
-    StaticSemantics("x'".asTerm) should be (Set("x".asNamedSymbol, DifferentialSymbol(Variable("x", None, Real))))
+    // assumes that x' is parsed as differential symbol
+    "x'".asTerm shouldBe DifferentialSymbol(V("x"))
+    StaticSemantics("x'".asTerm) should be (Set(DifferentialSymbol(V("x"))))
+    StaticSemantics(Differential(V("x"))) should be (Set(V("x"), DifferentialSymbol(V("x"))))
   }
 
   "Free variables of x+1" should "be {x}" in {
@@ -70,8 +73,14 @@ class FreeVariablesTests extends FlatSpec with Matchers {
   }
 
   "Free variables of x'*y+x*z'" should "be {x,y}" in {
-    StaticSemantics("x'*y+x*z'".asTerm) should be (Set(V("x"),V("y"),V("z"),DifferentialSymbol(Variable("x", None, Real)),
+    // assumes that x' and z' are parsed as differential symbols
+    "x'".asTerm shouldBe DifferentialSymbol(V("x"))
+    "z'".asTerm shouldBe DifferentialSymbol(V("z"))
+    StaticSemantics("x'*y+x*z'".asTerm) should be (Set(V("x"),V("y"),DifferentialSymbol(Variable("x", None, Real)),
       DifferentialSymbol(Variable("z", None, Real))))
+    StaticSemantics(Plus(Times(Differential(V("x")), V("y")), Times(V("x"), Differential(V("z"))))) shouldBe
+      Set(V("x"),V("y"),V("z"),DifferentialSymbol(Variable("x", None, Real)),
+        DifferentialSymbol(Variable("z", None, Real)))
   }
 
   // test cases for formulas
