@@ -214,7 +214,7 @@ object AxiomaticRuleTactics {
           globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
           new ApplyRule(AxiomaticRule("all generalization", s)) {
             override def applicable(node: ProofNode): Boolean = outer.applicable(node)
-          } & globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
+          } /* TODO this step will not work, since aX not bound anymore */& globalAlphaRenamingT(aX.name, aX.index, x.name, x.index)
         )
     }
   }
