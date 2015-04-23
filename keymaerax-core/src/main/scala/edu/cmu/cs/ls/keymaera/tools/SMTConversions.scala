@@ -99,6 +99,7 @@ class KeYmaeraToSMT {
   def convertTerm(t : Term) : String = {
     require(t.sort == Real || t.sort == Unit, "SMT can only deal with reals not with sort " + t.sort)
     t match {
+      case Neg(c) => "(- " + convertTerm(c) + ")"
       case Plus(l, r) => "(+ " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Minus(l, r) => "(- " + convertTerm(l) + " " + convertTerm(r) + ")"
       case Times(l, r) => "(* " + convertTerm(l) + " " + convertTerm(r) + ")"
