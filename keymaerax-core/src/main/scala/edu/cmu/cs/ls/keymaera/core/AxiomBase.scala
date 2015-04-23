@@ -97,7 +97,7 @@ private[core] object AxiomBase {
     val x = Variable("x_", None, Real)
     Map(
       ("x' derive variable",
-        Equal(Differential(x), DifferentialSymbol(x)))
+        Forall(Seq(x), Equal(Differential(x), DifferentialSymbol(x))))
     )
   }
 
