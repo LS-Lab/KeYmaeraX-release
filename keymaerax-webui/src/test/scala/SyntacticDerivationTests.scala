@@ -316,4 +316,29 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "[x'=b;]x'-x'<=0".asFormula
   }
+
+  "symbolizeDifferentials" should "work when the Differential() occurs in a formula without []'s" in {
+    val z = Variable("z", None, Real)
+    val f = Equal(Differential(z), Number(1))
+    val node = helper.formulaToNode(f)
+
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(0 :: Nil)))
+    helper.runTactic(tactic, node, mustApply = true)
+    val result = node.openGoals().head.sequent.succ.head
+    result shouldBe Equal(DifferentialSymbol(z), Number(1))
+  }
+
+  it should "work in context" in {
+    val z = Variable("z", None, Real)
+    val f = Box(Assign(z, Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = helper.formulaToNode(f)
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil))) //not sure about this position?
+
+    helper.runTactic(tactic, node, mustApply = true)
+    helper.report(node)
+    val result = node.openGoals().head.sequent.succ.head
+    result shouldBe Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+  }
+
 }
