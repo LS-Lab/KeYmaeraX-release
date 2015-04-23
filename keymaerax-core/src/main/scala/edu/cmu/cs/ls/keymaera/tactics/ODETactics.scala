@@ -186,21 +186,34 @@ object ODETactics {
 //  }
 
   /**
+   * Creates a new tactic to handle differential effect atomic/system.
+   * @return The newly created tactic
+   */
+  def diffEffectT: PositionTactic = new PositionTactic("DE differential effect") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Box(ODESystem(_, _), _) => true
+      case _ => false
+    }
+
+    // TODO just call appropriate tactic without scheduler (needs base class change: inspect sequent)
+    override def apply(p: Position): Tactic = diffEffectAtomicT(p) | diffEffectSystemT(p)
+  }
+
+  /**
    * Creates a new tactic for the differential effect axiom.
    * @return The newly created tactic
    */
-  def diffEffectT: PositionTactic = {
+  private def diffEffectAtomicT: PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), t), q), p) =>
         // [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)
-        // TODO DiffSymbol :=
         Equiv(fml, Box(ode, Box(DiffAssign(dx, t), p)))
       case _ => False
     }
-    uncoverAxiomT("DE differential effect", axiomInstance, _ => diffEffectBaseT)
+    uncoverAxiomT("DE differential effect", axiomInstance, _ => diffEffectAtomicBaseT)
   }
   /** Base tactic for diff effect */
-  private def diffEffectBaseT: PositionTactic = {
+  private def diffEffectAtomicBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), t), q), p), _) =>
         val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
@@ -600,7 +613,7 @@ object ODETactics {
     axiomLookupBaseT("DI differential invariant", subst, _ => NilPT, (f, ax) => ax)
   }
 
-  def differentialEffectSystemT: PositionTactic = new PositionTactic("DE differential effect (system)") {
+  private def diffEffectSystemT: PositionTactic = new PositionTactic("DE differential effect (system)") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (getFormula(s, p) match {
       //        case Box(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
       case Box(ODESystem(cp: DifferentialProduct, _),_) => cp/*.normalize()*/ match {
@@ -615,7 +628,6 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case f@Box(ODESystem(a, h), phi) => a match {
-          //@TODO If it's an AtomicODE right away, shouldn't the same thing work, too?
           case cp: DifferentialProduct => cp/*.normalize()*/ match {
             case DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t: Term), c: DifferentialProgram) =>
               val g = Box(
@@ -651,19 +663,19 @@ object ODETactics {
                   }
                 } else NilPT
 
-              Some(differentialEffectT(instance, subst, alpha, x)(p))
+              Some(diffEffectSystemT(instance, subst, alpha, x)(p))
           }
         }
       }
     }
   }
   /** Uncovering differential equation system from context */
-  private def differentialEffectT(axInstance: Formula, subst: List[SubstitutionPair],
-                                       alpha: PositionTactic, x: Variable): PositionTactic = {
-    uncoverAxiomT("DE differential effect (system)", _ => axInstance, _ => differentialEffectBaseT(subst, alpha, x))
+  private def diffEffectSystemT(axInstance: Formula, subst: List[SubstitutionPair],
+                                alpha: PositionTactic, x: Variable): PositionTactic = {
+    uncoverAxiomT("DE differential effect (system)", _ => axInstance, _ => diffEffectSystemBaseT(subst, alpha, x))
   }
   /** Base tactic for DE differential effect (system) */
-  private def differentialEffectBaseT(subst: List[SubstitutionPair], alpha: PositionTactic,
+  private def diffEffectSystemBaseT(subst: List[SubstitutionPair], alpha: PositionTactic,
                                            x: Variable): PositionTactic = {
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
       val aX = Variable("x", None, Real)
@@ -702,7 +714,7 @@ object ODETactics {
 
             Some(diffInvariantAxiomT(p) & ImplyRightT(p) & AndRightT(p) & (
               debugT("left branch") & ((AxiomCloseT | PropositionalRightT(p))*) & arithmeticT,
-              debugT("right branch") & (differentialEffectSystemT(p) * n) & debugT("differential effect complete") &
+              debugT("right branch") & (diffEffectT(p) * n) & debugT("differential effect complete") &
                 debugT("About to NNF rewrite") & NNFRewrite(p.second) && debugT("Finished NNF rewrite") &
                 SyntacticDerivationInContext.SyntacticDerivationT(p.second) ~ debugT("Done with syntactic derivation") &
                 (boxDerivativeAssignT(p.second)*) & debugT("Box assignments complete") &
