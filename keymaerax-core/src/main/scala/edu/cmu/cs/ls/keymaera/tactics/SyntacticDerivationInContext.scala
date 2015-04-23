@@ -453,6 +453,89 @@ object SyntacticDerivationInContext {
     else findParentFormulaPos(f, PosInExpr(p.pos.init))
   }
 
+
+
+  /*
+   * Converts Differential(Variable(v)) into DifferentialSymbol(v). Used as a post-processing step to clean up after
+   * syntactic derivation.
+   *
+   * Implements the useful direction of the "x' derive variable" axiom.
+   *
+   * In the axiom base:
+   *    (x') == (x)'
+   *    Equal(Differential(x), DifferentialSymbol(x)))
+   */
+  def symbolizeDifferential = new PositionTactic("x' derive variable") with ApplicableAtTerm  {
+    override def applies(s : Sequent, p : Position) : Boolean = !p.isAnte && applies(getTerm(s, p)) //positioning required for the useTactic value.
+    override def applies(t : Term) = t match {
+      case Differential(Variable(_, _, Real)) => true
+      case _ => false
+    }
+
+    override def apply(p : Position) : Tactic = new ConstructionTactic(name) {
+      override def applicable(node : ProofNode) = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getTerm(node.sequent, p) match {
+        case origTerm@Differential(v : Variable) => {
+          val result = DifferentialSymbol(v)
+
+          val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+          val termCtxPos = PosInExpr(p.inExpr.pos.drop(formulaCtxPos.pos.length))
+
+          val proofOfEquivTactic : Tactic =
+            lastSucc(cohideT) &
+              equationCongruenceT(termCtxPos) &
+              lastSucc(symbolizeDifferentialBase) ~
+              errorT("Expected a copmlete proof of instantiated axiom.")
+
+          val useTactic : Tactic =
+            EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPosition(p.getIndex))
+//            lastAnte(PropositionalTacticsImpl.hideT)
+
+          Some(
+            cutInContext(Equal(origTerm, result), p) & onBranch(
+              (cutShowLbl, proofOfEquivTactic),
+              (cutUseLbl, useTactic)
+            )
+          )
+        }
+        case _ => throw new Exception("Does not apply.")
+      }
+    }
+  }
+
+  def symbolizeDifferentialBase = new PositionTactic("x' derive variable") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Equal(Differential(lv : Variable), DifferentialSymbol(rv : Variable)) => lv.equals(rv)
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case fml@Equal(left@Differential(lv : Variable), right@DifferentialSymbol(rv : Variable)) => {
+
+          val axiom = Axiom.axioms.get("x' derive variable").getOrElse(throw new Exception("Could not find (x')<->(x)' axiom!"))
+          val axiomVar = Variable("x_", None, Real) //Variable as it appears in the axiom.
+
+          val renameAndInstantiate =
+            lastAnte(TacticLibrary.alphaRenamingT(axiomVar.name, axiomVar.index, lv.name, lv.index)) &
+            lastAnte(FOQuantifierTacticsImpl.instantiateT(lv, lv)) //@todo why can't we just directly instantiated axiomVar with lv?!?!
+
+          Some(
+            assertT(0,1) &
+              TacticLibrary.cutT(Some(axiom)) & onBranch(
+                (BranchLabels.cutUseLbl, renameAndInstantiate ~ closeT ~ errorT("Should've closed (use cut symbolize differential axiom).")),
+                (BranchLabels.cutShowLbl, lastSucc(cohideT) & AxiomTactic.axiomT("x' derive variable") ~ AxiomCloseT ~ errorT("Should've closed (2)."))
+              )
+          )
+        }
+        case _ => throw new Exception("Not applicable -- only implementing the useful direction of the rewrite.")
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
   /*
    * Axiom "-' derive neg".
    *   (-s)' = -(s')
