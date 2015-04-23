@@ -83,6 +83,7 @@ object StaticSemantics {
       // base cases
       case x: Variable => SetLattice(x)
       case xp: DifferentialSymbol => SetLattice(xp)
+      case Differential(v : Variable) => SetLattice(DifferentialSymbol(v)) //@todo eisegesis. Check with Andre.
       case _: Number => bottom
       case DotTerm => assert(!DotTerm.isInstanceOf[Variable], "DotTerm is no variable"); bottom
       // homomorphic cases
