@@ -264,7 +264,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Divide(l, r) => Divide(usubst(l), usubst(r))
         case Power(l, r) => Power(usubst(l), usubst(r))
         case der@Differential(e) =>
-          require(admissible(topVarsDiffVars[NamedSymbol], e),
+          require(admissible(topVarsDiffVars[NamedSymbol](), e),
             "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")
           Differential(usubst(e))
         // unofficial
@@ -294,7 +294,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
         case app@PredicationalOf(_, fml) if matchHead(app) =>
-          require(admissible(topVarsDiffVars[NamedSymbol], fml),
+          require(admissible(topVarsDiffVars[NamedSymbol](), fml),
             "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " FV(" + fml + ") = " + StaticSemantics(fml).fv.prettyString + " is not empty")
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
           val (rArg, rFormula) = (
@@ -331,7 +331,7 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
         case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
         case der@DifferentialFormula(g) =>
-          require(admissible(topVarsDiffVars[NamedSymbol], g),
+          require(admissible(topVarsDiffVars[NamedSymbol](), g),
             "Substitution clash when substituting " + this + " in derivative " +  der.prettyString() + ": FV(" + g + ") = " + StaticSemantics(g).fv.prettyString + " is not empty")
           DifferentialFormula(usubst(g))
 

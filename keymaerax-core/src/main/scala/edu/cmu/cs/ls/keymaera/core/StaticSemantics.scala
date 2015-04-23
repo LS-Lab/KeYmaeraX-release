@@ -157,8 +157,8 @@ object StaticSemantics {
     case Less(l, r) => VCF(fv = freeVars(l) ++ freeVars(r), bv = bottom)
 
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
-    case DotFormula => VCF(fv = topVarsDiffVars, bv = bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars, bv = bottom) //@todo eisegesis bv=topVarsDiffVars?
+    case DotFormula => VCF(fv = topVarsDiffVars(), bv = bottom)
+    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = bottom) //@todo eisegesis bv=topVarsDiffVars?
 
     // homomorphic cases
     case Not(g) => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
@@ -188,8 +188,8 @@ object StaticSemantics {
   private def progVars(p: Program): VCP = {
     p match {
       // base cases
-      case _: ProgramConst => VCP(fv = topVarsDiffVars, bv = topVarsDiffVars, mbv = bottom)
-      case _: DifferentialProgramConst => VCP(fv = topVarsDiffVars, bv = topVarsDiffVars, mbv = bottom)
+      case pc: ProgramConst => VCP(fv = topVarsDiffVars(pc), bv = topVarsDiffVars(pc), mbv = bottom)
+      case dpc: DifferentialProgramConst => VCP(fv = topVarsDiffVars(dpc), bv = topVarsDiffVars(dpc), mbv = bottom)
       case Assign(x: Variable, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
       case DiffAssign(xp: DifferentialSymbol, e) => VCP(fv = freeVars(e), bv = SetLattice(xp), mbv = SetLattice(xp))
       case Test(f) => VCP(fv = apply(f).fv, bv = bottom, mbv = bottom)
@@ -332,21 +332,21 @@ object StaticSemantics {
   /**
    * Any symbol occurring in term, whether variable or function
    */
-  def symbols(t: Term): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSet
+  def symbols(t: Term): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSymbolSet
 
   /**
    * Any symbol occurring in formula, whether free or bound variable or function or predicate or program constant
    * @todo return SetLattice instead?
    */
   def symbols(f: Formula): Set[NamedSymbol] = {
-    val stat = apply(f); signature(f) ++ stat.fv.toSet ++ stat.bv.toSet
+    val stat = apply(f); signature(f) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
 
   /**
    * Any symbol occurring in program, whether free or bound variable or function or predicate or program constant
    */
   def symbols(p: Program): Set[NamedSymbol] = {
-    val stat = apply(p); signature(p) ++ stat.fv.toSet ++ stat.bv.toSet
+    val stat = apply(p); signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
 
   /**
