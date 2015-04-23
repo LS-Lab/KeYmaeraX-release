@@ -1087,8 +1087,9 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val h = Equal(Differential(Times(f, g)),
       Plus(Times(Differential(f), g), Times(f, Differential(g))))
 
-    val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
-    s(h) should be ("(x*x)' = x'*x + x*x'".asFormula)
+    val s = create(SubstitutionPair(f, "x".asVariable), SubstitutionPair(g, "x".asVariable))
+    s(h) shouldBe Equal("(x*x)'".asTerm, Plus(Times(Differential("x".asVariable), "x".asVariable),
+                                              Times("x".asVariable, Differential("x".asVariable))))
   }
 
   it should "work with DotTerm" in {
@@ -1106,8 +1107,8 @@ class UniformSubstitutionTests extends FlatSpec with Matchers with BeforeAndAfte
     val h = Equiv(DifferentialFormula(Equal(f, g)),
       Equal(Differential(f), Differential(g)))
 
-    val s = create(SubstitutionPair(f, Variable("x", None, Real)), SubstitutionPair(g, Variable("x", None, Real)))
-    s(h) should be ("(x=x)' <-> x'=x'".asFormula)
+    val s = create(SubstitutionPair(f, "x".asVariable), SubstitutionPair(g, "x".asVariable))
+    s(h) shouldBe Equiv("(x=x)'".asFormula, Equal(Differential("x".asVariable), Differential("x".asVariable)))
   }
 
   it should "work with DotTerm" in {
