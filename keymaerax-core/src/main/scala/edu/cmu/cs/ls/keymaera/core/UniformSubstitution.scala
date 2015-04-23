@@ -121,18 +121,17 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
 
   /**
    * Check whether we match on the term other, i.e. both have the same head.
-   * @todo Turn into more defensive algorithm that just checks head and merely asserts rather than checks that the left has the expected children.
    */
   private[core] def sameHead(other: Expression) = what match {
-    case DotTerm => other == DotTerm
-    case FuncOf(lf, DotTerm | Anything | Nothing) => other match { case FuncOf(rf, _) => lf == rf case _ => false }
-    case PredOf(lf, DotTerm | Anything | Nothing) => other match { case PredOf(rf, _) => lf == rf case _ => false }
-    case Anything => ???
-    case Nothing => false // Nothing never matches anything
-    case a: DifferentialProgramConst => other == a
-    case a: ProgramConst => other == a
-    case DotFormula => other == DotFormula
-    case PredicationalOf(lf, DotFormula) => other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
+    case FuncOf(lf, arg) =>
+      assert(arg match { case DotTerm | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      other match { case FuncOf(rf, _) => lf == rf case _ => false }
+    case PredOf(lf, arg) =>
+      assert(arg match { case DotTerm | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
+      other match { case PredOf(rf, _) => lf == rf case _ => false }
+    case PredicationalOf(lf, arg) =>
+      assert(arg match { case DotFormula => true case _ => false }, "Only DotFormula allowed as argument")
+      other match { case PredicationalOf(rf, _) => lf == rf case _ => false }
     case _ => false
   }
 
@@ -148,7 +147,9 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * Used for UniformSubstitution rule.
  * @author aplatzer
  */
-final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPair]) {
+final case class USubst(subsDefsInput: scala.collection.immutable.Seq[SubstitutionPair]) {
+  val subsDefs = subsDefsInput.filter(p => p.what != p.repl)
+
   applicable()
 
   import SetLattice.bottom
@@ -243,11 +244,12 @@ final case class USubst(subsDefs: scala.collection.immutable.Seq[SubstitutionPai
             )
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rTerm)
         case app@FuncOf(g:Function, theta) if !matchHead(app) => FuncOf(g, usubst(theta))
-        case Anything => assert(!subsDefs.exists(_.what == Anything)); Anything // TODO check
-        case Nothing => {
+        case Anything =>
+          assert(!subsDefs.exists(_.what == Anything), "Substitution of anything not supported " + this)
+          Anything
+        case Nothing =>
           assert(!subsDefs.exists(sp => sp.what == Nothing && sp.repl != Nothing), "can replace Nothing only by Nothing, and nothing else");
           Nothing
-        }
         case DotTerm if  subsDefs.exists(_.what == DotTerm) => // TODO check (should be case x = sigma x for variable x)
           subsDefs.find(_.what == DotTerm).get.repl match {
             case t: Term => t
