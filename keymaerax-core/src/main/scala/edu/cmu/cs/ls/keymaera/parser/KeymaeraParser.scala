@@ -350,7 +350,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     lazy val termDifferentialP:PackratParser[Term] = {
-      lazy val pattern = "(" ~> tighterParsers(precedence, termDifferentialP).reduce(_|_) <~ ")"
+      lazy val pattern = tighterParsers(precedence, termDifferentialP).reduce(_|_)
       log(pattern ~ PRIME)(PRIME + " parser") ^^ {
         case t ~ PRIME => t match {
           case _ => new Differential(t)

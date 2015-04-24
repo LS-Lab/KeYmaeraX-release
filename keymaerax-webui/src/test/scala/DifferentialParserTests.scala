@@ -112,6 +112,16 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
     "(x)' = x'".asFormula shouldBe Equal(Differential(x), DifferentialSymbol(x))
   }
 
+  it should "parse f()' as differential" in {
+    val f = FuncOf(Function("f", None, Unit, Real), Nothing)
+    "f()' = 5".asFormula shouldBe Equal(Differential(f), Number(5))
+  }
+
+  it should "parse (-f())' as differential" in {
+    val f = FuncOf(Function("f", None, Unit, Real), Nothing)
+    "(-f())' = 5".asFormula shouldBe Equal(Differential(Neg(f)), Number(5))
+  }
+
   /**
    * This test just makes sure that we parse boxes in the expected way, because that's necessary for the system axioms.
    */
