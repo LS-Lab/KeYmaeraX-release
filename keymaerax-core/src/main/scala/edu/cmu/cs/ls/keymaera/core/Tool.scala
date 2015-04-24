@@ -20,7 +20,7 @@ import scala.collection.immutable.Map
 import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
-import edu.cmu.cs.ls.keymaera.tools.{Z3Solver, DiffSolutionTool, JLinkMathematicaLink, QETool}
+import edu.cmu.cs.ls.keymaera.tools._
 
 /**
  * Defines the lifecycle for external tools. A tool is available once init is called.
@@ -104,4 +104,9 @@ class Mathematica extends ToolBase("Mathematica") {
 class Z3 extends ToolBase("Z3") {
   private val z3 = new Z3Solver
   private[core] val cricitalQE: QETool = z3
+}
+
+class Polya extends ToolBase("Polya") {
+  private val polya = new PolyaSolver
+  private[core] val cricitalQE: QETool = polya
 }
