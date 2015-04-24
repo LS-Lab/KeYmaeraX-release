@@ -1,6 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.{LoadedAxiom, KeYmaeraParser}
 import testHelper.ProvabilityTestHelper
+import testHelper.StringConverter._
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 
 /**
@@ -102,8 +103,13 @@ class DifferentialParserTests extends FlatSpec with Matchers with PrivateMethodT
       "Failed to parse Lemmas & Axioms at (line: 1, column:60): `'' expected but `;' found"
   }
 
-  it should "Parse diff assign" in {
-    helper.parseBareProgram("x' := 1;")
+  it should "parse diff assign" in {
+    helper.parseBareProgram("x' := 1;") shouldBe Some(DiffAssign(DifferentialSymbol("x".asVariable), Number(1)))
+  }
+
+  it should "parse (x)' as differential and x' as differential symbol" in {
+    val x = Variable("x", None, Real)
+    "(x)' = x'".asFormula shouldBe Equal(Differential(x), DifferentialSymbol(x))
   }
 
   /**
