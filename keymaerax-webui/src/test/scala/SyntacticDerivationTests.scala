@@ -378,4 +378,18 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
   }
 
+  it should "work with other formulas around" in {
+    val z = Variable("z", None, Real)
+    val f = Box(Assign(z, Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = new RootNode(sequent(Nil, "a>0".asFormula :: Nil, "b<0".asFormula :: f :: "c=0".asFormula :: Nil))
+    val tactic = symbolizeDifferential(SuccPosition(1, PosInExpr(1 :: 0 :: Nil)))
+
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "a>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only
+      ("b<0".asFormula, Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1))), "c=0".asFormula)
+  }
+
 }

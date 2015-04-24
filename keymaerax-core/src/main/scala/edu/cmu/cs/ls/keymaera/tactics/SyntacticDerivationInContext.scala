@@ -490,7 +490,7 @@ object SyntacticDerivationInContext {
               errorT("Expected a complete proof of instantiated axiom.")
 
           val useTactic : Tactic =
-            EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPosition(p.getIndex))
+            EqualityRewritingImpl.equivRewriting(AntePos(node.sequent.ante.length), SuccPosition(p.getIndex))
 
           Some(
             cutInContext(Equal(origTerm, result), p) & onBranch(
