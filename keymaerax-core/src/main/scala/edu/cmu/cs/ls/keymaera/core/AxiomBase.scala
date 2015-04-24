@@ -51,36 +51,99 @@ private[core] object AxiomBase {
     val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
     Map(
-      /* @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.") */
+      /**
+       * Rule "CT term congruence".
+       * Premise f_(?) = g_(?)
+       * Conclusion ctxT_(f_(?)) = ctxT_(g_(?))
+       * End.
+       * @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
+       */
       ("CT term congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
+      /**
+       * Rule "CQ equation congruence".
+       * Premise f_(?) = g_(?)
+       * Conclusion ctxP_(f_(?)) <-> ctxP_(g_(?))
+       * End.
+       */
       ("CQ equation congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
+      /**
+       * Rule "CE congruence".
+       * Premise p_(?) <-> q_(?)
+       * Conclusion ctxF_(p_(?)) <-> ctxF_(q_(?))
+       * End.
+       */
       ("CE congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pany, qany))),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       ("CO one-sided congruence",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pany, qany))),
           Sequent(Seq(), IndexedSeq(PredicationalOf(context, pany)), IndexedSeq(PredicationalOf(context, qany))))),
+      /**
+       * Rule "all generalization".
+       * Premise p(x)
+       * Conclusion \forall x . p(x)
+       * End.
+       */
       ("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
+      /**
+       * Rule "all monotone".
+       * Premise p(x) ==> q(x)
+       * Conclusion \forall x. p(x) ==> \forall x. q(x)
+       * End.
+       */
       ("all monotone",
         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+      /**
+       * Rule "exists monotone".
+       * Premise p(x) ==> q(x)
+       * Conclusion \exists x. p(x) ==> \exists x. q(x)
+       * End.
+       */
       ("exists monotone",
         (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
           Sequent(Seq(), IndexedSeq(Exists(Seq(x), px)), IndexedSeq(Exists(Seq(x), qx))))),
+      /**
+       * Rule "[] monotone".
+       * Premise p(x) ==> q(x)
+       * Conclusion [a;]p(x) ==> [a;]q(x)
+       * End.
+       */
       ("[] monotone",
         (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
           Sequent(Seq(), IndexedSeq(Box(a, pany)), IndexedSeq(Box(a, qany))))),
+      /**
+       * Rule "<> monotone".
+       * Premise p(x) ==> q(x)
+       * Conclusion <a;>p(x) ==> <a;>q(x)
+       * End.
+       */
       ("<> monotone",
         (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
           Sequent(Seq(), IndexedSeq(Diamond(a, pany)), IndexedSeq(Diamond(a, qany))))),
+      /**
+       * Rule "ind induction".
+       * Premise p(?) ==> [a;]p(?)
+       * Conclusion p(?) ==> [a*]p(?)
+       */
+      ("ind induction",
+        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(Box(a, pany))),
+          Sequent(Seq(), IndexedSeq(pany), IndexedSeq(Box(Loop(a), pany))))),
       /* UNSOUND FOR HYBRID GAMES */
-      ("Goedel", /* unsound for hybrid games */
+      /**
+       * Rule "Goedel".
+       * Premise p(x)
+       * Conclusion [a;]p(x)
+       * End.
+       * @NOTE Unsound for hybrid games
+       */
+      ("Goedel",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(pany)),
           Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pany)))))
     )
@@ -243,102 +306,6 @@ Axiom "const formula congruence".
   s() = t() -> (ctxF_(s()) <-> ctxF_(t()))
 End.
 
-/*
-Rule "CT term congruence".
-Premise f_(?) = g_(?)
-Conclusion ctxT_(f_(?)) = ctxT_(g_(?))
-End.
-
-Rule "CQ equation congruence".
-Premise f_(?) = g_(?)
-Conclusion ctxP_(f_(?)) <-> ctxP_(g_(?))
-End.
-
-Rule "CE congruence".
-Premise p_(?) = q_(?)
-Conclusion ctxF_(p_(?)) <-> ctxF_(q_(?))
-End.
-
-Rule "all generalization".
-Premise p(x)
-Conclusion \forall x . p(x)
-End.
-
-Rule "[] monotone".
-Premise p(x) ==> q(x)
-Conclusion [a;]p(x) ==> [a;]q(x)
-End.
-
-Rule "<> monotone".
-Premise p(x) ==> q(x)
-Conclusion <a;>p(x) ==> <a;>q(x)
-End.
-
-// derived rules
-
-// @Derived
-// @deprecated
-Rule "all congruence".
-Premise p(x) <-> q(x)
-Conclusion (\forall x . p(x)) <-> (\forall x . q(x))
-End.
-
-// @Derived
-// @deprecated
-Rule "exists congruence".
-Premise p(x) <-> q(x)
-Conclusion (\exists x . p(x)) <-> (\exists x . q(x))
-End.
-
-// @Derived
-// @deprecated
-Rule "[] congruence".
-Premise p(x) <-> q(x)
-Conclusion [a;]p(x) <-> [a;]q(x)
-End.
-
-// @Derived
-// @deprecated
-Rule "<> congruence".
-Premise p(x) <-> q(x)
-Conclusion <a;>p(x) <-> <a;>q(x)
-End.
-
-// @Derived
-// @deprecated
-Rule "-> congruence".
-Premise p <-> q
-Conclusion (F->p) <-> (F->q)
-End.
-
-// @Derived
-// @deprecated
-Rule "<-> congruence".
-Premise p <-> q
-Conclusion (F<->p) <-> (F<->q)
-End.
-
-// @Derived
-// @deprecated
-Rule "& congruence".
-Premise p <-> q
-Conclusion (F & p) <-> (F & q)
-End.
-
-// @Derived
-// @deprecated
-Rule "| congruence".
-Premise p <-> q
-Conclusion (F | p) <-> (F | q)
-End.
-
-// @Derived
-// @deprecated
-Rule "! congruence".
-Premise p <-> q
-Conclusion (!p) <-> (!q)
-End.
-*/
 
 /**
  * HYBRID PROGRAM MODALITIES
@@ -572,18 +539,19 @@ Axiom "V vacuous".
   p -> [a;]p
 End.
 
-/*
-Rule "Goedel". // unsound for hybrid games
+/* @NOTE Unsound for hybrid games
+Rule "Goedel".
 Premise p(x)
 Conclusion [a;]p(x)
 End.
 */
 
-/* @NOTE Unsound for games */
+/* @NOTE Unsound for hybrid games */
 Axiom "K modal modus ponens".
   [a;](p(?)->q(?)) -> (([a;]p(?)) -> ([a;]q(?)))
 End.
 
+/* @NOTE Unsound for hybrid games, use ind induction rule instead */
 Axiom "I induction".
   /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) */
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
