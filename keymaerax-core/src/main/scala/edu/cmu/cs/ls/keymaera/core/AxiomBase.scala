@@ -203,6 +203,10 @@ Axiom "all instantiate".
   \forall x. p(x) -> p(t())
 End.
 
+Axiom "all eliminate".
+  \forall x. p(?) -> p(?)
+End.
+
 Axiom "exists generalize".
   p(t()) -> \exists x. p(x)
 End.
