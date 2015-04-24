@@ -263,7 +263,7 @@ End.
  * FIRST-ORDER QUANTIFIER AXIOMS
  */
 Axiom "all instantiate".
-  \forall x. p(x) -> p(t())
+  (\forall x. p(x)) -> p(t())
 End.
 
 Axiom "exists generalize".
@@ -279,7 +279,7 @@ Axiom "vacuous all quantifier".
 End.
 
 Axiom "all dual".
-  \forall x . p(x) <-> !(\exists x . (!p(x)))
+  (\forall x . p(x)) <-> !(\exists x . (!p(x)))
 End.
 
 /* @Derived */
@@ -557,8 +557,6 @@ Axiom "I induction".
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
 End.
 
-/*@TODO Convergence axiom*/
-
 /**
  * Real arithmetic
  */
@@ -646,7 +644,7 @@ Axiom "abs expand".
   Abs(s) = if (s < 0) then -s else s fi
 End.
 */
-/* Multi-argument don't parse
+/* @todo Multi-argument don't parse
 Axiom "max expand".
   Max(s, t) = if (s > t) then s else t fi
 End.
