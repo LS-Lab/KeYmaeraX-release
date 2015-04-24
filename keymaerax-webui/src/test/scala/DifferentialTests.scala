@@ -421,4 +421,22 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
     result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=5 & y>2;][y':=5;]y>0".asFormula
   }
+
+  it should "introduce a differential assignment for the first ODE in a system" in {
+    val s = sucSequent("[x'=5, y'=2 & x>2;]x>0".asFormula)
+    val tactic = locateSucc(ODETactics.diffEffectT)
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=2, x'=5 & x>2;][x':=5;]x>0".asFormula
+  }
+
+  it should "introduce a differential assignment for the first ODE in a system repeatedly (even loop if asked to)" in {
+    val s = sucSequent("[x'=5, y'=2 & x>2;]x>0".asFormula)
+    val tactic = ODETactics.diffEffectT(SuccPosition(0)) * 3
+    val result = helper.runTactic(tactic, new RootNode(s))
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[y'=2, x'=5 & x>2;][x':=5;][y':=2;][x':=5;]x>0".asFormula
+  }
 }

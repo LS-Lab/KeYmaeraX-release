@@ -834,14 +834,9 @@ object UniformSubstitutionRule {
  * @requires target name with target index tIdx is fresh in the sequent.
  * @author smitsch
  */
-class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int])
-  extends Rule("Bound Renaming") {
+class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int]) extends Rule("Bound Renaming") {
 
   override def toString = name + "(" + what + "_" + wIdx + "~>" + repl + "_" + rIdx + ")"
-
-  //@TODO Unclear. Remove?
-  @unspecialized
-  override def compose[A](g: (A) => _root_.edu.cmu.cs.ls.keymaera.core.Sequent): (A) => scala.List[_root_.edu.cmu.cs.ls.keymaera.core.Sequent] = super.compose(g)
 
   def apply(s: Sequent): List[Sequent] =
       List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))

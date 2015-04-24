@@ -81,7 +81,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
-  "Forall generalization" should "work" in {
+  ignore /*"Forall generalization"*/ should "Forall generalization work" in {
     val s = sucSequent("\\forall x . x>0".asFormula)
     val tactic = AxiomaticRuleTactics.forallGeneralizationT
 
@@ -91,7 +91,7 @@ class AxiomaticRuleTacticTests extends FlatSpec with Matchers with BeforeAndAfte
     result.openGoals().flatMap(_.sequent.succ) should contain only "x>0".asFormula
   }
 
-  it should "alpha rename simple" in {
+  ignore should "alpha rename simple" in {
     val s = sucSequent("\\forall y . y>0".asFormula)
     val tactic = AxiomaticRuleTactics.forallGeneralizationT
 
