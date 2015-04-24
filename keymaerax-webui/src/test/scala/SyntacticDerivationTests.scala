@@ -45,7 +45,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val tactic = axTactic(SuccPosition(0, PosInExpr(1::Nil)))
 
     val sequent = sucSequent(Box("x:=2;".asProgram, DifferentialFormula(innerOp(s, t))))
-    // TODO should be DifferentialSymbols once done
     val expected = Box("x:=2;".asProgram, outerOp(Differential(s), Differential(t)))
 
     val result = helper.runTactic(tactic, new RootNode(sequent), mustApply = true)
@@ -117,83 +116,82 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   "syntactic derivation of addition" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "(x'+y') = 0".asFormula
-    val out = helper.parseFormula(" (x+y)' = 0")
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "((x)'+(y)') = 0".asFormula
+    val out = " (x+y)' = 0".asFormula
     innerOuterTest(in,out,AddDerivativeT)
   }
 
   "syntactic derivation of subtraction" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "(x'-y') = 0".asFormula
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "((x)'-(y)') = 0".asFormula
     val out = helper.parseFormula(" (x-y)' = 0")
     innerOuterTest(in,out,SubtractDerivativeT)
   }
 
   "syntactic derivation of multiplication" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "((x')*y) + (x*(y')) = 0".asFormula
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "(((x)')*y) + (x*((y)')) = 0".asFormula
     val out = "(x*y)' = 0".asFormula
     innerOuterTest(in,out,MultiplyDerivativeT)
   }
 
   "syntactic derivation of division" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "(((x')*y) - (x*(y'))) / (y^2) = 0".asFormula
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "((((x)')*y) - (x*((y)'))) / (y^2) = 0".asFormula
     val out = "(x / y)' = 0".asFormula
     innerOuterTest(in,out,DivideDerivativeT)
 
   }
 
   "TermSyntacticDerivationT" should "work for +" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "n*m + (a+b)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val pos = SuccPosition(0, PosInExpr(0 :: Nil))
-//    val tactic = TermSyntacticDerivationT(pos)
     val tactic = TacticLibrary.ClosureT(TermSyntacticDerivationT)(pos)
     val result = helper.runTactic(tactic,node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + (a'+b') + 1 + c^n = a^2 + 2".asFormula //again, nonsense...
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + ((a)'+(b)') + 1 + c^n = a^2 + 2".asFormula //again, nonsense...
   }
 
   it should "work for -y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "n*m + (-y)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
     val result = helper.runTactic(tactic,node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(y') + 1 + c^n = a^2 + 2".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -((y)') + 1 + c^n = a^2 + 2".asFormula
   }
 
   it should "work for -x" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "n*m + (-x)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
     val result = helper.runTactic(tactic,node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(x') + 1 + c^n = a^2 + 2".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -((x)') + 1 + c^n = a^2 + 2".asFormula
   }
 
   "Power Derivative" should "work" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "1 + (x^2)' = 1 + 2*x*x'".asFormula
     val node = helper.formulaToNode(in)
     val tactic = PowerDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
     val result = helper.runTactic(tactic, node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^(2-1)*x'=1+2*x*x'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^(2-1)*(x)'=1+2*x*x'".asFormula
   }
 
   "DeriveConstant" should "work" in {

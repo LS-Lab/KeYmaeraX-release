@@ -1081,7 +1081,9 @@ object SyntacticDerivationInContext {
       (locateTerm(TermSyntacticDerivationT, inAnte = false) *) &
       assertT(!containsTermDerivative(_), "Term derivative left unhandled by TermSyntacticDerivationT") &
       (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) &
-      assertT(containsOnlyVariableDerivatives(_), "Syntactic derivation left monomial or constant unhandled")
+      assertT(containsOnlyVariableDerivatives(_), "Syntactic derivation left monomial or constant unhandled") &
+      (locateTerm(symbolizeDifferential, inAnte = false) *) &
+      assertT(containsOnlyDiffSymbols(_), "Syntactic derivation did not convert all differentials into differential symbols")
 
     private def containsFormulaDerivative(s: Sequent): Boolean =
       s.ante.exists(containsFormulaDerivative) || s.succ.exists(containsFormulaDerivative)
@@ -1128,6 +1130,21 @@ object SyntacticDerivationInContext {
         }
       }, f)
       onlyPrimitiveDerivatives
+    }
+
+    private def containsOnlyDiffSymbols(s: Sequent): Boolean =
+      s.ante.forall(containsOnlyDiffSymbols) && s.succ.forall(containsOnlyDiffSymbols)
+
+    private def containsOnlyDiffSymbols(f: Formula): Boolean = {
+      var onlyDiffSymbols = true
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case DifferentialSymbol(_) => Left(None)
+          case Differential(_) => onlyDiffSymbols = false; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, f)
+      onlyDiffSymbols
     }
 
   }
