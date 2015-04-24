@@ -13,6 +13,8 @@ import scala.sys.process._
  */
 class PolyaSolver extends SMTSolver {
 
+  // a tentative solution for experimental purpose
+  // TODO: put Polya in the resource
   val PolyaPath = "/Users/ran/software/polya/polya"
   val exportPolya = "export PYTHONPATH=PYTHONPATH:" + PolyaPath
   val runPolya = "python /Users/ran/software/polya/smtlib2polya/batch_translate.py"
@@ -20,7 +22,7 @@ class PolyaSolver extends SMTSolver {
 
   def run(cmd: String) = {
     val output : String = cmd.!!
-    println("[Ploya result] \n" + output + "\n")
+    println("[Polya result] \n" + output + "\n")
     // TODO So far does not handle get-model or unsat-core
     val result = {
       if (output.contains("1 successes")) True
@@ -53,7 +55,5 @@ class PolyaSolver extends SMTSolver {
       case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
     }
   }
-
-
 }
 
