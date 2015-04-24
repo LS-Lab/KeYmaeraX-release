@@ -81,6 +81,11 @@ object FOQuantifierTacticsImpl {
     axiomLookupBaseT("exists dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
+  /**
+   * Creates a new tactic for universal/existential quantifier instantiation. The tactic performs self-instantiation
+   * with the quantified variable.
+   * @return The newly created tactic.
+   */
   def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Forall(_, _) => p.isAnte
@@ -92,14 +97,8 @@ object FOQuantifierTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(vars, phi) =>
-          Some(vars.filter(_.isInstanceOf[Variable]).
-            map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
-            fold(NilT)((a, b) => a & b))
-        case Exists(vars, phi) =>
-          Some(vars.filter(_.isInstanceOf[Variable]).
-            map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
-            fold(NilT)((a, b) => a & b))
+        case Forall(vars, phi) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
+        case Exists(vars, phi) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
         case _ => None
       }
     }
