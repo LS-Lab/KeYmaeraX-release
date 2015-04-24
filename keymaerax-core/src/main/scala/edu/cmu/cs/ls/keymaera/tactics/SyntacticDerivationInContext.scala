@@ -484,13 +484,13 @@ object SyntacticDerivationInContext {
 
           val proofOfEquivTactic : Tactic =
             lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) &
               lastSucc(symbolizeDifferentialBase) ~
-              errorT("Expected a copmlete proof of instantiated axiom.")
+              errorT("Expected a complete proof of instantiated axiom.")
 
           val useTactic : Tactic =
             EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPosition(p.getIndex))
-//            lastAnte(PropositionalTacticsImpl.hideT)
 
           Some(
             cutInContext(Equal(origTerm, result), p) & onBranch(
@@ -514,12 +514,12 @@ object SyntacticDerivationInContext {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case fml@Equal(left@Differential(lv : Variable), right@DifferentialSymbol(rv : Variable)) => {
 
-          val axiom = Axiom.axioms.get("x' derive variable").getOrElse(throw new Exception("Could not find (x')<->(x)' axiom!"))
+          val axiom = Axiom.axioms.getOrElse("x' derive variable", throw new Exception("Could not find (x')<->(x)' axiom!"))
           val axiomVar = Variable("x_", None, Real) //Variable as it appears in the axiom.
 
           val renameAndInstantiate =
             lastAnte(TacticLibrary.alphaRenamingT(axiomVar.name, axiomVar.index, lv.name, lv.index)) &
-            lastAnte(FOQuantifierTacticsImpl.instantiateT(lv, lv)) //@todo why can't we just directly instantiated axiomVar with lv?!?!
+            lastAnte(FOQuantifierTacticsImpl.allEliminateT)
 
           Some(
             assertT(0,1) &

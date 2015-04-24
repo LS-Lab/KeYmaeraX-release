@@ -318,27 +318,66 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   "symbolizeDifferentials" should "work when the Differential() occurs in a formula without []'s" in {
+    val x = Variable("x", None, Real)
+    val f = Equal(Differential(x), Number(1))
+    val node = helper.formulaToNode(f)
+
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Equal(DifferentialSymbol(x), Number(1))
+  }
+
+  it should "alpha rename if necessary" in {
     val z = Variable("z", None, Real)
     val f = Equal(Differential(z), Number(1))
     val node = helper.formulaToNode(f)
 
     val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic, node, mustApply = true)
-    val result = node.openGoals().head.sequent.succ.head
-    result shouldBe Equal(DifferentialSymbol(z), Number(1))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Equal(DifferentialSymbol(z), Number(1))
   }
 
   it should "work in context" in {
     val z = Variable("z", None, Real)
+    val f = Box(Assign("y".asVariable, Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = helper.formulaToNode(f)
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
+
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Box(Assign("y".asVariable, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+  }
+
+  it should "work in a context that binds the differential symbol" in {
+    val z = Variable("z", None, Real)
+    val f = Box(DiffAssign(DifferentialSymbol(z), Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = helper.formulaToNode(f)
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
+
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Box(DiffAssign(DifferentialSymbol(z), Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+  }
+
+  it should "work in a context that binds x" in {
+    val z = Variable("z", None, Real)
     val f = Box(Assign(z, Number(1)), Equal(Differential(z), Number(1)))
 
     val node = helper.formulaToNode(f)
-    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil))) //not sure about this position?
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
 
-    helper.runTactic(tactic, node, mustApply = true)
-    helper.report(node)
-    val result = node.openGoals().head.sequent.succ.head
-    result shouldBe Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
   }
 
 }
