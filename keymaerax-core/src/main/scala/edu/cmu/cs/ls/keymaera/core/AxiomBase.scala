@@ -422,6 +422,11 @@ Axiom "DA differential ghost".
 /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
 End.
 
+Axiom "DS differential equation solution".
+  [x'=c();]p(x) <-> \forall t. (t>=0 -> [x:=x+c()*t;]p(x))
+End.
+
+/* @derived(DS differential equation solution + duality) */
 Axiom "Dsol differential equation solution".
  <x'=c();>p(x) <-> \exists t. (t>=0 & <x:=x+c()*t;>p(x))
 End.
