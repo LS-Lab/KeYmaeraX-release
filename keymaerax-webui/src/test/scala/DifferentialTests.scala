@@ -237,8 +237,9 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       "x_2()=x".asFormula,
       "k4_t_4()=k4_t_1".asFormula
       )
+    // specific form irrelevant for test, as long as we get an equivalent formula
     node.openGoals().flatMap(_.sequent.succ) should contain only
-      "true & k4_t_5>=k4_t_4() & x_3=2*k4_t_5 + x_2() -> x_3>b".asFormula
+      "true & k4_t_5>=k4_t_4() & x_3=x_2() + 2*k4_t_5 -> x_3>b".asFormula
   }
 
   it should "find solutions for x'=v if None is provided" in {
@@ -273,7 +274,8 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       "x_2()=x".asFormula,
       "t_2()=t".asFormula
       )
-    node.openGoals().flatMap(_.sequent.succ) should contain only "true & t_3>=t_2() & x_3=2*(t_3-t_2())+x_2() -> x_3>0".asFormula
+    // specific form irrelevant for test, as long as we get an equivalent formula
+    node.openGoals().flatMap(_.sequent.succ) should contain only "true & t_3>=t_2() & x_3=x_2() + 2*(t_3-t_2()) -> x_3>0".asFormula
 
     helper.runTactic(arithmeticT, node.openGoals().last) shouldBe 'closed
   }
@@ -291,7 +293,8 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
       "x_2()=x".asFormula,
       "t_2()=t".asFormula
       )
-    node.openGoals().flatMap(_.sequent.succ) should contain only "t_3<=5 & t_3>=t_2() & x_3=2*(t_3-t_2())+x_2() -> x_3>0".asFormula
+    // specific form irrelevant for test, as long as we get an equivalent formula
+    node.openGoals().flatMap(_.sequent.succ) should contain only "t_3<=5 & t_3>=t_2() & x_3=x_2() + 2*(t_3-t_2()) -> x_3>0".asFormula
 
     helper.runTactic(arithmeticT, node.openGoals().last) shouldBe 'closed
   }
