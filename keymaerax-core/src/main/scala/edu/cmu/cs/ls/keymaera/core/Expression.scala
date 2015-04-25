@@ -228,12 +228,12 @@ trait Quantified extends CompositeFormula {
   def child: Formula
 }
 case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
-  require(!vars.isEmpty, "quantifiers bind at least one variable")
+  require(vars.nonEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   //@todo require all vars have the same sort?
 }
 case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
-  require(!vars.isEmpty, "quantifiers bind at least one variable")
+  require(vars.nonEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   //@todo require all vars have the same sort?
 }
@@ -313,12 +313,16 @@ object DifferentialProduct {
   }
 
   //@tailrec
-  private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = left match {
+  private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = (left match {
     // properly associated cases
     case l: AtomicODE => new DifferentialProduct(l, right)
     case l: DifferentialProgramConst => new DifferentialProduct(l, right)
     // reassociate
     case DifferentialProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
+  }) ensuring(r => listify(r) == listify(left) ++ listify(right))
+
+  private def listify(ode: DifferentialProgram): List[DifferentialProgram] = ode match {
+    case p: DifferentialProduct => listify(p.left) ++ listify(p.right)
+    case _ => ode :: Nil
   }
-  //@todo ensuring(same list of AtomicODE)
 }
