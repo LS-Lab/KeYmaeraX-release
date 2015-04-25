@@ -290,25 +290,35 @@ sealed case class DifferentialProgramConst(name: String) extends NamedSymbol wit
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends DifferentialProgram {
   require(e.sort == Real)
 }
-case class DifferentialProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
+final class DifferentialProduct(val left: DifferentialProgram, val right: DifferentialProgram) extends DifferentialProgram {
+  override def equals(e: Any): Boolean = e match {
+    case x: DifferentialProduct => x.left == left && x.right == right
+    case _ => false
+  }
+
+  override def hashCode: Int = 3 * left.hashCode() + right.hashCode()
+}
 
 object DifferentialProduct {
   /**
-   * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in the data structures.
-   * @note This is important to not get stuck after using axiom "DE differential effect (system)".\
-   * @todo defined twice. So either demote DifferentialProduct to be a non-case-class. Or convention to call normalDifferentialProduct instead.
+   * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in
+   * the data structures.
+   * @note This is important to not get stuck after using axiom "DE differential effect (system)".
    */
-  def DifferentialProduct/*@TODO apply*/(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = reassociate(left, right)
+  def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = reassociate(left, right)
+
+  def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
+    case x: DifferentialProduct => Some(x.left, x.right)
+    case _ => None
+  }
 
   //@tailrec
-  private def reassociate(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = left match {
+  private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = left match {
     // properly associated cases
-    case l:AtomicODE => new DifferentialProduct(l, right)
-    case l:DifferentialProgramConst => new DifferentialProduct(l, right)
+    case l: AtomicODE => new DifferentialProduct(l, right)
+    case l: DifferentialProgramConst => new DifferentialProduct(l, right)
     // reassociate
     case DifferentialProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
   }
   //@todo ensuring(same list of AtomicODE)
 }
-//@todo either enforce auto-normalization during construction via an apply method? :-)
-//@todo Or flexibilize equals to be as sets that is modulo associative/commutative but possibly breaking symmetry and all kinds of things :-(
