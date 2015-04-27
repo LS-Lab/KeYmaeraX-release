@@ -52,11 +52,11 @@ object Bool extends Sort
  */
 object Real extends Sort
 /**
- * Sort of state transformations (for programs)
+ * Sort of state transformations (i.e. programs)
  */
 object Trafo extends Sort
 /**
- * Tuple sort
+ * Tuple sort for pairs
  */
 case class Tuple(left: Sort, right: Sort) extends Sort
 /**
@@ -94,7 +94,7 @@ sealed trait Term extends Expression {
 }
 
 // atomic terms
-sealed trait AtomicTerm extends Term with Atomic {}
+sealed trait AtomicTerm extends Term with Atomic
 
 /**
  * real terms
@@ -103,8 +103,10 @@ private[core] trait RTerm extends Term {
   final def sort = Real
 }
 
-sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort) extends NamedSymbol with AtomicTerm
-sealed case class DifferentialSymbol(e: Variable) extends NamedSymbol with AtomicTerm with RTerm {
+sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort)
+  extends NamedSymbol with AtomicTerm
+sealed case class DifferentialSymbol(e: Variable)
+  extends NamedSymbol with AtomicTerm with RTerm {
   require(e.sort == Real)
   def name = e.name  //@todo eisegesis
   def index = e.index  //@todo eisegesis
@@ -112,7 +114,8 @@ sealed case class DifferentialSymbol(e: Variable) extends NamedSymbol with Atomi
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
-sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort) extends Expression with NamedSymbol {
+sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort)
+  extends Expression with NamedSymbol {
   def kind = FunctionKind
 }
 
@@ -137,7 +140,7 @@ case class FuncOf(func: Function, child: Term) extends AtomicTerm {
 }
 
 // composite terms
-sealed trait CompositeTerm extends Term with Composite {}
+sealed trait CompositeTerm extends Term with Composite
 
 /**
  * Unary Composite Real Terms, i.e. real terms composed of one real term.
@@ -178,7 +181,7 @@ sealed trait Formula extends Expression {
 }
 
 // atomic formulas
-sealed trait AtomicFormula extends Formula with Atomic {}
+sealed trait AtomicFormula extends Formula with Atomic
 
 /**
  * Composite Real Terms, i.e. real terms composed of two real terms.
@@ -215,7 +218,7 @@ case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula
 }
 
 // composite formulas
-sealed trait CompositeFormula extends Formula with Composite {}
+sealed trait CompositeFormula extends Formula with Composite
 
 case class Not(child: Formula) extends CompositeFormula
 case class And(left: Formula, right:Formula) extends CompositeFormula
@@ -228,12 +231,12 @@ trait Quantified extends CompositeFormula {
   def child: Formula
 }
 case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
-  require(!vars.isEmpty, "quantifiers bind at least one variable")
+  require(vars.nonEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   //@todo require all vars have the same sort?
 }
 case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
-  require(!vars.isEmpty, "quantifiers bind at least one variable")
+  require(vars.nonEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
   //@todo require all vars have the same sort?
 }
@@ -259,7 +262,7 @@ sealed trait Program extends Expression {
 }
 
 // atomic programs
-sealed trait AtomicProgram extends Program with Atomic {}
+sealed trait AtomicProgram extends Program with Atomic
 
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {
   def index = None
@@ -275,40 +278,60 @@ case class AssignAny(target: Variable) extends AtomicProgram
 case class Test(cond: Formula) extends AtomicProgram
 
 // composite programs
-sealed trait CompositeProgram extends Program with Composite {}
-case class Choice(left: Program, right: Program) extends Program {}
-case class Compose(left: Program, right: Program) extends Program {}
-case class Loop(child: Program) extends Program {}
-//case class Dual(child: Program) extends Program {}
+sealed trait CompositeProgram extends Program with Composite
+case class Choice(left: Program, right: Program) extends CompositeProgram
+case class Compose(left: Program, right: Program) extends CompositeProgram
+case class Loop(child: Program) extends CompositeProgram
+//case class Dual(child: Program) extends CompositeProgram
 
 // differential programs
-sealed trait DifferentialProgram extends Program/*???*/ {}
+sealed trait DifferentialProgram extends Program/*???*/
+sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends DifferentialProgram
-sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with DifferentialProgram {
+sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with AtomicDifferentialProgram {
   def index = None
 }
-case class AtomicODE(xp: DifferentialSymbol, e: Term) extends DifferentialProgram {
+case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {
   require(e.sort == Real)
 }
-case class DifferentialProduct(left: DifferentialProgram, right: DifferentialProgram) extends DifferentialProgram {}
+final class DifferentialProduct(val left: DifferentialProgram, val right: DifferentialProgram)
+  extends DifferentialProgram {
+  override def equals(e: Any): Boolean = e match {
+    case x: DifferentialProduct => x.left == left && x.right == right
+    case _ => false
+  }
+
+  override def hashCode: Int = 3 * left.hashCode() + right.hashCode()
+
+  //@todo override def toString = ???
+}
 
 object DifferentialProduct {
   /**
-   * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in the data structures.
-   * @note This is important to not get stuck after using axiom "DE differential effect (system)".\
-   * @todo defined twice. So either demote DifferentialProduct to be a non-case-class. Or convention to call normalDifferentialProduct instead.
+   * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in
+   * the data structures.
+   * @note This is important to not get stuck after using axiom "DE differential effect (system)".
    */
-  def DifferentialProduct/*@TODO apply*/(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = reassociate(left, right)
+  def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct =
+    reassociate(left, right)
+
+  def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
+    case x: DifferentialProduct => Some(x.left, x.right)
+    case _ => None
+  }
 
   //@tailrec
-  private def reassociate(left: DifferentialProgram, right : DifferentialProgram): DifferentialProduct = left match {
+  private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = (left match {
     // properly associated cases
-    case l:AtomicODE => new DifferentialProduct(l, right)
-    case l:DifferentialProgramConst => new DifferentialProduct(l, right)
+    case l: AtomicODE => new DifferentialProduct(l, right)
+    case l: DifferentialProgramConst => new DifferentialProduct(l, right)
     // reassociate
     case DifferentialProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
+  }) ensuring(r => listify(r) == listify(left) ++ listify(right),
+    "reassociating DifferentialProduct does not change the list of atomic ODEs")
+
+  private def listify(ode: DifferentialProgram): List[DifferentialProgram] = ode match {
+    case p: DifferentialProduct => listify(p.left) ++ listify(p.right)
+    case a: AtomicDifferentialProgram => a :: Nil
   }
-  //@todo ensuring(same list of AtomicODE)
 }
-//@todo either enforce auto-normalization during construction via an apply method? :-)
-//@todo Or flexibilize equals to be as sets that is modulo associative/commutative but possibly breaking symmetry and all kinds of things :-(

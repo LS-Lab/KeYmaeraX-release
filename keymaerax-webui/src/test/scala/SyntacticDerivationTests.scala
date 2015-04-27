@@ -45,7 +45,6 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val tactic = axTactic(SuccPosition(0, PosInExpr(1::Nil)))
 
     val sequent = sucSequent(Box("x:=2;".asProgram, DifferentialFormula(innerOp(s, t))))
-    // TODO should be DifferentialSymbols once done
     val expected = Box("x:=2;".asProgram, outerOp(Differential(s), Differential(t)))
 
     val result = helper.runTactic(tactic, new RootNode(sequent), mustApply = true)
@@ -117,83 +116,82 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   "syntactic derivation of addition" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "(x'+y') = 0".asFormula
-    val out = helper.parseFormula(" (x+y)' = 0")
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "((x)'+(y)') = 0".asFormula
+    val out = " (x+y)' = 0".asFormula
     innerOuterTest(in,out,AddDerivativeT)
   }
 
   "syntactic derivation of subtraction" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "(x'-y') = 0".asFormula
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "((x)'-(y)') = 0".asFormula
     val out = helper.parseFormula(" (x-y)' = 0")
     innerOuterTest(in,out,SubtractDerivativeT)
   }
 
   "syntactic derivation of multiplication" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "((x')*y) + (x*(y')) = 0".asFormula
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "(((x)')*y) + (x*((y)')) = 0".asFormula
     val out = "(x*y)' = 0".asFormula
     innerOuterTest(in,out,MultiplyDerivativeT)
   }
 
   "syntactic derivation of division" should "work on x,y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
-    val in = "(((x')*y) - (x*(y'))) / (y^2) = 0".asFormula
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
+    val in = "((((x)')*y) - (x*((y)'))) / (y^2) = 0".asFormula
     val out = "(x / y)' = 0".asFormula
     innerOuterTest(in,out,DivideDerivativeT)
 
   }
 
   "TermSyntacticDerivationT" should "work for +" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "n*m + (a+b)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val pos = SuccPosition(0, PosInExpr(0 :: Nil))
-//    val tactic = TermSyntacticDerivationT(pos)
     val tactic = TacticLibrary.ClosureT(TermSyntacticDerivationT)(pos)
     val result = helper.runTactic(tactic,node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + (a'+b') + 1 + c^n = a^2 + 2".asFormula //again, nonsense...
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + ((a)'+(b)') + 1 + c^n = a^2 + 2".asFormula //again, nonsense...
   }
 
   it should "work for -y" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "n*m + (-y)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
     val result = helper.runTactic(tactic,node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(y') + 1 + c^n = a^2 + 2".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -((y)') + 1 + c^n = a^2 + 2".asFormula
   }
 
   it should "work for -x" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "n*m + (-x)' + 1 + c^n = a^2 + 2".asFormula //nonsense idk just want some extra terms.
     val node = helper.formulaToNode(in)
     val tactic = TermSyntacticDerivationT(SuccPosition(0, PosInExpr(0 :: Nil)))
     val result = helper.runTactic(tactic,node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -(x') + 1 + c^n = a^2 + 2".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "n*m + -((x)') + 1 + c^n = a^2 + 2".asFormula
   }
 
   "Power Derivative" should "work" in {
-    // assumes v' parsed as DifferentialSymbol
     "x'".asTerm shouldBe DifferentialSymbol("x".asVariable)
+    "(x)'".asTerm shouldBe Differential("x".asVariable)
     val in = "1 + (x^2)' = 1 + 2*x*x'".asFormula
     val node = helper.formulaToNode(in)
     val tactic = PowerDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
     val result = helper.runTactic(tactic, node)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^(2-1)*x'=1+2*x*x'".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^(2-1)*(x)'=1+2*x*x'".asFormula
   }
 
   "DeriveConstant" should "work" in {
@@ -318,27 +316,80 @@ class SyntacticDerivationTests extends TacticTestSuite {
   }
 
   "symbolizeDifferentials" should "work when the Differential() occurs in a formula without []'s" in {
+    val x = Variable("x", None, Real)
+    val f = Equal(Differential(x), Number(1))
+    val node = helper.formulaToNode(f)
+
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(0 :: Nil)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Equal(DifferentialSymbol(x), Number(1))
+  }
+
+  it should "alpha rename if necessary" in {
     val z = Variable("z", None, Real)
     val f = Equal(Differential(z), Number(1))
     val node = helper.formulaToNode(f)
 
     val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(0 :: Nil)))
-    helper.runTactic(tactic, node, mustApply = true)
-    val result = node.openGoals().head.sequent.succ.head
-    result shouldBe Equal(DifferentialSymbol(z), Number(1))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Equal(DifferentialSymbol(z), Number(1))
   }
 
   it should "work in context" in {
     val z = Variable("z", None, Real)
+    val f = Box(Assign("y".asVariable, Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = helper.formulaToNode(f)
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
+
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Box(Assign("y".asVariable, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+  }
+
+  it should "work in a context that binds the differential symbol" in {
+    val z = Variable("z", None, Real)
+    val f = Box(DiffAssign(DifferentialSymbol(z), Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = helper.formulaToNode(f)
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
+
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Box(DiffAssign(DifferentialSymbol(z), Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+  }
+
+  it should "work in a context that binds x" in {
+    val z = Variable("z", None, Real)
     val f = Box(Assign(z, Number(1)), Equal(Differential(z), Number(1)))
 
     val node = helper.formulaToNode(f)
-    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil))) //not sure about this position?
+    val tactic = symbolizeDifferential(SuccPosition(0, PosInExpr(1 :: 0 :: Nil)))
 
-    helper.runTactic(tactic, node, mustApply = true)
-    helper.report(node)
-    val result = node.openGoals().head.sequent.succ.head
-    result shouldBe Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1)))
+  }
+
+  it should "work with other formulas around" in {
+    val z = Variable("z", None, Real)
+    val f = Box(Assign(z, Number(1)), Equal(Differential(z), Number(1)))
+
+    val node = new RootNode(sequent(Nil, "a>0".asFormula :: Nil, "b<0".asFormula :: f :: "c=0".asFormula :: Nil))
+    val tactic = symbolizeDifferential(SuccPosition(1, PosInExpr(1 :: 0 :: Nil)))
+
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) should contain only "a>0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only
+      ("b<0".asFormula, Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1))), "c=0".asFormula)
   }
 
 }

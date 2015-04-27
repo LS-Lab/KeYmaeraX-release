@@ -306,7 +306,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
       divP ::
       expP ::
       negativeP ::
-      termDerivativeP ::
+      termDifferentialP ::
+      termDiffSymbolP ::
       applyP ::
       variableP :: //real-valued.
       numberP   ::
@@ -320,7 +321,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
      *      But, for instance, -x' is still allowed because the negativeP parser does a "tighterThan" on the original
      *      precedence list. In order to fix this problem, we should make this class parameterized by a precedence list.
      */
-    lazy val nonDerivativeTermP =   (precedence diff (termDerivativeP::Nil)).reduce(_|_)
+    lazy val nonDerivativeTermP =   (precedence diff (termDifferentialP::termDiffSymbolP::Nil)).reduce(_|_)
 
     //non-variable ident parser. TODO-nrf add logging and check anything
     //parsed by identP is always bound.
@@ -347,14 +348,19 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
         }
       } 
     }
-    
-    lazy val termDerivativeP:PackratParser[Term] = {
-      lazy val pattern = tighterParsers(precedence, termDerivativeP).reduce(_|_)
+
+    lazy val termDifferentialP:PackratParser[Term] = {
+      lazy val pattern = tighterParsers(precedence, termDifferentialP).reduce(_|_)
       log(pattern ~ PRIME)(PRIME + " parser") ^^ {
         case t ~ PRIME => t match {
-          case v: Variable => new DifferentialSymbol(v)
           case _ => new Differential(t)
         }
+      }
+    }
+    
+    lazy val termDiffSymbolP:PackratParser[Term] = {
+      log(variableP <~ PRIME)(PRIME + " parser") ^^ {
+        case v => new DifferentialSymbol(v)
       }
     }
     

@@ -8,7 +8,8 @@ import testHelper.SequentFactory._
 import testHelper.StringConverter._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
-  instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT}
+  instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
+  allEliminateT}
 
 import scala.collection.immutable.Map
 
@@ -394,6 +395,29 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
       sequent(Nil, "y+1>0".asFormula :: Nil, Nil))
   }
 
+  it should "use bound renaming if necessary" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val tactic = locateAnte(instantiateT(Variable("y", None, Real), "y+1".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "y+1>0".asFormula :: Nil, Nil))
+  }
+
+  it should "use bound renaming when instantiating identity if necessary" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val tactic = locateAnte(instantiateT(Variable("y", None, Real), "y".asTerm))
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "y>0".asFormula :: Nil, Nil))
+  }
+
+  it should "work on differential symbols" in {
+    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    val x = "x".asVariable
+    val tactic = locateAnte(instantiateT(x, x))
+    getProofSequent(tactic, new RootNode(sequent(Nil, Forall(x :: Nil,
+      Equal(DifferentialSymbol(x), DifferentialSymbol(x))) :: Nil, Nil))) should be (
+      sequent(Nil, Equal(DifferentialSymbol(x), DifferentialSymbol(x)) :: Nil, Nil))
+  }
+
   it should "guess names from quantified names" in {
     import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT)
@@ -427,6 +451,26 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
     val tactic = instantiateT(Variable("x", None, Real), "z".asTerm)(SuccPosition(0))
     getProofSequent(tactic, new RootNode(sucSequent("\\exists x. [{x:=x+1;}*]x>0".asFormula))) should be (
       sucSequent("[{z:=z+1;}*]z>0".asFormula))
+  }
+
+  "All eliminate" should "remove quantifier" in {
+    val tactic = locateAnte(allEliminateT)
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "x>0".asFormula :: Nil, Nil))
+  }
+
+  it should "alpha rename if necessary" in {
+    val tactic = locateAnte(allEliminateT)
+    getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. y>0".asFormula :: Nil, Nil))) should be (
+      sequent(Nil, "y>0".asFormula :: Nil, Nil))
+  }
+
+  it should "remove quantifier from differentials" in {
+    val tactic = locateAnte(allEliminateT)
+    val x = "x".asVariable
+    getProofSequent(tactic, new RootNode(sequent(Nil,
+      Forall(x::Nil, Equal(Differential(x), DifferentialSymbol(x))) :: Nil, Nil))) should be (
+      sequent(Nil, Equal(Differential(x), DifferentialSymbol(x)) :: Nil, Nil))
   }
 
   "Forall duality" should "turn a universal quantifier into a negated existential" in {

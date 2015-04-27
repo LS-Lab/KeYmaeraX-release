@@ -62,11 +62,11 @@ object ArithmeticTacticsImpl {
 
     override def apply(tool: Tool, node: ProofNode): Unit = {
       var tacticName : String = ""
-      if (toolId.equals("Mathematica")) {
-        tacticName = "Mathematica QE"
-      } else if (toolId.equals("Z3")) {
-        tacticName = "Z3 QE"
-      }
+
+      if (toolId.equals("Mathematica")) tacticName = "Mathematica QE"
+      else if (toolId.equals("Z3")) tacticName = "Z3 QE"
+      else if (toolId.equals("Polya")) tacticName = "Polya QE"
+
       val t: Tactic = new ConstructionTactic(tacticName) {
         override def applicable(node: ProofNode): Boolean = true
 
@@ -119,11 +119,10 @@ object ArithmeticTacticsImpl {
         }
       }
 
-      if (toolId.equals("Mathematica")) {
-        t.scheduler = Tactics.MathematicaScheduler
-      } else if (toolId.equals("Z3")) {
-        t.scheduler = Tactics.Z3Scheduler
-      } else throw new Exception("Cannot find the QE tool")
+      if (toolId.equals("Mathematica")) t.scheduler = Tactics.MathematicaScheduler
+      else if (toolId.equals("Z3")) t.scheduler = Tactics.Z3Scheduler
+      else if (toolId.equals("Polya")) t.scheduler = Tactics.PolyaScheduler
+      else throw new Exception("Cannot find the QE tool")
 
       t.continuation = continuation
       t.dispatch(this, node)
@@ -132,6 +131,7 @@ object ArithmeticTacticsImpl {
     private def toolIsInitialized(): Boolean = {
       if (toolId == "Mathematica") MathematicaScheduler.isInitialized
       else if (toolId == "Z3") Z3Scheduler.isInitialized
+      else if (toolId == "Polya") PolyaScheduler.isInitialized
       else false
     }
   }

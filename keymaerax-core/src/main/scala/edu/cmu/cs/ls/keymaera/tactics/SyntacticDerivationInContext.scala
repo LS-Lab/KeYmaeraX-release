@@ -484,13 +484,13 @@ object SyntacticDerivationInContext {
 
           val proofOfEquivTactic : Tactic =
             lastSucc(cohideT) &
+              equivalenceCongruenceT(formulaCtxPos) &
               equationCongruenceT(termCtxPos) &
               lastSucc(symbolizeDifferentialBase) ~
-              errorT("Expected a copmlete proof of instantiated axiom.")
+              errorT("Expected a complete proof of instantiated axiom.")
 
           val useTactic : Tactic =
-            EqualityRewritingImpl.equivRewriting(AntePos(0), SuccPosition(p.getIndex))
-//            lastAnte(PropositionalTacticsImpl.hideT)
+            EqualityRewritingImpl.equivRewriting(AntePos(node.sequent.ante.length), SuccPosition(p.getIndex))
 
           Some(
             cutInContext(Equal(origTerm, result), p) & onBranch(
@@ -514,12 +514,12 @@ object SyntacticDerivationInContext {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case fml@Equal(left@Differential(lv : Variable), right@DifferentialSymbol(rv : Variable)) => {
 
-          val axiom = Axiom.axioms.get("x' derive variable").getOrElse(throw new Exception("Could not find (x')<->(x)' axiom!"))
+          val axiom = Axiom.axioms.getOrElse("x' derive variable", throw new Exception("Could not find (x')<->(x)' axiom!"))
           val axiomVar = Variable("x_", None, Real) //Variable as it appears in the axiom.
 
           val renameAndInstantiate =
             lastAnte(TacticLibrary.alphaRenamingT(axiomVar.name, axiomVar.index, lv.name, lv.index)) &
-            lastAnte(FOQuantifierTacticsImpl.instantiateT(lv, lv)) //@todo why can't we just directly instantiated axiomVar with lv?!?!
+            lastAnte(FOQuantifierTacticsImpl.allEliminateT)
 
           Some(
             assertT(0,1) &
@@ -1081,7 +1081,9 @@ object SyntacticDerivationInContext {
       (locateTerm(TermSyntacticDerivationT, inAnte = false) *) &
       assertT(!containsTermDerivative(_), "Term derivative left unhandled by TermSyntacticDerivationT") &
       (locateTerm(MonomialAndConstantDerivationT, inAnte = false) *) &
-      assertT(containsOnlyVariableDerivatives(_), "Syntactic derivation left monomial or constant unhandled")
+      assertT(containsOnlyVariableDerivatives(_), "Syntactic derivation left monomial or constant unhandled") &
+      (locateTerm(symbolizeDifferential, inAnte = false) *) &
+      assertT(containsOnlyDiffSymbols(_), "Syntactic derivation did not convert all differentials into differential symbols")
 
     private def containsFormulaDerivative(s: Sequent): Boolean =
       s.ante.exists(containsFormulaDerivative) || s.succ.exists(containsFormulaDerivative)
@@ -1128,6 +1130,21 @@ object SyntacticDerivationInContext {
         }
       }, f)
       onlyPrimitiveDerivatives
+    }
+
+    private def containsOnlyDiffSymbols(s: Sequent): Boolean =
+      s.ante.forall(containsOnlyDiffSymbols) && s.succ.forall(containsOnlyDiffSymbols)
+
+    private def containsOnlyDiffSymbols(f: Formula): Boolean = {
+      var onlyDiffSymbols = true
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case DifferentialSymbol(_) => Left(None)
+          case Differential(_) => onlyDiffSymbols = false; Left(Some(ExpressionTraversal.stop))
+          case _ => Left(None)
+        }
+      }, f)
+      onlyDiffSymbols
     }
 
   }

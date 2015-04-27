@@ -33,6 +33,8 @@ class SubstitutionHelper(what: Term, repl: Term) {
   private def usubst(o: SetLattice[NamedSymbol], u: SetLattice[NamedSymbol], t: Term): Term = {
     t match {
       // homomorphic cases
+      case Neg(e) if t != what => Neg(usubst(o, u, e))
+      case Neg(e) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Plus(l, r) if t != what => Plus(usubst(o, u, l), usubst(o, u, r))
       case Plus(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Minus(l, r) if t != what => Minus(usubst(o, u, l), usubst(o, u, r))
@@ -41,7 +43,7 @@ class SubstitutionHelper(what: Term, repl: Term) {
       case Times(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       case Divide(l, r) if t != what => Divide(usubst(o, u, l), usubst(o, u, r))
       case Divide(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
-      case Power(l, r) if t != what => Power(usubst(o, u, l), usubst(o, u, r).asInstanceOf[Number])
+      case Power(l, r) if t != what => Power(usubst(o, u, l), usubst(o, u, r))
       case Power(l, r) if t == what && u.intersect(StaticSemantics(t)).isEmpty => repl
       // base cases
       case x: Variable if !u.contains(x) && x == what => repl

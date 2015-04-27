@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
-import TacticLibrary.alphaRenamingT
+import TacticLibrary.{alphaRenamingT, globalAlphaRenamingT}
 import PropositionalTacticsImpl.uniformSubstT
 import AxiomTactic.axiomT
 
@@ -81,6 +81,72 @@ object FOQuantifierTacticsImpl {
     axiomLookupBaseT("exists dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
+  /**
+   * Creates a new tactic to eliminate a universal quantifier.
+   * @return The newly created tactic
+   */
+  def allEliminateT: PositionTactic = new PositionTactic("All eliminate") {
+    // TODO applies is ignored by uncoverAxiomT
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && p.isTopLevel && (s(p) match {
+      case Forall(_, _) => true
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = {
+      val aX = Variable("x", None, Real)
+      def axiomInstance(fml: Formula): Formula = fml match {
+        case Forall(_, phi) => Imply(fml, phi)
+        case _ => False
+      }
+      uncoverAxiomT("all eliminate", axiomInstance, _ => allEliminateBaseT)(p)
+    }
+  }
+  /** Base tactic for all eliminate */
+  private def allEliminateBaseT: PositionTactic = {
+    def subst(fml: Formula): List[SubstitutionPair] = {
+      val p = fml match {
+        case Imply(_, q) => q
+      }
+      val aP = PredOf(Function("p", None, Real, Bool), Anything)
+      SubstitutionPair(aP, p) :: Nil
+    }
+    val aX = Variable("x", None, Real)
+    def alpha(fml: Formula): PositionTactic = fml match {
+      case Imply(Forall(vars, _), _) =>
+        assert(vars.length == 1, "Block quantifiers not yet supported")
+        val x = vars.head
+        if (x.name != aX.name || x.index != aX.index)
+          new PositionTactic("Alpha") {
+            override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+              case Imply(Forall(_, _), _) => true
+              case _ => false
+            }
+
+            override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
+                Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+
+              override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+            }
+          }
+        else NilPT
+    }
+
+    def axiomInstance(fml: Formula, axiom: Formula): Formula = fml match {
+      case Imply(Forall(vars, _), p) =>
+        assert(vars.length == 1, "Block quantifiers not yet supported")
+        val x = vars.head
+        if (x.name == aX.name && x.index == aX.index) axiom
+        else replace(axiom)(aX, x)
+    }
+    axiomLookupBaseT("all eliminate", subst, alpha, axiomInstance)
+  }
+
+  /**
+   * Creates a new tactic for universal/existential quantifier instantiation. The tactic performs self-instantiation
+   * with the quantified variable.
+   * @return The newly created tactic.
+   */
   def instantiateT: PositionTactic = new PositionTactic("Quantifier Instantiation") {
     override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
       case Forall(_, _) => p.isAnte
@@ -92,14 +158,8 @@ object FOQuantifierTacticsImpl {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, pos)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, pos) match {
-        case Forall(vars, phi) =>
-          Some(vars.filter(_.isInstanceOf[Variable]).
-            map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
-            fold(NilT)((a, b) => a & b))
-        case Exists(vars, phi) =>
-          Some(vars.filter(_.isInstanceOf[Variable]).
-            map(v => instantiateT(v.asInstanceOf[Variable], v.asInstanceOf[Variable])(pos)).
-            fold(NilT)((a, b) => a & b))
+        case Forall(vars, phi) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
+        case Exists(vars, phi) => Some(vars.map(v => instantiateT(v, v)(pos)).fold(NilT)((a, b) => a & b))
         case _ => None
       }
     }
