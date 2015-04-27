@@ -615,9 +615,7 @@ object ODETactics {
 
   private def diffEffectSystemT: PositionTactic = new PositionTactic("DE differential effect (system)") {
     override def applies(s: Sequent, p: Position): Boolean = !p.isAnte && p.isTopLevel && (getFormula(s, p) match {
-      //        case Box(NFODEProduct(_, IncompleteSystem(ODEProduct(AtomicODE(Derivative(_, _: Variable), _), _)), _), _) => true
-      case Box(ODESystem(cp: DifferentialProduct, _),_) => cp/*.normalize()*/ match {
-        //@TODO Why restrict to ODEProduct? AtomicODE should also be fine, right?
+      case Box(ODESystem(cp: DifferentialProduct, _),_) => cp match {
         case DifferentialProduct(AtomicODE(DifferentialSymbol(_), _), _) => true
         case _ => false
       }
@@ -628,7 +626,7 @@ object ODETactics {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = getFormula(node.sequent, p) match {
         case f@Box(ODESystem(a, h), phi) => a match {
-          case cp: DifferentialProduct => cp/*.normalize()*/ match {
+          case cp: DifferentialProduct => cp match {
             case DifferentialProduct(AtomicODE(d@DifferentialSymbol(x), t: Term), c: DifferentialProgram) =>
               val g = Box(
                 ODESystem(DifferentialProduct(c, AtomicODE(d, t)), h),
