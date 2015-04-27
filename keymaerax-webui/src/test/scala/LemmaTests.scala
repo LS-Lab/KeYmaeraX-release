@@ -1,12 +1,11 @@
-import java.math.BigDecimal
-
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{RootNode, Interpreter, TacticLibrary, Config}
+import edu.cmu.cs.ls.keymaera.tactics.{RootNode, TacticLibrary}
 import edu.cmu.cs.ls.keymaera.tools.{Tool, Mathematica}
 import testHelper.ProvabilityTestHelper
+import testHelper.StringConverter._
+
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
-import scala.Equals
 import scala.collection.immutable.{Nil, Map}
 
 /**
@@ -14,20 +13,9 @@ import scala.collection.immutable.{Nil, Map}
  * @author Stefan Mitsch
  */
 class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
   var math: Tool with QETool = null
-
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
-  val zero = Number(new BigDecimal("0"))
-  val one = Number(new BigDecimal("1"))
-
-  val xgeq0 = GreaterEqual(x, zero)
-  val xgt0 = Greater(x, zero)
-  val xplus1 = Plus(x, one)
-  val xplus1gtx = Greater(xplus1, x)
 
   override def beforeEach() = {
     math = new Mathematica
@@ -40,15 +28,16 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Tactics (Lemma)" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
-    val f = TacticLibrary.universalClosure(Imply(And(xgt0, Greater(y, x)), xgeq0))
-    LookupLemma.addRealArithLemma(math, f) match {
-      case Some((file, id, res)) =>
+    val f = TacticLibrary.universalClosure("(x > 0 & y > x) -> x >= 0".asFormula)
+    val lemmaDB = new FileLemmaDB
+    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
+      case Some((id, res)) =>
         (res match {
           case Equiv(_, True) => true
           case _ => false
-        }) should be (true)
+        }) shouldBe true
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-        val t = LookupLemma(file,id)
+        val t = LookupLemma(lemmaDB, id)
         val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
@@ -56,15 +45,16 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)" in {
-    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equal(y, xplus1)), Greater(y, x)), And(xgeq0, Greater(y, zero))))
-    LookupLemma.addRealArithLemma(math, f) match {
-      case Some((file, id, res)) =>
+    val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)".asFormula)
+    val lemmaDB = new FileLemmaDB
+    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
+      case Some((id, res)) =>
         (res match {
           case Equiv(_, True) => true
           case _ => false
-        }) should be (true)
+        }) shouldBe true
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-        val t = LookupLemma(file,id)
+        val t = LookupLemma(lemmaDB, id)
         val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
@@ -72,15 +62,16 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (y > 0)" in {
-    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equal(y, xplus1)), Greater(y, x)), Greater(y, zero)))
-    LookupLemma.addRealArithLemma(math, f) match {
-      case Some((file, id, res)) =>
+    val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (y > 0)".asFormula)
+    val lemmaDB = new FileLemmaDB
+    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
+      case Some((id, res)) =>
         (res match {
           case Equiv(_, True) => true
           case _ => false
-        }) should be (true)
+        }) shouldBe true
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-        val t = LookupLemma(file,id)
+        val t = LookupLemma(lemmaDB, id)
         val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")
@@ -88,15 +79,16 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)" in {
-    val f = TacticLibrary.universalClosure(Imply(And(And(xgt0, Equal(y, xplus1)), Greater(xplus1, x)), Greater(xplus1, zero)))
-    LookupLemma.addRealArithLemma(math, f) match {
-      case Some((file, id, res)) =>
+    val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)".asFormula)
+    val lemmaDB = new FileLemmaDB
+    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
+      case Some((id, res)) =>
         (res match {
           case Equiv(_, True) => true
           case _ => false
-        }) should be (true)
+        }) shouldBe true
         val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
-        val t = LookupLemma(file,id)
+        val t = LookupLemma(lemmaDB, id)
         val nr = r.apply(t).subgoals.head
         nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
       case None => "Lemma creation" should be ("successful")

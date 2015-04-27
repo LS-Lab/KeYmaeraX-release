@@ -75,11 +75,13 @@ object ArithmeticTacticsImpl {
           try {
             tool match {
               case qe: QETool =>
-                LookupLemma.addRealArithLemma(qe, universalClosure(desequentialization(node.sequent))) match {
-                  case Some((file, id, f)) =>
+                // TODO make lemma DB configurable
+                val lemmaDB = new FileLemmaDB()
+                LookupLemma.addRealArithLemma(lemmaDB, qe, universalClosure(desequentialization(node.sequent))) match {
+                  case Some((id, f)) =>
                     f match {
                       case Equiv(res, True) => {
-                        val lemma = new ApplyRule(LookupLemma(file, id)) {
+                        val lemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
                           override def applicable(node: ProofNode): Boolean = true
                         }
                         // reinstantiate quantifiers
