@@ -9,6 +9,12 @@ import scala.collection.immutable.Map
 import testHelper.ParserFactory._
 import testHelper.StringConverter._
 import TacticLibrary._
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
+import Tactics.NilT
+
+import scala.language.postfixOps
 
 /**
  * Created by ran on 2/4/15.
@@ -37,81 +43,56 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
   def la(t: PositionTactic) = locateAnte(t)
 
   "AxiomClose" should "be provable with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/AxiomClose.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/AxiomClose.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable with Z3" in {
-    val file = new File("examples/dev/t/tactics/AxiomClose.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/AxiomClose.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "DecomposeQuant" should "be provable with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/DecomposeQuant.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/DecomposeQuant.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable with Z3" in {
-    val file = new File("examples/dev/t/tactics/DecomposeQuant.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/DecomposeQuant.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "EqualityRewriting" should "be provable with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/EqualityRewriting.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/EqualityRewriting.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable with Z3" in {
-    val file = new File("examples/dev/t/tactics/EqualityRewriting.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/EqualityRewriting.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "ETCS-essentials-noloop" should "be provable with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/ETCS-essentials-noloop.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials-noloop.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable with Z3" in {
-    val file = new File("examples/dev/t/tactics/ETCS-essentials-noloop.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials-noloop.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "ETCS-essentials" should "be provable with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/ETCS-essentials.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable with Z3" in {
-    val file = new File("examples/dev/t/tactics/ETCS-essentials.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-essentials.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-z)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Stuttering" should "be provable with Mathematica" in {
-    import scala.language.postfixOps
-    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
-    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
-    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
-
     val tactic = ls(ImplyRightT) &
       ls(wipeContextInductionT(Some("x <= y".asFormula))) &
       onBranch(
@@ -122,31 +103,24 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
         (indUseCaseLbl, ls(ImplyRightT) & AxiomCloseT(AntePosition(0), SuccPosition(0)))
       )
 
-    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering-allwrites.key")))) shouldBe 'closed
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Stuttering-allwrites.key"))
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
     // loops where not all branches write the same variables are not yet supported
 //    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/Stuttering-allwrites.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Stuttering-allwrites.key"))
     helper.runTactic(master(new Generate("x <= y".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/dev/t/tactics/Stuttering-allwrites.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Stuttering-allwrites.key"))
     helper.runTactic(master(new Generate("x <= y".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "ETCS-safety-allwrites" should "be provable with explicit strategy" in {
-    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
-    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
-    import Tactics.NilT
-
-    import scala.language.postfixOps
-    val file = new File("examples/dev/t/tactics/ETCS-safety-allwrites.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
 
     // sub strategies for SB cases
     def subsubtactic(testTactic: Tactic) = (ls(boxSeqT) ~
@@ -202,47 +176,32 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/ETCS-safety-allwrites.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/dev/t/tactics/ETCS-safety-allwrites.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Saturable" should "be provable with Mathematica" in {
-    val file = new File("examples/dev/t/tactics/Saturable.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Saturable.key"))
     helper.runTactic(default("Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable with Z3" in {
-    val file = new File("examples/dev/t/tactics/Saturable.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Saturable.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   ignore should "prove SimpleDiff" in {
-    val file = new File("examples/dev/t/tactics/SimpleDiff.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/SimpleDiff.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   "Simple car" should "be provable" in {
-    import scala.language.postfixOps
-    import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
-    import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
-    import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
-    import Tactics.NilT
-
-    val file = new File("examples/tutorials/sttt/simplecar.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/simplecar.key"))
 
     val plantTactic = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolutionT) & arithmeticT
 
@@ -263,16 +222,12 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
   }
 
   it should "be provable automatically with Mathematica" in {
-
-    val file = new File("examples/tutorials/sttt/simplecar.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/simplecar.key"))
     helper.runTactic(master(new Generate("v>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-
-    val file = new File("examples/tutorials/sttt/simplecar.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/simplecar.key"))
     helper.runTactic(master(new Generate("v>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 

@@ -1,9 +1,8 @@
-import testHelper.ProvabilityTestHelper
 import org.scalatest._
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser._
-import java.io.File
 import scala.collection.immutable._
+import testHelper.StringConverter._
 
 class ParserParenTests extends FlatSpec with Matchers {
   // type declaration header for tests
@@ -15,6 +14,8 @@ class ParserParenTests extends FlatSpec with Matchers {
 
   val parser = new KeYmaeraParser(false) 
   val alpParser = parser.ProofFileParser
+  val x = Variable("x", None, Real)
+  val y = Variable("y", None, Real)
 
   "The Parser" should "place implicit parens correctly (a.k.a. resolve abiguities correctly)" in {
     val equalPairs =
@@ -100,28 +101,48 @@ class ParserParenTests extends FlatSpec with Matchers {
     }
   }
   
-  it should "parse all examples/t/positive files" in {
-    val positiveTestsDir = new File("examples/dev/t/parsing/positive")
-    positiveTestsDir.isDirectory() should be (true)
-    for(testFile <- positiveTestsDir.listFiles().filter(f => f.getName.endsWith(".key"))) {
-      val src = io.Source.fromFile(testFile).mkString
-      parser.runParser(src) //test fails on exception.
+  it should "parse all positive examples" in {
+    val files =
+      "abs.key" ::
+      "dia.key" ::
+      "ETCS-essentials.key" ::
+      "ETCS-essentials-loopinv.key" ::
+      "ETCS-safety.key" ::
+      "forall.key" ::
+      "functions.key" ::
+      "jdq2.key" ::
+      "passivesafety.key" ::
+      "sections.key" ::
+      "semicolons.key" ::
+      "test.key" ::
+      "unity.key" :: Nil
+
+    for(testFile <- files) {
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/" + testFile)).mkString
+      withClue(testFile) {
+        parser.runParser(src) //test fails on exception.
+      }
     }
   }
 
   it should "parse predicates using functions" in {
-    val src = io.Source.fromFile(new File("examples/dev/t/parsing/positive/functions.key")).mkString
+    val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positive/functions.key")).mkString
     parser.runParser(src)
   }
 
-  it should "not parse any examples/t/negative files" in {
-    val negativeTestsDir = new File("examples/dev/t/parsing/negative")
-    negativeTestsDir.isDirectory() should be (true)
-    for(testFile <- negativeTestsDir.listFiles()) {
-      val src = io.Source.fromFile(testFile).mkString
+  it should "not parse any negative examples" in {
+    val files =
+      "finishparse.key" ::
+      "scolon1.key" ::
+      "scolon2.key" ::
+      "scolon3.key" ::
+      "UndeclaredVariables.key" :: Nil
+
+    for(testFile <- files) {
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negative/" + testFile)).mkString
       try {
-        parser.runParser(src);
-        fail("A negative file parsed correctly: " + testFile.getName() + " \t ( " + testFile.getAbsoluteFile() + ")")
+        parser.runParser(src)
+        fail("A negative file parsed correctly: " + testFile)
       }
       catch {
         case _ : Throwable => { } // ok
@@ -148,25 +169,29 @@ class ParserParenTests extends FlatSpec with Matchers {
   // Begin ALP Parser tests
   //////////////////////////////////////////////////////////////////////////////
   
-  "The ALP Parser" should "parse all examples/t/positiveALP files" in {
-    val positiveTestsDir = new File("examples/dev/t/parsing/positiveALP")
-    positiveTestsDir.isDirectory shouldBe true
-    for(testFile <- positiveTestsDir.listFiles()) {
-      val src = io.Source.fromFile(testFile).mkString
+  "The ALP Parser" should "parse all positive ALP examples" in {
+    val files =
+      "axioms.key.alp" ::
+      "QE94.alp" ::
+      "QE96.alp" :: Nil
+
+    for(testFile <- files) {
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/positiveALP/" + testFile)).mkString
       try {
         alpParser.runParser(src) //test fails on exception.
       } catch {
-        case ex: Exception => fail("Unable to parse " + testFile.getName, ex)
+        case ex: Exception => fail("Unable to parse " + testFile, ex)
       }
     }
   }
   
   it should "not parse any examples/t/negativeALP files" in {
-    val negativeTestsDir = new File("examples/dev/t/parsing/negativeALP")
-    negativeTestsDir.isDirectory() should be (true)
-    for(testFile <- negativeTestsDir.listFiles()) {
-      val src = io.Source.fromFile(testFile).mkString
-      withClue(testFile.getName) {
+    val files =
+      "undeclared.key.alp" :: Nil
+
+    for(testFile <- files) {
+      val src = io.Source.fromInputStream(getClass.getResourceAsStream("/examples/dev/t/parsing/negativeALP/" + testFile)).mkString
+      withClue(testFile) {
         a[Exception] should be thrownBy {
           alpParser.runParser(src)
         }
@@ -174,12 +199,8 @@ class ParserParenTests extends FlatSpec with Matchers {
     }
   }
 
-  val helper = new ProvabilityTestHelper()
-  val x = Variable("x", None, Real)
-  val y = Variable("y", None, Real)
-
   "Random test cases from development" should "reduce systems of diffEqs correctly." in {
-    helper.parseFormula("[x'=y, y'=x;]true") shouldBe Box(ODESystem(DifferentialProduct(
+    "[x'=y, y'=x;]true".asFormula shouldBe Box(ODESystem(DifferentialProduct(
       AtomicODE(DifferentialSymbol(x), y),
       AtomicODE(DifferentialSymbol(y), x)), True), True)
   }

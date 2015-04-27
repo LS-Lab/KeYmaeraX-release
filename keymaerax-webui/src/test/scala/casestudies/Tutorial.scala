@@ -8,7 +8,6 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateAnte
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateSucc
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.stopT
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -52,8 +51,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   def la(t: PositionTactic) = locateAnte(t)
 
   "Example 1" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example1.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
 
     val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
 
@@ -61,20 +59,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example1.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example1.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 1a" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example1a.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffSolution(None)) & ls(ImplyRightT) & arithmeticT
 
@@ -82,20 +77,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example1a.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example1a.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example1a.key"))
     helper.runTactic(default("Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 2" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example2.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
 
     val tactic = ls(ImplyRightT) & la(AndLeftT) & ls(wipeContextInductionT(Some("v>=0".asFormula))) & onBranch(
       (indInitLbl, debugT("Base Case") & (la(AndLeftT)*) & AxiomCloseT),
@@ -114,23 +106,18 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example2.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
     helper.runTactic(master(new Generate("v>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example2.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example2.key"))
     helper.runTactic(master(new Generate("v>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   // TODO not implemented yet: evolution domain must hold in the beginning
   ignore /*"Example 3a"*/ should "Example 3a be provable" in {
-    val file = new File("examples/tutorials/sttt/example3a.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example3a.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxChoiceT) & ls(AndRightT) &&
       (debugT("evolution domain <=") & ls(diffSolution(None)) & ls(ImplyRightT),
@@ -155,8 +142,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
   ignore /*"Example 4a"*/ should "Example 4a be provable" in {
-    val file = new File("examples/tutorials/sttt/example4a.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4a.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
@@ -172,8 +158,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
   ignore /*"Example 4b"*/ should "Example 4b be provable" in {
-    val file = new File("examples/tutorials/sttt/example4b.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4b.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(diffSolution(None)) & ls(ImplyRightT)
 
@@ -189,8 +174,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO not implemented yet: evolution domain must hold in the beginning, IfThenElse
   ignore /*"Example 4c"*/ should "Example 4c be provable" in {
-    val file = new File("examples/tutorials/sttt/example4c.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example4c.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxChoiceT) & ls(AndRightT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
@@ -207,8 +191,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   "Example 5 with simple control" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example5_simplectrl.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
@@ -225,22 +208,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example5_simplectrl.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example5_simplectrl.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5_simplectrl.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 5" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example5.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
@@ -263,23 +241,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example5.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example5.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example5.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 6" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example6.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
 
@@ -302,23 +274,17 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example6.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example6.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example6.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*B) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
   "Example 7" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example7.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
 
@@ -341,16 +307,12 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/sttt/example7.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/sttt/example7.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example7.key"))
     helper.runTactic(master(new Generate("v >= 0 & x+v^2/(2*b) <= S".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
@@ -358,17 +320,13 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
   // Example 8
 
   "Example 9a" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example9a.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9a.key"))
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(diffInvariant)
-
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
   "Example 9b" should "be provable" in {
-    val file = new File("examples/tutorials/sttt/example9b.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example9b.key"))
 
     val plant = debugT("Plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & la(AndLeftT) & debugT("Before Cut") &
       ls(diffCutT("xm() <= x_0".asFormula)) & onBranch(
@@ -397,8 +355,7 @@ class Tutorial extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   // TODO needs better assignment tactic (when ODE is not first statement in subsequent modality, like in [w:=0;][c:=0; v'=w, w'=5;]1>0)
   ignore /* "Example 10"*/ should "Example 10 be provable" in {
-    val file = new File("examples/tutorials/sttt/example10.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/example10.key"))
 
     // TODO
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
