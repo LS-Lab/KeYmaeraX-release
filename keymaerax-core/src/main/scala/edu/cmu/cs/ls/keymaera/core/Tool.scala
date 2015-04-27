@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import scala.Predef
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -21,6 +22,8 @@ import scala.collection.immutable.SortedSet
 import scala.collection.immutable.Set
 
 import edu.cmu.cs.ls.keymaera.tools._
+
+// TODO no longer part of the core
 
 /**
  * Defines the lifecycle for external tools. A tool is available once init is called.
@@ -80,12 +83,9 @@ abstract class ToolBase(val name: String) extends Tool {
 
 object KeYmaera extends ToolBase("KeYmaera") {}
 
-class Mathematica extends ToolBase("Mathematica") {
+class Mathematica extends ToolBase("Mathematica") with QETool with DiffSolutionTool {
   //@TODO illegal access to out of core. Fix!
   private val jlink = new JLinkMathematicaLink
-  //@TODO illegal access to out of core. Fix!
-  private[core] val cricitalQE: QETool = jlink
-  val diffSolver: DiffSolutionTool = jlink
 
   // TODO replace with constructor and dependency injection
   override def init(config: Map[String,String]) = {
@@ -99,14 +99,23 @@ class Mathematica extends ToolBase("Mathematica") {
   }
 
   override def shutdown() = jlink.shutdown()
+
+  override def qe(formula: Formula): Formula = jlink.qe(formula)
+  override def qeInOut(formula: Formula): (Formula, String, String) = jlink.qeInOut(formula)
+  override def diffSol(diffSys: DifferentialProgram, diffArg: Variable,
+                       iv: Predef.Map[Variable, Function]): Option[Formula] = jlink.diffSol(diffSys, diffArg, iv)
 }
 
-class Z3 extends ToolBase("Z3") {
+class Z3 extends ToolBase("Z3") with QETool {
   private val z3 = new Z3Solver
-  private[core] val cricitalQE: QETool = z3
+
+  override def qe(formula: Formula): Formula = z3.qe(formula)
+  override def qeInOut(formula: Formula): (Formula, String, String) = z3.qeInOut(formula)
 }
 
-class Polya extends ToolBase("Polya") {
+class Polya extends ToolBase("Polya") with QETool {
   private val polya = new PolyaSolver
-  private[core] val cricitalQE: QETool = polya
+
+  override def qe(formula: Formula): Formula = polya.qe(formula)
+  override def qeInOut(formula: Formula): (Formula, String, String) = polya.qeInOut(formula)
 }

@@ -2,6 +2,7 @@ import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{RootNode, Interpreter, TacticLibrary, Config}
+import edu.cmu.cs.ls.keymaera.tools.QETool
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -16,7 +17,7 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   val helper = new ProvabilityTestHelper((x) => println(x))
   val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
-  var math: Mathematica = null
+  var math: Tool with QETool = null
 
   val x = Variable("x", None, Real)
   val y = Variable("y", None, Real)

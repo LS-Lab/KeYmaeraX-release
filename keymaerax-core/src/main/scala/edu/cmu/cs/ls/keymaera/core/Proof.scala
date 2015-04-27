@@ -11,6 +11,8 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import edu.cmu.cs.ls.keymaera.tools.QETool
+
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -1101,6 +1103,10 @@ object LookupLemma {
     file
   }
 
+  private val trustedTools =
+    "edu.cmu.cs.ls.keymaera.core.Mathematica" ::
+    "edu.cmu.cs.ls.keymaera.core.Z3" :: Nil
+
   def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
   private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
     def apply(s : Sequent) = {
@@ -1113,84 +1119,33 @@ object LookupLemma {
     }
   }
 
-  def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
+  def addRealArithLemma (t: QETool, f : Formula) : Option[(java.io.File, String, Formula)] = {
+    require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
     //Find the solution
-    t match {
-      case x: Mathematica if x.isInitialized =>
-        //@TODO illegal access to out of core. Fix!
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
+    //@TODO assumes the tool is initialized
+    //@TODO illegal access to out of core. Fix!
+    val (solution, input, output) = t.qeInOut(f)
+    val result = Equiv(f,solution)
 
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = LookupLemma.synchronized {
-          // synchronize on file creation to make sure concurrent uses use new file names
-          val newFile = getUniqueLemmaFile()
-          newFile.createNewFile
-          newFile
-        }
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-
-      case x: Z3 if x.isInitialized =>
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
-
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = LookupLemma.synchronized {
-          // synchronize on file creation to make sure concurrent uses use new file names
-          val newFile = getUniqueLemmaFile()
-          newFile.createNewFile
-          newFile
-        }
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-
-      case x: Polya if x.isInitialized =>
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
-
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = LookupLemma.synchronized {
-          // synchronize on file creation to make sure concurrent uses use new file names
-          val newFile = getUniqueLemmaFile()
-          newFile.createNewFile
-          newFile
-        }
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-
-      case _ => None
+    //Save the solution to a file.
+    //TODO-nrf create an interface for databases.
+    def getUniqueLemmaFile(idx: Int=0): java.io.File = {
+      val f = new java.io.File(lemmadbpath, "QE" + idx.toString + ".alp")
+      if(f.exists()) getUniqueLemmaFile(idx+1)
+      else f
     }
+    val file = LookupLemma.synchronized {
+      // synchronize on file creation to make sure concurrent uses use new file names
+      val newFile = getUniqueLemmaFile()
+      newFile.createNewFile
+      newFile
+    }
+    val evidence = new ToolEvidence(Map(
+      "input" -> input, "output" -> output))
+    KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
+
+    //Return the file where the result is saved, together with the result.
+    Some((file, file.getName, result))
   }
 }
 
