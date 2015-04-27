@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaera.tactics.AlphaConversionHelper._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import TacticHelper.getFormula
 import SearchTacticsImpl.onBranch
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.{List, Seq}
 import scala.language.postfixOps

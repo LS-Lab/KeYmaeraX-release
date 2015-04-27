@@ -11,8 +11,8 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.core.Tool
 import Config._
+import edu.cmu.cs.ls.keymaera.tools._
 import scala.Unit
 import scala.language.implicitConversions
 import scala.collection.mutable.HashMap

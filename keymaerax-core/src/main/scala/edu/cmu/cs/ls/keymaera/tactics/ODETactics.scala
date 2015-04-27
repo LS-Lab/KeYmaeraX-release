@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{abstractionT, globalAlphaRenamingT, debugT, arithmeticT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import AlphaConversionHelper._
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, Tool}
 
 import scala.collection.immutable.List
 import scala.language.postfixOps

@@ -1,6 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, FOQuantifierTacticsImpl,
   Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._

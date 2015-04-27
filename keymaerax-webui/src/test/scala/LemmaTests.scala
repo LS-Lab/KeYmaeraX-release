@@ -2,7 +2,7 @@ import java.math.BigDecimal
 
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{RootNode, Interpreter, TacticLibrary, Config}
-import edu.cmu.cs.ls.keymaera.tools.QETool
+import edu.cmu.cs.ls.keymaera.tools.{Tool, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

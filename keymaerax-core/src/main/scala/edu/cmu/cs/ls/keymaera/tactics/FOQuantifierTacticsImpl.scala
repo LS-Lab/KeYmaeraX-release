@@ -15,6 +15,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import TacticLibrary.{alphaRenamingT, globalAlphaRenamingT}
 import PropositionalTacticsImpl.uniformSubstT
 import AxiomTactic.axiomT
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.List
 import scala.collection.immutable.Seq

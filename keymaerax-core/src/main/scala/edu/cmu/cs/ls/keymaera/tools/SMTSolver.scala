@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.tools
 
-import edu.cmu.cs.ls.keymaera.core.Term
+import edu.cmu.cs.ls.keymaera.core.{QETool, Term}
 
 /**
  * Created by ran on 3/17/15.

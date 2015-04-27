@@ -9,6 +9,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Interpreter
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, Z3, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._

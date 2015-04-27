@@ -2,6 +2,8 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 // favoring immutable Seqs
 
+import edu.cmu.cs.ls.keymaera.tools.Tool
+
 import scala.collection.immutable.Seq
 
 import edu.cmu.cs.ls.keymaera.core._

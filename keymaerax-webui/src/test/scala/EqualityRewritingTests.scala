@@ -2,6 +2,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, EqualityRewritingImpl,
   Interpreter, Tactics}
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.{constFormulaCongruenceT, eqLeft}
+import edu.cmu.cs.ls.keymaera.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._

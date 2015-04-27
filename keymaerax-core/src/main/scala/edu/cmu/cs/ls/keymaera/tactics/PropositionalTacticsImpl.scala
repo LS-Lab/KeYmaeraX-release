@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getFormula
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.Position._
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.{Map, List}
 

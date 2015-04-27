@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{KeYmaera, Mathematica}
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, Config, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaera.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -7,6 +7,7 @@ import scala.collection.immutable.Map
 
 /**
  * Created by nfulton on 12/6/14.
+ * @author Nathan Fulton
  */
 class ProvabilityExamples extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper()

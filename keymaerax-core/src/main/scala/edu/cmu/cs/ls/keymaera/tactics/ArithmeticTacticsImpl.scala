@@ -14,7 +14,7 @@ import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
 import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.getFormula
-import edu.cmu.cs.ls.keymaera.tools.QETool
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.List
 import scala.language.postfixOps

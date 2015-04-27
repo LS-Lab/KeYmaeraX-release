@@ -11,8 +11,6 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
-import edu.cmu.cs.ls.keymaera.tools.QETool
-
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
@@ -1104,8 +1102,8 @@ object LookupLemma {
   }
 
   private val trustedTools =
-    "edu.cmu.cs.ls.keymaera.core.Mathematica" ::
-    "edu.cmu.cs.ls.keymaera.core.Z3" :: Nil
+    "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
+    "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
 
   def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
   private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {

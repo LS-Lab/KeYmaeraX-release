@@ -1,6 +1,4 @@
-package edu.cmu.cs.ls.keymaera.tools
-
-import edu.cmu.cs.ls.keymaera.core._
+package edu.cmu.cs.ls.keymaera.core
 
 /**
  * Quantifier elimination tool.

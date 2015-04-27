@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.getTerm
 import AxiomaticRuleTactics.{equivalenceCongruenceT,boxMonotoneT,diamondMonotoneT}
 import ContextTactics.{cutInContext,cutImplyInContext}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 object AxiomTactic {
   /**

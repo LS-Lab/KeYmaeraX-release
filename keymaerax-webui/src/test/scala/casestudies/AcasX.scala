@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{Propositional,No
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, RootNode, SuccPosition, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
