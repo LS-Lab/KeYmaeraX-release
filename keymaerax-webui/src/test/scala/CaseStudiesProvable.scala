@@ -1,6 +1,3 @@
-import java.io.File
-
-import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
@@ -107,7 +104,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/Stuttering-allwrites.key"))
     helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
     // loops where not all branches write the same variables are not yet supported
-//    helper.runTactic(tactic, new RootNode(parseToSequent(new File("examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
+//    helper.runTactic(tactic, new RootNode(parseToSequent(this.getClass.getResourceAsStream("/examples/dev/t/tactics/Stuttering.key")))) shouldBe 'closed
   }
 
   it should "be provable automatically with Mathematica" in {
