@@ -187,31 +187,27 @@ class UnimplementedResponse(callUrl : String) extends Response {
   )
 }
 
-class ProofStatusResponse(proofId : String, error : String) extends Response {
+class ProofStatusResponse(proofId: String, status: String, error: Option[String] = None) extends Response {
   override val schema = Some("proofstatus.js")
   val json = JsObject(
-    "textStatus" -> JsString(error + ": " + proofId),
-    "errorThrown" -> JsString(error),
     "proofId" -> JsString(proofId),
-    "type" -> JsString("error")
+    "type" -> JsString("ProofLoadStatus"),
+    "status" -> JsString(status),
+    "textStatus" -> JsString(status + ": " + proofId),
+    "errorThrown" -> JsString(error.getOrElse(""))
   )
 }
-class ProofIsLoadingResponse(proofId : String) extends ProofStatusResponse(proofId, "proof is loading")
-class ProofNotLoadedResponse(proofId : String) extends ProofStatusResponse(proofId, "proof not loaded")
-
+class ProofIsLoadingResponse(proofId : String) extends ProofStatusResponse(proofId, "loading")
+class ProofNotLoadedResponse(proofId : String) extends ProofStatusResponse(proofId, "notloaded")
+class ProofIsLoadedResponse(proofId: String) extends ProofStatusResponse(proofId, "loaded")
+// progress "open": open goals
+// progress "closed": no open goals but not checked for isProved
+class ProofProgressResponse(proofId: String, progress: String) extends ProofStatusResponse(proofId, progress)
 
 class GetProblemResponse(proofid:String, tree:String) extends Response {
   val json = JsObject(
     "proofid" -> JsString(proofid),
     "proofTree" -> JsonParser(tree)
-  )
-}
-
-//class TacticDispatchedResponse(proofId: String, taskId: String, nodeId: String, tacticId: String, tacticInstId: String) extends Response {
-class ProofIsLoadedResponse(proofId: String) extends Response {
-  val json = JsObject(
-    "proofId" -> JsString(proofId),
-    "status" -> JsString("Loaded")
   )
 }
 

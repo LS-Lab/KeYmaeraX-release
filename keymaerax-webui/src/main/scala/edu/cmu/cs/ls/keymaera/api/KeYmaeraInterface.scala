@@ -1,7 +1,7 @@
 package edu.cmu.cs.ls.keymaera.api
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation.PositionTacticAutomation
-import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement.TaskStatus
+import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.TaskManagement.{TaskProgressStatus, TaskLoadStatus}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
@@ -40,9 +40,14 @@ object KeYmaeraInterface {
   }
 
   object TaskManagement {
-    object TaskStatus extends Enumeration {
-      type TaskStatus = Value
+    object TaskLoadStatus extends Enumeration {
+      type TaskLoadStatus = Value
       val NotLoaded, Loading, Loaded = Value
+    }
+
+    object TaskProgressStatus extends Enumeration {
+      type TaskProgressStatus = Value
+      val Open, Closed = Value
     }
 
     /**
@@ -231,14 +236,40 @@ object KeYmaeraInterface {
   def isLoadingTask(taskId : String) : Boolean = TaskManagement.loading.contains(taskId)
 
   /**
-   * Gets the status of the specified task.
+   * Gets the load status of the specified task.
    * @param taskId Identifies the task.
-   * @return The task status.
+   * @return The task load status.
    */
-  def getTaskStatus(taskId : String) : TaskStatus.Value = {
-    if (isLoadingTask(taskId)) TaskStatus.Loading
-    else if (containsTask(taskId)) TaskStatus.Loaded
-    else TaskStatus.NotLoaded
+  def getTaskLoadStatus(taskId : String) : TaskLoadStatus.Value = {
+    if (isLoadingTask(taskId)) TaskLoadStatus.Loading
+    else if (containsTask(taskId)) TaskLoadStatus.Loaded
+    else TaskLoadStatus.NotLoaded
+  }
+
+  /**
+   * Gets the progress status of the specified task.
+   * @param taskId Identifies the task.
+   * @return The task progress status.
+   */
+  def getTaskProgressStatus(taskId: String): TaskProgressStatus.Value = {
+    require(containsTask(taskId), "Unknown task ID " + taskId)
+    val (task, _) = TaskManagement.tasks.get(taskId).get
+    if (task.isClosed()) TaskProgressStatus.Closed
+    else TaskProgressStatus.Open
+  }
+
+  /**
+   * Indicates whether or not the specified task is proved. This is a long-running operation!
+   * @param taskId Identifies the task.
+   * @return True, if the task is proved, false otherwise.
+   */
+  def isProved(taskId: String): Boolean = {
+    require(containsTask(taskId), "Unknown task ID " + taskId)
+    val (task, _) = TaskManagement.tasks.get(taskId).get
+    println("Validating proof...")
+    val isProved = task.isProved()
+    println("...done")
+    isProved
   }
 
   /**

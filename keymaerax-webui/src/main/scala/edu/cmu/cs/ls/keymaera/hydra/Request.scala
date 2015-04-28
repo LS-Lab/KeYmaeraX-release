@@ -62,7 +62,7 @@ class LoginRequest(db : DBAbstraction, username : String, password : String) ext
 class ProofsForUserRequest(db : DBAbstraction, userId: String) extends Request {
   def getResultingResponses() = {
     val proofs = db.getProofsForUser(userId).map(proof =>
-      (proof._1, KeYmaeraInterface.getTaskStatus(proof._1.proofId).toString))
+      (proof._1, KeYmaeraInterface.getTaskLoadStatus(proof._1.proofId).toString.toLowerCase))
     new ProofListResponse(proofs) :: Nil
   }
 }
@@ -276,7 +276,7 @@ class CreateProofRequest(db : DBAbstraction, userId : String, modelId : String, 
 class ProofsForModelRequest(db : DBAbstraction, modelId: String) extends Request {
   def getResultingResponses() = {
     val proofs = db.getProofsForModel(modelId).map(proof =>
-      (proof, KeYmaeraInterface.getTaskStatus(proof.proofId).toString))
+      (proof, KeYmaeraInterface.getTaskLoadStatus(proof.proofId).toString.toLowerCase))
     new ProofListResponse(proofs) :: Nil
   }
 }
@@ -313,10 +313,10 @@ class OpenProofRequest(db : DBAbstraction, userId : String, proofId : String, wa
     })
 
     if(!wait) t.start()
-    else t.run
+    else t.run()
 
-    val status = KeYmaeraInterface.getTaskStatus(proofId)
-    new OpenProofResponse(proof, status.toString) :: Nil
+    val status = KeYmaeraInterface.getTaskLoadStatus(proofId)
+    new OpenProofResponse(proof, status.toString.toLowerCase) :: Nil
   }
 
   //@todo To improve readability, move the once-unwinding above and this implementation into a single function.
@@ -569,7 +569,7 @@ class GetProofNodeInfoRequest(db : DBAbstraction, userId : String, proofId : Str
   }
 }
 
-class GetProofStatusRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
+class GetProofLoadStatusRequest(db : DBAbstraction, userId : String, proofId : String) extends Request {
   def getResultingResponses() = {
     if (!KeYmaeraInterface.containsTask(proofId)) {
       if (!KeYmaeraInterface.isLoadingTask(proofId)) {
@@ -583,6 +583,36 @@ class GetProofStatusRequest(db : DBAbstraction, userId : String, proofId : Strin
       } else {
         new ProofIsLoadingResponse(proofId) :: Nil
       }
+    }
+  }
+}
+
+class GetProofProgressStatusRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
+  def getResultingResponses() = {
+    if (!KeYmaeraInterface.containsTask(proofId)) {
+      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
+        new ProofNotLoadedResponse(proofId) :: Nil
+      } else {
+        new ProofIsLoadingResponse(proofId) :: Nil
+      }
+    } else {
+      val progress = KeYmaeraInterface.getTaskProgressStatus(proofId)
+      new ProofProgressResponse(proofId, progress.toString.toLowerCase) :: Nil
+    }
+  }
+}
+
+class CheckIsProvedRequest(db: DBAbstraction, userId: String, proofId: String) extends Request {
+  def getResultingResponses() = {
+    if (!KeYmaeraInterface.containsTask(proofId)) {
+      if (!KeYmaeraInterface.isLoadingTask(proofId)) {
+        new ProofNotLoadedResponse(proofId) :: Nil
+      } else {
+        new ProofIsLoadingResponse(proofId) :: Nil
+      }
+    } else {
+      val isProved = KeYmaeraInterface.isProved(proofId)
+      new ProofProgressResponse(proofId, if (isProved) "proved" else "closed") :: Nil
     }
   }
 }

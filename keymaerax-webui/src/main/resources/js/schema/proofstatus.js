@@ -8,6 +8,9 @@
         "type" : {
             "type" : "string"
         },
+        "status" : {
+            "type" : "string"
+        },
         "textStatus" : {
             "type" : "string"
         },
@@ -15,5 +18,5 @@
             "type" : "string"
         }
     },
-    "required" : ["proofId","type","errorThrown"]
+    "required" : ["proofId","type","status"]
 }

@@ -194,9 +194,23 @@ trait RestApi extends HttpService {
     }
   }}}
 
-  val proofStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
+  val proofLoadStatus = path("proofs" / "user" / Segment / Segment / "status") { (userId, proofId) => { pathEnd {
     get {
-      val request = new GetProofStatusRequest(database, userId, proofId)
+      val request = new GetProofLoadStatusRequest(database, userId, proofId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofProgressStatus = path("proofs" / "user" / Segment / Segment / "progress") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new GetProofProgressStatusRequest(database, userId, proofId)
+      complete(standardCompletion(request))
+    }
+  }}}
+
+  val proofCheckIsProved = path("proofs" / "user" / Segment / Segment / "validatedStatus") { (userId, proofId) => { pathEnd {
+    get {
+      val request = new CheckIsProvedRequest(database, userId, proofId)
       complete(standardCompletion(request))
     }
   }}}
@@ -409,7 +423,9 @@ trait RestApi extends HttpService {
     proofListForModel     ::
     proofList             ::
     openProof             ::
-    proofStatus           ::
+    proofLoadStatus       ::
+    proofProgressStatus   ::
+    proofCheckIsProved    ::
     proofTasks            ::
     proofTask             ::
     nodeFormulaTactics    ::

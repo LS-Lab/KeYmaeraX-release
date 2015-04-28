@@ -611,9 +611,14 @@ var pollProofStatus = function(proof, userId, http) {
           if (data.status == undefined) {
             console.log("Continue polling proof status");
             pollProofStatus(proof, userId, http);
-          } else {
+          } else if (data.status == 'loading') {
+            console.log("Continue polling proof status");
+            pollProofStatus(proof, userId, http);
+          } else if (data.status == 'loaded') {
             console.log("Received proof status " + data.status);
             proof.loadStatus = data.status
+          } else {
+            console.error("Received unknown proof status " + data.status)
           }
       }).
       error(function(data, status, headers, config) {
@@ -634,11 +639,11 @@ keymaeraProofControllers.controller('ProofListCtrl',
     });
 
     $scope.loadProof = function(proof) {
-        proof.loadStatus = 'Loading'
+        proof.loadStatus = 'loading'
         $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
             proof.loadStatus = data.loadStatus
             // when server loads proof itself asynchronously
-            if (data.loadStatus == 'Loading') {
+            if (data.loadStatus == 'loading') {
               console.log("Start polling proof status");
               pollProofStatus(proof, $cookies.userId, $http);
             }
@@ -679,11 +684,11 @@ keymaeraProofControllers.controller('ModelProofsCtrl',
     }
 
     $scope.loadProof = function(proof) {
-      proof.loadStatus = 'Loading'
+      proof.loadStatus = 'loading'
       $http.get('proofs/user/' + $cookies.userId + "/" + proof.id).success(function(data) {
         proof.loadStatus = data.loadStatus
         // when server loads proof itself asynchronously
-        if (data.loadStatus == 'Loading') {
+        if (data.loadStatus == 'loading') {
           console.log("Start polling proof status");
           pollProofStatus(proof, $cookies.userId, $http);
         }
@@ -781,21 +786,32 @@ keymaeraProofControllers.controller('TaskListCtrl',
                 $scope.setSelected($scope.agenda[0]);
                 $scope.refreshTree();
             } else {
-                // proof finished
+                // proof might be finished
                 $scope.refreshTree();
-                var modalInstance = $modal.open({
-                  templateUrl: 'partials/prooffinisheddialog.html',
-                  controller: 'ProofFinishedDialogCtrl',
-                  size: 'md',
-                  resolve: {
-                    proofId: function() { return $scope.proofId; }
+                $http.get('proofs/user/' + userId + "/" + proofId + '/progress').success(function(data) {
+                  if (data.status == 'closed') {
+                    var modalInstance = $modal.open({
+                      templateUrl: 'partials/prooffinisheddialog.html',
+                      controller: 'ProofFinishedDialogCtrl',
+                      size: 'md',
+                      resolve: {
+                        proofId: function() { return $scope.proofId; },
+                        status: function() { return data.status }
+                      }
+                    });
+                  } else {
+                    // should never happen
+                    console.error('empty agenda even though proof is not closed (' + data.status + ')')
                   }
-                });
+                })
+                .error(function() {
+                  console.error("error retrieving proof progress")
+                })
             }
         }).error(function(data) {
-            if (data.errorThrown == 'proof not loaded') {
+            if (data.status == 'notloaded') {
                 // TODO open modal dialog and ask if proof should be loaded
-            } else if (data.errorThrown == 'proof is loading') {
+            } else if (data.status == 'loading') {
                 $scope.proofIsLoading = $q.defer()
                 $scope.proofIsLoading.promise.then(function() {
                     // TODO proof is now loaded, fetch tree and tasks
@@ -1077,10 +1093,21 @@ keymaeraProofControllers.controller('TaskListCtrl',
   });
 
 keymaeraProofControllers.controller('ProofFinishedDialogCtrl',
-        function($scope, $http, $modalInstance, proofId) {
-    $scope.cancel = function () {
+        function($scope, $http, $cookies, $modalInstance, proofId) {
+    $scope.validatedProofStatus = 'closed'
+
+    $scope.cancel = function() {
         $modalInstance.dismiss('cancel');
     };
+
+    $scope.validateProof = function() {
+      $http.get("/proofs/user/" + $cookies.userId + "/" + proofId + "/validatedStatus").success(function(data) {
+        $scope.validatedProofStatus = data.status
+      })
+      .error(function() {
+        console.error("error when validating proof")
+      })
+    }
 });
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
