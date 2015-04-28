@@ -10,25 +10,54 @@ import scala.sys.process._
 
 /**
  * Created by ran on 4/24/15.
+ * @author Ran Ji
  */
 class PolyaSolver extends SMTSolver {
 
-  // a tentative solution for experimental purpose
-  // TODO: put Polya in the resource
-  val PolyaPath = "/Users/ran/software/polya/polya"
-  val exportPolya = "export PYTHONPATH=PYTHONPATH:" + PolyaPath
-  val runPolya = "python /Users/ran/software/polya/smtlib2polya/batch_translate.py"
-  val smtDir = "/Users/ran/software/polya/keymaera-smt2"
+  val pathToPolya : String = {
+    val polyaTempDir = System.getProperty("java.io.tmpdir")
+    val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
+
+    // so far only for Mac Os
+    // TODO: support for other OS
+    if(new java.io.File(polyaTempDir+"polya").exists()) {
+      polyaTempDir+"polya"
+    } else {
+      val osArch = System.getProperty("os.arch")
+      var resource : InputStream = null
+      if(osName.contains("mac")) {
+        if(osArch.contains("64")) {
+          resource = this.getClass.getResourceAsStream("/polya/mac64/polya")
+        }
+      } else {
+        throw new Exception("Polya solver is currently not supported in your operating system.")
+      }
+      if(resource == null)
+        throw new Exception("Could not find Polya in classpath: " + System.getProperty("user.dir"))
+
+      val polyaSource = Channels.newChannel(resource)
+      val polyaTemp = new File(polyaTempDir, "polya")
+      // Get a stream to the script in the resources dir
+      val polyaDest = new FileOutputStream(polyaTemp)
+      // Copy file to temporary directory
+      polyaDest.getChannel.transferFrom(polyaSource, 0, Long.MaxValue)
+      val polyaAbsPath = polyaTemp.getAbsolutePath
+      Runtime.getRuntime.exec("chmod u+x " + polyaAbsPath)
+      polyaSource.close()
+      polyaDest.close()
+      assert(new java.io.File(polyaAbsPath).exists())
+      polyaAbsPath
+    }
+  }
 
   def run(cmd: String) = {
     val output : String = cmd.!!
     println("[Polya result] \n" + output + "\n")
-    // TODO So far does not handle get-model or unsat-core
     val result = {
-      if (output.contains("1 successes")) True
-      else if(output.contains("1 failures")) False
-      else if(output.contains("1 errors")) False
-      else throw new SMTConversionException("Conversion of SMT result " + output + " is not defined")
+      if (output.contains("-1")) False
+      else if(output.contains("1")) True
+      else if(output.contains("0")) False
+      else throw new SMTConversionException("Conversion of Polya result \n" + output + "\n is not defined")
     }
     (output, result)
   }
@@ -41,18 +70,18 @@ class PolyaSolver extends SMTSolver {
     var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
     smtCode += "\n(check-sat)\n"
     println("[Solving with Polya...] \n" + smtCode)
-    val smtFile = new File(smtDir, "KeymaeraToPolya.smt2")
+    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtFile = new File(smtTempDir, "KeymaeraToPolya.smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
     writer.flush()
     writer.close()
-//    val cmd = exportPolya + " & " + runPolya
-    val cmd = runPolya
+    val cmd = pathToPolya + " " + smtFile.getAbsolutePath
     val (output, result) = run(cmd)
     smtFile.delete()
     result match {
       case f : Formula => (f, cmd, output)
-      case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+      case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
 }

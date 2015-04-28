@@ -4,6 +4,9 @@ import edu.cmu.cs.ls.keymaera.core._
 
 import scala.collection.immutable.Seq
 
+/**
+ * @author Ran Ji
+ */
 class SMTLib {
   private var description : String = ""
   private var variableList : String  = ""

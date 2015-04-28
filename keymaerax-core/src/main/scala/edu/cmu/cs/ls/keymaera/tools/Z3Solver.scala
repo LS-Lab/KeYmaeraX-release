@@ -4,12 +4,13 @@ import java.io.{InputStream, FileOutputStream, FileWriter, File}
 import java.nio.channels.Channels
 import java.util.Locale
 
-import edu.cmu.cs.ls.keymaera.core.{Term, Formula}
+import edu.cmu.cs.ls.keymaera.core.{True, False, Term, Formula}
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 import scala.sys.process._
 
 /**
  * Created by ran on 3/27/15.
+ * @author Ran Ji
  */
 class Z3Solver extends SMTSolver {
 
@@ -73,7 +74,13 @@ class Z3Solver extends SMTSolver {
     val output : String = cmd.!!
     println("[Z3 result] \n" + output + "\n")
     // TODO So far does not handle get-model or unsat-core
-    (output, toKeYmaera(output))
+    val result = {
+      if (output.contains("unsat")) True
+      else if(output.contains("sat")) False
+      else if(output.contains("unknown")) False
+      else throw new SMTConversionException("Conversion of Z3 result \n" + output + "\n is not defined")
+    }
+    (output, result)
   }
 
   def qe(f : Formula) : Formula = {
@@ -95,7 +102,7 @@ class Z3Solver extends SMTSolver {
     smtFile.delete()
     result match {
       case f : Formula => (f, cmd, output)
-      case _ => throw new Exception("Expected a formula from Reduce call but got a non-formula expression.")
+      case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
 
