@@ -197,7 +197,7 @@ object ODETactics {
     }
 
     // TODO just call appropriate tactic without scheduler (needs base class change: inspect sequent)
-    override def apply(p: Position): Tactic = diffEffectAtomicT(p) | diffEffectSystemT(p)
+    override def apply(p: Position): Tactic = diffEffectAtomicT(p) | (debugT("Diff effect system") & diffEffectSystemT(p))
   }
 
   /**
