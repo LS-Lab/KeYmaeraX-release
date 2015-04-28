@@ -1,23 +1,268 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomCloseT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxAssignT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
+import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import TacticLibrary._
 
 /**
  * Solves simple ODEs.
  * @todo get an exact characterization of the ODEs that this actually solves.
- * @todo change file name...
  * @author Nathan Fulton
  */
 object LogicalODESolver {
 
+
+  def solveT : PositionTactic = new PositionTactic("Solve ODE") {
+    override def applies(s: Sequent, p: Position): Boolean = true //@todo
+
+    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) ~
+      (
+        (stepTactic(p) *) &
+        cutTimeLB(p) &
+        ODETactics.diffWeakenT(p) &
+        arithmeticT
+      )
+  }
+
+  def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Box(asdf:ODESystem, _) => true //@todo
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(program : DifferentialProgram, f) => {
+          val t = timeVar(program).getOrElse(throw new Exception("Need time var"))
+
+          //Should always be 0, but let's be safe.
+          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions).find(_ match {
+            case Equal(x, _) if x.equals(t) => true
+            case _ => false
+          }).getOrElse(throw new Exception("Need initial condition on time variable.")) match {
+            case Equal(x, term) => term
+            case _ => throw new Exception("find failed.")
+          }
+
+          //@todo figure out how to prove the show branch --
+          //@todo modify solve tactic above to weaken and arith
+          //@todo
+          val theCut = diffCutT(GreaterEqual(t, timeInitialCondition))(p) & onBranch(
+            (BranchLabels.cutShowLbl, diffInvariant(p)),
+            (BranchLabels.cutUseLbl, /*yield*/NilT)
+          )
+
+          Some(theCut)
+        }
+      }
+
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  def setupTimeVar : PositionTactic = new PositionTactic("Introduce time into ODE") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Box(dp : DifferentialProgram, f) => timeVar(dp).isEmpty
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Box(program : DifferentialProgram, f) => {
+          val t = freshTimeVar(program)
+          val lastAntePos = AntePos(node.sequent.ante.length)
+          //@todo timehack
+          val introTime =
+            ODETactics.diffAuxiliaryT(t, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
+              PropositionalTacticsImpl.EquivRightT(p) & onBranch(
+                (equivLeftLbl, vacuousExistentialQuanT(None)(p) & AxiomCloseT(lastAntePos, p)),
+                (equivRightLbl, skolemizeT(lastAntePos) & AxiomCloseT(lastAntePos, p))
+              ),
+              NilT //yield
+            )
+
+          Some(introTime)
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
   /**
-   * Computes the solution to v' = f where where v' = f is a component of "program"
+   * @return A tactic that cuts in a solution to an ODE in a system. This should be saturated.
+   */
+  def stepTactic : PositionTactic = new PositionTactic("Logical ODE Solver") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case Box(program : DifferentialProgram, _) => {
+        val hasNextStep = atomicODEs(program).filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.e)).find(ode => isUnsolved(ode.xp.e, program)) match {
+          case Some(_) => true
+          case None => false
+        }
+        timeVar(program).isDefined && hasNextStep
+      }
+      case _ => false
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        val initialConditions : List[Formula] = node.sequent.ante.flatMap(extractInitialConditions).toList
+
+        node.sequent(p) match {
+          case Box(program : DifferentialProgram, f) => {
+            val sortedOdes = sortAtomicOdes(atomicODEs(program))
+            val nextOde = sortedOdes
+              .filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.e)) //Skip time var, which we deal with using diff solve instead of diff inv.
+              .find(ode => isUnsolved(ode.xp.e, program)).getOrElse(throw new Exception("applies method failed."))
+            val toCut = Equal(nextOde.xp.e, integralOf(nextOde.xp.e, program, initialConditions))
+
+
+
+            Some(ODETactics.diffCutT(toCut)(p) & onBranch(
+              (BranchLabels.cutUseLbl, /*yield*/NilT),
+              (BranchLabels.cutShowLbl, ODETactics.diffInvariantT(p))
+            ))
+          }
+          case _ => throw new Exception
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+  }
+
+  private def extractInitialConditions(f : Formula) : List[Formula] = flattenAnds(f match {
+    case And(l, r) => extractInitialConditions(l) ++ extractInitialConditions(r)
+    case Equal(v:Variable, _) => f :: Nil
+    case _ => Nil //ignore?
+  })
+
+  /**
+   *
+   * @param v
+   * @param program
+   * @return true if the program does not already contain a solution for v.
+   */
+  def isUnsolved(v : Variable, program : DifferentialProgram) = {
+    val odes = atomicODEs(program)
+    if(odes.find(_.xp.e.equals(v)).isEmpty) false //Variables that don't occur in the ODE are trivially already solved.
+    else if(timeVar(program).equals(v)) false //Don't need to solve for the time var.
+    //In non-special cases, check for a = evolution domain constraint in the ode.
+    else {
+      val vConstraints = odeConstraints(program).flatMap(decomposeAnds).find(_ match {
+        case Equal(l, r) => l.equals(v)
+        case _ => false
+      })
+      vConstraints.isEmpty
+    }
+  }
+
+  private def decomposeAnds(f : Formula) : List[Formula] = f match {
+    case And(l,r) => decomposeAnds(l) ++ decomposeAnds(r)
+    case _ => f :: Nil
+  }
+
+  /**
+   * @param odes
+   * @return
+   */
+  private def sortAtomicOdes(odes : List[AtomicODE]) : List[AtomicODE] = {
+    sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.e.equals(v)).get)
+  }
+
+  //@tailrec
+  //@todo check this implementation.
+  private def sortAtomicOdesHelper(odes : List[AtomicODE], prevOdes : List[AtomicODE] = Nil) : List[Variable] = {
+    var primedVars = odes.map(_.xp.e)
+
+    def dependencies(v : Variable) : List[Variable] = {
+      val vTerm = odes.find(_.xp.e.equals(v)).get.e
+      //remove self-references to cope with the fact that t' = 0*t + 1 :-( @todo timehack
+      primedVars.filter(StaticSemantics.freeVars(vTerm).contains(_)).filter(!_.equals(v))
+    }
+
+    var nonDependentSet : List[Variable] = primedVars.filter(dependencies(_).isEmpty)
+    val possiblyDependentOdes = odes.filter(ode => !nonDependentSet.contains(ode.xp.e))
+
+    if(possiblyDependentOdes.isEmpty) nonDependentSet
+    else {
+      if(prevOdes.equals(possiblyDependentOdes)) throw new Exception("Cycle detected!")
+      nonDependentSet ++ sortAtomicOdesHelper(possiblyDependentOdes, odes)
+    }
+  }
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Integrals of a single ODE.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * If v' = term occurs in the system of ODEs, then this function computes the integral of term.
+   * Assumes that the ODEs have a time variable, that a formula of the form v=f occurs in the initialConditions formulas,
+   * and that the system of odes is blah blah.
+   * @param v
+   * @param program
+   * @param initialConditions
+   * @return Integral of f assuming v' = f occurs in ODEs.
+   */
+  def integralOf(v : Variable, program : DifferentialProgram, initialConditions : List[Formula]) : Term = {
+    val termToIntegrate = resolveRecurrences(v, program, initialConditions)
+    println("Integrating term " + termToIntegrate)
+
+    val t = timeVar(program) match {
+      case Some(t) => t
+      case None    => throw new Exception("Could not find time variable in ODEs")
+    }
+
+    val v_0 : Term = conditionsToValues(initialConditions).get(v) match {
+      case Some(x) => x
+      case None => throw new Exception("Could not find initial condition for " + v.name)
+    }
+
+    Plus(integrator(termToIntegrate, t), v_0)
+  }
+
+  /**
+   * A syntactic integrator for terms of the form blah. @todo adequate description.
+   * @param term
+   * @param t
+   * @return Integral term dt
+   */
+  private def integrator(term : Term, t : Variable) : Term = term match {
+    case Plus(l, r) => Plus(integrator(l, t), integrator(r, t))
+    case Minus(l, r) => Minus(integrator(l, t), integrator(r, t))
+    case Times(n : Number, time) if time.equals(t) => Times(Divide(n, Number(2)), Power(t, Number(2)))
+    case Times(l ,r) => ???
+    case Divide(l, r) => ???
+    case Power(base, exp) => exp match {
+      case Number(n) =>
+        if(n == 1) integrator(base, t)
+        else       Times(Divide(Number(1), Number(n+1)), integrator(Power(base, Number(n-1)), t))
+      case _ => throw new Exception("Cannot integrate terms with non-number exponents!")
+    }
+    case Number(n) => Times(term, t) //@todo do we need a constant here?
+    case term : Variable => Times(term, t)
+  }
+
+  /**
+   * Given x' = f, replaces all variables in f with their recurrences or initial conditions.
+   * @todo this needs a better name.
+   * @todo make thie private and figure out the private method helper thing.
    * @param v A variable s.t. v' = f occurs in the ODEs.
    * @param program ODE(s) with a time variable (some x s.t. x' = 1).
    * @param initialConditions Any initial conditions for the ODE.
-   * @return The solution to a single ODE given a set of initial conditions and an ODE program (possibly with constraints).
+   * @return f with all variables replaced by their recurrences or initial conditions.
    */
-  def solutionForVariable(v : Variable, program : DifferentialProgram, initialConditions : List[Formula]) : Formula = {
+  def resolveRecurrences(v : Variable, program : DifferentialProgram, initialConditions : List[Formula]) : Term = {
     val odes         = atomicODEs(program)
 
     val time : Variable = timeVar(program) match {
@@ -30,12 +275,6 @@ object LogicalODESolver {
     //an honest inquiry.
     assert(odes.find(ode => ode.xp.e.equals(v)).isDefined, "Cannot solve for a variable that does not occur in the ODE")
 
-    //The initial value for v.
-    val v_0 : Term = initValue(program, initialConditions)(v) match {
-      case Some(term) => term
-      case None    => Number(0)
-    }
-
     //@todo check that this is always an OK cast Variable to NamedSymbol.
     val primedVariables : Set[Variable] = odes.map(_.xp.e).toSet
 
@@ -46,61 +285,89 @@ object LogicalODESolver {
         x.asInstanceOf[Variable]
       })
 
+    //Variables that occur in the term associated with v' and also occur primed in the ODE.
     val recurrenceVars : Set[Variable] = (varsInOde intersect primedVariables) //for lack of a better name.
+
+    //Variables that occur in the term associated with v' but do not occur primed in the ODE.
+    val nonRecurringVars : Set[Variable] = varsInOde -- recurrenceVars
+
     if(recurrenceVars.isEmpty) {
       // If x' = a where a is not a variable occurring in the system of odes, then the solution is
       // x = at + x_0 where t is the time variable and x_0 is the value in initialValues associated with
-      Equal(v, Plus(Times(ode.e, time), v_0))
+      val f_initValuesResolved = nonRecurringVars.foldLeft[Term](ode.e)((currTerm, x) => {
+        val x_0 = initValue(initialConditions, x)
+        assert(x_0.isDefined, "Need an initial condition for non-recurring variable " + x + " while solve for " + v)
+        SubstitutionHelper.replaceFree(currTerm)(x, x_0.get)
+      })
+
+      f_initValuesResolved
     }
     else {
+      //@todo good variable names for these two passes.
       //Replace all instance of primed variables in the term assocaited with v'
-      val transformedTerm = recurrenceVars.foldLeft[Term](ode.e)((currTerm, x) => {
-        val xSoln = initValue(program, initialConditions)(x)
+      val f_substRecurrences = recurrenceVars.foldLeft[Term](ode.e)((currTerm, x) => {
+        val xSoln = recurrence(program, initialConditions, x)
         assert(xSoln.isDefined, "Need a solution for recurring variable " + x + " while solving for " + v)
         SubstitutionHelper.replaceFree(currTerm)(x, xSoln.get)
       })
-      Equal(v, Plus(Times(transformedTerm, time), v_0))
+      val f_substInitValues = nonRecurringVars.foldLeft[Term](f_substRecurrences)((currTerm, x) => {
+        val x_0 = initValue(initialConditions, x)
+        assert(x_0.isDefined, "Need an initial condition for non-recurring variable " + x + " while solve for " + v)
+        SubstitutionHelper.replaceFree(currTerm)(x, x_0.get)
+      })
+      f_substInitValues
     }
   }
 
   /**
-   * If we topologically sort the ODEs of the system then we should end up with the equation with the fewest depednecies
-   * as the first element of the list. If we can solve that ODE, then we can use the constraint in the next system and so on.
-   * @param odes
-   * @return Topological sort on the ODEs.
+   * Converts formulas of the form x = term into a map x -> term, and ignores all formulas of other forms.
+   * @todo think of a better name -- constraintsToConditions? formulasToConditions?
    */
-  private def sortAtomicOdes(odes : List[AtomicODE]) : List[AtomicODE] = ???
+  private def conditionsToValues(fs : List[Formula]) : Map[Variable, Term] = flattenAnds(fs)
+    .map(f => f match {
+    case Equal(left, right) => left match {
+      case v : Variable => Some(v, right)
+      case _ => None
+    }
+    case _ => None
+  })
+    .filter(_.isDefined)
+    .map(e => (e.get._1 -> e.get._2))
+    .toMap
 
   /**
-   *
+   * @todo document.
    * @param program
-   * @param iniitalConstraints
-   * @param x The variable whose initial value is requested.
-   * @return The initial value of x in the ODE "program" subject to the initial conditions "initialConditions", where
-   *         initial conditions in both the ODE's constraints and the initialConditiions are expressed in the form
-   *         x = Term.
+   * @param initialConstraints
+   * @param x
+   * @return ???
    */
-  private def initValue(program : DifferentialProgram, iniitalConstraints : List[Formula])(x : Variable) : Option[Term] = {
-    //Helper method that converts conditions of the form x = term into maps from variables to terms.
-    def conditionsToValues(fs : List[Formula]) : Map[Variable, Term] = fs
-      .map(f => f match {
-        case Equal(left, right) => left match {
-          case v : Variable => Some(v, right)
-          case _ => None
-        }
-        case _ => None
-      })
-      .filter(_.isDefined)
-      .map(e => (e.get._1 -> e.get._2))
-      .toMap
-
-    val odeConditions = conditionsToValues(odeConstraints(program))
-    val initialConditions = conditionsToValues(iniitalConstraints)
-
-    //Currently prerfering ode conditions. @todo check that this is OK.
+  private def recurrence(program : DifferentialProgram, initialConstraints : List[Formula], x : Variable) : Option[Term] = {
+    val odeConditions = conditionsToValues(flattenAnds(odeConstraints(program)))
+    val initialConditions = conditionsToValues(flattenAnds(initialConstraints))
     if(odeConditions.contains(x)) odeConditions.get(x)
     else if(initialConditions.contains(x)) initialConditions.get(x)
     else None
+  }
+
+  /**
+   * Converts list of formulas possibly containing ANDs into list of formulas that does not contain any ANDs.
+   * @param fs
+   */
+  private def flattenAnds(fs : List[Formula]) = fs.flatMap(f => f match {
+    case And(l, r) => l :: r :: Nil
+    case _ => f :: Nil
+  })
+
+  /**
+   *
+   * @param iniitalConstraints
+   * @param x The variable whose initial value is requested.
+   * @return The initial value of x.
+   */
+  private def initValue(iniitalConstraints : List[Formula], x : Variable) : Option[Term] = {
+    val initialConditions = conditionsToValues(iniitalConstraints)
+    initialConditions.get(x)
   }
 
   /**
@@ -130,14 +397,31 @@ object LogicalODESolver {
    * @return A variable x s.t. x'=1 occurs in ode.
    * @author Nathan Fulton
    */
-  private def timeVar(ode : DifferentialProgram) : Option[Variable] = ode match {
-    case AtomicODE(x, e)                  => if(e.equals(Number(1))) Some(x.e) else None
-    case ODESystem(ode, constraint)       => timeVar(ode)
-    case DifferentialProduct(left, right) => (timeVar(left), timeVar(right)) match {
-      case (Some(t), Some(t2)) => if(t.equals(t2)) Some(t) else ???
-      case (Some(t), None)     => Some(t)
-      case (None, Some(t))     => Some(t)
-      case (None, None)        => None
+  def timeVar(ode : DifferentialProgram) : Option[Variable] = {
+    //The second value is the one that we cut in. @todo timehack
+    def isTimeVar(atomic : AtomicODE) = atomic.e.equals(Number(1)) || atomic.e.equals(Plus(Times(Number(0), atomic.xp.e), Number(1)))
+
+    ode match {
+      case atomic:AtomicODE => if(isTimeVar(atomic)) Some(atomic.xp.e) else None
+      case ODESystem(ode, constraint)       => timeVar(ode)
+      case DifferentialProduct(left, right) => (timeVar(left), timeVar(right)) match {
+        case (Some(t), Some(t2)) => if(t.equals(t2)) Some(t) else ???
+        case (Some(t), None)     => Some(t)
+        case (None, Some(t))     => Some(t)
+        case (None, None)        => None
+      }
     }
   }
+
+  private def freshTimeVar(program : DifferentialProgram) = {
+    val timeIdx : Option[Int] = atomicODEs(program)
+      .filter(_.xp.e.name.equals("t"))
+      .foldLeft[Option[Int]](None)((currentIdx, nextOde) => nextOde.xp.e.index match {
+      case Some(i) => if(currentIdx.getOrElse(i) >= i) Some(i) else currentIdx
+      case None    => Some(0)
+    })
+    Variable("t", timeIdx, Real)
+  }
+
+
 }
