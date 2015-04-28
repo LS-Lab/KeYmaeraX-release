@@ -11,7 +11,6 @@ import edu.cmu.cs.ls.keymaera.parser._
  * @author Stefan Mitsch
  */
 class FileLemmaDB extends LemmaDB {
-  // TODO need not be part of the core, but how to make trusted if outside?
 
   private lazy val lemmadbpath = {
     val file = new java.io.File(System.getProperty("user.home") + java.io.File.separator +
@@ -27,7 +26,7 @@ class FileLemmaDB extends LemmaDB {
     LoadedKnowledgeTools.fromName(knowledge)(lemmaID + ".alp").head.formula
   }
 
-  override def addLemma(conclusion: Formula, evidence: (String, String)): Option[String] = {
+  private[core] override def addLemma(conclusion: Formula, evidence: (String, String)): Option[String] = {
     def getUniqueLemmaFile(idx: Int = 0): (String, java.io.File) = {
       val id = "QE" + idx.toString
       val f = new java.io.File(lemmadbpath, id + ".alp")

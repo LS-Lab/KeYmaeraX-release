@@ -1098,7 +1098,6 @@ object LookupLemma {
     "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
     "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
 
-  // TODO trusts the lemma DB, how can we make sure we get only correct lemmas?
   def apply(lemmaDB: LemmaDB, name: String): Rule = new LookupLemma(lemmaDB, name)
 
   def addRealArithLemma(lemmaDB: LemmaDB, t: QETool, f : Formula) : Option[(String, Formula)] = {

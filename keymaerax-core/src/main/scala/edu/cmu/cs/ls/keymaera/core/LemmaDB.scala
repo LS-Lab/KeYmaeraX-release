@@ -1,7 +1,5 @@
 package edu.cmu.cs.ls.keymaera.core
 
-import edu.cmu.cs.ls.keymaera.parser.ToolEvidence
-
 /**
  * Store and retrieve lemmas.
  *
@@ -23,5 +21,5 @@ trait LemmaDB {
    * @param evidence Evidence that the lemma is correct: (input to the tool, tool output)
    * @return The lemma ID, if added successfully; None otherwise.
    */
-  def addLemma(conclusion: Formula, evidence: (String, String)): Option[String]
+  private[core] def addLemma(conclusion: Formula, evidence: (String, String)): Option[String]
 }
