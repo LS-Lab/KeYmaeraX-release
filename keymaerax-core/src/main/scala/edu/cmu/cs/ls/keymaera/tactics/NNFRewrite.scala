@@ -12,6 +12,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 /**
 * Rewrites formulas into negation normal form using DeMorgan's laws and double negation elimination.

@@ -1090,107 +1090,38 @@ object AxiomaticRule {
 /**
  * Lookup a lemma that has been proved previously or by an external arithmetic tool.
  * @author nfulton
+ * @author Stefan Mitsch
  *@TODO Review
  */
 object LookupLemma {
-  //import java.io.File
-  private lazy val lemmadbpath = {
-    val file = new java.io.File(System.getProperty("user.home") + java.io.File.separator +
-      ".keymaera" + java.io.File.separator + "cache" + java.io.File.separator + "lemmadb")
-    file.mkdirs
-    file
-  }
+  private val trustedTools =
+    "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
+    "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
 
-  def apply(file : java.io.File, name : String):Rule = new LookupLemma(file,name)
-  private class LookupLemma(file : java.io.File, name : String) extends Rule("Lookup Lemma") {
-    def apply(s : Sequent) = {
-      val parser = new KeYmaeraParser()
-      val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
-      val formula = LoadedKnowledgeTools.fromName(knowledge)(name).head.formula
-      //@TODO Are lemmas fine in every context? Including any s.pref?
-      val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
-      List(newSequent)
-    }
-  }
+  // TODO trusts the lemma DB, how can we make sure we get only correct lemmas?
+  def apply(lemmaDB: LemmaDB, name: String): Rule = new LookupLemma(lemmaDB, name)
 
-  def addRealArithLemma (t : Tool, f : Formula) : Option[(java.io.File, String, Formula)] = {
+  def addRealArithLemma(lemmaDB: LemmaDB, t: QETool, f : Formula) : Option[(String, Formula)] = {
+    require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
+
     //Find the solution
-    t match {
-      case x: Mathematica if x.isInitialized =>
-        //@TODO illegal access to out of core. Fix!
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
+    //@TODO assumes the tool is initialized
+    val (solution, input, output) = t.qeInOut(f)
+    val result = Equiv(f, solution)
 
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = LookupLemma.synchronized {
-          // synchronize on file creation to make sure concurrent uses use new file names
-          val newFile = getUniqueLemmaFile()
-          newFile.createNewFile
-          newFile
-        }
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-
-      case x: Z3 if x.isInitialized =>
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
-
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = LookupLemma.synchronized {
-          // synchronize on file creation to make sure concurrent uses use new file names
-          val newFile = getUniqueLemmaFile()
-          newFile.createNewFile
-          newFile
-        }
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-
-      case x: Polya if x.isInitialized =>
-        val (solution, input, output) = x.cricitalQE.qeInOut(f)
-        val result = Equiv(f,solution)
-
-        //Save the solution to a file.
-        //TODO-nrf create an interface for databases.
-        def getUniqueLemmaFile(idx:Int=0):java.io.File = {
-          val f = new java.io.File(lemmadbpath, "QE" + t.name + idx.toString() + ".alp")
-          if(f.exists()) getUniqueLemmaFile(idx+1)
-          else f
-        }
-        val file = LookupLemma.synchronized {
-          // synchronize on file creation to make sure concurrent uses use new file names
-          val newFile = getUniqueLemmaFile()
-          newFile.createNewFile
-          newFile
-        }
-        val evidence = new ToolEvidence(Map(
-          "input" -> input, "output" -> output))
-        KeYmaeraPrettyPrinter.saveProof(file, result, evidence)
-
-        //Return the file where the result is saved, together with the result.
-        Some((file, file.getName, result))
-
-      case _ => None
+    lemmaDB.addLemma(result, (input, output)) match {
+      case Some(id) => Some(id, result)
+      case None => throw new IllegalStateException("Unable to add lemma")
     }
+  }
+}
+
+private class LookupLemma(lemmaDB: LemmaDB, name: String) extends Rule("Lookup Lemma") {
+  def apply(s : Sequent) = {
+    val formula = lemmaDB.getLemmaConclusion(name)
+    //@TODO Are lemmas fine in every context? Including any s.pref?
+    val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
+    List(newSequent)
   }
 }
 

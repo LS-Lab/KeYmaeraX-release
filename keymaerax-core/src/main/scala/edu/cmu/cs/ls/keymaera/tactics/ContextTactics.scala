@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{lastSucc,lastAnte}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, ConstructionTactic, Tactic, stopT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{cutT,debugT,alphaRenamingT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula,freshNamedSymbol,getTerm}
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 
 /**

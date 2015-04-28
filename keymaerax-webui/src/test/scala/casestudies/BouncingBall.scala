@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Interpreter
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, Z3, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
@@ -21,9 +22,11 @@ import testHelper.StringConverter._
 import BranchLabels._
 
 import scala.collection.immutable.Map
+import scala.language.postfixOps
 
 /**
  * Created by ran on 3/24/15.
+ * @author Ran Ji
  */
 class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
@@ -49,9 +52,7 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
   def la(t: PositionTactic) = locateAnte(t)
 
   "bouncing ball tout" should "be provable" in {
-
-    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key"))
 
     val tactic = ls(ImplyRightT) & (la(AndLeftT)*) & ls(wipeContextInductionT(Some("v^2<=2*g()*(H-h) & h>=0".asFormula))) & onBranch(
       (indInitLbl, debugT("Base Case") & ls(AndRightT) &&
@@ -78,16 +79,12 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key"))
     helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/simple/bouncing-ball/bouncing-ball-tout.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/simple/bouncing-ball/bouncing-ball-tout.key"))
     helper.runTactic(master(new Generate("v^2<=2*g()*(H-h) & h>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 

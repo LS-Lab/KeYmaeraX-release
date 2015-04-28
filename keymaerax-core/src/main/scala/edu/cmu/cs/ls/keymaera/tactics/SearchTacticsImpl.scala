@@ -3,6 +3,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 /**
  * Implementation of search tactics.

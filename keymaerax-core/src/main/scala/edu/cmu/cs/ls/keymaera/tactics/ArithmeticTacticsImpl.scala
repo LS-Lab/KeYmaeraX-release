@@ -14,6 +14,7 @@ import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
 import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.getFormula
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.List
 import scala.language.postfixOps
@@ -72,45 +73,51 @@ object ArithmeticTacticsImpl {
 
         override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
           try {
-            LookupLemma.addRealArithLemma(tool, universalClosure(desequentialization(node.sequent))) match {
-              case Some((file, id, f)) =>
-                f match {
-                  case Equiv(res, True) => {
-                    val lemma = new ApplyRule(LookupLemma(file, id)) {
-                      override def applicable(node: ProofNode): Boolean = true
-                    }
-                    // reinstantiate quantifiers
-                    val pos = AntePosition(node.sequent.ante.length)
-                    def reInst(f: Formula): Option[Tactic] = f match {
-                      case Forall(v, g) =>
-                        val resG = reInst(g)
-                        if (v.isEmpty) resG
-                        else {
-                          val vars = v.map({
-                            case x: Variable => x
-                            case _ => throw new IllegalArgumentException("Can only handle quantifiers over variables")
-                          })
-                          val tac = (for (n <- vars) yield instantiateT(n, n)(pos)).reduce(seqT)
-                          resG match {
-                            case Some(tt) => Some(tac & tt)
-                            case None => Some(tac)
-                          }
+            tool match {
+              case qe: QETool =>
+                // TODO make lemma DB configurable
+                val lemmaDB = new FileLemmaDB()
+                LookupLemma.addRealArithLemma(lemmaDB, qe, universalClosure(desequentialization(node.sequent))) match {
+                  case Some((id, f)) =>
+                    f match {
+                      case Equiv(res, True) => {
+                        val lemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
+                          override def applicable(node: ProofNode): Boolean = true
                         }
-                      case _ => None
+                        // reinstantiate quantifiers
+                        val pos = AntePosition(node.sequent.ante.length)
+                        def reInst(f: Formula): Option[Tactic] = f match {
+                          case Forall(v, g) =>
+                            val resG = reInst(g)
+                            if (v.isEmpty) resG
+                            else {
+                              val vars = v.map({
+                                case x: Variable => x
+                                case _ => throw new IllegalArgumentException("Can only handle quantifiers over variables")
+                              })
+                              val tac = (for (n <- vars) yield instantiateT(n, n)(pos)).reduce(seqT)
+                              resG match {
+                                case Some(tt) => Some(tac & tt)
+                                case None => Some(tac)
+                              }
+                            }
+                          case _ => None
+                        }
+                        val contTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
+                        def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
+                        //Really simple because this is just checking that the thing we believe to be true is actually true.
+                        val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
+                        val tr = reInst(res) match {
+                          case Some(inst) => lemma & EquivLeftT(pos) & onBranch((equivLeftLbl, branch1(inst)), (equivRightLbl, branch2))
+                          case _ => lemma & contTactic
+                        }
+                        Some(tr) //& debugT("Test"))
+                      }
+                      case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
                     }
-                    val contTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
-                    def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
-                    //Really simple because this is just checking that the thing we believe to be true is actually true.
-                    val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
-                    val tr = reInst(res) match {
-                      case Some(inst) => lemma & EquivLeftT(pos) & onBranch((equivLeftLbl, branch1(inst)), (equivRightLbl, branch2))
-                      case _ => lemma & contTactic
-                    }
-                    Some(tr) //& debugT("Test"))
-                  }
-                  case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
+                  case _ => None
                 }
-              case _ => None
+              case _ => throw new IllegalArgumentException("Cannot use " + tool.name + " for quantifier elimination, need a QETool")
             }
           } catch {
             case ex: IllegalArgumentException => Some(debugT("QE failed: " + ex.getMessage) & stopT)
@@ -129,6 +136,7 @@ object ArithmeticTacticsImpl {
     }
 
     private def toolIsInitialized(): Boolean = {
+      // HACK access singletons, because applies/applicable does not have a tool instance parameter
       if (toolId == "Mathematica") MathematicaScheduler.isInitialized
       else if (toolId == "Z3") Z3Scheduler.isInitialized
       else if (toolId == "Polya") PolyaScheduler.isInitialized

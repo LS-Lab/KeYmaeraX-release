@@ -455,23 +455,6 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
   //////////////////////////////////////////////////////////////////////////////
   // Proofs
   //////////////////////////////////////////////////////////////////////////////
-  def saveProof(file : java.io.File, f : Formula, ev : Evidence) = {
-    val namesToDeclare = BindingAssessment.allNames(f) -- (BindingAssessment.catVars(f).bv.s match {
-      case Left(_) => throw new IllegalArgumentException("")
-      case Right(ts) => ts
-    })
-    val header = new KeYmaeraPrettyPrinter(ParseSymbols).proofHeader(namesToDeclare.toList)
-    val fString = new KeYmaeraPrettyPrinter(ParseSymbols).stringify(f)
-    
-    val fileContents = header + "Lemma " + "\"" + file.getName() + "\"." + "\n" +
-    				   fString + "\nEnd.\n" + stringifyEvidence(ev)
-    
-    val pw = new java.io.PrintWriter(file)
-    pw.write(fileContents)
-    //@TODO Read and parse file again. Compare with f.
-    pw.close()
-  }
-  
   def stringifyEvidence(e:Evidence) = e match {
     case e : ProofEvidence => ??? //TODO
     case e : ExternalEvidence => "External.\n\t" + e.file.toString() + "\nEnd."

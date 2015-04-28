@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{Propositional,No
 import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, RootNode, SuccPosition, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 
@@ -50,8 +51,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
   def l(t: PositionTactic) = locate(t)
 
   "No Delay" should "be provable" in {
-    val file = new File("examples/casestudies/acasx/nodelay.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/casestudies/acasx/nodelay.key"))
 
     val invariant = ("( (w=-1 | w=1) & " +
       "      (" +

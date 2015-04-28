@@ -4,6 +4,7 @@ import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 /**
  * Breaking stuff up.

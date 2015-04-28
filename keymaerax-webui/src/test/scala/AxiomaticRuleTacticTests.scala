@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{Mathematica, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaera.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._

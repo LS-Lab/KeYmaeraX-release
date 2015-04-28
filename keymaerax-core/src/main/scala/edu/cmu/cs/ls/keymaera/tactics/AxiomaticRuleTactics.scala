@@ -6,6 +6,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SubstitutionHelper.replaceFree
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ApplyRule, ConstructionTactic, Tactic, NilT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.globalAlphaRenamingT
 import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 
 /**

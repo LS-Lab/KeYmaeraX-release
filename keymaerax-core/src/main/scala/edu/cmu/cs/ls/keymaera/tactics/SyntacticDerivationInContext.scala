@@ -16,6 +16,7 @@ import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{onBranch,lastAnte,lastS
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula,getTerm}
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.List
 

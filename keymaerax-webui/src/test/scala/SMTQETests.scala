@@ -1,6 +1,5 @@
-import edu.cmu.cs.ls.keymaera.core.{Polya, Z3, KeYmaera}
 import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tools.{PolyaSolver, Z3Solver, SMTLib}
+import edu.cmu.cs.ls.keymaera.tools._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
 

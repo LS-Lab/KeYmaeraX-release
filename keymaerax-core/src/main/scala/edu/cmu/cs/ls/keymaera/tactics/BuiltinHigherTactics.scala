@@ -8,6 +8,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import SearchTacticsImpl.locateSucc
 import EqualityRewritingImpl.eqLeft
 import HybridProgramTacticsImpl.genInductionT
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 /**
  * Implementation of builtin higher tactics composed of base tactics.

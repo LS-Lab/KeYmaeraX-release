@@ -1,7 +1,5 @@
 package casestudies
 
-import java.io.File
-
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateAnte
@@ -11,8 +9,8 @@ import edu.cmu.cs.ls.keymaera.tactics.Interpreter
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels
 import edu.cmu.cs.ls.keymaera.tactics.Tactics
 import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, Z3, KeYmaera}
 import testHelper.ProvabilityTestHelper
-import edu.cmu.cs.ls.keymaera.tools.Z3Solver
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
 import edu.cmu.cs.ls.keymaera.tactics.ODETactics.diffSolution
@@ -22,9 +20,11 @@ import testHelper.StringConverter._
 import BranchLabels._
 
 import scala.collection.immutable.Map
+import scala.language.postfixOps
 
 /**
  * Created by ran on 3/24/15.
+ * @author Ran Ji
  */
 class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
@@ -50,8 +50,7 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   def la(t: PositionTactic) = locateAnte(t)
 
   "LICS 4a" should "be provable" in {
-    val file = new File("examples/tutorials/lics/lics-4a.key")
-    val s = parseToSequent(file)
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key"))
 
     val plant = debugT("plant") & ls(boxSeqT) & ls(boxTestT) & ls(ImplyRightT) & ls(boxSeqT) & ls(boxAssignT) &
       ls(diffSolution(None)) & ls(ImplyRightT)
@@ -70,16 +69,12 @@ class LICS extends FlatSpec with Matchers with BeforeAndAfterEach {
   }
 
   it should "be provable automatically with Mathematica" in {
-    val file = new File("examples/tutorials/lics/lics-4a.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
 
   it should "be provable automatically with Z3" in {
-    val file = new File("examples/tutorials/lics/lics-4a.key")
-    val s = parseToSequent(file)
-
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/lics/lics-4a.key"))
     helper.runTactic(master(new Generate("v^2<=2*b*(m-x)".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 

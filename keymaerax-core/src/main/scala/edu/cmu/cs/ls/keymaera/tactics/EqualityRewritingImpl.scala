@@ -11,6 +11,7 @@ import BranchLabels._
 import SearchTacticsImpl.{lastAnte,onBranch}
 import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverConditionalAxiomT,uncoverConditionalTermAxiomT,axiomLookupBaseT}
 import TacticLibrary.TacticHelper.getTerm
+import edu.cmu.cs.ls.keymaera.tools.Tool
 
 import scala.collection.immutable.Set
 

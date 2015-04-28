@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{abstractionT, globalAlphaRenamingT, debugT, arithmeticT}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper.{getFormula, freshNamedSymbol}
 import AlphaConversionHelper._
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, Tool}
 
 import scala.collection.immutable.List
 import scala.language.postfixOps
@@ -396,7 +397,7 @@ object ODETactics {
         val theSolution = solution match {
           case sol@Some(_) => sol
           case None => tool match {
-            case x: Mathematica if x.isInitialized => x.diffSolver.diffSol(diffEq, time, ivm)
+            case x: Mathematica if x.isInitialized => x.diffSol(diffEq, time, ivm)
             case _ => None
           }
         }
