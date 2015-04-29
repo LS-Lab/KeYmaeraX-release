@@ -25,18 +25,18 @@ class ProverException(msg: String) extends RuntimeException(msg) {
  */
 class CoreException(msg:String) extends ProverException(msg) {}
 
-class SubstitutionClashException(msg: String, s: String/*Substitution*/, info: String = "") extends CoreException(msg + "\nSubstitution " + s + " (details: " + info + ")") {
+class SubstitutionClashException(msg: String, subst: String/*Substitution*/, info: String = "") extends CoreException(msg + "\nSubstitution " + subst + " (details: " + info + ")") {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
-  def inContext(context: String) = new SubstitutionClashException(msg, s, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
+  def inContext(context: String) = new SubstitutionClashException(msg, subst, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
 
-class BoundRenamingClashException(msg: String, s: String/*AlphaConversion*/, info: String = "") extends CoreException(msg + "\nAlphaConversion " + s + " (details: " + info + ")") {
+class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/, info: String = "") extends CoreException(msg + "\nBoundRenaming " + ren + " (details: " + info + ")") {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
-  def inContext(context: String) = new BoundRenamingClashException(msg, s, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
+  def inContext(context: String) = new BoundRenamingClashException(msg, ren, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
 }
 
 class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}

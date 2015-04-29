@@ -167,7 +167,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
 
   @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
 
-  override def toString: String = "USubst(" + subsDefs.mkString(", ") + ")"
+  override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
   def apply(t: Term): Term = usubst(t) ensuring(
     r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
@@ -267,7 +267,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
         case Power(l, r) => Power(usubst(l), usubst(r))
         case der@Differential(e) =>
           require(admissible(topVarsDiffVars[NamedSymbol](), e),
-            "Substitution clash when substituting " + this + " in derivative " + der.prettyString() + " FV(" + e + ") = " + StaticSemantics(e).prettyString + " is not empty")
+            "Substitution clash when substituting " + this + " in differential " + der.prettyString() + " with clashes " + clashes(topVarsDiffVars[NamedSymbol](), e))
           Differential(usubst(e))
         // unofficial
         case Pair(l, r) => Pair(usubst(l), usubst(r))  
@@ -297,7 +297,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
         case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
         case app@PredicationalOf(_, fml) if matchHead(app) =>
           require(admissible(topVarsDiffVars[NamedSymbol](), fml),
-            "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " FV(" + fml + ") = " + StaticSemantics(fml).fv.prettyString + " is not empty")
+            "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " with clashes " + clashes(topVarsDiffVars[NamedSymbol](), fml))
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
           val (rArg, rFormula) = (
             subs.what match { case PredicationalOf(_, v: NamedSymbol) => v
@@ -334,7 +334,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
 
         case der@DifferentialFormula(g) =>
           require(admissible(topVarsDiffVars[NamedSymbol](), g),
-            "Substitution clash when substituting " + this + " in derivative " +  der.prettyString() + ": FV(" + g + ") = " + StaticSemantics(g).fv.prettyString + " is not empty")
+            "Substitution clash when substituting " + this + " in differential " +  der.prettyString() + " with clashes " + clashes(topVarsDiffVars[NamedSymbol](), g))
           DifferentialFormula(usubst(g))
 
         // binding cases add bound variables to u
@@ -416,17 +416,9 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
   // admissibility
   
   /**
-   * Is this uniform substitution U-admissible for term t?
+   * Is this uniform substitution U-admissible for expression e?
    */
-  private def admissible(U: SetLattice[NamedSymbol], t: Term) : Boolean = admissible(U, StaticSemantics.signature(t))
-  /**
-   * Is this uniform substitution U-admissible for formula f?
-   */
-  private def admissible(U: SetLattice[NamedSymbol], f: Formula) : Boolean = admissible(U, StaticSemantics.signature(f))
-  /**
-   * Is this uniform substitution U-admissible for program p?
-   */
-  private def admissible(U: SetLattice[NamedSymbol], p: Program) : Boolean = admissible(U, StaticSemantics.signature(p))
+  private def admissible[E <: Expression](U: SetLattice[NamedSymbol], e: E) : Boolean = admissible(U, StaticSemantics.signature(e))
 
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
@@ -442,8 +434,8 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
 
     subsDefs.filter(intersectsU).flatMap(sigma => StaticSemantics.signature(sigma.what)).forall(fn => !occurrences.contains(fn))
   } ensuring(r =>
-    // U-admissible iff FV(restrict sigma to occurrences) /\ U = empty
-    r == projection(occurrences).freeVars.intersect(U).isEmpty,
+    // U-admissible iff FV(restrict this to occurrences) /\ U = empty
+    r == clashes(U, occurrences).isEmpty,
     this + " is " + U + "-admissible iff restriction " + projection(occurrences) + " to occurring symbols " + occurrences + " has no free variables " + projection(occurrences).freeVars + " of " + U)
 
   /**
@@ -452,6 +444,25 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
   private def projection(affected: Set[NamedSymbol]) : USubst = new USubst(
     subsDefs.filter(sigma => affected.contains(sigma.matchKey))
   )
+
+  /**
+   * Compute the set of all symbols for which this substitution clashes because it is not U-admissible
+   * for the given expression.
+   * @param U taboo list of variables
+   * @param e the expression of interest.
+   * @return FV(restrict this to occurrences) /\ U
+   */
+  private def clashes[E <: Expression](U: SetLattice[NamedSymbol], e: E) : SetLattice[NamedSymbol] = clashes(U, StaticSemantics.signature(e))
+
+  /**
+   * Compute the set of all symbols for which this substitution clashes because it is not U-admissible
+   * for an expression with the given occurrences of functions/predicates symbols.
+   * @param U taboo list of variables
+   * @param occurrences the function and predicate symbols occurring in the expression of interest.
+   * @return FV(restrict this to occurrences) /\ U
+   */
+  private def clashes(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : SetLattice[NamedSymbol] =
+    projection(occurrences).freeVars.intersect(U)
 
   /**
    * Get the unique element in c to which pred applies.
