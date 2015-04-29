@@ -22,7 +22,7 @@ object LogicalODESolver {
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
-    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) & (
+    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) ~ (
         (stepTactic(p) *) &
         cutTimeLB(p) &
         ODETactics.diffWeakenT(p) &
