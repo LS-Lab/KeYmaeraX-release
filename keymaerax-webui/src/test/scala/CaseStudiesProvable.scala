@@ -121,63 +121,7 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     helper.runTactic(master(new Generate("x <= y".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
   }
 
-  "ETCS-safety-allwrites" should "be provable with explicit strategy" in {
-    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
-
-    // sub strategies for SB cases
-    def subsubtactic(testTactic: Tactic) = (ls(boxSeqT) ~
-      ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxAssignT) | ls(boxNDetAssign))*) &
-      (la(AndLeftT)*) & ls(AndRightT) &&
-      ((List(3,4,23) ++ (7 to 19) ++ (25 to 29)).sortWith(_ > _).foldLeft(NilT)((t, i) => t & eqLeft(exhaustive = true)(AntePosition(i)) & hideT(AntePosition(i))) & testTactic & arithmeticT & debugT("result 1"),
-       (List(3,4,23) ++ (7 to 19) ++ (25 to 29)).sortWith(_ > _).foldLeft(NilT)((t, i) => t & eqLeft(exhaustive = true)(AntePosition(i)) & hideT(AntePosition(i))) & AxiomCloseT & debugT("result 2"))
-
-    val subtactic = ((ls(boxSeqT) ~
-      ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxNDetAssign)))*) &
-      la(AndLeftT) ~ ls(boxAssignT) & ls(boxSeqT) & ls(boxChoiceT) &
-      ls(AndRightT) && (debugT("choice 2.2.*.1") & subsubtactic(la(OrLeftT)),
-                                debugT("choice 2.2.*.2") & subsubtactic(la(NotLeftT) & ls(OrRightT) & arithmeticT))
-
-    // main strategy
-    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
-      ls(inductionT(Some("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula))) &
-      onBranch(
-        (indInitLbl, debugT("base case") & ls(AndRightT) && (AxiomCloseT(AntePosition(4), SuccPosition(0)),
-                                       AxiomCloseT(AntePosition(3), SuccPosition(0)))),
-        (indStepLbl, debugT("step") & ls(ImplyRightT) & la(AndLeftT) & ls(boxChoiceT) & ls(AndRightT) &&
-          (debugT("choice 1") & ((ls(boxSeqT) ~ (ls(boxAssignT) | ls(boxNDetAssign)))*) &
-                                ls(boxTestT) & ls(ImplyRightT) & (la(AndLeftT)*) &
-                                ls(AndRightT) && (/* v,z not written without self-assignment */ arithmeticT,
-                                                  AxiomCloseT),
-            debugT("choice 2") & ls(boxChoiceT) & ls(AndRightT) &&
-              /* {state:=brake} */
-              (debugT("choice 2.1") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
-                ls(AndRightT) && /* v,z,d,m, etc. not written without self-assignment */
-                  /* explicit equality rewriting, just for demo purposes -> see eqLeft above for alternative */
-                  /* numbering in positions: 0 -> lhs, 1 -> rhs
-                   * e.g. in v^2-d^2 <= 2*b*(m-z) 0::0 refers to v^2, 0::0::0 to v, 0::0::1 to 2, 0::1::0 to d
-                   *                              1::1::0 to m, 1::1::1 to z, 1::0 to 2*b
-                   */
-                  (/* v_2 */eqLeft(exhaustive=true)(AntePosition(9)) &
-                    /* d_1 */eqLeft(exhaustive=true)(AntePosition(16)) &
-                    /* m_1 */eqLeft(exhaustive=true)(AntePosition(14)) &
-                    /* z_2 */ eqLeft(exhaustive=true)(AntePosition(10)) &
-                    AxiomCloseT(AntePosition(5), SuccPosition(0)),
-                   eqLeft(exhaustive=true)(AntePosition(16)) &
-                     AxiomCloseT(AntePosition(6), SuccPosition(0))
-                  ),
-                debugT("choice 2.2") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
-                  ls(boxChoiceT) & ls(AndRightT) &&
-                  (debugT("choice 2.2.1") & subtactic,
-                    debugT("choice 2.2.2") & subtactic
-                  )
-              )
-            )),
-        (indUseCaseLbl, debugT("use case") & ls(ImplyRightT) & la(AndLeftT) & arithmeticT))
-
-    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
-  }
-
-  it should "be provable automatically with Mathematica" in {
+  "ETCS safety all-writes" should "be provable automatically with Mathematica" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Mathematica"), new RootNode(s)) shouldBe 'closed
   }
@@ -185,6 +129,58 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
   it should "be provable automatically with Z3" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
     helper.runTactic(master(new Generate("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula), true, "Z3"), new RootNode(s)) shouldBe 'closed
+  }
+
+  it should "be provable with explicit strategy" in {
+    val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/ETCS-safety-allwrites.key"))
+
+    // sub strategies for SB cases
+    def subsubtactic(testTactic: Tactic) = (ls(boxSeqT) ~
+      ((ls(boxTestT) & ls(ImplyRightT)) | ls(boxAssignT) | (ls(boxNDetAssign) & ls(skolemizeT)))*) &
+      (la(AndLeftT)*) & ls(AndRightT) &&
+      (testTactic & arithmeticT & debugT("result 1"), /* d_2 */ eqLeft(exhaustive=true)(AntePosition(19)) & AxiomCloseT ~ debugT("result 2"))
+
+    val subtactic = ((ls(boxSeqT) ~
+      ((ls(boxTestT) & ls(ImplyRightT)) | (ls(boxNDetAssign) & ls(skolemizeT))))*) &
+      la(AndLeftT) ~ ls(boxAssignT) & ls(boxSeqT) & ls(boxChoiceT) &
+      ls(AndRightT) && (debugT("choice 2.2.*.1") & subsubtactic(la(OrLeftT)),
+      debugT("choice 2.2.*.2") & subsubtactic(la(NotLeftT) & ls(OrRightT) & arithmeticT))
+
+    // main strategy
+    val tactic = ls(ImplyRightT) & (la(AndLeftT)*) &
+      ls(inductionT(Some("v^2-d^2 <= 2*b*(m-z) & d>=0".asFormula))) &
+      onBranch(
+        (indInitLbl, debugT("base case") & ls(AndRightT) & AxiomCloseT),
+        (indStepLbl, debugT("step") & ls(ImplyRightT) & la(AndLeftT) & ls(boxChoiceT) & ls(AndRightT) &&
+          (debugT("choice 1") & ((ls(boxSeqT) ~ (ls(boxAssignT) | ls(boxNDetAssign)) ~ ls(skolemizeT))*) &
+            ls(boxTestT) & ls(ImplyRightT) & (la(AndLeftT)*) &
+            ls(AndRightT) && (/* v,z not written without self-assignment */ arithmeticT ~ debugT("choice 1 result (should not be displayed)"),
+            AxiomCloseT ~ debugT("choice 1 result 2 (should not be displayed)")),
+            debugT("choice 2") & ls(boxChoiceT) & ls(AndRightT) &&
+              /* {state:=brake} */
+              (debugT("choice 2.1") & ((ls(boxSeqT) ~ ls(boxAssignT))*) & la(AndLeftT) & debugT("After assign") &
+                ls(AndRightT) && /* v,z,d,m, etc. not written without self-assignment */
+                /* explicit equality rewriting, just for demo purposes -> see eqLeft above for alternative */
+                /* numbering in positions: 0 -> lhs, 1 -> rhs
+                 * e.g. in v^2-d^2 <= 2*b*(m-z) 0::0 refers to v^2, 0::0::0 to v, 0::0::1 to 2, 0::1::0 to d
+                 *                              1::1::0 to m, 1::1::1 to z, 1::0 to 2*b
+                 */
+                (/* v_3 */eqLeft(exhaustive=true)(AntePosition(12)) &
+                  /* d_2 */eqLeft(exhaustive=true)(AntePosition(19)) &
+                  /* m_2 */eqLeft(exhaustive=true)(AntePosition(17)) &
+                  /* z_3 */ eqLeft(exhaustive=true)(AntePosition(13)) & AxiomCloseT,
+                  /* d_2 */ eqLeft(exhaustive=true)(AntePosition(19)) & AxiomCloseT
+                  ),
+                debugT("choice 2.2") & ((ls(boxSeqT) ~ ls(boxAssignT))*) &
+                  ls(boxChoiceT) & ls(AndRightT) &&
+                  (debugT("choice 2.2.1") & subtactic,
+                    debugT("choice 2.2.2") & subtactic
+                    )
+                )
+            )),
+        (indUseCaseLbl, debugT("use case") & ls(ImplyRightT) & la(AndLeftT) & arithmeticT ~ debugT("use case result (should never be displayed)")))
+
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 
   "Saturable" should "be provable with Mathematica" in {
