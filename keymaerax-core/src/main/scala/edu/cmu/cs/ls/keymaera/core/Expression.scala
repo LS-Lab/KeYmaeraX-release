@@ -303,7 +303,7 @@ final class DifferentialProduct(val left: DifferentialProgram, val right: Differ
 
   override def hashCode: Int = 3 * left.hashCode() + right.hashCode()
 
-  //@todo override def toString = ???
+  override def toString = getClass.getSimpleName + "(" + left + ", " + right + ")"
 }
 
 object DifferentialProduct {
