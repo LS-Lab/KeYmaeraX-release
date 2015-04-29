@@ -26,7 +26,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]a'-b'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](a)'-(b)'=0".asFormula
   }
 
   it should "replace bvs" in {
@@ -36,7 +36,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]x'-b'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](x)'-(b)'=0".asFormula
   }
 
   it should "replace bvs in a larger expression." in {
@@ -46,7 +46,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[y' := 1;][x':=1;]x'-b'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[y' := 1;][x':=1;](x)'-(b)'=0".asFormula
   }
 
   "add" should "replace" in {
@@ -66,7 +66,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node, mustApply = true)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]x'+1'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](x)'+1'=0".asFormula
   }
 
   "multiply" should "replace" in {
@@ -76,7 +76,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node, mustApply = true)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](a'*b + a*b')=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]((a)'*b + a*(b)')=0".asFormula
   }
 
 
@@ -87,7 +87,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](x'*b + x*b')=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]((x)'*b + x*(b)')=0".asFormula
   }
 
   "divide" should "replace" in {
@@ -97,7 +97,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]((a'*b - a*b') / b^2)=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](((a)'*b - a*(b)') / b^2)=0".asFormula
   }
 
   it should "replace bvs" in {
@@ -107,7 +107,7 @@ class TermDerivationInContextTests extends TacticTestSuite {
     val result = helper.runTactic(tactic, node)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;]((x'*b - x*b') / b^2)=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;](((x)'*b - x*(b)') / b^2)=0".asFormula
   }
 
 }

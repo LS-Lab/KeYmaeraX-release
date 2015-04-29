@@ -826,7 +826,7 @@ object UniformSubstitutionRule {
           throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
         }
       } catch {
-        case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " to conclusion\n" + conclusion)
+        case exc: SubstitutionClashException => throw exc.inContext(this + "\nof premise\n" + origin + "\ndid not lead to expected conclusion\n" + conclusion)
       }
     }
   }
