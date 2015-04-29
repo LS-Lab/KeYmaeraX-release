@@ -3,11 +3,8 @@ package edu.cmu.cs.ls.keymaera.tactics
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomCloseT
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxAssignT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tools.Tool
@@ -53,9 +50,6 @@ object LogicalODESolver {
             case _ => throw new Exception("find failed.")
           }
 
-          //@todo figure out how to prove the show branch --
-          //@todo modify solve tactic above to weaken and arith
-          //@todo
           val theCut = diffCutT(GreaterEqual(t, timeInitialCondition))(p) & onBranch(
             (BranchLabels.cutShowLbl, diffInvariant(p)),
             (BranchLabels.cutUseLbl, /*yield*/NilT)
@@ -82,7 +76,6 @@ object LogicalODESolver {
         case Box(program : DifferentialProgram, f) => {
           val t = freshTimeVar(program)
           val lastAntePos = AntePos(node.sequent.ante.length)
-          //@todo timehack
           val introTime =
             ODETactics.diffAuxiliaryT(t, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
               PropositionalTacticsImpl.EquivRightT(p) & onBranch(
@@ -188,7 +181,7 @@ object LogicalODESolver {
 
     def dependencies(v : Variable) : List[Variable] = {
       val vTerm = odes.find(_.xp.e.equals(v)).get.e
-      //remove self-references to cope with the fact that t' = 0*t + 1 :-( @todo timehack
+      //remove self-references to cope with the fact that t' = 0*t + 1, which is necessary due to DG.
       primedVars.filter(StaticSemantics.freeVars(vTerm).contains(_)).filter(!_.equals(v))
     }
 
@@ -233,16 +226,25 @@ object LogicalODESolver {
   }
 
   /**
-   * A syntactic integrator for terms of the form blah. @todo adequate description.
-   * @param term
-   * @param t
+   * A syntactic integrator for some class of terms @todo something like sums of terms of the form c*t^n where c and n are t-free? Is this enough?
+   * @param term The term
+   * @param t Time variable
    * @return Integral term dt
    */
   private def integrator(term : Term, t : Variable) : Term = term match {
     case Plus(l, r) => Plus(integrator(l, t), integrator(r, t))
     case Minus(l, r) => Minus(integrator(l, t), integrator(r, t))
-    case Times(n : Number, time) if time.equals(t) => Times(Divide(n, Number(2)), Power(t, Number(2)))
-    case Times(l ,r) => ???
+    case Times(c, time) if time.equals(t) && !StaticSemantics.freeVars(c).contains(t) => Times(Divide(c, Number(2)), Power(time, Number(2)))
+    case Times(c, Power(time, exp)) if time.equals(t) && !StaticSemantics.freeVars(exp).contains(t) && !StaticSemantics.freeVars(c).contains(t) => {
+      val newExp = exp match {
+        case Number(n) => Number(n+1)
+        case _ => Plus(exp, Number(1))
+      }
+      Times(Divide(c, newExp), Power(t, newExp))
+    }
+    case Times(l ,r) => {
+      ??? //what about terms that are not of the form c*t^n with c and n t-free?
+    }
     case Divide(l, r) => ???
     case Power(base, exp) => exp match {
       case Number(n) =>
@@ -399,7 +401,7 @@ object LogicalODESolver {
    * @author Nathan Fulton
    */
   def timeVar(ode : DifferentialProgram) : Option[Variable] = {
-    //The second value is the one that we cut in. @todo timehack
+    //The second value is the one that we cut in. @todo maybe actually we really need time to be 0*t + 1?
     def isTimeVar(atomic : AtomicODE) = atomic.e.equals(Number(1)) || atomic.e.equals(Plus(Times(Number(0), atomic.xp.e), Number(1)))
 
     ode match {
