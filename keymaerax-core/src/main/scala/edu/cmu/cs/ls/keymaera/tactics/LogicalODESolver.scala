@@ -10,6 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.boxAssignT
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
+import edu.cmu.cs.ls.keymaera.tools.Tool
 import TacticLibrary._
 
 /**
