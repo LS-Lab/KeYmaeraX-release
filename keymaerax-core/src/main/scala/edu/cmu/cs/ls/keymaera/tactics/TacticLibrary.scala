@@ -432,7 +432,7 @@ object TacticLibrary {
 
       private def initialValueTactic(formulas: IndexedSeq[Formula], factory: (Int, PosInExpr) => Position) = {
         (0 to formulas.length-1).map(i => {
-          val pos = factory(i, HereP); abstractionT(pos) & (skolemizeT(pos) | NilT)
+          val pos = factory(i, HereP); (abstractionT(pos) | NilT) & (skolemizeT(pos) | NilT)
         }).foldLeft(Tactics.NilT)((a, b) => a & b)
       }
     }
