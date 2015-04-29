@@ -32,14 +32,13 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lemmaDB = new FileLemmaDB
     LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
       case Some((id, res)) =>
-        (res match {
+        (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
           case _ => false
         }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
         val t = LookupLemma(lemmaDB, id)
-        val nr = r.apply(t).subgoals.head
-        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+        r.apply(t) shouldBe 'closed
       case None => "Lemma creation" should be ("successful")
     }
   }
@@ -49,14 +48,13 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lemmaDB = new FileLemmaDB
     LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
       case Some((id, res)) =>
-        (res match {
+        (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
           case _ => false
         }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
         val t = LookupLemma(lemmaDB, id)
-        val nr = r.apply(t).subgoals.head
-        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+        r.apply(t) shouldBe 'closed
       case None => "Lemma creation" should be ("successful")
     }
   }
@@ -66,14 +64,13 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lemmaDB = new FileLemmaDB
     LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
       case Some((id, res)) =>
-        (res match {
+        (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
           case _ => false
         }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
         val t = LookupLemma(lemmaDB, id)
-        val nr = r.apply(t).subgoals.head
-        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+        r.apply(t) shouldBe 'closed
       case None => "Lemma creation" should be ("successful")
     }
   }
@@ -83,14 +80,13 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     val lemmaDB = new FileLemmaDB
     LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
       case Some((id, res)) =>
-        (res match {
+        (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
           case _ => false
         }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector()))
+        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
         val t = LookupLemma(lemmaDB, id)
-        val nr = r.apply(t).subgoals.head
-        nr.sequent.ante(nr.sequent.ante.length-1) should be (res)
+        r.apply(t) shouldBe 'closed
       case None => "Lemma creation" should be ("successful")
     }
   }

@@ -8,18 +8,23 @@ package edu.cmu.cs.ls.keymaera.core
  */
 trait LemmaDB {
   /**
-   * Returns the lemma's conclusion.
+   * Indicates whether or not this lemma DB contains a lemma with the specified ID.
    * @param lemmaID Identifies the lemma.
-   * @return The conclusion.
+   * @return True, if this lemma DB contains a lemma with the specified ID; false otherwise.
    */
-  def getLemmaConclusion(lemmaID: String): Formula
+  def contains(lemmaID: String): Boolean
 
   /**
-   * Adds a lemma to this lemma DB. The lemma is proved using some tool, which provided evidence of the correctness of
-   * the lemma.
-   * @param conclusion The lemma's conclusion.
-   * @param evidence Evidence that the lemma is correct: (input to the tool, tool output)
-   * @return The lemma ID, if added successfully; None otherwise.
+   * Returns a lemma.
+   * @param lemmaID Identifies the lemma.
+   * @return The lemma, if found. None otherwise.
    */
-  private[core] def addLemma(conclusion: Formula, evidence: (String, String)): Option[String]
+  def get(lemmaID: String): Option[Lemma]
+
+  /**
+   * Adds a lemma to this lemma DB.
+   * @param lemma The lemma to add.
+   * @return The lemma ID.
+   */
+  private[core] def add(lemma: Lemma): String
 }

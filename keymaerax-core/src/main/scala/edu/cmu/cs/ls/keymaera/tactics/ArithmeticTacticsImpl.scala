@@ -8,9 +8,8 @@ import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.Propositional
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 
 import TacticLibrary.{universalClosure,closeT,hideT,CloseTrueT, debugT, locate}
-import BuiltinHigherTactics.stepAt
 import PropositionalTacticsImpl.{AndLeftT,NotLeftT,EquivLeftT,cohideT,kModalModusPonensT,NotT,ImplyT,cutT, AxiomCloseT}
-import SearchTacticsImpl.{locateAnte,locateSucc,onBranch}
+import SearchTacticsImpl.{lastAnte,lastSucc,locateAnte,locateSucc,onBranch}
 import FOQuantifierTacticsImpl.instantiateT
 import AxiomaticRuleTactics.goedelT
 import TacticLibrary.TacticHelper.getFormula
@@ -29,7 +28,7 @@ object ArithmeticTacticsImpl {
    * @param toolId The quantifier elimination tool to use.
    * @return The tactic.
    */
-  protected[tactics] def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
+  def quantifierEliminationT(toolId: String): Tactic = new Tactic("Quantifier Elimination") {
     def qeApplicable(s: Sequent): Boolean = (s.ante ++ s.succ).forall(qeApplicable)
 
     def qeApplicable(f: Formula): Boolean = {
@@ -78,42 +77,37 @@ object ArithmeticTacticsImpl {
                 // TODO make lemma DB configurable
                 val lemmaDB = new FileLemmaDB()
                 LookupLemma.addRealArithLemma(lemmaDB, qe, universalClosure(desequentialization(node.sequent))) match {
-                  case Some((id, f)) =>
-                    f match {
-                      case Equiv(res, True) => {
-                        val lemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
+                  case Some((id, lemma)) =>
+                    lemma.fact.conclusion.succ.head match {
+                      case lemmaFml@Equiv(res, True) => {
+
+                        val applyLemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
                           override def applicable(node: ProofNode): Boolean = true
                         }
-                        // reinstantiate quantifiers
-                        val pos = AntePosition(node.sequent.ante.length)
-                        def reInst(f: Formula): Option[Tactic] = f match {
+
+                        def reInst(f: Formula): Tactic = f match {
                           case Forall(v, g) =>
                             val resG = reInst(g)
                             if (v.isEmpty) resG
                             else {
-                              val vars = v.map({
-                                case x: Variable => x
-                                case _ => throw new IllegalArgumentException("Can only handle quantifiers over variables")
-                              })
-                              val tac = (for (n <- vars) yield instantiateT(n, n)(pos)).reduce(seqT)
-                              resG match {
-                                case Some(tt) => Some(tac & tt)
-                                case None => Some(tac)
-                              }
+                              val tac = (for (n <- v) yield lastAnte(instantiateT(n, n))).reduce(seqT)
+                              tac & resG
                             }
-                          case _ => None
+                          case _ => NilT
                         }
-                        val contTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
-                        def branch1(inst: Tactic): Tactic = AndLeftT(pos) & hideT(pos + 1) & inst & contTactic
-                        //Really simple because this is just checking that the thing we believe to be true is actually true.
-                        val branch2 = AndLeftT(pos) & NotLeftT(AntePosition(node.sequent.ante.length + 1)) & CloseTrueT(SuccPosition(node.sequent.succ.length))
-                        val tr = reInst(res) match {
-                          case Some(inst) => lemma & EquivLeftT(pos) & onBranch((equivLeftLbl, branch1(inst)), (equivRightLbl, branch2))
-                          case _ => lemma & contTactic
-                        }
-                        Some(tr) //& debugT("Test"))
+
+                        val closeTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
+
+                        val tactic = cutT(Some(lemmaFml)) & onBranch(
+                          (cutShowLbl, lastSucc(cohideT) & applyLemma),
+                          (cutUseLbl, lastAnte(EquivLeftT) & onBranch(
+                            (equivLeftLbl, lastAnte(AndLeftT) & lastAnte(hideT) & reInst(res) & closeTactic),
+                            (equivRightLbl, lastAnte(AndLeftT) & lastAnte(NotLeftT) & closeT)
+                          ))
+                        )
+                        Some(tactic)
                       }
-                      case _ => println("Only apply QE if the result is true, have " + f.prettyString()); None
+                      case f => println("Only apply QE if the result is true, have " + f.prettyString()); None
                     }
                   case _ => None
                 }

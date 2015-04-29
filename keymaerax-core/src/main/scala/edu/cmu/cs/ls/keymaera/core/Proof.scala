@@ -244,6 +244,16 @@ object Provable {
     Provable(goal, scala.collection.immutable.IndexedSeq(goal))
   } ensuring(
     r => !r.isProved && r.subgoals == IndexedSeq(r.conclusion), "correct initial proof start")
+
+  /**
+   * Create a new provable for facts provided by external tools.
+   * @param goal the desired conclusion.
+   * @return a Provable without subgoals.
+   * @note soundness-critical, only call from RCF/LemmaDB within core.
+   */
+  private[core] def toolFact(goal: Sequent) = {
+    Provable(goal, scala.collection.immutable.IndexedSeq())
+  }
 }
 
 /**
@@ -1078,6 +1088,36 @@ object AxiomaticRule {
 
 }
 
+/*********************************************************************************
+ * Real Arithmetic
+ *********************************************************************************
+ */
+object RCF {
+  private val trustedTools =
+    "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
+    "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
+
+  /**
+   * Proves a formula f in real arithmetic using an external tool for quantifier elimination.
+   * @param t The tool.
+   * @param f The formula.
+   * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+   */
+  def proveArithmetic(t: QETool, f: Formula): Lemma = {
+    require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
+
+    //Find the solution
+    //@TODO assumes the tool is initialized
+    val (solution, input, output) = t.qeInOut(f)
+
+    val fact = Provable.toolFact(new Sequent(
+      Nil,
+      scala.collection.immutable.IndexedSeq(),
+      scala.collection.immutable.IndexedSeq(Equiv(f, solution))))
+
+    Lemma(fact, new ToolEvidence(Map("input" -> input, "output" -> output)) :: Nil)
+  }
+}
 
 /*********************************************************************************
  * Lemma Mechanism Rules
@@ -1091,7 +1131,6 @@ object AxiomaticRule {
  * Lookup a lemma that has been proved previously or by an external arithmetic tool.
  * @author nfulton
  * @author Stefan Mitsch
- *@TODO Review
  */
 object LookupLemma {
   private val trustedTools =
@@ -1100,27 +1139,22 @@ object LookupLemma {
 
   def apply(lemmaDB: LemmaDB, name: String): Rule = new LookupLemma(lemmaDB, name)
 
-  def addRealArithLemma(lemmaDB: LemmaDB, t: QETool, f : Formula) : Option[(String, Formula)] = {
+  def addRealArithLemma(lemmaDB: LemmaDB, t: QETool, f : Formula) : Option[(String, Lemma)] = {
     require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
 
-    //Find the solution
-    //@TODO assumes the tool is initialized
-    val (solution, input, output) = t.qeInOut(f)
-    val result = Equiv(f, solution)
-
-    lemmaDB.addLemma(result, (input, output)) match {
-      case Some(id) => Some(id, result)
-      case None => throw new IllegalStateException("Unable to add lemma")
-    }
+    val lemma = RCF.proveArithmetic(t, f)
+    val lemmaID = lemmaDB.add(lemma)
+    Some(lemmaID, lemma)
   }
 }
 
 private class LookupLemma(lemmaDB: LemmaDB, name: String) extends Rule("Lookup Lemma") {
-  def apply(s : Sequent) = {
-    val formula = lemmaDB.getLemmaConclusion(name)
-    //@TODO Are lemmas fine in every context? Including any s.pref?
-    val newSequent = new Sequent(s.pref, s.ante :+ formula, s.succ) //TODO-nrf not sure about this.
-    List(newSequent)
+  def apply(s : Sequent): List[Sequent] = {
+    require(lemmaDB.contains(name))
+    val lemma = lemmaDB.get(name).get
+    if (s.sameSequentAs(lemma.fact.conclusion)) Nil
+    else throw new IllegalArgumentException("Lemma " + name + " with conclusion " + lemma.fact.conclusion + " not " +
+      "applicable for sequent " + s)
   }
 }
 

@@ -1,11 +1,10 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools.KeYmaera
+import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
+import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{locateAnte,locateSucc}
 import edu.cmu.cs.ls.keymaera.tactics.ArithmeticTacticsImpl._
 
 import scala.collection.immutable.Map
@@ -16,15 +15,20 @@ import scala.collection.immutable.Map
  */
 class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   val helper = new ProvabilityTestHelper((x) => println(x))
+  val mathematicaConfig: Map[String, String] = helper.mathematicaConfig
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.KeYmaeraScheduler.init(Map())
+    Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
+    Tactics.MathematicaScheduler.init(mathematicaConfig)
   }
 
   override def afterEach() = {
+    Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.KeYmaeraScheduler = null
+    Tactics.MathematicaScheduler = null
   }
 
   "NegateEqualsT" should "negate = in succedent" in {
@@ -453,5 +457,11 @@ class ArithmeticTacticTests extends FlatSpec with Matchers with BeforeAndAfterEa
     helper.runTactic(tactic, new RootNode(s)).openGoals().foreach(_.sequent should be (
       sequent(Nil, "!(x>0)".asFormula :: Nil, Nil)
     ))
+  }
+
+  "Quantifier elimination" should "prove x<0 -> x<=0" in {
+    val s = sequent(Nil, "x<0".asFormula :: Nil, "x<=0".asFormula :: Nil)
+    val tactic = quantifierEliminationT("Mathematica")
+    helper.runTactic(tactic, new RootNode(s)) shouldBe 'closed
   }
 }
