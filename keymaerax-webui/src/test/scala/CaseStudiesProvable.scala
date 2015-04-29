@@ -1,6 +1,6 @@
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaera.tools.{Z3, Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable.Map
@@ -28,13 +28,17 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
+    Tactics.Z3Scheduler = new Interpreter(new Z3)
+    Tactics.Z3Scheduler.init(Map())
   }
 
   override def afterEach() = {
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
+    Tactics.Z3Scheduler.shutdown()
     Tactics.MathematicaScheduler = null
     Tactics.KeYmaeraScheduler = null
+    Tactics.Z3Scheduler = null
   }
 
   def ls(t: PositionTactic) = locateSucc(t)
