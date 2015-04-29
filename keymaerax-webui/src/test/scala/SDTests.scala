@@ -3,13 +3,15 @@ import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
 
+import scala.language.postfixOps
+
 /**
  * These are post-development "integration" tests for syntactic derivation
  * Created by nfulton on 2/10/15.
  */
 class SDTests extends TacticTestSuite {
   "Subtraction derivation" should "work without context" in {
-    val in = "(x'+y') = 0".asFormula
+    val in = "((x)'+(y)') = 0".asFormula
     val out = "(x+y)' = 0".asFormula
 
     val node = helper.formulaToNode(out)
@@ -21,7 +23,7 @@ class SDTests extends TacticTestSuite {
   }
 
   it should "work after non-binding assignment" in {
-    val in = "[a':=0;](x'+y') = 0".asFormula
+    val in = "[a':=0;]((x)'+(y)') = 0".asFormula
     val out = "[a':=0;](x+y)' = 0".asFormula
 
     val node = helper.formulaToNode(out)
@@ -139,7 +141,7 @@ class SDTests extends TacticTestSuite {
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;][y':=1;](x' <= y')".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x':=1;][y':=1;]((x)' <= (y)')".asFormula
   }
 
   "monomial derivation" should "work outside of context" in {
@@ -149,7 +151,7 @@ class SDTests extends TacticTestSuite {
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "2*x^(2-1)*x'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "2*x^(2-1)*(x)'=0".asFormula
   }
 
   it should "work inside of a non-binding context" in {
@@ -159,7 +161,7 @@ class SDTests extends TacticTestSuite {
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[a := 0;]2*x^(2-1)*x'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[a := 0;]2*x^(2-1)*(x)'=0".asFormula
   }
 
   it should "work inside of a binding context" in {
@@ -169,7 +171,7 @@ class SDTests extends TacticTestSuite {
 
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "[x := 0;]2*x^(2-1)*x'=0".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "[x := 0;]2*x^(2-1)*(x)'=0".asFormula
   }
 
   "constant derivation" should "work" in {
@@ -185,10 +187,10 @@ class SDTests extends TacticTestSuite {
   "Failure scenarios from dsolve" should "be fixed for the failure case from x'=v,v'=a (using multiplyderivative)" in {
     val f= "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2*k4_t_1)'*v_2+2*k4_t_1*v_2')+(2*x_2)')".asFormula
     val n = helper.formulaToNode(f)
-    val result = helper.runTactic((SearchTacticsImpl.locateTerm(MultiplyDerivativeT)*), n, true)
+    val result = helper.runTactic(SearchTacticsImpl.locateTerm(MultiplyDerivativeT)*, n, mustApply = true)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2'*k4_t_1+2*k4_t_1')*v_2+2*k4_t_1*v_2')+(2'*x_2+2*x_2'))".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2'*k4_t_1+2*(k4_t_1)')*v_2+2*k4_t_1*v_2')+(2'*x_2+2*(x_2)'))".asFormula
   }
 
   it should "be fixed for the failure case from x'=v,v'=a (using bare sytnacticderivationt)" in {
@@ -205,7 +207,7 @@ class SDTests extends TacticTestSuite {
     val f = "x'=(1'*2-1*2')/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)'".asFormula
     val n = helper.formulaToNode(f)
 
-    helper.runTactic((SearchTacticsImpl.locateTerm(SyntacticDerivationT)*), n, true)
+    helper.runTactic(SearchTacticsImpl.locateTerm(SyntacticDerivationT)*, n, mustApply = true)
 
   }
 }
