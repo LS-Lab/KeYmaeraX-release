@@ -235,7 +235,7 @@ object LogicalODESolver {
   }
 
   /**
-   * A syntactic integrator for some class of terms @todo something like sums of terms of the form c*t^n where c and n are t-free? Is this enough?
+   * A syntactic integrator for @todo something like sums of terms over polynomials univariable in t.
    * @param term The term
    * @param t Time variable
    * @return Integral term dt
@@ -243,26 +243,24 @@ object LogicalODESolver {
   private def integrator(term : Term, t : Variable) : Term = term match {
     case Plus(l, r) => Plus(integrator(l, t), integrator(r, t))
     case Minus(l, r) => Minus(integrator(l, t), integrator(r, t))
-    case Times(c, time) if time.equals(t) && !StaticSemantics.freeVars(c).contains(t) => Times(Divide(c, Number(2)), Power(time, Number(2)))
-    case Times(c, Power(time, exp)) if time.equals(t) && !StaticSemantics.freeVars(exp).contains(t) && !StaticSemantics.freeVars(c).contains(t) => {
+    case Times(c, x) if x.equals(t) && !StaticSemantics.freeVars(c).contains(t) => Times(Divide(c, Number(2)), Power(x, Number(2)))
+    case Times(c, Power(x, exp)) if x.equals(t) && !StaticSemantics.freeVars(exp).contains(t) && !StaticSemantics.freeVars(c).contains(t) => {
       val newExp = exp match {
         case Number(n) => Number(n+1)
         case _ => Plus(exp, Number(1))
       }
       Times(Divide(c, newExp), Power(t, newExp))
     }
-    case Times(l ,r) => {
-      ??? //what about terms that are not of the form c*t^n with c and n t-free?
-    }
-    case Divide(l, r) => ???
     case Power(base, exp) => exp match {
       case Number(n) =>
         if(n == 1) integrator(base, t)
         else       Times(Divide(Number(1), Number(n+1)), integrator(Power(base, Number(n-1)), t))
       case _ => throw new Exception("Cannot integrate terms with non-number exponents!")
     }
-    case Number(n) => Times(term, t) //@todo do we need a constant here?
-    case term : Variable => Times(term, t)
+//    case Number(n) => Times(term, t) //@todo do we need a constant here?
+//    case x : Variable => Times(x, t)
+      //@todo is this more general case of the number/variable pattern sufficient?
+    case x : Term if !StaticSemantics.freeVars(x).contains(t) => Times(x, t)
   }
 
   /**
