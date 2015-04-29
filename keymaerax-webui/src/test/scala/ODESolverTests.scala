@@ -25,7 +25,7 @@ class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   private def getOde(s : String) = s.asFormula.asInstanceOf[Box].program.asInstanceOf[DifferentialProgram]
 
   "Prove after time intro" should "work" in {
-    val f = "x = 0 & v = 1 & a = 5 & t = 0 -> [x' =v, v' = a;]x >= 0".asFormula
+    val f = "x = 0 & v = 1 & a = 5 -> [x' =v, v' = a;]x >= 0".asFormula
     val node = helper.formulaToNode(f)
     val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
     helper.runTactic(tactic, node)
