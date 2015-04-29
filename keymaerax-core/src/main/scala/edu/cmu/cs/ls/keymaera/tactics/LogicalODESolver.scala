@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomCloseT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tools.Tool
@@ -21,8 +22,7 @@ object LogicalODESolver {
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
-    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) ~
-      (
+    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) & (
         (stepTactic(p) *) &
         cutTimeLB(p) &
         ODETactics.diffWeakenT(p) &
@@ -32,7 +32,7 @@ object LogicalODESolver {
 
   def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Box(asdf:ODESystem, _) => true //@todo
+      case Box(odes:ODESystem, _) => true //@todo
       case _ => false
     }
 
@@ -42,10 +42,10 @@ object LogicalODESolver {
           val t = timeVar(program).getOrElse(throw new Exception("Need time var"))
 
           //Should always be 0, but let's be safe.
-          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions).find(_ match {
+          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions).find(f => f match {
             case Equal(x, _) if x.equals(t) => true
             case _ => false
-          }).getOrElse(throw new Exception("Need initial condition on time variable.")) match {
+          }).getOrElse(throw new Exception("Need initial condition on time variable " + t)) match {
             case Equal(x, term) => term
             case _ => throw new Exception("find failed.")
           }
@@ -53,7 +53,7 @@ object LogicalODESolver {
           val theCut = diffCutT(GreaterEqual(t, timeInitialCondition))(p) & onBranch(
             (BranchLabels.cutShowLbl, diffInvariant(p)),
             (BranchLabels.cutUseLbl, /*yield*/NilT)
-          )
+          ) & debugT("yield from cutTimeLB")
 
           Some(theCut)
         }
@@ -74,16 +74,25 @@ object LogicalODESolver {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(program : DifferentialProgram, f) => {
-          val t = freshTimeVar(program)
-          val lastAntePos = AntePos(node.sequent.ante.length)
-          val introTime =
-            ODETactics.diffAuxiliaryT(t, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
+          //Copied from DiffSolutionT
+          // HACK need some convention for internal names
+          val initialTime: Variable = freshNamedSymbol(Variable("k4_t", None, Real), node.sequent)
+          // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
+          val time = Variable(initialTime.name,
+            initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
+
+          val lastAntePos = AntePos(node.sequent.ante.length + 1)
+
+          val setTimer = HybridProgramTacticsImpl.nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p)
+
+          val introTime = setTimer &
+            ODETactics.diffAuxiliaryT(time, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
               PropositionalTacticsImpl.EquivRightT(p) & onBranch(
                 (equivLeftLbl, vacuousExistentialQuanT(None)(p) & AxiomCloseT(lastAntePos, p)),
                 (equivRightLbl, skolemizeT(lastAntePos) & AxiomCloseT(lastAntePos, p))
               ),
               NilT //yield
-            )
+            ) & debugT("yield from setupTimeVar")
 
           Some(introTime)
         }
@@ -416,15 +425,9 @@ object LogicalODESolver {
     }
   }
 
-  private def freshTimeVar(program : DifferentialProgram) = {
-    val timeIdx : Option[Int] = atomicODEs(program)
-      .filter(_.xp.e.name.equals("t"))
-      .foldLeft[Option[Int]](None)((currentIdx, nextOde) => nextOde.xp.e.index match {
-      case Some(i) => if(currentIdx.getOrElse(i) >= i) Some(i) else currentIdx
-      case None    => Some(0)
-    })
-    Variable("t", timeIdx, Real)
-  }
+  private def freshTimeVar(s : Sequent) : Variable =
+    Variable("t",TacticHelper.freshIndexInSequent("t", s), Real)
 
-
+  private def freshTimeVar(f : Formula) : Variable =
+    Variable("t", TacticHelper.freshIndexInFormula("t", f), Real)
 }
