@@ -280,7 +280,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
 
   private[core] def usubst(formula: Formula): Formula = {
-    log(s"Substituting ${formula.prettyString()} using $this")
+    log("Substituting " + formula.prettyString() + " using " + this)
     try {
       formula match {
         case app@PredOf(_, theta) if matchHead(app) =>
@@ -288,10 +288,10 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
           val (rArg, rFormula) = (
             subs.what match { case PredOf(_, v: NamedSymbol) => v
                            case _ => throw new IllegalArgumentException(
-                            s"Substitution of p(theta)=${app.prettyString()} for arbitrary theta=${theta.prettyString()} not supported")},
+                            "Substitution of p(theta)=" + app.prettyString() + " for arbitrary theta=" + theta.prettyString() + " not supported")},
             subs.repl match { case f: Formula => f
                            case _ => throw new IllegalArgumentException(
-                             s"Can only substitute formulas for ${app.prettyString()}")
+                             "Can only substitute formulas for " + app.prettyString())
             })
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(rFormula)
         case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
@@ -302,10 +302,10 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
           val (rArg, rFormula) = (
             subs.what match { case PredicationalOf(_, v: NamedSymbol) => v
                            case _ => throw new IllegalArgumentException(
-                            s"Substitution of p(fml)=${app.prettyString()} for arbitrary fml=${fml.prettyString()} not supported")},
+                            "Substitution of p(fml)=" + app.prettyString() + " for arbitrary fml=" + fml.prettyString() + " not supported")},
             subs.repl match { case f: Formula => f
                            case _ => throw new IllegalArgumentException(
-                             s"Can only substitute formulas for ${app.prettyString()}")
+                             "Can only substitute formulas for " + app.prettyString())
             })
           USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(rFormula)
         case app@PredicationalOf(q, fml) if !matchHead(app) => PredicationalOf(q, usubst(fml))
