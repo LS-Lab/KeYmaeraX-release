@@ -1,12 +1,18 @@
 import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.LogicalODESolver
+import edu.cmu.cs.ls.keymaera.tactics.{SearchTacticsImpl, LogicalODESolver}
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
+import testHelper.{ProvabilityTestHelper, StringConverter}
+import StringConverter._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
 
 /**
  * Created by nfulton on 4/23/15.
  */
-class ODESolverTests extends FlatSpec with Matchers with PrivateMethodTester {
+class ODESolverTests extends TacticTestSuite with PrivateMethodTester {
   //Useful values used throughout these tests.
+  val nov    = Variable("doesnotoccur", None, Real)
+  val acc    = Variable("acc", None, Real) //oh wow Matchers has a publicly exposed variable named a...
+  val v      = Variable("v", None, Real)
   val x      = Variable("x", None, Real)
   val xPrime = DifferentialSymbol(x)
   val t      = Variable("t", None, Real)
@@ -16,13 +22,15 @@ class ODESolverTests extends FlatSpec with Matchers with PrivateMethodTester {
   val one    = Number(1)
   val zero   = Number(0)
 
-  "solutionForVariable" should "compute the correct solution for x' = 2" in {
-    val program = DifferentialProduct(AtomicODE(xPrime, two), AtomicODE(tPrime, one))
-    LogicalODESolver.solutionForVariable(x, program, Equal(x, zero) :: Nil) shouldBe Equal(x, Plus(Times(Number(2), t), Number(0)))
+  private def getOde(s : String) = s.asFormula.asInstanceOf[Box].program.asInstanceOf[DifferentialProgram]
+
+  "Prove after time intro" should "work" in {
+    val f = "x = 0 & v = 1 & a = 5 & t = 0 -> [x' =v, v' = a;]x >= 0".asFormula
+    val node = helper.formulaToNode(f)
+    val tactic = locateSucc(ImplyRightT) & LogicalODESolver.solveT(SuccPos(0))
+    helper.runTactic(tactic, node)
+    helper.report(node)
+    node shouldBe 'closed
   }
 
-  it should "compute the correct solution for x' = 2 & x = 5" in {
-    val program = DifferentialProduct(ODESystem(AtomicODE(xPrime, two), Equal(x, five)), AtomicODE(tPrime, one))
-    LogicalODESolver.solutionForVariable(x, program, Nil) shouldBe Equal(x, Plus(Times(Number(2), t), Number(5)))
-  }
 }
