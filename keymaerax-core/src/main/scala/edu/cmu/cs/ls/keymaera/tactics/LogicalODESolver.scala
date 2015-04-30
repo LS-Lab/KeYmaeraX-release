@@ -110,7 +110,7 @@ object LogicalODESolver {
   private def stepTacticT : PositionTactic = new PositionTactic("Logical ODE Solver") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(program : DifferentialProgram, _) => {
-        val hasNextStep = atomicODEs(program).filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.e)).find(ode => isUnsolved(ode.xp.e, program)) match {
+        val hasNextStep = atomicODEs(program).filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.x)).find(ode => isUnsolved(ode.xp.x, program)) match {
           case Some(_) => true
           case None => false
         }
@@ -127,9 +127,9 @@ object LogicalODESolver {
           case Box(program : DifferentialProgram, f) => {
             val sortedOdes = sortAtomicOdes(atomicODEs(program))
             val nextOde = sortedOdes
-              .filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.e)) //Skip time var, which we deal with using diff solve instead of diff inv.
-              .find(ode => isUnsolved(ode.xp.e, program)).getOrElse(throw new Exception("applies method failed."))
-            val toCut = Equal(nextOde.xp.e, integralOf(nextOde.xp.e, program, initialConditions))
+              .filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.x)) //Skip time var, which we deal with using diff solve instead of diff inv.
+              .find(ode => isUnsolved(ode.xp.x, program)).getOrElse(throw new Exception("applies method failed."))
+            val toCut = Equal(nextOde.xp.x, integralOf(nextOde.xp.x, program, initialConditions))
 
 
 
@@ -186,7 +186,7 @@ object LogicalODESolver {
    */
   def isUnsolved(v : Variable, program : DifferentialProgram) = {
     val odes = atomicODEs(program)
-    if(odes.find(_.xp.e.equals(v)).isEmpty) false //Variables that don't occur in the ODE are trivially already solved.
+    if(odes.find(_.xp.x.equals(v)).isEmpty) false //Variables that don't occur in the ODE are trivially already solved.
     else if(timeVar(program).equals(v)) false //Don't need to solve for the time var.
     //In non-special cases, check for a = evolution domain constraint in the ode.
     else {
@@ -203,21 +203,21 @@ object LogicalODESolver {
    * @return
    */
   private def sortAtomicOdes(odes : List[AtomicODE]) : List[AtomicODE] = {
-    sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.e.equals(v)).get)
+    sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.x.equals(v)).get)
   }
 
   //@todo check this implementation.
   private def sortAtomicOdesHelper(odes : List[AtomicODE], prevOdes : List[AtomicODE] = Nil) : List[Variable] = {
-    var primedVars = odes.map(_.xp.e)
+    var primedVars = odes.map(_.xp.x)
 
     def dependencies(v : Variable) : List[Variable] = {
-      val vTerm = odes.find(_.xp.e.equals(v)).get.e
+      val vTerm = odes.find(_.xp.x.equals(v)).get.e
       //remove self-references to cope with the fact that t' = 0*t + 1, which is necessary due to DG.
       primedVars.filter(StaticSemantics.freeVars(vTerm).contains(_)).filter(!_.equals(v))
     }
 
     var nonDependentSet : List[Variable] = primedVars.filter(dependencies(_).isEmpty)
-    val possiblyDependentOdes = odes.filter(ode => !nonDependentSet.contains(ode.xp.e))
+    val possiblyDependentOdes = odes.filter(ode => !nonDependentSet.contains(ode.xp.x))
 
     if(possiblyDependentOdes.isEmpty) nonDependentSet
     else {
@@ -300,13 +300,13 @@ object LogicalODESolver {
     //The assertion message is not technically true becuase the solution would just be zero.
     //But if the variable requested is not in the ODE, it's most likely this indicates a programming error rather than
     //an honest inquiry.
-    assert(odes.find(ode => ode.xp.e.equals(v)).isDefined, "Cannot solve for a variable that does not occur in the ODE")
+    assert(odes.find(ode => ode.xp.x.equals(v)).isDefined, "Cannot solve for a variable that does not occur in the ODE")
 
-    val primedVariables : Set[Variable] = odes.map(_.xp.e).toSet
+    val primedVariables : Set[Variable] = odes.map(_.xp.x).toSet
 
     //Compute the free variables in the ode corresponding to v'.
-    val ode = odes.find(_.xp.e.equals(v)).getOrElse(throw new Exception("Could not find ODE associated with " + v))
-    val varsInOde = StaticSemantics.freeVars(ode.e).toSet.map((x : NamedSymbol) => { x
+    val ode = odes.find(_.xp.x.equals(v)).getOrElse(throw new Exception("Could not find ODE associated with " + v))
+    val varsInOde = StaticSemantics.freeVars(ode.e).toSet.map((x : NamedSymbol) => {
         assert(x.isInstanceOf[Variable], "Only variables should occur as the child of the LHS of an ODE")
         x.asInstanceOf[Variable]
       })
@@ -415,10 +415,10 @@ object LogicalODESolver {
    */
   def timeVar(ode : DifferentialProgram) : Option[Variable] = {
     //The second value is the one that we cut in. @todo maybe actually we really need time to be 0*t + 1?
-    def isTimeVar(atomic : AtomicODE) = atomic.e.equals(Number(1)) || atomic.e.equals(Plus(Times(Number(0), atomic.xp.e), Number(1)))
+    def isTimeVar(atomic : AtomicODE) = atomic.e.equals(Number(1)) || atomic.e.equals(Plus(Times(Number(0), atomic.xp.x), Number(1)))
 
     ode match {
-      case atomic:AtomicODE => if(isTimeVar(atomic)) Some(atomic.xp.e) else None
+      case atomic:AtomicODE => if(isTimeVar(atomic)) Some(atomic.xp.x) else None
       case ODESystem(ode, constraint)       => timeVar(ode)
       case DifferentialProduct(left, right) => (timeVar(left), timeVar(right)) match {
         case (Some(t), Some(t2)) => if(t.equals(t2)) Some(t) else ???
