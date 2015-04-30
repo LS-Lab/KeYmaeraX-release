@@ -194,7 +194,7 @@ object FOQuantifierTacticsImpl {
 
         // HACK don't need stuttering for dummy variable introduced in abstractionT
         // (no longer necessary when we have the correct condition on filtering stutteringAt)
-        if (quantified.name != "$abstraction_dummy") {
+        if (quantified.name != "$abstractiondummy") {
           ExpressionTraversal.traverse(new ExpressionTraversalFunction {
             override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = e match {
               case Box(prg, _) if /*StaticSemantics(prg).bv.contains(quantified) &&*/ !stutteringAt.exists(_.isPrefixOf(p)) => stutteringAt += p; Left(None)

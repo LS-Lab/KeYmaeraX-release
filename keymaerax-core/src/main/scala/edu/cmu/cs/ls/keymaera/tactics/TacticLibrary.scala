@@ -270,7 +270,7 @@ object TacticLibrary {
             case Left(_) => throw new IllegalArgumentException("Cannot handle non-concrete programs")
           }
           val qPhi =
-            if (vars.isEmpty) Forall(Variable("$abstraction_dummy", None, Real)::Nil, phi)
+            if (vars.isEmpty) Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
             else vars.sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
               foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
