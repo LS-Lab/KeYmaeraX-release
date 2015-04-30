@@ -209,7 +209,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * Whether this substitution matches to replace the given expression e,
    * because there is a substitution pair that matches e.
    */
-  private def matchHead(e: Expression): Boolean = subsDefs.exists(sp => sp.sameHead(e))
+  private def matchHead(e: Expression): Boolean = subsDefs.filter(_.what.isInstanceOf[ApplicationOf]).exists(sp => sp.sameHead(e))
 
 
   // implementation of uniform substitution application
@@ -224,7 +224,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
         case xp: DifferentialSymbol => assert(!subsDefs.exists(_.what == xp), "Substitution of differential symbols not supported: " + xp)
           xp
         case app@FuncOf(of, theta) if matchHead(app) =>
-          val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
+          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(app))
           val FuncOf(rf, rArg) = subs.what
           assert(rf == of, "match on same function heads")
           assert(rArg == DotTerm || rArg == Nothing || rArg == Anything)
@@ -268,7 +268,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     try {
       formula match {
         case app@PredOf(op, theta) if matchHead(app) =>
-          val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
+          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(app))
           val PredOf(rp, rArg) = subs.what
           assert(rp == op, "match only if same head")
           assert(rArg == DotTerm || rArg == Nothing || rArg == Anything)
@@ -278,7 +278,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
         case app@PredicationalOf(op, fml) if matchHead(app) =>
           require(admissible(topVarsDiffVars[NamedSymbol](), fml),
             "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " with clashes " + clashSet(topVarsDiffVars[NamedSymbol](), fml))
-          val subs = uniqueElementOf[SubstitutionPair](subsDefs, _.sameHead(app))
+          val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[ApplicationOf] && sp.sameHead(app))
           val PredicationalOf(rp, rArg) = subs.what
           assert(rp == op, "match only if same head")
           assert(rArg == DotFormula)
