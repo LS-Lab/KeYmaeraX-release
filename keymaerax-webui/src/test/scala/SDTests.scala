@@ -185,17 +185,17 @@ class SDTests extends TacticTestSuite {
   }
 
   "Failure scenarios from dsolve" should "be fixed for the failure case from x'=v,v'=a (using multiplyderivative)" in {
-    val f= "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2*k4_t_1)'*v_2+2*k4_t_1*v_2')+(2*x_2)')".asFormula
+    val f= "x'=(0*2-1*0)/2^2*(a*kxtime_1^2+2*kxtime_1*v_2+2*x_2)+1/2*(a'*kxtime_1^2+a*(2*kxtime_1^1)+((2*kxtime_1)'*v_2+2*kxtime_1*v_2')+(2*x_2)')".asFormula
     val n = helper.formulaToNode(f)
     val result = helper.runTactic(SearchTacticsImpl.locateTerm(MultiplyDerivativeT)*, n, mustApply = true)
     result.openGoals() should have size 1
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
-    result.openGoals().flatMap(_.sequent.succ) should contain only "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2'*k4_t_1+2*(k4_t_1)')*v_2+2*k4_t_1*v_2')+(2'*x_2+2*(x_2)'))".asFormula
+    result.openGoals().flatMap(_.sequent.succ) should contain only "x'=(0*2-1*0)/2^2*(a*kxtime_1^2+2*kxtime_1*v_2+2*x_2)+1/2*(a'*kxtime_1^2+a*(2*kxtime_1^1)+((2'*kxtime_1+2*(kxtime_1)')*v_2+2*kxtime_1*v_2')+(2'*x_2+2*(x_2)'))".asFormula
   }
 
   it should "be fixed for the failure case from x'=v,v'=a (using bare sytnacticderivationt)" in {
-    val f= "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((2*k4_t_1)'*v_2+2*k4_t_1*v_2')+(2*x_2)')".asFormula
-    val expected = "x'=(0*2-1*0)/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a'*k4_t_1^2+a*(2*k4_t_1^1)+((0*k4_t_1+2*k4_t_1')*v_2+2*k4_t_1*v_2')+(0*x_2+2*x_2'))".asFormula
+    val f= "x'=(0*2-1*0)/2^2*(a*kxtime_1^2+2*kxtime_1*v_2+2*x_2)+1/2*(a'*kxtime_1^2+a*(2*kxtime_1^1)+((2*kxtime_1)'*v_2+2*kxtime_1*v_2')+(2*x_2)')".asFormula
+    val expected = "x'=(0*2-1*0)/2^2*(a*kxtime_1^2+2*kxtime_1*v_2+2*x_2)+1/2*(a'*kxtime_1^2+a*(2*kxtime_1^1)+((0*kxtime_1+2*kxtime_1')*v_2+2*kxtime_1*v_2')+(0*x_2+2*x_2'))".asFormula
     val n = helper.formulaToNode(f)
     val result = helper.runTactic(SearchTacticsImpl.locateTerm(SyntacticDerivationT)*, n, mustApply = true)
     result.openGoals().flatMap(_.sequent.ante) shouldBe empty
@@ -204,7 +204,7 @@ class SDTests extends TacticTestSuite {
 
 
   it should "be fixed for Tues. night example 2" in {
-    val f = "x'=(1'*2-1*2')/2^2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)+1/2*(a*k4_t_1^2+2*k4_t_1*v_2+2*x_2)'".asFormula
+    val f = "x'=(1'*2-1*2')/2^2*(a*kxtime_1^2+2*kxtime_1*v_2+2*x_2)+1/2*(a*kxtime_1^2+2*kxtime_1*v_2+2*x_2)'".asFormula
     val n = helper.formulaToNode(f)
 
     helper.runTactic(SearchTacticsImpl.locateTerm(SyntacticDerivationT)*, n, mustApply = true)

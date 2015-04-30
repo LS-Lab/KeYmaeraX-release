@@ -103,10 +103,10 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
 
   // complex
   ignore should "try bouncing ball" in {
-    smt.toSMT("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & k4_t_1=0 & h_2=h & v_2=v & k4_t_4=k4_t_1 & v_3=-1*k4_t_5*g+v_2 & h_3=1/2*(-1*k4_t_5^2*g+2*h_2+2*k4_t_5*v_2) & h_3>=0 & k4_t_5>=k4_t_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula).getAssertNot should be ("")
+    smt.toSMT("c<1 & c>=0 & H>=0 & g>0 & v^2<=2*g*(H-h) & h>=0 & kxtime_1=0 & h_2=h & v_2=v & kxtime_4=kxtime_1 & v_3=-1*kxtime_5*g+v_2 & h_3=1/2*(-1*kxtime_5^2*g+2*h_2+2*kxtime_5*v_2) & h_3>=0 & kxtime_5>=kxtime_4 & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g*(H-h_3)".asFormula).getAssertNot should be ("")
   }
 
   ignore should "try bouncing ball constfun" in {
-    smt.toSMT("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & k4_t_1=0 & h_2()=h & v_2()=v & k4_t_4()=k4_t_1 & v_3=-1*k4_t_5*g()+v_2() & h_3=1/2*(-1*k4_t_5^2*g()+2*h_2()+2*k4_t_5*v_2()) & h_3>=0 & k4_t_5>=k4_t_4() & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g()*(H-h_3)".asFormula).getAssertNot should be ("")
+    smt.toSMT("c<1 & c>=0 & H>=0 & g()>0 & v^2<=2*g()*(H-h) & h>=0 & kxtime_1=0 & h_2()=h & v_2()=v & kxtime_4()=kxtime_1 & v_3=-1*kxtime_5*g()+v_2() & h_3=1/2*(-1*kxtime_5^2*g()+2*h_2()+2*kxtime_5*v_2()) & h_3>=0 & kxtime_5>=kxtime_4() & h_3=0 & v_5=-c*v_3 -> v_5^2<=2*g()*(H-h_3)".asFormula).getAssertNot should be ("")
   }
 }
