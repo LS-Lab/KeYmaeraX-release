@@ -209,7 +209,7 @@ object AxiomaticRuleTactics {
         }
         val pX = Function("p_", None, Real, Bool)
         val aX = Variable("x_", None, Real)
-        val s = USubst(SubstitutionPair(PredOf(pX, DotTerm), replaceFree(replace(p)(x, aX))(aX, DotTerm)) :: Nil)
+        val s = USubst(SubstitutionPair(PredOf(pX, Anything), replace(p)(x, aX)) :: Nil)
 
         Some(
           globalAlphaRenamingT(x.name, x.index, aX.name, aX.index) &
