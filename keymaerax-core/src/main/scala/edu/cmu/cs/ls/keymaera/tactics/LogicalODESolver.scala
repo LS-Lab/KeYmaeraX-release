@@ -13,24 +13,26 @@ import TacticLibrary._
 
 /**
  * Solves simple ODEs.
- * @todo get an exact characterization of the ODEs that this actually solves.
  * @author Nathan Fulton
  */
 object LogicalODESolver {
 
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Tactics
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
-    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) ~ (
-        (stepTactic(p) *) &
+    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVarT(p) ~ (
+        (stepTacticT(p) *) &
         cutTimeLB(p) &
         ODETactics.diffWeakenT(p) &
         arithmeticT
       )
   }
 
-  def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
+  private def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(odes:ODESystem, _) => true //@todo
       case _ => false
@@ -64,7 +66,7 @@ object LogicalODESolver {
     }
   }
 
-  def setupTimeVar : PositionTactic = new PositionTactic("Introduce time into ODE") {
+  private def setupTimeVarT : PositionTactic = new PositionTactic("Introduce time into ODE") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(dp : DifferentialProgram, f) => timeVar(dp).isEmpty
       case _ => false
@@ -105,7 +107,7 @@ object LogicalODESolver {
   /**
    * @return A tactic that cuts in a solution to an ODE in a system. This should be saturated.
    */
-  def stepTactic : PositionTactic = new PositionTactic("Logical ODE Solver") {
+  private def stepTacticT : PositionTactic = new PositionTactic("Logical ODE Solver") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case Box(program : DifferentialProgram, _) => {
         val hasNextStep = atomicODEs(program).filter(ode => !timeVar(program).getOrElse( () ).equals(ode.xp.e)).find(ode => isUnsolved(ode.xp.e, program)) match {
@@ -144,6 +146,32 @@ object LogicalODESolver {
     }
   }
 
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Helper methods for step tactic.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   *
+   * @param f A formula.
+   * @return A list of formulas wiht no top-level andss.
+   */
+  private def decomposeAnds(f : Formula) : List[Formula] = f match {
+    case And(l,r) => decomposeAnds(l) ++ decomposeAnds(r)
+    case _ => f :: Nil
+  }
+
+  /**
+   * Converts list of formulas possibly containing Ands into list of formulas that does not contain any ANDs.
+   * @param fs A list of formulas, possibly containing Ands.
+   */
+  private def flattenAnds(fs : List[Formula]) = fs.flatMap(decomposeAnds)
+
+  /**
+   *
+   * @param f A formula containing conjunctions.
+   * @return A list of *equality* formulas after deconstructing Ands. E.g., A&B&C -> A::B::C::Nil
+   */
   private def extractInitialConditions(f : Formula) : List[Formula] = flattenAnds(f match {
     case And(l, r) => extractInitialConditions(l) ++ extractInitialConditions(r)
     case Equal(v:Variable, _) => f :: Nil
@@ -152,9 +180,9 @@ object LogicalODESolver {
 
   /**
    *
-   * @param v
-   * @param program
-   * @return true if the program does not already contain a solution for v.
+   * @param v A variable occuring in the odes program.
+   * @param program An ode system.
+   * @return true if the program does not already contain an = constraint (a.k.a. sol'n) for v in the evolution domain.
    */
   def isUnsolved(v : Variable, program : DifferentialProgram) = {
     val odes = atomicODEs(program)
@@ -170,11 +198,6 @@ object LogicalODESolver {
     }
   }
 
-  private def decomposeAnds(f : Formula) : List[Formula] = f match {
-    case And(l,r) => decomposeAnds(l) ++ decomposeAnds(r)
-    case _ => f :: Nil
-  }
-
   /**
    * @param odes
    * @return
@@ -183,7 +206,6 @@ object LogicalODESolver {
     sortAtomicOdesHelper(odes).map(v => odes.find(_.xp.e.equals(v)).get)
   }
 
-  //@tailrec
   //@todo check this implementation.
   private def sortAtomicOdesHelper(odes : List[AtomicODE], prevOdes : List[AtomicODE] = Nil) : List[Variable] = {
     var primedVars = odes.map(_.xp.e)
@@ -257,16 +279,11 @@ object LogicalODESolver {
         else       Times(Divide(Number(1), Number(n+1)), integrator(Power(base, Number(n-1)), t))
       case _ => throw new Exception("Cannot integrate terms with non-number exponents!")
     }
-//    case Number(n) => Times(term, t) //@todo do we need a constant here?
-//    case x : Variable => Times(x, t)
-      //@todo is this more general case of the number/variable pattern sufficient?
     case x : Term if !StaticSemantics.freeVars(x).contains(t) => Times(x, t)
   }
 
   /**
    * Given x' = f, replaces all variables in f with their recurrences or initial conditions.
-   * @todo this needs a better name.
-   * @todo make thie private and figure out the private method helper thing.
    * @param v A variable s.t. v' = f occurs in the ODEs.
    * @param program ODE(s) with a time variable (some x s.t. x' = 1).
    * @param initialConditions Any initial conditions for the ODE.
@@ -285,7 +302,6 @@ object LogicalODESolver {
     //an honest inquiry.
     assert(odes.find(ode => ode.xp.e.equals(v)).isDefined, "Cannot solve for a variable that does not occur in the ODE")
 
-    //@todo check that this is always an OK cast Variable to NamedSymbol.
     val primedVariables : Set[Variable] = odes.map(_.xp.e).toSet
 
     //Compute the free variables in the ode corresponding to v'.
@@ -313,7 +329,6 @@ object LogicalODESolver {
       f_initValuesResolved
     }
     else {
-      //@todo good variable names for these two passes.
       //Replace all instance of primed variables in the term assocaited with v'
       val f_substRecurrences = recurrenceVars.foldLeft[Term](ode.e)((currTerm, x) => {
         val xSoln = recurrence(program, initialConditions, x)
@@ -331,7 +346,8 @@ object LogicalODESolver {
 
   /**
    * Converts formulas of the form x = term into a map x -> term, and ignores all formulas of other forms.
-   * @todo think of a better name -- constraintsToConditions? formulasToConditions?
+   * @param fs A list of formulas.
+   * @return A map (f -> term) which maps each f in fs of the foram f=term to term.
    */
   private def conditionsToValues(fs : List[Formula]) : Map[Variable, Term] = flattenAnds(fs)
     .map(f => f match {
@@ -346,11 +362,10 @@ object LogicalODESolver {
     .toMap
 
   /**
-   * @todo document.
-   * @param program
-   * @param initialConstraints
-   * @param x
-   * @return ???
+   * @param program (An system of) odes.
+   * @param initialConstraints Formulas describing initial values.
+   * @param x A variable that occurs on the left hand side of some ode.
+   * @return Some(term) if x = term occurs in either the ev.dom. constraint or the initial constraints. Otherwise, None.
    */
   private def recurrence(program : DifferentialProgram, initialConstraints : List[Formula], x : Variable) : Option[Term] = {
     val odeConditions = conditionsToValues(flattenAnds(odeConstraints(program)))
@@ -359,15 +374,6 @@ object LogicalODESolver {
     else if(initialConditions.contains(x)) initialConditions.get(x)
     else None
   }
-
-  /**
-   * Converts list of formulas possibly containing ANDs into list of formulas that does not contain any ANDs.
-   * @param fs
-   */
-  private def flattenAnds(fs : List[Formula]) = fs.flatMap(f => f match {
-    case And(l, r) => l :: r :: Nil
-    case _ => f :: Nil
-  })
 
   /**
    *
