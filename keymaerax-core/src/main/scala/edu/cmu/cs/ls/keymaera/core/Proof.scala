@@ -65,9 +65,9 @@ sealed trait SeqPos {
  * @param index the position base 0 in antecedent.
  */
 case class AntePos(private[core] val index: Int) extends SeqPos {
-  def isAnte = true
-  def isSucc = false
-  def getIndex = index
+  def isAnte: Boolean = true
+  def isSucc: Boolean = false
+  def getIndex: Int = index
 }
 
 /**
@@ -75,9 +75,9 @@ case class AntePos(private[core] val index: Int) extends SeqPos {
  * @param index the position base 0 in antecedent.
  */
 case class SuccPos(private[core] val index: Int) extends SeqPos {
-  def isAnte = false
-  def isSucc = true
-  def getIndex = index
+  def isAnte: Boolean = false
+  def isSucc: Boolean = true
+  def getIndex: Int = index
 }
 
 object SeqPos {
@@ -87,7 +87,8 @@ object SeqPos {
    *  Positive numbers indicate succedent positions, 1, 2, 3.
    *  Zero is a degenerate case indicating whole sequent 0.
    */
-  def SeqPos(signedPos: Int) = if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos+1)}
+  def SeqPos(signedPos: Int): SeqPos =
+    if (signedPos>0) {SuccPos(signedPos-1)} else {assert(signedPos<0);AntePos(-signedPos+1)}
 
 }
 
@@ -98,8 +99,9 @@ object SeqPos {
 final case class Sequent(pref: immutable.Seq[NamedSymbol],
                          ante: immutable.IndexedSeq[Formula],
                          succ: immutable.IndexedSeq[Formula]) {
-  applicable
-  @elidable(ASSERTION) def applicable = require(pref.isEmpty, "only empty sequent prefix supported so far " + pref)
+  applicable()
+  @elidable(ASSERTION) def applicable(): Unit =
+    require(pref.isEmpty, "only empty sequent prefix supported so far " + pref)
 
   /**
    * Retrieves the formula in sequent at a given position.
@@ -151,7 +153,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
    * @return a copy of this sequent concatenated with s.
    * Results in a least upper bound with respect to subsets of this and s.
    */
-  def glue(s: Sequent) : Sequent = {
+  def glue(s: Sequent): Sequent = {
     require(s.pref == pref, "identical sequent prefix required when gluing " + this + " with " + s)
     Sequent(pref, ante ++ s.ante, succ ++ s.succ)
     } ensuring(r => this.subsequentOf(r) && s.subsequentOf(r)
@@ -166,7 +168,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
    * @param f the replacing formula
    * @return a copy of this sequent with the formula at position p replaced by f.
    */
-  def updated(p: SeqPos, f: Formula) : Sequent = {
+  def updated(p: SeqPos, f: Formula): Sequent = {
     if (p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante.updated(p.getIndex, f), succ)
@@ -185,7 +187,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
    * @see #updated(Position,Formula)
    * @see #glue(Sequent)
    */
-  def updated(p: SeqPos, s: Sequent) : Sequent = {
+  def updated(p: SeqPos, s: Sequent): Sequent = {
     if (p.isAnte) {
       require(p.getIndex < ante.length, "Position " + p + " is invalid in sequent " + this) //@TODO might be @elidable
       Sequent(pref, ante.patch(p.getIndex, Nil, 1), succ).glue(s)
@@ -204,12 +206,12 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   /**
    * Check whether this sequent is a subsequent of the given sequent r (considered as sets)
    */
-  def subsequentOf(r: Sequent) : Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
+  def subsequentOf(r: Sequent): Boolean = (pref == r.pref && ante.toSet.subsetOf(r.ante.toSet) && succ.toSet.subsetOf(r.succ.toSet))
 
   /**
    * Check whether this sequent is a equivalent to the given sequent r (considered as sets)
    */
-  def sameSequentAs(r: Sequent) : Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
+  def sameSequentAs(r: Sequent): Boolean = (this.subsequentOf(r) && r.subsequentOf(this))
 
   override def toString: String = "Sequent[{(" + pref.map(_.prettyString).mkString(", ") + "), " +
     ante.map(_.prettyString()).mkString(", ") + " ==> " + succ.map(_.prettyString()).mkString(", ") + "}]"
@@ -223,7 +225,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   */
 
 object Provable {
-  private[core] val debugProver = false
+  private[core] val debugProver: Boolean = false
 
   /**
    * Begin a new proof for the desired conclusion goal
@@ -231,7 +233,7 @@ object Provable {
    * @return a Provable whose subgoals need to be all proved in order to prove goal.
    * @note soundness-critical
    */
-  def startProof(goal : Sequent) = {
+  def startProof(goal : Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq(goal))
   } ensuring(
     r => !r.isProved && r.subgoals == immutable.IndexedSeq(r.conclusion), "correct initial proof start")
@@ -242,7 +244,7 @@ object Provable {
    * @return a Provable without subgoals.
    * @note soundness-critical, only call from RCF/LemmaDB within core.
    */
-  private[core] def toolFact(goal: Sequent) = {
+  private[core] def toolFact(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq())
   }
 }
@@ -275,13 +277,13 @@ final case class Provable private (val conclusion: Sequent, val subgoals: immuta
    *         false if subgoals are missing that need to be proved first.
    * @note soundness-critical
    */
-  final def isProved : Boolean = (subgoals.isEmpty)
+  final def isProved: Boolean = subgoals.isEmpty
 
   /**
    * What conclusion this Provable proves if isProved.
    * @requires(isProved)
    */
-  final def proved : Sequent = {
+  final def proved: Sequent = {
     require(isProved, "Only Provables that have been proved have a proven conclusion " + this)
     if (isProved) conclusion else throw new CoreException("ASSERT: Provables with remaining subgoals are not proved yet " + this)
   }
@@ -295,7 +297,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: immuta
    * @requires(0 <= subgoal && subgoal < subgoals.length)
    * @note soundness-critical
    */
-  final def apply(rule : Rule, subgoal : Subgoal) : Provable = {
+  final def apply(rule: Rule, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Rules " + rule + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     rule(subgoals(subgoal)) match {
       // subgoal closed by proof rule
@@ -319,7 +321,7 @@ final case class Provable private (val conclusion: Sequent, val subgoals: immuta
    * @requires(subderivation.conclusion == subgoals(subgoal))
    * @note soundness-critical
    */
-  final def apply(subderivation : Provable, subgoal : Subgoal) : Provable = {
+  final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the given derivation to conclude " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
@@ -342,13 +344,13 @@ final case class Provable private (val conclusion: Sequent, val subgoals: immuta
    * Provables resulting from the returned subgoal can be merged into this Provable to prove said subgoal.
    * @note not soundness-critical only completeness-critical
    */
-  def sub(subgoal : Subgoal) : Provable = {
+  def sub(subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "Subprovable can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
     Provable.startProof(subgoals(subgoal))
   } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
     r => r.subgoals == immutable.List(r.conclusion), "sub Provable is an unfinished Provable")
 
-  override def toString() = "Provable(conclusion\n" + conclusion + "\nfrom subgoals\n" + subgoals.mkString(",\n") + ")"
+  override def toString: String = "Provable(conclusion\n" + conclusion + "\nfrom subgoals\n" + subgoals.mkString(",\n") + ")"
 }
 
 
@@ -721,7 +723,7 @@ object ImplyLeft extends (AntePos => Rule) {
   def apply(pos: AntePos): Rule = new ImplyLeft(pos)
 }
 class ImplyLeft(pos: AntePos) extends LeftRule("Imply Left", pos) {
-  def apply(s: Sequent): List[Sequent] = {
+  def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
     //@TODO Perhaps surprising that both positions change but at least consistent for this rule.
     List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
@@ -795,13 +797,13 @@ object UniformSubstitutionRule {
    * --------------------
    * subst(G) |- subst(D)
    */
-  def apply(subst: USubst, origin: Sequent) : Rule = new UniformSubstitutionRule(subst, origin)
+  def apply(subst: USubst, origin: Sequent): Rule = new UniformSubstitutionRule(subst, origin)
 
-  @elidable(FINEST) private def log(msg: =>Any) = {} //println(msg)
+  @elidable(FINEST) private def log(msg: =>Any): Unit = {} //println(msg)
 
   private class UniformSubstitutionRule(val subst: USubst, val origin: Sequent) extends Rule("Uniform Substitution") {
 
-    override def toString = name + "(" + subst + ")"
+    override def toString: String = name + "(" + subst + ")"
 
     /**
      * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
@@ -837,7 +839,7 @@ object UniformSubstitutionRule {
  */
 class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int]) extends Rule("Bound Renaming") {
 
-  override def toString = name + "(" + what + "_" + wIdx + "~>" + repl + "_" + rIdx + ")"
+  override def toString: String = name + "(" + what + "_" + wIdx + "~>" + repl + "_" + rIdx + ")"
 
   def apply(s: Sequent): immutable.List[Sequent] =
     immutable.List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
@@ -857,7 +859,7 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
-  private def ghostify(f: Formula) =
+  private def ghostify(f: Formula): Formula =
     if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
       case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
       case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
@@ -962,9 +964,9 @@ class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[
   }
 
   // allow self-renaming for stuttering
-  private def admissible(t: Term) =
+  private def admissible(t: Term): Boolean =
     (what == repl && wIdx == rIdx) || !StaticSemantics.freeVars(t).exists(v => v.name == repl && v.index == rIdx)
-  private def admissible(f: Formula) =
+  private def admissible(f: Formula): Boolean =
     (what == repl && wIdx == rIdx) || !StaticSemantics.symbols(f).exists(v => v.name == repl && v.index == rIdx)
 }
 
@@ -1056,7 +1058,7 @@ object AxiomaticRule {
   private final case class AxiomaticRuleInstance(val id: String, val subst: USubst) extends Rule("Axiomatic Rule " + id + " instance") {
     require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rules cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
-    private val (rulepremise,ruleconclusion) = rules.get(id) match {
+    private val (rulepremise: Sequent, ruleconclusion: Sequent) = rules.get(id) match {
       case Some(pair) => pair
       case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)
     }
@@ -1086,7 +1088,7 @@ object AxiomaticRule {
  *********************************************************************************
  */
 object RCF {
-  private val trustedTools =
+  private val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
     "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
 
@@ -1235,7 +1237,7 @@ object CutLeft extends ((Formula, AntePos) => Rule) {
    * -------------------------
    *        p, G |- D
    */
-  def apply(c: Formula, pos: AntePos) : Rule = new CutLeft(c, pos)
+  def apply(c: Formula, pos: AntePos): Rule = new CutLeft(c, pos)
   private class CutLeft(c: Formula, pos: AntePos) extends Rule("cut Left") {
     def apply(s: Sequent): immutable.List[Sequent] = {
       val p = s(pos)

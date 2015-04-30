@@ -157,12 +157,12 @@ class SetLattice[A](@deprecated val s: Either[TopSet[A], immutable.Set[A]]) {
     case Left(ts) => new SetLattice(Left(ts -- other))
     case Right(ts) => SetLattice(ts -- other)
   }
-  override def toString = s match {
+  override def toString: String = s match {
     case Left(ts) => "top except " + ts.toString
     case Right(ts) => ts.toString()
   }
   //@TODO Move into pretty printer and also pretty print the elements of ts.
-  def prettyString = s match {
+  def prettyString: String = s match {
     case Left(ts) => "top except {" + ts.excluded.mkString(",") + "}"
     case Right(ts) => "{" + ts.mkString(",") + "}"
   }

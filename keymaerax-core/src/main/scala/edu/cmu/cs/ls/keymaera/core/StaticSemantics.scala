@@ -97,7 +97,7 @@ object StaticSemantics {
    * Add ' to a set, i.e. turn all elements x in the lattice into x'
    * @return The set of all x' for which x is in s.
    */
-  private[core] def differentialSymbols(s: SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] =
+  private[core] def differentialSymbols(s: SetLattice[NamedSymbol]): SetLattice[NamedSymbol] =
     s.map[NamedSymbol](v => v match {
     case x: Variable => DifferentialSymbol(x)
     case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v + " of type " + v.getClass)

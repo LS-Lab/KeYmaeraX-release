@@ -28,11 +28,11 @@ import scala.annotation.elidable._
  * @param repl the expression to be used in place of what
  */
 final case class SubstitutionPair (what: Expression, repl: Expression) {
-  applicable
+  applicable()
 
   import SetLattice.bottom
 
-  @elidable(ASSERTION) def applicable = {
+  @elidable(ASSERTION) def applicable(): Unit = {
     require(what.kind == repl.kind,
         "substitution to same kind of expression (terms for terms, formulas for formulas, programs for programs) " + this + " substitutes " + what.kind + " ~> " + repl.kind)
     require(what.sort == repl.sort, "Sorts have to match in substitution pairs: " + what.sort + " != " + repl.sort)
@@ -49,7 +49,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
    * @return essentially freeVars(repl) except for special handling of Anything arguments.
    */
-  def freeVars : SetLattice[NamedSymbol] = (repl match {
+  def freeVars: SetLattice[NamedSymbol] = (repl match {
         case replt: Term => what match {
           case FuncOf(f: Function, Anything) => bottom[NamedSymbol] // Anything locally binds all variables
           // if ever extended with f(x,y,z): StaticSemantics(t) -- {x,y,z}
@@ -89,14 +89,14 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * The signature of the replacement introduced by this substitution.
    * @todo remove DotTerm and DotFormula arguments
    */
-  def signature : immutable.Set[NamedSymbol] = StaticSemantics.signature(repl)
+  def signature: immutable.Set[NamedSymbol] = StaticSemantics.signature(repl)
 
   /**
    * The key characteristic expression constituent that this SubstitutionPair is matching on.
    * @return only the lead / key part that this SubstitutionPair is matching on,
    *         which may not be its head.
    */
-  private[core] def matchKey : NamedSymbol = what match {
+  private[core] def matchKey: NamedSymbol = what match {
     case DotTerm => DotTerm
     case FuncOf(f: Function, DotTerm | Nothing | Anything) => f
     case PredOf(p: Function, DotTerm | Nothing | Anything) => p
@@ -112,7 +112,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   /**
    * Check whether we match on the term other, i.e. both have the same head.
    */
-  private[core] def sameHead(other: Expression) = what match {
+  private[core] def sameHead(other: Expression): Boolean = what match {
     case FuncOf(lf, arg) =>
       assert(arg match { case DotTerm | Anything | Nothing => true case _ => false }, "Only DotTerm/Anything/Nothing allowed as argument")
       other match { case FuncOf(rf, _) => lf == rf case _ => false }
@@ -138,7 +138,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * @author aplatzer
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
-  val subsDefs = subsDefsInput.filter(p => p.what != p.repl)
+  val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
   applicable()
 
@@ -146,7 +146,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   import SetLattice.topVarsDiffVars
 
   // unique left hand sides in l
-  @elidable(ASSERTION) def applicable() = {
+  @elidable(ASSERTION) def applicable(): Unit = {
     // check that we never replace n by something and then again replacing the same n by something
     val lefts = subsDefs.map(_.what).toList
     require(lefts.distinct.size == lefts.size, "no duplicate substitutions with same substitutees " + subsDefs)
@@ -155,7 +155,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     require(lambdaNames.distinct.size == lambdaNames.size, "no duplicate substitutions with same substitutee modulo alpha-renaming of lambda terms " + this)
   }
 
-  @elidable(FINEST-1) private def log(msg: =>String) {}  //= println(msg)
+  @elidable(FINEST-1) private def log(msg: =>String): Unit = {}  //= println(msg)
 
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
@@ -184,7 +184,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * free variables of all repl that are not bound as arguments in what.
    * @return union of the freeVars of all our substitution pairs.
    */
-  def freeVars : SetLattice[NamedSymbol] = {
+  def freeVars: SetLattice[NamedSymbol] = {
     subsDefs.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ (b.freeVars))
   } ensuring(r => r == subsDefs.map(_.freeVars).
       foldLeft(bottom[NamedSymbol])((a,b)=>a++b), "free variables identical, whether computed with map or with fold")
@@ -193,7 +193,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * The signature of the replacement introduced by this substitution.
    * @return union of the freeVars of all our substitution pairs.
    */
-  def signature : immutable.Set[NamedSymbol] = {
+  def signature: immutable.Set[NamedSymbol] = {
     subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ (b.signature))
   } ensuring(r => r == subsDefs.map(_.signature).
     foldLeft(Set.empty[NamedSymbol])((a,b)=>a++b), "signature identical, whether computed with map or with fold")
@@ -202,14 +202,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * The key characteristic expression constituents that this Substitution is matching on.
    * @return union of the matchKeys of all our substitution pairs.
    */
-  def matchKeys : immutable.List[NamedSymbol] = {
+  def matchKeys: immutable.List[NamedSymbol] = {
     subsDefs.foldLeft(immutable.List[NamedSymbol]())((a,b)=>a ++ immutable.List(b.matchKey))
   }
 
   /**
    * Whether this substitution matches to replace the given expression e.
    */
-  private def matchHead(e: Expression) : Boolean = subsDefs.exists(sp => sp.sameHead(e))
+  private def matchHead(e: Expression): Boolean = subsDefs.exists(sp => sp.sameHead(e))
 
 
   // implementation of uniform substitution application
@@ -408,14 +408,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   /**
    * Is this uniform substitution U-admissible for expression e?
    */
-  private def admissible[E <: Expression](U: SetLattice[NamedSymbol], e: E) : Boolean = admissible(U, StaticSemantics.signature(e))
+  private def admissible[E <: Expression](U: SetLattice[NamedSymbol], e: E): Boolean = admissible(U, StaticSemantics.signature(e))
 
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
    * @param U taboo list of variables
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    */
-  private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]) : Boolean = {
+  private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): Boolean = {
       // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
       // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
       // occurs in theta (or phi or alpha)
@@ -431,7 +431,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   /**
    * Projects a substitution to only those that affect the symbols listed in occurrences.
    */
-  private def projection(affected: immutable.Set[NamedSymbol]) : USubst = new USubst(
+  private def projection(affected: immutable.Set[NamedSymbol]): USubst = new USubst(
     subsDefs.filter(sigma => affected.contains(sigma.matchKey))
   )
 
@@ -442,7 +442,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * @param e the expression of interest.
    * @return FV(restrict this to occurrences) /\ U
    */
-  private def clashes[E <: Expression](U: SetLattice[NamedSymbol], e: E) : SetLattice[NamedSymbol] = clashes(U, StaticSemantics.signature(e))
+  private def clashes[E <: Expression](U: SetLattice[NamedSymbol], e: E): SetLattice[NamedSymbol] = clashes(U, StaticSemantics.signature(e))
 
   /**
    * Compute the set of all symbols for which this substitution clashes because it is not U-admissible
@@ -451,7 +451,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    * @return FV(restrict this to occurrences) /\ U
    */
-  private def clashes(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]) : SetLattice[NamedSymbol] =
+  private def clashes(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]): SetLattice[NamedSymbol] =
     projection(occurrences).freeVars.intersect(U)
 
   /**

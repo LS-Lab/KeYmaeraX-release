@@ -12,7 +12,7 @@ import edu.cmu.cs.ls.keymaera.parser._
  */
 class FileLemmaDB extends LemmaDB {
 
-  private lazy val lemmadbpath = {
+  private lazy val lemmadbpath: java.io.File = {
     val file = new java.io.File(System.getProperty("user.home") + java.io.File.separator +
       ".keymaera" + java.io.File.separator + "cache" + java.io.File.separator + "lemmadb")
     file.mkdirs
@@ -67,7 +67,7 @@ class FileLemmaDB extends LemmaDB {
     else (id, f)
   }
 
-  private def saveProof(file: java.io.File, f: Formula, ev: List[Evidence]) = {
+  private def saveProof(file: java.io.File, f: Formula, ev: List[Evidence]): Unit = {
     val namesToDeclare = StaticSemantics.symbols(f) -- StaticSemantics(f).bv.toSymbolSet
     val header = new KeYmaeraPrettyPrinter(ParseSymbols).proofHeader(namesToDeclare.toList)
     val fString = new KeYmaeraPrettyPrinter(ParseSymbols).stringify(f)

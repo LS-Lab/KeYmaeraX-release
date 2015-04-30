@@ -30,7 +30,7 @@ private[core] object AxiomBase {
    * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
    * @author aplatzer
    */
-  private[core] def loadAxiomaticRules() : scala.collection.immutable.Map[String, (Sequent, Sequent)] = {
+  private[core] def loadAxiomaticRules() : immutable.Map[String, (Sequent, Sequent)] = {
     val x = Variable("x_", None, Real)
     val px = PredOf(Function("p_", None, Real, Bool), x)
     val pany = PredOf(Function("p_", None, Real, Bool), Anything)
@@ -156,14 +156,14 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] =
+  private[core] def loadAxioms() : immutable.Map[String, Formula] =
     loadAxiomFile
 
   /**
    * parse the axiom file and add all loaded knowledge to the axioms map.
    * @todo In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
    */
-  private def loadAxiomFile: scala.collection.immutable.Map[String, Formula] = {
+  private def loadAxiomFile: immutable.Map[String, Formula] = {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
     val res = alp.runParser(loadAxiomString())

@@ -9,7 +9,7 @@ trait QETool {
    * @param formula The formula.
    * @return An equivalent quantifier-free formula.
    */
-  def qe(formula : Formula) : Formula
+  def qe(formula: Formula): Formula
 
   /**
    * Returns a quantifier-free formula that is equivalent to the specified formula, together with the actual input

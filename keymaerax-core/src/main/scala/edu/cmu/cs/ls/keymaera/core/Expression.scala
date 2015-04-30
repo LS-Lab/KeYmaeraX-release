@@ -59,7 +59,7 @@ case class ObjectSort(name : String) extends Sort
 sealed trait Expression {
   def kind : Kind
   def sort : Sort
-  override def toString = "(" + prettyString() + ")@" + super.toString
+  override def toString : String = "(" + prettyString() + ")@" + super.toString
   def prettyString() : String = new KeYmaeraPrettyPrinter().stringify(this)
 }
 
@@ -69,7 +69,7 @@ sealed trait Composite extends Expression
 sealed trait NamedSymbol extends Expression {
   def name: String
   def index: Option[Int]
-  override def toString = name
+  override def toString: String = name
 }
 
 /********************************************
@@ -77,7 +77,7 @@ sealed trait NamedSymbol extends Expression {
  * @author aplatzer
  */
 sealed trait Term extends Expression {
-  final def kind = TermKind
+  final def kind: Kind = TermKind
 }
 
 // atomic terms
@@ -87,7 +87,7 @@ sealed trait AtomicTerm extends Term with Atomic
  * real terms
  */
 private[core] trait RTerm extends Term {
-  final def sort = Real
+  final def sort: Sort = Real
 }
 
 sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort)
@@ -95,34 +95,34 @@ sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort)
 sealed case class DifferentialSymbol(e: Variable)
   extends NamedSymbol with AtomicTerm with RTerm {
   require(e.sort == Real)
-  def name = e.name  //@todo eisegesis
-  def index = e.index  //@todo eisegesis
+  def name: String = e.name  //@todo eisegesis
+  def index: Option[Int] = e.index  //@todo eisegesis
 }
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort)
   extends Expression with NamedSymbol {
-  def kind = FunctionKind
+  def kind: Kind = FunctionKind
 }
 
 object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
-  def name = ("\\cdot")
-  def index = None
+  def name: String = "\\cdot"
+  def index: Option[Int] = None
 }
 
 object Nothing extends NamedSymbol with AtomicTerm {
-  def sort = Unit
-  def name = ("\\nothing")
-  def index = None
+  def sort: Sort = Unit
+  def name: String = "\\nothing"
+  def index: Option[Int] = None
 }
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
-  def name = ("\\anything")
-  def index = None
+  def name: String = "\\anything"
+  def index: Option[Int] = None
 }
 
 case class FuncOf(func: Function, child: Term) extends AtomicTerm {
-  def sort = func.sort
+  def sort: Sort = func.sort
   require(child.sort == func.domain)
 }
 
@@ -154,7 +154,7 @@ case class Power(left: Term, right: Term) extends RCompositeTerm(left, right)
 case class Differential(child: Term) extends RUnaryCompositeTerm(child)
 
 case class Pair(left: Term, right: Term) extends CompositeTerm {
-  def sort = Tuple(left.sort, right.sort)
+  def sort: Sort = Tuple(left.sort, right.sort)
 }
 
 /********************************************
@@ -163,8 +163,8 @@ case class Pair(left: Term, right: Term) extends CompositeTerm {
  */
 
 sealed trait Formula extends Expression {
-  final def kind = FormulaKind
-  final def sort = Bool
+  final def kind: Kind = FormulaKind
+  final def sort: Sort = Bool
 }
 
 // atomic formulas
@@ -193,8 +193,8 @@ case class LessEqual(left: Term, right: Term) extends RAtomicFormula(left, right
 case class Less(left: Term, right: Term) extends RAtomicFormula(left, right)
 
 object DotFormula extends NamedSymbol with AtomicFormula {
-  def name = "\\_"
-  def index = None
+  def name: String = "\\_"
+  def index: Option[Int] = None
 }
 
 case class PredOf(pred: Function, child: Term) extends AtomicFormula {
@@ -244,15 +244,15 @@ case class DifferentialFormula(child: Formula) extends CompositeFormula
   */
 
 sealed trait Program extends Expression {
-  final def kind = ProgramKind
-  final def sort = Trafo
+  final def kind: Kind = ProgramKind
+  final def sort: Sort = Trafo
 }
 
 // atomic programs
 sealed trait AtomicProgram extends Program with Atomic
 
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {
-  def index = None
+  def index: Option[Int] = None
 }
 
 case class Assign(target: Variable, e: Term) extends AtomicProgram {
@@ -276,7 +276,7 @@ sealed trait DifferentialProgram extends Program/*???*/
 sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
 case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends DifferentialProgram
 sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with AtomicDifferentialProgram {
-  def index = None
+  def index: Option[Int] = None
 }
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {
   require(e.sort == Real)
