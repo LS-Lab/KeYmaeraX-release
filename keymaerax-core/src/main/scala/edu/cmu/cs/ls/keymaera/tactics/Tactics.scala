@@ -97,7 +97,7 @@ object Tactics {
   var KeYmaeraScheduler = new Interpreter(KeYmaera)//new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
   var MathematicaScheduler = new Interpreter(new Mathematica)
   var Z3Scheduler = new Interpreter(new Z3)
-  var PolyaScheduler = new Interpreter(new Polya)
+  var PolyaScheduler : Option[Interpreter] = try { Some(new Interpreter(new Polya)) } catch { case e : Exception => None }
     //new Scheduler(for (i <- 0 until Config.mathlicenses) yield new Mathematica)
 
   class Stats(var executionTime : Int, var branches : Int, var rules : Int) {

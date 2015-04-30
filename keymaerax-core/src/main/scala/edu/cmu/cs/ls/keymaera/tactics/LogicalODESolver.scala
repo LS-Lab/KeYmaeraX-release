@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.AxiomCloseT
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tools.Tool
@@ -21,8 +22,7 @@ object LogicalODESolver {
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {
     override def applies(s: Sequent, p: Position): Boolean = true //@todo
 
-    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) ~
-      (
+    override def apply(p: Position): Tactic = LogicalODESolver.setupTimeVar(p) ~ (
         (stepTactic(p) *) &
         cutTimeLB(p) &
         ODETactics.diffWeakenT(p) &
@@ -32,7 +32,7 @@ object LogicalODESolver {
 
   def cutTimeLB : PositionTactic = new PositionTactic("DiffCut and prove a lower-bound on time.") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-      case Box(asdf:ODESystem, _) => true //@todo
+      case Box(odes:ODESystem, _) => true //@todo
       case _ => false
     }
 
@@ -42,10 +42,10 @@ object LogicalODESolver {
           val t = timeVar(program).getOrElse(throw new Exception("Need time var"))
 
           //Should always be 0, but let's be safe.
-          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions).find(_ match {
+          val timeInitialCondition : Term = node.sequent.ante.flatMap(extractInitialConditions).find(f => f match {
             case Equal(x, _) if x.equals(t) => true
             case _ => false
-          }).getOrElse(throw new Exception("Need initial condition on time variable.")) match {
+          }).getOrElse(throw new Exception("Need initial condition on time variable " + t)) match {
             case Equal(x, term) => term
             case _ => throw new Exception("find failed.")
           }
@@ -53,7 +53,7 @@ object LogicalODESolver {
           val theCut = diffCutT(GreaterEqual(t, timeInitialCondition))(p) & onBranch(
             (BranchLabels.cutShowLbl, diffInvariant(p)),
             (BranchLabels.cutUseLbl, /*yield*/NilT)
-          )
+          ) & debugT("yield from cutTimeLB")
 
           Some(theCut)
         }
@@ -74,16 +74,25 @@ object LogicalODESolver {
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case Box(program : DifferentialProgram, f) => {
-          val t = freshTimeVar(program)
-          val lastAntePos = AntePos(node.sequent.ante.length)
-          val introTime =
-            ODETactics.diffAuxiliaryT(t, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
+          //Copied from DiffSolutionT
+          // HACK need some convention for internal names
+          val initialTime: Variable = freshNamedSymbol(Variable("k4_t", None, Real), node.sequent)
+          // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
+          val time = Variable(initialTime.name,
+            initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)
+
+          val lastAntePos = AntePos(node.sequent.ante.length + 1)
+
+          val setTimer = HybridProgramTacticsImpl.nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p)
+
+          val introTime = setTimer &
+            ODETactics.diffAuxiliaryT(time, Number(0), Number(1))(p) & PropositionalTacticsImpl.AndRightT(p) && (
               PropositionalTacticsImpl.EquivRightT(p) & onBranch(
                 (equivLeftLbl, vacuousExistentialQuanT(None)(p) & AxiomCloseT(lastAntePos, p)),
                 (equivRightLbl, skolemizeT(lastAntePos) & AxiomCloseT(lastAntePos, p))
               ),
               NilT //yield
-            )
+            ) & debugT("yield from setupTimeVar")
 
           Some(introTime)
         }
@@ -226,7 +235,7 @@ object LogicalODESolver {
   }
 
   /**
-   * A syntactic integrator for some class of terms @todo something like sums of terms of the form c*t^n where c and n are t-free? Is this enough?
+   * A syntactic integrator for @todo something like sums of terms over polynomials univariable in t.
    * @param term The term
    * @param t Time variable
    * @return Integral term dt
@@ -234,26 +243,24 @@ object LogicalODESolver {
   private def integrator(term : Term, t : Variable) : Term = term match {
     case Plus(l, r) => Plus(integrator(l, t), integrator(r, t))
     case Minus(l, r) => Minus(integrator(l, t), integrator(r, t))
-    case Times(c, time) if time.equals(t) && !StaticSemantics.freeVars(c).contains(t) => Times(Divide(c, Number(2)), Power(time, Number(2)))
-    case Times(c, Power(time, exp)) if time.equals(t) && !StaticSemantics.freeVars(exp).contains(t) && !StaticSemantics.freeVars(c).contains(t) => {
+    case Times(c, x) if x.equals(t) && !StaticSemantics.freeVars(c).contains(t) => Times(Divide(c, Number(2)), Power(x, Number(2)))
+    case Times(c, Power(x, exp)) if x.equals(t) && !StaticSemantics.freeVars(exp).contains(t) && !StaticSemantics.freeVars(c).contains(t) => {
       val newExp = exp match {
         case Number(n) => Number(n+1)
         case _ => Plus(exp, Number(1))
       }
       Times(Divide(c, newExp), Power(t, newExp))
     }
-    case Times(l ,r) => {
-      ??? //what about terms that are not of the form c*t^n with c and n t-free?
-    }
-    case Divide(l, r) => ???
     case Power(base, exp) => exp match {
       case Number(n) =>
         if(n == 1) integrator(base, t)
         else       Times(Divide(Number(1), Number(n+1)), integrator(Power(base, Number(n-1)), t))
       case _ => throw new Exception("Cannot integrate terms with non-number exponents!")
     }
-    case Number(n) => Times(term, t) //@todo do we need a constant here?
-    case term : Variable => Times(term, t)
+//    case Number(n) => Times(term, t) //@todo do we need a constant here?
+//    case x : Variable => Times(x, t)
+      //@todo is this more general case of the number/variable pattern sufficient?
+    case x : Term if !StaticSemantics.freeVars(x).contains(t) => Times(x, t)
   }
 
   /**
@@ -416,15 +423,9 @@ object LogicalODESolver {
     }
   }
 
-  private def freshTimeVar(program : DifferentialProgram) = {
-    val timeIdx : Option[Int] = atomicODEs(program)
-      .filter(_.xp.e.name.equals("t"))
-      .foldLeft[Option[Int]](None)((currentIdx, nextOde) => nextOde.xp.e.index match {
-      case Some(i) => if(currentIdx.getOrElse(i) >= i) Some(i) else currentIdx
-      case None    => Some(0)
-    })
-    Variable("t", timeIdx, Real)
-  }
+  private def freshTimeVar(s : Sequent) : Variable =
+    Variable("t",TacticHelper.freshIndexInSequent("t", s), Real)
 
-
+  private def freshTimeVar(f : Formula) : Variable =
+    Variable("t", TacticHelper.freshIndexInFormula("t", f), Real)
 }

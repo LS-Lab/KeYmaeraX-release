@@ -7,6 +7,10 @@ import org.scalatest.{Matchers, FlatSpec}
  */
 class ParsePrintParseTests extends FlatSpec with Matchers {
 
+    val randomTrials = 40*10
+    val randomComplexity = 20
+    val rand = new RandomFormula()
+
   // type declaration header for tests
   def makeInput(program : String) : String = {
     "Functions. B a. B b. B c. End." +
@@ -66,6 +70,13 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
     for (e <- exprs) {
       val expected = parser.runParser(makeInput(e))
       parser.runParser(makeInput(printer.stringify(expected))) should be(expected)
+    }
+  }
+
+  "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
+    for (i <- 1 to randomTrials) {
+		val expected = rand.nextFormula(randomComplexity)
+        parser.runParser(printer.stringify(expected)) should be(expected)
     }
   }
 }
