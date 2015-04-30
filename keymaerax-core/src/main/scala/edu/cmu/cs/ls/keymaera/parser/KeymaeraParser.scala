@@ -343,7 +343,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
             case None => false
           }) match {
             case Some(p) => p
-            case None => System.err.println("WARNING: undeclared identifier " + name); Variable(n, i, Real)
+            case None => /*System.err.println("WARNING: undeclared identifier " + name);*/ Variable(n, i, Real)
           }
         }
       } 

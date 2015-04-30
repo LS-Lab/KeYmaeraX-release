@@ -1,5 +1,6 @@
 import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraPrettyPrinter, KeYmaeraParser}
 import org.scalatest.{Matchers, FlatSpec}
+import testHelper.StringConverter._
 
 /**
  * Created by smitsch on 1/8/15.
@@ -76,7 +77,8 @@ class ParsePrintParseTests extends FlatSpec with Matchers {
   "Parsing pretty-printer output" should "be the same as the original expression (random)" in {
     for (i <- 1 to randomTrials) {
 		val expected = rand.nextFormula(randomComplexity)
-        parser.runParser(printer.stringify(expected)) should be(expected)
+      // asFormula runs the parser, but declares the variables occurring in the formula
+      printer.stringify(expected).asFormula shouldBe expected
     }
   }
 }

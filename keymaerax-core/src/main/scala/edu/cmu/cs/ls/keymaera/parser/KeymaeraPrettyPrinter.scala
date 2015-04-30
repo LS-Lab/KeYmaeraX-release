@@ -223,7 +223,7 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case Not(e) => symbolTable.NEGATIVE + recurse(e)
     case Test(e) => symbolTable.TEST + prettyPrinter(e) + symbolTable.SCOLON
     
-    case Loop(p) => recurse(p) + symbolTable.KSTAR
+    case Loop(p) => "{" + prettyPrinter(p) + "}" + symbolTable.KSTAR
    
     case DifferentialFormula(f) => recPostfix(f, symbolTable.PRIME)
     //These we cannot pattern match on...
