@@ -137,7 +137,7 @@ object JSONConverter {
     val cf = ("name" -> JsString(rule.name)) :: Nil
     rule match {
       case r : AssumptionRule => JsObject(("kind" -> JsString("AssumptionRule")) :: ("pos" -> convertPosition(r.pos))
-        :: ("assumption" -> convertPosition(r.aPos)) :: Nil ++: cf)
+        :: ("assumption" -> convertPosition(r.assume)) :: Nil ++: cf)
       case r : PositionRule => JsObject(("kind" -> JsString("PositionRule"))
         :: ("pos" -> convertPosition(r.pos)) :: Nil ++: cf)
       case r : TwoPositionRule => JsObject(("kind" -> JsString("TwoPositionRule"))
