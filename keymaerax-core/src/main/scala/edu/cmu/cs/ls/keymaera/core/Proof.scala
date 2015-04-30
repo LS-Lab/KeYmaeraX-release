@@ -1062,7 +1062,9 @@ object AxiomaticRule {
   // apply uniform substitution instance subst of "axiomatic" rule named id
   final def apply(id: String, subst: USubst): Rule = new AxiomaticRuleInstance(id, subst)
 
-  private final class AxiomaticRuleInstance(val id: String, val subst: USubst) extends Rule("Axiomatic Rule " + id + " instance") {
+  private final case class AxiomaticRuleInstance(val id: String, val subst: USubst) extends Rule("Axiomatic Rule " + id + " instance") {
+    require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rules cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
+
     private val (rulepremise,ruleconclusion) = rules.get(id) match {
       case Some(pair) => pair
       case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + rules.mkString("\n"), this)

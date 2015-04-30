@@ -88,9 +88,18 @@ private[core] object AxiomBase {
        * Conclusion \forall x . p(x)
        * End.
        */
-      ("all generalization",
+      /*("all generalization",
         (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
+      /**
+       * Rule "all generalization".
+       * Premise p(?)
+       * Conclusion \forall x . p(?)
+       * End.
+       */
+      ("all generalization",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pany)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), pany))))),
       /**
        * Rule "all monotone".
        * Premise p(x) ==> q(x)
@@ -154,15 +163,7 @@ private[core] object AxiomBase {
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
   private[core] def loadAxioms() : scala.collection.immutable.Map[String, Formula] =
-    loadAxiomFile ++ loadConstructedAxioms
-
-  private def loadConstructedAxioms() : scala.collection.immutable.Map[String, Formula] = {
-    val x = Variable("x_", None, Real)
-    Map(
-      ("x' derive variable",
-        Forall(Seq(x), Equal(Differential(x), DifferentialSymbol(x))))
-    )
-  }
+    loadAxiomFile
 
   /**
    * parse the axiom file and add all loaded knowledge to the axioms map.
@@ -172,10 +173,8 @@ private[core] object AxiomBase {
     val parser = new KeYmaeraParser(false)
     val alp = parser.ProofFileParser
     val res = alp.runParser(loadAxiomString())
-    val constructedAxioms = loadConstructedAxioms()
 
     assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
-    assert(res.forall(k => !constructedAxioms.contains(k.name)), "No duplicate axiom names across")
 
     (for(k <- res)
       yield (k.name -> k.formula)).toMap
@@ -183,6 +182,7 @@ private[core] object AxiomBase {
 
   @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x", None, Real)
+    val x_ = Variable("x_", None, Real)
     val aP0 = PredOf(Function("p", None, Unit, Bool), Nothing)
     val aPn = PredOf(Function("p", None, Real, Bool), Anything)
     val aQn = PredOf(Function("q", None, Real, Bool), Anything)
@@ -204,6 +204,7 @@ private[core] object AxiomBase {
     assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
     assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
+    assert(axs("x' derive variable") == Forall(Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
     true
   }
 
@@ -533,11 +534,9 @@ Axiom "^' derive power".
 	(f(?)^c())' = (c()*(f(?)^(c()-1)))*(f(?)') /*<- c() != 0*/
 End.
 
-/*
 Axiom "x' derive variable".
-  (x)' = x'
+  \forall x_ . ((x_)' = x_')
 End.
-*/
 
 /**
  * EXCLUSIVELY FOR HYBRID PROGRAMS.
