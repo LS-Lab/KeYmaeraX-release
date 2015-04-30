@@ -944,22 +944,23 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
  *  ---------------all generalize
  *  \forall x. p(x)
  */
-class Skolemize(p: SeqPos) extends PositionRule("Skolemize", p) {
+case class Skolemize(pos: SeqPos) extends PositionRule {
+  val name: String = "Skolemize"
   override def apply(s: Sequent): immutable.List[Sequent] = {
     // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-    val vars = allNamesExceptAt(s, p)
-    val (v,phi) = s(p) match {
-      case Forall(qv, qphi) if !p.isAnte => (qv,qphi)
-      case Exists(qv, qphi) if p.isAnte => (qv,qphi)
+    val vars = allNamesExceptAt(s, pos)
+    val (v,phi) = s(pos) match {
+      case Forall(qv, qphi) if !pos.isAnte => (qv,qphi)
+      case Exists(qv, qphi) if pos.isAnte => (qv,qphi)
       case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
     }
     if (vars.intersect(v.toSet).nonEmpty)
       throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
         vars.intersect(v.toSet))
     // TODO append v to prefix for merge or existential quantifier handling
-    immutable.List(s.updated(p, phi))
-    /*immutable.List(if (p.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(p.getIndex, phi), s.succ)
-         else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(p.getIndex, phi)))*/
+    immutable.List(s.updated(pos, phi))
+    /*immutable.List(if (pos.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(pos.getIndex, phi), s.succ)
+         else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(pos.getIndex, phi)))*/
   }
 
   private def allNamesExceptAt(s: Sequent, pos: SeqPos) = {
@@ -985,19 +986,16 @@ class Skolemize(p: SeqPos) extends PositionRule("Skolemize", p) {
 object Axiom {
   // immutable list of sound axioms
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms()
-
-  /**
-   * lookup axiom named id
-   */
-  final def apply(id: String): Rule = new Rule("Axiom " + id) {
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      axioms.get(id) match {
-        case Some(f) => immutable.List(new Sequent(s.pref, s.ante :+ f, s.succ))
-        case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + axioms.mkString("\n"), this, s)
-      }
-    } ensuring (r => !r.isEmpty && r.forall(s.subsequentOf(_)), "axiom lookup adds formulas")
-  }
-
+}
+/** lookup axiom named id */
+case class Axiom(id: String) extends Rule {
+  val name: String = "Axiom " + id
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    Axiom.axioms.get(id) match {
+      case Some(f) => immutable.List(new Sequent(s.pref, s.ante :+ f, s.succ))
+      case _ => throw new InapplicableRuleException("Axiom " + id + " does not exist in:\n" + Axiom.axioms.mkString("\n"), this, s)
+    }
+  } ensuring (r => r.nonEmpty && r.forall(s.subsequentOf), "axiom lookup adds formulas")
 }
 
 /*********************************************************************************
@@ -1045,27 +1043,19 @@ object RCF {
  * @author Stefan Mitsch
  */
 object LookupLemma {
-  private val trustedTools =
-    "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
-    "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
-
-  def apply(lemmaDB: LemmaDB, name: String): Rule = new LookupLemma(lemmaDB, name)
-
   def addRealArithLemma(lemmaDB: LemmaDB, t: QETool, f : Formula) : Option[(String, Lemma)] = {
-    require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
-
     val lemma = RCF.proveArithmetic(t, f)
     val lemmaID = lemmaDB.add(lemma)
     Some(lemmaID, lemma)
   }
 }
-
-private class LookupLemma(lemmaDB: LemmaDB, name: String) extends Rule("Lookup Lemma") {
+case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
+  val name: String = "Lookup Lemma"
   def apply(s : Sequent): immutable.List[Sequent] = {
-    require(lemmaDB.contains(name))
-    val lemma = lemmaDB.get(name).get
+    require(lemmaDB.contains(lemmaID))
+    val lemma = lemmaDB.get(lemmaID).get
     if (s.sameSequentAs(lemma.fact.conclusion)) Nil
-    else throw new IllegalArgumentException("Lemma " + name + " with conclusion " + lemma.fact.conclusion + " not " +
+    else throw new IllegalArgumentException("Lemma " + lemmaID + " with conclusion " + lemma.fact.conclusion + " not " +
       "applicable for sequent " + s)
   }
 }
@@ -1075,116 +1065,96 @@ private class LookupLemma(lemmaDB: LemmaDB, name: String) extends Rule("Lookup L
   *********************************************************************************
   */
 
-// co-weakening left = co-hide left (all but indicated position)
+/** co-weakening left = co-hide left (all but indicated position) */
 //@derived
-object CoHideLeft extends (AntePos => Rule) {
+case class CoHideLeft(pos: AntePos) extends LeftRule {
+  val name: String = "CoHideLeft"
   /**
    * CoHide left.
    *      p |-
    * -------------
    *   p, G |- D
    */
-  def apply(pos: AntePos): Rule = new CoHideLeft(pos)
-}
-class CoHideLeft(pos: AntePos) extends LeftRule("CoHideLeft", pos) {
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-// co-weakening right = co-hide right (all but indicated position)
+/** co-weakening right = co-hide right (all but indicated position) */
 //@derived
-object CoHideRight extends (SuccPos => Rule) {
+case class CoHideRight(pos: SuccPos) extends RightRule {
+  val name: String = "CoHideRight"
   /**
    * CoHide right.
    *     |- p
    * -------------
    *   G |- p, D
    */
-  def apply(pos: SuccPos): Rule = new CoHideRight(pos)
-}
-class CoHideRight(pos: SuccPos) extends RightRule("CoHideRight", pos) {
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(s.succ(pos.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-// co-weakening = co-hide all but the indicated positions
-//2derived
-object CoHide2 extends ((AntePos, SuccPos) => Rule) {
+/** co-weakening = co-hide all but the indicated positions */
+//@derived
+case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
+  val name: String = "CoHide2"
   /**
    * CoHide2.
    *      p |- q
    * ---------------
    *   p, G |- q, D
    */
-  def apply(p1: AntePos, p2: SuccPos): Rule = new CoHide2(p1, p2)
-}
-class CoHide2(p1: AntePos, p2: SuccPos) extends TwoPositionRule("CoHide2", p1, p2) {
   def apply(s: Sequent): immutable.List[Sequent] = {
-    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(p1.getIndex)), immutable.IndexedSeq(s.succ(p2.getIndex))))
+    immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos1.getIndex)), immutable.IndexedSeq(s.succ(pos2.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 
 //@derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
-object CutRight extends ((Formula, SuccPos) => Rule) {
+//@todo convert rules to private[core] to make them easier to change? Ruins access though?
+case class CutRight(c: Formula, pos: SuccPos) extends Rule {
+  val name: String = "cut Right"
   /**
    * Cut in the given formula c in place of p.
    * G |- c, D    G |- c->p, D
    * -------------------------
    *        G |- p, D
    */
-  def apply(c: Formula, pos: SuccPos) : Rule = new CutRight(c, pos)
-  //@todo convert all rules to case classes since unmodifiable values and componentwise equality?
-  //@todo convert rules to private[core] to make them easier to change? Ruins access though?
-  private class CutRight(c: Formula, pos: SuccPos) extends Rule("cut Right") {
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      val p = s(pos)
-      immutable.List(s.updated(pos, c), s.updated(pos, Imply(c, p)))
-    } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
-  }
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val p = s(pos)
+    immutable.List(s.updated(pos, c), s.updated(pos, Imply(c, p)))
+  } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
 }
 
 //@derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
-object CutLeft extends ((Formula, AntePos) => Rule) {
+private case class CutLeft(c: Formula, pos: AntePos) extends Rule {
+  val name: String = "cut Left"
   /**
    * Cut in the given formula c in place of p
-   * G, c |- D    G |- p->c, D
+   * c, G |- D    G |- p->c, D
    * -------------------------
    *        p, G |- D
+   * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
    */
-  def apply(c: Formula, pos: AntePos): Rule = new CutLeft(c, pos)
-  private class CutLeft(c: Formula, pos: AntePos) extends Rule("cut Left") {
-    def apply(s: Sequent): immutable.List[Sequent] = {
-      val p = s(pos)
-      /**
-       * Cut in the given formula c in place of p
-       * c, G |- D    G |- p->c, D
-       * -------------------------
-       *        p, G |- D
-       * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
-       */
-      //immutable.List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
-      immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(c), immutable.IndexedSeq())),
-                     s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(c, p)))))
-    } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
-  }
+  def apply(s: Sequent): immutable.List[Sequent] = {
+    val p = s(pos)
+    //immutable.List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(c), immutable.IndexedSeq())),
+                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(c, p)))))
+  } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
 }
 
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
-object EquivifyRight extends (SuccPos => Rule) {
+private[core] case class EquivifyRight(pos: SuccPos) extends RightRule {
+  val name: String = "->2<-> Equivify Right"
   /**
    * Equivify Right: Convert implication to equivalence.
    * G |- a<->b, D
    * -------------
    * G |- a->b,  D
    */
-  def apply(pos: SuccPos): Rule = new EquivifyRight(pos)
-}
-
-private[core] class EquivifyRight(pos: SuccPos) extends RightRule("->2<-> Equivify Right", pos) {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(a,b) = s(pos)
     immutable.List(s.updated(pos, Equiv(a, b)))
