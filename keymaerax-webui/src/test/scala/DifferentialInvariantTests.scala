@@ -42,24 +42,27 @@ class DifferentialInvariantTests extends FlatSpec with Matchers with BeforeAndAf
   // Differential Assignment
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   "Differential Assignment" should "work" in {
-    val f = helper.parseFormula("[x' := 2;]x' > 1") // should be parsed as differential symbols
-    val expected = helper.parseFormula("2 > 1")
+    val f = "[x':=2;]x'>1".asFormula // should be parsed as differential symbols
+    val expected = "2 > 1".asFormula
 
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(HybridProgramTacticsImpl.boxDerivativeAssignT)
-    helper.runTactic(tactic, node, mustApply = true)
-    containsOpenGoal(node, expected) shouldBe true
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only expected
   }
 
   it should "work when there are differential symbols" in {
-    val x = DifferentialSymbol(Variable("x", None, Real))
-    val f = Box(DiffAssign(x, Number(2)), Greater(x, Number(1)))
-    val expected = helper.parseFormula("2 > 1")
+    val f = "[x':=2;]x'>1".asFormula
+    val expected = "2 > 1".asFormula
 
     val node = helper.formulaToNode(f)
     val tactic = helper.positionTacticToTactic(HybridProgramTacticsImpl.boxDerivativeAssignT)
-    helper.runTactic(tactic, node, mustApply = true)
-    containsOpenGoal(node, expected) shouldBe true
+    val result = helper.runTactic(tactic, node, mustApply = true)
+    result.openGoals() should have size 1
+    result.openGoals().flatMap(_.sequent.ante) shouldBe empty
+    result.openGoals().flatMap(_.sequent.succ) should contain only expected
   }
 
   ignore should "work in a more complicated example" in {
