@@ -678,7 +678,7 @@ case class EquivRight(pos: SuccPos) extends RightRule {
 }
 
 /** <->L Equiv left */
-case class EquivLeft(p: AntePos) extends LeftRule {
+case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
   /**
    * <->L Equiv left.
@@ -687,13 +687,13 @@ case class EquivLeft(p: AntePos) extends LeftRule {
    *   p<->q, G |- D
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    val Equiv(a,b) = s(p)
+    val Equiv(a,b) = s(pos)
     //immutable.List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
     // immutable.List(s.updated(p, Sequent(s.pref, IndexedSeq(a,b),IndexedSeq())),
     //      s.updated(p, Sequent(s.pref, IndexedSeq(Not(a),Not(b)),IndexedSeq())))
     //@TODO This choice is compatible with tactics but is unreasonable. Prefer upper choices
-    immutable.List(s.updated(p, And(a,b)),
-                   s.updated(p, And(Not(a),Not(b))))
+    immutable.List(s.updated(pos, And(a,b)),
+                   s.updated(pos, And(Not(a),Not(b))))
   }
 }
 
@@ -756,7 +756,8 @@ object AxiomaticRule {
   val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
 }
 
-final case class AxiomaticRuleInstance(id: String, subst: USubst) extends Rule {
+// TODO review name change
+final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rules cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
   val name: String = "Axiomatic Rule " + id + " instance"
 
