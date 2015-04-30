@@ -14,13 +14,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
 import scala.annotation.elidable
 import scala.annotation.elidable._
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.SortedSet
-import scala.collection.immutable.Set
+import scala.collection.immutable
 
 /**
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
@@ -59,8 +53,8 @@ private[core] object AxiomBase {
        * @derived("Could also use CQ equation congruence with p(.)=(ctx_(.)=ctx_(g_(x))) and reflexivity of = instead.")
        */
       ("CT term congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(FuncOf(ctxt, fany), FuncOf(ctxt, gany)))))),
       /**
        * Rule "CQ equation congruence".
        * Premise f_(?) = g_(?)
@@ -68,8 +62,8 @@ private[core] object AxiomBase {
        * End.
        */
       ("CQ equation congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equal(fany, gany))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equal(fany, gany))),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredOf(ctxf, fany), PredOf(ctxf, gany)))))),
       /**
        * Rule "CE congruence".
        * Premise p_(?) <-> q_(?)
@@ -77,11 +71,11 @@ private[core] object AxiomBase {
        * End.
        */
       ("CE congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pany, qany))),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(PredicationalOf(context, pany), PredicationalOf(context, qany)))))),
       ("CO one-sided congruence",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(Equiv(pany, qany))),
-          Sequent(Seq(), IndexedSeq(PredicationalOf(context, pany)), IndexedSeq(PredicationalOf(context, qany))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
       /**
        * Rule "all generalization".
        * Premise p(x)
@@ -98,8 +92,8 @@ private[core] object AxiomBase {
        * End.
        */
       ("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pany)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), pany))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
       /**
        * Rule "all monotone".
        * Premise p(x) ==> q(x)
@@ -107,8 +101,8 @@ private[core] object AxiomBase {
        * End.
        */
       ("all monotone",
-        (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
-          Sequent(Seq(), IndexedSeq(Forall(Seq(x), px)), IndexedSeq(Forall(Seq(x), qx))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(px), immutable.IndexedSeq(qx)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(Forall(immutable.Seq(x), px)), immutable.IndexedSeq(Forall(immutable.Seq(x), qx))))),
       /**
        * Rule "exists monotone".
        * Premise p(x) ==> q(x)
@@ -116,8 +110,8 @@ private[core] object AxiomBase {
        * End.
        */
       ("exists monotone",
-        (Sequent(Seq(), IndexedSeq(px), IndexedSeq(qx)),
-          Sequent(Seq(), IndexedSeq(Exists(Seq(x), px)), IndexedSeq(Exists(Seq(x), qx))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(px), immutable.IndexedSeq(qx)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(Exists(immutable.Seq(x), px)), immutable.IndexedSeq(Exists(immutable.Seq(x), qx))))),
       /**
        * Rule "[] monotone".
        * Premise p(x) ==> q(x)
@@ -125,8 +119,8 @@ private[core] object AxiomBase {
        * End.
        */
       ("[] monotone",
-        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
-          Sequent(Seq(), IndexedSeq(Box(a, pany)), IndexedSeq(Box(a, qany))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(Box(a, pany)), immutable.IndexedSeq(Box(a, qany))))),
       /**
        * Rule "<> monotone".
        * Premise p(x) ==> q(x)
@@ -134,16 +128,16 @@ private[core] object AxiomBase {
        * End.
        */
       ("<> monotone",
-        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(qany)),
-          Sequent(Seq(), IndexedSeq(Diamond(a, pany)), IndexedSeq(Diamond(a, qany))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(qany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(Diamond(a, pany)), immutable.IndexedSeq(Diamond(a, qany))))),
       /**
        * Rule "ind induction".
        * Premise p(?) ==> [a;]p(?)
        * Conclusion p(?) ==> [a*]p(?)
        */
       ("ind induction",
-        (Sequent(Seq(), IndexedSeq(pany), IndexedSeq(Box(a, pany))),
-          Sequent(Seq(), IndexedSeq(pany), IndexedSeq(Box(Loop(a), pany))))),
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(a, pany))),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(pany), immutable.IndexedSeq(Box(Loop(a), pany))))),
       /* UNSOUND FOR HYBRID GAMES */
       /**
        * Rule "Goedel".
@@ -153,8 +147,8 @@ private[core] object AxiomBase {
        * @NOTE Unsound for hybrid games
        */
       ("Goedel",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(pany)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Box(a, pany)))))
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Box(a, pany)))))
     )
   }
 
@@ -192,8 +186,8 @@ private[core] object AxiomBase {
     val a = ProgramConst("a")
     val b = ProgramConst("b")
     // soundness-critical that these are for p() not for p(x) or p(?)
-    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(IndexedSeq(x), aP0)), "vacuous all quantifier")
-    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(IndexedSeq(x), aP0)), "vacuous exists quantifier")
+    assert(axs("vacuous all quantifier") == Equiv(aP0, Forall(immutable.IndexedSeq(x), aP0)), "vacuous all quantifier")
+    assert(axs("vacuous exists quantifier") == Equiv(aP0, Exists(immutable.IndexedSeq(x), aP0)), "vacuous exists quantifier")
     assert(axs("V vacuous") == Imply(aP0, Box(a, aP0)), "V vacuous")
 
     assert(axs("[++] choice") == Equiv(Box(Choice(a,b), aPn), And(Box(a, aPn), Box(b, aPn))), "[++] choice")
@@ -204,7 +198,7 @@ private[core] object AxiomBase {
     assert(axs("*' derive product") == Equal(Differential(Times(aF, aG)), Plus(Times(Differential(aF), aG), Times(aF, Differential(aG)))), "*' derive product")
     assert(axs("!=' derive !=") == Equiv(DifferentialFormula(NotEqual(aF, aG)), Equal(Differential(aF), Differential(aG))), "!=' derive !=")
     assert(axs("|' derive or") == Equiv(DifferentialFormula(Or(aPn, aQn)), And(DifferentialFormula(aPn), DifferentialFormula(aQn))), "|' derive or")
-    assert(axs("x' derive variable") == Forall(Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
+    assert(axs("x' derive variable") == Forall(immutable.Seq(x_), Equal(Differential(x_), DifferentialSymbol(x_))), "x' derive variable")
     true
   }
 

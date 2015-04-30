@@ -6,13 +6,7 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness (probably)
 
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.SortedSet
-import scala.collection.immutable.Set
+import scala.collection.immutable
 
 import scala.collection.GenTraversableOnce
 
@@ -34,7 +28,7 @@ import scala.collection.GenTraversableOnce
  * @param symbols The specific symbols contained in the set.
  * @tparam A The type of elements.
  */
-class TopSet[A](val excluded: Set[A], val symbols: Set[A]) {
+class TopSet[A](val excluded: immutable.Set[A], val symbols: immutable.Set[A]) {
   /* (top except ts) /\ (top except os) == (top except ts++os) */
   def intersect(other: TopSet[A]): TopSet[A] = new TopSet(excluded ++ other.excluded, symbols.intersect(other.symbols))
   /* this top is a subset of that top if that excluded at most this's excluded */
@@ -82,7 +76,7 @@ object SetLattice {
  * @tparam A Type of elements in the set
  * @todo SetLattice[+A]
  */
-class SetLattice[A](@deprecated val s: Either[TopSet[A], Set[A]]) {
+class SetLattice[A](@deprecated val s: Either[TopSet[A], immutable.Set[A]]) {
   def isTop = s.isLeft
   def intersect(other: SetLattice[A]): SetLattice[A] = s match {
     case Left(ts) => other.s match {

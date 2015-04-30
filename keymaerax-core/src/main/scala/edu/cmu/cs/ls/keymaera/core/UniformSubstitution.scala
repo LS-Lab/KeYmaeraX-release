@@ -8,20 +8,10 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
+import scala.collection.immutable
 
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.SortedSet
-import scala.collection.immutable.Set
-
-import scala.annotation.{unspecialized, elidable}
+import scala.annotation.elidable
 import scala.annotation.elidable._
-
-import StaticSemantics._
-
-import scala.collection.GenTraversableOnce
 
 /**
  * Representation of a substitution replacing n with t.
@@ -99,7 +89,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
    * The signature of the replacement introduced by this substitution.
    * @todo remove DotTerm and DotFormula arguments
    */
-  def signature : Set[NamedSymbol] = StaticSemantics.signature(repl)
+  def signature : immutable.Set[NamedSymbol] = StaticSemantics.signature(repl)
 
   /**
    * The key characteristic expression constituent that this SubstitutionPair is matching on.
@@ -147,7 +137,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * Used for UniformSubstitution rule.
  * @author aplatzer
  */
-final case class USubst(subsDefsInput: scala.collection.immutable.Seq[SubstitutionPair]) {
+final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   val subsDefs = subsDefsInput.filter(p => p.what != p.repl)
 
   applicable()
@@ -203,7 +193,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
    * The signature of the replacement introduced by this substitution.
    * @return union of the freeVars of all our substitution pairs.
    */
-  def signature : Set[NamedSymbol] = {
+  def signature : immutable.Set[NamedSymbol] = {
     subsDefs.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ (b.signature))
   } ensuring(r => r == subsDefs.map(_.signature).
     foldLeft(Set.empty[NamedSymbol])((a,b)=>a++b), "signature identical, whether computed with map or with fold")
@@ -212,8 +202,8 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
    * The key characteristic expression constituents that this Substitution is matching on.
    * @return union of the matchKeys of all our substitution pairs.
    */
-  def matchKeys : List[NamedSymbol] = {
-    subsDefs.foldLeft(List[NamedSymbol]())((a,b)=>a ++ List(b.matchKey))
+  def matchKeys : immutable.List[NamedSymbol] = {
+    subsDefs.foldLeft(immutable.List[NamedSymbol]())((a,b)=>a ++ immutable.List(b.matchKey))
   }
 
   /**
@@ -425,7 +415,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
    * @param U taboo list of variables
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    */
-  private def admissible(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : Boolean = {
+  private def admissible(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]) : Boolean = {
       // if  no function symbol f in sigma with FV(sigma f(.)) /\ U != empty
       // and no predicate symbol p in sigma with FV(sigma p(.)) /\ U != empty
       // occurs in theta (or phi or alpha)
@@ -441,7 +431,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
   /**
    * Projects a substitution to only those that affect the symbols listed in occurrences.
    */
-  private def projection(affected: Set[NamedSymbol]) : USubst = new USubst(
+  private def projection(affected: immutable.Set[NamedSymbol]) : USubst = new USubst(
     subsDefs.filter(sigma => affected.contains(sigma.matchKey))
   )
 
@@ -461,7 +451,7 @@ final case class USubst(subsDefsInput: scala.collection.immutable.Seq[Substituti
    * @param occurrences the function and predicate symbols occurring in the expression of interest.
    * @return FV(restrict this to occurrences) /\ U
    */
-  private def clashes(U: SetLattice[NamedSymbol], occurrences: Set[NamedSymbol]) : SetLattice[NamedSymbol] =
+  private def clashes(U: SetLattice[NamedSymbol], occurrences: immutable.Set[NamedSymbol]) : SetLattice[NamedSymbol] =
     projection(occurrences).freeVars.intersect(U)
 
   /**

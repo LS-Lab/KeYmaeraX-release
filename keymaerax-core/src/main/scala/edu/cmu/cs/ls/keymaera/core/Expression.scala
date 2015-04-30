@@ -8,23 +8,10 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
-
 import scala.collection.immutable
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.SortedSet
-import scala.collection.immutable.Set
-
-import scala.annotation.{tailrec, elidable}
-import scala.annotation.elidable._
+import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter // external
 
 import scala.math._
-
-//import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter  // external
 
 /*******************************
   * Kinds of expressions
@@ -330,7 +317,7 @@ object DifferentialProduct {
   }) ensuring(r => listify(r) == listify(left) ++ listify(right),
     "reassociating DifferentialProduct does not change the list of atomic ODEs")
 
-  private def listify(ode: DifferentialProgram): List[DifferentialProgram] = ode match {
+  private def listify(ode: DifferentialProgram): immutable.List[DifferentialProgram] = ode match {
     case p: DifferentialProduct => listify(p.left) ++ listify(p.right)
     case a: AtomicDifferentialProgram => a :: Nil
   }

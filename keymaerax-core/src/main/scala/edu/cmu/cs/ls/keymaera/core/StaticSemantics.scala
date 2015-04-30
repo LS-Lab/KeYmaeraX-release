@@ -7,16 +7,7 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
-import scala.collection.immutable.Seq
-import scala.collection.immutable.IndexedSeq
-
-import scala.collection.immutable.List
-import scala.collection.immutable.Map
-import scala.collection.immutable.SortedSet
-import scala.collection.immutable.Set
-
-
-import scala.annotation.elidable
+import scala.collection.immutable
 
 /**
  * The static semantics of differential dynamic logic.
@@ -223,7 +214,7 @@ object StaticSemantics {
    * The signature of expression e.
    * @todo change return types or at least implementation types to SortedSet for order stability?
    */
-  def signature(e: Expression): Set[NamedSymbol] = e match {
+  def signature(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => signature(t)
     case f: Formula => signature(f)
     case a: Program => signature(a)
@@ -234,7 +225,7 @@ object StaticSemantics {
    * Disregarding number literals.
    * @todo Change return type to Set[Function]?
    */
-  def signature(t: Term): Set[NamedSymbol] = t match {
+  def signature(t: Term): immutable.Set[NamedSymbol] = t match {
     // base cases
     case _: Variable => Set.empty
     case _: DifferentialSymbol => Set.empty
@@ -261,7 +252,7 @@ object StaticSemantics {
    * The signature of a formula, i.e., set of function, predicate, and atomic program 
    * symbols occurring in it.
    */
-  def signature(f: Formula): Set[NamedSymbol] = f match {
+  def signature(f: Formula): immutable.Set[NamedSymbol] = f match {
     // base cases
     case True | False => Set.empty
     case PredOf(p, arg) => Set(p) ++ signature(arg)
@@ -296,7 +287,7 @@ object StaticSemantics {
    * The signature of a program, i.e., set of function, predicate, and atomic program 
    * symbols occurring in it.
    */
-  def signature(p: Program): Set[NamedSymbol] = p match {
+  def signature(p: Program): immutable.Set[NamedSymbol] = p match {
     // base cases
     case ap: ProgramConst => Set(ap)
     case ap: DifferentialProgramConst => Set(ap)
@@ -316,14 +307,14 @@ object StaticSemantics {
   /**
    * The signature of a sequent.
    */
-  def signature(s: Sequent): Set[NamedSymbol] =
+  def signature(s: Sequent): immutable.Set[NamedSymbol] =
     s.ante.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b)) ++
       s.succ.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
 
   /**
    * Any symbols in expression e.
    */
-  def symbols(e: Expression): Set[NamedSymbol] = e match {
+  def symbols(e: Expression): immutable.Set[NamedSymbol] = e match {
     case t: Term => symbols(t)
     case f: Formula => symbols(f)
     case a: Program => symbols(a)
@@ -332,27 +323,27 @@ object StaticSemantics {
   /**
    * Any symbol occurring in term, whether variable or function
    */
-  def symbols(t: Term): Set[NamedSymbol] = signature(t) ++ freeVars(t).toSymbolSet
+  def symbols(t: Term): immutable.Set[NamedSymbol] = signature(t) ++ freeVars(t).toSymbolSet
 
   /**
    * Any symbol occurring in formula, whether free or bound variable or function or predicate or program constant
    * @todo return SetLattice instead?
    */
-  def symbols(f: Formula): Set[NamedSymbol] = {
+  def symbols(f: Formula): immutable.Set[NamedSymbol] = {
     val stat = apply(f); signature(f) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
 
   /**
    * Any symbol occurring in program, whether free or bound variable or function or predicate or program constant
    */
-  def symbols(p: Program): Set[NamedSymbol] = {
+  def symbols(p: Program): immutable.Set[NamedSymbol] = {
     val stat = apply(p); signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
 
   /**
    * Any symbol occurring in a sequent, whether free or bound variable or function or predicate or program constant
    */
-  def symbols(s: Sequent): Set[NamedSymbol] =
+  def symbols(s: Sequent): immutable.Set[NamedSymbol] =
     s.ante.foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b)) ++
       s.succ.foldLeft(Set[NamedSymbol]())((a,b)=>a ++ symbols(b))
 }
