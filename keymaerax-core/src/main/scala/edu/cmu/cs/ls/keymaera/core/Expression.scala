@@ -26,29 +26,17 @@ object FunctionKind extends Kind { override def toString = "Function" }
  * Sorts
  */
 sealed abstract class Sort
-/**
- * Unit type of Nothing
- */
+/**  Unit type of Nothing */
 object Unit extends Sort
-/**
- * Sort of booleans: true, false
- */
+/** Sort of booleans: true, false */
 object Bool extends Sort
-/**
- * Sort of real numbers: 0, 1, 2.5
- */
+/** Sort of real numbers: 0, 1, 2.5 */
 object Real extends Sort
-/**
- * Sort of state transformations (i.e. programs)
- */
+/** Sort of state transformations (i.e. programs) */
 object Trafo extends Sort
-/**
- * Tuple sort for pairs
- */
+/** Tuple sort for pairs */
 case class Tuple(left: Sort, right: Sort) extends Sort
-/**
- * User-defined object sort
- */
+/** User-defined object sort */
 case class ObjectSort(name : String) extends Sort
 
 
@@ -66,10 +54,24 @@ sealed trait Expression {
 sealed trait Atomic extends Expression
 sealed trait Composite extends Expression
 
+sealed trait ApplicationOf extends Expression
+
+/**
+ * A named symbol such as a variable or function symbol or predicate symbol.
+ * User-level symbols should not use underscores, which are reserved for the core.
+ */
 sealed trait NamedSymbol extends Expression {
+  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
+    "non-empty names without underscores (except at end for internal names)")
+  require(isInstanceOf[DifferentialSymbol] || !name.contains("'"),
+    "only differential symbols can mention primes in their names")
+
   def name: String
   def index: Option[Int]
-  override def toString: String = name
+  override def toString: String = index match {
+    case None => name
+    case Some(idx) => name + "_" + idx
+  }
 }
 
 /********************************************
@@ -80,79 +82,86 @@ sealed trait Term extends Expression {
   final def kind: Kind = TermKind
 }
 
-// atomic terms
+/** atomic terms */
 sealed trait AtomicTerm extends Term with Atomic
 
-/**
- * real terms
- */
+/**  real terms */
 private[core] trait RTerm extends Term {
   final def sort: Sort = Real
 }
 
 sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort)
   extends NamedSymbol with AtomicTerm
-sealed case class DifferentialSymbol(e: Variable)
+
+sealed case class DifferentialSymbol(x: Variable)
   extends NamedSymbol with AtomicTerm with RTerm {
-  require(e.sort == Real)
-  def name: String = e.name  //@todo eisegesis
-  def index: Option[Int] = e.index  //@todo eisegesis
+  require(x.sort == Real)
+  def name: String = x.name + "'"
+  def index: Option[Int] = x.index
 }
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
 
+/** Function symbol or predicate symbol or predicational symbol */
 sealed case class Function(name: String, index: Option[Int] = None, domain: Sort, sort: Sort)
   extends Expression with NamedSymbol {
   def kind: Kind = FunctionKind
 }
 
+/** Reserved function symbol \\cdot for substitutions are unlike ordinary function symbols */
 object DotTerm extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\cdot"
   def index: Option[Int] = None
 }
 
+/** The empty argument of Unit sort */
 object Nothing extends NamedSymbol with AtomicTerm {
   def sort: Sort = Unit
   def name: String = "\\nothing"
   def index: Option[Int] = None
 }
+
+/** The list of all variables as arguments \bar{x} */
 object Anything extends NamedSymbol with AtomicTerm with RTerm {
   def name: String = "\\anything"
   def index: Option[Int] = None
 }
 
-case class FuncOf(func: Function, child: Term) extends AtomicTerm {
+/** Function symbol applied to argument child */
+case class FuncOf(func: Function, child: Term) extends AtomicTerm with ApplicationOf {
   def sort: Sort = func.sort
-  require(child.sort == func.domain)
+  require(child.sort == func.domain, "expected argument sort")
 }
 
-// composite terms
+/** Composite terms */
 sealed trait CompositeTerm extends Term with Composite
 
-/**
- * Unary Composite Real Terms, i.e. real terms composed of one real term.
- */
-private[core] abstract class RUnaryCompositeTerm(child: Term) extends RTerm with Composite {
-  require(child.sort == Real)
+/** Unary Composite Real Terms, i.e. real terms composed of one real term. */
+private[core] trait RUnaryCompositeTerm extends RTerm with Composite {
+  require(child.sort == Real, "expected argument sort real")
+  def child: Term
 }
 
-/**
- * Composite Real Terms, i.e. real terms composed of two real terms.
- */
-private[core] abstract class RCompositeTerm(left: Term, right: Term) extends RTerm with Composite {
-  require(left.sort == Real && right.sort == Real)
+/** Composite Real Terms, i.e. real terms composed of two real terms. */
+private[core] trait RCompositeTerm extends RTerm with Composite {
+  require(left.sort == Real && right.sort == Real, "expected argument sorts real")
+  def left: Term
+  def right: Term
 }
 
-case class Neg(child: Term) extends RUnaryCompositeTerm(child)
-case class Plus(left: Term, right: Term) extends RCompositeTerm(left, right)
-case class Minus(left: Term, right: Term) extends RCompositeTerm(left, right)
-case class Times(left: Term, right: Term) extends RCompositeTerm(left, right)
-case class Divide(left: Term, right: Term) extends RCompositeTerm(left, right)
+/** Unary negation */
+case class Neg(child: Term) extends RUnaryCompositeTerm
+case class Plus(left: Term, right: Term) extends RCompositeTerm
+/** Binary subtraction */
+case class Minus(left: Term, right: Term) extends RCompositeTerm
+case class Times(left: Term, right: Term) extends RCompositeTerm
+case class Divide(left: Term, right: Term) extends RCompositeTerm
 //@note axiom("^' derive power") needs right to be a Term not just a Number
-case class Power(left: Term, right: Term) extends RCompositeTerm(left, right)
+case class Power(left: Term, right: Term) extends RCompositeTerm
 
-case class Differential(child: Term) extends RUnaryCompositeTerm(child)
+case class Differential(child: Term) extends RUnaryCompositeTerm
 
+/** Pairs are to enable binary Function and FuncOf and PredOf */
 case class Pair(left: Term, right: Term) extends CompositeTerm {
   def sort: Sort = Tuple(left.sort, right.sort)
 }
@@ -161,50 +170,52 @@ case class Pair(left: Term, right: Term) extends CompositeTerm {
  * Formulas of differential dynamic logic.
  * @author aplatzer
  */
-
 sealed trait Formula extends Expression {
   final def kind: Kind = FormulaKind
   final def sort: Sort = Bool
 }
 
-// atomic formulas
+/** Atomic formulas */
 sealed trait AtomicFormula extends Formula with Atomic
 
-/**
- * Composite Real Terms, i.e. real terms composed of two real terms.
- */
-private[core] abstract class RAtomicFormula(left: Term, right: Term) extends AtomicFormula {
-  require(left.sort == Real && right.sort == Real)
+/** Formulas composed of real terms. */
+private[core] trait RAtomicFormula extends AtomicFormula {
+  require(left.sort == Real && right.sort == Real, "expected argument sorts real")
+  def left: Term
+  def right: Term
 }
 
 object True extends AtomicFormula
 object False extends AtomicFormula
 
 case class Equal(left: Term, right: Term) extends AtomicFormula {
-  require(left.sort == right.sort)
+  require(left.sort == right.sort, "expected identical argument sorts")
 }
 case class NotEqual(left: Term, right: Term) extends AtomicFormula {
-  require(left.sort == right.sort)
+  require(left.sort == right.sort, "expected identical argument sorts")
 }
 
-case class GreaterEqual(left: Term, right: Term) extends RAtomicFormula(left, right)
-case class Greater(left: Term, right: Term) extends RAtomicFormula(left, right)
-case class LessEqual(left: Term, right: Term) extends RAtomicFormula(left, right)
-case class Less(left: Term, right: Term) extends RAtomicFormula(left, right)
+case class GreaterEqual(left: Term, right: Term) extends RAtomicFormula
+case class Greater(left: Term, right: Term) extends RAtomicFormula
+case class LessEqual(left: Term, right: Term) extends RAtomicFormula
+case class Less(left: Term, right: Term) extends RAtomicFormula
 
+/** Reserved predicational symbol \\_ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula {
   def name: String = "\\_"
   def index: Option[Int] = None
 }
 
-case class PredOf(pred: Function, child: Term) extends AtomicFormula {
-  require(child.sort == pred.domain)
+/** Predicate symbol applied to argument child */
+case class PredOf(pred: Function, child: Term) extends AtomicFormula with ApplicationOf {
+  require(child.sort == pred.domain, "expected argument sort")
 }
-case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula {
-  require(pred.sort == Bool)
+/** Predicational symbol applied to argument formula child */
+case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula with ApplicationOf {
+  require(pred.sort == Bool, "expected argument sort")
 }
 
-// composite formulas
+/** Composite formulas */
 sealed trait CompositeFormula extends Formula with Composite
 
 case class Not(child: Formula) extends CompositeFormula
@@ -220,12 +231,12 @@ trait Quantified extends CompositeFormula {
 case class Forall(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
   require(vars.nonEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  //@todo require all vars have the same sort?
+  require(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
 }
 case class Exists(vars: immutable.Seq[Variable], child: Formula) extends CompositeFormula with Quantified {
   require(vars.nonEmpty, "quantifiers bind at least one variable")
   require(vars.distinct.size == vars.size, "no duplicates within one quantifier block")
-  //@todo require all vars have the same sort?
+  require(vars.forall(x => x.sort == vars.head.sort), "all vars have the same sort")
 }
 
 trait Modal extends CompositeFormula {
@@ -236,55 +247,66 @@ trait Modal extends CompositeFormula {
 case class Box(program: Program, child: Formula) extends CompositeFormula with Modal
 case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal
 
+/** Differential formula are differentials of formulas in analogy to differential terms */
 case class DifferentialFormula(child: Formula) extends CompositeFormula
 
 /********************************************
   * Hybrid programs of differential dynamic logic.
   * @author aplatzer
   */
-
 sealed trait Program extends Expression {
   final def kind: Kind = ProgramKind
   final def sort: Sort = Trafo
 }
 
-// atomic programs
+/** Atomic programs */
 sealed trait AtomicProgram extends Program with Atomic
 
 sealed case class ProgramConst(name: String) extends NamedSymbol with AtomicProgram {
   def index: Option[Int] = None
 }
 
-case class Assign(target: Variable, e: Term) extends AtomicProgram {
-  require(e.sort == target.sort)
+case class Assign(x: Variable, e: Term) extends AtomicProgram {
+  require(e.sort == x.sort, "assignment of compatible sort")
 }
-case class DiffAssign(target: DifferentialSymbol, e: Term) extends AtomicProgram {
-  require(e.sort == Real)
+case class DiffAssign(xp: DifferentialSymbol, e: Term) extends AtomicProgram {
+  require(e.sort == Real, "differential assignment of real sort")
 }
-case class AssignAny(target: Variable) extends AtomicProgram
+/** Nondeterministic assignment */
+case class AssignAny(x: Variable) extends AtomicProgram
 case class Test(cond: Formula) extends AtomicProgram
 
-// composite programs
+/** composite programs */
 sealed trait CompositeProgram extends Program with Composite
+
 case class Choice(left: Program, right: Program) extends CompositeProgram
 case class Compose(left: Program, right: Program) extends CompositeProgram
 case class Loop(child: Program) extends CompositeProgram
 //case class Dual(child: Program) extends CompositeProgram
 
-// differential programs
-sealed trait DifferentialProgram extends Program/*???*/
+/** differential programs */
+sealed trait DifferentialProgram extends Program
 sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
-case class ODESystem(ode: DifferentialProgram, constraint: Formula) extends DifferentialProgram
+case class ODESystem(ode: DifferentialProgram, constraint: Formula)
+  extends Program with DifferentialProgram
 sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with AtomicDifferentialProgram {
   def index: Option[Int] = None
 }
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {
-  require(e.sort == Real)
+  require(e.sort == Real, "expected argument sort real")
 }
-final class DifferentialProduct(val left: DifferentialProgram, val right: DifferentialProgram)
+
+/**
+ * Parallel product of differential programs.
+ * This data structure automatically reassociates to list form
+ * DifferentialProduct(AtomicDifferentialProgram, DifferentialProduct(AtomicDifferentialProgram, ....))
+ * @note This is a case class except for an override of the apply function.
+ */
+final class DifferentialProduct private(val left: DifferentialProgram, val right: DifferentialProgram)
   extends DifferentialProgram {
+
   override def equals(e: Any): Boolean = e match {
-    case x: DifferentialProduct => x.left == left && x.right == right
+    case a: DifferentialProduct => left == a.left && right == a.right
     case _ => false
   }
 
@@ -303,17 +325,19 @@ object DifferentialProduct {
     reassociate(left, right)
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
-    case x: DifferentialProduct => Some(x.left, x.right)
+    case a: DifferentialProduct => Some(a.left, a.right)
     case _ => None
   }
 
   //@tailrec
   private def reassociate(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = (left match {
+    // reassociate
+    case DifferentialProduct(ll, lr) =>
+      assert(ll.isInstanceOf[AtomicDifferentialProgram], "reassociation has succeeded on the left")
+      reassociate(ll, reassociate(lr, right))
     // properly associated cases
     case l: AtomicODE => new DifferentialProduct(l, right)
     case l: DifferentialProgramConst => new DifferentialProduct(l, right)
-    // reassociate
-    case DifferentialProduct(ll, lr) => reassociate(ll, reassociate(lr, right))
   }) ensuring(r => listify(r) == listify(left) ++ listify(right),
     "reassociating DifferentialProduct does not change the list of atomic ODEs")
 
