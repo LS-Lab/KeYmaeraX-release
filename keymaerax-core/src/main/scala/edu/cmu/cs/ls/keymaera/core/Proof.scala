@@ -339,7 +339,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
-  //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+  //@TODO Could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
   def name: String
 
@@ -470,13 +470,8 @@ case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with Clos
    *   p, G |- p, D
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    if (s(assume) == s(pos)) {
-        assert (assume.isAnte && pos.isSucc)
-        // close goal
-        Nil
-    } else {
-        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
-    }
+    if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
+    else throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
   } ensuring (_.isEmpty, "closed if applicable")
 }
 
@@ -655,8 +650,8 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
-    List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
-         s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq())))
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
+                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq())))
   }
 }
 
@@ -716,6 +711,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
  * @note this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
  * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
   val name: String = "Uniform Substitution"
@@ -729,18 +725,16 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
    * require explicit rule applications)
    * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
    */
-  def apply(conclusion: Sequent): immutable.List[Sequent] = {
+  def apply(conclusion: Sequent): immutable.List[Sequent] =
     try {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
-      if (subst(origin) == conclusion) {
+      if (subst(origin) == conclusion)
         immutable.List(origin)
-      } else {
+      else
         throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
-      }
     } catch {
       case exc: SubstitutionClashException => throw exc.inContext(this + "\nof premise\n" + origin + "\ndid not lead to expected conclusion\n" + conclusion)
     }
-  }
 }
 
 
@@ -756,7 +750,6 @@ object AxiomaticRule {
   val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
 }
 
-// TODO review name change
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rules cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
   val name: String = "Axiomatic Rule " + id + " instance"
@@ -771,17 +764,15 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
    * Leads to same substitution instance of axiomatic rule's premise.
    * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
    */
-  def apply(conclusion: Sequent): immutable.List[Sequent] = {
+  def apply(conclusion: Sequent): immutable.List[Sequent] =
     try {
-      if (subst(ruleconclusion) == conclusion) {
+      if (subst(ruleconclusion) == conclusion)
         immutable.List(subst(rulepremise))
-      } else {
+      else
         throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
-      }
     } catch {
       case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " for intended conclusion\n" + conclusion)
     }
-  }
 
 }
 

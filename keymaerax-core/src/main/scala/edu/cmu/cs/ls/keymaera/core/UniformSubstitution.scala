@@ -364,6 +364,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
 
+  /** uniform substitutions on differential programs */
   private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[NamedSymbol]): DifferentialProgram = {
     ode match {
       case ODESystem(a, h) =>

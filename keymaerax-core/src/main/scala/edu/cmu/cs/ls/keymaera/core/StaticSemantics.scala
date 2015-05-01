@@ -112,13 +112,6 @@ object StaticSemantics {
   def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
 
   /**
-   * The set FV(a) of free variables of a sequent.
-   */
-  def freeVars(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b)) ++
-      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
-
-  /**
    * The set BV(f) of bound variables of formula f.
    */
   def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
@@ -127,13 +120,6 @@ object StaticSemantics {
    * The set BV(a) of bound variables of program a.
    */
   def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
-
-  /**
-   * The set BV(a) of bound variables of a sequent.
-   */
-  def boundVars(s: Sequent): SetLattice[NamedSymbol] =
-    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b)) ++
-      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
 
   // implementation
 
@@ -305,13 +291,6 @@ object StaticSemantics {
   }
 
   /**
-   * The signature of a sequent.
-   */
-  def signature(s: Sequent): immutable.Set[NamedSymbol] =
-    s.ante.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b)) ++
-      s.succ.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
-
-  /**
    * Any symbols in expression e.
    */
   def symbols(e: Expression): immutable.Set[NamedSymbol] = e match {
@@ -338,6 +317,29 @@ object StaticSemantics {
   def symbols(p: Program): immutable.Set[NamedSymbol] = {
     val stat = StaticSemantics(p); signature(p) ++ stat.fv.toSymbolSet ++ stat.bv.toSymbolSet
   }
+
+  // convenience for sequents are unions over their formulas
+
+  /**
+   * The set FV(a) of free variables of a sequent.
+   */
+  def freeVars(s: Sequent): SetLattice[NamedSymbol] =
+    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b)) ++
+      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ freeVars(b))
+
+  /**
+   * The set BV(a) of bound variables of a sequent.
+   */
+  def boundVars(s: Sequent): SetLattice[NamedSymbol] =
+    s.ante.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b)) ++
+      s.succ.foldLeft(bottom[NamedSymbol])((a,b)=>a ++ boundVars(b))
+
+  /**
+   * The signature of a sequent.
+   */
+  def signature(s: Sequent): immutable.Set[NamedSymbol] =
+    s.ante.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b)) ++
+      s.succ.foldLeft(Set.empty[NamedSymbol])((a,b)=>a ++ signature(b))
 
   /**
    * Any symbol occurring verbatim in a sequent, whether free or bound variable or function or predicate or program constant

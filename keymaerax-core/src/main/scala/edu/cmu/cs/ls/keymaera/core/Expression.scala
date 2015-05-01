@@ -200,7 +200,7 @@ case class Greater(left: Term, right: Term) extends RAtomicFormula
 case class LessEqual(left: Term, right: Term) extends RAtomicFormula
 case class Less(left: Term, right: Term) extends RAtomicFormula
 
-/** Reserved predicational symbol \\_ for substitutions are unlike ordinary predicational symbols */
+/** Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula {
   def name: String = "\\_"
   def index: Option[Int] = None
@@ -243,7 +243,6 @@ trait Modal extends CompositeFormula {
   def program: Program
   def child: Formula
 }
-
 case class Box(program: Program, child: Formula) extends CompositeFormula with Modal
 case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal
 
