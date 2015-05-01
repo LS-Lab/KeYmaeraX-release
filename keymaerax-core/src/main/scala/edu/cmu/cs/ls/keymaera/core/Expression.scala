@@ -63,8 +63,7 @@ sealed trait ApplicationOf extends Expression
 sealed trait NamedSymbol extends Expression {
   require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names)")
-  require(isInstanceOf[DifferentialSymbol] || !name.contains("'"),
-    "only differential symbols can mention primes in their names")
+  require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols")
 
   def name: String
   def index: Option[Int]
@@ -95,9 +94,10 @@ sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort)
 
 sealed case class DifferentialSymbol(x: Variable)
   extends NamedSymbol with AtomicTerm with RTerm {
-  require(x.sort == Real)
-  def name: String = x.name + "'"
+  require(x.sort == Real, "differential symbols expect real sort")
+  def name: String = x.name
   def index: Option[Int] = x.index
+  override def toString: String =  super.toString + "'"
 }
 
 case class Number(value: BigDecimal) extends AtomicTerm with RTerm
