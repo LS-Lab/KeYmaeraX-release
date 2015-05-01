@@ -339,7 +339,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
  * @note soundness-critical This class is sealed, so no rules can be added outside Proof.scala
  */
 sealed trait Rule extends (Sequent => immutable.List[Sequent]) {
-  //@TODO Augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
+  //@TODO Could augment apply with contract "ensuring instanceOf[ClosingRule](_) || (!_.isEmpty)" to ensure only closing rules can ever come back with an empty list of premises
 
   def name: String
 
@@ -470,13 +470,8 @@ case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with Clos
    *   p, G |- p, D
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
-    if (s(assume) == s(pos)) {
-        assert (assume.isAnte && pos.isSucc)
-        // close goal
-        Nil
-    } else {
-        throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
-    }
+    if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
+    else throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
   } ensuring (_.isEmpty, "closed if applicable")
 }
 
@@ -655,8 +650,8 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
-    List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
-         s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq())))
+    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
+                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(q), immutable.IndexedSeq())))
   }
 }
 
@@ -716,6 +711,7 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
  * @note this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
  * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
 case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule {
   val name: String = "Uniform Substitution"
@@ -729,18 +725,15 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
    * require explicit rule applications)
    * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
    */
-  def apply(conclusion: Sequent): immutable.List[Sequent] = {
+  def apply(conclusion: Sequent): immutable.List[Sequent] =
     try {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
-      if (subst(origin) == conclusion) {
-        immutable.List(origin)
-      } else {
-        throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst + "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
-      }
+      if (subst(origin) == conclusion) immutable.List(origin)
+      else throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst +
+        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
     } catch {
       case exc: SubstitutionClashException => throw exc.inContext(this + "\nof premise\n" + origin + "\ndid not lead to expected conclusion\n" + conclusion)
     }
-  }
 }
 
 
@@ -756,7 +749,6 @@ object AxiomaticRule {
   val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
 }
 
-// TODO review name change
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rules cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
   val name: String = "Axiomatic Rule " + id + " instance"
@@ -771,17 +763,14 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
    * Leads to same substitution instance of axiomatic rule's premise.
    * @param conclusion the conclusion in sequent calculus to which the uniform substitution rule will be pseudo-applied, resulting in the premise origin that was supplied to UniformSubstituion.
    */
-  def apply(conclusion: Sequent): immutable.List[Sequent] = {
+  def apply(conclusion: Sequent): immutable.List[Sequent] =
     try {
-      if (subst(ruleconclusion) == conclusion) {
-        immutable.List(subst(rulepremise))
-      } else {
-        throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion + "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
-      }
+      if (subst(ruleconclusion) == conclusion) immutable.List(subst(rulepremise))
+      else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
+        "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
     } catch {
       case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " for intended conclusion\n" + conclusion)
     }
-  }
 
 }
 
@@ -795,6 +784,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
  * @param rIdx The index of the target name as replacement.
  * @requires target name with target index tIdx is fresh in the sequent.
  * @author smitsch
+ * @todo Code Review decided to change arguments to (what: Variable, repl: Variable) of same sort.
  */
 case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int]) extends Rule {
   val name: String = "Bound Renaming"
@@ -817,117 +807,129 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
   }
 
   /**
-   * Introduce a ghost for the target variable to remember the value of the previous variable.
+   * Introduce a ghost for the target variable as needed to remember the value of the previous variable.
+   * If what is bound at f, rename, otherwise introduce stuttering [what:=what] before renaming,
+   * leading to [repl:=what] after renaming.
    */
   private def ghostify(f: Formula): Formula =
     if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
       case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
       case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
-      case Box(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case Diamond(Assign(x: Variable, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case _ => Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
-    } else f
+      case Box(Assign(x, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case Diamond(Assign(x, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
+      case _ => {
+        apply(Box(Assign(Variable(what, wIdx, Real), Variable(what, wIdx, Real)), f))
+      } ensuring(r => r==Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f)))
+    } else {
+      // old name is not bound anywhere in f, so no bound renaming needed/possible
+      f
+    }
 
   /**
    * Introduce a ghost for the target variable to remember the value of the previous variable.
    */
   //private def ghostifyDiamond(f: Formula) = DiamondModality(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f))
 
-  /**
-   * Performing alpha conversion renaming in a term
-   */
-  private def rename(t: Term): Term = t match {
+  /** Perform bound variable renaming in a term (i.e. alpha conversion) */
+  private def rename(term: Term): Term = term match {
     // base cases
     case x: Variable => renameVar(x)
-    case DifferentialSymbol(x: Variable) => DifferentialSymbol(renameVar(x))
+    case DifferentialSymbol(x) => DifferentialSymbol(renameVar(x))
+    case n: Number => n
+    // homomorphic cases
+    case FuncOf(f, e) => FuncOf(f, rename(e))
+    case Neg(l) => Neg(rename(l))
+    case Plus(l, r)   => Plus(rename(l), rename(r))
+    case Minus(l, r)  => Minus(rename(l), rename(r))
+    case Times(l, r)  => Times(rename(l), rename(r))
+    case Divide(l, r) => Divide(rename(l), rename(r))
+    case Power(l, r)  => Power(rename(l), rename(r))
+
+    case Differential(e) => Differential(rename(e))
+
+    // special
     case DotTerm => DotTerm
     case Nothing => Nothing
     case Anything => Anything
-    case x: Number => x
-    case FuncOf(f, theta) => FuncOf(f, rename(theta))
-    // homomorphic cases
-    case Neg(l) => Neg(rename(l))
-    case Plus(l, r) => Plus(rename(l), rename(r))
-    case Minus(l, r) => Minus(rename(l), rename(r))
-    case Times(l, r) => Times(rename(l), rename(r))
-    case Divide(l, r) => Divide(rename(l), rename(r))
-    case Power(l, r) => Power(rename(l), rename(r))
     case Pair(l, r) => Pair(rename(l), rename(r))
-
-    case Differential(e) => Differential(rename(e))
   }
 
   private def renameVar(e: Variable): Variable =
-    //@TODO Comparison without sort is intended?
-    if (e.name == what && e.index == wIdx) Variable(repl, rIdx, e.sort)
+    if (e.name == what && e.index == wIdx && e.sort == Real) Variable(repl, rIdx, e.sort)
     else e
 
-  /**
-   * Performing alpha conversion renaming in a formula
-   */
-  private def rename(f: Formula): Formula = f match {
-    // homomorphic base cases
-    case Equal(l, r) => Equal(rename(l), rename(r))
-    case NotEqual(l, r) => NotEqual(rename(l), rename(r))
+  /** Perform bound variable renaming in a formula (i.e. alpha conversion) */
+  private def rename(formula: Formula): Formula = {
+    assert(admissible(formula), "new variable does not occur")
+    formula match {
+      // homomorphic base cases
+      case Equal(l, r)        => Equal(rename(l), rename(r))
+      case NotEqual(l, r)     => NotEqual(rename(l), rename(r))
 
-    case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))
-    case Greater(l, r) => Greater(rename(l), rename(r))
-    case LessEqual(l, r) => LessEqual(rename(l), rename(r))
-    case Less(l, r) => Less(rename(l), rename(r))
+      case GreaterEqual(l, r) => GreaterEqual(rename(l), rename(r))
+      case Greater(l, r)      => Greater(rename(l), rename(r))
+      case LessEqual(l, r)    => LessEqual(rename(l), rename(r))
+      case Less(l, r)         => Less(rename(l), rename(r))
 
-    case PredOf(fn, theta) => PredOf(fn, rename(theta))
+      case PredOf(fn, e) => PredOf(fn, rename(e))
 
-    // homomorphic cases
-    case Not(g) => Not(rename(g))
-    case And(l, r) => And(rename(l), rename(r))
-    case Or(l, r) => Or(rename(l), rename(r))
-    case Imply(l, r) => Imply(rename(l), rename(r))
-    case Equiv(l, r) => Equiv(rename(l), rename(r))
+      // homomorphic cases
+      case Not(g) => Not(rename(g))
+      case And(l, r)   => And(rename(l), rename(r))
+      case Or(l, r)    => Or(rename(l), rename(r))
+      case Imply(l, r) => Imply(rename(l), rename(r))
+      case Equiv(l, r) => Equiv(rename(l), rename(r))
 
-    case Forall(vars, phi) => Forall(vars.map(renameVar), rename(phi))
-    case Exists(vars, phi) => Exists(vars.map(renameVar), rename(phi))
+      case Forall(vars, g) => Forall(vars.map(renameVar), rename(g))
+      case Exists(vars, g) => Exists(vars.map(renameVar), rename(g))
 
-    case Box(a, phi) => Box(rename(a), rename(phi))
-    case Diamond(a, phi) => Diamond(rename(a), rename(phi))
+      case Box(a, g)     => Box(rename(a), rename(g))
+      case Diamond(a, g) => Diamond(rename(a), rename(g))
 
-    case DifferentialFormula(g) => DifferentialFormula(rename(g))
+      case DifferentialFormula(g) => DifferentialFormula(rename(g))
 
-    case True | False => f
+      case True | False => formula
+    }
   }
 
-  /**
-   * Performing alpha conversion renaming in a program
-   */
-  private def rename(p: Program): Program = p match {
-    case Assign(v: Variable, t) => assert(admissible(v) && admissible(t)); Assign(renameVar(v), rename(t))
-    case DiffAssign(DifferentialSymbol(v: Variable), t) =>
-      assert(admissible(v) && admissible(t))
-      DiffAssign(DifferentialSymbol(renameVar(v)), rename(t))
-    case AssignAny(v: Variable) => assert(admissible(v)); AssignAny(renameVar(v))
-    case Test(phi) => Test(rename(phi))
-    case ode: DifferentialProgram => renameODE(ode)
-    case Choice(a, b) => Choice(rename(a), rename(b))
-    case Compose(a, b) => Compose(rename(a), rename(b))
-    case Loop(a) => Loop(rename(a))
-    // extended cases
-//    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
-//    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
+  /** Perform bound variable renaming in a program (i.e. alpha conversion) */
+  private def rename(program: Program): Program = {
+    assert(admissible(program), "new variable does not occur")
+    program match {
+      case Assign(x, t) => Assign(renameVar(x), rename(t))
+      case DiffAssign(DifferentialSymbol(x), t) =>
+        DiffAssign(DifferentialSymbol(renameVar(x)), rename(t))
+      case AssignAny(x) => AssignAny(renameVar(x))
+      case Test(cond) => Test(rename(cond))
+      case ode: DifferentialProgram => renameODE(ode)
+      case Choice(a, b)  => Choice(rename(a), rename(b))
+      case Compose(a, b) => Compose(rename(a), rename(b))
+      case Loop(a)       => Loop(rename(a))
+      // extended cases
+      //    case IfThen(cond, thenT) => IfThen(rename(cond), rename(thenT))
+      //    case IfThenElse(cond, thenT, elseT) => IfThenElse(rename(cond), rename(thenT), rename(elseT))
+    }
   }
 
-  private def renameODE(p: DifferentialProgram): DifferentialProgram = p match {
-      case AtomicODE(DifferentialSymbol(v@Variable(n, i, Real)), t) =>
-        assert(admissible(v) && admissible(t))
-        AtomicODE(DifferentialSymbol(renameVar(v)), rename(t))
-      case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
+  /** Perform bound variable renaming in a differential programs (i.e. alpha conversion) */
+  private def renameODE(dp: DifferentialProgram): DifferentialProgram = {
+    assert(admissible(dp), "new variable does not occur")
+    dp match {
       case ODESystem(a, h) => ODESystem(renameODE(a), rename(h))
-      case _: DifferentialProgramConst => p
+      case AtomicODE(DifferentialSymbol(x), t) =>
+        AtomicODE(DifferentialSymbol(renameVar(x)), rename(t))
+      case DifferentialProduct(a, b) => DifferentialProduct(renameODE(a), renameODE(b))
+      case _: DifferentialProgramConst => dp
+    }
   }
 
-  // allow self-renaming for stuttering
-  private def admissible(t: Term): Boolean =
-    (what == repl && wIdx == rIdx) || !StaticSemantics.freeVars(t).exists(v => v.name == repl && v.index == rIdx)
-  private def admissible(f: Formula): Boolean =
-    (what == repl && wIdx == rIdx) || !StaticSemantics.symbols(f).exists(v => v.name == repl && v.index == rIdx)
+  /**
+   * Check whether this renaming is admissible for expression e, i.e.
+   * the new name repl does not already occur (or the renaming was the identity).
+   * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
+   */
+  private def admissible(e: Expression): Boolean =
+    (what == repl && wIdx == rIdx) || !StaticSemantics.symbols(e).exists(v => v.name == repl && v.index == rIdx)
 }
 
 
@@ -948,27 +950,19 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
 case class Skolemize(pos: SeqPos) extends PositionRule {
   val name: String = "Skolemize"
   override def apply(s: Sequent): immutable.List[Sequent] = {
-    // Other names underneath p are forbidden as well, but the variables v that are to be skolemized are fine as Skolem function names.
-    val vars = allNamesExceptAt(s, pos)
+    // all symbols anywhere else in the sequent, i.e. except at the quantifier position
+    // note: this skolemization will be by identity, not to a new name, so no clashes can be caused from s(pos)
+    val taboos = StaticSemantics.symbols(s.updated(pos, True))
     val (v,phi) = s(pos) match {
-      case Forall(qv, qphi) if !pos.isAnte => (qv,qphi)
-      case Exists(qv, qphi) if pos.isAnte => (qv,qphi)
+      case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
+      case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
       case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
     }
-    if (vars.intersect(v.toSet).nonEmpty)
-      throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
-        vars.intersect(v.toSet))
-    // TODO append v to prefix for merge or existential quantifier handling
-    immutable.List(s.updated(pos, phi))
-    /*immutable.List(if (pos.isAnte) Sequent(s.pref /*++ v*/, s.ante.updated(pos.getIndex, phi), s.succ)
-         else Sequent(s.pref /*++ v*/, s.ante, s.succ.updated(pos.getIndex, phi)))*/
+    if (taboos.intersect(v.toSet).isEmpty) immutable.List(s.updated(pos, phi))
+    else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
+        taboos.intersect(v.toSet))
   }
 
-  private def allNamesExceptAt(s: Sequent, pos: SeqPos) = {
-    val fs = if (pos.isAnte) s.ante.slice(0, pos.getIndex) ++ s.ante.slice(pos.getIndex + 1, s.ante.length) ++ s.succ
-    else s.ante ++ s.succ.slice(0, pos.getIndex) ++ s.succ.slice(pos.getIndex + 1, s.ante.length)
-    fs.flatMap(StaticSemantics.symbols).toSet
-  } ensuring (r => r == StaticSemantics.symbols(s.updated(pos, True)), "Same as symbols after replacing by true")
 }
 
 /*********************************************************************************
@@ -983,6 +977,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+ * @todo change to the format where the axiom ends up on the right (so cut if needed on the left).
  */
 object Axiom {
   // immutable list of sound axioms
@@ -1004,6 +999,7 @@ case class Axiom(id: String) extends Rule {
  *********************************************************************************
  */
 object RCF {
+  /** List of the class names of all external tools whose answers KeYmaera X would believe */
   private val trustedTools: immutable.List[String] =
     "edu.cmu.cs.ls.keymaera.tools.Mathematica" ::
     "edu.cmu.cs.ls.keymaera.tools.Z3" :: Nil
@@ -1013,18 +1009,19 @@ object RCF {
    * @param t The tool.
    * @param f The formula.
    * @return a Lemma with a quantifier-free formula equivalent to f and evidence as provided by the tool.
+   * @todo Change structure around such that quantifier elimination tools already come back with whatever evidence they can provide.
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
     require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
 
-    //Find the solution
-    //@TODO assumes the tool is initialized
-    val (solution, input, output) = t.qeInOut(f)
+    // Quantifier elimination determines (quantifier-free) equivalent of f.
+    val (equivalent, input, output) = t.qeInOut(f)
 
+    // soundness-critical
     val fact = Provable.toolFact(new Sequent(
       Nil,
       immutable.IndexedSeq(),
-      immutable.IndexedSeq(Equiv(f, solution))))
+      immutable.IndexedSeq(Equiv(f, equivalent))))
 
     Lemma(fact, new ToolEvidence(immutable.Map("input" -> input, "output" -> output)) :: Nil)
   }
@@ -1035,27 +1032,27 @@ object RCF {
  *********************************************************************************
  */
 
-// Lookup Lemma (different justifications: Axiom, Lemma with proof, Oracle Lemma)
-
-
 /**
  * Lookup a lemma that has been proved previously or by an external arithmetic tool.
  * @author nfulton
  * @author Stefan Mitsch
  */
 object LookupLemma {
-  def addRealArithLemma(lemmaDB: LemmaDB, t: QETool, f : Formula) : Option[(String, Lemma)] = {
-    val lemma = RCF.proveArithmetic(t, f)
-    val lemmaID = lemmaDB.add(lemma)
-    Some(lemmaID, lemma)
-  }
+  /**
+   * Add given lemma to the given lemma database
+   * @param lemmaDB Lemma database to insert into.
+   * @param lemma The lemma whose Provable will be inserted with its name.
+   * @return Internal lemma identifier.
+   */
+  def addLemma(lemmaDB: LemmaDB, lemma: Lemma): String = lemmaDB.add(lemma)
+
 }
 case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   val name: String = "Lookup Lemma"
   def apply(s : Sequent): immutable.List[Sequent] = {
-    require(lemmaDB.contains(lemmaID))
+    require(lemmaDB.contains(lemmaID), "Cannot lookup lemmas that have not been added to the LemmaDB")
     val lemma = lemmaDB.get(lemmaID).get
-    if (s.sameSequentAs(lemma.fact.conclusion)) Nil
+    if (s.sameSequentAs(lemma.fact.conclusion)) lemma.fact.subgoals.toList
     else throw new IllegalArgumentException("Lemma " + lemmaID + " with conclusion " + lemma.fact.conclusion + " not " +
       "applicable for sequent " + s)
   }
@@ -1125,11 +1122,11 @@ case class CutRight(c: Formula, pos: SuccPos) extends Rule {
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
     immutable.List(s.updated(pos, c), s.updated(pos, Imply(c, p)))
-  } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
+  }
 }
 
 //@derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
-private case class CutLeft(c: Formula, pos: AntePos) extends Rule {
+case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   val name: String = "cut Left"
   /**
    * Cut in the given formula c in place of p
@@ -1140,15 +1137,16 @@ private case class CutLeft(c: Formula, pos: AntePos) extends Rule {
    */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
-    //immutable.List(s.updated(pos, c), s.updated(pos, Sequent(s.pref, IndexedSeq(), IndexedSeq(Imply(c, p)))))
-    immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(c), immutable.IndexedSeq())),
-                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(c, p)))))
-  } //ensuring(r => r.length==2 && s.subsequentOf(r(0)) && s.subsequentOf(r(1)), "subsequent of subgoals of cuts except for pos")
+    immutable.List(s.updated(pos, c),
+                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c)))))
+    /* immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(c), immutable.IndexedSeq())),
+                   s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(Imply(p, c))))) */
+  }
 }
 
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
-private[core] case class EquivifyRight(pos: SuccPos) extends RightRule {
+case class EquivifyRight(pos: SuccPos) extends RightRule {
   val name: String = "->2<-> Equivify Right"
   /**
    * Equivify Right: Convert implication to equivalence.
@@ -1161,5 +1159,3 @@ private[core] case class EquivifyRight(pos: SuccPos) extends RightRule {
     immutable.List(s.updated(pos, Equiv(a, b)))
   }
 }
-
-// vim: set ts=4 sw=4 et:

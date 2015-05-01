@@ -126,7 +126,7 @@ object LogicalODESolver {
         case Box(program : DifferentialProgram, f) => {
           //Copied from DiffSolutionT
           // HACK need some convention for internal names
-          val initialTime: Variable = freshNamedSymbol(Variable("k4_t", None, Real), node.sequent)
+          val initialTime: Variable = freshNamedSymbol(Variable("kxtime", None, Real), node.sequent)
           // universal quantifier and skolemization in ghost tactic (t:=0) will increment index twice
           val time = Variable(initialTime.name,
             initialTime.index match { case None => Some(1) case Some(a) => Some(a+2) }, initialTime.sort)

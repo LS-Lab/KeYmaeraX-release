@@ -96,22 +96,22 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
               // here we'd want to access the previously introduced skolem symbol and the time introduced by diffSolution
               // goal 90
               la(instantiateT(Variable("t", None, Real),
-                // t_22+t_23: k4_t_5 == t_22, t_0 == t_23
-                Plus(Variable("k4_t", Some(5), Real), Variable("t", Some(0), Real)))) &
+                // t_22+t_23: kxtime_5 == t_22, t_0 == t_23
+                Plus(Variable("kxtime", Some(5), Real), Variable("t", Some(0), Real)))) &
               la(instantiateT(Variable("ro", None, Real),
                 // rv*(t_22+t_23)
                 Times(
                   Variable("rv", None, Real),
-                  Plus(Variable("k4_t", Some(5), Real), Variable("t", Some(0), Real)))
+                  Plus(Variable("kxtime", Some(5), Real), Variable("t", Some(0), Real)))
                 )) &
               // here we'd also want to access symbols created during the proof
-              // CUT 1: (0 <= t_0+k4_t_5 & t_0+k4_t_5 < Max(0, w*(dhf-dhd))/a) | t_0+k4_t_5 >= Max(0, w*(dhf-dhd))/a
-              cutT(Some("(0 <= t_0+k4_t_5 & t_0+k4_t_5 < w*(dhf-dhd)/a) | (0 <= t_0+k4_t_5 & t_0+k4_t_5 >= w*(dhf-dhd)/a)".asFormula)) & onBranch(
+              // CUT 1: (0 <= t_0+kxtime_5 & t_0+kxtime_5 < Max(0, w*(dhf-dhd))/a) | t_0+kxtime_5 >= Max(0, w*(dhf-dhd))/a
+              cutT(Some("(0 <= t_0+kxtime_5 & t_0+kxtime_5 < w*(dhf-dhd)/a) | (0 <= t_0+kxtime_5 & t_0+kxtime_5 >= w*(dhf-dhd)/a)".asFormula)) & onBranch(
                 (cutShowLbl, debugT("Show Cut") & lastAnte(hideT) & hideT(SuccPosition(1)) & hideT(SuccPosition(0)) &
                   ls(OrRightT) & lastAnte(OrLeftT) & (la(AndLeftT)*) & (ls(AndRightT)*) & (arith | debugT("Should be closed") & Tactics.stopT)),
                 (cutUseLbl, debugT("Use Cut") & /* OrLeftT on formula of CUT 1 */ lastAnte(OrLeftT) && (
                     // goal 110
-                    instantiateT(Variable("ho", None, Real), "w*a/2*(t_0+k4_t_5)^2 + dhd*(t_0+k4_t_5)".asTerm)(AntePosition(18)) & debugT("Did we instantiate?") &
+                    instantiateT(Variable("ho", None, Real), "w*a/2*(t_0+kxtime_5)^2 + dhd*(t_0+kxtime_5)".asTerm)(AntePosition(18)) & debugT("Did we instantiate?") &
                       // OrLeftT on ???
                       ((AxiomCloseT | l(NonBranchingPropositionalT))*) & debugT("Implication at same pos as instantiate?") & ImplyLeftT(AntePosition(18)) && (
                         (ls(OrRightT)*) & lastSucc(hideT) & (ls(AndRightT)*) & (AxiomCloseT | arith | debugT("Shouldn't get here")),
@@ -133,11 +133,11 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                           )
                       ),
                     // goal 111
-                    // we don't have Max, so instead of instantiating ho with dhf*(t_0+k4_t_5) - w*(Max(0, w*(dhf-dhd))^2/(2*a) we first cut
+                    // we don't have Max, so instead of instantiating ho with dhf*(t_0+kxtime_5) - w*(Max(0, w*(dhf-dhd))^2/(2*a) we first cut
                     cutT(Some("w*(dhf-dhd) > 0 | w*(dhf-dhd) <= 0".asFormula)) & onBranch(
                       (cutShowLbl, lastSucc(cohideT) & arith),
                       (cutUseLbl, lastAnte(OrLeftT) && (
-                        /* w*(dhf-dhd_3) > 0 */ instantiateT(Variable("ho", None, Real), "dhf*(t_0+k4_t_5) - w*(w*(dhf-dhd))^2/(2*a)".asTerm)(AntePosition(18)) &
+                        /* w*(dhf-dhd_3) > 0 */ instantiateT(Variable("ho", None, Real), "dhf*(t_0+kxtime_5) - w*(w*(dhf-dhd))^2/(2*a)".asTerm)(AntePosition(18)) &
                         debugT("Goal 120-1") & lastAnte(ImplyLeftT) && (
                           debugT("Goal 122") & (la(AndLeftT)*) & (ls(OrRightT)*) & (ls(AndRightT)*) & (AxiomCloseT | arith),
                           debugT("Goal 123") & OrLeftT(AntePosition(17)) && (
@@ -162,7 +162,7 @@ class AcasX extends FlatSpec with Matchers with BeforeAndAfterEach {
                               )
                             )
                         ),
-                        /* w*(dhf-dhd_3) <= 0 */ instantiateT(Variable("ho", None, Real), "dhf*(t_0+k4_t_5)".asTerm)(AntePosition(18)) &
+                        /* w*(dhf-dhd_3) <= 0 */ instantiateT(Variable("ho", None, Real), "dhf*(t_0+kxtime_5)".asTerm)(AntePosition(18)) &
                           debugT("Goal 120-2") /* TODO open goal */
                         ))
                     )

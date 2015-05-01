@@ -234,13 +234,13 @@ class DifferentialTests extends FlatSpec with Matchers with BeforeAndAfterEach {
     node.openGoals() should have size 1
     node.openGoals().flatMap(_.sequent.ante) should contain only (
       "b=0 & x>b".asFormula,
-      "k4_t_1=0".asFormula,
+      "kxtime_1=0".asFormula,
       "x_2()=x".asFormula,
-      "k4_t_4()=k4_t_1".asFormula
+      "kxtime_4()=kxtime_1".asFormula
       )
     // specific form irrelevant for test, as long as we get an equivalent formula
     node.openGoals().flatMap(_.sequent.succ) should contain only
-      "true & k4_t_5>=k4_t_4() & x_3=x_2() + 2*k4_t_5 -> x_3>b".asFormula
+      "true & kxtime_5>=kxtime_4() & x_3=x_2() + 2*kxtime_5 -> x_3>b".asFormula
   }
 
   it should "find solutions for x'=v if None is provided" in {

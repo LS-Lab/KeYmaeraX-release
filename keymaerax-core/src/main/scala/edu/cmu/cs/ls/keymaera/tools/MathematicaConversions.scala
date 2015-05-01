@@ -31,7 +31,7 @@ private object NameConversion {
   private val SEP    = "$beginIndex$"
   private val MUNDERSCORE = "$underscore$" //Mathematica Underscore
 
-  val CONST_FN_PREFIX: String = "constfn_"
+  val CONST_FN_PREFIX: String = "constfn$"
 
   private def regexOf(s: String) = {
     s.replace("$", "\\$")
