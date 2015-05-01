@@ -10,11 +10,10 @@ package edu.cmu.cs.ls.keymaera.core
 
 // require favoring immutable Seqs for soundness
 
+import scala.collection.immutable
+
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
-import scala.annotation.elidable
-import scala.annotation.elidable._
-import scala.collection.immutable
 
 /**
  * The data base of axioms and axiomatic rules of KeYmaera X as resulting from differential dynamic logic axiomatizations.
@@ -38,13 +37,32 @@ private[core] object AxiomBase {
     val qany = PredOf(Function("q_", None, Real, Bool), Anything)
     val fany = FuncOf(Function("f_", None, Real, Real), Anything)
     val gany = FuncOf(Function("g_", None, Real, Real), Anything)
-    val ctxt = Function("ctx_", None, Real, Real)
-    val ctxf = Function("ctx_", None, Real, Bool)
-    val context = Function("ctx_", None, Bool, Bool)//@TODO eisegesis predicational should be Function("ctx_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
+    val ctxt = Function("ctx_", None, Real, Real) // function symbol
+    val ctxf = Function("ctx_", None, Real, Bool) // predicate symbol
+    // Sort of predicational is really (Real->Bool)->Bool except sort system doesn't know that type.
+    val context = Function("ctx_", None, Bool, Bool) // predicational symbol
     val a = ProgramConst("a_")
     val fmlany = PredOf(Function("F_", None, Real, Bool), Anything)
 
     Map(
+      /**
+       * Rule "all generalization".
+       * Premise p(x)
+       * Conclusion \forall x . p(x)
+       * End.
+       */
+      /*("all generalization",
+        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
+          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
+      /**
+       * Rule "all generalization".
+       * Premise p(?)
+       * Conclusion \forall x . p(?)
+       * End.
+       */
+      ("all generalization",
+        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
+          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
       /**
        * Rule "CT term congruence".
        * Premise f_(?) = g_(?)
@@ -76,24 +94,6 @@ private[core] object AxiomBase {
       ("CO one-sided congruence",
         (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Equiv(pany, qany))),
           Sequent(immutable.Seq(), immutable.IndexedSeq(PredicationalOf(context, pany)), immutable.IndexedSeq(PredicationalOf(context, qany))))),
-      /**
-       * Rule "all generalization".
-       * Premise p(x)
-       * Conclusion \forall x . p(x)
-       * End.
-       */
-      /*("all generalization",
-        (Sequent(Seq(), IndexedSeq(), IndexedSeq(px)),
-          Sequent(Seq(), IndexedSeq(), IndexedSeq(Forall(Seq(x), px))))),*/
-      /**
-       * Rule "all generalization".
-       * Premise p(?)
-       * Conclusion \forall x . p(?)
-       * End.
-       */
-      ("all generalization",
-        (Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(pany)),
-          Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(Forall(immutable.Seq(x), pany))))),
       /**
        * Rule "all monotone".
        * Premise p(x) ==> q(x)
@@ -155,26 +155,20 @@ private[core] object AxiomBase {
   /**
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
-   */
-  private[core] def loadAxioms() : immutable.Map[String, Formula] =
-    loadAxiomFile
-
-  /**
    * parse the axiom file and add all loaded knowledge to the axioms map.
    * @todo In the long run, could benefit from asserting expected parse of axioms to remove parser from soundness-critical core. This, obviously, introduces redundancy.
    */
-  private def loadAxiomFile: immutable.Map[String, Formula] = {
-    val parser = new KeYmaeraParser(false)
+  private[core] def loadAxioms: immutable.Map[String, Formula] = {
+    val parser = new KeYmaeraParser(enabledLogging = false)
     val alp = parser.ProofFileParser
     val res = alp.runParser(loadAxiomString())
 
     assert(res.length == res.map(k => k.name).distinct.length, "No duplicate axiom names during parse")
 
-    (for(k <- res)
-      yield (k.name -> k.formula)).toMap
+    res.map(k => (k.name -> k.formula)).toMap
   } ensuring(assertCheckAxiomFile _, "checking parse of axioms against expected outcomes")
 
-  @elidable(ASSERTION) private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
+  private def assertCheckAxiomFile(axs : Map[String, Formula]) = {
     val x = Variable("x", None, Real)
     val x_ = Variable("x_", None, Real)
     val aP0 = PredOf(Function("p", None, Unit, Bool), Nothing)
@@ -257,24 +251,26 @@ End.
 /**
  * FIRST-ORDER QUANTIFIER AXIOMS
  */
-Axiom "all instantiate".
+Axiom /*\\foralli */ "all instantiate".
   (\forall x. p(x)) -> p(t())
 End.
 
+/* consequence of "all instantiate" */
 Axiom "all eliminate".
-  \forall x. p(?) -> p(?)
+  (\forall x. p(?)) -> p(?)
 End.
 
+/* @Derived */
 Axiom "exists generalize".
   p(t()) -> \exists x. p(x)
 End.
 
-Axiom "vacuous exists quantifier".
-  p <-> \exists x. p
-End.
-
 Axiom "vacuous all quantifier".
   p <-> \forall x. p
+End.
+
+Axiom "vacuous exists quantifier".
+  p <-> \exists x. p
 End.
 
 Axiom "all dual".
@@ -283,7 +279,7 @@ End.
 
 /* @Derived */
 Axiom "exists dual".
-  \exists x . p(x) <-> !(\forall x . (!p(x)))
+  (\exists x . p(x)) <-> !(\forall x . (!p(x)))
 End.
 
 /*
@@ -293,8 +289,7 @@ End.
 */
 
 /**
- * CONGRUENCE RULES
- * MONOTONICITY RULES
+ * CONGRUENCE AXIOMS (for constant terms)
  */
 
 Axiom "const congruence".
@@ -323,10 +318,12 @@ Axiom "[:=] assign".
   [v:=t();]p(v) <-> p(t())
 End.
 
+/* @derived */
 Axiom "<:=> assign".
   <v:=t();>p(v) <-> p(t())
 End.
 
+/* @derived */
 Axiom "[:=] assign equational".
   [v:=t();]p(v) <-> \forall v . (v=t() -> p(v))
 End.
@@ -335,6 +332,7 @@ Axiom "[:=] vacuous assign".
   [v:=t();]p <-> p
 End.
 
+/* @derived */
 Axiom "<:=> vacuous assign".
   <v:=t();>p <-> p
 End.
@@ -343,6 +341,7 @@ Axiom "[':=] differential assign".
   [v':=t();]p(v') <-> p(t())
 End.
 
+/* @derived */
 Axiom "<':=> differential assign".
   <v':=t();>p(v') <-> p(t())
 End.
@@ -351,6 +350,7 @@ Axiom "[:*] assign nondet".
   [v:=*;]p(v) <-> \forall v. p(v)
 End.
 
+/* @derived */
 Axiom "<:*> assign nondet".
   <v:=*;>p(v) <-> \exists v. p(v)
 End.
@@ -398,7 +398,7 @@ End.
 
 Axiom "DC differential cut".
   ([c&H(?);]p(?) <-> [c&(H(?)&r(?));]p(?)) <- [c&H(?);]r(?)
-/*  ([x'=f(x)&q(x);]p(x) <-> [x'=f(x)&(q(x)&r(x));]p(x)) <- [x'=f(x)&q(x);]r(x) THEORY */
+/* ([x'=f(x)&q(x);]p(x) <-> [x'=f(x)&(q(x)&r(x));]p(x)) <- [x'=f(x)&q(x);]r(x) THEORY */
 End.
 
 Axiom "DE differential effect".
@@ -406,12 +406,13 @@ Axiom "DE differential effect".
 End.
 
 Axiom "DI differential invariant".
-  [c&H(?);]p(?) <- (H(?)-> (p(?) & [c&H(?);](p(?)')))
-/* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);](p(x)'))) THEORY */
+  [c&H(?);]p(?) <- (H(?)-> (p(?) & [c&H(?);]((p(?))')))
+/* [x'=f(x)&q(x);]p(x) <- (q(x) -> (p(x) & [x'=f(x)&q(x);]((p(x))'))) THEORY */
 End.
 
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DA differential ghost".
+  /*@TODO Code Review discrepancy: change to TODO form from theory, not old calculus */
   [c&H(?);]p(?) <- ((p(?) <-> \exists x. q(?)) & [c,x'=t()*x+s()&H(?);]q(?))
 /*@TODO [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?) */
 /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
@@ -421,9 +422,17 @@ Axiom "DS differential equation solution".
   [x'=c();]p(x) <-> \forall t. (t>=0 -> [x:=x+c()*t;]p(x))
 End.
 
+Axiom "DS& differential equation solution".
+  [x'=c()&q(x);]p(x) <-> \forall t. (t>=0 -> ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) -> [x:=x+c()*t;]p(x)))
+End.
+
 /* @derived(DS differential equation solution + duality) */
 Axiom "Dsol differential equation solution".
  <x'=c();>p(x) <-> \exists t. (t>=0 & <x:=x+c()*t;>p(x))
+End.
+
+Axiom "Dsol& differential equation solution".
+  <x'=c()&q(x);>p(x) <-> \exists t. (t>=0 & ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) & <x:=x+c()*t;>p(x)))
 End.
 
 /**
@@ -431,8 +440,9 @@ End.
  */
 
 Axiom "DE differential effect (system)".
+    /* @TODO Code Review decided that ? cannot allow ' here so needs to be split */
     /* @TODO f(?) cannot contain primes */
-    /* @NOTE reassociate needed in data structures */
+    /* @NOTE reassociate needed in DifferentialProduct data structures */
     [x'=f(?),c&H(?);]p(?) <-> [c,x'=f(?)&H(?);][x':=f(?);]p(?)
 End.
 
@@ -517,15 +527,12 @@ Axiom "/' derive quotient".
   (f(?) / g(?))' = (((f(?)')*g(?)) - (f(?)*(g(?)'))) / (g(?)^2)
 End.
 
-/*
 Axiom "chain rule".
-	//@NOTE can be used
+	[y:=g(x);][y':=1;]( (f(g(x)))' = (f(y)') * (g(x)') )
 End.
-*/
 
-/* @TODO c() != 0 */
 Axiom "^' derive power".
-	(f(?)^c())' = (c()*(f(?)^(c()-1)))*(f(?)') /*<- c() != 0*/
+	(f(?)^c())' = (c()*(f(?)^(c()-1)))*(f(?)') <- c() != 0
 End.
 
 Axiom "x' derive variable".
@@ -537,16 +544,10 @@ End.
  * UNSOUND FOR HYBRID GAMES.
  */
 
+/* @NOTE Unsound for hybrid games */
 Axiom "V vacuous".
   p -> [a;]p
 End.
-
-/* @NOTE Unsound for hybrid games
-Rule "Goedel".
-Premise p(x)
-Conclusion [a;]p(x)
-End.
-*/
 
 /* @NOTE Unsound for hybrid games */
 Axiom "K modal modus ponens".
@@ -555,7 +556,7 @@ End.
 
 /* @NOTE Unsound for hybrid games, use ind induction rule instead */
 Axiom "I induction".
-  /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) */
+  /*@TODO Use this form instead? which is possibly more helpful: ([a*](p(?) -> [a;] p(?))) -> (p(?) -> [a*]p(?)) THEORY */
   (p(?) & [a*](p(?) -> [a;] p(?))) -> [a*]p(?)
 End.
 
@@ -581,7 +582,7 @@ Axiom "* commutative".
 End.
 
 Axiom "distributive".
-  r*(s+t) = r*s + r*t
+  r*(s+t) = (r*s) + (r*t)
 End.
 
 Axiom "+ identity".
