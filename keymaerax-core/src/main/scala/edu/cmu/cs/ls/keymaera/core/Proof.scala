@@ -789,6 +789,9 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
 case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int]) extends Rule {
   val name: String = "Bound Renaming"
 
+  /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
+  private val compatibilityMode = true
+
   override def toString: String = name + "(" + what + "_" + wIdx + "~>" + repl + "_" + rIdx + ")"
 
   def apply(s: Sequent): immutable.List[Sequent] =
@@ -810,6 +813,7 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
    * Introduce a ghost for the target variable as needed to remember the value of the previous variable.
    * If what is bound at f, rename, otherwise introduce stuttering [what:=what] before renaming,
    * leading to [repl:=what] after renaming.
+   * Ensures that the bound variable is literally bound on the top level, when in doubt by introducing a stutter.
    */
   private def ghostify(f: Formula): Formula =
     if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
@@ -817,9 +821,10 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
       case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
       case Box(Assign(x, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
       case Diamond(Assign(x, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case _ => {
-        apply(Box(Assign(Variable(what, wIdx, Real), Variable(what, wIdx, Real)), f))
-      } ensuring(r => r==Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f)))
+      case _ => if (compatibilityMode)
+        Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f)
+        else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
+        what + "_" + wIdx + " is not bound", this.toString, f.prettyString()))
     } else {
       // old name is not bound anywhere in f, so no bound renaming needed/possible
       f
