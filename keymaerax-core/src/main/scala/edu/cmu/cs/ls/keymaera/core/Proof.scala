@@ -777,36 +777,35 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
 
 
 /**
- * Performs bound renaming renaming all occurrences of symbol name_idx
- * to a symbol target_tIdx.
- * @param what What name to replace.
- * @param wIdx What index of the name to replace.
- * @param repl The target name to replace what with.
- * @param rIdx The index of the target name as replacement.
- * @requires target name with target index tIdx is fresh in the sequent.
+ * Performs bound renaming renaming all occurrences of variable what
+ * (and its associated DifferentialSymbol) to repl.
+ * @param what What variable (and its associated DifferentialSymbol) to replace.
+ * @param repl The target variable to replace what with.
+ * @requires repl is fresh in the sequent.
  * @author smitsch
- * @todo Code Review decided to change arguments to (what: Variable, repl: Variable) of same sort.
+ * @author aplatzer
  */
-case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Option[Int]) extends Rule {
+case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
+  require(what.sort == repl.sort, "Bounding renaming only to variables of the same sort")
   val name: String = "Bound Renaming"
 
   /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
   private val compatibilityMode = true
 
-  override def toString: String = name + "(" + what + "_" + wIdx + "~>" + repl + "_" + rIdx + ")"
+  override def toString: String = name + "(" + what + "~>" + repl + ")"
 
   def apply(s: Sequent): immutable.List[Sequent] =
     immutable.List(Sequent(s.pref, s.ante.map(ghostify), s.succ.map(ghostify)))
 
   def apply(f: Formula): Formula = {
-    if (!StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) {
+    if (StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
       // old name is not bound anywhere in f, so no bound renaming needed/possible
       f
     } else {
       // old name is bound somewhere in f -> check that new name is admissible (does not occur)
       if (admissible(f)) rename(f)
       else throw new BoundRenamingClashException("Bound renaming only to fresh names but name " +
-        repl + "_" + rIdx + " is not fresh", this.toString, f.prettyString())
+        repl + " is not fresh", this.toString, f.prettyString())
     }
   }
 
@@ -817,16 +816,18 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
    * Ensures that the bound variable is literally bound on the top level, when in doubt by introducing a stutter.
    */
   private def ghostify(f: Formula): Formula =
-    if (StaticSemantics(f).bv.exists(v => v.name == what && v.index == wIdx)) f match {
-      case Forall(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
-      case Exists(vars, _) if vars.exists(v => v.name == what && v.index == wIdx) => apply(f)
-      case Box(Assign(x, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case Diamond(Assign(x, y), _) if x == y && x.name == repl && x.index == rIdx => apply(f)
-      case _ => if (compatibilityMode)
-        Box(Assign(Variable(repl, rIdx, Real), Variable(what, wIdx, Real)), apply(f)
+    if (!StaticSemantics(f).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty) {
+      // old name is bound somewhere in f -> lazy check by ensuring that new name is admissible (does not occur)
+      f match {
+        case Forall(vars, _) if vars.contains(what) => apply(f)
+        case Exists(vars, _) if vars.contains(what) => apply(f)
+        case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
+        case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
+        case _ => if (compatibilityMode)
+          Box(Assign(repl, what), apply(f))
         else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
-        what + "_" + wIdx + " is not bound", this.toString, f.prettyString()))
-    } else {
+          what + " is not bound", this.toString, f.prettyString())
+    } } ensuring(admissible(f)) else {
       // old name is not bound anywhere in f, so no bound renaming needed/possible
       f
     }
@@ -860,9 +861,7 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
     case Pair(l, r) => Pair(rename(l), rename(r))
   }
 
-  private def renameVar(e: Variable): Variable =
-    if (e.name == what && e.index == wIdx && e.sort == Real) Variable(repl, rIdx, e.sort)
-    else e
+  private def renameVar(e: Variable): Variable = if (e == what) repl else e
 
   /** Perform bound variable renaming in a formula (i.e. alpha conversion) */
   private def rename(formula: Formula): Formula = {
@@ -933,9 +932,11 @@ case class BoundRenaming(what: String, wIdx: Option[Int], repl: String, rIdx: Op
    * Check whether this renaming is admissible for expression e, i.e.
    * the new name repl does not already occur (or the renaming was the identity).
    * @note identity renaming is merely allowed to enable BoundVariableRenaming to introduce stutter.
+   * @note This implementation currently errors if repl.sort!=Real
    */
   private def admissible(e: Expression): Boolean =
-    (what == repl && wIdx == rIdx) || !StaticSemantics.symbols(e).exists(v => v.name == repl && v.index == rIdx)
+    what == repl ||
+      StaticSemantics.symbols(e).intersect(Set(repl, DifferentialSymbol(repl))).isEmpty
 }
 
 
