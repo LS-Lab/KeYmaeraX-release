@@ -34,6 +34,7 @@ object LogicalODESolver {
    *
    * @return The tactic.
    */
+  /*
   private def stepRemoveT : PositionTactic = new PositionTactic("Remove solved ODE from system") {
     override def applies(s: Sequent, p: Position): Boolean = s(p) match {
       case program : DifferentialProduct => {
@@ -61,6 +62,7 @@ object LogicalODESolver {
       override def applicable(node: ProofNode): Boolean = ???
     }
   }
+  */
 
   private def removeTimeVar : PositionTactic = ???
 

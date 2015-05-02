@@ -22,8 +22,9 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
   def globalAlpha(from: String, to: String) = TacticLibrary.globalAlphaRenamingT(from, None, to, None)
 
   def alphaRule(from: String, to: String): PositionTactic = new PositionTactic("Alpha Renaming") {
-
     import scala.language.postfixOps
+    val what = Variable(from, None, Real)
+    val repl = Variable(to, None, Real)
 
     override def applies(s: Sequent, p: Position): Boolean = /*s(p) match*/ {
       var applicable = false
@@ -32,8 +33,8 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
           f match {
             case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == None)
             case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == None)
-            case Box(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == None)
-            case Diamond(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == None)
+            case Box(a, _) => applicable = !StaticSemantics(a).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty
+            case Diamond(a, _) => applicable = !StaticSemantics(a).bv.intersect(SetLattice(Set[NamedSymbol](what, DifferentialSymbol(what)))).isEmpty
             case _ => applicable = false
           }
           Left(Some(ExpressionTraversal.stop))
@@ -46,7 +47,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new BoundRenaming(from, None, to, None)) {
+        Some(new ApplyRule(new BoundRenaming(what, repl)) {
           override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
         })
       }
@@ -57,7 +58,7 @@ class AlphaConversionTests extends FlatSpec with Matchers with BeforeAndAfterEac
     import scala.language.postfixOps
     override def applicable(node: ProofNode): Boolean = true
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      Some(new ApplyRule(new BoundRenaming(from, None, to, None)) {
+      Some(new ApplyRule(new BoundRenaming(Variable(from, None, Real), Variable(to, None, Real))) {
         override def applicable(node: ProofNode): Boolean = true
       })
     }

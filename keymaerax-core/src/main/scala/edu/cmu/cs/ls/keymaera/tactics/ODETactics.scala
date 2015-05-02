@@ -363,10 +363,7 @@ object ODETactics {
           result
         }
 
-        def sizeOf[T](s: SetLattice[T]): Int = s.s match {
-          case Left(_) => ???
-          case Right(ts) => ts.size
-        }
+        def sizeOf[T](s: SetLattice[T]): Int = s.toSet.size
 
         def createTactic(ode: DifferentialProgram, solution: Formula, time: Variable, iv: Map[Variable, Variable],
                          diffEqPos: Position) = {

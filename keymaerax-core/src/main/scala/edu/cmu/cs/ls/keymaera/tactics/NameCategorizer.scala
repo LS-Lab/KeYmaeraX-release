@@ -10,38 +10,39 @@ import scala.collection.immutable.Set
  */
 object NameCategorizer {
   /** Returns the set of names maybe free in term t (same as certainly free). */
-  def maybeFreeVariables(t: Term): Set[NamedSymbol] = BindingAssessment.freeVariables(t).s match {
+  def maybeFreeVariables(t: Term): Set[NamedSymbol] = StaticSemantics(t).toSet /*match {
     case Right(ts) => ts
     case Left(_) => throw new IllegalArgumentException(s"Unexpected term $t: any variable is free")
-  }
+  }*/
   /** Returns the set of names maybe free in formula f. */
-  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = BindingAssessment.catVars(f).fv.s match {
+  def maybeFreeVariables(f: Formula): Set[NamedSymbol] = StaticSemantics(f).fv.toSet /*match {
     case Right(ts) => ts
     case Left(_) => throw new IllegalArgumentException(s"Unexpected formula $f: any variable is free")
-  }
+  }*/
   /** Returns the set of names maybe free in program p. */
-  def maybeFreeVariables(p: Program): Set[NamedSymbol] = BindingAssessment.catVars(p).fv.s match {
+  def maybeFreeVariables(p: Program): Set[NamedSymbol] = StaticSemantics(p).fv.toSet  /*match {
     case Right(ts) => ts
     case Left(_) => throw new IllegalArgumentException(s"Unexpected program $p: any variable is free")
-  }
+  }*/
   /** Returns the set of names certainly free in program p. */
   def freeVariables(p: Program): Set[NamedSymbol] = {
-    val ba = BindingAssessment.catVars(p)
-    (ba.fv -- (ba.mbv ++ ba.bv)).s match {
+    val ba = StaticSemantics(p)
+    (ba.fv -- (ba.mbv ++ ba.bv)).toSet /*.s match {
       case Right(ts) => ts
       case Left(_) => throw new IllegalArgumentException(s"Unexpected program $p: any variable is free")
-    }
+    }*/
   }
   /** Returns the set of names certainly free in formula f. */
   def freeVariables(f: Formula) = {
-    (BindingAssessment.catVars(f).fv -- BindingAssessment.catVars(f).bv).s match {
+    val ba = StaticSemantics(f)
+    (ba.fv -- ba.bv).toSet /*s match {
       case Left(_) => throw new IllegalArgumentException(s"Unexpected formula $f: any variable imaginable is free")
       case Right(ts) => ts
-    }
+    }*/
   }
   /** Returns the set of names maybe bound in program p. */
-  def maybeBoundVariables(p: Program): Set[NamedSymbol] = BindingAssessment.catVars(p).bv.s match {
+  def maybeBoundVariables(p: Program): Set[NamedSymbol] = StaticSemantics(p).bv.toSet /*s match {
     case Right(ts) => ts
     case Left(_) => throw new IllegalArgumentException(s"Unexpected program $p: all variables are bound")
-  }
+  }*/
 }
