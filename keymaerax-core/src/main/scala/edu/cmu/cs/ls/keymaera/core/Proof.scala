@@ -789,6 +789,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
   val name: String = "Bound Renaming"
 
   /** @todo Code Review: change to false: This is a slight euphemism for do you mind being possibly unsound */
+  //@todo turn to false after telling alphaRenamingT and globalAlphaRenamingT to add the stutter by axiom if needed
   private val compatibilityMode = true
 
   override def toString: String = name + "(" + what + "~>" + repl + ")"
@@ -822,9 +823,9 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         case Exists(vars, _) if vars.contains(what) => apply(f)
         case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
         case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
-        case _ => if (compatibilityMode)
+        case _ => if (compatibilityMode) {println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
           Box(Assign(repl, what), apply(f))
-        else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
+        } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString())
     } } ensuring(admissible(f)) else {
       // old name is not bound anywhere in f, so no bound renaming needed/possible
