@@ -443,9 +443,8 @@ End.
  */
 
 Axiom "DE differential effect (system)".
-    /* @TODO Code Review decided that ? cannot allow ' here so needs to be split */
-    /* @TODO f(?) cannot contain primes */
-    /* @NOTE reassociate needed in DifferentialProduct data structures */
+    /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols */
+    /* @NOTE Completeness: reassociate needed in DifferentialProduct data structures */
     [x'=f(?),c&H(?);]p(?) <-> [c,x'=f(?)&H(?);][x':=f(?);]p(?)
 End.
 

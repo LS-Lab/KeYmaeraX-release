@@ -14,12 +14,29 @@ class CoreTests extends FlatSpec with Matchers {
   val sPos = SuccPosition(0)
   val aPos = AntePosition(0)
 
-  "Core (Positions)" should "have HereP == new PosInExpr(Nil)" in {
+  val x = Variable("x", None, Real)
+  val y = Variable("y", None, Real)
+  val z = Variable("z", None, Real)
+
+
+  "Core (Data Strutures)" should "require explicit-form differential equations" in {
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(y))}
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(x))}
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(y))}
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(Plus(x, y)))}
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, new Differential(Plus(x, y))))}
+    an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
+  }
+
+  //@todo add core SeqPos tests
+
+  "Tactic (Positions)" should "have HereP == new PosInExpr(Nil)" in {
     HereP should be (new PosInExpr(Nil))
     HereP should be (new PosInExpr(List()))
   }
 
-  "Core (Positions)" should "have PosInExpr equality based on lists" in {
+  "Tactic (Positions)" should "have PosInExpr equality based on lists" in {
     new PosInExpr(List(1,0,4,4,1)) should be (new PosInExpr(List(1,0,4,4,1)))
     new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1)))
     new PosInExpr(List(1,0,4,4,1)) should not be (new PosInExpr(List(1,0,4,1,4)))
@@ -85,6 +102,7 @@ class CoreTests extends FlatSpec with Matchers {
   }
   
   it should "complain about being applied to the wrong sequent side" in {
+    //@todo adapt to SeqPos
     val sPos = SuccPosition(0)
     val aPos = AntePosition(0)
     val s = Sequent(Nil, IndexedSeq(And(p, Not(p)), Imply(p, q)), IndexedSeq(And(Not(Equiv(p,Not(p))), q), Not(q)))

@@ -299,7 +299,10 @@ sealed case class DifferentialProgramConst(name: String) extends NamedSymbol wit
   def index: Option[Int] = None
 }
 case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferentialProgram {
-  require(e.sort == Real, "expected argument sort real")
+  require(e.sort == Real, "expected argument sort real " + this)
+  /* @NOTE Soundness: AtomicODE requires explicit-form so f(?) cannot verbatim mention differentials/differential symbols,
+     which is required for soundness of axiom "DE differential effect (system)" */
+  require(!StaticSemantics.isDifferential(e), "Explicit-form differential equations expected, without any differentials on right-hand side " + this)
 }
 
 /**
@@ -325,7 +328,8 @@ object DifferentialProduct {
   /**
    * Construct an ODEProduct in reassociated normal form, i.e. as a list such that left will never be an ODEProduct in
    * the data structures.
-   * @note This is important to not get stuck after using axiom "DE differential effect (system)".
+   * @note Completeness: reassociate needed in DifferentialProduct data structures for
+   *       axiom "DE differential effect (system)" so as not to get stuck after it.
    */
   def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct =
     reassociate(left, right)
