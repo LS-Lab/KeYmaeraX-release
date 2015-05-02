@@ -265,13 +265,12 @@ object TacticLibrary {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
         case b@Box(prg, phi) =>
-          val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).s match {
-            case Right(s) => s.to[scala.collection.immutable.Seq]
-            case Left(_) => throw new IllegalArgumentException("Cannot handle non-concrete programs")
-          }
+          val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+          //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
           val qPhi =
             if (vars.isEmpty) Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
-            else vars.sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+            else
+              vars.to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
               foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
 
           Some(cutT(Some(Imply(qPhi, Box(prg, qPhi)))) & onBranch(
