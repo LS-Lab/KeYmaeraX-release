@@ -369,17 +369,22 @@ object TacticLibrary {
   def diffInvariantSystemT = ODETactics.diffInvariantT
   def diffSolutionT = ODETactics.diffSolution(None)
 
+  @deprecated("Use alphaRenamingT(Variable,Variable) instead.")
   def alphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): PositionTactic =
+    alphaRenamingT(Variable(from, fromIdx, Real), Variable(to, toIdx, Real))
+
+  def alphaRenamingT(from: Variable, to: Variable): PositionTactic =
       new PositionTactic("Bound Renaming") {
     override def applies(s: Sequent, p: Position): Boolean = {
       var applicable = false
       ExpressionTraversal.traverse(TraverseToPosition(p.inExpr, new ExpressionTraversalFunction {
         override def preF(pos: PosInExpr, f: Formula): Either[Option[StopTraversal], Formula] = {
           f match {
-            case Forall(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
-            case Exists(vars, _) => applicable = vars.exists(v => v.name == from && v.index == fromIdx)
-            case Box(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == fromIdx)
-            case Diamond(a, _) => applicable = StaticSemantics(a).bv.exists(v => v.name == from && v.index == fromIdx)
+            case Forall(vars, _) => applicable = vars.contains(from)
+            case Exists(vars, _) => applicable = vars.contains(from)
+              //@todo accept DiffSymbol(from) to occur as well
+            case Box(a, _) => applicable = StaticSemantics(a).bv.contains(from)
+            case Diamond(a, _) => applicable = StaticSemantics(a).bv.contains(from)
             case _ => applicable = false
           }
           Left(Some(ExpressionTraversal.stop))
@@ -391,14 +396,10 @@ object TacticLibrary {
     override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
 
-      private def br = new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
-        override def applicable(node: ProofNode): Boolean = true
-      }
-
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
         val fml = TacticHelper.getFormula(node.sequent, p)
         val findResultProof = Provable.startProof(Sequent(node.sequent.pref, IndexedSeq(), IndexedSeq(fml)))
-        val desiredResult = findResultProof(new BoundRenaming(from, fromIdx, to, toIdx), 0).subgoals.head.succ.head
+        val desiredResult = findResultProof(new BoundRenaming(from, to), 0).subgoals.head.succ.head
         if (p.isAnte) {
           Some(cutT(Some(node.sequent(p.topLevel).replaceAt(p.inExpr, desiredResult))) & onBranch(
             (cutShowLbl, cohide2T(p.topLevel, SuccPos(node.sequent.succ.length)) &
@@ -415,16 +416,23 @@ object TacticLibrary {
               ))
         }
       }
+
+      private def br = new ApplyRule(new BoundRenaming(from, to)) {
+        override def applicable(node: ProofNode): Boolean = true
+      }
     }
   }
 
+  @deprecated("Use globalAlphaRenamingT(Variable,Variable) instead.")
   def globalAlphaRenamingT(from: String, fromIdx: Option[Int], to: String, toIdx: Option[Int]): Tactic =
+    globalAlphaRenamingT(Variable(from, fromIdx, Real), Variable(to, toIdx, Real))
+  def globalAlphaRenamingT(from: Variable, to: Variable): Tactic =
     new ConstructionTactic("Bound Renaming") {
       import scala.language.postfixOps
       override def applicable(node: ProofNode): Boolean = true
 
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        Some(new ApplyRule(new BoundRenaming(from, fromIdx, to, toIdx)) {
+        Some(new ApplyRule(new BoundRenaming(from, to)) {
           override def applicable(node: ProofNode): Boolean = true
         } & initialValueTactic(node.sequent.ante, AntePosition.apply)
           & initialValueTactic(node.sequent.succ, SuccPosition.apply))
