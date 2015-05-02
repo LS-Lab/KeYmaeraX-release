@@ -750,8 +750,8 @@ object AxiomaticRule {
 }
 
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
-  require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rules cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
   val name: String = "Axiomatic Rule " + id + " instance"
+  require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
   private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
     case Some(pair) => pair
