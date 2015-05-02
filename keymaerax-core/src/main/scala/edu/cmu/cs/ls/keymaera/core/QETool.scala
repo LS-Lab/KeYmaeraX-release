@@ -1,3 +1,6 @@
+/**
+ * @note Code Review: 2015-05-01
+ */
 package edu.cmu.cs.ls.keymaera.core
 
 /**

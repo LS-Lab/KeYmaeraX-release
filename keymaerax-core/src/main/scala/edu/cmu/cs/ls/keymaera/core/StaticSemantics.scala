@@ -2,6 +2,7 @@
  * The static semantics of differential dynamic logic.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @note Code Review: 2015-05-01
  */
 package edu.cmu.cs.ls.keymaera.core
 
