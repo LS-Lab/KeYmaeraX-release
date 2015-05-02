@@ -71,14 +71,8 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 
   def compare(other: NamedSymbol): Int = {
     val cmp = name.compare(other.name)
-    if (cmp != 0) cmp else index match {
-        case Some(idx) => other.index match {case Some(odx) => idx-odx case None => 1}
-        case None => other.index match {case Some(odx) => -1 case None =>
-          assert(this==other, "no different categories of symbols with same name " + this + " compared to " + other)
-          0
-        }
-    }
-  }
+    if (cmp != 0) cmp else index.getOrElse(-1) - other.index.getOrElse(-1)
+  } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
   override def toString: String = index match {
     case None => name
