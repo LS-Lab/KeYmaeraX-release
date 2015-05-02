@@ -61,13 +61,17 @@ sealed trait ApplicationOf extends Expression
  * A named symbol such as a variable or function symbol or predicate symbol.
  * User-level symbols should not use underscores, which are reserved for the core.
  */
-sealed trait NamedSymbol extends Expression {
+sealed trait NamedSymbol extends Expression with Ordered {
   require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names)")
   require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols")
 
   def name: String
   def index: Option[Int]
+
+  def compare(other: NamedSymbol): Int = name.compare(other.name) ensuring(
+    r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
+
   override def toString: String = index match {
     case None => name
     case Some(idx) => name + "_" + idx
