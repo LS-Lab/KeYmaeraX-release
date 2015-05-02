@@ -39,3 +39,9 @@ A uniform substitution calculus for differential dynamic logic. http://arxiv.org
 Differential dynamic logic for hybrid systems. 
 Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
 http://www.cs.cmu.edu/~aplatzer/pub/freedL.pdf
+
+
+------------------------------------------------------------------
+Code Review: KeYmaera X Core: 2015-05-01
+  TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
+  TODO AxiomBase.scala: Code Review confirms that DE needs ? not to have a '.
