@@ -240,7 +240,6 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
 
   /**
    * Position types for the subgoals of a Provable.
-   * @TODO Not sure how to make this type visible outside as well
    */
   type Subgoal = Int
 
@@ -1117,7 +1116,6 @@ case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
 
 
 //@derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
-//@todo convert rules to private[core] to make them easier to change? Ruins access though?
 case class CutRight(c: Formula, pos: SuccPos) extends Rule {
   val name: String = "cut Right"
   /**

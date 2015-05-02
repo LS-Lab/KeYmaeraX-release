@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaera.core
 // require favoring immutable Seqs for soundness
 
 import scala.collection.immutable
+import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
 
@@ -218,6 +219,7 @@ private[core] object AxiomBase {
  * @see "Andre Platzer. Dynamic logics of dynamical systems. arXiv 1205.4788, May 2012."
  * @see "Andre Platzer. Differential game logic. arXiv 1408.1980, August 2014."
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ * @todo simplify/unify the number of declarations.
  */
 Variables.
   T c().

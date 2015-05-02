@@ -61,7 +61,7 @@ sealed trait ApplicationOf extends Expression
  * A named symbol such as a variable or function symbol or predicate symbol.
  * User-level symbols should not use underscores, which are reserved for the core.
  */
-sealed trait NamedSymbol extends Expression with Ordered {
+sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
     "non-empty names without underscores (except at end for internal names)")
   require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols")
