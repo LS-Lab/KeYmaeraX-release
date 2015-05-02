@@ -236,7 +236,10 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     //And these we can pattern match on but are not implemented yet.
     case Exists(_,_) => ???
 
-    case DifferentialSymbol(x : NamedSymbol) => prettyPrinter(x) + symbolTable.PRIME
+    case DifferentialSymbol(x : NamedSymbol) => x.name + (x.index match {
+      case None => ""
+      case Some(idx) => "_" + idx
+    }) + symbolTable.PRIME
     
     case _ => throw new Exception("Ended up in the _ case of the pretty printer for: " + expressionToPrint.getClass())
   }

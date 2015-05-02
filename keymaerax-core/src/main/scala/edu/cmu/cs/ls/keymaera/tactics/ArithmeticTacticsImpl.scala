@@ -76,42 +76,40 @@ object ArithmeticTacticsImpl {
               case qe: QETool =>
                 // TODO make lemma DB configurable
                 val lemmaDB = new FileLemmaDB()
-                LookupLemma.addRealArithLemma(lemmaDB, qe, universalClosure(desequentialization(node.sequent))) match {
-                  case Some((id, lemma)) =>
-                    lemma.fact.conclusion.succ.head match {
-                      case lemmaFml@Equiv(res, True) => {
+                val lemma = RCF.proveArithmetic(qe, universalClosure(desequentialization(node.sequent)))
+                val id = LookupLemma.addLemma(lemmaDB, lemma)
 
-                        val applyLemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
-                          override def applicable(node: ProofNode): Boolean = true
-                        }
+                lemma.fact.conclusion.succ.head match {
+                  case lemmaFml@Equiv(res, True) => {
 
-                        def reInst(f: Formula): Tactic = f match {
-                          case Forall(v, g) =>
-                            val resG = reInst(g)
-                            if (v.isEmpty) resG
-                            else {
-                              val tac = (for (n <- v) yield lastAnte(instantiateT(n, n))).reduce(seqT)
-                              tac & resG
-                            }
-                          case _ => NilT
-                        }
-
-                        val closeTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
-
-                        val tactic = cutT(Some(lemmaFml)) & onBranch(
-                          (cutShowLbl, lastSucc(cohideT) & applyLemma),
-                          (cutUseLbl, lastAnte(EquivLeftT) & onBranch(
-                            (equivLeftLbl, lastAnte(AndLeftT) & lastAnte(hideT) & reInst(res) & closeTactic),
-                            (equivRightLbl, lastAnte(AndLeftT) & lastAnte(NotLeftT) & closeT)
-                          ))
-                        )
-                        Some(tactic)
-                      }
-                      case f => println("Only apply QE if the result is true, have " + f.prettyString()); None
+                    val applyLemma = new ApplyRule(LookupLemma(lemmaDB, id)) {
+                      override def applicable(node: ProofNode): Boolean = true
                     }
-                  case _ => None
+
+                    def reInst(f: Formula): Tactic = f match {
+                      case Forall(v, g) =>
+                        val resG = reInst(g)
+                        if (v.isEmpty) resG
+                        else {
+                          val tac = (for (n <- v) yield lastAnte(instantiateT(n, n))).reduce(seqT)
+                          tac & resG
+                        }
+                      case _ => NilT
+                    }
+
+                    val closeTactic = (closeT | locateSucc(Propositional) | locateAnte(Propositional)) *
+
+                    val tactic = cutT(Some(lemmaFml)) & onBranch(
+                      (cutShowLbl, lastSucc(cohideT) & applyLemma),
+                      (cutUseLbl, lastAnte(EquivLeftT) & onBranch(
+                        (equivLeftLbl, lastAnte(AndLeftT) & lastAnte(hideT) & reInst(res) & closeTactic),
+                        (equivRightLbl, lastAnte(AndLeftT) & lastAnte(NotLeftT) & closeT)
+                      ))
+                    )
+                    Some(tactic)
+                  }
+                  case f => println("Only apply QE if the result is true, have " + f.prettyString()); None
                 }
-              case _ => throw new IllegalArgumentException("Cannot use " + tool.name + " for quantifier elimination, need a QETool")
             }
           } catch {
             case ex: IllegalArgumentException => Some(debugT("QE failed: " + ex.getMessage) & stopT)

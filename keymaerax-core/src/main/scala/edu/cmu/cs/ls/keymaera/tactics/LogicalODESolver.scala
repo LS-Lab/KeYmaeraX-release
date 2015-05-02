@@ -17,8 +17,56 @@ import TacticLibrary._
  */
 object LogicalODESolver {
 
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Tactics
+  // tactics for the advanced solver
+  // The advanced solver is the same as the simple solver, but instead of diffWeaken it does successive inverse ghosts
+  // and inverse cuts until finally only time remains, and then solves just for t' = 0*t + 1. This allows the selection
+  // of only specific points in time.
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Given a system of form:
+   *    [x1' = theta1, ..., t' = 0*t+1 & x1=s1, ...]p
+   * produces a system of form:
+   *    [x2' = theta2, ..., t' = 0*t+1 & x1=s1, ...]p
+   * that is, it removes the first ODE from the system that is not required.
+   *
+   * @return The tactic.
+   */
+  private def stepRemoveT : PositionTactic = new PositionTactic("Remove solved ODE from system") {
+    override def applies(s: Sequent, p: Position): Boolean = s(p) match {
+      case program : DifferentialProduct => {
+        val solvedEquations = conditionsToValues(odeConstraints(program))
+        val variables = atomicODEs(program).map(_.xp.x)
+
+        val nextVariable : Option[Variable] = ???
+
+        (variables.toSet - timeVar(program) -- solvedEquations.keys.toSet).isEmpty && nextVariable.isDefined
+      }
+    }
+
+    override def apply(p: Position): Tactic = new ConstructionTactic() {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case program : DifferentialProduct => {
+          val solvedEquations = conditionsToValues(odeConstraints(program))
+          val variables = atomicODEs(program).map(_.xp.x)
+          require((variables.toSet - timeVar(program) -- solvedEquations.keys.toSet).isEmpty,
+            "All primed variables should have solution")
+
+          ???
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = ???
+    }
+  }
+
+  private def removeTimeVar : PositionTactic = ???
+
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Tactics of the simple solver
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   def solveT : PositionTactic = new PositionTactic("Solve ODE") {

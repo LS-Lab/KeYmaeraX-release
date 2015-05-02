@@ -986,7 +986,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
  */
 object Axiom {
   // immutable list of sound axioms
-  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms()
+  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
 }
 /** lookup axiom named id */
 case class Axiom(id: String) extends Rule {

@@ -30,64 +30,60 @@ class LemmaTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   "Tactics (Lemma)" should "learn a lemma from (x > 0 & y > x) -> x >= 0" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y > x) -> x >= 0".asFormula)
     val lemmaDB = new FileLemmaDB
-    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
-      case Some((id, res)) =>
-        (res.fact.conclusion.succ.head match {
-          case Equiv(_, True) => true
-          case _ => false
-        }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
-        val t = LookupLemma(lemmaDB, id)
-        r.apply(t) shouldBe 'closed
-      case None => "Lemma creation" should be ("successful")
-    }
+    val res = RCF.proveArithmetic(math, f)
+    val id = LookupLemma.addLemma(lemmaDB, res)
+
+    (res.fact.conclusion.succ.head match {
+      case Equiv(_, True) => true
+      case _ => false
+    }) shouldBe true
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
+    val t = LookupLemma(lemmaDB, id)
+    r.apply(t) shouldBe 'closed
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (x >= 0 & y > 0)".asFormula)
     val lemmaDB = new FileLemmaDB
-    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
-      case Some((id, res)) =>
-        (res.fact.conclusion.succ.head match {
+    val res = RCF.proveArithmetic(math, f)
+    val id = LookupLemma.addLemma(lemmaDB, res)
+
+    (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
           case _ => false
-        }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
-        val t = LookupLemma(lemmaDB, id)
-        r.apply(t) shouldBe 'closed
-      case None => "Lemma creation" should be ("successful")
-    }
+    }) shouldBe true
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
+    val t = LookupLemma(lemmaDB, id)
+    r.apply(t) shouldBe 'closed
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & y > x) -> (y > 0)" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & y > x) -> (y > 0)".asFormula)
     val lemmaDB = new FileLemmaDB
-    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
-      case Some((id, res)) =>
-        (res.fact.conclusion.succ.head match {
-          case Equiv(_, True) => true
-          case _ => false
-        }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
-        val t = LookupLemma(lemmaDB, id)
-        r.apply(t) shouldBe 'closed
-      case None => "Lemma creation" should be ("successful")
-    }
+    val res = RCF.proveArithmetic(math, f)
+    val id = LookupLemma.addLemma(lemmaDB, res)
+
+    (res.fact.conclusion.succ.head match {
+        case Equiv(_, True) => true
+        case _ => false
+    }) shouldBe true
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
+    val t = LookupLemma(lemmaDB, id)
+    r.apply(t) shouldBe 'closed
   }
 
   it should "learn a lemma from (x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)" in {
     val f = TacticLibrary.universalClosure("(x > 0 & y = x+1 & x+1 > x) -> (x+1 > 0)".asFormula)
     val lemmaDB = new FileLemmaDB
-    LookupLemma.addRealArithLemma(lemmaDB, math, f) match {
-      case Some((id, res)) =>
-        (res.fact.conclusion.succ.head match {
+    val res = RCF.proveArithmetic(math, f)
+    val id = LookupLemma.addLemma(lemmaDB, res)
+
+    (res.fact.conclusion.succ.head match {
           case Equiv(_, True) => true
           case _ => false
-        }) shouldBe true
-        val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
-        val t = LookupLemma(lemmaDB, id)
-        r.apply(t) shouldBe 'closed
-      case None => "Lemma creation" should be ("successful")
-    }
+    }) shouldBe true
+    val r = new RootNode(new Sequent(Nil, Vector(), Vector(res.fact.conclusion.succ.head)))
+    val t = LookupLemma(lemmaDB, id)
+    r.apply(t) shouldBe 'closed
   }
 }
