@@ -4,6 +4,7 @@ import java.nio.channels.Channels
 
 import edu.cmu.cs.ls.keymaera.api.KeYmaeraInterface.PositionTacticAutomation
 
+import java.io.File
 import java.io.FileOutputStream
 
 import scala.io.Source
@@ -11,8 +12,13 @@ import spray.json.DefaultJsonProtocol._
 
 //Global setting:
 object DBAbstractionObj {
-  def defaultDatabase = SQLite //this needs to ba a def and not a val because DBAbstractionObj is initialized in SQLite.
-  val dblocation = System.getProperty("user.home") + "/keymaerax.sqlite"
+  def defaultDatabase = SQLite //this needs to be a def and not a val because DBAbstractionObj is initialized in SQLite.
+  val dblocation: String = {
+    val file = new File(System.getProperty("user.home") + File.separator +
+      ".keymaera" + File.separator + "keymaerax.sqlite")
+    file.mkdirs
+    file.getCanonicalPath
+  }
   println(dblocation)
 }
 
