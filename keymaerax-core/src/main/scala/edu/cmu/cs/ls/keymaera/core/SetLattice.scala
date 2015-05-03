@@ -57,8 +57,10 @@ private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[
  * @param s Elements in the set: Left[A] elements excluded from the set, Right[A] elements included in the set
  * @tparam A Type of elements in the set
  * @note s is private for abstraction purposes to be able to change representation.
+ * @todo could turn into a sealed trait with two private implementations: TopLattice and SetLattice
+ *       which check each other. Symmetry may be less obvious in that case.
  */
-class SetLattice[A](private val s: Either[TopSet[A], immutable.Set[A]]) {
+class SetLattice[A] private(private val s: Either[TopSet[A], immutable.Set[A]]) {
   def isTop = s.isLeft
   def isEmpty: Boolean = s match {
     case Right(ts) => ts.isEmpty
