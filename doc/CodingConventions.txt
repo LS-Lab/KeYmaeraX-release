@@ -1,0 +1,28 @@
+KeYmaera X Coding Style
+-----------------------
+Soundness-critical core:
+
+1) Code should be optimized for correctness by a strict "correctness-first" principle.
+
+2) Code should further be optimized for readability and simplicity, making it obvious what it does so that it is easier to check whether it is correct.
+
+3) Pure functional code without mutable data structures and without side effects. Algebraic datatypes via case classes are encouraged as well as value pattern matching such as: val Imply(p,q) = f.
+
+4) Requires preconditions are strictly enforced. Ample use of asserts and ensuring postconditions are encouraged. Their string arguments should state the expected positive outcome. Unlike thrown exceptions, whose strings can talk negatively about what failed. No hidden aspects that are crucial to the understanding of the correctness of the local code is acceptable without documentation or local checking via asserts even if that causes redundant checking.
+
+5) The code should follow the principle of least astonishment, not using  surprising or unconventional Scala features in the core. Preferably not making correctness of code depend on the order that match case are placed in, without an explicit comment indicating that.
+
+6) Let's not be dogmatic about the writing part of code. Simplicity and elegance are always preferred over lexical style. Lines that are much longer than 100 characters are discouraged, though, for readability reasons.
+
+7) Brief scaladoc compatible one-line comments /** like this */ are encouraged for documentation purposes except when more lines are needed, in which case
+ /**
+  * Comment styles should
+  * be like this instead.
+  * @param x important thingy
+  * @return whatever we give back
+  */
+  
+8) Type delimiters go short right after the name and return types should be declared (in the core), so
+  def something(x: Int, p: Function): Boolean
+  
+  instead of def something(x : Int, p : Function) : Boolean

@@ -1,0 +1,47 @@
+KeYmaera X Kernel Code Review
+
+1) The primary purpose of the code review is to establish correctness of all soundness-critical parts of the KeYmaera X theorem prover.
+
+2) The secondary purpose of the review is to identify whether there are better ways of implementing the system, but precedence will be given to point 1). Those improvements will not be performed during the code review but noted for later in a separate todo file.
+
+During the KeYmaera X Kernel Code Review, the whole source code will be reviewed for correctness and compliance with the theoretical results. We follow the principle of Cartesian Doubt and scrutinize the code until everybody present is convinced that the code is correct. The code review cannot proceed to other parts of the code until everybody has established its correctness. If anyone present during a kernel code review has any doubt about any part of the code, pertaining to its correctness, the code review cannot move on until the doubt has been settled or a flag such as 
+
+ //@todo code review postponed
+
+has been placed along with an explanation. The code review will only proceed successfully if everybody present clearly and independently stated that he is convinced that the code is correct.
+
+Please don't hesitate at all if some part of the code is unclear to you. It is the purpose of the code review to clarify what the KeYmaera X Kernel does and whether it is correctly doing what it should be doing. Parts of confusion about the code are likely sources of trouble. So it is crucial for the KeYmaera X project to point out possible sources of deficiencies or ambiguities.
+
+KeYmaera X Kernel Code Review
+
+R1) Expression.scala for correctness and compliance with section 2.1 [1]
+R2) StaticSemantics.scala for correctness and compliance with section 2.3 [1]
+R3) UniformSubstitution.scala for correctness and compliance with section 3.0 [1]
+R4) Proof.scala for correctness and compliance with [1,2]
+R5) AxiomBase.scala for correctness and compliance with Fig 2+3 [1]
+R6) SetLattice.scala for correctness
+ including a glance at Errors.scala
+R7) QETool.scala for correctness
+R8) LemmaDB.scala + FileLemmaDB.scala for correctness
+
+If you are convinced of the correct implementation of the KeYmaera X Kernel you will indicate so by signing the same commit with your secret gpg key to which only you have access. We will also be placing a tag to clearly mark the reviewed version of the code.
+
+Changes to the KeYmaera X Kernel will have to be reviewed periodically in similar ways.
+
+If there are any questions about the KeYmaera X Kernel code review or any suggestions on how it could be improved, please ask.
+
+Andre
+
+[1] André Platzer. 
+A uniform substitution calculus for differential dynamic logic. http://arxiv.org/abs/1503.01981
+
+[2] André Platzer. 
+Differential dynamic logic for hybrid systems. 
+Journal of Automated Reasoning, 41(2), pages 143-189, 2008.
+http://www.cs.cmu.edu/~aplatzer/pub/freedL.pdf
+
+
+------------------------------------------------------------------
+Code Review: KeYmaera X Core: 2015-05-01
+  TODO Proof.scala: BoundVariableRenaming.compatibilityMode should be false
+  TODO AxiomBase.scala: Code Review confirms that DE needs ? not to have a '.
