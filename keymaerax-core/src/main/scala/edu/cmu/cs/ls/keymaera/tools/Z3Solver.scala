@@ -14,6 +14,9 @@ import scala.sys.process._
  */
 class Z3Solver extends SMTSolver {
 
+  val k2s = new KeYmaeraToSMT("Z3")
+  def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
+
   val pathToZ3 : String = {
     val z3TempDir = System.getProperty("java.io.tmpdir")
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -117,6 +120,7 @@ class Z3Solver extends SMTSolver {
     writer.close()
     val cmd = pathToZ3 + " " + smtFile.getAbsolutePath
     val output: String = cmd.!!
+//    println("[Z3 simplify result] \n" + output + "\n")
     smtFile.delete()
     new KeYmaeraParser().parseBareTerm(output) match {
       case Some(output) => output

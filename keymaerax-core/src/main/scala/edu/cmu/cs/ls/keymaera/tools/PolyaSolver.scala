@@ -14,6 +14,9 @@ import scala.sys.process._
  */
 class PolyaSolver extends SMTSolver {
 
+  val k2s = new KeYmaeraToSMT("Polya")
+  def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
+
   val pathToPolya : String = {
     val polyaTempDir = System.getProperty("java.io.tmpdir")
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
@@ -84,5 +87,25 @@ class PolyaSolver extends SMTSolver {
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
+
+  def simplify(t: Term) = {
+    val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
+//    println("[Simplifying with Polya ...] \n" + smtCode)
+    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtFile = new File(smtTempDir, "KeymaeraToPolyaSimplify.smt2")
+    val writer = new FileWriter(smtFile)
+    writer.write(smtCode)
+    writer.flush()
+    writer.close()
+    val cmd = pathToPolya + " " + smtFile.getAbsolutePath
+    val output: String = cmd.!!
+//    println("[Polya simplify result] \n" + output + "\n")
+    smtFile.delete()
+    new KeYmaeraParser().parseBareTerm(output) match {
+      case Some(output) => output
+      case None => t
+    }
+  }
+
 }
 
