@@ -18,11 +18,11 @@ class Z3Solver extends SMTSolver {
   def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
 
   val pathToZ3 : String = {
-    val z3TempDir = System.getProperty("java.io.tmpdir")
+    val z3TempDir = System.getProperty("user.home") + File.separator + ".keymaera"
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
-    if(osName.contains("windows") && new java.io.File(z3TempDir+"z3.exe").exists()) {
+    if(osName.contains("windows") && new File(z3TempDir+"z3.exe").exists()) {
       z3TempDir+"z3.exe"
-    } else if(new java.io.File(z3TempDir+"z3").exists()) {
+    } else if(new File(z3TempDir+"z3").exists()) {
       z3TempDir+"z3"
     } else {
       val osArch = System.getProperty("os.arch")
@@ -68,7 +68,7 @@ class Z3Solver extends SMTSolver {
       Runtime.getRuntime.exec("chmod u+x " + z3AbsPath)
       z3Source.close()
       z3Dest.close()
-      assert(new java.io.File(z3AbsPath).exists())
+      assert(new File(z3AbsPath).exists())
       z3AbsPath
     }
   }
@@ -94,7 +94,7 @@ class Z3Solver extends SMTSolver {
     var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
     smtCode += "\n(check-sat)\n"
     println("[Solving with Z3...] \n" + smtCode)
-    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaera"
     val smtFile = new File(smtTempDir, "KeymaeraToZ3.smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -112,7 +112,7 @@ class Z3Solver extends SMTSolver {
   def simplify(t: Term) = {
     val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
 //    println("[Simplifying with Z3 ...] \n" + smtCode)
-    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaera"
     val smtFile = new File(smtTempDir, "KeymaeraToZ3Simplify.smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
