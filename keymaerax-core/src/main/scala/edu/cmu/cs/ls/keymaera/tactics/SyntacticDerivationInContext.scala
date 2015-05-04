@@ -641,7 +641,7 @@ object SyntacticDerivationInContext {
 
   def PowerDerivativeT = BinaryDerivativeT("^' derive power", Power.unapply, deriveExponential)
   def deriveExponential(lhs: Term, rhs: Term): Term = {
-    assert(rhs != Number(0), "not power 0")
+    require(rhs != Number(0), "not power 0")
     Times(Times(rhs, Power(lhs, Minus(rhs, Number(1)))), Differential(lhs))
   }
 

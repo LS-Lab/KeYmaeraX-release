@@ -194,6 +194,18 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.succ) should contain only "1+2*x^(2-1)*(x)'=1+2*x*x'".asFormula
   }
 
+  it should "not work when the exp is 0" in {
+    val in = "1 + (x^0)' = 1 + 2*x*x'".asFormula
+    val tactic = PowerDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
+    val node = helper.formulaToNode(in)
+    helper.runTactic(tactic, node)
+    node.openGoals().head.sequent.succ(0) shouldBe in
+    //Cannot intercept because the exception is thrown from inside the tactics execution framework.
+//    intercept[IllegalArgumentException] {
+//      helper.runTactic(tactic, helper.formulaToNode(in))
+//    }
+  }
+
   "DeriveConstant" should "work" in {
     val in = "1 + 2' = 1 + 0".asFormula
     val node = helper.formulaToNode(in)
