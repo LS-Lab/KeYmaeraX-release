@@ -32,6 +32,10 @@ class PolyaSolver extends SMTSolver {
         if(osArch.contains("64")) {
           resource = this.getClass.getResourceAsStream("/polya/mac64/polya")
         }
+      } else if(osName.contains("linux")) {
+        if(osArch.contains("64")) {
+          resource = this.getClass.getResourceAsStream("/polya/ubuntu64/polya")
+        }
       } else {
         throw new Exception("Polya solver is currently not supported in your operating system.")
       }
