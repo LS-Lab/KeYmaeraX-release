@@ -173,6 +173,7 @@ object StaticSemantics {
   private def progVars(program: Program): VCP = {
     program match {
       // base cases
+      //@todo in what sense does a literally occur in the free or bound variables? a is a program constant, not a variable to begin with.
       case a: ProgramConst             => VCP(fv = topVarsDiffVars(a), bv = topVarsDiffVars(a), mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = topVarsDiffVars(a), bv = topVarsDiffVars(a), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))
