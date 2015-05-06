@@ -119,7 +119,7 @@ object ArithmeticTacticsImpl {
       }
 
       if (toolId.equals("Mathematica")) t.scheduler = Tactics.MathematicaScheduler
-      else if (toolId.equals("Z3")) t.scheduler = Tactics.Z3Scheduler
+      else if (toolId.equals("Z3")) t.scheduler = Tactics.Z3Scheduler.get
       else if (toolId.equals("Polya")) t.scheduler = Tactics.PolyaScheduler.get
       else throw new Exception("Cannot find the QE tool")
 
@@ -130,7 +130,7 @@ object ArithmeticTacticsImpl {
     private def toolIsInitialized(): Boolean = {
       // HACK access singletons, because applies/applicable does not have a tool instance parameter
       if (toolId == "Mathematica") MathematicaScheduler.isInitialized
-      else if (toolId == "Z3") Z3Scheduler.isInitialized
+      else if (toolId == "Z3") Z3Scheduler.get.isInitialized
       else if (toolId == "Polya") PolyaScheduler.get.isInitialized
       else false
     }

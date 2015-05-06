@@ -16,8 +16,8 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
     Tactics.KeYmaeraScheduler.init(Map())
-    Tactics.Z3Scheduler = new Interpreter(new Z3)
-    Tactics.Z3Scheduler.init(Map())
+    Tactics.Z3Scheduler = Some(new Interpreter(new Z3))
+    Tactics.Z3Scheduler.get.init(Map())
     z3 = new Z3Solver
     polya = new PolyaSolver
   }
@@ -25,7 +25,7 @@ class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach 
   override def afterEach() = {
     z3 = null
     polya = null
-    Tactics.Z3Scheduler.shutdown()
+    Tactics.Z3Scheduler.get.shutdown()
     Tactics.Z3Scheduler = null
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.KeYmaeraScheduler = null

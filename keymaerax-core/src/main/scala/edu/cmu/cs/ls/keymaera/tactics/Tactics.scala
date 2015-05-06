@@ -96,7 +96,7 @@ object Tactics {
   // TODO replace with dependency injection
   var KeYmaeraScheduler = new Interpreter(KeYmaera)//new Scheduler(Seq.fill(Config.maxCPUs)(KeYmaera))
   var MathematicaScheduler = new Interpreter(new Mathematica)
-  var Z3Scheduler = new Interpreter(new Z3)
+  var Z3Scheduler  : Option[Interpreter] = try { Some(new Interpreter(new Z3)) } catch { case e : Exception => None }
   var PolyaScheduler : Option[Interpreter] = try { Some(new Interpreter(new Polya)) } catch { case e : Exception => None }
     //new Scheduler(for (i <- 0 until Config.mathlicenses) yield new Mathematica)
 
