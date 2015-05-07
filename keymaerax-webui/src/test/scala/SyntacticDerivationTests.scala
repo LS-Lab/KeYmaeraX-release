@@ -1,7 +1,7 @@
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext.ApplicableAtFormula
 import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
+import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
 
@@ -402,6 +402,19 @@ class SyntacticDerivationTests extends TacticTestSuite {
     result.openGoals().flatMap(_.sequent.ante) should contain only "a>0".asFormula
     result.openGoals().flatMap(_.sequent.succ) should contain only
       ("b<0".asFormula, Box(Assign(z, Number(1)), Equal(DifferentialSymbol(z), Number(1))), "c=0".asFormula)
+  }
+
+  it should "work on powers" in {
+    val f = helper.parseFormula("[x := 0;](a^2)'=0")
+    val node = helper.formulaToNode(f)
+
+    val tactic : Tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.PowerDerivativeT)
+
+    helper.runTactic(tactic, node, true)
+
+    helper.report(node)
+
+    node.openGoals().head.sequent.succ(0) shouldBe helper.parseFormula("[x:=(0);](2!=0->2*a^(2-1)*(a)'=0)")
   }
 
 }
