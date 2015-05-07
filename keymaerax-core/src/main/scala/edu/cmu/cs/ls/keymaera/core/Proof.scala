@@ -753,9 +753,11 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
   require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
+  override def toString: String = name + "(" + subst + ")"
+
   private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
     case Some(pair) => pair
-    case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
+    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
   }
 
   /**
