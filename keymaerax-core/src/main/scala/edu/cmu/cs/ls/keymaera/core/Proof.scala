@@ -771,7 +771,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
       else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
         "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
     } catch {
-      case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " for intended conclusion\n" + conclusion)
+      case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion)
     }
 
 }

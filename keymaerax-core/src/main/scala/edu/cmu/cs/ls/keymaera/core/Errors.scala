@@ -9,7 +9,25 @@ package edu.cmu.cs.ls.keymaera.core
  * KeYmaera Prover Exceptions.
  */
 class ProverException(msg: String) extends RuntimeException(msg) {
-  
+
+  private var logicalContext: String = ""
+
+  /**
+   * The logical context, i.e. stack of proof rules or nested logical context information
+   * describing in which context this exception occurred.
+   */
+  def getContext = logicalContext
+
+  /**
+   * Add the context information to this exception, returning the resulting exception to be thrown.
+   */
+  def inContext(context: String): ProverException = {
+    this.logicalContext = this.logicalContext + "\nin " + context
+    this
+  }
+
+  override def toString: String = super.getMessage + "\n" + getContext
+
   //@TODO Add functionality to prettyPrint all expressions passed in on demand.
 }
 // class ProverException private(ex: RuntimeException) extends RuntimeException(ex) {
@@ -28,19 +46,16 @@ class CoreException(msg:String) extends ProverException(msg) {}
 
 class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
   extends CoreException("Substitution clash: " + subst + " not " + U + "-admissible for " + e + " when substituting in " + context + "\n" + info) {
-  /**
-   * Add the context information to this exception, returning the resulting exception to be thrown.
-   */
-  def inContext(context: String): SubstitutionClashException =
-    new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
+  //  def inContext(context: String): SubstitutionClashException =
+    //new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
 
 class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/, info: String = "") extends CoreException(msg + "\nBoundRenaming " + ren + " because\n" + info) {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
-  def inContext(context: String): BoundRenamingClashException =
-    new BoundRenamingClashException(msg, ren, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
+//  def inContext(context: String): BoundRenamingClashException =
+//    new BoundRenamingClashException(msg, ren, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
 }
 
 class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
