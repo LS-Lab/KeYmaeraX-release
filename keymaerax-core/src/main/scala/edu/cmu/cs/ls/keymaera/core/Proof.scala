@@ -718,7 +718,7 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
 
   private def log(msg: =>Any): Unit = {} //println(msg)
 
-  override def toString: String = name + "(" + subst + ")"
+  override def toString: String = subst.toString   // name + "(" + subst + ")"
 
   /**
    * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
@@ -729,10 +729,11 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
     try {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
       if (subst(origin) == conclusion) immutable.List(origin)
-      else throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst +
-        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+      else throw new CoreException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion)
+      /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
+        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
     } catch {
-      case exc: SubstitutionClashException => throw exc.inContext(this + "\nof premise\n" + origin + "\ndid not lead to expected conclusion\n" + conclusion)
+      case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion)
     }
 }
 
@@ -825,7 +826,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         case Exists(vars, _) if vars.contains(what) => apply(f)
         case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
         case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
-        case _ => if (compatibilityMode) {println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
+        case _ => if (compatibilityMode) {//println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
           Box(Assign(repl, what), apply(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString())

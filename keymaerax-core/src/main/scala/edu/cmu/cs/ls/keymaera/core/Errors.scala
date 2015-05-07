@@ -10,6 +10,7 @@ package edu.cmu.cs.ls.keymaera.core
  */
 class ProverException(msg: String) extends RuntimeException(msg) {
 
+  /* @note mutable state for gathering the logical context that led to this exception */
   private var logicalContext: String = ""
 
   /**
@@ -26,7 +27,7 @@ class ProverException(msg: String) extends RuntimeException(msg) {
     this
   }
 
-  override def toString: String = super.getMessage + "\n" + getContext
+  override def toString: String = super.getMessage + getContext
 
   //@TODO Add functionality to prettyPrint all expressions passed in on demand.
 }
@@ -42,15 +43,15 @@ class ProverException(msg: String) extends RuntimeException(msg) {
 /**
  * Critical exceptions from KeYmaera's Prover Core.
  */
-class CoreException(msg:String) extends ProverException(msg) {}
+class CoreException(msg:String) extends ProverException(msg)
 
-class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
-  extends CoreException("Substitution clash: " + subst + " not " + U + "-admissible for " + e + " when substituting in " + context + "\n" + info) {
+case class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
+  extends CoreException("Substitution clash: " + subst + " not " + U + "-admissible for " + e + " when substituting in " + context + " " + info) {
   //  def inContext(context: String): SubstitutionClashException =
     //new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
 
-class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/, info: String = "") extends CoreException(msg + "\nBoundRenaming " + ren + " because\n" + info) {
+case class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/, info: String = "") extends CoreException(msg + "\nBoundRenaming " + ren + " because\n" + info) {
   /**
    * Add the context information to this exception, returning the resulting exception to be thrown.
    */
@@ -58,10 +59,10 @@ class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/, inf
 //    new BoundRenamingClashException(msg, ren, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
 }
 
-class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
+case class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
 
-class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
+case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
 }
 
-class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
+case class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}
