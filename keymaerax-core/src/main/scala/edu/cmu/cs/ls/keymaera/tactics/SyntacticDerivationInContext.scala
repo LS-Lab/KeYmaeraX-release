@@ -10,7 +10,7 @@ import edu.cmu.cs.ls.keymaera.tactics.AxiomTactic.{uncoverAxiomT,axiomLookupBase
 import edu.cmu.cs.ls.keymaera.tactics.AxiomaticRuleTactics.{equivalenceCongruenceT,equationCongruenceT}
 import edu.cmu.cs.ls.keymaera.tactics.ContextTactics.cutInContext
 import edu.cmu.cs.ls.keymaera.tactics.EqualityRewritingImpl.equivRewriting
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl._
+import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohideT, uniformSubstT}
 import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.AxiomCloseT
 import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{onBranch,lastAnte,lastSucc,locateTerm}
 import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
@@ -431,7 +431,7 @@ object SyntacticDerivationInContext {
           val axiom = Axiom.axioms.get("c()' derive constant fn") match { case Some(ax) => ax }
 
           Some(
-            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+            assertT(0,1) & PropositionalTacticsImpl.uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
               AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
               AxiomCloseT)
@@ -441,7 +441,7 @@ object SyntacticDerivationInContext {
           val axiom = Axiom.axioms.get("c()' derive constant fn") match { case Some(ax) => ax }
 
           Some(
-            assertT(0,1) & uniformSubstT(subst, Map(fml -> axiom)) &
+            assertT(0,1) & PropositionalTacticsImpl.uniformSubstT(subst, Map(fml -> axiom)) &
               lastSucc(assertPT(axiom)) &
               AxiomTactic.axiomT("c()' derive constant fn") & assertT(1,1) & lastAnte(assertPT(axiom)) & lastSucc(assertPT(axiom)) &
               AxiomCloseT)
@@ -639,7 +639,119 @@ object SyntacticDerivationInContext {
   def DivideDerivativeT = BinaryDerivativeT("/' derive quotient", Divide.unapply, deriveDivision)
   def deriveDivision(lhs: Term, rhs: Term): Term = Divide(Minus(Times(Differential(lhs), rhs), Times(lhs, Differential(rhs))), Power(rhs, Number(2)))
 
-  def PowerDerivativeT = BinaryDerivativeT("^' derive power", Power.unapply, deriveExponential)
+  def PowerDerivativeT = new PositionTactic("^' derive power") with ApplicableAtTerm {
+    val axiom = Axiom.axioms("^' derive power")
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+        //Positions
+        val formulaCtxPos = findParentFormulaPos(node.sequent(p), p.inExpr)
+
+        //Terms and formulas
+        val term = getTerm(node.sequent, p)
+
+        //Construct the tactic.
+        term match {
+          case Differential(Power(lhs, rhs)) => {
+            require(rhs != Number(0), "not power 0")
+            val right = Times(Times(rhs, Power(lhs, Minus(rhs, Number(1)))), Differential(lhs))
+            val axiomInstance = Imply(NotEqual(rhs, Number(0)), Equal(term, right))
+
+            val errOnOpen = assertT(_=>false, "Failed to close")
+
+//            println("f(?) substitution " + lhs.prettyString())
+//            println("c() substitution " + rhs.prettyString())
+//            println("axiom instance: " + axiomInstance.prettyString())
+//            println("replacement: " + axiom)
+
+            val aF = FuncOf(Function("f", None, lhs.sort, lhs.sort), Anything)
+            val aC = FuncOf(Function("c", None, Unit, Real), Nothing)
+
+            val subst = new SubstitutionPair(aF, lhs) :: new SubstitutionPair(aC, rhs) :: Nil
+
+            //Show that an instance of the axiom is true by uniform substitution.
+            def proveByAxiom = {
+              val cNonZero = NotEqual(rhs, Number(0))
+
+              def proveByUsubst = //helper tactic for proveEquivalence
+                assertT(1,2) &
+                cutT(Some(axiomInstance)) &
+                onBranch(
+                  (BranchLabels.cutShowLbl,
+                    hideT(SuccPos(0)) &
+                    hideT(SuccPos(0)) &
+                    uniformSubstT(subst, Map(axiomInstance -> axiom)) &
+                    AxiomTactic.axiomT("^' derive power") &
+                    assertT(2,1) &
+                    lastAnte(assertPT(axiom)) &
+                    lastSucc(assertPT(axiom)) &
+                    AxiomCloseT),
+                  (BranchLabels.cutUseLbl,
+                    (lastAnte(ImplyLeftT) &&
+                      (
+                        (AxiomCloseT ~ errorT("Expected close")),
+                        (AxiomCloseT ~ errorT("user -- left over"))
+                      )
+                    ) ~
+                    errorT("Expected proof to close.")
+                  )
+                )
+
+              def proveEquivalence = //Helper tactic for proveByAxiom.
+                cutT(Some( Equal(term, right) )) &
+                onBranch(
+                  (BranchLabels.cutShowLbl, proveByUsubst ~ errOnOpen),
+                  (BranchLabels.cutUseLbl, (
+                    assertT(2, 1) &
+                    assertPT(Equal(term, right))(AntePos(1)) &
+                      assertPT(term, "Rewrite will succeed")(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))) &
+                      EqualityRewritingImpl.constFormulaCongruenceT(AntePos(1), true, false)(SuccPosition(0, PosInExpr(0 :: 0 :: Nil))) &
+                      lastSucc(EquivRightT) &
+                      onBranch(
+                        (BranchLabels.equivLeftLbl, lastSucc(ImplyRightT) & AxiomCloseT ~ errorT("Expected close")),
+                        (BranchLabels.equivRightLbl, (lastAnte(ImplyLeftT) && (
+                          lastSucc(cohideT) & arithmeticT,
+                          AxiomCloseT ~ errorT("expected close")
+                        )))
+                      ) ~ errorT("Expected close")
+                  ))
+                )
+
+              lastSucc(cohideT) & // hide original problem.
+                equivalenceCongruenceT(formulaCtxPos) &
+                assertT(0,1) &
+                PropositionalTacticsImpl.cutT(Some(cNonZero)) &
+                onBranch(
+                  (BranchLabels.cutShowLbl, lastSucc(cohideT) & arithmeticT),
+                  (BranchLabels.cutUseLbl, proveEquivalence)
+                ) ~ errorT("Expected full proof.")
+            }
+
+
+            Some(ContextTactics.cutInContext(axiomInstance, p) & onBranch(
+              (cutShowLbl, proveByAxiom),
+              (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
+            ))
+
+          }
+          case _ => None
+        }
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+
+    override def applies(t: Term): Boolean = t match {
+      case Differential(Power(_, exp)) => exp != Number(0)
+      case _ => false
+    }
+
+    override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
+  }
+
+
+//  def PowerDerivativeT = BinaryDerivativeT("^' derive power", Power.unapply, deriveExponential)
+
   def deriveExponential(lhs: Term, rhs: Term): Term = {
     require(rhs != Number(0), "not power 0")
     Times(Times(rhs, Power(lhs, Minus(rhs, Number(1)))), Differential(lhs))
