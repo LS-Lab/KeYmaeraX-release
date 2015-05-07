@@ -159,12 +159,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
 
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
-  def apply(t: Term): Term = usubst(t) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
-  def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
-  def apply(p: Program): Program = usubst(p) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
+  def apply(t: Term): Term = {try usubst(t) catch {case ex: SubstitutionClashException => throw ex.inContext(t.prettyString())}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
+  def apply(f: Formula): Formula = {try usubst(f) catch {case ex: SubstitutionClashException => throw ex.inContext(f.prettyString())}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
+  def apply(p: Program): Program = {try usubst(p) catch {case ex: SubstitutionClashException => throw ex.inContext(p.prettyString())}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
   /**
    * Apply uniform substitution everywhere in the sequent.
@@ -173,6 +176,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     try {
       Sequent(s.pref, s.ante.map(usubst), s.succ.map(usubst))
     } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
