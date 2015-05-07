@@ -582,7 +582,7 @@ class USubstTests extends FlatSpec with Matchers {
     USubst(SubstitutionPair(DotTerm, arg) :: Nil)(context)
   
   def contextapp(context: Formula, arg: Formula) : Formula = {
-    val mycontext = Function("dottingC__", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC__", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
+    val mycontext = Function("dottingC_", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
 
     USubst(SubstitutionPair(PredicationalOf(mycontext, DotFormula), context) :: Nil)(PredicationalOf(mycontext, arg))
   }

@@ -25,7 +25,7 @@ sealed case class Context(ctx: Formula) {
    * @return The instantiated context.
    */
   def instantiate(withF: Formula): Formula = {
-    val context = Function("dottingC__", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC__", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
+    val context = Function("dottingC_", None, Bool, Bool)//@TODO eisegesis  should be Function("dottingC_", None, Real->Bool, Bool) //@TODO introduce function types or the Predicational datatype
     USubst(SubstitutionPair(PredicationalOf(context, DotFormula), ctx) :: Nil)(PredicationalOf(context, withF))
   }
 
@@ -35,7 +35,7 @@ sealed case class Context(ctx: Formula) {
    * @return The instantiated context.
    */
   def instantiate(withT: Term): Formula = {
-    val context = Function("dottingC__", None, Real, Bool)
+    val context = Function("dottingC_", None, Real, Bool)
     USubst(SubstitutionPair(PredOf(context, DotTerm), ctx) :: Nil)(PredOf(context, withT))
   }
 }
