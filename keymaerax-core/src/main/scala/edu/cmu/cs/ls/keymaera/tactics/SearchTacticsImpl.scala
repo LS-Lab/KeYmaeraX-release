@@ -1,6 +1,6 @@
 package edu.cmu.cs.ls.keymaera.tactics
 
-import ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tools.Tool
@@ -32,6 +32,67 @@ object SearchTacticsImpl {
       case _ => false
     }
   }
+
+  /**
+   * Locates the first expression and position in the sequent for which pred is true.
+   * @author Nathan Fulton
+   * @param posT The tactic to apply at the found position.
+   * @param pred A predicate defined in terms of expressions and positions in expressions.
+   * @param inAnte Determines if we should search the ante or succ.
+   * @return A tactic that applies posT and is applicable iff there is a position where pred holds and posT is applicable.
+   */
+  def locateByPredicate(posT : PositionTactic, pred : (PosInExpr, Expression) => Boolean, inAnte : Boolean = false) : Tactic =
+    new ApplyPositionTactic("locateByPredicate(" + posT.name + ")", posT) {
+      override def findPosition(s: Sequent): Option[Position] = {
+
+        val formulaTraversal = new ExpressionTraversalFunction {
+          var applicableExprAndPos : Option[(PosInExpr, Expression)] = None
+
+          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
+            if(pred(p, e)) {
+              applicableExprAndPos = Some(p, e)
+              Left(Some(ExpressionTraversal.stop))
+            }
+            else Left(None)
+
+          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
+            if(pred(p, e)) {
+              applicableExprAndPos = Some(p, e)
+              Left(Some(ExpressionTraversal.stop))
+            }
+            else Left(None)
+
+          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+            if(pred(p, e)) {
+              applicableExprAndPos = Some(p, e)
+              Left(Some(ExpressionTraversal.stop))
+            }
+            else Left(None)
+        }
+
+        def firstApplicablePosition(fs : IndexedSeq[Formula], isAnte : Boolean) : Option[Position] =
+          (fs zip Range(0, fs.length-1))
+            .map(indexedElement => {
+              val f     = indexedElement._1
+              val index = indexedElement._2
+              ExpressionTraversal.traverse(formulaTraversal, f)
+              (index, formulaTraversal.applicableExprAndPos)
+            })
+            .filter(_._2.isDefined)
+            .lastOption match {
+              case Some((idx, posAndExpr)) =>
+                if(isAnte) AntePosition(idx, posAndExpr.get._1) //Thee gets are justified by the filter.
+                else       SuccPosition(idx, posAndExpr.get._1)
+              case None => None
+            }
+
+
+        if(inAnte) firstApplicablePosition(s.ante, true)
+        else firstApplicablePosition(s.succ, false)
+      }
+
+      override def applicable(node: ProofNode): Boolean = findPosition(node.sequent).isDefined
+    }
 
   def locateTerm(posT : PositionTactic, inAnte: Boolean = false) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
     override def findPosition(s: Sequent): Option[Position] = if (inAnte) {
