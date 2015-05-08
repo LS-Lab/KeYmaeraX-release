@@ -143,7 +143,7 @@ object StaticSemantics {
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
     // DotFormula is like a reserved Predicational
     case DotFormula => VCF(fv = topVarsDiffVars(), bv = bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = bottom) //@todo bv=topVarsDiffVars?
+    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
     // homomorphic cases
     case Not(g)      => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
