@@ -46,25 +46,25 @@ object SearchTacticsImpl {
       override def findPosition(s: Sequent): Option[Position] = {
 
         val formulaTraversal = new ExpressionTraversalFunction {
-          var applicableExprAndPos : Option[(PosInExpr, Expression)] = None
+          var applicablePosAndExpr : Option[(PosInExpr, Expression)] = None
 
           override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
             if(pred(p, e)) {
-              applicableExprAndPos = Some(p, e)
+              applicablePosAndExpr = Some(p, e)
               Left(Some(ExpressionTraversal.stop))
             }
             else Left(None)
 
           override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
             if(pred(p, e)) {
-              applicableExprAndPos = Some(p, e)
+              applicablePosAndExpr = Some(p, e)
               Left(Some(ExpressionTraversal.stop))
             }
             else Left(None)
 
           override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
             if(pred(p, e)) {
-              applicableExprAndPos = Some(p, e)
+              applicablePosAndExpr = Some(p, e)
               Left(Some(ExpressionTraversal.stop))
             }
             else Left(None)
@@ -76,7 +76,7 @@ object SearchTacticsImpl {
               val f     = indexedElement._1
               val index = indexedElement._2
               ExpressionTraversal.traverse(formulaTraversal, f)
-              (index, formulaTraversal.applicableExprAndPos)
+              (index, formulaTraversal.applicablePosAndExpr)
             })
             .filter(_._2.isDefined)
             .lastOption match {
