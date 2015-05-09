@@ -90,7 +90,7 @@ sealed trait SetLattice[A] {
 
 object SetLattice {
   def apply[A](e: A): SetLattice[A] = new FiniteLattice(Set(e))
-  def apply[A](e: A*): SetLattice[A] = new FiniteLattice(e.toSet)
+  //def apply[A](e: A*): SetLattice[A] = new FiniteLattice(e.toSet)
   def apply[A](s: immutable.Set[A]): SetLattice[A] = new FiniteLattice(s)
   def apply[A](s: immutable.Seq[A]): SetLattice[A] = new FiniteLattice(s.toSet)
   def bottom[A]: SetLattice[A] = new FiniteLattice(Set.empty[A])
