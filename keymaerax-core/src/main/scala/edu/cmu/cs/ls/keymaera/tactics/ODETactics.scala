@@ -575,7 +575,7 @@ object ODETactics {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
-      if (x.name != aX.name || x.index != aX.index) replaceFree(axiom)(aX, x, None)
+      if (x.name != aX.name || x.index != aX.index) SubstitutionHelper.replaceFree(axiom)(aX, x)//replaceFree(axiom)(aX, x, None)
       else axiom
     }
     axiomLookupBaseT("DA differential ghost", subst, alpha, axiomInstance)
