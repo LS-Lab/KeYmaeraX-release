@@ -37,12 +37,12 @@ class BouncingBall extends FlatSpec with Matchers with BeforeAndAfterEach {
     Tactics.MathematicaScheduler = new Interpreter(new Mathematica)
     Tactics.MathematicaScheduler.init(mathematicaConfig)
     Tactics.KeYmaeraScheduler.init(Map())
-    Tactics.Z3Scheduler = new Interpreter(new Z3)
-    Tactics.Z3Scheduler.init(Map())
+    Tactics.Z3Scheduler = Some(new Interpreter(new Z3))
+    Tactics.Z3Scheduler.get.init(Map())
   }
 
   override def afterEach() = {
-    Tactics.Z3Scheduler.shutdown()
+    Tactics.Z3Scheduler.get.shutdown()
     Tactics.MathematicaScheduler.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.Z3Scheduler = null

@@ -159,12 +159,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
 
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
-  def apply(t: Term): Term = usubst(t) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
-  def apply(f: Formula): Formula = usubst(f) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
-  def apply(p: Program): Program = usubst(p) ensuring(
-    r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty, "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
+  def apply(t: Term): Term = {try usubst(t) catch {case ex: SubstitutionClashException => throw ex.inContext(t.prettyString())}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
+  def apply(f: Formula): Formula = {try usubst(f) catch {case ex: SubstitutionClashException => throw ex.inContext(f.prettyString())}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
+  def apply(p: Program): Program = {try usubst(p) catch {case ex: SubstitutionClashException => throw ex.inContext(p.prettyString())}
+  } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
+    "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
   /**
    * Apply uniform substitution everywhere in the sequent.
@@ -173,8 +176,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     try {
       Sequent(s.pref, s.ante.map(usubst), s.succ.map(usubst))
     } catch {
+      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this.toString, s.toString()).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
   }
 
@@ -249,16 +253,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
         case Times(l, r)  => Times(usubst(l),  usubst(r))
         case Divide(l, r) => Divide(usubst(l), usubst(r))
         case Power(l, r)  => Power(usubst(l),  usubst(r))
-        case der@Differential(e) =>
-          require(admissible(topVarsDiffVars(), e),
-            "Substitution clash when substituting " + this + " in differential " + der.prettyString() + " with clashes " + clashSet(topVarsDiffVars[NamedSymbol](), e))
+        case der@Differential(e) => requireAdmissible(topVarsDiffVars(), e, term)
           Differential(usubst(e))
         // unofficial
         case Pair(l, r) => Pair(usubst(l), usubst(r))  
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this.toString, term.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString(), "undef", ex.getMessage).initCause(ex)
     }
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
@@ -277,14 +279,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
           USubst(SubstitutionPair(rArg, usubst(theta)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
         case app@PredOf(q, theta) if !matchHead(app) => PredOf(q, usubst(theta))
         case app@PredicationalOf(op, fml) if matchHead(app) =>
-          require(admissible(topVarsDiffVars[NamedSymbol](), fml),
-            "Substitution clash when substituting " + this + " in predicational " +  app.prettyString() + " with clashes " + clashSet(topVarsDiffVars[NamedSymbol](), fml))
+          requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
           val subs = uniqueElementOf[SubstitutionPair](subsDefs, sp => sp.what.isInstanceOf[PredicationalOf] && sp.sameHead(app))
           val PredicationalOf(rp, rArg) = subs.what
           assert(rp == op, "match only if same head")
           assert(rArg == DotFormula)
           USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
-        case app@PredicationalOf(q, fml) if !matchHead(app) => PredicationalOf(q, usubst(fml))
+        case app@PredicationalOf(q, fml) if !matchHead(app) =>
+          requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
+          PredicationalOf(q, usubst(fml))
         case DotFormula if  subsDefs.exists(_.what == DotFormula) =>
           subsDefs.find(_.what == DotFormula).get.repl.asInstanceOf[Formula]
         case DotFormula if !subsDefs.exists(_.what == DotFormula) => DotFormula
@@ -305,30 +308,24 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
         case Equiv(l, r) => Equiv(usubst(l), usubst(r))
 
         // NOTE DifferentialFormula in analogy to Differential
-        case der@DifferentialFormula(g) =>
-          require(admissible(topVarsDiffVars(), g),
-            "Substitution clash when substituting " + this + " in differential " +  der.prettyString() + " with clashes " + clashSet(topVarsDiffVars[NamedSymbol](), g))
+        case der@DifferentialFormula(g) => requireAdmissible(topVarsDiffVars(), g, formula)
           DifferentialFormula(usubst(g))
 
         // binding cases add bound variables to u
-        case Forall(vars, g) => require(admissible(SetLattice[NamedSymbol](vars), g),
-          "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
+        case Forall(vars, g) => requireAdmissible(SetLattice[NamedSymbol](vars), g, formula)
             Forall(vars, usubst(g))
-        case Exists(vars, g) => require(admissible(SetLattice[NamedSymbol](vars), g),
-          "Substitution clash: " + this + " not " + vars.mkString(",") + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
+        case Exists(vars, g) => requireAdmissible(SetLattice[NamedSymbol](vars), g, formula)
             Exists(vars, usubst(g))
 
         // Note could optimize speed by avoiding duplicate computation unless Scalac knows about CSE
-        case Box(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          "Substitution clash:" + this + " not " + StaticSemantics(usubst(p)).bv.prettyString + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
+        case Box(p, g) => requireAdmissible(StaticSemantics(usubst(p)).bv, g, formula)
             Box(usubst(p), usubst(g))
-        case Diamond(p, g) => require(admissible(StaticSemantics(usubst(p)).bv, g),
-          "Substitution clash:" + this + " not " +  StaticSemantics(usubst(p)).bv.prettyString + "-admissible for " + g.prettyString() + " when substituting in " + formula.prettyString())
+        case Diamond(p, g) => requireAdmissible(StaticSemantics(usubst(p)).bv, g, formula)
             Diamond(usubst(p), usubst(g))
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this.toString, formula.prettyString()).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString(), "undef", ex.getMessage).initCause(ex)
     }
   } ensuring(
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
@@ -345,22 +342,18 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
         case a: AssignAny => a
         case Test(f) => Test(usubst(f))
         //case IfThen(cond, thenT) => IfThen(usubst(cond), usubst(thenT))
-        case ode: DifferentialProgram =>
+        case ode: DifferentialProgram => requireAdmissible(StaticSemantics(ode).bv, ode, program)
           // require is redundant with the checks on NFContEvolve in usubst(ode, primed)
-          require(admissible(StaticSemantics(ode).bv, ode),
-          "Substitution clash: " + this + " not " + StaticSemantics(ode).bv.prettyString + "-admissible when substituting in " + program.prettyString)
           usubstODE(ode, StaticSemantics(ode).bv)
         case Choice(a, b) => Choice(usubst(a), usubst(b))
-        case Compose(a, b) => require(admissible(StaticSemantics(usubst(a)).bv, b),
-          "Substitution clash: " + this + " not " + StaticSemantics(usubst(a)).bv.prettyString + "-admissible for " + b.prettyString() + " when substituting in " + program.prettyString())
+        case Compose(a, b) => requireAdmissible(StaticSemantics(usubst(a)).bv, b, program)
           Compose(usubst(a), usubst(b))
-        case Loop(a) => require(admissible(StaticSemantics(usubst(a)).bv, a),
-          "Substitution clash: " + this + " not " + StaticSemantics(usubst(a)).bv.prettyString + "-admissible for " + a.prettyString() + " when substituting in " + program.prettyString())
+        case Loop(a) => requireAdmissible(StaticSemantics(usubst(a)).bv, a, program)
           Loop(usubst(a))
       }
     } catch {
       case ex: IllegalArgumentException =>
-        throw new SubstitutionClashException(ex.getMessage, this.toString, program.toString()).initCause(ex)
+        throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString(), "undef", ex.getMessage).initCause(ex)
     }
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
@@ -368,13 +361,10 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   /** uniform substitutions on differential programs */
   private def usubstODE(ode: DifferentialProgram, odeBV: SetLattice[NamedSymbol]): DifferentialProgram = {
     ode match {
-      case ODESystem(a, h) =>
-        require(admissible(odeBV, h), "Substitution clash in ODE: " + odeBV + " clash with " + h.prettyString())
+      case ODESystem(a, h) => requireAdmissible(odeBV, h, ode)
         // admissibility within ODE a will be checked recursively by usubstODE
         ODESystem(usubstODE(a, odeBV), usubst(h))
-      case AtomicODE(xp: DifferentialSymbol, e) =>
-        require(admissible(odeBV, e),
-          "Substitution clash: " + this + " not " + odeBV + "-admissible for " + e.prettyString() + " when substituting in " + ode.prettyString())
+      case AtomicODE(xp: DifferentialSymbol, e) => requireAdmissible(odeBV, e, ode)
         AtomicODE(xp, usubst(e))
       case c: DifferentialProgramConst if subsDefs.exists(_.what == c) =>
         subsDefs.find(_.what == c).get.repl.asInstanceOf[DifferentialProgram]
@@ -391,6 +381,16 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * Is this uniform substitution U-admissible for expression e?
    */
   private def admissible(U: SetLattice[NamedSymbol], e: Expression): Boolean = admissible(U, StaticSemantics.signature(e))
+
+  /**
+   * Require that this uniform substitution is U-admissible for expression e, and
+   * raise informative exception if not.
+   */
+  private def requireAdmissible(U: SetLattice[NamedSymbol], e: Expression, context: Expression): Unit =
+//    require(admissible(U, e),
+//      "Substitution clash: " + this + " not " + U + "-admissible for " + e.prettyString() + " when substituting in " + context.prettyString())
+    if (!admissible(U, e))
+      throw new SubstitutionClashException(toString, U.prettyString, e.prettyString(), context.prettyString(), clashSet(U, e).prettyString, "")
 
   /**
    * check whether this substitution is U-admissible for an expression with the given occurrences of functions/predicates symbols.
@@ -426,6 +426,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
    * @param e the expression of interest.
    * @return FV(restrict this to occurrences) /\ U
    * @see arXiv:1503.01981 Definition 12.
+   * @note not used often
    */
   private def clashSet(U: SetLattice[NamedSymbol], e: Expression): SetLattice[NamedSymbol] = clashSet(U, StaticSemantics.signature(e))
 

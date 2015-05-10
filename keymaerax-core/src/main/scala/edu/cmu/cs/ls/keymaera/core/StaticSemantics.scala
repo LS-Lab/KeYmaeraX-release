@@ -143,7 +143,7 @@ object StaticSemantics {
     case PredOf(p, arg) => VCF(fv = freeVars(arg), bv = bottom)
     // DotFormula is like a reserved Predicational
     case DotFormula => VCF(fv = topVarsDiffVars(), bv = bottom)
-    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = bottom) //@todo bv=topVarsDiffVars?
+    case PredicationalOf(p, arg) => VCF(fv = topVarsDiffVars(), bv = topVarsDiffVars())
 
     // homomorphic cases
     case Not(g)      => val vg = fmlVars(g); VCF(fv = vg.fv, bv = vg.bv)
@@ -173,6 +173,7 @@ object StaticSemantics {
   private def progVars(program: Program): VCP = {
     program match {
       // base cases
+      //@todo in what sense does a literally occur in the free or bound variables? a is a program constant, not a variable to begin with.
       case a: ProgramConst             => VCP(fv = topVarsDiffVars(a), bv = topVarsDiffVars(a), mbv = bottom)
       case a: DifferentialProgramConst => VCP(fv = topVarsDiffVars(a), bv = topVarsDiffVars(a), mbv = bottom)
       case Assign(x, e) => VCP(fv = freeVars(e), bv = SetLattice(x), mbv = SetLattice(x))

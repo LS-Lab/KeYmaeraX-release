@@ -81,7 +81,7 @@ object SMTLib {
 
 class SMTConversionException(s:String) extends Exception(s)
 
-class KeYmaeraToSMT {
+class KeYmaeraToSMT(toolId : String) {
   type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
   type SExpr = SMTLib
   private val smtLib : SExpr = new SExpr // Result
@@ -167,8 +167,13 @@ class KeYmaeraToSMT {
   }
 
   def simplifyTerm(t: Term) : Term = {
-    val z3 = new Z3Solver
-    z3.simplify(t)
+    if (toolId == "Z3") {
+      val z3 = new Z3Solver
+      z3.simplify(t)
+    } else if (toolId == "Polya") {
+      val polya = new PolyaSolver
+      polya.simplify(t)
+    } else throw new SMTConversionException("Cannot simplify term with: " + toolId)
   }
 
   def convertFormula(f : Formula) : String = {
@@ -229,17 +234,5 @@ class KeYmaeraToSMT {
   }
 }
 
-class SMTToKeYmaera {
-
-  def convertToKeYmaera(e : String) = {
-    if (e.contains("unsat")) {
-      True
-    } else if(e.contains("sat")) {
-      False
-    } else if(e.contains("unknown")) {
-      False
-    } else throw new SMTConversionException("Conversion of SMT result " + e + " is not defined")
-  }
-}
 
 

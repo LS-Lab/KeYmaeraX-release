@@ -14,13 +14,16 @@ import scala.sys.process._
  */
 class PolyaSolver extends SMTSolver {
 
+  val k2s = new KeYmaeraToSMT("Polya")
+  def toSMT(expr : KExpr): SExpr = k2s.convertToSMT(expr)
+
   val pathToPolya : String = {
-    val polyaTempDir = System.getProperty("java.io.tmpdir")
+    val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaera"
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
     // so far only for Mac Os
     // TODO: support for other OS
-    if(new java.io.File(polyaTempDir+"polya").exists()) {
+    if(new File(polyaTempDir+"polya").exists()) {
       polyaTempDir+"polya"
     } else {
       val osArch = System.getProperty("os.arch")
@@ -28,6 +31,10 @@ class PolyaSolver extends SMTSolver {
       if(osName.contains("mac")) {
         if(osArch.contains("64")) {
           resource = this.getClass.getResourceAsStream("/polya/mac64/polya")
+        }
+      } else if(osName.contains("linux")) {
+        if(osArch.contains("64")) {
+          resource = this.getClass.getResourceAsStream("/polya/ubuntu64/polya")
         }
       } else {
         throw new Exception("Polya solver is currently not supported in your operating system.")
@@ -45,7 +52,7 @@ class PolyaSolver extends SMTSolver {
       Runtime.getRuntime.exec("chmod u+x " + polyaAbsPath)
       polyaSource.close()
       polyaDest.close()
-      assert(new java.io.File(polyaAbsPath).exists())
+      assert(new File(polyaAbsPath).exists())
       polyaAbsPath
     }
   }
@@ -70,7 +77,7 @@ class PolyaSolver extends SMTSolver {
     var smtCode = toSMT(f).getVariableList + "(assert (not " + toSMT(f).getFormula + "))"
     smtCode += "\n(check-sat)\n"
     println("[Solving with Polya...] \n" + smtCode)
-    val smtTempDir = System.getProperty("java.io.tmpdir")
+    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaera"
     val smtFile = new File(smtTempDir, "KeymaeraToPolya.smt2")
     val writer = new FileWriter(smtFile)
     writer.write(smtCode)
@@ -84,5 +91,25 @@ class PolyaSolver extends SMTSolver {
       case _ => throw new Exception("Expected a formula from QE call but got a non-formula expression.")
     }
   }
+
+  def simplify(t: Term) = {
+    val smtCode = toSMT(t).getVariableList + "(simplify " + toSMT(t).getFormula + ")"
+//    println("[Simplifying with Polya ...] \n" + smtCode)
+    val smtTempDir = System.getProperty("user.home") + File.separator + ".keymaera"
+    val smtFile = new File(smtTempDir, "KeymaeraToPolyaSimplify.smt2")
+    val writer = new FileWriter(smtFile)
+    writer.write(smtCode)
+    writer.flush()
+    writer.close()
+    val cmd = pathToPolya + " " + smtFile.getAbsolutePath
+    val output: String = cmd.!!
+//    println("[Polya simplify result] \n" + output + "\n")
+    smtFile.delete()
+    new KeYmaeraParser().parseBareTerm(output) match {
+      case Some(output) => output
+      case None => t
+    }
+  }
+
 }
 

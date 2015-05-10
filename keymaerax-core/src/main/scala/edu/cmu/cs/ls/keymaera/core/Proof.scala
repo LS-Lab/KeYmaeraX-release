@@ -718,7 +718,7 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
 
   private def log(msg: =>Any): Unit = {} //println(msg)
 
-  override def toString: String = name + "(" + subst + ")"
+  override def toString: String = subst.toString   // name + "(" + subst + ")"
 
   /**
    * check that conclusion is indeed derived from origin via subst (note that no reordering is allowed since those operations
@@ -729,10 +729,11 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
     try {
       log("---- " + subst + "\n    " + origin + "\n--> " + subst(origin) + (if (subst(origin) == conclusion) "\n==  " else "\n!=  ") + conclusion)
       if (subst(origin) == conclusion) immutable.List(origin)
-      else throw new CoreException("From\n  " + origin + "\nuniform substitution\n  " + subst +
-        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))
+      else throw new CoreException(this + "\non premise   " + origin + "\nresulted in  " + subst(origin) + "\nbut expected " + conclusion)
+      /*("From\n  " + origin + "\nuniform substitution\n  " + subst +
+        "\ndid not conclude the intended\n  " + conclusion + "\nbut instead\n  " + subst(origin))*/
     } catch {
-      case exc: SubstitutionClashException => throw exc.inContext(this + "\nof premise\n" + origin + "\ndid not lead to expected conclusion\n" + conclusion)
+      case exc: SubstitutionClashException => throw exc.inContext(this + "\non premise   " + origin + "\nresulted in  " + "clash " + exc.clashes + "\nbut expected " + conclusion)
     }
 }
 
@@ -754,9 +755,11 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   //@todo temporarily disabling (temporary?) require.
 //  require(subst.freeVars.isEmpty, "Uniform substitution instances of axiomatic rule " + id + " cannot currently introduce free variables " + subst.freeVars + " in\n" + this)
 
+  override def toString: String = name + "(" + subst + ")"
+
   private val (rulepremise: Sequent, ruleconclusion: Sequent) = AxiomaticRule.rules.get(id) match {
     case Some(pair) => pair
-    case _ => throw new InapplicableRuleException("Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
+    case _ => throw new InapplicableRuleException("Axiomatic Rule " + id + " does not exist in:\n" + AxiomaticRule.rules.mkString("\n"), this)
   }
 
   /**
@@ -770,7 +773,7 @@ final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
       else throw new CoreException("Desired conclusion\n  " + conclusion + "\nis not a uniform substitution instance of\n" + ruleconclusion +
         "\nwith uniform substitution\n  " + subst + "\nwhich would be the instance\n  " + subst(ruleconclusion) + "\ninstead of\n  " + conclusion)
     } catch {
-      case exc: SubstitutionClashException => throw exc.inContext("while applying " + this + " for intended conclusion\n" + conclusion)
+      case exc: SubstitutionClashException => throw exc.inContext(this + " for intended conclusion\n" + conclusion)
     }
 
 }
@@ -824,7 +827,7 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
         case Exists(vars, _) if vars.contains(what) => apply(f)
         case Box(Assign(x, y), _) if x == y && x == repl => apply(f)
         case Diamond(Assign(x, y), _) if x == y && x == repl => apply(f)
-        case _ => if (compatibilityMode) {println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
+        case _ => if (compatibilityMode) {//println("BoundRenaming: Change alphaRenamingT to disable compatibilityMode")
           Box(Assign(repl, what), apply(f))
         } else throw new BoundRenamingClashException("Bound renaming only to bound variables " +
           what + " is not bound", this.toString, f.prettyString())

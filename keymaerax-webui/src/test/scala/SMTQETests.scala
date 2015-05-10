@@ -15,7 +15,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   override def beforeEach() = {
     Tactics.KeYmaeraScheduler = new Interpreter(KeYmaera)
-    Tactics.Z3Scheduler = new Interpreter(new Z3)
+    Tactics.Z3Scheduler = Some(new Interpreter(new Z3))
     Tactics.PolyaScheduler = Some(new Interpreter(new Polya))
     z3 = new Z3Solver
     polya = new PolyaSolver
@@ -23,7 +23,7 @@ class SMTQETests extends FlatSpec with Matchers with BeforeAndAfterEach {
 
   override def afterEach() = {
     Tactics.PolyaScheduler.get.shutdown()
-    Tactics.Z3Scheduler.shutdown()
+    Tactics.Z3Scheduler.get.shutdown()
     Tactics.KeYmaeraScheduler.shutdown()
     Tactics.Z3Scheduler = null
     Tactics.KeYmaeraScheduler = null

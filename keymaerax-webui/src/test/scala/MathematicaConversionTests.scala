@@ -129,6 +129,10 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   it should "convert names correctly" in {
     ml.runUnchecked("x")._2 should be (x)
     ml.runUnchecked("x[y]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y", None, Real)))
+    ml.runUnchecked("x[y0]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real)))
+  }
+
+  ignore should "convert crazy names correctly" in {
     ml.runUnchecked("x$underscore$0")._2 should be (Variable("x_0", None, Real))
     ml.runUnchecked("x$underscore$0$underscore$1")._2 should be (Variable("x_0_1", None, Real))
     ml.runUnchecked("x[y$underscore$0]")._2 should be (FuncOf(Function("x", None, Real, Real), Variable("y_0", None, Real)))
@@ -182,6 +186,18 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
   "KeYmaera <-> Mathematica converters" should "commute" in {
     round trip num(5)
     round trip x
+    round trip Variable("y", None, Real)
+    round trip Variable("xyzd", None, Real)
+    round trip Variable("_", None, Real)
+    round trip Variable("x_", None, Real)
+    round trip Variable("x", Some(0), Real)
+    round trip Variable("x", Some(5), Real)
+    round trip Variable("x_", Some(0), Real)
+    round trip Variable("x_", Some(2), Real)
+    round trip FuncOf(Function("x", None, Real, Real), Variable("y0", None, Real))
+  }
+
+  ignore should "commute crazy names" in {
     round trip Variable("x_0", None, Real)
     round trip Variable("x_", None, Real)
     round trip Variable("_", None, Real)

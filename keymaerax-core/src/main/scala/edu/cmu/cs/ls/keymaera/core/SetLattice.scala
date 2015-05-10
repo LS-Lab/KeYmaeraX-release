@@ -12,14 +12,122 @@ import scala.collection.immutable
 import scala.collection.GenTraversableOnce
 
 
-//  type SetLattice[A] = Set[A]
-//  private def topExceptDotFormula[A]: Set[A] = ???
-//  private def topExceptDotTerm[A]: Set[A] = ???
+/**
+ * Lattice of sets, i.e. the lattice of sets that also includes top and top-like elements.
+ * @tparam A Type of elements in the set
+ * @author smitsch
+ * @author aplatzer
+ */
+sealed trait SetLattice[A] {
+  //@todo isInfinite might be a better name? If needed at all.
+  def isTop: Boolean
+  def isEmpty: Boolean
 
-//object SetLattice {
-//  def apply[A](e: A): Set[A] = Set(e)
-//  def bottom[A]: Set[A] = Set()
-//}
+  // element operations
+  def contains(elem: A): Boolean
+
+  def +(elem: A): SetLattice[A]
+  def -(elem: A): SetLattice[A]
+
+  // set operations
+
+  /** Set union */
+  def ++(other: GenTraversableOnce[A]): SetLattice[A]
+  /** Set subtraction */
+  def --(other: GenTraversableOnce[A]): SetLattice[A]
+  def intersect(other: immutable.Set[A]): SetLattice[A]
+
+  // conversions and mappings
+  def map[B](fun: A => B): SetLattice[B]
+
+  def toSetLattice[B >: A]: SetLattice[B]
+  def toSet[B >: A]: Set[B]
+  /** Set of verbatim occurring symbols in this (possibly top) SetLattice */
+  def toSymbolSet[B >: A]: Set[B]
+
+  def prettyString: String
+
+  // binary operations with mixed cases
+
+  def subsetOf(other: SetLattice[A]): Boolean = this match {
+    case FiniteLattice(ts) => other match {
+      case FiniteLattice(os) => ts.subsetOf(os)
+      case os: TopSet[A] => ts.intersect(os.excluded).isEmpty /* this is a subset of that top if that doesn't exclude any of this */
+    }
+    case ts: TopSet[A] => other match {
+      case FiniteLattice(_) => false           /* top not a subset of anything else */
+      case os: TopSet[A] => os.excluded.subsetOf(ts.excluded) /* this top is a subset of that top if that excluded at most this's excluded */
+
+    }
+  }
+  /** Set union */
+  def ++(other: SetLattice[A]): SetLattice[A] = other match {
+    case FiniteLattice(os) => this ++ os
+    case os: TopSet[A] => this match {
+      case FiniteLattice(ts) => os ++ ts   // commute ++ for type reasons
+      case ts: TopSet[A] => new TopSet(ts.excluded.intersect(os.excluded), ts.symbols ++ os.symbols)
+    }
+  }
+  def --(other: SetLattice[A]): SetLattice[A] = other match {
+    case FiniteLattice(os) => this -- os
+    case os: TopSet[A] => this match {
+      case FiniteLattice(ts) => FiniteLattice(ts.intersect(os.excluded)) /* ts -- (top except os) == ts/\os */
+      case ts: TopSet[A] => new TopSet(os.excluded -- ts.excluded, ts.symbols -- os.symbols)
+    }
+  }
+
+  def intersect(other: SetLattice[A]): SetLattice[A] = other match {
+    case FiniteLattice(os) => intersect(os)
+    case os: TopSet[A] => this match {
+        //@todo could do symmetric call as well: os.intersect(ts)
+      case FiniteLattice(ts) => FiniteLattice(ts -- os.excluded) /* ts /\ (top except os) == ts--os */
+      case ts: TopSet[A] => new TopSet(ts.excluded ++ os.excluded, ts.symbols.intersect(os.symbols)) /* (top except ts) /\ (top except os) == (top except ts++os) */
+
+    }
+  }
+
+}
+
+object SetLattice {
+  def apply[A](e: A): SetLattice[A] = new FiniteLattice(Set(e))
+  //def apply[A](e: A*): SetLattice[A] = new FiniteLattice(e.toSet)
+  def apply[A](s: immutable.Set[A]): SetLattice[A] = new FiniteLattice(s)
+  def apply[A](s: immutable.Seq[A]): SetLattice[A] = new FiniteLattice(s.toSet)
+  def bottom[A]: SetLattice[A] = new FiniteLattice(Set.empty[A])
+  def top[A](topSymbols: A*): SetLattice[A] = new TopSet(Set.empty, topSymbols.toSet)
+  //@todo careful: this is an overapproximation of V\cup V'
+  def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new TopSet(Set(DotTerm, DotFormula), topSymbols.toSet)
+}
+
+/**
+ * A finite element of a lattice, represented as a finite set of concrete elements.
+ * @param set the concrete members of this finite element of a lattice
+ * @tparam A Type of elements in the set
+ * @note Implementation forwards to set.
+ * @author aplatzer
+ */
+private case class FiniteLattice[A](set: immutable.Set[A])
+  extends SetLattice[A] {
+  def isTop = false
+  def isEmpty: Boolean = set.isEmpty
+
+  def contains(elem: A): Boolean = set.contains(elem)
+
+  def +(elem: A): SetLattice[A] = FiniteLattice(set + elem)
+  def -(elem: A): SetLattice[A] = FiniteLattice(set - elem)
+  def ++(other: GenTraversableOnce[A]): SetLattice[A] = FiniteLattice(set ++ other)
+  def --(other: GenTraversableOnce[A]): SetLattice[A] = FiniteLattice(set -- other)
+  def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteLattice(set.intersect(other))
+
+  def map[B](fun: A => B): SetLattice[B] = FiniteLattice(set.map(fun))
+
+  override def toString: String = set.toString()
+  def prettyString: String = "{" + set.mkString(",") + "}"
+
+  def toSetLattice[B >: A]: SetLattice[B] = FiniteLattice(toSet)
+  def toSet[B >: A]: Set[B] = toSymbolSet
+  def toSymbolSet[B >: A]: Set[B] = set.toSet
+}
 
 /**
  * Represents top in a lattice of sets (i.e., includes all elements, except explicitly excluded ones). Additionally,
@@ -28,161 +136,42 @@ import scala.collection.GenTraversableOnce
  * @param excluded The elements not included in top.
  * @param symbols The specific symbols contained verbatim in the set, even if all except excluded are present.
  * @tparam A The type of elements.
+ * @author smitsch
  */
-private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A]) {
+private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A])
+  extends SetLattice[A] {
+  def isTop = true
+  def isEmpty = false
   /* top contains everything that's not excluded */
   def contains(e: A): Boolean = !excluded.contains(e)
-  /* this top is a subset of that top if that excluded at most this's excluded */
-  def subsetOf(other: TopSet[A]): Boolean = other.excluded.subsetOf(excluded)
-  /* (top except ts) /\ (top except os) == (top except ts++os) */
-  def intersect(other: TopSet[A]): TopSet[A] = new TopSet(excluded ++ other.excluded, symbols.intersect(other.symbols))
+
   /* top excludes one element less now */
   def +(e: A): TopSet[A] = new TopSet(excluded - e, symbols + e)
   def ++(other: immutable.Set[A]): TopSet[A] = new TopSet(excluded -- other, symbols ++ other)
   def ++(other: GenTraversableOnce[A]): TopSet[A] = new TopSet(excluded -- other, symbols ++ other)
   /* union: (top except ts) ++ (top except os) == (top except ts/\os) */
-  def ++(other: TopSet[A]): TopSet[A] = new TopSet(excluded.intersect(other.excluded), symbols ++ other.symbols)
+  //def ++(other: TopSet[A]): TopSet[A] = new TopSet(excluded.intersect(other.excluded), symbols ++ other.symbols)
   /* top now excludes one more element */
   def -(e: A): TopSet[A] = new TopSet(excluded + e, symbols - e)
   def --(other: immutable.Set[A]): TopSet[A] = new TopSet(excluded ++ other, symbols -- other)
   def --(other: GenTraversableOnce[A]): TopSet[A] = new TopSet(excluded ++ other, symbols -- other)
   /* setminus: (top except ts) -- (top except os) == os -- ts */
-  def --(other: TopSet[A]): immutable.Set[A] = other.excluded -- excluded
+  //def --(other: TopSet[A]): immutable.Set[A] = other.excluded -- excluded
+  /* this top is a subset of that top if that excluded at most this's excluded */
+  //def subsetOf(other: TopSet[A]): Boolean = other.excluded.subsetOf(excluded)
+  /* (top except ts) /\ (top except os) == (top except ts++os) */
+  //def intersect(other: TopSet[A]): TopSet[A] = new TopSet(excluded ++ other.excluded, symbols.intersect(other.symbols))
+  def intersect(other: immutable.Set[A]): SetLattice[A] = TopSet(other -- excluded, symbols.intersect(other)) /* (top except ts) /\ os == os--ts */
 
   def map[B](fun: A => B): TopSet[B] = new TopSet(excluded.map(fun), symbols.map(fun))
+
+  def toSetLattice[B >: A]: SetLattice[B] = new TopSet(excluded.toSet, symbols.toSet)
+  def toSet[B >: A]: Set[B] = throw new IllegalStateException("SetLattice.top has no set representation")
+  def toSymbolSet[B >: A]: Set[B] = symbols.toSet
+
+  override def toString: String = "top except " + excluded.toString
+  def prettyString: String = "top except {" + excluded.mkString(",") + "}"
 }
 
-/**
- * Lattice of sets. Top includes all elements, except the ones listed. Bottom is the empty set.
- * @param s Elements in the set: Left[A] elements excluded from the set, Right[A] elements included in the set
- * @tparam A Type of elements in the set
- * @note s is private for abstraction purposes to be able to change representation.
- * @todo could turn into a sealed trait with two private implementations: TopLattice and SetLattice
- *       which check each other. Symmetry may be less obvious in that case.
- */
-class SetLattice[A] private(private val s: Either[TopSet[A], immutable.Set[A]]) {
-  def isTop = s.isLeft
-  def isEmpty: Boolean = s match {
-    case Right(ts) => ts.isEmpty
-    case Left(_) => false /* top is never empty, no matter how much it excludes */
-  }
-  def contains(elem: A): Boolean = s match {
-    case Right(ts) => ts.contains(elem)
-    case Left(ts) => ts.contains(elem)
-  }
-  def subsetOf(other: SetLattice[A]): Boolean = s match {
-    case Right(ts) => other.s match {
-      case Right(os) => ts.subsetOf(os)
-      case Left(os) => ts.intersect(os.excluded).isEmpty /* this is a subset of that top if that doesn't exclude any of this */
-    }
-    case Left(ts) => other.s match {
-      case Right(_) => false           /* top not a subset of anything else */
-      case Left(os) => ts.subsetOf(os)
-    }
-  }
-  def intersect(other: immutable.Set[A]): SetLattice[A] = s match {
-    case Right(ts) => SetLattice(ts.intersect(other))
-    case Left(ts) => SetLattice(other -- ts.excluded)           /* (top except ts) /\ os == os--ts */
-  }
-  def intersect(other: SetLattice[A]): SetLattice[A] = other.s match {
-    case Right(os) => intersect(os)
-    case Left(os) => s match {
-      case Right(ts) => SetLattice(ts -- os.excluded)           /* ts /\ (top except os) == ts--os */
-      case Left(ts) => SetLattice(ts.intersect(os))
-    }
-  }
 
-  def map[B](fun: A => B): SetLattice[B] = s match {
-    case Right(ts) => SetLattice(ts.map(fun))
-    case Left(ts) => SetLattice(ts.map(fun))
-  }
-
-  def +(elem: A): SetLattice[A] = s match {
-    case Right(ts) => SetLattice(ts + elem)
-    case Left(ts) => SetLattice(ts + elem)
-  }
-  def -(elem: A): SetLattice[A] = s match {
-    case Right(ts) => SetLattice(ts - elem)
-    case Left(ts) => SetLattice(ts - elem)
-  }
-  def ++(other: GenTraversableOnce[A]): SetLattice[A] = s match {
-    case Right(ts) => SetLattice(ts ++ other)
-    case Left(ts) => SetLattice(ts ++ other)
-  }
-  /** Set union */
-  def ++(other: SetLattice[A]): SetLattice[A] = other.s match {
-    case Right(os) => this ++ os
-    case Left(os) => s match {
-      case Right(ts) => SetLattice(os ++ ts)   // commute ++ for type reasons
-      case Left(ts) => SetLattice(ts ++ os)
-    }
-  }
-
-  /** Set subtraction */
-  def --(other: GenTraversableOnce[A]): SetLattice[A] = s match {
-    case Left(ts) => SetLattice(ts -- other)
-    case Right(ts) => SetLattice(ts -- other)
-  }
-
-  def --(other: SetLattice[A]): SetLattice[A] = other.s match {
-    case Right(os) => this -- os
-    case Left(os) => s match {
-      case Right(ts) => SetLattice(ts.intersect(os.excluded))    /* ts -- (top except os) == ts/\os */
-      case Left(ts) => SetLattice(ts -- os)
-    }
-  }
-
-  override def toString: String = s match {
-    case Left(ts) => "top except " + ts.toString
-    case Right(ts) => ts.toString()
-  }
-
-  //@TODO Move into pretty printer and also pretty print the elements of ts.
-  def prettyString: String = s match {
-    case Left(ts) => "top except {" + ts.excluded.mkString(",") + "}"
-    case Right(ts) => "{" + ts.mkString(",") + "}"
-  }
-
-  //@TODO Code Review suggests conversion to case class, for hashCode and type confusion reasons.
-  override def equals(other: Any): Boolean = other match {
-    case ls: SetLattice[A] => s match {
-      case Left(ts) => ls.s match {
-        case Left(os) => ts == os
-        case Right(_) => false
-      }
-      case Right(ts) => ls.s match {
-        case Left(_) => false
-        case Right(os) => ts == os
-      }
-    }
-    case os: Set[A] => throw new InternalError("DONT DO THIS")
-  }
-
-  def toSetLattice[B >: A]: SetLattice[B] = s match {
-    case Right(ts) => new SetLattice(Right(ts.toSet))
-    case Left(ts) => new SetLattice(Left(new TopSet(ts.excluded.toSet, ts.symbols.toSet)))
-  }
-
-  def toSet[B >: A]: Set[B] = s match {
-    case Right(ts) => ts.toSet
-    case Left(_) => throw new IllegalStateException("SetLattice.top has no set representation")
-  }
-
-  /** Set of verbatim occurring symbols in this (possibly top) SetLattice */
-  def toSymbolSet[B >: A]: Set[B] = s match {
-    case Right(ts) => ts.toSet
-    case Left(ts) => ts.symbols.toSet
-  }
-}
-
-object SetLattice {
-  def apply[A](e: A): SetLattice[A] = new SetLattice(Right(Set(e)))
-  def apply[A](s: immutable.Set[A]): SetLattice[A] = new SetLattice(Right(s))
-  def apply[A](s: immutable.Seq[A]): SetLattice[A] = new SetLattice(Right(s.toSet))
-  private def apply[A](s: TopSet[A]): SetLattice[A] = new SetLattice(Left(s))
-  def bottom[A] = new SetLattice(Right(Set.empty[A]))
-  def top[A](topSymbols: A*): SetLattice[A] = new SetLattice[A](Left(new TopSet(Set.empty, topSymbols.toSet)))
-  //@todo careful: this is an overapproximation of V\cup V'
-  def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new SetLattice[A](Left(new TopSet(Set(DotTerm, DotFormula), topSymbols.toSet)))
-}
 
