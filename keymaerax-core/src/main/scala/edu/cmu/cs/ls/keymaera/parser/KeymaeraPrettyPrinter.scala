@@ -136,7 +136,13 @@ class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) {
     case AssignAny(l) => prettyPrinter(l) + symbolTable.ASSIGN + symbolTable.KSTAR + symbolTable.SCOLON
     
     case Box(p,f) => symbolTable.BOX_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.BOX_CLOSE + parensIfNeeded(f,expressionToPrint, false)
-    case Differential(child) => recPostfix(child, symbolTable.PRIME)
+    case Differential(child) => {
+      //(x)' should not print as x' in order to distinguish Differential(Variable(x)) from DifferentialSymbol(Variable(x))
+      child match {
+        case c : Variable => symbolTable.paren(prettyPrinter(c)) + symbolTable.PRIME
+        case _            => recPostfix(child, symbolTable.PRIME)
+      }
+    }
     case Diamond(p,f) => symbolTable.DIA_OPEN + parensIfNeeded(p,expressionToPrint, false) + symbolTable.DIA_CLOSE +parensIfNeeded(f,expressionToPrint, false)
     case Equiv(l,r) => recInfix(l,r,expressionToPrint,symbolTable.EQUIV, Some(RightAssoc()))
 
