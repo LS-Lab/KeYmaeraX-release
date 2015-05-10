@@ -74,6 +74,13 @@ object TacticLibrary {
       }
     }
 
+    /**
+     * @deprecated this is very special-purpose.
+     */
+    def getTerm(f: Formula, p: Position): Term = {
+      getTerm(Sequent(Nil, scala.collection.immutable.IndexedSeq(), scala.collection.immutable.IndexedSeq(f)), p)
+    }
+
     def getTerm(s: Sequent, p: Position): Term = try {
         require(p.inExpr != HereP) //should not be at a formula.
         var t: Term = null
@@ -163,10 +170,16 @@ object TacticLibrary {
         if (TacticHelper.isFormula(node.sequent, p)) {
           Some(debugT(s"$s at $p: ${TacticHelper.getFormula(node.sequent, p)}"))
         } else {
+          val term = try {
+            Some(TacticHelper.getTerm(node.sequent, p))
+          }
+          catch {
+            case _ : Exception => None
+          }
           val parentPos =
             if (p.isAnte) AntePosition(p.index, PosInExpr(p.inExpr.pos.init))
             else SuccPosition(p.index, PosInExpr(p.inExpr.pos.init))
-          Some(debugT(s"$s at $p is invalid") & debugAtT(s"looking for valid formula")(parentPos))
+          Some(debugT(s"$s at $p is invalid; but might contain term: " + term) & debugAtT(s"looking for valid formula")(parentPos))
         }
       }
     }
@@ -384,11 +397,21 @@ object TacticLibrary {
               //@todo accept DiffSymbol(from) to occur as well
             case Box(a, _) => applicable = StaticSemantics(a).bv.contains(from)
             case Diamond(a, _) => applicable = StaticSemantics(a).bv.contains(from)
-            case _ => applicable = false
+            case _ => applicable = false //@todo is this over-writing when we're already applicable?!
           }
           Left(Some(ExpressionTraversal.stop))
         }
       }), s(p))
+//      if(!applicable) s(p) match {
+//        case Forall(vars, _) => applicable = {println("Variables in " + s(p) + " are: " + vars.mkString(",")); vars.contains(from)}
+//        case Exists(vars, _) => applicable = vars.contains(from)
+//        case _ => println("Not a forall or exists: " + s(p))
+//      }
+//      else {
+//        println("apparently is applicable: " + s(p))
+//      }
+//      println("Found that this renaming of " + from.prettyString() + " is applicable: " + applicable + " for " + s(p).prettyString() + " with inExpr position: " + p.inExpr)
+
       applicable
     }
 
