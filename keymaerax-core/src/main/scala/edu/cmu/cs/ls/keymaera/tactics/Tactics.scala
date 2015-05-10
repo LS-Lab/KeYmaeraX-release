@@ -12,6 +12,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 import ExpressionTraversal.ExpressionTraversalFunction
 import edu.cmu.cs.ls.keymaera.core._
 import Config._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaera.tools._
 import scala.Unit
 import scala.language.implicitConversions
@@ -442,6 +443,16 @@ object Tactics {
 
   def assertPT(formulaExpectedAtPosition: Formula): PositionTactic = assertPT(formulaExpectedAtPosition, "")
 
+  def assertPT(termExpectedAtPosition : Term, msg : String): PositionTactic = assertPT((s,p) => {
+
+    if(TacticHelper.getTerm(s, p) == termExpectedAtPosition) {
+      true
+    } else{
+      println(" ---> About to fail an assertPT because we expected " + termExpectedAtPosition.prettyString() + " but found " + TacticHelper.getTerm(s, p) + " <---")
+      false
+    }
+  }, msg)
+
   /**
    * Assertion PositionTactic, which checks that the sequent has the specified number of antecedent and succedent formulas, respectively.
    */
@@ -751,7 +762,7 @@ object Tactics {
     def apply(tool: Tool, node: ProofNode) {
       findPosition(node) match {
         case Some(pos) => {
-          val tactic = t(pos)
+          val tactic = assertT(_ => t.applies(node.sequent, pos), "Position tactic is applicable at found position.") & t(pos)
           tactic.continuation = continuation
           tactic.dispatch(this, node)
         }
