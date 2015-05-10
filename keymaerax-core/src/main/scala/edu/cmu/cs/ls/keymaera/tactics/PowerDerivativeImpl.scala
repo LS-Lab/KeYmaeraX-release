@@ -148,7 +148,6 @@ object PowerDerivativeImpl {
   /**
    * Assuming:
    *    a and b are terms
-   *    c -> (a = b) is provable by quantifier elimination
    *    a occurs at position posInExpr in f(a), and similarly for b and f(b).
    * This tactic proves:
    *    c, a=b |- f(a) <-> ( c -> f(b) )
