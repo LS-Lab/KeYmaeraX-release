@@ -36,6 +36,17 @@ import scala.language.postfixOps
 object TacticLibrary {
 
   object TacticHelper {
+    def getTerm(f : Formula, p : PosInExpr) = {
+      var retVal : Option[Term] = None
+      ExpressionTraversal.traverse(TraverseToPosition(p, new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] = {
+          retVal = Some(e)
+          Left(Some(ExpressionTraversal.stop))
+        }
+      }), f);
+      retVal
+    }
+
     def isFormula(s: Sequent, p: Position): Boolean = {
       if (p.isTopLevel) {
         if (p.isAnte) p.index < s.ante.length else p.index < s.succ.length
