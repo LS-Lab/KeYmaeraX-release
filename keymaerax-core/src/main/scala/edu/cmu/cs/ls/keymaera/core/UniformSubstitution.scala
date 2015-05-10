@@ -285,7 +285,9 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
           assert(rp == op, "match only if same head")
           assert(rArg == DotFormula)
           USubst(SubstitutionPair(rArg, usubst(fml)) :: Nil).usubst(subs.repl.asInstanceOf[Formula])
-        case app@PredicationalOf(q, fml) if !matchHead(app) => PredicationalOf(q, usubst(fml))
+        case app@PredicationalOf(q, fml) if !matchHead(app) =>
+          requireAdmissible(topVarsDiffVars[NamedSymbol](), fml, formula)
+          PredicationalOf(q, usubst(fml))
         case DotFormula if  subsDefs.exists(_.what == DotFormula) =>
           subsDefs.find(_.what == DotFormula).get.repl.asInstanceOf[Formula]
         case DotFormula if !subsDefs.exists(_.what == DotFormula) => DotFormula
