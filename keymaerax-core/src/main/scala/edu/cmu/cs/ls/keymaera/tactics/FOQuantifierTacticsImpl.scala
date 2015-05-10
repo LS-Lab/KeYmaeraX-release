@@ -82,6 +82,26 @@ object FOQuantifierTacticsImpl {
     axiomLookupBaseT("exists dual", subst, _ => NilPT, (f, ax) => ax)
   }
 
+  def allEliminateAlphaT(instantiation : Variable) = new PositionTactic("All eliminate with alpha-renaming") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isAnte && p.isTopLevel && (s(p) match {
+      case Forall(list, phi) => true // TODO applies is ignored by uncoverAxiomT?
+      case _ => false
+    })
+
+    override def apply(p: Position): Tactic = {
+      val aX = Variable("x", None, Real)
+
+      val renamingTactic = alphaRenamingT(aX, instantiation)
+
+      def axiomInstance(fml: Formula): Formula = fml match {
+        case Forall(_, phi) => Imply(fml, phi)
+        case _ => False
+      }
+
+      renamingTactic(p) & uncoverAxiomT("all eliminate", axiomInstance, _ => allEliminateBaseT)(p)
+    }
+  }
+
   /**
    * Creates a new tactic to eliminate a universal quantifier.
    * @return The newly created tactic
@@ -95,10 +115,12 @@ object FOQuantifierTacticsImpl {
 
     override def apply(p: Position): Tactic = {
       val aX = Variable("x", None, Real)
+
       def axiomInstance(fml: Formula): Formula = fml match {
         case Forall(_, phi) => Imply(fml, phi)
         case _ => False
       }
+
       uncoverAxiomT("all eliminate", axiomInstance, _ => allEliminateBaseT)(p)
     }
   }
@@ -112,11 +134,14 @@ object FOQuantifierTacticsImpl {
       SubstitutionPair(aP, p) :: Nil
     }
     val aX = Variable("x", None, Real)
+
+    //alpha should rename the bound variable to x.
     def alpha(fml: Formula): PositionTactic = fml match {
       case Imply(Forall(vars, _), _) =>
         assert(vars.length == 1, "Block quantifiers not yet supported")
         val x = vars.head
         if (x.name != aX.name || x.index != aX.index)
+//          TacticLibrary.alphaRenamingT(x, aX)
           new PositionTactic("Alpha") {
             override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
               case Imply(Forall(_, _), _) => true
@@ -124,8 +149,15 @@ object FOQuantifierTacticsImpl {
             }
 
             override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
-              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+              override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
+                //                Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+                val succLength = node.sequent.succ.length - 1
+                def hasExpectedForm(sequent : Sequent) = sequent(p) match {
+                  case Imply(Forall(_,_), _) => true
+                  case _ => false
+                }
+                Some(assertT(hasExpectedForm) & SearchTacticsImpl.locateSubposition(SuccPos(succLength))(TacticLibrary.alphaRenamingT(x, aX)))
+              }
 
               override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
             }
