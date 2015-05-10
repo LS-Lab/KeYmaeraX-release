@@ -61,7 +61,7 @@ object SearchTacticsImpl {
       var retVal : Option[PosInExpr] = None
 
       val traversalFn = new ExpressionTraversalFunction {
-        //preExpression will be used for all pre-whatever tactics.
+        //preExpression will be used for all pre-whatever functions in this traversal.
         def preExpression(p : PosInExpr, e : Expression) =
           if(e == a) {
             if(TacticLibrary.TacticHelper.getTerm(fb, p) == b) {
