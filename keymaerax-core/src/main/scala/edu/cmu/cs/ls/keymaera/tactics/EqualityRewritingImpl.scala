@@ -38,7 +38,7 @@ object EqualityRewritingImpl {
       case Equiv(a, b) if a == node.sequent(p) && !p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
           (equivLeftLbl, AndLeftT(eqPos) & AxiomCloseT),
-          (equivRightLbl, AndLeftT(eqPos) & hideT(p) & hideT(eqPos) & NotLeftT(eqPos))
+          (equivRightLbl, AndLeftT(eqPos) & hideT(p) & NotLeftT(AntePos(node.sequent.ante.length)) & hideT(AntePos(node.sequent.ante.length - 1)))
         ))
       case Equiv(a, b) if a == node.sequent(p) && p.isAnte =>
         Some(EquivLeftT(eqPos) & onBranch(
