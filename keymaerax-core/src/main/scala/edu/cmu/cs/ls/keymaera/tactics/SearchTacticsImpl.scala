@@ -41,57 +41,61 @@ object SearchTacticsImpl {
    * @param inAnte Determines if we should search the ante or succ.
    * @return A tactic that applies posT and is applicable iff there is a position where pred holds and posT is applicable.
    */
-  def locateByPredicate(posT : PositionTactic, pred : (PosInExpr, Expression) => Boolean, inAnte : Boolean = false) : Tactic =
+  def locateByPredicate(posT : PositionTactic, pred : (PosInExpr, Expression, Sequent) => Boolean, inAnte : Boolean = false) : Tactic =
     new ApplyPositionTactic("locateByPredicate(" + posT.name + ")", posT) {
+
       override def findPosition(s: Sequent): Option[Position] = {
-
-        val formulaTraversal = new ExpressionTraversalFunction {
-          var applicablePosAndExpr : Option[(PosInExpr, Expression)] = None
-
-          override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] =
-            if(pred(p, e)) {
-              applicablePosAndExpr = Some(p, e)
-              Left(Some(ExpressionTraversal.stop))
-            }
-            else Left(None)
-
-          override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
-            if(pred(p, e)) {
-              applicablePosAndExpr = Some(p, e)
-              Left(Some(ExpressionTraversal.stop))
-            }
-            else Left(None)
-
-          override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
-            if(pred(p, e)) {
-              applicablePosAndExpr = Some(p, e)
-              Left(Some(ExpressionTraversal.stop))
-            }
-            else Left(None)
-        }
-
-        def firstApplicablePosition(fs : IndexedSeq[Formula], isAnte : Boolean) : Option[Position] =
-          (fs zip Range(0, fs.length-1))
+        def firstApplicablePosition(fs : IndexedSeq[Formula], isAnte : Boolean) : Option[Position] = {
+          (fs zip List.range(0, fs.length))
             .map(indexedElement => {
-              val f     = indexedElement._1
-              val index = indexedElement._2
-              ExpressionTraversal.traverse(formulaTraversal, f)
-              (index, formulaTraversal.applicablePosAndExpr)
-            })
+            val f     = indexedElement._1
+            val index = indexedElement._2
+
+            var applicablePosAndExpr : Option[(PosInExpr, Expression)] = None
+            ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+              override def preF(p: PosInExpr, e: Formula): Either[Option[StopTraversal], Formula] = {
+                if (pred(p, e, s)) {
+                  applicablePosAndExpr = Some(p, e)
+                  Left(Some(ExpressionTraversal.stop))
+                }
+                else Left(None)
+              }
+              override def preP(p: PosInExpr, e: Program): Either[Option[StopTraversal], Program] =
+                if(pred(p, e, s)) {
+                  applicablePosAndExpr = Some(p, e)
+                  Left(Some(ExpressionTraversal.stop))
+                }
+                else Left(None)
+              override def preT(p: PosInExpr, e: Term): Either[Option[StopTraversal], Term] =
+                if(pred(p, e, s)) {
+                  applicablePosAndExpr = Some(p, e)
+                  Left(Some(ExpressionTraversal.stop))
+                }
+                else Left(None)
+            }, f)
+
+            (index, applicablePosAndExpr)
+          })
             .filter(_._2.isDefined)
             .lastOption match {
-              case Some((idx, posAndExpr)) =>
-                if(isAnte) AntePosition(idx, posAndExpr.get._1) //Thee gets are justified by the filter.
-                else       SuccPosition(idx, posAndExpr.get._1)
-              case None => None
+            case Some(idxAndPosAndExpr) => {
+              val idx : Int = idxAndPosAndExpr._1
+              val posAndExpr : Option[(PosInExpr, Expression)] = idxAndPosAndExpr._2
+              if(isAnte) Some(AntePosition(idx, posAndExpr.get._1)) //The .get is justified by the filter.
+              else       Some(SuccPosition(idx, posAndExpr.get._1))
             }
+            case None => None
+          }
+        }
 
 
         if(inAnte) firstApplicablePosition(s.ante, true)
-        else firstApplicablePosition(s.succ, false)
+        else       firstApplicablePosition(s.succ, false)
       }
 
-      override def applicable(node: ProofNode): Boolean = findPosition(node.sequent).isDefined
+      override def applicable(node: ProofNode): Boolean =
+//        findPosition(node.sequent).isDefined
+        if(findPosition(node.sequent).isDefined) {println("is applic"); true} else {println("Not applicable"); false}
     }
 
   def locateTerm(posT : PositionTactic, inAnte: Boolean = false) : Tactic = new ApplyPositionTactic("locateTerm(" + posT.name + ")", posT) {
