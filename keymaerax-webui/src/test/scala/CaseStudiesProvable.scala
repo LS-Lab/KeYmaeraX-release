@@ -1,8 +1,10 @@
+import edu.cmu.cs.ls.keymaera.core.{AntePos, Expression, Sequent}
 import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
 import edu.cmu.cs.ls.keymaera.tactics._
 import edu.cmu.cs.ls.keymaera.tools.{Z3, Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
+import scala.collection.immutable
 import scala.collection.immutable.Map
 import testHelper.ParserFactory._
 import testHelper.StringConverter._
@@ -197,6 +199,22 @@ class CaseStudiesProvable extends FlatSpec with Matchers with BeforeAndAfterEach
     val s = parseToSequent(getClass.getResourceAsStream("/examples/dev/t/tactics/SimpleDiff.key"))
     helper.runTactic(default, new RootNode(s)) shouldBe 'closed
   }
+
+  "simple car" should "not fail due to new ^' tactic" in {
+//    val sequent = new Sequent(Nil, immutable.IndexedSeq(
+//      "2!=0".asFormula, "(kxtime_1^2)'=2*kxtime_1^(2-1)*(kxtime_1)'".asFormula
+//    ),immutable.IndexedSeq(
+//
+//    ))
+    val node = helper.formulaToNode("[x'=v,v'=(a()),kxtime_1'=(0*kxtime_1+1) & (true&kxtime_1>=kxtime_4()&v=v_2()+a()*kxtime_1);][kxtime_1':=0*kxtime_1+1;][v':=a();][x':=v;](x)'=(0*2-1*0)/2^2*(2*x_2()+2*v_2()*kxtime_1+a()*kxtime_1^2)+1/2*(0*x_2()+2*0+((0*v_2()+2*0)*kxtime_1+2*v_2()*(kxtime_1)')+(0*kxtime_1^2+a()*(kxtime_1^2)'))".asFormula)
+
+    val tactic = SearchTacticsImpl.locateTerm(SyntacticDerivationInContext.PowerDerivativeT, false)
+
+    helper.runTactic(tactic, node)
+
+    helper.report(node)
+  }
+
 
   "Simple car" should "be provable" in {
     val s = parseToSequent(getClass.getResourceAsStream("/examples/tutorials/sttt/simplecar.key"))
