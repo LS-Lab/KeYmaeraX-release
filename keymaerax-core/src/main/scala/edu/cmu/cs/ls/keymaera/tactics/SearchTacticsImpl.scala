@@ -34,6 +34,55 @@ object SearchTacticsImpl {
   }
 
   /**
+   * Finds the positin in expression of a in f(a) when applied to a formula of the form f(a) <-> f(b), and applies a
+   * congruence tactic at a.
+   */
+  def locateForCongruenceRewriting(a : Term, b : Term, congT : PosInExpr => Tactic) =
+  new PositionTactic("locate for congurnece rewirting") {
+    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (s(p) match {
+      case Equiv(_,_) => true
+      case _          => false
+    })
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case Equiv(fa, fb) => (findPosInExpr(fa, fb) match {
+          case Some(posInExpr) => Some(congT(posInExpr))
+          case None            => None
+        })
+        case _ => None
+      }
+
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+    }
+
+
+    private def findPosInExpr(fa : Formula, fb : Formula) : Option[PosInExpr] = {
+      var retVal : Option[PosInExpr] = None
+
+      val traversalFn = new ExpressionTraversalFunction {
+        //preExpression will be used for all pre-whatever tactics.
+        def preExpression(p : PosInExpr, e : Expression) =
+          if(e == a) {
+            if(TacticLibrary.TacticHelper.getTerm(fb, p) == b) {
+              retVal = Some(p)
+              Left(Some(ExpressionTraversal.stop))
+            }
+            else Left(None)
+          }
+          else Left(None)
+
+        override def preT(p : PosInExpr, t : Term) = preExpression(p,t)
+        override def preF(p : PosInExpr, f : Formula) = preExpression(p,f)
+        override def preP(p : PosInExpr, program : Program) = preExpression(p,program)
+      }
+
+      ExpressionTraversal.traverse(traversalFn, fa)
+      retVal
+    }
+  }
+
+  /**
    * Locates the first expression and position in the sequent for which pred is true.
    * @author Nathan Fulton
    * @param posT The tactic to apply at the found position.
