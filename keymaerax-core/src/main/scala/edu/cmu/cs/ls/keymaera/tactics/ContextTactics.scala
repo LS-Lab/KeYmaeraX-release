@@ -97,6 +97,44 @@ object ContextTactics {
     case Equal(lhs, rhs) if fml.termAt(where) == rhs => Equiv(fml.replaceAt(rhs, where, lhs), fml)
     case Equiv(lhs, rhs) if fml.subFormulaAt(where) == Some(lhs) => Equiv(fml, fml.replaceAt(lhs, where, rhs))
     case Equiv(lhs, rhs) if fml.subFormulaAt(where) == Some(rhs) => Equiv(fml.replaceAt(rhs, where, lhs), fml)
+    //For the power derive rule.
+    case Imply(cond, Equal(lhs, rhs)) if fml.termAt(where) == lhs => {
+      // We have [ctx] f(lhs) and want [ctx] cond -> f(lhs) = f(rhs), where f is some formula.
+      val (f, fPos, lhsPos) = findSmallestSubformulaContaining(fml, where)
+//      val fPos = PosInExpr(where.pos.dropRight(1))
+//
+//      val f: Formula = fml.subFormulaAt(fPos).getOrElse(
+//        throw new Exception("Could not find a subformula at position " + fPos.pos.mkString("::") + " in " + fml.prettyString())
+//      )
+      val newFormula = Imply(cond, f.replaceAt(lhs, lhsPos, rhs))
+      Equiv(fml, fml.replaceAt(f, fPos, newFormula))
+    }
+  }
+
+  /**
+   * Example: Consider arguments a+b = 0 -> a=0|b=0, 0::0::0, i.e. the position of a in fml.
+   * Then the return value should be:
+   *      a+b = 0       - smallest subformula containing a
+   *      0             - location of a+b=0 within fml
+   *      0 :: 0        - location of a within a+b=0
+   *
+   * @author Nathan Fulton
+   * @param fml A formula
+   * @param where A position in the formula
+   * @return A 3-tuple containing:
+   *          The smallest subformula containing the term/formula at where.
+   *          The position of the first return value in fml.
+   *          The position of where within the smallest subformula.
+   */
+  private def findSmallestSubformulaContaining(fml : Formula, where : PosInExpr, recPos : PosInExpr = PosInExpr()) : (Formula, PosInExpr, PosInExpr) = {
+    val nextLargestPos = PosInExpr(where.pos.dropRight(1))
+    val posOfWhereInSubformula = PosInExpr(recPos.pos :+ where.pos.last)
+
+    //None means that we must have found a term or program rather than a subformula, so we recurse.
+    fml.subFormulaAt(nextLargestPos) match {
+      case Some(f) => (f, nextLargestPos, posOfWhereInSubformula)
+      case None    => findSmallestSubformulaContaining(fml, nextLargestPos, posOfWhereInSubformula)
+    }
   }
 
   /**
@@ -111,6 +149,7 @@ object ContextTactics {
     def applicable(pn: ProofNode): Boolean = g(pn) match {
       case Equal(lhs, rhs) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
       case Equiv(lhs, rhs) => val f = getFormula(pn.sequent, ctx); f == lhs || f == rhs
+      case Imply(cond, Equal(lhs, rhs)) => val t = getTerm(pn.sequent, ctx); t == lhs || t == rhs
       case _ => false
     }
 
