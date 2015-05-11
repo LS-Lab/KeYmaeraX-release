@@ -120,7 +120,7 @@ class FormulaConverter(val fml: Formula) {
         else Left(Some(ExpressionTraversal.stop))
     }), fml) match {
       case Some(f) => f
-      case None => throw new IllegalArgumentException(s"Did not find $what at position $where")
+      case None => throw new IllegalArgumentException(s"Did not find $what at position $where in $fml")
     }
   }
 
