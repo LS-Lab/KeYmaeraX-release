@@ -414,7 +414,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
 
     helper.report(node)
 
-    node.openGoals().head.sequent.succ(0) shouldBe helper.parseFormula("[x:=(0);](2!=0->2*a^(2-1)*(a)'=0)")
+    node.openGoals().head.sequent.succ(0) shouldBe helper.parseFormula("[x:=(0);](2*a^(2-1)*(a)'=0)")
   }
 
 }

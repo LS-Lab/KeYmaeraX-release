@@ -48,11 +48,11 @@ object PowerDerivativeImpl {
         val term = getTerm(node.sequent, p)
         //Construct the tactic.
         term match {
-          case Differential(Power(lhs, rhs)) => {
+          case Differential(Power(base, power)) => {
             Some(
               debugT("Starting complicated new ^' tactic") &
-                ContextTactics.cutInContext(axiomInstance(term, lhs, rhs), p) & onBranch(
-                (cutShowLbl, proveInContext(term, lhs, rhs, formulaCtxPos)),
+                ContextTactics.cutInContext(Equal(term, differentiatedTerm(base, power)), p) & onBranch(
+                (cutShowLbl, proveInContext(term, base, power, formulaCtxPos)),
                 (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
               ))
           }
@@ -86,16 +86,42 @@ object PowerDerivativeImpl {
           cutT(Some( Equal(diffTerm, differentiatedTerm(base, power)) )) &
           onBranch(
             (BranchLabels.cutShowLbl, {
-              introduceInstance(diffTerm, base, power) &
-              onBranch(
-                (yield_proveAxiomInstance,
-                  ( lastAnte(ImplyLeftT) && (AxiomCloseT, AxiomCloseT)) ~ errorT("Expected closed"))
-              ) ~ errorT("expected closed")
+              debugT("show =") &
+                hideT(SuccPos(0)) &
+                cutT(Some(Imply(NotEqual(power, Number(0)), Equal(diffTerm, differentiatedTerm(base, power))))) &
+                onBranch(
+                  (BranchLabels.cutShowLbl,
+                    lastSucc(cohideT) &
+                    introduceInstance(diffTerm, base, power) &
+                    onBranch(
+                      (yield_proveAxiomInstance, AxiomCloseT)
+                    ) ~
+                    errorT("Expected close")
+                  ),
+                  (BranchLabels.cutUseLbl,
+                    lastAnte(ImplyLeftT) && (
+                      AxiomCloseT ~ errorT("Expected close."),
+                      AxiomCloseT ~ errorT("Expected close.")
+                      )
+                  )
+                ) ~
+                debugT("Expected close")
             }),
             (BranchLabels.cutUseLbl, {
-              EquationCongruenceCorollary(diffTerm, differentiatedTerm(base, power))
+              EquationCongruenceCorollary(diffTerm, differentiatedTerm(base, power)) ~
+                errorT("Expected EquationCongruenceCorollary to close.")
             })
           )
+//              introduceInstance(diffTerm, base, power) &
+//              onBranch(
+//                ( lastAnte(ImplyLeftT) && (AxiomCloseT, AxiomCloseT)) ~ errorT("Expected closed"))
+//              (yield_proveAxiomInstance,
+//              ) ~ errorT("expected closed")
+//            }),
+//            (BranchLabels.cutUseLbl,
+//
+//            )
+//          )
         })
       ) ~ errorT("Expected full proof.")
   }
@@ -141,7 +167,7 @@ object PowerDerivativeImpl {
             AxiomTactic.axiomT("^' derive power") &
             lastAnte(assertPT(axiom)) &
             lastSucc(assertPT(axiom)) &
-            AxiomCloseT
+            AxiomCloseT ~ debugT("Expected close")
         }),
         (BranchLabels.cutUseLbl, LabelBranch(yield_proveAxiomInstance))
       )
@@ -159,9 +185,7 @@ object PowerDerivativeImpl {
    *    c -> (a = b) is provable by the power derive axiom.
    *    a occurs at position posInExpr in f(a), and similarly for b and f(b).
    * This tactic proves:
-   *    c, a=b |- f(a) <-> ( c -> f(b) )
-   * By first proving a key lemma (elidePremiseOccurringInAntecedent) that removes the assumed premise in the right hand side:
-   *    c, a=b |- (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b).
+   *    c, a=b |- f(a) <-> f(b)
    *
    * @author Nathan Fulton
    * @return Closed proof.
@@ -173,83 +197,24 @@ object PowerDerivativeImpl {
       s.ante.length == 2 &&
         s.succ.length == 1 &&
         (s.succ.last match {
-          case Equiv(phi, Imply(c, psi)) => c == s.ante(0)
+          case Equiv(phi, psi) => true
           case _ => false
         })
     }
 
     override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-      val cRight            = node.sequent.ante(0)
-      val (phi, cLeft, psi) = node.sequent.succ(0) match {
-        case Equiv(phi, Imply(c2, psi)) => (phi, c2, psi)
+      val (phi, psi) = node.sequent.succ(0) match {
+        case Equiv(phi, psi) => (phi, psi)
         case _ => throw new IllegalArgumentException(".applicable should not have been true.")
       }
-      assert(cLeft == cRight)
-
-      val lemma = Equiv(Equiv(phi, Imply(cLeft, psi)), Equiv(phi, psi))
 
       Some(
-          cutT(Some(lemma)) &
-          onBranch(
-            (BranchLabels.cutShowLbl,
-              debugT("showing lemma (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b)") &
-              hideT(SuccPos(0)) &
-              elidePremiseOccurringInAntecedent ~ errorT("End of show -- should've closed")
-            ),
-            (BranchLabels.cutUseLbl,
-              debugT("using lemma (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b)") &
-              equivRewriting(AntePos(2), SuccPos(0)) &
-              locateForCongruenceRewriting(a, b, EqualityRewritingImpl.constFormulaCongruenceT(AntePos(1), true, false))(SuccPos(0)) &
-              debugT("Successfully applied congruence rewriting in power derivative tactic.") &
-              lastSucc(EquivRightT) &
-              onBranch(
-                (BranchLabels.equivLeftLbl, AxiomCloseT ~ errorT("should have closed")),
-                (BranchLabels.equivRightLbl, AxiomCloseT ~ errorT("should have closed"))
-              )
-            )
-          )
-      )
-    }
-
-      /**
-       * Lemma: c, a=b |- (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b).
-       * Apologies for the unaligned parens -- it's an IntelliJ bug.
-       */
-    def elidePremiseOccurringInAntecedent : Tactic = {
-      assertT(2, 1) &
-      lastSucc(EquivRightT) &
-      onBranch(
-        (BranchLabels.equivLeftLbl,
-          lastSucc(EquivRightT) &
-          onBranch(
-            (BranchLabels.equivLeftLbl,
-                equivRewriting(AntePos(2), AntePos(3)) & // rewrite c -> f(i) to f(a)
-                lastAnte(ImplyLeftT) & AxiomCloseT ~ errorT("Should've closed by Ax Close") // both branches close immediately
-            ),
-            (BranchLabels.equivRightLbl,
-              equivRewriting(AntePos(2), SuccPos(0)) & // rewrite f(a) in succ to c -> f(i)
-                lastSucc(ImplyRightT) &
-                AxiomCloseT ~ debugT("Should've closed.")
-
-            )
-          )
-        ),
-        (BranchLabels.equivRightLbl,
-          lastSucc(EquivRightT) &
-          onBranch(
-            (BranchLabels.equivLeftLbl,
-              equivRewriting(AntePos(2), AntePos(3)) &
-                lastSucc(ImplyRightT) &
-                AxiomCloseT ~ debugT("Should've closed.")
-              ),
-            (BranchLabels.equivRightLbl,
-              equivRewriting(AntePos(2), SuccPos(0)) &
-              lastAnte(ImplyLeftT) && (
-                AxiomCloseT ~ errorT("Should've closed by now."),
-                AxiomCloseT ~ errorT("Should've closed by now.")
-              )
-            )
-          )
+        locateForCongruenceRewriting(a, b, EqualityRewritingImpl.constFormulaCongruenceT(AntePos(1), true, false))(SuccPos(0)) &
+        debugT("Successfully applied congruence rewriting in power derivative tactic.") &
+        lastSucc(EquivRightT) &
+        onBranch(
+          (BranchLabels.equivLeftLbl, AxiomCloseT ~ errorT("should have closed")),
+          (BranchLabels.equivRightLbl, AxiomCloseT ~ errorT("should have closed"))
         )
       )
     }

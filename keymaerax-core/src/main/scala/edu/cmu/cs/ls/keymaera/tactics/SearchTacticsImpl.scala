@@ -35,7 +35,7 @@ object SearchTacticsImpl {
   }
 
   /**
-   * Finds the position of a  f(a) <-> f(b), and applies congT at that position.
+   * Finds the position of a in f(a) <-> f(b), and applies congT at that position.
    * @param a The left term.
    * @param b The right term
    * @param congT The congruence tactic.
