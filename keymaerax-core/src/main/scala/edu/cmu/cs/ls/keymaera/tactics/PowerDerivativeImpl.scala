@@ -112,16 +112,6 @@ object PowerDerivativeImpl {
                 errorT("Expected EquationCongruenceCorollary to close.")
             })
           )
-//              introduceInstance(diffTerm, base, power) &
-//              onBranch(
-//                ( lastAnte(ImplyLeftT) && (AxiomCloseT, AxiomCloseT)) ~ errorT("Expected closed"))
-//              (yield_proveAxiomInstance,
-//              ) ~ errorT("expected closed")
-//            }),
-//            (BranchLabels.cutUseLbl,
-//
-//            )
-//          )
         })
       ) ~ errorT("Expected full proof.")
   }
