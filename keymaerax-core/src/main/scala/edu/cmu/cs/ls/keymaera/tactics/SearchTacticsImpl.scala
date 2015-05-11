@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaera.tactics
 
 import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper
 import edu.cmu.cs.ls.keymaera.tactics.Tactics._
 import edu.cmu.cs.ls.keymaera.tools.Tool
 
@@ -34,10 +35,14 @@ object SearchTacticsImpl {
   }
 
   /**
-   * Finds the positin in expression of a in f(a) when applied to a formula of the form f(a) <-> f(b), and applies a
-   * congruence tactic at a.
+   * Finds the position of a in f(a) <-> f(b) and applies congT at that position in the top-level position at which
+   * this tactic is applied.
+   * @param a The left term.
+   * @param b The right term
+   * @param congT The congruence tactic.
+   * @return Result of running congT on the position of a, given a position containing f(a) <-> f(b).
    */
-  def locateForCongruenceRewriting(a : Term, b : Term, congT : PosInExpr => Tactic) =
+  def locateForCongruenceRewriting(a : Term, b : Term, congT : PositionTactic) =
   new PositionTactic("locate for congurnece rewirting") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && (s(p) match {
       case Equiv(_,_) => true
@@ -46,31 +51,51 @@ object SearchTacticsImpl {
 
     override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
-        case Equiv(fa, fb) => (findPosInExpr(fa, fb) match {
-          case Some(posInExpr) => Some(congT(posInExpr))
-          case None            => None
-        })
+        case Equiv(fa, fb) => findPosInExpr(fa, fb) match {
+          case Some(posInExpr) => {
+            // posInExpr is the position of a in fa, so to get the position of a in fa <-> fb we have to prepend a 0.
+            val position =
+              if(p.isAnte) AntePosition(p.index, PosInExpr(0 +: posInExpr.pos))
+              else SuccPosition(p.index, PosInExpr(0 +: posInExpr.pos))
+            Some(congT(position))
+          }
+          case None => None
+        }
         case _ => None
       }
 
       override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
     }
 
-
+    /**
+     * Finds the position of the first occurence of a in fa.
+     * @param fa LHS of Equiv
+     * @param fb RHS of Equiv
+     * @return Some position of the first occurrence of the term a **in fa** iff b occurs at the same position in fb.
+     *         If a cannot be found in fa or if the corresponding position in fb is not equal to b, then None.
+     */
     private def findPosInExpr(fa : Formula, fb : Formula) : Option[PosInExpr] = {
       var retVal : Option[PosInExpr] = None
 
       val traversalFn = new ExpressionTraversalFunction {
-        //preExpression will be used for all pre-whatever functions in this traversal.
-        def preExpression(p : PosInExpr, e : Expression) =
-          if(e == a) {
-            if(TacticLibrary.TacticHelper.getTerm(fb, p) == b) {
-              retVal = Some(p)
-              Left(Some(ExpressionTraversal.stop))
+        def preExpression(p : PosInExpr, e : Expression) = {
+          if (e == a) {
+            TacticHelper.getTerm(fb, p) match {
+              case Some(bCandidate) => {
+                if(bCandidate == b) {
+                  retVal = Some(p)
+                  Left(Some(ExpressionTraversal.stop))
+                }
+                else {
+//                  println("Skipping this candidate because b != " + TacticHelper.getTerm(fb, p))
+                  Left(None)
+                }
+              }
+              case None => Left(None)
             }
-            else Left(None)
           }
           else Left(None)
+        }
 
         override def preT(p : PosInExpr, t : Term) = preExpression(p,t)
         override def preF(p : PosInExpr, f : Formula) = preExpression(p,f)

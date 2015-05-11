@@ -29,7 +29,7 @@ object PowerDerivativeImpl {
 
   /**
    *
-   * @return The formula after a single syntactic derivation the power at the position.
+   * @return The formula after a single application of the syntactic derivation axiom for powers.
    */
   def PowerDerivativeT = new PositionTactic("^' derive power") with ApplicableAtTerm {
 
@@ -41,7 +41,8 @@ object PowerDerivativeImpl {
 
     override def apply(p: Position): Tactic = new ConstructionTactic("Construct " + name) {
       override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = {
-        //@todo explain what this is?
+        //The position of f(term) in [pi;]g(f(term)), where g might be some even larger formula.
+        //I.e., the smallest subformula containing term.
         val formulaCtxPos = SyntacticDerivationInContext.findParentFormulaPos(node.sequent(p), p.inExpr)
 
         val term = getTerm(node.sequent, p)
@@ -63,11 +64,17 @@ object PowerDerivativeImpl {
     }
   }
 
-  private def proveInContext(diffTerm: Term, base: Term, power: Term, formulaCtxPos: PosInExpr, p : Position) : Tactic = {
-    //Remove the head because it's referring to a boxed formula and will always be 1.
-    //Then add a 0 because we're always interested in the differential term which we keep on the left of the equiv.
-    //@todo remove this.
-    val positionOfPowerTermWithinEquivalence : PosInExpr = PosInExpr(0 +: p.inExpr.pos.tail)
+  /**
+   * Proves [pi;] f((base^power^)') <-> f(syntactic derivative of (base^power^)')
+   * @param diffTerm The original differential term. Probably (base^power^)'
+   * @param base The base of diffTerm
+   * @param power the power of diffTerm
+   * @param formulaCtxPos The position of the smallest subformula containing diffTerm..
+   * @return Closed proof
+   */
+  private def proveInContext(diffTerm: Term, base: Term, power: Term, formulaCtxPos: PosInExpr) : Tactic = {
+    assert(diffTerm == Differential(Power(base, power)),
+      "Expected diffTerm to be (base^power)' -- not sure if this is going to work out.")
 
     lastSucc(cohideT) & // hide original problem.
       equivalenceCongruenceT(formulaCtxPos) & // hide box
@@ -81,11 +88,12 @@ object PowerDerivativeImpl {
             (BranchLabels.cutShowLbl, {
               introduceInstance(diffTerm, base, power) &
               onBranch(
-                (yield_proveAxiomInstance, ( lastAnte(ImplyLeftT) && (AxiomCloseT, AxiomCloseT)) ~ errorT("Expected closed"))
+                (yield_proveAxiomInstance,
+                  ( lastAnte(ImplyLeftT) && (AxiomCloseT, AxiomCloseT)) ~ errorT("Expected closed"))
               ) ~ errorT("expected closed")
             }),
             (BranchLabels.cutUseLbl, {
-              EquationCongruenceCorollary(positionOfPowerTermWithinEquivalence)
+              EquationCongruenceCorollary(diffTerm, differentiatedTerm(base, power))
             })
           )
         })
@@ -156,10 +164,10 @@ object PowerDerivativeImpl {
    *    c, a=b |- (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b).
    *
    * @author Nathan Fulton
-   * @param posInExpr the position in f where we can apply the CQ rule (see comment above.)
    * @return Closed proof.
    */
-  private def EquationCongruenceCorollary(posInExpr : PosInExpr) = new ConstructionTactic("Corollary of Equation Congruence (elide valid premise in implication)") {
+  private def EquationCongruenceCorollary(a: Term, b: Term) =
+  new ConstructionTactic("Corollary of Equation Congruence (elide valid premise in implication)") {
     override def applicable(node: ProofNode): Boolean = {
       val s = node.sequent
       s.ante.length == 2 &&
@@ -180,16 +188,19 @@ object PowerDerivativeImpl {
 
       val lemma = Equiv(Equiv(phi, Imply(cLeft, psi)), Equiv(phi, psi))
 
-      //@todo a tactic that does: "This formula has the form f(a) <-> f(b) for a given a,b and some f. Please find the position of a for me."
       Some(
           cutT(Some(lemma)) &
           onBranch(
-            (BranchLabels.cutShowLbl, debugT("showing lemma (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b)") & hideT(SuccPos(0)) & elidePremiseOccurringInAntecedent ~ errorT("End of show.")),
+            (BranchLabels.cutShowLbl,
+              debugT("showing lemma (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b)") &
+              hideT(SuccPos(0)) &
+              elidePremiseOccurringInAntecedent ~ errorT("End of show -- should've closed")
+            ),
             (BranchLabels.cutUseLbl,
-              debugT("using lemma") &
+              debugT("using lemma (f(a) <-> (c -> f(b)) IFF f(a) <-> f(b)") &
               equivRewriting(AntePos(2), SuccPos(0)) &
-              debugAtT("Is the position correct?")(SuccPosition(0, posInExpr)) &
-              EqualityRewritingImpl.constFormulaCongruenceT(AntePos(1), true, false)(SuccPosition(0, posInExpr)) &
+              locateForCongruenceRewriting(a, b, EqualityRewritingImpl.constFormulaCongruenceT(AntePos(1), true, false))(SuccPos(0)) &
+              debugT("Successfully applied congruence rewriting in power derivative tactic.") &
               lastSucc(EquivRightT) &
               onBranch(
                 (BranchLabels.equivLeftLbl, AxiomCloseT ~ errorT("should have closed")),
