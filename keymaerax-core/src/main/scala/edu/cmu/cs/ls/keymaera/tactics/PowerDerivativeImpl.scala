@@ -52,7 +52,7 @@ object PowerDerivativeImpl {
             Some(
               debugT("Starting complicated new ^' tactic") &
                 ContextTactics.cutInContext(axiomInstance(term, lhs, rhs), p) & onBranch(
-                (cutShowLbl, proveInContext(term, lhs, rhs, formulaCtxPos, p)),
+                (cutShowLbl, proveInContext(term, lhs, rhs, formulaCtxPos)),
                 (cutUseLbl, equivRewriting(AntePosition(node.sequent.ante.length), p.topLevel))
               ))
           }
