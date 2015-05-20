@@ -272,6 +272,7 @@ Axiom "vacuous all quantifier".
   p <-> \forall x. p
 End.
 
+/* @Derived */
 Axiom "vacuous exists quantifier".
   p <-> \exists x. p
 End.
@@ -362,6 +363,7 @@ Axiom "[?] test".
   [?H;]p <-> (H -> p).
 End.
 
+/* @Derived */
 Axiom "<?> test".
   <?H;>p <-> (H & p).
 End.
@@ -370,6 +372,7 @@ Axiom "[++] choice".
   [a ++ b]p(?) <-> ([a;]p(?) & [b;]p(?)).
 End.
 
+/* @Derived */
 Axiom "<++> choice".
    <a ++ b;>p(?) <-> (<a;>p(?) | <b;>p(?)).
 End.
@@ -378,6 +381,7 @@ Axiom "[;] compose".
   [ a; b; ]p(?) <-> [a;][b;]p(?).
 End.
 
+/* @Derived */
 Axiom "<;> compose".
   < a; b; >p(?) <-> <a;><b;>p(?).
 End.
@@ -386,6 +390,7 @@ Axiom "[*] iterate".
   [a*]p(?) <-> (p(?) & [a;][a*] p(?)).
 End.
 
+/* @Derived */
 Axiom "<*> iterate".
   <a*>p(?) <-> (p(?) | <a;><a*> p(?)).
 End.
@@ -421,6 +426,7 @@ Axiom "DA differential ghost".
 /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
 End.
 
+/* @Derived */
 Axiom "DS differential equation solution".
   [x'=c();]p(x) <-> \forall t. (t>=0 -> [x:=x+c()*t;]p(x))
 End.
@@ -434,6 +440,7 @@ Axiom "Dsol differential equation solution".
  <x'=c();>p(x) <-> \exists t. (t>=0 & <x:=x+c()*t;>p(x))
 End.
 
+/* @Derived */
 Axiom "Dsol& differential equation solution".
   <x'=c()&q(x);>p(x) <-> \exists t. (t>=0 & ((\forall s. ((0<=s&s<=t) -> q(x+c()*s))) & <x:=x+c()*t;>p(x)))
 End.
