@@ -43,7 +43,9 @@ class ProverException(msg: String) extends RuntimeException(msg) {
 /**
  * Critical exceptions from KeYmaera's Prover Core.
  */
-class CoreException(msg:String) extends ProverException(msg)
+class CoreException(msg: String) extends ProverException(msg)
+
+case class CoreAssertionError(msg: String) extends CoreException("Assertion failed " + msg)
 
 case class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
   extends CoreException("Substitution clash: " + subst + " not " + U + "-admissible for " + e + " when substituting in " + context + " " + info) {

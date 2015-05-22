@@ -159,13 +159,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
 
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
-  def apply(t: Term): Term = {try usubst(t) catch {case ex: SubstitutionClashException => throw ex.inContext(t.prettyString())}
+  // apply calls usubst, augmenting with contract and exception context handling
+
+  def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString())}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
-  def apply(f: Formula): Formula = {try usubst(f) catch {case ex: SubstitutionClashException => throw ex.inContext(f.prettyString())}
+  def apply(f: Formula): Formula = {try usubst(f) catch {case ex: ProverException => throw ex.inContext(f.prettyString())}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
-  def apply(p: Program): Program = {try usubst(p) catch {case ex: SubstitutionClashException => throw ex.inContext(p.prettyString())}
+  def apply(p: Program): Program = {try usubst(p) catch {case ex: ProverException => throw ex.inContext(p.prettyString())}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
 
@@ -176,7 +178,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     try {
       Sequent(s.pref, s.ante.map(usubst), s.succ.map(usubst))
     } catch {
-      case ex: SubstitutionClashException => throw ex.inContext(s.toString)
+      case ex: ProverException => throw ex.inContext(s.toString)
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", s.toString, "undef", ex.getMessage).initCause(ex)
     }
@@ -261,6 +263,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     } catch {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString(), "undef", ex.getMessage).initCause(ex)
+        throw new CoreAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString()).initCause(ex)
     }
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
@@ -326,6 +329,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     } catch {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString(), "undef", ex.getMessage).initCause(ex)
+      case ex: AssertionError =>
+        throw new CoreAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString()).initCause(ex)
     }
   } ensuring(
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
@@ -354,6 +359,8 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     } catch {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString(), "undef", ex.getMessage).initCause(ex)
+      case ex: AssertionError =>
+        throw new CoreAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString()).initCause(ex)
     }
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
