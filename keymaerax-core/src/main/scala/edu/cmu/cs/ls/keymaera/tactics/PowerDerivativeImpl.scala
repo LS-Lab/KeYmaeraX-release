@@ -34,7 +34,7 @@ object PowerDerivativeImpl {
   def PowerDerivativeT = new PositionTactic("^' derive power") with ApplicableAtTerm {
 
     override def applies(t: Term): Boolean = t match {
-      case Differential(Power(_, exp)) => true
+      case Differential(Power(_, exp)) => exp != Number(0)
       case _ => false
     }
     override def applies(s: Sequent, p: Position): Boolean = applies(getTerm(s, p))
