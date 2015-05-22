@@ -137,7 +137,7 @@ object Anything extends NamedSymbol with AtomicTerm with RTerm {
 /** Function symbol applied to argument child */
 case class FuncOf(func: Function, child: Term) extends AtomicTerm with ApplicationOf {
   def sort: Sort = func.sort
-  require(child.sort == func.domain, "expected argument sort")
+  require(child.sort == func.domain, "expected argument sort to match domain sort")
 }
 
 /** Composite terms */
