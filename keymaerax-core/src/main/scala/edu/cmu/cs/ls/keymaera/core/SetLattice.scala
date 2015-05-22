@@ -85,7 +85,6 @@ sealed trait SetLattice[A] {
 
     }
   }
-
 }
 
 object SetLattice {
@@ -97,6 +96,20 @@ object SetLattice {
   def top[A](topSymbols: A*): SetLattice[A] = new TopSet(Set.empty, topSymbols.toSet)
   //@todo careful: this is an overapproximation of V\cup V'
   def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new TopSet(Set(DotTerm, DotFormula), topSymbols.toSet)
+
+  /**
+   * Only applies if sl isTop.
+   * @param sl A SetLattice of NamedSymbols.
+   * @return sl ++ sl' where sl' is the lattice containing the primes of the variables of sl.
+   */
+  def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = {
+    assert(sl isTop, "Cannot extend to differentialSymbols unless sl isTop.")
+    val diffSymbols: Set[NamedSymbol] =
+      sl.toSymbolSet
+        .filter(_.isInstanceOf[Variable])
+        .map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
+    sl ++ SetLattice(diffSymbols)
+  }
 }
 
 /**
