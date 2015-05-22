@@ -99,7 +99,7 @@ object StaticSemantics {
   private[core] def differentialSymbols(s: SetLattice[NamedSymbol]): SetLattice[NamedSymbol] =
     s.map[NamedSymbol](v => v match {
     case x: Variable => DifferentialSymbol(x)
-    case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v + " of type " + v.getClass)
+    case _ => throw new IllegalArgumentException("Unsupported symbol has no differential " + v + " of type " + v.getClass + " in differentialSymbols(" + s + ")")
   })
 
   /**
