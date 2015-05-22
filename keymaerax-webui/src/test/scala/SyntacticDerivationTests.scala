@@ -11,7 +11,8 @@ import testHelper.SequentFactory._
  * @author Stefan Mitsch
  */
 class SyntacticDerivationTests extends TacticTestSuite {
-  "ForallDerivativeT tactic" should "atomize" in {
+  //@todo write L ++ L' for SetLattice.
+  "ForallDerivativeT" should "atomize" in {
     val f = "(\\forall s. s > 0)'".asFormula
     val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0))
     val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
@@ -28,6 +29,7 @@ class SyntacticDerivationTests extends TacticTestSuite {
     node.openGoals().flatMap(_.sequent.ante) shouldBe empty
     node.openGoals().flatMap(_.sequent.succ) should contain only "[x:=2;](\\forall s. (s>0)')".asFormula
   }
+
 
   "AndDerivativeT tactics" should "atomize" in {
     val f = "[x:=2;](1=1 & 2=2)'".asFormula
@@ -206,7 +208,10 @@ class SyntacticDerivationTests extends TacticTestSuite {
     val in = "1 + (x^0)' = 1 + 2*x*x'".asFormula
     val tactic = PowerDerivativeT(SuccPosition(0, PosInExpr(0 :: 1 :: Nil)))
     val node = helper.formulaToNode(in)
-    helper.runTactic(tactic, node)
+    intercept[Exception] {
+      helper.runTactic(tactic, node)
+    }
+
     node.openGoals().head.sequent.succ(0) shouldBe in
     //Cannot intercept because the exception is thrown from inside the tactics execution framework.
 //    intercept[IllegalArgumentException] {
