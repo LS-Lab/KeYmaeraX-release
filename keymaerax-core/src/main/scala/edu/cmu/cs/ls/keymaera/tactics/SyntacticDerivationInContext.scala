@@ -94,7 +94,7 @@ object SyntacticDerivationInContext {
 
             override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
               override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(globalAlphaRenamingT(vars.head.name, vars.head.index, aX.name, aX.index))
+                Some(globalAlphaRenamingT(vars.head, aX))
 
               override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
             }
