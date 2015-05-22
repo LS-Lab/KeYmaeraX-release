@@ -150,6 +150,7 @@ private case class FiniteLattice[A](set: immutable.Set[A])
  * @param symbols The specific symbols contained verbatim in the set, even if all except excluded are present.
  * @tparam A The type of elements.
  * @author smitsch
+ * @todo CoSet may be a better name because it's a complement of a set.
  */
 private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[A])
   extends SetLattice[A] {
