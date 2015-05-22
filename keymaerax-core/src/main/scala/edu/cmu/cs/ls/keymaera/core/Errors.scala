@@ -45,10 +45,8 @@ class ProverException(msg: String) extends RuntimeException(msg) {
  */
 class CoreException(msg: String) extends ProverException(msg)
 
-case class CoreAssertionError(msg: String) extends CoreException("Assertion failed " + msg)
-
 case class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
-  extends CoreException("Substitution clash: " + subst + " not " + U + "-admissible for " + e + " when substituting in " + context + " " + info) {
+  extends CoreException("Substitution clash:\n" + subst + "\nnot " + U + "-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info) {
   //  def inContext(context: String): SubstitutionClashException =
     //new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
@@ -66,5 +64,7 @@ case class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol])
 case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s
 }
+
+case class ProverAssertionError(msg: String) extends ProverException("Assertion failed " + msg)
 
 case class UnknownOperatorException(msg: String, e:Expression) extends ProverException(msg + ": " + e.prettyString + " of " + e.getClass + " " + e) {}

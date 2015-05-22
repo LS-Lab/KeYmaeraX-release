@@ -263,7 +263,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
     } catch {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", term.prettyString(), "undef", ex.getMessage).initCause(ex)
-        throw new CoreAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString()).initCause(ex)
+        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + term.prettyString()).initCause(ex)
     }
   } ensuring(
     r => r.kind == term.kind && r.sort == term.sort, "Uniform Substitution leads to same kind and same sort " + term)
@@ -330,7 +330,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", formula.prettyString(), "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
-        throw new CoreAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString()).initCause(ex)
+        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + formula.prettyString()).initCause(ex)
     }
   } ensuring(
     r => r.kind == formula.kind && r.sort == formula.sort, "Uniform Substitution leads to same kind and same sort " + formula)
@@ -360,7 +360,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
       case ex: IllegalArgumentException =>
         throw new SubstitutionClashException(toString, "undef", "undef", program.prettyString(), "undef", ex.getMessage).initCause(ex)
       case ex: AssertionError =>
-        throw new CoreAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString()).initCause(ex)
+        throw new ProverAssertionError("Assertion failed " + ex.getMessage() + "\nin " + toString + "\nin " + program.prettyString()).initCause(ex)
     }
   } ensuring(
     r => r.kind == program.kind && r.sort == program.sort, "Uniform Substitution leads to same kind and same sort " + program)
