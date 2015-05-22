@@ -11,7 +11,6 @@ import testHelper.SequentFactory._
  * @author Stefan Mitsch
  */
 class SyntacticDerivationTests extends TacticTestSuite {
-  //@todo write L ++ L' for SetLattice.
   "ForallDerivativeT" should "atomize" in {
     val f = "(\\forall s. s > 0)'".asFormula
     val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0))
