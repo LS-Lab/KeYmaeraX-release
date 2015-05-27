@@ -12,9 +12,75 @@ import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 * @author aplatzer
 */
 class AdvocatusReflecti extends FlatSpec with Matchers {
+  val verum = new Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(True))
   val falsum = new Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(False))
 
-  "advocatus diavoli" should "not allow new Provable via reflection" in {
+
+  "advocatus diavoli mutandis" should "not allow immutable Provable conclusion to be written to" in {
+    var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
+    println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+    println(classOf[Provable].getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
+    val fld = classOf[Provable].getField("conclusion")
+    a [IllegalAccessException] should be thrownBy fld.set(proof, falsum)
+    println("Suddenly " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+  }
+
+  it should "not allow immutable Provable conclusion to be written to via index" in {
+    var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
+    println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+    println(classOf[Provable].getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
+    val fld = classOf[Provable].getDeclaredFields.apply(0)
+    a [IllegalAccessException] should be thrownBy fld.set(proof, falsum)
+    println("Suddenly " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+  }
+
+  it should "not allow immutable Provable conclusion to be written to after accessible via index" in {
+    var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
+    println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+    println(classOf[Provable].getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
+    val fld = classOf[Provable].getDeclaredFields.apply(0)
+    a [SecurityException] should be thrownBy fld.setAccessible(true)
+    a [IllegalAccessException] should be thrownBy fld.set(proof, falsum)
+    println("Suddenly " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+  }
+  //@todo same with security manager again
+
+
+
+  //@TODO turn the following into indexedSeq overwriting. Not sure why they don't yell nor effect.
+
+  it should "not allow immutable Provable to be written to" in {
+    var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
+    println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+    val clazz = classOf[Sequent]
+    println(clazz.getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
+    val fld = clazz.getField("succ")
+    a [IllegalAccessException] should be thrownBy fld.set(proof.conclusion, False)
+    println("Suddenly " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+  }
+
+  it should "not allow immutable Provable to be written to via index" in {
+    var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
+    println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+    val clazz = classOf[Sequent]
+    println(clazz.getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
+    val fld = clazz.getDeclaredFields.apply(2)
+    a [IllegalAccessException] should be thrownBy fld.set(proof.conclusion, False)
+    println("Suddenly " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+  }
+
+  it should "not allow immutable Provable to be written to via index despite accessible" in {
+    var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
+    println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+    val clazz = classOf[Sequent]
+    println(clazz.getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
+    val fld = clazz.getDeclaredFields.apply(2)
+    a [SecurityException] should be thrownBy fld.setAccessible(true)
+    a [IllegalAccessException] should be thrownBy fld.set(proof.conclusion, False)
+    println("Suddenly " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
+  }
+
+  "advocatus diavoli reflecti" should "not allow new Provable via reflection" in {
     val clazz = Class.forName(Provable.getClass.getName)
     println("Got class " + clazz)
     a [IllegalAccessException] should be thrownBy clazz.newInstance()
