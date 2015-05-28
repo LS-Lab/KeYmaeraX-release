@@ -232,6 +232,7 @@ object Provable {
  * @param subgoals the premises that, if they are all valid, imply the conclusion.
  * @note soundness-critical
  * @note Only private constructor calls for soundness
+ * @note For soundness: No reflection to bybass constructor call privacy, nor reflection to bypass immutable val data structures.
  * @author aplatzer
  * @todo probably split into different locality levels of subgoals
  */
