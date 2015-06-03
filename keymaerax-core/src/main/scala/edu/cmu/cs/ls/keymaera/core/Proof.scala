@@ -6,6 +6,7 @@
  * @author nfulton
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
+ * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  * @note Code Review: 2015-05-01
  */
 package edu.cmu.cs.ls.keymaera.core
@@ -81,6 +82,7 @@ object SeqPos {
 /**
  * Sequents
  * @author aplatzer
+ * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
 final case class Sequent(pref: immutable.Seq[NamedSymbol],
                          ante: immutable.IndexedSeq[Formula],
