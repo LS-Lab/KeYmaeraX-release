@@ -6,4 +6,8 @@ lazy val keymaerax = (project in file("keymaerax-webui")).
   dependsOn(core)
 
 lazy val root = (project in file("."))
+  .settings(unidocSettings: _*)
+  .settings(
+    name := "KeYmaeraX",
+  )
   .aggregate(core, keymaerax)
