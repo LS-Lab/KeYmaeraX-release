@@ -3,6 +3,10 @@ package edu.cmu.cs.ls.keymaera
 /**
  * Soundness-critical core of the KeYmaera X theorem prover.
  * 
+ * Defines the syntax, static semantics, uniform substitutions, axioms, and proof rules of
+ * differential dynamic logic.
+ * Provides lemma data base, real arithmetic interfaces, error reporting, and lattice management.
+ * 
  * ==Usage Overview==
  * [[edu.cmu.cs.ls.keymaera.core.Provable.startProof(Sequent)]] begins a new proof of a
  * [[edu.cmu.cs.ls.keymaera.core.Sequent]] containing the conjectured differential dynamic logic formula.
@@ -14,14 +18,26 @@ package edu.cmu.cs.ls.keymaera
  *   // conjecture
  *   val provable = Provable.startProof(verum)
  *   // construct a proof
- *   val proving = provable(CloseTrue(SuccPos(0)), 0)
+ *   val proof = provable(CloseTrue(SuccPos(0)), 0)
  *   // check if proof successful
- *   if (proving.isProved) println("Successfully proved " + proving.proved)
+ *   if (proof.isProved) println("Successfully proved " + proof.proved)
  * }}}
  * Of course, [[edu.cmu.cs.ls.keymaera.tactics]] are an easier way to describe proof search procedures.
+ *
  * Multiple Provable objects for subderivations obtained from different sources can also be merged
  * into a single Provable object with [[edu.cmu.cs.ls.keymaera.core.Provable.apply(Provable,Subgoal)]].
- *
+ * The above example can be continued to merge proofs as follows:
+ * {{{
+ *   val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x",None,Real), Number(5)), True)))
+ *   // another conjecture
+ *   val moreProvable = Provable.startProof(more)
+ *   // construct another (partial) proof
+ *   val moreProof = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
+ *   // merge proofs by gluing their Provables together
+ *   val mergedProof = moreProof(proof, 0)
+ *   // check if proof successful
+ *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
+ * }}}
  *
  * ==Syntax==
  * Immutable algebraic data structures for the expressions of differential dynamic logic have type
