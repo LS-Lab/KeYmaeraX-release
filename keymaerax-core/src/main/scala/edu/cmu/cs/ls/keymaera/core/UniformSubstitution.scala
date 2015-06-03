@@ -16,7 +16,7 @@ import SetLattice.topVarsDiffVars
 
 
 /**
- * Representation of a substitution replacing n with t.
+ * Representation of a substitution replacing what with repl uniformly.
  *
  * @param what the expression to be replaced. what can have one of the following forms:
  *          - DotTerm
@@ -135,8 +135,13 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
 
 /**
  * A Uniform Substitution with its application mechanism.
- * Implements application of uniform substitutions to terms, formulas, programs.
- * "Global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
+ * A Uniform Substitution uniformly replaces all occurrences of a given predicate p(.) by a formula in (.).
+ * It can also replace all occurrences of a function symbol f(.) by a term in (.)
+ * and all occurrences of a quantifier C(-) by a formula in (-)
+ * and all occurrences of program constant b by a hybrid program.
+ *
+ * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
+ * @note Implements the "global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
  * Main ingredient of [[edu.cmu.cs.ls.keymaera.core.UniformSubstitutionRule]]
  * and [[edu.cmu.cs.ls.keymaera.core.AxiomaticRule]]
  * @author aplatzer
