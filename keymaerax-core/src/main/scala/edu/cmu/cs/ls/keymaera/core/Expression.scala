@@ -54,6 +54,7 @@ case class ObjectSort(name : String) extends Sort
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
  * @author aplatzer
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+ * @see [[edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser.parseBareExpression()]]
  */
 sealed trait Expression {
   def kind : Kind
@@ -93,6 +94,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 /********************************************
  * Terms of differential dynamic logic.
  * @author aplatzer
+  * @see [[edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser.parseBareTerm()]]
  */
 sealed trait Term extends Expression {
   final def kind: Kind = TermKind
@@ -186,6 +188,7 @@ case class Pair(left: Term, right: Term) extends CompositeTerm {
 /********************************************
  * Formulas of differential dynamic logic.
  * @author aplatzer
+  * @see [[edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser.parseBareFormula()]]
  */
 sealed trait Formula extends Expression {
   final def kind: Kind = FormulaKind

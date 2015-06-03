@@ -42,7 +42,29 @@ class USubstTests extends FlatSpec with Matchers {
   val ctxt = Function("ctx_", None, Real, Real)
   val ctxf = Function("ctx_", None, Real, Bool)
 
-  "Uniform substitution" should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
+  "Uniform substitution" should "substitute simple formula p(x) <-> ! ! p(- - x)" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    // p(x) <-> ! ! p(- - x)
+    val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
+    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
+    s(prem) should be ("x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula)
+  }
+
+  it should "substitute simple sequent p(x) <-> ! ! p(- - x)" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    // p(x) <-> ! ! p(- - x)
+    val prem = Equiv(PredOf(p, x), Not(Not(PredOf(p, Neg(Neg(x))))))
+    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
+    val conc = "x^5>=0 <-> !(!((-(-x))^5>=0))".asFormula
+    UniformSubstitutionRule(s,
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be
+      (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+  }
+
+  it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)
     val prem = Equiv(
       Box("x:=f();".asProgram, PredOf(p1, "x".asTerm)),
