@@ -488,45 +488,51 @@ object ContractionLeft {
  *********************************************************************************
  */
 
-/** Ax Axiom close / Identity rule */
+/**
+ * Ax Axiom close / Identity rule
+ * {{{
+ *        *
+ * ------------------ (Close)
+ *   p, G |- p, D
+ * }}}
+ */
 case class Close(assume: AntePos, pos: SuccPos) extends AssumptionRule with ClosingRule {
   val name: String = "Axiom"
-  /**
-   * Close identity.
-   *        *
-   * ------------------
-   *   p, G |- p, D
-   */
+  /** Close identity */
   def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(assume) == s(pos)) {assert (assume.isAnte && pos.isSucc); Nil }
     else throw new InapplicableRuleException("The referenced formulas are not identical. Thus cannot close goal. " + s(assume) + " not the same as " + s(pos), this, s)
   } ensuring (_.isEmpty, "closed if applicable")
 }
 
-/** close by true */
+/**
+ * close by true
+ * {{{
+ *       *
+ * ------------------ (close true)
+ *   G |- true, D
+ * }}}
+*/
 case class CloseTrue(pos: SuccPos) extends RightRule with ClosingRule {
   val name: String = "CloseTrue"
-  /**
-   * close true.
-   *        *
-   * ------------------
-   *   G |- true, D
-   */
+  /** close true */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == True) {assert(pos.isSucc); Nil }
     else throw new InapplicableRuleException("CloseTrue is not applicable to " + s + " at " + pos, this, s)
   } ensuring (s(pos) == True && pos.isSucc && _.isEmpty, "closed if applicable")
 }
 
-/** close by false */
+/**
+ * close by false.
+ * {{{
+ *        *
+ * ------------------ (close false)
+ *   false, G |- D
+ * }}}
+ */
 case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
   val name: String = "CloseFalse"
-  /**
-   * close false.
-   *        *
-   * ------------------
-   *   false, G |- D
-   */
+  /** close false */
   override def apply(s: Sequent): immutable.List[Sequent] = {
     if (s(pos) == False) { assert(pos.isAnte); Nil }
     else throw new InapplicableRuleException("CloseFalse is not applicable to " + s + " at " + pos, this, s)
@@ -534,15 +540,17 @@ case class CloseFalse(pos: AntePos) extends LeftRule with ClosingRule {
 }
 
 
-/** cut in the given formula c */
+/**
+ * cut in the given formula c.
+ * {{{
+ * G, c |- D     G |- D, c
+ * ----------------------- (cut)
+ *   G |- D
+ * }}}
+ */
 case class Cut(c: Formula) extends Rule {
   val name: String = "cut"
-  /**
-   * cut in the given formula c.
-   * G, c |- D     G |- D, c
-   * -----------------------
-   *   G |- D
-   */
+  /** cut in the given formula c */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val use = new Sequent(s.pref, s.ante :+ c, s.succ)
     val show = new Sequent(s.pref, s.ante, s.succ :+ c)
@@ -560,105 +568,119 @@ case class Cut(c: Formula) extends Rule {
  *********************************************************************************
  */
 
-/** !R Not right */
+/**
+ * !R Not right.
+ * {{{
+ *   G, p |- D
+ * ------------ (!R Not right)
+ *   G |- !p, D
+ * }}}
+ */
 case class NotRight(pos: SuccPos) extends RightRule {
   val name: String = "Not Right"
-  /**
-   * !R Not right.
-   *   G, p |- D
-   * ------------
-   *   G |- !p, D
-   */
+  /** !R Not right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Not(p) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p), immutable.IndexedSeq())))
   }
 }
 
-/** !L Not left */
+/**
+ * !L Not left.
+ * {{{
+ *   G |- D, p
+ * ------------ (!L Not left)
+ *  !p, G |- D
+ * }}}
+ */
 case class NotLeft(pos: AntePos) extends LeftRule {
   val name: String = "Not Left"
-  /**
-   * !L Not left.
-   *   G |- D, p
-   * ------------
-   *  !p, G |- D
-   */
+  /** !L Not left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Not(p) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))))
   }
 }
 
-/** |R Or right */
+/**
+ * |R Or right.
+ * {{{
+ *   G |- D, p,q
+ * --------------- (|R Or right)
+ *   G |- p|q, D
+ * }}}
+ */
 case class OrRight(pos: SuccPos) extends RightRule {
   val name: String = "Or Right"
-  /**
-   * |R Or right.
-   *   G |- D, p,q
-   * ---------------
-   *   G |- p|q, D
-   */
+  /** |R Or right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Or(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p,q))))
   }
 }
 
-/** |L Or left */
+/**
+ * |L Or left.
+ * {{{
+ * p, G |- D     q, G |- D
+ * ----------------------- (|L Or left)
+ *   p|q, G |- D
+ * }}}
+ */
 case class OrLeft(pos: AntePos) extends LeftRule {
   val name: String = "Or Left"
-  /**
-   * |L Or left.
-   * p, G |- D     q, G |- D
-   * -----------------------
-   *   p|q, G |- D
-   */
+  /** |L Or left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Or(p,q) = s(pos)
     immutable.List(s.updated(pos, p), s.updated(pos, q))
   }
 }
 
-/** &R And right */
+/**
+ * &R And right
+ * {{{
+ * G |- p, D    G |- q, D
+ * ---------------------- (&R And right)
+ *   G |- p&q, D
+ * }}}
+ */
 case class AndRight(pos: SuccPos) extends RightRule {
   val name: String = "And Right"
-  /**
-   * &R And right.
-   * G |- p, D    G |- q, D
-   * ----------------------
-   *   G |- p&q, D
-   */
+  /** &R And right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val And(p,q) = s(pos)
     immutable.List(s.updated(pos, p), s.updated(pos, q))
   }
 }
 
-/** &L And left */
+/**
+ * &L And left.
+ * {{{
+ *   G, p, q |- D
+ * --------------- (&L And left)
+ *   p&q, G |- D
+ * }}}
+ */
 case class AndLeft(pos: AntePos) extends LeftRule {
   val name: String = "And Left"
-  /**
-   * &L And left.
-   *   G, p, q |- D
-   * ---------------
-   *   p&q, G |- D
-   */
+  /** &L And left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val And(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p,q), immutable.IndexedSeq())))
   }
 }
 
-/** ->R Imply right */
+/**
+ * ->R Imply right.
+ * {{{
+ *   G, p |- D, q
+ * --------------- (->R Imply right)
+ *   G |- p->q, D
+ * }}}
+ */
 case class ImplyRight(pos: SuccPos) extends RightRule {
   val name: String = "Imply Right"
-  /**
-   * ->R Imply right.
-   *   G, p |- D, q
-   * ---------------
-   *   G |- p->q, D
-   */
+  /** ->R Imply right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(p), immutable.IndexedSeq(q))))
@@ -666,16 +688,18 @@ case class ImplyRight(pos: SuccPos) extends RightRule {
 }
 
 
-/** ->L Imply left */
+/**
+ * ->L Imply left.
+ * {{{
+ * G |- D, p    G, q |- D
+ * ---------------------- (-> Imply left)
+ *   p->q, G |- D
+ * }}}
+ * @note Perhaps surprising that both positions change but at least consistent for this rule.
+ */
 case class ImplyLeft(pos: AntePos) extends LeftRule {
   val name: String = "Imply Left"
-  /**
-   * ->L Imply left.
-   * G |- D, p    G, q |- D
-   * ----------------------
-   *   p->q, G |- D
-   * @note Perhaps surprising that both positions change but at least consistent for this rule.
-   */
+  /** ->L Imply left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(p,q) = s(pos)
     immutable.List(s.updated(pos, Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(p))),
@@ -683,15 +707,17 @@ case class ImplyLeft(pos: AntePos) extends LeftRule {
   }
 }
 
-/** <->R Equiv right */
+/**
+ * <->R Equiv right.
+ * {{{
+ * G, p |- D, q    G, q |- D, p
+ * ----------------------------- (<->R Equiv right)
+ *   G |- p<->q, D
+ * }}}
+ */
 case class EquivRight(pos: SuccPos) extends RightRule {
   val name: String = "Equiv Right"
-  /**
-   * <->R Equiv right.
-   * G, p |- D, q    G, q |- D, p
-   * -----------------------------
-   *   G |- p<->q, D
-   */
+  /** <->R Equiv right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(p,q) = s(pos)
     //immutable.List(s.updated(p, And(Imply(a,b), Imply(b,a))))  // and then AndRight ~ ImplyRight
@@ -700,15 +726,17 @@ case class EquivRight(pos: SuccPos) extends RightRule {
   }
 }
 
-/** <->L Equiv left */
+/**
+ * <->L Equiv left.
+ * {{{
+ * p&q, G |- D    !p&!q, G |- D
+ * ----------------------------- (<-> Equiv left)
+ *   p<->q, G |- D
+ * }}}
+ */
 case class EquivLeft(pos: AntePos) extends LeftRule {
   val name: String = "Equiv Left"
-  /**
-   * <->L Equiv left.
-   * p&q, G |- D    !p&!q, G |- D
-   * -----------------------------
-   *   p<->q, G |- D
-   */
+  /** <->L Equiv left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Equiv(a,b) = s(pos)
     //immutable.List(s.updated(p, Or(And(a,b), And(Not(a),Not(b)))))  // and then OrLeft ~ AndLeft
@@ -732,9 +760,11 @@ case class EquivLeft(pos: AntePos) extends LeftRule {
  * Pseudo application in sequent calculus to conclusion that fits to the Hilbert calculus application (origin->conclusion).
  * This rule interfaces forward Hilbert calculus rule application with backward sequent calculus pseudo-application
  * US uniform substitution.
+ * {{{
  *        G |- D
- * --------------------
+ * -------------------- (US)
  * subst(G) |- subst(D)
+ * }}}
  * @param subst the uniform substitution to be applied to origin.
  * @param origin the original premise, to which the uniform substitution will be applied. Thus, origin is the result of pseudo-applying this UniformSubstitution rule in sequent calculus.
  * @note this rule performs a backward substitution step. That is the substitution applied to the conclusion yields the premise
@@ -766,6 +796,11 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
 }
 
 
+object AxiomaticRule {
+  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
+  val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
+}
+
 /**
  * Apply a uniform substitution instance of an axiomatic proof rule,
  * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
@@ -773,11 +808,6 @@ case class UniformSubstitutionRule(subst: USubst, origin: Sequent) extends Rule 
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
-object AxiomaticRule {
-  // immutable list of locally sound axiomatic proof rules (premise, conclusion)
-  val rules: immutable.Map[String, (Sequent, Sequent)] = AxiomBase.loadAxiomaticRules()
-}
-
 final case class AxiomaticRule(id: String, subst: USubst) extends Rule {
   val name: String = "Axiomatic Rule " + id + " instance"
   //@todo temporarily disabling (temporary?) require.
@@ -1009,20 +1039,19 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
  *********************************************************************************
  */
 
+object Axiom {
+  // immutable list of sound axioms
+  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
+}
 /**
- * Look up an axiom,
- * i.e. sound axioms are valid formulas of differential dynamic logic.
+ * Look up an axiom named id.
+ * Sound axioms are valid formulas of differential dynamic logic.
  * @author nfulton
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @todo change to the format where the axiom ends up on the right (so cut if needed on the left).
  */
-object Axiom {
-  // immutable list of sound axioms
-  val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
-}
-/** lookup axiom named id */
 case class Axiom(id: String) extends Rule {
   val name: String = "Axiom " + id
   def apply(s: Sequent): immutable.List[Sequent] = {
@@ -1071,11 +1100,6 @@ object RCF {
  *********************************************************************************
  */
 
-/**
- * Lookup a lemma that has been proved previously or by an external arithmetic tool.
- * @author nfulton
- * @author Stefan Mitsch
- */
 object LookupLemma {
   /**
    * Add given lemma to the given lemma database
@@ -1086,6 +1110,11 @@ object LookupLemma {
   def addLemma(lemmaDB: LemmaDB, lemma: Lemma): String = lemmaDB.add(lemma)
 
 }
+/**
+ * Lookup a lemma that has been proved previously or by an external arithmetic tool.
+ * @author nfulton
+ * @author Stefan Mitsch
+ */
 case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   val name: String = "Lookup Lemma"
   def apply(s : Sequent): immutable.List[Sequent] = {
@@ -1102,77 +1131,87 @@ case class LookupLemma(lemmaDB: LemmaDB, lemmaID: String) extends Rule {
   *********************************************************************************
   */
 
-/** co-weakening left = co-hide left (all but indicated position) */
-//@derived
+/**
+ * CoHide left.
+ * {{{
+ *      p |-
+ * ------------- (CoHide left)
+ *   p, G |- D
+ * }}}
+ * @derived
+ */
 case class CoHideLeft(pos: AntePos) extends LeftRule {
   val name: String = "CoHideLeft"
-  /**
-   * CoHide left.
-   *      p |-
-   * -------------
-   *   p, G |- D
-   */
+  /** co-weakening left = co-hide left (all but indicated position) */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos.getIndex)), immutable.IndexedSeq()))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-/** co-weakening right = co-hide right (all but indicated position) */
-//@derived
+/**
+ * CoHide right.
+ * {{{
+ *     |- p
+ * ------------- (CoHide right)
+ *   G |- p, D
+ * }}}
+ * @derived
+ */
 case class CoHideRight(pos: SuccPos) extends RightRule {
   val name: String = "CoHideRight"
-  /**
-   * CoHide right.
-   *     |- p
-   * -------------
-   *   G |- p, D
-   */
+  /** co-weakening right = co-hide right (all but indicated position) */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(), immutable.IndexedSeq(s.succ(pos.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-/** co-weakening = co-hide all but the indicated positions */
-//@derived
+/**
+ * CoHide2 hides all but the two indicated positions.
+ * {{{
+ *      p |- q
+ * --------------- (CoHide2)
+ *   p, G |- q, D
+ * }}}
+ * @derived
+ */
 case class CoHide2(pos1: AntePos, pos2: SuccPos) extends TwoPositionRule {
   val name: String = "CoHide2"
-  /**
-   * CoHide2.
-   *      p |- q
-   * ---------------
-   *   p, G |- q, D
-   */
+  /** co-weakening = co-hide all but the indicated positions */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, immutable.IndexedSeq(s.ante(pos1.getIndex)), immutable.IndexedSeq(s.succ(pos2.getIndex))))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
 
-//@derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
+/**
+ * Cut in the given formula c in place of p.
+ * {{{
+ * G |- c, D    G |- c->p, D
+ * ------------------------- (Cut right)
+ *        G |- p, D
+ * }}}
+ * @derived(cut(c->p) & <(ImplyLeft & <(CloseId, HideRight), HideRight))
+ */
 case class CutRight(c: Formula, pos: SuccPos) extends Rule {
   val name: String = "cut Right"
-  /**
-   * Cut in the given formula c in place of p.
-   * G |- c, D    G |- c->p, D
-   * -------------------------
-   *        G |- p, D
-   */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
     immutable.List(s.updated(pos, c), s.updated(pos, Imply(c, p)))
   }
 }
 
-//@derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
+/**
+ * Cut in the given formula c in place of p
+ * {{{
+ * c, G |- D    G |- p->c, D
+ * -------------------------
+ *        p, G |- D
+ * }}}
+ * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
+ * @derived(cut(p->c) & <(ImplyLeft & <(HideLeft, CloseId), HideLeft))
+ */
 case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   val name: String = "cut Left"
-  /**
-   * Cut in the given formula c in place of p
-   * c, G |- D    G |- p->c, D
-   * -------------------------
-   *        p, G |- D
-   * @note this would perhaps surprising that inconsistent posititioning within this rule, unlike in ImplyLeft?
-   */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val p = s(pos)
     immutable.List(s.updated(pos, c),
@@ -1182,16 +1221,18 @@ case class CutLeft(c: Formula, pos: AntePos) extends Rule {
   }
 }
 
+/**
+ * Equivify Right: Convert implication to equivalence.
+ * {{{
+ * G |- a<->b, D
+ * -------------
+ * G |- a->b,  D
+ * }}}
+ */
 // ->2<-> Equivify Right: Equivalencify Implication Right
 //@derived(cut(a<->b) & prop...)
 case class EquivifyRight(pos: SuccPos) extends RightRule {
   val name: String = "->2<-> Equivify Right"
-  /**
-   * Equivify Right: Convert implication to equivalence.
-   * G |- a<->b, D
-   * -------------
-   * G |- a->b,  D
-   */
   def apply(s: Sequent): immutable.List[Sequent] = {
     val Imply(a,b) = s(pos)
     immutable.List(s.updated(pos, Equiv(a, b)))
