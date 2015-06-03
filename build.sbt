@@ -8,6 +8,6 @@ lazy val keymaerax = (project in file("keymaerax-webui")).
 lazy val root = (project in file("."))
   .settings(unidocSettings: _*)
   .settings(
-    name := "KeYmaeraX",
+    name := "KeYmaeraX"
   )
   .aggregate(core, keymaerax)
