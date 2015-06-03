@@ -17,7 +17,7 @@ object OptimisticTest extends Tag("OptimisticTest")
 
 class USubstTests extends FlatSpec with Matchers {
 
-  val randomTrials = 40*10
+  val randomTrials = 1 + 0 * 40*10
   val randomComplexity = 20
   val rand = new RandomFormula()
 
@@ -61,8 +61,35 @@ class USubstTests extends FlatSpec with Matchers {
     UniformSubstitutionRule(s,
       Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
         Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be
-      (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+    (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
   }
+
+  it should "substitute simple formula [a]p(x) <-> [a](p(x)&true)" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    val a = ProgramConst("a")
+    // [a]p(x) <-> [a](p(x)&true)
+    val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
+    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
+      SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
+    s(prem) should be ("[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula)
+  }
+
+  it should "substitute simple sequent [a]p(x) <-> [a](p(x)&true)" in {
+    val p = Function("p", None, Real, Bool)
+    val x = Variable("x", None, Real)
+    val a = ProgramConst("a")
+    // [a]p(x) <-> [a](p(x)&true)
+    val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
+    val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
+      SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
+    val conc = "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
+    UniformSubstitutionRule(s,
+      Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+        Sequent(Seq(), IndexedSeq(), IndexedSeq(conc))) should be
+    (List(Sequent(Seq(), IndexedSeq(), IndexedSeq(prem))))
+  }
+
 
   it should "clash when using [:=] for a substitution with a free occurrence of a bound variable" taggedAs USubstTest in {
     val fn = FuncOf(Function("f", None, Unit, Real), Nothing)

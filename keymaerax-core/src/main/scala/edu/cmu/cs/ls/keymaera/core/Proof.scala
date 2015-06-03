@@ -80,7 +80,10 @@ object SeqPos {
 }
 
 /**
- * Sequents
+ * Sequent ante |- succ with antecedent ante and succedent succ.
+ *
+ * The semantics of sequent ante |- succ is the conjunction of the formulas in ante implying
+ * the disjunction of the formulas in succ.
  * @author aplatzer
  * @see "Andre Platzer. Differential dynamic logic for hybrid systems. Journal of Automated Reasoning, 41(2), pages 143-189, 2008."
  */
@@ -227,7 +230,7 @@ object Provable {
 
 /**
  * Provable(conclusion, subgoals) represents certified provability of
- * conclusion from all the premises in subgoals.
+ * conclusion from the premises in subgoals.
  * If subgoals is an empty list, conclusion is provable.
  * Otherwise conclusion is provable from the assumptions subgoals.
  * @param conclusion the conclusion that follows if all subgoals are valid.
@@ -412,29 +415,33 @@ trait TwoPositionRule extends Rule {
  *********************************************************************************
  */
 
-/** weakening left = hide left */
+/**
+ * Hide left.
+ * {{{
+ *     G |- D
+ * ------------- (Hide left)
+ *  p, G |- D
+ * }}}
+ */
 case class HideLeft(pos: AntePos) extends LeftRule {
   val name: String = "HideLeft"
-  /**
-   * Hide left.
-   *     G |- D
-   * -------------
-   *  p, G |- D
-   */
+  /** weakening left = hide left */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante.patch(pos.getIndex, Nil, 1), s.succ))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")
 }
 
-/** weakening right = hide right */
+/**
+ * Hide right.
+ * {{{
+ *    G |- D
+ * ------------- (Hide right)
+ *   G |- p, D
+ * }}}
+ */
 case class HideRight(pos: SuccPos) extends RightRule {
   val name: String = "HideRight"
-  /**
-   * Hide right.
-   *    G |- D
-   * -------------
-   *   G |- p, D
-   */
+  /** weakening right = hide right */
   def apply(s: Sequent): immutable.List[Sequent] = {
     immutable.List(Sequent(s.pref, s.ante, s.succ.patch(pos.getIndex, Nil, 1)))
   } ensuring (_.forall(r => r.subsequentOf(s)), "structural rule subsequents")

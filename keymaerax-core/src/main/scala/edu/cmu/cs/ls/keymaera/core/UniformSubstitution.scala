@@ -41,7 +41,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
   matchKey // matchKey will throw exception if requirement("Substitutable expression required, found " + what + " in " + this) failed
 
   /**
-   * The (new) free variables of this substitution (without DotTerm/DotFormula arguments).
+   * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
    * That is the (new) free variables introduced by this substitution, i.e. free variables of repl that are not bound as arguments in what.
    * @return essentially freeVars(repl) except for special handling of Anything arguments.
    */
@@ -151,7 +151,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *   val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm),
  *       GreaterEqual(Power(DotTerm, Number(5)), Number(0)))))
  *   // x^5>=0 <-> !(!((-(-x))^5>=0))
- *   println(s(prem)
+ *   println(s(prem))
  * }}}
  * @example Uniform substitutions can be applied via the uniform substitution proof rule to a sequent:
  * {{{
@@ -165,6 +165,34 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *     Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
  *       Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
  *   // results in: p(x) <-> ! ! p(- - x)
+ *   println(next)
+ * }}}
+ * @example Uniform substitutions also work for substituting hybrid programs
+ * {{{
+ *   val p = Function("p", None, Real, Bool)
+ *   val x = Variable("x", None, Real)
+ *   val a = ProgramConst("a")
+ *   // [a]p(x) <-> [a](p(x)&true)
+ *   val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
+ *   val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
+ *     SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
+ *   // "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
+ *   println(s(prem))
+ * }}}
+ * @example Uniform substitution rule also works when substitution hybrid programs
+ * {{{
+ *   val p = Function("p", None, Real, Bool)
+ *   val x = Variable("x", None, Real)
+ *   val a = ProgramConst("a")
+ *   // [a]p(x) <-> [a](p(x)&true)
+ *   val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
+ *   val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
+ *     SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
+ *  val conc = "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
+ *  val next = UniformSubstitutionRule(s,
+ *    Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
+ *      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
+ *   // results in: [x'=5;]x>=2 <-> [x'=5;](x>=2&true)
  *   println(next)
  * }}}
  * @see edu.cmu.cs.ls.keymaera.core.USubst
@@ -190,12 +218,15 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
 
   // apply calls usubst, augmenting with contract and exception context handling
 
+  /** apply this uniform substitution everywhere in a term */
   def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString())}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + t + "\ngave " + usubst(t))
+  /** apply this uniform substitution everywhere in a formula */
   def apply(f: Formula): Formula = {try usubst(f) catch {case ex: ProverException => throw ex.inContext(f.prettyString())}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + f + "\ngave " + usubst(f))
+  /** apply this uniform substitution everywhere in a program */
   def apply(p: Program): Program = {try usubst(p) catch {case ex: ProverException => throw ex.inContext(p.prettyString())}
   } ensuring(r => matchKeys.toSet.intersect(StaticSemantics.signature(r)--signature).isEmpty,
     "Uniform Substitution substituted all occurrences (except when reintroduced by substitution) " + this + "\non" + p + "\ngave " + usubst(p))
@@ -214,7 +245,7 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   }
 
   /**
-   * The (new) free variables of this substitution (without DotTerm/DotFormula arguments).
+   * The (new) free variables that this substitution introduces (without DotTerm/DotFormula arguments).
    * That is the (new) free variables introduced by this substitution, i.e.
    * free variables of all repl that are not bound as arguments in what.
    * @return union of the freeVars of all our substitution pairs.
