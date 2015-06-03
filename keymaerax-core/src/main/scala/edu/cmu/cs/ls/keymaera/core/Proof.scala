@@ -203,6 +203,7 @@ final case class Sequent(pref: immutable.Seq[NamedSymbol],
   *********************************************************************************
   */
 
+/** Starting new Provables to begin a proof */
 object Provable {
   private[core] val debugProver: Boolean = false
 
@@ -221,7 +222,7 @@ object Provable {
    * Create a new provable for facts provided by external tools.
    * @param goal the desired conclusion.
    * @return a Provable without subgoals.
-   * @note soundness-critical, only call from RCF/LemmaDB within core.
+   * @note soundness-critical, only call from RCF/LemmaDB within core with true facts.
    */
   private[core] def toolFact(goal: Sequent): Provable = {
     Provable(goal, immutable.IndexedSeq())
@@ -229,7 +230,7 @@ object Provable {
 }
 
 /**
- * Provable(conclusion, subgoals) represents certified provability of
+ * Provable(conclusion, subgoals) is the proof certificate representing certified provability of
  * conclusion from the premises in subgoals.
  * If subgoals is an empty list, conclusion is provable.
  * Otherwise conclusion is provable from the assumptions subgoals.
@@ -1046,6 +1047,7 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
  *********************************************************************************
  */
 
+/** Finite list of axioms. */
 object Axiom {
   // immutable list of sound axioms
   val axioms: immutable.Map[String, Formula] = AxiomBase.loadAxioms
@@ -1073,6 +1075,8 @@ case class Axiom(id: String) extends Rule {
  * Real Arithmetic
  *********************************************************************************
  */
+
+/** Real arithmetic */
 object RCF {
   /** List of the class names of all external tools whose answers KeYmaera X would believe */
   private val trustedTools: immutable.List[String] =
@@ -1107,6 +1111,7 @@ object RCF {
  *********************************************************************************
  */
 
+/** Lemma mechanism */
 object LookupLemma {
   /**
    * Add given lemma to the given lemma database

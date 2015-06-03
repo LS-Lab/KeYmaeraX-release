@@ -14,7 +14,7 @@ import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter // external
 
 import scala.math._
 
-/*******************************
+/**
   * Kinds of expressions
   */
 sealed abstract class Kind
@@ -23,7 +23,7 @@ object FormulaKind extends Kind { override def toString = "Formula" }
 object ProgramKind extends Kind { override def toString = "Program" }
 object FunctionKind extends Kind { override def toString = "Function" }
 
-/*******************************
+/**
  * Sorts
  */
 sealed abstract class Sort
@@ -91,7 +91,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   }
 }
 
-/********************************************
+/**
  * Terms of differential dynamic logic.
  * @author aplatzer
   * @see [[edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser.parseBareTerm()]]
@@ -185,7 +185,7 @@ case class Pair(left: Term, right: Term) extends CompositeTerm {
   def sort: Sort = Tuple(left.sort, right.sort)
 }
 
-/********************************************
+/**
  * Formulas of differential dynamic logic.
  * @author aplatzer
   * @see [[edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser.parseBareFormula()]]
@@ -269,7 +269,7 @@ case class Diamond(program: Program, child: Formula) extends CompositeFormula wi
 /** Differential formula are differentials of formulas in analogy to differential terms */
 case class DifferentialFormula(child: Formula) extends CompositeFormula
 
-/********************************************
+/**
   * Hybrid programs of differential dynamic logic.
   * @author aplatzer
   */
