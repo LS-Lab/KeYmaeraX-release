@@ -234,9 +234,34 @@ object Provable {
  * @param subgoals the premises that, if they are all valid, imply the conclusion.
  * @note soundness-critical
  * @note Only private constructor calls for soundness
- * @note For soundness: No reflection to bybass constructor call privacy, nor reflection to bypass immutable val data structures.
+ * @note For soundness: No reflection to bybass constructor call privacy,
+ *       nor reflection to bypass immutable val data structures.
  * @author aplatzer
  * @todo probably split into different locality levels of subgoals
+ * @example Proofs can be constructed forward using Provables:
+ * {{{
+ *   import scala.collection.immutable._
+ *   val verum = new Sequent(Seq(), IndexedSeq(), IndexedSeq(True))
+ *   // conjecture
+ *   val provable = Provable.startProof(verum)
+ *   // construct a proof
+ *   val proof = provable(CloseTrue(SuccPos(0)), 0)
+ *   // check if proof successful
+ *   if (proof.isProved) println("Successfully proved " + proof.proved)
+ * }}}
+ * @example Multiple Provable objects for subderivations obtained from different sources can also be merged
+ * {{{
+ *   // ... continuing other example
+ *   val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x",None,Real), Number(5)), True)))
+ *   // another conjecture
+ *   val moreProvable = Provable.startProof(more)
+ *   // construct another (partial) proof
+ *   val moreProof = moreProvable(ImplyRight(SuccPos(0)), 0)(HideLeft(AntePos(0)), 0)
+ *   // merge proofs by gluing their Provables together
+ *   val mergedProof = moreProof(proof, 0)
+ *   // check if proof successful
+ *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
+ * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
   if (Provable.debugProver && subgoals.distinct.size != subgoals.size) print("WARNING: repeated subgoals may warrant set construction in Provable " + this)

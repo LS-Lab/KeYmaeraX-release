@@ -43,7 +43,17 @@ case class ObjectSort(name : String) extends Sort
 
 /**
  * Expressions of differential dynamic logic.
+ * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
+ *
+ * 1. terms are of type [[edu.cmu.cs.ls.keymaera.core.Term]]
+ *
+ * 2. formulas are of type [[edu.cmu.cs.ls.keymaera.core.Formula]]
+ *
+ * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaera.core.Program]]
+ *
+ * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
  * @author aplatzer
+ * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  */
 sealed trait Expression {
   def kind : Kind

@@ -54,7 +54,9 @@ package edu.cmu.cs.ls.keymaera
  * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
  *
  * 1. terms are of type [[edu.cmu.cs.ls.keymaera.core.Term]]
+ *
  * 2. formulas are of type [[edu.cmu.cs.ls.keymaera.core.Formula]]
+ *
  * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaera.core.Program]]
  *
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]

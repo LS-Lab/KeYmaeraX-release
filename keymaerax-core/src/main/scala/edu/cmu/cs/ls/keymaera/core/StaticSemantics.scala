@@ -12,8 +12,23 @@ import scala.collection.immutable
 
 /**
  * The static semantics of differential dynamic logic.
+ * This object defines the static semantics of differential dynamic logic
+ * in terms of the free variables and bound variables that expressions have as well as their signatures.
+ * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
  * @author aplatzer
  * @author smitsch
+ * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+ * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
+ * @example
+ * {{{
+ *   val fml = Imply(Greater(Variable("x",None,Real), Number(5)),
+ *     Forall(Seq(Variable("y",None,Real)),
+ *       GreaterEqual(Variable("x",None,Real), Variable("y",None,Real))))
+ *   // determine the static semantics of the above formula
+ *   val stat = StaticSemantics(fml)
+ *   println("Free variables " + stat.fv)
+ *   println("Bound variables " + stat.bv)
+ * }}}
  */
 object StaticSemantics {
 

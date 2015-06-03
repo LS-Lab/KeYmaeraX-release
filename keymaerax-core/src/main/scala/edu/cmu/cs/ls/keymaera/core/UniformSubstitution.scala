@@ -137,8 +137,11 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * A Uniform Substitution with its application mechanism.
  * Implements application of uniform substitutions to terms, formulas, programs.
  * "Global" version that checks admissibility eagerly at bound variables rather than computing bounds on the fly and checking upon occurrence.
- * Used for UniformSubstitution rule.
+ * Main ingredient of [[edu.cmu.cs.ls.keymaera.core.UniformSubstitutionRule]]
+ * and [[edu.cmu.cs.ls.keymaera.core.AxiomaticRule]]
  * @author aplatzer
+ * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+ * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   /** automatically filter out identity substitution no-ops */
