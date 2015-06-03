@@ -17,19 +17,7 @@ class AdvocatusReflecti extends FlatSpec with Matchers {
   val falsum = new Sequent(immutable.Seq(), immutable.IndexedSeq(), immutable.IndexedSeq(False))
 
 
-  "advocatus diavoli mutandis" should "do trivial proofs" in {
-    import scala.collection.immutable._
-    val verum = new Sequent(Seq(), IndexedSeq(), IndexedSeq(True))
-    // conjecture
-    val provable = Provable.startProof(verum)
-    // construct a proof
-    val proving = provable(CloseTrue(SuccPos(0)), 0)
-    // check if proof successful
-    if (proving.isProved) println("Successfully proved " + proving.proved)
-    proving.isProved should be (true)
-  }
-  
-  it should "not allow immutable Provable conclusion to be written to" in {
+  "advocatus diavoli mutandis" should "not allow immutable Provable conclusion to be written to" in {
     var proof = Provable.startProof(verum)(CloseTrue(SuccPos(0)), 0)
     println("Provable " + proof + " " + (if (proof.isProved) "proved" else "not proved"))
     println(classOf[Provable].getDeclaredFields.map(c => c.getName + " of type " + c.getType).mkString("\n"))
