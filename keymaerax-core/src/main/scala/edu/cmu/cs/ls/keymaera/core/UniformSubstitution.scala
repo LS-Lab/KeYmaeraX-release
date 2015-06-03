@@ -167,6 +167,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *   // results in: p(x) <-> ! ! p(- - x)
  *   println(next)
  * }}}
+ * @see edu.cmu.cs.ls.keymaera.core.USubst
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   /** automatically filter out identity substitution no-ops */
