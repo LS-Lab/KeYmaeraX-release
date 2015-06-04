@@ -59,6 +59,22 @@ common sbt problems:
 
 https://github.com/LS-Lab/KeYmaera4/wiki/Building-Instructions
 
+Generating Scaladoc
+===================
+
+To generate scoaladoc, run:
+
+    sbt doc
+
+Documentation will be generated for each subproject in the 
+target/scala-x.xx/api directory of the subproject. 
+For instance, keymaerax-core/target/scala-2.10/api for the core subproject.
+
+To generate unified scaladoc for all subprojects, run:
+
+  sbt unidoc
+
+
 IntelliJ IDEA
 =============
 
