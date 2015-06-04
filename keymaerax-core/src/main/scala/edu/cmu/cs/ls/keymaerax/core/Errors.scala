@@ -59,7 +59,8 @@ case class BoundRenamingClashException(msg: String, ren: String/*BoundRenaming*/
 //    new BoundRenamingClashException(msg, ren, info + "\nin " + context).initCause(this).asInstanceOf[BoundRenamingClashException]
 }
 
-case class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol]) extends CoreException(msg + " " + clashedNames) {}
+case class SkolemClashException(msg: String, clashedNames:Set[_ >: NamedSymbol], vars:String/*Seq[Variable]*/, s:String/*Sequent*/)
+  extends CoreException(msg + " " + clashedNames + "\nwhen skolemizing variables " + vars + "\nin " + s)
 
 case class InapplicableRuleException(msg: String, r:Rule, s:Sequent = null) extends CoreException(msg + "\nRule " + r + (if (s != null) " applied to " + s else "")) {
   //@TODO if (r instanceof PositionRule) msg + "\n" + s(r.pos) + "\nRule " + r + " applied to " + s

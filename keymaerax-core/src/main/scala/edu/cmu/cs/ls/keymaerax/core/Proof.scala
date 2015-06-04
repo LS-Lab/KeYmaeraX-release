@@ -1018,6 +1018,16 @@ case class BoundRenaming(what: Variable, repl: Variable) extends Rule {
 /**
  * Skolemization assumes that the names of the quantified variables to be skolemized are unique within the sequent.
  * This can be ensured by finding a unique name and renaming the bound variable through alpha conversion.
+ * {{{
+ * G |- p(x), D
+ * ---------------------------- (Skolemize) provided x not in G,D
+ * G |- \forall x . p(x), D
+ * }}}
+ * {{{
+ * G, p(x) |- D
+ * ---------------------------- (Skolemize) provided x not in G,D
+ * G, \exists x . p(x) |- D
+ * }}}
  * @TODO Could replace by uniform substitution rule application mechanism for rule "all generalization"
  * along with tactics expanding scope of quantifier with axiom "all quantifier scope" at the cost of propositional repacking and unpacking.
  *      p(x)
@@ -1033,11 +1043,11 @@ case class Skolemize(pos: SeqPos) extends PositionRule {
     val (v,phi) = s(pos) match {
       case Forall(qv, qphi) if pos.isSucc => (qv, qphi)
       case Exists(qv, qphi) if pos.isAnte => (qv, qphi)
-      case _ => throw new InapplicableRuleException("Skolemization in antecedent is only applicable to existential quantifiers/in succedent only to universal quantifiers", this, s)
+      case _ => throw new InapplicableRuleException("Skolemization only applicable to universal quantifiers in the succedent or to existential quantifiers in the antecedent", this, s)
     }
     if (taboos.intersect(v.toSet).isEmpty) immutable.List(s.updated(pos, phi))
     else throw new SkolemClashException("Variables to be skolemized should not appear anywhere else in the sequent. BoundRenaming required.",
-        taboos.intersect(v.toSet))
+        taboos.intersect(v.toSet), v.toString, s.toString)
   }
 
 }
@@ -1091,7 +1101,7 @@ object RCF {
    * @todo Change structure around such that quantifier elimination tools already come back with whatever evidence they can provide.
    */
   def proveArithmetic(t: QETool, f: Formula): Lemma = {
-    require(trustedTools.contains(t.getClass.getCanonicalName), "Untrusted tool " + t.getClass.getCanonicalName)
+    require(trustedTools.contains(t.getClass.getCanonicalName), "Trusted tool required: " + t.getClass.getCanonicalName)
 
     // Quantifier elimination determines (quantifier-free) equivalent of f.
     val (equivalent, input, output) = t.qeInOut(f)
@@ -1116,8 +1126,9 @@ object LookupLemma {
   /**
    * Add given lemma to the given lemma database
    * @param lemmaDB Lemma database to insert into.
-   * @param lemma The lemma whose Provable will be inserted with its name.
+   * @param lemma The lemma whose Provable will be inserted under its name.
    * @return Internal lemma identifier.
+   * @todo error if name already exists?
    */
   def addLemma(lemmaDB: LemmaDB, lemma: Lemma): String = lemmaDB.add(lemma)
 
