@@ -16,6 +16,7 @@ package edu.cmu.cs.ls.keymaerax
  * constructing and searching for proofs, but they internally reduce to what is shown here.
  *
  * ===Constructing Proofs===
+ * The proof certificates of KeYmaera X are [[edu.cmu.cs.ls.keymaerax.core.Provable]] objects.
  * [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]] begins a new proof of a
  * [[edu.cmu.cs.ls.keymaerax.core.Sequent]] containing the conjectured differential dynamic logic formula.
  * A proof rule of type [[edu.cmu.cs.ls.keymaerax.core.Rule]] can be applied to any subgoal of a
