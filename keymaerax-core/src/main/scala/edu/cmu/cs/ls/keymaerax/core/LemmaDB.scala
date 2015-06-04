@@ -22,16 +22,19 @@ trait LemmaDB {
   def contains(lemmaID: LemmaID): Boolean
 
   /**
-   * Returns a lemma.
+   * Returns the lemma with the given name or None if non-existent.
    * @param lemmaID Identifies the lemma.
    * @return The lemma, if found. None otherwise.
+   * @ensures contains(lemmaID) && \result==Some(l) && l.name == lemmaID
+   *         || !contains(lemmaID) && \result==None
    */
   def get(lemmaID: LemmaID): Option[Lemma]
 
   /**
-   * Adds a lemma to this lemma DB.
+   * Adds a lemma to this lemma DB, with a unique name or None, which will automatically assign a name.
    * @param lemma The lemma to add.
    * @return The lemma ID.
+   * @requires if (lemma.name==Some(n)) then !contains(n)
    */
   private[core] def add(lemma: Lemma): LemmaID
 }

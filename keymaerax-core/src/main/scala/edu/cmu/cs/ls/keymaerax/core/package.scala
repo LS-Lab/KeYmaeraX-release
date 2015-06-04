@@ -43,7 +43,7 @@ package edu.cmu.cs.ls.keymaerax
  * The above example can be continued to merge proofs as follows:
  * {{{
  *   val more = new Sequent(Seq(), IndexedSeq(),
- *       IndexedSeq(Imply(Greater(Variable("x",None,Real), Number(5)), True)))
+ *       IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
  *   // another conjecture
  *   val moreProvable = Provable.startProof(more)
  *   // construct another (partial) proof

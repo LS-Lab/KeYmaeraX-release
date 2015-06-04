@@ -200,7 +200,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *   // results in: [x'=5;]x>=2 <-> [x'=5;](x>=2&true)
  *   println(next)
  * }}}
- * @see edu.cmu.cs.ls.keymaerax.core.USubst
+ * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
 final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   /** automatically filter out identity substitution no-ops */

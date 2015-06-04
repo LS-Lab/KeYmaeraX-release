@@ -30,7 +30,7 @@ class ProvableTest extends FlatSpec with Matchers {
     if (proving.isProved) println("Successfully proved " + proving.proved)
     proving.isProved should be (true)
 
-    val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x",None, Real), Number(5)), True)))
+    val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
     val moreProvable = Provable.startProof(more)
     // construct another (partial) proof
@@ -45,7 +45,7 @@ class ProvableTest extends FlatSpec with Matchers {
 
   it should "glue trivial proofs backward" in {
     import scala.collection.immutable._
-    val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x",None, Real), Number(5)), True)))
+    val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
     // another conjecture
     val moreProvable = Provable.startProof(more)
     // construct another (partial) proof

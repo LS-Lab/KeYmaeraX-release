@@ -121,7 +121,7 @@ private[core] trait RTerm extends Term {
 }
 
 /** Variable called name with an index of a fixed sort */
-sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort)
+sealed case class Variable(name: String, index: Option[Int] = None, sort: Sort = Real)
   extends NamedSymbol with AtomicTerm
 
 /** Differential symbol x' for variable x */
