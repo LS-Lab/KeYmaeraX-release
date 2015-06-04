@@ -9,6 +9,13 @@ package edu.cmu.cs.ls.keymaerax
  * Provides lemma data base, real arithmetic interfaces, error reporting, and set lattice management.
  * 
  * ==Usage Overview==
+ * The KeYmaera X Kernel package provides the soundness-critical core of KeYmaera X.
+ * It provides ways of constructing proofs that, by construction, can only be constructed using
+ * the proof rules that the KeYmaera X Kernel provides.
+ * The tactics that KeYmaera X provides give you a more powerful and flexible and easier way of
+ * constructing and searching for proofs, but they internally reduce to what is shown here.
+ *
+ * ===Constructing Proofs===
  * [[edu.cmu.cs.ls.keymaerax.core.Provable.startProof]] begins a new proof of a
  * [[edu.cmu.cs.ls.keymaerax.core.Sequent]] containing the conjectured differential dynamic logic formula.
  * A proof rule of type [[edu.cmu.cs.ls.keymaerax.core.Rule]] can be applied to any subgoal of a
@@ -30,12 +37,13 @@ package edu.cmu.cs.ls.keymaerax
  * The tactics internally construct proofs this way, but add additional flexibility and
  * provide convenient ways of expressing proof search strategies in a tactic language.
  *
- * ==Merging Proofs==
+ * ===Combining Proofs===
  * Multiple Provable objects for subderivations obtained from different sources can also be merged
  * into a single Provable object with [[edu.cmu.cs.ls.keymaerax.core.Provable.apply]]([[edu.cmu.cs.ls.keymaerax.core.Provable]],Int).
  * The above example can be continued to merge proofs as follows:
  * {{{
- *   val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x",None,Real), Number(5)), True)))
+ *   val more = new Sequent(Seq(), IndexedSeq(),
+ *       IndexedSeq(Imply(Greater(Variable("x",None,Real), Number(5)), True)))
  *   // another conjecture
  *   val moreProvable = Provable.startProof(more)
  *   // construct another (partial) proof
@@ -48,44 +56,49 @@ package edu.cmu.cs.ls.keymaerax
  *
  * ==Differential Dynamic Logic==
  * The language of differential dynamic logic is described in KeYmaera X by its syntax and static semantics.
+ *
  * ===Syntax===
- * Immutable algebraic data structures for the expressions of differential dynamic logic have type
+ * The immutable algebraic data structures for the expressions of differential dynamic logic are of type
  * [[edu.cmu.cs.ls.keymaerax.core.Expression]].
- * Expressions are categorized according to the syntactic categories of the grammar of differential dynamic logic:
+ * Expressions are categorized according to their kind by the syntactic categories
+ * of the grammar of differential dynamic logic:
  *
- * 1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]]
+ * 1. terms are of type [[edu.cmu.cs.ls.keymaerax.core.Term]] of kind [[edu.cmu.cs.ls.keymaerax.core.TermKind]]
  *
- * 2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]]
+ * 2. formulas are of type [[edu.cmu.cs.ls.keymaerax.core.Formula]] of kind [[edu.cmu.cs.ls.keymaerax.core.FormulaKind]]
  *
- * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]]
+ * 3. hybrid programs are of type [[edu.cmu.cs.ls.keymaerax.core.Program]] of kind [[edu.cmu.cs.ls.keymaerax.core.ProgramKind]]
  *
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
  *
  * ===Static Semantics===
- * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]] defines the static semantics of differential dynamic logic
- * in terms of the free variables and bound variables that expressions have as well as their signatures.
+ * The static semantics of differential dynamic logic is captured in
+ * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
+ * in terms of the free variables and bound variables that expressions have as well as their signatures
+ * (set of occurring symbols).
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
  *
  * ==Theorem Prover==
- * The KeYmaera X Prover Kernel provides uniform substitutions, axioms of differential dynamic logic,
- * and propositional sequent proof rules.
+ * The KeYmaera X Prover Kernel provides uniform substitutions, bound variable renamings,
+ * axioms of differential dynamic logic.
+ * For efficiency, it also directly provides propositional sequent proof rules and Skolemization.
  *
  * ===Uniform Substitutions===
- * [[edu.cmu.cs.ls.keymaerax.core.USubst]] defines uniform substitutions and their application mechanism
- * for differential dynamic logic.
+ * Uniform substitutions and their application mechanism for differential dynamic logic
+ * are implemented in [[edu.cmu.cs.ls.keymaerax.core.USubst]].
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 3.0]]
  *
- * [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]] applies uniform substitutions as a proof rule.
- * [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]] generates uniform substitution instances of axiomatic rules.
+ * The proof rule [[edu.cmu.cs.ls.keymaerax.core.UniformSubstitutionRule]] applies uniform substitutions as a proof rule.
+ * The [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]] generates uniform substitution instances of axiomatic rules.
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 4]]
  *
  * ===Axioms===
- * The axioms and axiomatic rules of differential dynamic logic are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
+ * The axioms and axiomatic rules of differential dynamic logic are all listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
  * See [[http://arxiv.org/pdf/1503.01981.pdf Sections 4 and 5.0]]
  *
  * ===Sequent Proof Rules===
- * The uniform substitution and bound variable renaming rules as well as
- * efficient propositional sequent proof rules and Skolemization for differential dynamic logic
+ * All proof rules for differential dynamic logic, including the uniform substitution and bound variable renaming rules as well as
+ * efficient propositional sequent proof rules and Skolemization [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
  * are all of type [[edu.cmu.cs.ls.keymaerax.core.Rule]], which are the only proof rules that can ever be applied to a proof.
  * See [[http://dx.doi.org/10.1007/s10817-008-9103-8 sequent calculus]]
  *
