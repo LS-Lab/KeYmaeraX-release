@@ -2,22 +2,22 @@ package casestudies
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateAnte
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.locateSucc
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
-import edu.cmu.cs.ls.keymaera.tactics.Interpreter
-import edu.cmu.cs.ls.keymaera.tactics.BranchLabels
-import edu.cmu.cs.ls.keymaera.tactics.Tactics
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, Z3, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.locateAnte
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.locateSucc
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
+import edu.cmu.cs.ls.keymaerax.tactics.Interpreter
+import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, Z3, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, FlatSpec, Matchers}
 import testHelper.ParserFactory._
-import edu.cmu.cs.ls.keymaera.tactics.ODETactics.diffSolution
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffSolution
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.wipeContextInductionT
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
 import testHelper.StringConverter._
 import BranchLabels._
 

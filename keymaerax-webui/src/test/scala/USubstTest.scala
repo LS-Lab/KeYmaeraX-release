@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaerax.core._
 import org.scalatest._
 import testHelper.StringConverter
 import scala.collection.immutable.List

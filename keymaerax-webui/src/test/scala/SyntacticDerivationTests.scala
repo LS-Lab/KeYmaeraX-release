@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext.ApplicableAtFormula
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext.ApplicableAtFormula
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
 

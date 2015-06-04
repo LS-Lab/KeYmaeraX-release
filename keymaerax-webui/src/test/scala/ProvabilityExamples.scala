@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics, TacticLibrary}
-import edu.cmu.cs.ls.keymaera.tools.{KeYmaera, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics, TacticLibrary}
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.tactics.NameCategorizer
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.tactics.NameCategorizer
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{Matchers, FlatSpec}
 import testHelper.StringConverter._

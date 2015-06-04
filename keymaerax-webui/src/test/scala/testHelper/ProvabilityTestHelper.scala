@@ -4,10 +4,10 @@ import java.io.File
 import java.util.Locale
 import java.util.concurrent.TimeoutException
 
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration.Duration
@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  * These are helper functions for writing tactic tests. Suggested use:
- *    import edu.cmu.cs.ls.keymaera.ProvabilityTestHelper.scala
+ *    import edu.cmu.cs.ls.keymaerax.ProvabilityTestHelper.scala
  * Created by nfulton on 12/6/14.
  * @author nfulton
  * @author aplatzer

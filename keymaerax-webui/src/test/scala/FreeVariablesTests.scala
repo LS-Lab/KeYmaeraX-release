@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaerax.core._
 import org.scalatest.{Matchers, FlatSpec}
 import testHelper.StringConverter
 import StringConverter._

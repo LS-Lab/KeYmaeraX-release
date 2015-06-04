@@ -1,6 +1,6 @@
 import org.scalatest._
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.parser._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.parser._
 import scala.collection.immutable._
 import testHelper.StringConverter._
 

@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.tacticsinterface.CLParser
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.CLParser
 import org.scalatest.{Matchers, FlatSpec}
-import edu.cmu.cs.ls.keymaera.tacticsinterface._
+import edu.cmu.cs.ls.keymaerax.tacticsinterface._
 
 /**
  * Created by nfulton on 2/26/15.

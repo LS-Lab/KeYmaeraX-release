@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.ODETactics._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.{RootNode, HybridProgramTacticsImpl, ODETactics}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, HybridProgramTacticsImpl, ODETactics}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._

@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaera.core.Sequent
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.Tactic
-import edu.cmu.cs.ls.keymaera.tactics.{RootNode, Interpreter, Config}
-import edu.cmu.cs.ls.keymaera.tacticsinterface.{CLInterpreter, CLParser}
+import edu.cmu.cs.ls.keymaerax.core.Sequent
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.Tactic
+import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, Interpreter, Config}
+import edu.cmu.cs.ls.keymaerax.tacticsinterface.{CLInterpreter, CLParser}
 import testHelper.StringConverter._
 
 /**

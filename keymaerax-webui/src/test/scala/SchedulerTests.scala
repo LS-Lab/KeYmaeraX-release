@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.tactics.{TacticToolBinding, Scheduler}
-import edu.cmu.cs.ls.keymaera.tools.Tool
+import edu.cmu.cs.ls.keymaerax.tactics.{TacticToolBinding, Scheduler}
+import edu.cmu.cs.ls.keymaerax.tools.Tool
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{Matchers, FlatSpec}
 

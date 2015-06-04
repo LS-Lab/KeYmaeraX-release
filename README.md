@@ -72,7 +72,7 @@ Project Setup
 - Check update automatically (not checked by default), so that updates to build.sbt are reflected automatically in the project
 
 Create a new run configuration of type Application.
-- Main class: edu.cmu.cs.ls.keymaera.hydra.Boot
+- Main class: edu.cmu.cs.ls.keymaerax.hydra.Boot
 - Set the working directory to the project path
 - Use the classpath of your project module
 
@@ -115,7 +115,7 @@ jsgui/ - The javascript front-end
 
 src/ - Source code directory
 
-src/main/scala - source code (edu.cmu.cs.ls.keymaera)
+src/main/scala - source code (edu.cmu.cs.ls.keymaerax)
 
 Within the keymaera namespace, code is separated according to functionality:
 

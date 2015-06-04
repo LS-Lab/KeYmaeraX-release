@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import ODETactics.{diffWeakenT, diffWeakenAxiomT, diffSolution, diamondDiffWeakenAxiomT}

@@ -1,8 +1,8 @@
 import com.wolfram.jlink.Expr
 import testHelper.ProvabilityTestHelper
 import org.scalatest._
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tools._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import scala.collection.immutable._
 import testHelper.StringConverter._
@@ -159,9 +159,9 @@ class MathematicaConversionTests extends FlatSpec with Matchers with BeforeAndAf
 
 
   object round {
-    def trip(e: edu.cmu.cs.ls.keymaera.core.Expression) = roundTrip(e) should be (e)
+    def trip(e: edu.cmu.cs.ls.keymaerax.core.Expression) = roundTrip(e) should be (e)
 
-    def roundTrip(e : edu.cmu.cs.ls.keymaera.core.Expression) = {
+    def roundTrip(e : edu.cmu.cs.ls.keymaerax.core.Expression) = {
       val math = KeYmaeraToMathematica.fromKeYmaera(e)
       ml.run(math)._2
     }

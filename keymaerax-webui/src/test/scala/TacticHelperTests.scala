@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.tactics.{PosInExpr, SuccPosition}
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SuccPosition}
 import org.scalatest.{Matchers, FlatSpec}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.TacticHelper._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.TacticHelper._
 import testHelper.StringConverter._
 import testHelper.SequentFactory.sequent
 

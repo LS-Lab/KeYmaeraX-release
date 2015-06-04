@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.tactics.{Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tools._
+import edu.cmu.cs.ls.keymaerax.tactics.{Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tools._
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
 
@@ -8,7 +8,7 @@ import testHelper.StringConverter._
  * @author Ran Ji
  */
 class SMTConversionTests extends FlatSpec with Matchers with BeforeAndAfterEach {
-  type KExpr = edu.cmu.cs.ls.keymaera.core.Expression
+  type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
   type SExpr = SMTLib
   var z3 : Z3Solver = null
   var polya : PolyaSolver = null

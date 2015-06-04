@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{RootNode, TacticLibrary}
-import edu.cmu.cs.ls.keymaera.tools.{Tool, Mathematica}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{RootNode, TacticLibrary}
+import edu.cmu.cs.ls.keymaerax.tools.{Tool, Mathematica}
 import testHelper.ProvabilityTestHelper
 import testHelper.StringConverter._
 

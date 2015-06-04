@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics._
 import testHelper.StringConverter._
 
 

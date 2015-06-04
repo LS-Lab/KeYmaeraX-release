@@ -1,10 +1,10 @@
-import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics._
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction, TraverseToPosition}
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{ConstructionTactic, ApplyRule, Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tools.{KeYmaera, Tool}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{ConstructionTactic, ApplyRule, Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Tool}
 import testHelper.ProvabilityTestHelper
 import testHelper.StringConverter._
 import testHelper.SequentFactory._

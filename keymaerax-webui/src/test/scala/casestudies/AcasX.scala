@@ -2,18 +2,18 @@ package casestudies
 
 import java.io.File
 
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.ODETactics._
-import edu.cmu.cs.ls.keymaera.tactics.BranchLabels._
-import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT}
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics._
+import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
+import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{instantiateT,skolemizeT}
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, arithmeticT, ImplyRightT, AndLeftT, hideT, AndRightT,
   ImplyLeftT, AxiomCloseT, OrRightT, OrLeftT, cutT, locate}
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, RootNode, SuccPosition, Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{Propositional,NonBranchingPropositionalT,cohideT}
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, RootNode, SuccPosition, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

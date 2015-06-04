@@ -1,6 +1,6 @@
 package testHelper
 
-import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula, NamedSymbol}
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula, NamedSymbol}
 
 /**
  * Created by smitsch on 1/20/15.

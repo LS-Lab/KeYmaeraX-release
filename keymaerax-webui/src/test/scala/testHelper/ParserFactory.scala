@@ -1,8 +1,8 @@
 package testHelper
 
-import edu.cmu.cs.ls.keymaera.api.ComponentConfig
-import edu.cmu.cs.ls.keymaera.core.{Sequent, Formula}
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
+import edu.cmu.cs.ls.keymaerax.core.{Sequent, Formula}
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
 
 /**
  * Created by ran on 2/4/15.

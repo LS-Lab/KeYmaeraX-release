@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaerax.core._
 import scala.util.Random
 import scala.collection.immutable._
 

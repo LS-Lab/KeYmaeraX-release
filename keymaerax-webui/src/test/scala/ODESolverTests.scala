@@ -1,9 +1,9 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{SearchTacticsImpl, LogicalODESolver}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{SearchTacticsImpl, LogicalODESolver}
 import org.scalatest.{PrivateMethodTester, FlatSpec, Matchers}
 import testHelper.{ProvabilityTestHelper, StringConverter}
 import StringConverter._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary._
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 
 /**
  * @author Nathan Fulton

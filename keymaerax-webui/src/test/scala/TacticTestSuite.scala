@@ -1,10 +1,10 @@
-import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal
-import edu.cmu.cs.ls.keymaera.tactics.ExpressionTraversal.ExpressionTraversalFunction
-import edu.cmu.cs.ls.keymaera.tactics.Position
-import edu.cmu.cs.ls.keymaera.tactics.PosInExpr
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{ProofNode, Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal
+import edu.cmu.cs.ls.keymaerax.tactics.ExpressionTraversal.ExpressionTraversalFunction
+import edu.cmu.cs.ls.keymaerax.tactics.Position
+import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{ProofNode, Interpreter, Tactics}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

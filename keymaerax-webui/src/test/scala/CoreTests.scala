@@ -1,7 +1,7 @@
 import org.scalatest._
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools._
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools._
 import java.math.BigDecimal
 import java.io.File
 import scala.collection.immutable._

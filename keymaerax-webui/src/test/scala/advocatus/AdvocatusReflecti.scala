@@ -3,7 +3,7 @@ import java.security.{AccessControlException, Permission}
 
 import scala.collection.immutable
 
-import edu.cmu.cs.ls.keymaera.core._
+import edu.cmu.cs.ls.keymaerax.core._
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 

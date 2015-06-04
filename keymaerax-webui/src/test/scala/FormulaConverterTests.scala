@@ -1,9 +1,9 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Context
-import edu.cmu.cs.ls.keymaera.tactics.PosInExpr
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.Context
+import edu.cmu.cs.ls.keymaerax.tactics.PosInExpr
 import org.scalatest.{Matchers, FlatSpec}
 import testHelper.StringConverter._
-import edu.cmu.cs.ls.keymaera.tactics.FormulaConverter._
+import edu.cmu.cs.ls.keymaerax.tactics.FormulaConverter._
 
 /**
  * Created by smitsch on 3/26/15.

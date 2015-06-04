@@ -1,14 +1,14 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, FOQuantifierTacticsImpl,
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.{AntePosition, PosInExpr, RootNode, SuccPosition, FOQuantifierTacticsImpl,
   Interpreter, Tactics}
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.ProofFactory._
 import testHelper.SequentFactory._
 import testHelper.StringConverter._
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{locateSucc,locateAnte}
-import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{locateSucc,locateAnte}
+import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.{uniquify,instantiateExistentialQuanT,
   instantiateUniversalQuanT,instantiateT,existentialGenT,vacuousExistentialQuanT,vacuousUniversalQuanT,decomposeQuanT,
   allEliminateT}
 
@@ -354,7 +354,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   "Quantifier skolemization" should "not introduce a new name if the quantified names are unique already" in {
-    import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
+    import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
     val tactic = locateSucc(skolemizeT)
     val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula)))
     result.openGoals() should have size 1
@@ -363,7 +363,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "introduce a new name if the quantified name is not unique" in {
-    import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.skolemizeT
+    import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.skolemizeT
     val tactic = locateSucc(skolemizeT)
     val result = helper.runTactic(tactic, new RootNode(sequent(Nil, "x>2".asFormula :: Nil, "\\forall x. x>0".asFormula :: Nil)))
     result.openGoals() should have size 1
@@ -372,7 +372,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "introduce a new name even if the quantified names are unique already, if forced to do so" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeT
     val tactic = locateSucc(skolemizeT(forceUniquify = true))
     val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula)))
     result.openGoals() should have size 1
@@ -381,7 +381,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "skolemize to a function symbol" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.skolemizeToFnT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.skolemizeToFnT
     val tactic = locateSucc(skolemizeToFnT)
     val result = helper.runTactic(tactic, new RootNode(sucSequent("\\forall x. x>0".asFormula)))
     result.openGoals() should have size 1
@@ -390,28 +390,28 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   "Quantifier instantiation" should "instantiate quantifier with given term" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT(Variable("x", None, Real), "y+1".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "y+1>0".asFormula :: Nil, Nil))
   }
 
   it should "use bound renaming if necessary" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT(Variable("y", None, Real), "y+1".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "y+1>0".asFormula :: Nil, Nil))
   }
 
   it should "use bound renaming when instantiating identity if necessary" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT(Variable("y", None, Real), "y".asTerm))
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall y. y>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "y>0".asFormula :: Nil, Nil))
   }
 
   it should "work on differential symbols" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val x = "x".asVariable
     val tactic = locateAnte(instantiateT(x, x))
     getProofSequent(tactic, new RootNode(sequent(Nil, Forall(x :: Nil,
@@ -420,7 +420,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
   }
 
   it should "guess names from quantified names" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT)
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x. x>0".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "x>0".asFormula :: Nil, Nil))
@@ -428,7 +428,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
 
   // TODO not yet supported
   ignore should "guess all names from quantified names" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = locateAnte(instantiateT)
     getProofSequent(tactic, new RootNode(sequent(Nil, "\\forall x,y,z. x>y+z".asFormula :: Nil, Nil))) should be (
       sequent(Nil, "x>y+z".asFormula :: Nil, Nil))
@@ -448,7 +448,7 @@ class FOQuantifierTacticTests extends FlatSpec with Matchers with BeforeAndAfter
 
   // TODO not yet supported
   ignore should "instantiate loops" in {
-    import edu.cmu.cs.ls.keymaera.tactics.FOQuantifierTacticsImpl.instantiateT
+    import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl.instantiateT
     val tactic = instantiateT(Variable("x", None, Real), "z".asTerm)(SuccPosition(0))
     getProofSequent(tactic, new RootNode(sucSequent("\\exists x. [{x:=x+1;}*]x>0".asFormula))) should be (
       sucSequent("[{z:=z+1;}*]z>0".asFormula))

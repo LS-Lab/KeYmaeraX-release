@@ -1,6 +1,6 @@
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{Tactic, PositionTactic}
-import edu.cmu.cs.ls.keymaera.tactics.{PosInExpr, SearchTacticsImpl, SuccPosition, TacticLibrary, NNFRewrite}
-import edu.cmu.cs.ls.keymaera.tactics.NNFRewrite._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{Tactic, PositionTactic}
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, SearchTacticsImpl, SuccPosition, TacticLibrary, NNFRewrite}
+import edu.cmu.cs.ls.keymaerax.tactics.NNFRewrite._
 import testHelper.StringConverter._
 
 /**

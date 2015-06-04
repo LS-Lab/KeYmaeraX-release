@@ -1,7 +1,7 @@
 
 // favoring immutable Seqs
 
-import edu.cmu.cs.ls.keymaera.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics._
 import ProofNode.ProofStep
 import org.scalatest.{Matchers, FlatSpec}
 
@@ -12,14 +12,14 @@ import scala.collection.immutable.List
 import scala.collection.immutable.Map
 import scala.collection.immutable.Set
 
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.Tactics._
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraPrettyPrinter
-import edu.cmu.cs.ls.keymaera.parser.KeYmaeraParser
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics._
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraPrettyPrinter
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
 import java.io._
 import scala.language.postfixOps
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
-import edu.cmu.cs.ls.keymaera.tactics.{Generate, TacticWrapper, TacticLibrary, Tactics}
+import edu.cmu.cs.ls.keymaerax.tactics.{Generate, TacticWrapper, TacticLibrary, Tactics}
 
 class TermTests extends FlatSpec with Matchers{
 
@@ -208,7 +208,7 @@ class TermTests extends FlatSpec with Matchers{
   }
 //
 //  def test10database {
-//    val input = "jsgui/keymaera/resources/input.key"
+//    val input = "jsgui/keymaerax/resources/input.key"
 //    val in = readFile(input)
 //    val node = ProverBusinessLogic.addModel(in)
 //    println("running tactic on " + node)

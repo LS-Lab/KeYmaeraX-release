@@ -1,12 +1,12 @@
-import edu.cmu.cs.ls.keymaera.core._
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl._
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.{locateSucc, locateAnte}
-import edu.cmu.cs.ls.keymaera.tactics.ODETactics.diffWeakenT
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.boxNDetAssign
-import edu.cmu.cs.ls.keymaera.tactics.TacticLibrary.{debugT, skolemizeT, ImplyRightT}
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.PositionTactic
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools.{Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl._
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.{locateSucc, locateAnte}
+import edu.cmu.cs.ls.keymaerax.tactics.ODETactics.diffWeakenT
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.boxNDetAssign
+import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary.{debugT, skolemizeT, ImplyRightT}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.PositionTactic
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.{Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._

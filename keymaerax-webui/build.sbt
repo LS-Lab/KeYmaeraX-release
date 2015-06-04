@@ -96,9 +96,9 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-h", "target/te
 // Builds -- make sure you are using SBT 13.6+
 ////////////////////////////////////////////////////////////////////////////////
 
-//mainClass in assembly := Some("edu.cmu.cs.ls.keymaera.hydra.Boot")
+//mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.hydra.Boot")
 
-mainClass in assembly := Some("edu.cmu.cs.ls.keymaera.launcher.Main")
+mainClass in assembly := Some("edu.cmu.cs.ls.keymaerax.launcher.Main")
 
 
 test in assembly := {}

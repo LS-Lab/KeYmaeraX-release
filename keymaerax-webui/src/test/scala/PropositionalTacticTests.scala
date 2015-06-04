@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.locateSucc
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tactics.PropositionalTacticsImpl.{cohide2T,hideT,kModalModusPonensT,modusPonensT}
-import edu.cmu.cs.ls.keymaera.tools.{KeYmaera, Mathematica}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.locateSucc
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tactics.PropositionalTacticsImpl.{cohide2T,hideT,kModalModusPonensT,modusPonensT}
+import edu.cmu.cs.ls.keymaerax.tools.{KeYmaera, Mathematica}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{FlatSpec, Matchers, BeforeAndAfterEach}
 import testHelper.ProofFactory._

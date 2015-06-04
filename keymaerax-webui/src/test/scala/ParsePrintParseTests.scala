@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaera.parser.{KeYmaeraPrettyPrinter, KeYmaeraParser}
+import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraPrettyPrinter, KeYmaeraParser}
 import org.scalatest.{Matchers, FlatSpec}
 import testHelper.StringConverter._
 

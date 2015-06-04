@@ -1,7 +1,7 @@
-import edu.cmu.cs.ls.keymaera.core.{AntePos, Expression, Sequent}
-import edu.cmu.cs.ls.keymaera.tactics.Tactics.{PositionTactic, Tactic}
-import edu.cmu.cs.ls.keymaera.tactics._
-import edu.cmu.cs.ls.keymaera.tools.{Z3, Mathematica, KeYmaera}
+import edu.cmu.cs.ls.keymaerax.core.{AntePos, Expression, Sequent}
+import edu.cmu.cs.ls.keymaerax.tactics.Tactics.{PositionTactic, Tactic}
+import edu.cmu.cs.ls.keymaerax.tactics._
+import edu.cmu.cs.ls.keymaerax.tools.{Z3, Mathematica, KeYmaera}
 import testHelper.ProvabilityTestHelper
 import org.scalatest.{PrivateMethodTester, BeforeAndAfterEach, Matchers, FlatSpec}
 import scala.collection.immutable
@@ -9,9 +9,9 @@ import scala.collection.immutable.Map
 import testHelper.ParserFactory._
 import testHelper.StringConverter._
 import TacticLibrary._
-import edu.cmu.cs.ls.keymaera.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
-import edu.cmu.cs.ls.keymaera.tactics.SearchTacticsImpl.onBranch
-import edu.cmu.cs.ls.keymaera.tactics.HybridProgramTacticsImpl.wipeContextInductionT
+import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels.{indInitLbl,indStepLbl,indUseCaseLbl}
+import edu.cmu.cs.ls.keymaerax.tactics.SearchTacticsImpl.onBranch
+import edu.cmu.cs.ls.keymaerax.tactics.HybridProgramTacticsImpl.wipeContextInductionT
 import Tactics.NilT
 
 import scala.language.postfixOps

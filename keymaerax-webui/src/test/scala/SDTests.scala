@@ -1,5 +1,5 @@
-import edu.cmu.cs.ls.keymaera.tactics.{PosInExpr, RootNode, SuccPosition, SearchTacticsImpl}
-import edu.cmu.cs.ls.keymaera.tactics.SyntacticDerivationInContext._
+import edu.cmu.cs.ls.keymaerax.tactics.{PosInExpr, RootNode, SuccPosition, SearchTacticsImpl}
+import edu.cmu.cs.ls.keymaerax.tactics.SyntacticDerivationInContext._
 import testHelper.StringConverter._
 import testHelper.SequentFactory._
 
