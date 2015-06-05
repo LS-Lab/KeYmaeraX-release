@@ -78,9 +78,9 @@ package edu.cmu.cs.ls.keymaerax
  * ===Static Semantics===
  * The static semantics of differential dynamic logic is captured in
  * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics]]
- * in terms of the [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics.freeVars(edu.cmu.cs.ls.keymaerax.core.Expression) free variables]] and
- * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics.boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
- * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics.signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
+ * in terms of the [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#freeVars(edu.cmu.cs.ls.keymaerax.core.Expression) free variables]] and
+ * [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#boundVars(edu.cmu.cs.ls.keymaerax.core.Expression) bound variables]] that expressions have
+ * as well as their [[edu.cmu.cs.ls.keymaerax.core.StaticSemantics#signature(edu.cmu.cs.ls.keymaerax.core.Expression) signatures]] (set of occurring symbols).
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.3]]
  *
  * ==Theorem Prover==

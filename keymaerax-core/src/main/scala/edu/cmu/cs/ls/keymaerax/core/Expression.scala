@@ -58,7 +58,7 @@ case class ObjectSort(name : String) extends Sort
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 2.1]]
  * @author aplatzer
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
- * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser.parseBareExpression()]]
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser#parseBareExpression()]]
  */
 sealed trait Expression {
   def kind : Kind
@@ -77,7 +77,7 @@ sealed trait ApplicationOf extends Expression
 
 /**
  * A named symbol such as a variable or function symbol or predicate symbol.
- * User-level symbols should not use underscores, which are reserved for the core.
+ * @note User-level symbols should not use underscores, which are reserved for the core.
  */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
   require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
@@ -106,7 +106,7 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
 /**
  * Terms of differential dynamic logic.
  * @author aplatzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser.parseBareTerm()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser#parseBareTerm()]]
  */
 sealed trait Term extends Expression {
   final def kind: Kind = TermKind
@@ -183,7 +183,7 @@ private[core] trait RCompositeTerm extends RTerm with Composite {
   def right: Term
 }
 
-/** - unary negation */
+/** - unary negation: minus */
 case class Neg(child: Term) extends RUnaryCompositeTerm
 /** + binary addition */
 case class Plus(left: Term, right: Term) extends RCompositeTerm
@@ -213,7 +213,7 @@ case class Pair(left: Term, right: Term) extends CompositeTerm {
 /**
  * Formulas of differential dynamic logic.
  * @author aplatzer
-  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser.parseBareFormula()]]
+  * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser#parseBareFormula()]]
  */
 sealed trait Formula extends Expression {
   final def kind: Kind = FormulaKind
