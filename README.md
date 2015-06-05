@@ -164,8 +164,16 @@ Make sure to run the following before starting KeYmaera X:
 Specification
 =============
 
-The goal of KeYmaera4 is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness ensurance by way of a small trusted LCF-style core while still being amenable to automatic theorem proving.
+The goal of KeYmaera X is to implement the proof calculus of differential dynamic logic in a way that is amenable to soundness ensurance by way of a small trusted LCF-style core while still being amenable to automatic theorem proving.
 Differential dynamic logic and its Hilbert-type and sequent proof calculi have been described and specified in more detail in:
+
+André Platzer. 
+A uniform substitution calculus for differential dynamic logic. 
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
+
+André Platzer. 
+A uniform substitution calculus for differential dynamic logic. 
+arXiv 1503.01981.
 
 André Platzer.
 Logics of dynamical systems.
@@ -183,6 +191,11 @@ André Platzer.
 Differential dynamic logic for verifying parametric hybrid systems.
 In Nicola Olivetti, editor, Automated Reasoning with Analytic Tableaux and Related Methods, International Conference, TABLEAUX 2007, Aix en Provence, France, July 3-6, 2007, Proceedings, volume 4548 of LNCS, pages 216-232. Springer, 2007. 
 
+The prover is described in
+
+Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Völp and André Platzer. 
+KeYmaera X: An axiomatic tactical theorem prover for hybrid systems. 
+In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015. 
 
 The advanced proof techniques of differential invariants, differential cuts, and differential ghosts are described and specified in
 
@@ -190,7 +203,7 @@ André Platzer.
 The structure of differential invariants and differential cut elimination.
 Logical Methods in Computer Science, 8(4), pages 1-38, 2012. 
 
-A secondary goal of KeYmaera4 is to also make it possible to implement extensions of differential dynamic logic, such as quantified differential dynamic logic, which, along with its proof calculus, has been described and specified in
+A secondary goal of KeYmaera X is to also make it possible to implement extensions of differential dynamic logic, such as quantified differential dynamic logic, which, along with its proof calculus, has been described and specified in
 
 André Platzer.
 A complete axiomatization of quantified differential dynamic logic for distributed hybrid systems.
