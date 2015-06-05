@@ -235,7 +235,7 @@ object True extends AtomicFormula
 /** Falsum formula false */
 object False extends AtomicFormula
 
-/** = equality left = right */
+/** ``=`` equality left = right */
 case class Equal(left: Term, right: Term) extends AtomicFormula {
   require(left.sort == right.sort, "expected identical argument sorts")
 }
@@ -261,11 +261,12 @@ object DotFormula extends NamedSymbol with AtomicFormula {
 
 /** Predicate symbol applied to argument child */
 case class PredOf(pred: Function, child: Term) extends AtomicFormula with ApplicationOf {
-  require(child.sort == pred.domain, "expected argument sort")
+  require(pred.sort == Bool, "expected predicate sort Bool: " + this)
+  require(child.sort == pred.domain, "expected argument sort: " + this)
 }
 /** Predicational symbol applied to argument formula child */
 case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula with ApplicationOf {
-  require(pred.sort == Bool, "expected argument sort")
+  require(pred.sort == Bool, "expected argument sort Bool: " + this)
 }
 
 /** Composite formulas */
