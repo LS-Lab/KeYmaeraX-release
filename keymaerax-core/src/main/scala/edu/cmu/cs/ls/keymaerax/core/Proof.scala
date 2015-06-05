@@ -856,6 +856,7 @@ object AxiomaticRule {
  * Apply a uniform substitution instance of an axiomatic proof rule,
  * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
  * Axiomatic proof rules are employed after forming their uniform substitution instances.
+ * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
@@ -1108,6 +1109,7 @@ object Axiom {
 /**
  * Look up an axiom named id.
  * Sound axioms are valid formulas of differential dynamic logic.
+ * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
  * @author nfulton
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
