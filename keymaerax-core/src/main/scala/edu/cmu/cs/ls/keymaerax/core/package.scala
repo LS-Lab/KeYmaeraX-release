@@ -54,6 +54,7 @@ package edu.cmu.cs.ls.keymaerax
  *   // check if proof successful
  *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
  * }}}
+ * More examples for proof construction are shown in [[edu.cmu.cs.ls.keymaerax.core.Provable]].
  *
  * ==Differential Dynamic Logic==
  * The language of differential dynamic logic is described in KeYmaera X by its syntax and static semantics.
@@ -84,7 +85,17 @@ package edu.cmu.cs.ls.keymaerax
  * axioms of differential dynamic logic.
  * For efficiency, it also directly provides propositional sequent proof rules and Skolemization.
  *
+ * ===Axioms===
+ * The axioms and axiomatic rules of differential dynamic logic can be looked up with
+ * [[edu.cmu.cs.ls.keymaerax.core.Axiom]] and [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]] respectively.
+ * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]],
+ * all available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
+ * which both ultimately come from the file [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
+ * See [[http://arxiv.org/pdf/1503.01981.pdf Sections 4 and 5.0]]
+ *
  * ===Uniform Substitutions===
+ * Uniform substitutions uniformly replace all occurrences of a given predicate p(.) by a formula in (.)
+ * and likewise for function symbols f(.) and program constants.
  * Uniform substitutions and their application mechanism for differential dynamic logic
  * are implemented in [[edu.cmu.cs.ls.keymaerax.core.USubst]].
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 3.0]]
@@ -93,10 +104,6 @@ package edu.cmu.cs.ls.keymaerax
  * The [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule]] generates uniform substitution instances of axiomatic rules.
  * See [[http://arxiv.org/pdf/1503.01981.pdf Section 4]]
  *
- * ===Axioms===
- * The axioms and axiomatic rules of differential dynamic logic are all listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomBase]].
- * See [[http://arxiv.org/pdf/1503.01981.pdf Sections 4 and 5.0]]
- *
  * ===Sequent Proof Rules===
  * All proof rules for differential dynamic logic, including the uniform substitution and bound variable renaming rules as well as
  * efficient propositional sequent proof rules and Skolemization [[edu.cmu.cs.ls.keymaerax.core.Skolemize]]
@@ -104,15 +111,15 @@ package edu.cmu.cs.ls.keymaerax
  * See [[http://dx.doi.org/10.1007/s10817-008-9103-8 sequent calculus]]
  *
  * ==Additional Capabilities==
- * ===Error Reporting===
- * Errors from the prover core are reported as exceptions of type [[edu.cmu.cs.ls.keymaerax.core.ProverException]]
- * whose main responsibility is to propagate problems in traceable ways to the user by augmenting them
- * with contextual information.
- *
  * ===Lemma Mechanism===
  * A lemma database and an interface to real arithmetic decision procedures are defined in
  * [[edu.cmu.cs.ls.keymaerax.core.LemmaDB]] and [[edu.cmu.cs.ls.keymaerax.core.QETool]]
  * along with an implementation of a lemma data base using files [[edu.cmu.cs.ls.keymaerax.core.FileLemmaDB]]
+ *
+ * ===Error Reporting===
+ * Errors from the prover core are reported as exceptions of type [[edu.cmu.cs.ls.keymaerax.core.ProverException]]
+ * whose main responsibility is to propagate problems in traceable ways to the user by augmenting them
+ * with contextual information.
  *
  * ===Set Lattice===
  * A data structure for sets (or rather lattice completions of sets) is provided in

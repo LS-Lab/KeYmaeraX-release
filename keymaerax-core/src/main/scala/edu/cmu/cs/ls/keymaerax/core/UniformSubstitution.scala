@@ -137,7 +137,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * A Uniform Substitution with its application mechanism.
  * A Uniform Substitution uniformly replaces all occurrences of a given predicate p(.) by a formula in (.).
  * It can also replace all occurrences of a function symbol f(.) by a term in (.)
- * and all occurrences of a quantifier C(-) by a formula in (-)
+ * and all occurrences of a quantifier symbols C(-) by a formula in (-)
  * and all occurrences of program constant b by a hybrid program.
  *
  * This type implements the application of uniform substitutions to terms, formulas, programs, and sequents.
@@ -193,8 +193,8 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  *   val prem = Equiv(Box(a, PredOf(p, x)), Box(a, And(PredOf(p, x), True)))
  *   val s = USubst(Seq(SubstitutionPair(PredOf(p, DotTerm), GreaterEqual(DotTerm, Number(2))),
  *     SubstitutionPair(a, ODESystem(AtomicODE(DifferentialSymbol(x), Number(5)), True))))
- *  val conc = "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
- *  val next = UniformSubstitutionRule(s,
+ *   val conc = "[x'=5;]x>=2 <-> [x'=5;](x>=2&true)".asFormula
+ *   val next = UniformSubstitutionRule(s,
  *    Sequent(Seq(), IndexedSeq(), IndexedSeq(prem)))(
  *      Sequent(Seq(), IndexedSeq(), IndexedSeq(conc)))
  *   // results in: [x'=5;]x>=2 <-> [x'=5;](x>=2&true)
