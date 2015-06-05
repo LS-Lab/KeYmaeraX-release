@@ -242,7 +242,7 @@ object Provable {
  *       nor reflection to bypass immutable val data structures.
  * @author aplatzer
  * @todo probably split into different locality levels of subgoals
- * @example Proofs can be constructed forward using Provables:
+ * @example Proofs can be constructed in sequent order using Provables:
  * {{{
  *   import scala.collection.immutable._
  *   val verum = new Sequent(Seq(), IndexedSeq(), IndexedSeq(True))
@@ -256,7 +256,8 @@ object Provable {
  * @example Multiple Provable objects for subderivations obtained from different sources can also be merged
  * {{{
  *   // ... continuing other example
- *   val more = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(Greater(Variable("x",None,Real), Number(5)), True)))
+ *   val more = new Sequent(Seq(), IndexedSeq(),
+ *     IndexedSeq(Imply(Greater(Variable("x"), Number(5)), True)))
  *   // another conjecture
  *   val moreProvable = Provable.startProof(more)
  *   // construct another (partial) proof
@@ -265,6 +266,48 @@ object Provable {
  *   val mergedProof = moreProof(proof, 0)
  *   // check if proof successful
  *   if (mergedProof.isProved) println("Successfully proved " + mergedProof.proved)
+ * }}}
+ * @example Proofs in backward tableaux sequent order are straight-forward
+ * {{{
+ *  import scala.collection.immutable._
+ *  val fm = Greater(Variable("x"), Number(5))
+ *  // |- x>5 -> x>5 & true
+ *  val finGoal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+ *  // conjecture
+ *  val finProvable = Provable.startProof(finGoal)
+ *  // construct a proof
+ *  val proof = finProvable(
+ *    ImplyRight(SuccPos(0)), 0)(
+ *      AndRight(SuccPos(0)), 0)(
+ *      HideLeft(AntePos(0)), 1)(
+ *      CloseTrue(SuccPos(0)), 1)(
+ *      Close(AntePos(0), SuccPos(0)), 0)
+ *  // proof of finGoal
+ *  println(proof.proved)
+ * }}}
+ * @example Proofs in Hilbert are use subsequent merging
+ * {{{
+ *  import scala.collection.immutable._
+ *  val fm = Greater(Variable("x"), Number(5))
+ *  // x>0 |- x>0
+ *  val left = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(fm)))(
+ *    Close(AntePos(0), SuccPos(0)), 0)
+ *  // |- true
+ *  val right = Provable.startProof(Sequent(Seq(), IndexedSeq(), IndexedSeq(True)))(
+ *    CloseTrue(SuccPos(0)), 0)
+ *  val right2 = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(True)))(
+ *    HideLeft(AntePos(0)), 0) (right, 0)
+ *  // gluing order for subgoals is irrelevant. Could use: (right2, 1)(left, 0))
+ *  val merged = Provable.startProof(Sequent(Seq(), IndexedSeq(fm), IndexedSeq(And(fm, True))))(
+ *    AndRight(SuccPos(0)), 0) (
+ *    left, 0)(
+ *      right2, 0)
+ *  // |- x>5 -> x>5 & true
+ *  val finGoal = new Sequent(Seq(), IndexedSeq(), IndexedSeq(Imply(fm, And(fm, True))))
+ *  val proof = Provable.startProof(finGoal)(
+ *    ImplyRight(SuccPos(0)), 0) (merged, 0)
+ *  // proof of finGoal
+ *  println(proof.proved)
  * }}}
  */
 final case class Provable private (conclusion: Sequent, subgoals: immutable.IndexedSeq[Sequent]) {
@@ -327,7 +370,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
    */
   final def apply(subderivation: Provable, subgoal: Subgoal): Provable = {
     require(0 <= subgoal && subgoal < subgoals.length, "derivation " + subderivation + " can only be applied to an index " + subgoal + " within the subgoals " + subgoals)
-    require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the given derivation to conclude " + subderivation.conclusion + " and has to conclude our indicated subgoal " + subgoals(subgoal))
+    require(subderivation.conclusion == subgoals(subgoal), "merging Provables requires the subderivation to conclude the indicated subgoal:\nsubderivation " + subderivation + "\nconcludes " + subderivation.conclusion + "\nshould be subgoal " + subgoals(subgoal))
     if (subderivation.conclusion != subgoals(subgoal)) throw new CoreException("ASSERT: Provables not concluding the required subgoal cannot be joined")
     subderivation.subgoals.toList match {
       // subderivation proves given subgoal
@@ -354,7 +397,7 @@ final case class Provable private (conclusion: Sequent, subgoals: immutable.Inde
   } ensuring (r => r.conclusion == subgoals(subgoal), "sub yields Provable with expected subgoal " + subgoals(subgoal) + " as the conclusion") ensuring (
     r => r.subgoals == immutable.List(r.conclusion), "sub Provable is an unfinished Provable")
 
-  override def toString: String = "Provable(conclusion\n" + conclusion + "\nfrom subgoals\n" + subgoals.mkString(",\n") + ")"
+  override def toString: String = "Provable(concludes " + conclusion + (if (isProved) " proved" else "\nfrom " + subgoals.mkString(",\nwith ")) + ")"
 }
 
 
@@ -813,6 +856,7 @@ object AxiomaticRule {
  * Apply a uniform substitution instance of an axiomatic proof rule,
  * i.e. locally sound proof rules that are represented by a pair of concrete formulas, one for the premise and one for the conclusion.
  * Axiomatic proof rules are employed after forming their uniform substitution instances.
+ * All available axiomatic rules are listed in [[edu.cmu.cs.ls.keymaerax.core.AxiomaticRule.rules]]
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
@@ -1065,6 +1109,7 @@ object Axiom {
 /**
  * Look up an axiom named id.
  * Sound axioms are valid formulas of differential dynamic logic.
+ * All available axioms are listed in [[edu.cmu.cs.ls.keymaerax.core.Axiom.axioms]].
  * @author nfulton
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
