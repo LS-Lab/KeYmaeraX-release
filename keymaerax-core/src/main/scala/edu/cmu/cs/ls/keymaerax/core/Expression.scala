@@ -253,11 +253,11 @@ object True extends AtomicFormula
 object False extends AtomicFormula
 
 /** ``=`` equality left = right */
-case class Equal(left: Term, right: Term) extends AtomicFormula {
+case class Equal(left: Term, right: Term) extends ComparisonFormula {
   require(left.sort == right.sort, "expected identical argument sorts")
 }
 /** != disequality left != right */
-case class NotEqual(left: Term, right: Term) extends AtomicFormula {
+case class NotEqual(left: Term, right: Term) extends ComparisonFormula {
   require(left.sort == right.sort, "expected identical argument sorts")
 }
 
