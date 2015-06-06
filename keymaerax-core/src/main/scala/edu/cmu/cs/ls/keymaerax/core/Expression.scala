@@ -236,11 +236,15 @@ sealed trait Formula extends Expression {
 /** Atomic formulas */
 sealed trait AtomicFormula extends Formula with Atomic
 
-/** Atomic formulas composed of two real terms. */
-private[core] trait RAtomicFormula extends AtomicFormula {
-  require(left.sort == Real && right.sort == Real, "expected argument sorts real")
+/** Atomic comparison formula composed of two terms. */
+trait ComparisonFormula extends AtomicFormula {
   def left: Term
   def right: Term
+}
+
+/** Real comparison formula composed of two real terms. */
+private[core] trait RComparisonFormula extends ComparisonFormula {
+  require(left.sort == Real && right.sort == Real, "expected argument sorts real")
 }
 
 /** Verum formula true */
@@ -258,13 +262,13 @@ case class NotEqual(left: Term, right: Term) extends AtomicFormula {
 }
 
 /** >= greater or equal comparison left >= right */
-case class GreaterEqual(left: Term, right: Term) extends RAtomicFormula
+case class GreaterEqual(left: Term, right: Term) extends RComparisonFormula
 /** > greater than comparison left > right */
-case class Greater(left: Term, right: Term) extends RAtomicFormula
+case class Greater(left: Term, right: Term) extends RComparisonFormula
 /** < less or equal comparison left <= right */
-case class LessEqual(left: Term, right: Term) extends RAtomicFormula
+case class LessEqual(left: Term, right: Term) extends RComparisonFormula
 /** <= less than comparison left < right */
-case class Less(left: Term, right: Term) extends RAtomicFormula
+case class Less(left: Term, right: Term) extends RComparisonFormula
 
 /** Reserved predicational symbol _ for substitutions are unlike ordinary predicational symbols */
 object DotFormula extends NamedSymbol with AtomicFormula {
