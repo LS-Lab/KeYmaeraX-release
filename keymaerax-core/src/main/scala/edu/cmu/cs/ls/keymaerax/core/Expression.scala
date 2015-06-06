@@ -31,15 +31,15 @@ object FunctionKind extends Kind { override def toString = "Function" }
  * Sorts
  */
 sealed abstract class Sort
-/** Unit type of Nothing */
+/** Unit type of [[edu.cmu.cs.ls.keymaerax.core.Nothing Nothing]] */
 object Unit extends Sort
-/** Sort of booleans: true, false */
+/** Sort of booleans: [[edu.cmu.cs.ls.keymaerax.core.True True]], [[edu.cmu.cs.ls.keymaerax.core.False False]]. */
 object Bool extends Sort
 /** Sort of real numbers: 0, 1, 2.5 */
 object Real extends Sort
 /** Sort of state transformations (i.e. programs) */
 object Trafo extends Sort
-/** Tuple sort for pairs */
+/** Tuple sort for [[edu.cmu.cs.ls.keymaerax.core.Pair Pair]]. */
 case class Tuple(left: Sort, right: Sort) extends Sort
 /** User-defined object sort */
 case class ObjectSort(name : String) extends Sort
@@ -73,7 +73,10 @@ sealed trait Atomic extends Expression
 sealed trait Composite extends Expression
 
 /** Function/predicate/predicational application */
-sealed trait ApplicationOf extends Expression
+sealed trait ApplicationOf extends Expression {
+  def func : Function
+  def child : Expression
+}
 
 /**
  * A named symbol such as a variable or function symbol or predicate symbol.
@@ -170,14 +173,24 @@ case class FuncOf(func: Function, child: Term) extends AtomicTerm with Applicati
 /** Composite terms */
 sealed trait CompositeTerm extends Term with Composite
 
-/** Unary Composite Real Terms, i.e. real terms composed of one real term. */
-private[core] trait RUnaryCompositeTerm extends RTerm with Composite {
-  require(child.sort == Real, "expected argument sort real")
+/** Unary Composite Terms, i.e. terms composed of one real term. */
+trait UnaryCompositeTerm extends CompositeTerm {
   def child: Term
 }
 
-/** Composite Real Terms, i.e. real terms composed of two real terms. */
-private[core] trait RCompositeTerm extends RTerm with Composite {
+/** Unary Composite Real Terms, i.e. real terms composed of one real term. */
+private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
+  require(child.sort == Real, "expected argument sort real")
+}
+
+/** Binary Composite Terms, i.e. terms composed of two terms. */
+trait BinaryCompositeTerm extends CompositeTerm {
+  def left: Term
+  def right: Term
+}
+
+/** Binary Composite Real Terms, i.e. real terms composed of two real terms. */
+private[core] trait RBinaryCompositeTerm extends BinaryCompositeTerm with RTerm {
   require(left.sort == Real && right.sort == Real, "expected argument sorts real")
   def left: Term
   def right: Term
@@ -186,22 +199,22 @@ private[core] trait RCompositeTerm extends RTerm with Composite {
 /** - unary negation: minus */
 case class Neg(child: Term) extends RUnaryCompositeTerm
 /** + binary addition */
-case class Plus(left: Term, right: Term) extends RCompositeTerm
+case class Plus(left: Term, right: Term) extends RBinaryCompositeTerm
 /** - binary subtraction */
-case class Minus(left: Term, right: Term) extends RCompositeTerm
+case class Minus(left: Term, right: Term) extends RBinaryCompositeTerm
 /** * binary multiplication*/
-case class Times(left: Term, right: Term) extends RCompositeTerm
+case class Times(left: Term, right: Term) extends RBinaryCompositeTerm
 /** / real division */
-case class Divide(left: Term, right: Term) extends RCompositeTerm
+case class Divide(left: Term, right: Term) extends RBinaryCompositeTerm
 /** real exponentiation or power: left^right^ */
 //@note axiom("^' derive power") needs right to be a Term not just a Number
-case class Power(left: Term, right: Term) extends RCompositeTerm
+case class Power(left: Term, right: Term) extends RBinaryCompositeTerm
 
 /** ' differential of a term */
 case class Differential(child: Term) extends RUnaryCompositeTerm
 
 /** Pairs (left,right) for binary Function and FuncOf and PredOf */
-case class Pair(left: Term, right: Term) extends CompositeTerm {
+case class Pair(left: Term, right: Term) extends BinaryCompositeTerm {
   def sort: Sort = Tuple(left.sort, right.sort)
 }
 
@@ -223,7 +236,7 @@ sealed trait Formula extends Expression {
 /** Atomic formulas */
 sealed trait AtomicFormula extends Formula with Atomic
 
-/** Formulas composed of real terms. */
+/** Atomic formulas composed of two real terms. */
 private[core] trait RAtomicFormula extends AtomicFormula {
   require(left.sort == Real && right.sort == Real, "expected argument sorts real")
   def left: Term
@@ -260,31 +273,43 @@ object DotFormula extends NamedSymbol with AtomicFormula {
 }
 
 /** Predicate symbol applied to argument child */
-case class PredOf(pred: Function, child: Term) extends AtomicFormula with ApplicationOf {
-  require(pred.sort == Bool, "expected predicate sort Bool: " + this)
-  require(child.sort == pred.domain, "expected argument sort: " + this)
+case class PredOf(func: Function, child: Term) extends AtomicFormula with ApplicationOf {
+  require(func.sort == Bool, "expected predicate sort Bool: " + this)
+  require(child.sort == func.domain, "expected argument sort: " + this)
 }
 /** Predicational symbol applied to argument formula child */
-case class PredicationalOf(pred: Function, child: Formula) extends AtomicFormula with ApplicationOf {
-  require(pred.sort == Bool, "expected argument sort Bool: " + this)
+case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula with ApplicationOf {
+  require(func.sort == Bool, "expected argument sort Bool: " + this)
+  require(func.domain == Bool, "expected domain simplifies to Bool: " + this)
 }
 
 /** Composite formulas */
 sealed trait CompositeFormula extends Formula with Composite
 
+/** Unary Composite Formulas, i.e. formulas composed of one formula. */
+trait UnaryCompositeFormula extends CompositeFormula {
+  def child: Formula
+}
+
+/** Binary Composite Formulas, i.e. formulas composed of two formulas. */
+trait BinaryCompositeFormula extends CompositeFormula {
+  def left: Formula
+  def right: Formula
+}
+
 /** ! logical negation: not */
-case class Not(child: Formula) extends CompositeFormula
+case class Not(child: Formula) extends UnaryCompositeFormula
 /** & logical conjunction: and */
-case class And(left: Formula, right:Formula) extends CompositeFormula
+case class And(left: Formula, right:Formula) extends BinaryCompositeFormula
 /** | logical disjunction: or */
-case class Or(left: Formula, right:Formula) extends CompositeFormula
+case class Or(left: Formula, right:Formula) extends BinaryCompositeFormula
 /** -> logical implication: implies */
-case class Imply(left: Formula, right:Formula) extends CompositeFormula
+case class Imply(left: Formula, right:Formula) extends BinaryCompositeFormula
 /** <-> logical biimplication: equivalent */
-case class Equiv(left: Formula, right:Formula) extends CompositeFormula
+case class Equiv(left: Formula, right:Formula) extends BinaryCompositeFormula
 
 /** Quantified formulas */
-trait Quantified extends CompositeFormula {
+trait Quantified extends /*Unary?*/CompositeFormula {
   def vars: immutable.Seq[Variable]
   def child: Formula
 }
@@ -312,7 +337,7 @@ case class Box(program: Program, child: Formula) extends CompositeFormula with M
 case class Diamond(program: Program, child: Formula) extends CompositeFormula with Modal
 
 /** Differential formula are differentials of formulas in analogy to differential terms */
-case class DifferentialFormula(child: Formula) extends CompositeFormula
+case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
 
 /*********************************************************************************
   * Programs of differential dynamic logic
@@ -352,12 +377,24 @@ case class Test(cond: Formula) extends AtomicProgram
 /** composite programs */
 sealed trait CompositeProgram extends Program with Composite
 
+/** Unary Composite Programs, i.e. programs composed of one program. */
+trait UnaryCompositeProgram extends CompositeProgram {
+  def child: Program
+}
+
+/** Binary Composite Programs, i.e. programs composed of two programs. */
+trait BinaryCompositeProgram extends CompositeProgram {
+  def left: Program
+  def right: Program
+}
+
+
 /** left++right nondeterministic choice */
-case class Choice(left: Program, right: Program) extends CompositeProgram
+case class Choice(left: Program, right: Program) extends BinaryCompositeProgram
 /** left;right sequential composition */
-case class Compose(left: Program, right: Program) extends CompositeProgram
+case class Compose(left: Program, right: Program) extends BinaryCompositeProgram
 /** child* nondeterministic repetition */
-case class Loop(child: Program) extends CompositeProgram
+case class Loop(child: Program) extends UnaryCompositeProgram
 //case class Dual(child: Program) extends CompositeProgram
 
 /** differential programs */
