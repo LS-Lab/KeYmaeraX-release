@@ -9,18 +9,25 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 import scala.math.Ordered
 
+/** Operator associativity notational specification */
 private abstract class OpAssociativity
+/** Atomic operators of arity 0 within syntactic category */
 private object AtomicFormat extends OpAssociativity
+/** Unary operators of arity 1 within syntactic category */
 private object UnaryFormat extends OpAssociativity
+/** Left-associative infix operators of arity 2, i.e. ``x-y-z=(x-y)-z``*/
 private object LeftAssociative extends OpAssociativity
+/** Right-associative infix operators of arity 2, i.e. ``x^y^z=x^(y^z)`` */
 private object RightAssociative extends OpAssociativity
+/** Non-associative infix operators of arity 2, i.e. explicit parentheses */
 private object NonAssociative extends OpAssociativity
 
 /**
- * Operator notation
+ * Operator notation specification.
  * @param opcode operator code used for string representation
  * @param prec unique precedence where smaller numbers indicate stronger binding
  * @param assoc associativity of this operator
+ * @todo Could add spacing weight information to determine how much spacing is added around an operator.
  */
 private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity) extends Ordered[OpNotation] {
   def compare(other: OpNotation): Int = {
@@ -34,14 +41,7 @@ private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity)
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  */
-class KeYmaeraXPrettyPrinter {
-
-  /** Pretty-print expression to a string */
-  def stringify(expr: Expression): String = expr match {
-    case t: Term => stringify(t)
-    case f: Formula => stringify(f)
-    case p: Program => stringify(p)
-  }
+object KeYmaeraXPrettyPrinter extends PrettyPrinter {
 
   /** Pretty-print term to a string */
   def stringify(term: Term): String = pp(term)
@@ -149,7 +149,7 @@ class KeYmaeraXPrettyPrinter {
     case f: And          => OpNotation("&",   110, LeftAssociative)
     case f: Or           => OpNotation("|",   120, LeftAssociative)
     case f: Imply        => OpNotation("->",  130, RightAssociative)
-    case f: Equiv        => OpNotation("<->", 140, NonAssociative)
+    case f: Equiv        => OpNotation("<->", 130, NonAssociative)
 
     case t: ProgramConst => OpNotation("???",   0, AtomicFormat)
     case t: DifferentialProgramConst => OpNotation("???",   0, AtomicFormat)

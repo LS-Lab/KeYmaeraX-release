@@ -10,7 +10,6 @@ package edu.cmu.cs.ls.keymaerax.core
 // require favoring immutable Seqs for soundness
 
 import scala.collection.immutable
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraPrettyPrinter // external
 
 import scala.math._
 
@@ -63,8 +62,10 @@ case class ObjectSort(name : String) extends Sort
 sealed trait Expression {
   def kind : Kind
   def sort : Sort
-  override def toString : String = "(" + prettyString() + ")@" + super.toString
-  def prettyString() : String = new KeYmaeraPrettyPrinter().stringify(this)
+  override def toString : String = "(" + prettyString() + ")@" + canonicalString
+  /** Pretty-printed string representing this expression */
+  def prettyString() : String = PrettyPrinter.printer(this)
+  private[core] def canonicalString : String = super.toString
 }
 
 /** Atomic expressions */
