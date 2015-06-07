@@ -38,14 +38,20 @@ private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity)
 
 
 /**
- * KeYmaera X Pretty Printer.
+ * KeYmaera X Pretty Printer formats differential dynamic logic expressions
+ * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
+ * with explicit statement end ``;`` operator.
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
+ * @see doc/dL-grammar.md
  */
 object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
-  def apply(expr: Expression): String = expr match {
+  def apply(expr: Expression): String = stringify(expr)
+
+  /** Pretty-print term to a string without contract checking. */
+  private[parser] def stringify(expr: Expression) = expr match {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)
@@ -106,9 +112,9 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case Loop(a)                => pp(a) + op(program).opcode
     //case p: UnaryCompositeProgram=> op(p).opcode + pp(p.child)
     case t: BinaryCompositeProgram=>
-      (if (skipPrensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
+      (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
-        (if (skipParensRight(t)) pp(.right) else "{" + pp(t.right) + "}")
+        (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
   }
 
   private def pp(program: DifferentialProgram): String = program match {
@@ -124,15 +130,20 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   /** Formatting the atomic statement s */
   private def statement(s: String): String = s + ";"
 
+  /** no notation */
+  private val none = "???"
+
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
-  private def op(expr: Expression) = expr match {
+  private[parser] def op(expr: Expression) = expr match {
+    // terms
     case DotTerm         => OpNotation("•",     0, AtomicFormat)
     case Nothing         => OpNotation("",      0, AtomicFormat)
     case Anything        => OpNotation("?",     0, AtomicFormat)
-    case t: Variable     => OpNotation("???",   0, AtomicFormat)
-    case t: Number       => OpNotation("???",   0, AtomicFormat)
-    case t: FuncOf       => OpNotation("???",   0, AtomicFormat)
+    case t: Variable     => OpNotation(none,    0, AtomicFormat)
+    case t: Number       => OpNotation(none,    0, AtomicFormat)
+    case t: FuncOf       => OpNotation(none,    0, AtomicFormat)
     case t: DifferentialSymbol => OpNotation("'", 0, AtomicFormat)
+    case t: Pair         => OpNotation(",",     4, RightAssociative)
     case t: Differential => OpNotation("'",    10, UnaryFormat)
     case t: Neg          => OpNotation("-",    11, UnaryFormat)
     case t: Power        => OpNotation("^",    20, RightAssociative)
@@ -140,14 +151,14 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case t: Divide       => OpNotation("/",    40, LeftAssociative)
     case t: Plus         => OpNotation("+",    50, LeftAssociative)
     case t: Minus        => OpNotation("-",    60, LeftAssociative)
-    case t: Pair         => OpNotation(",",     2, RightAssociative)
 
+    // formulas
     case DotFormula      => OpNotation("_",     0, AtomicFormat)
     case True            => OpNotation("true",  0, AtomicFormat)
     case False           => OpNotation("false", 0, AtomicFormat)
-    case t: PredOf       => OpNotation("???",   0, AtomicFormat)
-    case t: PredicationalOf => OpNotation("???",   0, AtomicFormat)
-    case t: DifferentialFormula => OpNotation("'", 80, UnaryFormat)
+    case f: PredOf       => OpNotation(none,    0, AtomicFormat)
+    case f: PredicationalOf => OpNotation(none, 0, AtomicFormat)
+    case f: DifferentialFormula => OpNotation("'", 80, UnaryFormat)
     case f: Equal        => OpNotation("=",    90, NonAssociative)
     case f: NotEqual     => OpNotation("!=",   90, NonAssociative)
     case f: GreaterEqual => OpNotation(">=",   90, NonAssociative)
@@ -164,8 +175,9 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case f: Imply        => OpNotation("->",  130, RightAssociative)
     case f: Equiv        => OpNotation("<->", 130, NonAssociative)
 
-    case t: ProgramConst => OpNotation("???",   0, AtomicFormat)
-    case t: DifferentialProgramConst => OpNotation("???",   0, AtomicFormat)
+    // programs
+    case p: ProgramConst => OpNotation(none,    0, AtomicFormat)
+    case p: DifferentialProgramConst => OpNotation(none,  0, AtomicFormat)
     case p: Assign       => OpNotation(":=",  200, AtomicFormat)
     case p: DiffAssign   => OpNotation(":=",  200, AtomicFormat)
     case p: AssignAny    => OpNotation(":= *", 200, AtomicFormat)
