@@ -100,13 +100,13 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   private def pp(program: Program): String = program match {
-    case ProgramConst(a) => a + ";"
-    case Assign(x, e) => pp(x) + op(program).opcode + pp(e) + ";"
-    case AssignAny(x) => pp(x) + op(program).opcode + ";"
-    case DiffAssign(xp, e) => pp(xp) + op(program).opcode + pp(e) + ";"
-    case Test(f) => op(program).opcode + pp(f) + ";"
+    case ProgramConst(a) => statement(a)
+    case Assign(x, e) => statement(pp(x) + op(program).opcode + pp(e))
+    case AssignAny(x) => statement(pp(x) + op(program).opcode)
+    case DiffAssign(xp, e) => statement(pp(xp) + op(program).opcode + pp(e))
+    case Test(f) => statement(op(program).opcode + pp(f))
     case p: DifferentialProgram => pp(p)
-    case Loop(a) => pp(a) ++ op(program).opcode
+    case Loop(a) => pp(a) + op(program).opcode
     //case p: UnaryCompositeProgram => op(p).opcode + pp(p.child)
     case t: BinaryCompositeProgram=>
       (if (parensLeft(t)) "{" + pp(t.left) + "}" else pp(t.left)) +
@@ -123,6 +123,9 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
         op(t).opcode +
         (if (parensRight(t)) "{" + pp(t.right) + "}" else pp(t.right))
   }
+
+  /** Formatting the atomic statement s */
+  private def statement(s: String): String = s + ";"
 
   /** The operator code of the top-level operator of expr */
   private def op(expr: Expression) = expr match {
@@ -174,7 +177,8 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case p: AtomicODE    => OpNotation("=",   200, AtomicFormat)
     case p: DifferentialProduct => OpNotation(",", 210, RightAssociative)
     case p: Loop         => OpNotation("*",   220, UnaryFormat)
-    case p: Compose      => OpNotation("",    230, RightAssociative)
+    case p: Compose      => OpNotation(";",    230, RightAssociative) //@todo compatibility mode for parser
+    //case p: Compose      => OpNotation("",    230, RightAssociative)
     case p: Choice       => OpNotation("++",  240, LeftAssociative)
   }
 }
