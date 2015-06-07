@@ -66,14 +66,14 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
   private def pp(term: Term): String = term match {
-    case DotTerm | Anything | Nothing => op(term).opcode
-    case x: Variable => x.toString
-    case DifferentialSymbol(x) => pp(x) + op(term).opcode
-    case Differential(t) => "(" + pp(t) + ")" + op(term).opcode
-    case Number(n) => n.toString()
-    case FuncOf(f, c) => f.toString + "(" + pp(c) + ")"
-    case Pair(l, r) => "(" + pp(l) + op(term).opcode + pp(r) + ")"
-    case t: UnaryCompositeTerm => op(t).opcode + pp(t.child)
+    case DotTerm|Anything|Nothing=> op(term).opcode
+    case x: Variable            => x.toString
+    case DifferentialSymbol(x)  => pp(x) + op(term).opcode
+    case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
+    case Number(n)              => n.toString()
+    case FuncOf(f, c)           => f.toString + "(" + pp(c) + ")"
+    case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
+    case t: UnaryCompositeTerm  => op(t).opcode + pp(t.child)
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
@@ -81,40 +81,40 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   private def pp(formula: Formula): String = formula match {
-    case True | False | DotFormula => op(formula).opcode
-    case PredOf(p, c) => p.toString + "(" + pp(c) + ")"
-    case PredicationalOf(p, c) => p.toString + "{" + pp(c) + "}"
-    case f: ComparisonFormula => pp(f.left) + op(formula).opcode + pp(f.right)
+    case True|False|DotFormula  => op(formula).opcode
+    case PredOf(p, c)           => p.toString + "(" + pp(c) + ")"
+    case PredicationalOf(p, c)  => p.toString + "{" + pp(c) + "}"
+    case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    case f: Quantified => op(formula).opcode + f.vars.mkString(",") + /**/"."/**/ + pp(f.child)
-    case f: Box => "[" + pp(f.program) + "]" + pp(f.child)
-    case f: Diamond => "<" + pp(f.program) + ">" + pp(f.child)
-    case g: UnaryCompositeFormula => op(g).opcode + pp(g.child)
-    case t: BinaryCompositeFormula =>
+    case f: Quantified          => op(formula).opcode + f.vars.mkString(",") + /**/"."/**/ + pp(f.child)
+    case f: Box                 => "[" + pp(f.program) + "]" + pp(f.child)
+    case f: Diamond             => "<" + pp(f.program) + ">" + pp(f.child)
+    case g: UnaryCompositeFormula=> op(g).opcode + pp(g.child)
+    case t: BinaryCompositeFormula=>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "(" + pp(t.right) + ")")
   }
 
   private def pp(program: Program): String = program match {
-    case ProgramConst(a)   => statement(a)
-    case Assign(x, e)      => statement(pp(x) + op(program).opcode + pp(e))
-    case AssignAny(x)      => statement(pp(x) + op(program).opcode)
-    case DiffAssign(xp, e) => statement(pp(xp) + op(program).opcode + pp(e))
-    case Test(f)           => statement(op(program).opcode + pp(f))
+    case ProgramConst(a)        => statement(a)
+    case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
+    case AssignAny(x)           => statement(pp(x) + op(program).opcode)
+    case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
+    case Test(f)                => statement(op(program).opcode + pp(f))
     case p: DifferentialProgram => pp(p)
-    case Loop(a)           => pp(a) + op(program).opcode
-    //case p: UnaryCompositeProgram => op(p).opcode + pp(p.child)
-    case t: BinaryCompositeProgram =>
+    case Loop(a)                => pp(a) + op(program).opcode
+    //case p: UnaryCompositeProgram=> op(p).opcode + pp(p.child)
+    case t: BinaryCompositeProgram=>
       (if (skipPrensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(.right) else "{" + pp(t.right) + "}")
   }
 
   private def pp(program: DifferentialProgram): String = program match {
-    case ODESystem(ode, f) => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
+    case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
     case DifferentialProgramConst(a) => a.toString
-    case AtomicODE(xp, e)  => pp(xp) + op(program).opcode + pp(e)
+    case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
