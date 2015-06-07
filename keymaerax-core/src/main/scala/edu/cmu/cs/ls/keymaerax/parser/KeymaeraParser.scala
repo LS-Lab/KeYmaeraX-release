@@ -129,7 +129,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     
     //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
-    val printOfParse = KeYmaeraPrettyPrinter.stringify(parseResult)
+    val printOfParse = PrettyPrinter.printer(parseResult)
     checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, differentialPrograms, parseResult,printOfParse)
     
     parseResult
@@ -161,7 +161,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     catch {
       case e : Exception => require(requirement = false,
-        "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + KeYmaeraPrettyPrinter.stringify(parse) +
+        "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + PrettyPrinter.printer(parse) +
         "\n Exception was: " + e)
     }
 
