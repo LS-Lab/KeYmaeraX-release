@@ -6,7 +6,6 @@ import scala.collection.immutable.IndexedSeq
 
 import com.wolfram.jlink._
 import edu.cmu.cs.ls.keymaerax.core._
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraPrettyPrinter
 import scala.math.BigDecimal
 
 
@@ -378,7 +377,7 @@ object MathematicaToKeYmaera {
       }
       catch {
         case e : Exception => 
-          throw new ConversionException("Expected a formula in the body of the quanfiier, but found a non-variable expression: " + KeYmaeraPrettyPrinter.stringify(bodyAsExpr))
+          throw new ConversionException("Expected a formula in the body of the quanfiier, but found a non-variable expression: " + PrettyPrinter.printer(bodyAsExpr))
       }
         
       //Create the final expression.
@@ -615,5 +614,5 @@ object KeYmaeraToMathematica {
   }
   
   def keyExn(e: KExpr) : Exception =
-    new ConversionException("conversion not defined for KeYmaera expr: " + KeYmaeraPrettyPrinter.stringify(e))
+    new ConversionException("conversion not defined for KeYmaera expr: " + PrettyPrinter.printer(e))
 }
