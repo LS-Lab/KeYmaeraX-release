@@ -73,6 +73,17 @@ sealed trait Atomic extends Expression
 /** Composite expressions that are composed of subexpressions */
 sealed trait Composite extends Expression
 
+/** Unary composite expressions that are composed of one subexpression */
+trait UnaryComposite extends Composite {
+  def child: Expression
+}
+
+/** Binary composite expressions that are composed of two subexpressions */
+trait BinaryComposite extends Composite {
+  def left: Expression
+  def right: Expression
+}
+
 /** Function/predicate/predicational application */
 sealed trait ApplicationOf extends Expression {
   def func : Function
@@ -175,7 +186,7 @@ case class FuncOf(func: Function, child: Term) extends AtomicTerm with Applicati
 sealed trait CompositeTerm extends Term with Composite
 
 /** Unary Composite Terms, i.e. terms composed of one real term. */
-trait UnaryCompositeTerm extends CompositeTerm {
+trait UnaryCompositeTerm extends UnaryComposite with CompositeTerm {
   def child: Term
 }
 
@@ -185,7 +196,7 @@ private[core] trait RUnaryCompositeTerm extends UnaryCompositeTerm with RTerm {
 }
 
 /** Binary Composite Terms, i.e. terms composed of two terms. */
-trait BinaryCompositeTerm extends CompositeTerm {
+trait BinaryCompositeTerm extends BinaryComposite with CompositeTerm {
   def left: Term
   def right: Term
 }
@@ -292,12 +303,12 @@ case class PredicationalOf(func: Function, child: Formula) extends AtomicFormula
 sealed trait CompositeFormula extends Formula with Composite
 
 /** Unary Composite Formulas, i.e. formulas composed of one formula. */
-trait UnaryCompositeFormula extends CompositeFormula {
+trait UnaryCompositeFormula extends UnaryComposite with CompositeFormula {
   def child: Formula
 }
 
 /** Binary Composite Formulas, i.e. formulas composed of two formulas. */
-trait BinaryCompositeFormula extends CompositeFormula {
+trait BinaryCompositeFormula extends BinaryComposite with CompositeFormula {
   def left: Formula
   def right: Formula
 }
@@ -383,12 +394,12 @@ case class Test(cond: Formula) extends AtomicProgram
 sealed trait CompositeProgram extends Program with Composite
 
 /** Unary Composite Programs, i.e. programs composed of one program. */
-trait UnaryCompositeProgram extends CompositeProgram {
+trait UnaryCompositeProgram extends UnaryComposite with CompositeProgram {
   def child: Program
 }
 
 /** Binary Composite Programs, i.e. programs composed of two programs. */
-trait BinaryCompositeProgram extends CompositeProgram {
+trait BinaryCompositeProgram extends BinaryComposite with CompositeProgram {
   def left: Program
   def right: Program
 }
@@ -428,7 +439,7 @@ case class AtomicODE(xp: DifferentialSymbol, e: Term) extends AtomicDifferential
  * @note This is a case class except for an override of the apply function.
  */
 final class DifferentialProduct private(val left: DifferentialProgram, val right: DifferentialProgram)
-  extends DifferentialProgram {
+  extends DifferentialProgram with BinaryComposite {
 
   override def equals(e: Any): Boolean = e match {
     case a: DifferentialProduct => left == a.left && right == a.right
