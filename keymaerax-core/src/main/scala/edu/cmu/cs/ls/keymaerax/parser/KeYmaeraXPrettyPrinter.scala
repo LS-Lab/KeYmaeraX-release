@@ -32,7 +32,8 @@ private object NonAssociative extends OpAssociativity
 private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity) extends Ordered[OpNotation] {
   def compare(other: OpNotation): Int = {
     prec - other.prec
-  } ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)
+  } /*ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
+  //@note violates this: two different things can have same precedence.
 }
 
 
@@ -41,40 +42,50 @@ private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity)
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  */
-object KeYmaeraXPrettyPrinter extends PrettyPrinter {
+object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
-  def stringify(term: Term): String = pp(term)
+  def apply(expr: Expression): String = expr match {
+    case t: Term => pp(t)
+    case f: Formula => pp(f)
+    case p: Program => pp(p)
+  }
 
-  /** Pretty-print formula to a string */
-  def stringify(formula: Formula): String = pp(formula)
+  /**
+   * Whether printing t will need extra parentheses around t.left
+   */
+  private def parensLeft(t: BinaryComposite): Boolean =
+    op(t.left) > op(t) || op(t.left)==op(t) && (op(t).assoc!=LeftAssociative || op(t.left).assoc!=LeftAssociative)
 
-  /** Pretty-print program to a string */
-  def stringify(program: Program): String = pp(program)
+  /**
+   * Whether printing t will need extra parentheses around t.right
+   */
+  private def parensRight(t: BinaryComposite): Boolean =
+    op(t.right) > op(t) || op(t.right)==op(t) && (op(t).assoc!=RightAssociative || op(t.right).assoc!=RightAssociative)
 
   private def pp(term: Term): String = term match {
+    case DotTerm  => op(term).opcode
+    case Anything => op(term).opcode
+    case Nothing  => op(term).opcode
     case x: Variable => x.toString
     case DifferentialSymbol(x) => pp(x) + op(term).opcode
+    case Differential(t) => "(" + pp(t) + ")" + op(term).opcode
     case Number(n) => n.toString()
     case FuncOf(f, c) => f.toString + "(" + pp(c) + ")"
-    case DotTerm => op(DotTerm).opcode
-    case Anything => op(Anything).opcode
-    case Nothing => op(Nothing).opcode
-    case Differential(t) => "(" + pp(t) + ")" + op(term).opcode
     case Pair(l, r) => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     case t: UnaryCompositeTerm => op(t).opcode + pp(t.child)
     case t: BinaryCompositeTerm =>
-      (if (op(t.left) > op(t) || op(t.left)==op(t) && op(t).assoc!=LeftAssociative) "(" + pp(t.left) + ")" else pp(t.left)) +
+      (if (parensLeft(t)) "(" + pp(t.left) + ")" else pp(t.left)) +
         op(t).opcode +
-        (if (op(t.right) > op(t) || op(t.right)==op(t) && op(t).assoc!=RightAssociative) "(" + pp(t.right) + ")" else pp(t.right))
+        (if (parensRight(t)) "(" + pp(t.right) + ")" else pp(t.right))
   }
 
   private def pp(formula: Formula): String = formula match {
-    case True => op(True).opcode
-    case False => op(False).opcode
+    case True       => op(formula).opcode
+    case False      => op(formula).opcode
+    case DotFormula => op(formula).opcode
     case PredOf(p, c) => p.toString + "(" + pp(c) + ")"
     case PredicationalOf(p, c) => p.toString + "{" + pp(c) + "}"
-    case DotFormula=> op(DotFormula).opcode
     case f: ComparisonFormula => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
     case f: Quantified => op(formula).opcode + f.vars.mkString(",") + /**/"."/**/ + pp(f.child)
@@ -82,9 +93,9 @@ object KeYmaeraXPrettyPrinter extends PrettyPrinter {
     case f: Diamond => "<" + pp(f.program) + ">" + pp(f.child)
     case g: UnaryCompositeFormula => op(g).opcode + pp(g.child)
     case t: BinaryCompositeFormula =>
-      (if (op(t.left) > op(t) || op(t.left)==op(t) && op(t).assoc!=LeftAssociative) "(" + pp(t.left) + ")" else pp(t.left)) +
+      (if (parensLeft(t)) "(" + pp(t.left) + ")" else pp(t.left)) +
         op(t).opcode +
-        (if (op(t.right) > op(t) || op(t.right)==op(t) && op(t).assoc!=RightAssociative) "(" + pp(t.right) + ")" else pp(t.right))
+        (if (parensRight(t)) "(" + pp(t.right) + ")" else pp(t.right))
   }
 
   private def pp(program: Program): String = program match {
@@ -96,9 +107,9 @@ object KeYmaeraXPrettyPrinter extends PrettyPrinter {
     case p: DifferentialProgram => pp(p)
     case p: UnaryCompositeProgram => op(p).opcode + pp(p.child)
     case t: BinaryCompositeProgram=>
-      (if (op(t.left) > op(t) || op(t.left)==op(t) && op(t).assoc!=LeftAssociative) "{" + pp(t.left) + "}" else pp(t.left)) +
+      (if (parensLeft(t)) "{" + pp(t.left) + "}" else pp(t.left)) +
         op(t).opcode +
-        (if (op(t.right) > op(t) || op(t.right)==op(t) && op(t).assoc!=RightAssociative) "{" + pp(t.right) + "}" else pp(t.right))
+        (if (parensRight(t)) "{" + pp(t.right) + "}" else pp(t.right))
   }
 
   private def pp(program: DifferentialProgram): String = program match {
@@ -106,18 +117,21 @@ object KeYmaeraXPrettyPrinter extends PrettyPrinter {
     case DifferentialProgramConst(a) => a.toString
     case AtomicODE(xp, e) => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
-      (if (op(t.left) > op(t) || op(t.left)==op(t) && op(t).assoc!=LeftAssociative) "{" + pp(t.left) + "}" else pp(t.left)) +
+      (if (parensLeft(t)) "{" + pp(t.left) + "}" else pp(t.left)) +
         op(t).opcode +
-        (if (op(t.right) > op(t) || op(t.right)==op(t) && op(t).assoc!=RightAssociative) "{" + pp(t.right) + "}" else pp(t.right))
+        (if (parensRight(t)) "{" + pp(t.right) + "}" else pp(t.right))
   }
 
   /** The operator code of the top-level operator of expr */
   private def op(expr: Expression) = expr match {
+    case DotTerm         => OpNotation("•",     0, AtomicFormat)
+    case Nothing         => OpNotation("",      0, AtomicFormat)
+    case Anything        => OpNotation("?",     0, AtomicFormat)
     case t: Variable     => OpNotation("???",   0, AtomicFormat)
     case t: Number       => OpNotation("???",   0, AtomicFormat)
-    case t: DifferentialSymbol => OpNotation("'",    10, AtomicFormat)
+    case t: FuncOf       => OpNotation("???",   0, AtomicFormat)
+    case t: DifferentialSymbol => OpNotation("'", 0, AtomicFormat)
     case t: Differential => OpNotation("'",    10, UnaryFormat)
-    case t: FuncOf     => OpNotation("???",   0, AtomicFormat)
     case t: Neg          => OpNotation("-",    11, UnaryFormat)
     case t: Power        => OpNotation("^",    20, RightAssociative)
     case t: Times        => OpNotation("*",    30, LeftAssociative)
@@ -125,12 +139,9 @@ object KeYmaeraXPrettyPrinter extends PrettyPrinter {
     case t: Plus         => OpNotation("+",    50, LeftAssociative)
     case t: Minus        => OpNotation("-",    60, LeftAssociative)
     case t: Pair         => OpNotation(",",     2, RightAssociative)
-    case DotTerm         => OpNotation("•",     0, AtomicFormat)
-    case Nothing         => OpNotation("",      0, AtomicFormat)
-    case Anything        => OpNotation("?",     0, AtomicFormat)
 
     case t: DifferentialFormula => OpNotation("'", 80, UnaryFormat)
-    case t: PredOf     => OpNotation("???",   0, AtomicFormat)
+    case t: PredOf       => OpNotation("???",   0, AtomicFormat)
     case t: PredicationalOf => OpNotation("???",   0, AtomicFormat)
     case DotFormula      => OpNotation("_",     0, AtomicFormat)
     case True            => OpNotation("true",  0, AtomicFormat)
@@ -161,7 +172,7 @@ object KeYmaeraXPrettyPrinter extends PrettyPrinter {
     case p: AtomicODE    => OpNotation("=",   200, AtomicFormat)
     case p: DifferentialProduct => OpNotation(",", 210, RightAssociative)
     case p: Loop         => OpNotation("*",   220, UnaryFormat)
-    case p: Compose      => OpNotation(""+";",230, RightAssociative)
+    case p: Compose      => OpNotation("",    230, RightAssociative)
     case p: Choice       => OpNotation("++",  240, LeftAssociative)
   }
 }
