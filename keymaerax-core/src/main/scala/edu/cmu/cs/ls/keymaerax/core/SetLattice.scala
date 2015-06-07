@@ -103,7 +103,7 @@ object SetLattice {
    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables of sl.
    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = {
-    assert(sl isTop, "Cannot extend to differentialSymbols unless sl isTop.")
+    assert(sl isTop, "Cannot extend to differentialSymbols unless sl isTop " + sl)
     val diffSymbols: Set[NamedSymbol] =
       sl.toSymbolSet
         .filter(_.isInstanceOf[Variable])
