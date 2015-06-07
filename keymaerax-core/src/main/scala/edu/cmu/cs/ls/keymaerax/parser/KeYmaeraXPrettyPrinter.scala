@@ -53,6 +53,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /**
    * Whether printing t will need extra parentheses around t.left
+   * @todo should use op(t.left) compare op(t) == 0 instead of op(t.left)==op(t) ..... Isn't there a more elegant way?
    */
   private def parensLeft(t: BinaryComposite): Boolean =
     op(t.left) > op(t) || op(t.left)==op(t) && (op(t).assoc!=LeftAssociative || op(t.left).assoc!=LeftAssociative)
@@ -141,12 +142,12 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case t: Minus        => OpNotation("-",    60, LeftAssociative)
     case t: Pair         => OpNotation(",",     2, RightAssociative)
 
-    case t: DifferentialFormula => OpNotation("'", 80, UnaryFormat)
-    case t: PredOf       => OpNotation("???",   0, AtomicFormat)
-    case t: PredicationalOf => OpNotation("???",   0, AtomicFormat)
     case DotFormula      => OpNotation("_",     0, AtomicFormat)
     case True            => OpNotation("true",  0, AtomicFormat)
     case False           => OpNotation("false", 0, AtomicFormat)
+    case t: PredOf       => OpNotation("???",   0, AtomicFormat)
+    case t: PredicationalOf => OpNotation("???",   0, AtomicFormat)
+    case t: DifferentialFormula => OpNotation("'", 80, UnaryFormat)
     case f: Equal        => OpNotation("=",    90, NonAssociative)
     case f: NotEqual     => OpNotation("!=",   90, NonAssociative)
     case f: GreaterEqual => OpNotation(">=",   90, NonAssociative)
