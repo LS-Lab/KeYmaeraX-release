@@ -167,7 +167,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case t: DifferentialProgramConst => OpNotation("???",   0, AtomicFormat)
     case p: Assign       => OpNotation(":=",  200, AtomicFormat)
     case p: DiffAssign   => OpNotation(":=",  200, AtomicFormat)
-    case p: AssignAny    => OpNotation(":= *",  200, AtomicFormat)
+    case p: AssignAny    => OpNotation(":= *", 200, AtomicFormat)
     case p: Test         => OpNotation("?",   200, AtomicFormat)
     case p: ODESystem    => OpNotation("&",   200, NonAssociative)
     case p: AtomicODE    => OpNotation("=",   200, AtomicFormat)
