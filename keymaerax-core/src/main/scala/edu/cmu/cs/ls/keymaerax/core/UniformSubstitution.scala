@@ -202,7 +202,7 @@ final case class SubstitutionPair (what: Expression, repl: Expression) {
  * }}}
  * @see [[edu.cmu.cs.ls.keymaerax.core.USubst]]
  */
-final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
+final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) extends (Expression => Expression) {
   /** automatically filter out identity substitution no-ops */
   val subsDefs: immutable.Seq[SubstitutionPair] = subsDefsInput.filter(p => p.what != p.repl)
 
@@ -222,6 +222,14 @@ final case class USubst(subsDefsInput: immutable.Seq[SubstitutionPair]) {
   override def toString: String = "USubst{" + subsDefs.mkString(", ") + "}"
 
   // apply calls usubst, augmenting with contract and exception context handling
+
+  def apply(e: Expression): Expression = e match {
+    case t: Term => apply(t)
+    case f: Formula => apply(f)
+    case p: Program => apply(p)
+  }
+
+  //@note could define a direct composition implementation for fast compositions of USubst, but not used.
 
   /** apply this uniform substitution everywhere in a term */
   def apply(t: Term): Term = {try usubst(t) catch {case ex: ProverException => throw ex.inContext(t.prettyString())}
