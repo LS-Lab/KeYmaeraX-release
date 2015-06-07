@@ -12,11 +12,9 @@ object KeYmaeraPrettyPrinter extends KeYmaeraPrettyPrinter(ParseSymbols) {
  * Usage: KeYmaeraPrettyPrinter.stringify(e);
  * @author Nathan Fulton
  */
-class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) extends PrettyPrinter {
-  override def stringify(e:Expression) = prettyPrinter(e)
-  def stringify(term: Term): String = prettyPrinter(term)
-  def stringify(formula: Formula): String = prettyPrinter(formula)
-  def stringify(program: Program): String = prettyPrinter(program)
+class KeYmaeraPrettyPrinter(symbolTable : KeYmaeraSymbols = ParseSymbols) extends (Expression => String) {
+  def apply(e:Expression) = prettyPrinter(e)
+  def stringify(e:Expression) = apply(e)
 
   def header(ns : List[NamedSymbol]) : String = ??? 
     
