@@ -105,7 +105,8 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case DiffAssign(xp, e) => pp(xp) + op(program).opcode + pp(e) + ";"
     case Test(f) => op(program).opcode + pp(f) + ";"
     case p: DifferentialProgram => pp(p)
-    case p: UnaryCompositeProgram => op(p).opcode + pp(p.child)
+    case Loop(a) => pp(a) ++ op(program).opcode
+    //case p: UnaryCompositeProgram => op(p).opcode + pp(p.child)
     case t: BinaryCompositeProgram=>
       (if (parensLeft(t)) "{" + pp(t.left) + "}" else pp(t.left)) +
         op(t).opcode +
