@@ -61,7 +61,7 @@ object KeYmaeraXParser extends (String => Expression) {
   private def parseStep(st: ParseState): ParseState = {
     val (s, input@(Token(la,_) :: rest)) = st
     s match {
-      case Expr(t2) :: (Token(tok:OPERATORS,_)) :: Expr(t1) :: _ =>
+      case Expr(t2) :: (Token(tok:OPERATOR,_)) :: Expr(t1) :: _ =>
         assert(op(tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
         if (la==LPARENS || la==LBRACK || la==RBRACK) error(st)
         else if (la==EOF || la==RPARENS || la==RBRACK
@@ -71,7 +71,7 @@ object KeYmaeraXParser extends (String => Expression) {
           shift(st)
         else error(st)
 
-      case (tok@Token(_:OPERATORS,_)) :: Expr(t1) :: _ =>
+      case (tok@Token(_:OPERATOR,_)) :: Expr(t1) :: _ =>
         if (la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la == LPARENS) shift(st) else error(st)
 
       case Token(RPARENS,_) :: Expr(t1) :: Token(LPARENS,_) :: _ if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
@@ -83,11 +83,11 @@ object KeYmaeraXParser extends (String => Expression) {
         else reduce(st, 3, t1)
 
       case Expr(t1) :: Token(LPARENS,_) :: _ if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
-        if (la.isInstanceOf[OPERATORS] || la == RPARENS) shift(st)
+        if (la.isInstanceOf[OPERATOR] || la == RPARENS) shift(st)
         else if (la==PRIME) ??? else error(st)
 
       case Expr(t1:Program) :: Token(LBRACK,_) :: _ =>
-        if (la.isInstanceOf[OPERATORS] || la == RBRACK) shift(st)
+        if (la.isInstanceOf[OPERATOR] || la == RBRACK) shift(st)
         else error(st)
 
       case Token(LPARENS,_) :: _ =>
@@ -109,7 +109,7 @@ object KeYmaeraXParser extends (String => Expression) {
       // small stack cases
       case Expr(t) :: Nil =>
         if (la == EOF) accept(st, t)
-        else if (la==LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la.isInstanceOf[OPERATORS]) shift(st) //@todo or [ or <
+        else if (la==LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la.isInstanceOf[OPERATOR]) shift(st) //@todo or [ or <
         else error(st)
 
       case Nil =>

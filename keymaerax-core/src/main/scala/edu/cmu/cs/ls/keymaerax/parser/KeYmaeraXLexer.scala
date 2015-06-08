@@ -11,12 +11,18 @@ import scala.collection.immutable._
  * Terminal symbols of the differential dynamic logic grammar.
  * @author aplatzer
  */
-sealed abstract class Terminal(val img: String)
-abstract class OPERATORS(opcode: String) extends Terminal(opcode)
-case class IDENT(name: String) extends Terminal(name)
-case class NUMBER(value: String) extends Terminal(value)
-case class OPERATOR(opcode: String) extends OPERATORS(opcode)
-
+sealed abstract class Terminal(val img: String) {
+  override def toString = "\"" + img + "\""
+}
+abstract class OPERATOR(opcode: String) extends Terminal(opcode) {
+  override def toString = opcode
+}
+case class IDENT(name: String) extends Terminal(name) {
+  override def toString = "ID(\"" + name + "\")"
+}
+case class NUMBER(value: String) extends Terminal(value) {
+  override def toString = "NUM(" + value + ")"
+}
 object EOF extends Terminal("<EOF>")
 
 object LPARENS extends Terminal("(")
@@ -25,34 +31,38 @@ object LBRACK  extends Terminal("{")
 object RBRACK  extends Terminal("}")
 object LBOX    extends Terminal("[")
 object RBOX    extends Terminal("]")
-object LDIA    extends OPERATORS("<") //@todo really operator or better not?
-object RDIA    extends OPERATORS(">")
+object LDIA    extends OPERATOR("<") //@todo really operator or better not?
+object RDIA    extends OPERATOR(">")
 
-object PRIME   extends OPERATORS("'")
-object POWER   extends OPERATORS("^")
-object STAR    extends OPERATORS("*")
-object SLASH   extends OPERATORS("/")
-object PLUS    extends OPERATORS("+")
-object MINUS   extends OPERATORS("-")
+object PRIME   extends OPERATOR("'")
+object POWER   extends OPERATOR("^")
+object STAR    extends OPERATOR("*")
+object SLASH   extends OPERATOR("/")
+object PLUS    extends OPERATOR("+")
+object MINUS   extends OPERATOR("-")
 
-object NOT     extends OPERATORS("!")
-object AND     extends OPERATORS("&")
-object OR      extends OPERATORS("|")
-object EQUIV   extends OPERATORS("<->")
-object IMPLY   extends OPERATORS("->")
+object NOT     extends OPERATOR("!")
+object AND     extends OPERATOR("&")
+object OR      extends OPERATOR("|")
+object EQUIV   extends OPERATOR("<->")
+object IMPLY   extends OPERATOR("->")
 
-object FORALL  extends OPERATORS("\\forall")
-object EXISTS  extends OPERATORS("\\exists")
+object FORALL  extends OPERATOR("\\forall")
+object EXISTS  extends OPERATOR("\\exists")
 
-object GREATEREQ extends OPERATORS(">=")
-object LESSEQ  extends OPERATORS("<=")
+object GREATEREQ extends OPERATOR(">=")
+object LESSEQ  extends OPERATOR("<=")
 
-object COMPOSE extends OPERATORS(";")
-object CHOICE  extends OPERATORS("++")
+object ASSIGNANY extends OPERATOR(":=*")
+object ASSIGN extends OPERATOR(":=")
+object COMPOSE extends OPERATOR(";")
+object CHOICE  extends OPERATOR("++")
 
 
 sealed abstract class Location
-object UnknownLocation extends Location
+object UnknownLocation extends Location {
+  override def toString = "<somewhere>"
+}
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location
 
 
