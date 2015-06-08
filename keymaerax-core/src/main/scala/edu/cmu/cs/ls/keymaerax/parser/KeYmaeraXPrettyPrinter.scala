@@ -1,5 +1,5 @@
 /**
- * Differential Dynamic Logic pretty printer in KeYmaera X notation.
+ * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */

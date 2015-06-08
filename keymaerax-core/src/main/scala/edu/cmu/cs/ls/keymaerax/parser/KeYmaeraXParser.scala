@@ -1,3 +1,8 @@
+/**
+ * Differential Dynamic Logic parser for concrete KeYmaera X notation.
+ * @author aplatzer
+ * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
+ */
 package edu.cmu.cs.ls.keymaerax.parser
 
 import scala.annotation.tailrec
@@ -5,7 +10,10 @@ import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-/** Terminal symbols of the differential dynamic logic grammar. */
+/**
+ * Terminal symbols of the differential dynamic logic grammar.
+ * @author aplatzer
+ */
 sealed abstract class Terminal(val img: String)
 abstract class OPERATORS(opcode: String) extends Terminal(opcode)
 case class IDENT(name: String) extends Terminal(name)
@@ -22,6 +30,10 @@ sealed abstract class Location
 object UnknownLocation extends Location
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location
 
+/**
+ * KeYmaera X parser items on the parser stack.
+ * @author aplatzer
+ */
 sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
 case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item
