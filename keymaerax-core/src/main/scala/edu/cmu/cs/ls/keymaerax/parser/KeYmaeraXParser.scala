@@ -54,7 +54,9 @@ object KeYmaeraXParser extends (String => Expression) {
 
   def apply(input: String): Expression = parse(lexer(input))
 
+  /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
+  /** Parser stack of parser items with top at head. */
   type Stack = List[Item]
 
   type ParseState = (Stack, TokenStream)
