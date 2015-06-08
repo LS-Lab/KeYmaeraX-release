@@ -1,5 +1,6 @@
 package edu.cmu.cs.ls.keymaerax.parser
 
+import scala.annotation.tailrec
 import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
@@ -14,11 +15,14 @@ case class NUMBER(value: String) extends Terminal(value)
 object LPARENS extends Terminal("(")
 object RPARENS extends Terminal(")")
 object PRIME extends Terminal("'")
+object EOF extends Terminal("<EOF>")
 
-sealed abstract class Item
+sealed trait Item
 case class Tok(tok: Terminal) extends Item
 case class Expr(expr: Expression) extends Item
-object EndToken extends Item
+trait FinalItem extends Item
+case class Accept(expr: Expression) extends FinalItem
+case class Error(msg: String) extends FinalItem
 
 /*sealed abstract class Stack
 object Bottom extends Stack
@@ -32,7 +36,8 @@ case class St(stack: Stack, item: Item) extends Stack
  * @author aplatzer
  */
 object KeYmaeraXParser extends (String => Expression) {
-  def apply(input: String): Expression = ??? /*parse((Nil, lexer(input)))*/
+
+  def apply(input: String): Expression = parse(lexer(input))
 
   type TokenStream = List[Terminal]
   type Stack = List[Item]
@@ -41,7 +46,19 @@ object KeYmaeraXParser extends (String => Expression) {
 
   private def lexer(input: String): TokenStream = ???
 
-  private def parse(st: ParseState): ParseState = {
+  private def parse(input: TokenStream): Expression = parseLoop((Nil, input))._1 match {
+    case Accept(e) :: Nil => e
+    case Error(msg) :: context => throw new ParseException(msg)
+  }
+
+  @tailrec
+  private def parseLoop(st: ParseState): ParseState = st._1 match {
+    case result: FinalItem :: _ => st
+    case _ => parseLoop(parseStep(st))
+  }
+
+
+  private def parseStep(st: ParseState): ParseState = {
     val (s, input@(la :: rest)) = st
     s match {
       case Expr(t2: Term) :: (tok@Tok(OPERATOR(_))) :: Expr(t1: Term) :: _
@@ -64,16 +81,22 @@ object KeYmaeraXParser extends (String => Expression) {
         else if (la == PRIME) ??? else error(st)
 
       case Tok(LPARENS) :: _ =>
-        if (la == LPARENS || la.isInstanceOf[IDENT]) shift(st)
+        if (la == LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) shift(st)
         else error(st)
 
       case Tok(IDENT(name)) :: _ =>
-        if (la == RPARENS || la.isInstanceOf[IDENT]) error(st)
-        else if (la == LPARENS) /*function/predicate*/??? else reduce(st, 1, Variable(name,None,Real))
+        /*if (la == RPARENS || la.isInstanceOf[IDENT]) error(st)
+        else*/ if (la == LPARENS) /*function/predicate*/??? else reduce(st, 1, Variable(name,None,Real))
 
       case Tok(NUMBER(value)) :: _ =>
-        if (la.isInstanceOf[NUMBER] || la.isInstanceOf[IDENT] || la == LPARENS) error(st)
-        else reduce(st, 1, Number(BigDecimal(value)))
+        /*if (la.isInstanceOf[NUMBER] || la.isInstanceOf[IDENT] || la == LPARENS) error(st)
+        else*/ reduce(st, 1, Number(BigDecimal(value)))
+
+      // small stack cases
+      case Expr(t: Term) :: Nil =>
+        if (la == EOF) accept(st, t)
+        else if (la == LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la.isInstanceOf[OPERATOR]) shift(st) //@todo or [ or <
+        else error(st)
 
       case Nil =>
         if (la == LPARENS || la.isInstanceOf[IDENT]) shift(st) //@todo or [ or <
@@ -94,10 +117,18 @@ object KeYmaeraXParser extends (String => Expression) {
   }
   private def reduce(st: ParseState, consuming: Int, reduced: Expression): ParseState = reduce(st, consuming, Expr(reduced))
 
-  /** Error parsing the next input token la when in parser stack s. */
+  /** Accept the given parser result. */
+  private def accept(st: ParseState, result: Expression): ParseState = {
+    val (s, input) = st
+    require(input == List(EOF), "Can only accept after all input has been read")
+    require(s.length == 1, "Can only accept with one single result on the stack")
+    (Accept(result) :: Nil, input)
+  }
+
+  /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
-    val (s, (la :: rest)) = st
-    throw new ParseException("Unexpected token cannot be parsedn\nFound: " + la)
+    val (s, input@(la :: rest)) = st
+    (Error("Unexpected token cannot be parsedn\nFound: " + la) :: s, input)
   }
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
