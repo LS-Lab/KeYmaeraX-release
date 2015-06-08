@@ -5,37 +5,9 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import scala.collection.immutable._
+
 import edu.cmu.cs.ls.keymaerax.core._
-
-import scala.math.Ordered
-
-/** Operator associativity notational specification */
-private abstract class OpAssociativity
-/** Atomic operators of arity 0 within syntactic category */
-private object AtomicFormat extends OpAssociativity
-/** Unary operators of arity 1 within syntactic category */
-private object UnaryFormat extends OpAssociativity
-/** Left-associative infix operators of arity 2, i.e. ``x-y-z=(x-y)-z``*/
-private object LeftAssociative extends OpAssociativity
-/** Right-associative infix operators of arity 2, i.e. ``x^y^z=x^(y^z)`` */
-private object RightAssociative extends OpAssociativity
-/** Non-associative infix operators of arity 2, i.e. explicit parentheses */
-private object NonAssociative extends OpAssociativity
-
-/**
- * Operator notation specification.
- * @param opcode operator code used for string representation
- * @param prec unique precedence where smaller numbers indicate stronger binding
- * @param assoc associativity of this operator
- * @todo Could add spacing weight information to determine how much spacing is added around an operator.
- */
-private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity) extends Ordered[OpNotation] {
-  def compare(other: OpNotation): Int = {
-    prec - other.prec
-  } /*ensuring(r => r!=0 || this==other, "precedence assumed unique " + this + " compared to " + other)*/
-  //@note violates this: two different things can have same precedence.
-}
-
 
 /**
  * KeYmaera X Pretty Printer formats differential dynamic logic expressions
@@ -46,6 +18,7 @@ private case class OpNotation(opcode: String, prec: Int, assoc: OpAssociativity)
  * @see doc/dL-grammar.md
  */
 object KeYmaeraXPrettyPrinter extends (Expression => String) {
+  import OpSpec.op
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr)
@@ -130,64 +103,4 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   /** Formatting the atomic statement s */
   private def statement(s: String): String = s + ";"
 
-  /** no notation */
-  private val none = "???"
-
-  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
-  private[parser] def op(expr: Expression) = expr match {
-    // terms
-    case DotTerm         => OpNotation("•",     0, AtomicFormat)
-    case Nothing         => OpNotation("",      0, AtomicFormat)
-    case Anything        => OpNotation("?",     0, AtomicFormat)
-    case t: Variable     => OpNotation(none,    0, AtomicFormat)
-    case t: Number       => OpNotation(none,    0, AtomicFormat)
-    case t: FuncOf       => OpNotation(none,    0, AtomicFormat)
-    case t: DifferentialSymbol => OpNotation("'", 0, AtomicFormat)
-    case t: Pair         => OpNotation(",",     4, RightAssociative)
-    case t: Differential => OpNotation("'",    10, UnaryFormat)
-    case t: Neg          => OpNotation("-",    11, UnaryFormat)
-    case t: Power        => OpNotation("^",    20, RightAssociative)
-    case t: Times        => OpNotation("*",    30, LeftAssociative)
-    case t: Divide       => OpNotation("/",    40, LeftAssociative)
-    case t: Plus         => OpNotation("+",    50, LeftAssociative)
-    case t: Minus        => OpNotation("-",    60, LeftAssociative)
-
-    // formulas
-    case DotFormula      => OpNotation("_",     0, AtomicFormat)
-    case True            => OpNotation("true",  0, AtomicFormat)
-    case False           => OpNotation("false", 0, AtomicFormat)
-    case f: PredOf       => OpNotation(none,    0, AtomicFormat)
-    case f: PredicationalOf => OpNotation(none, 0, AtomicFormat)
-    case f: DifferentialFormula => OpNotation("'", 80, UnaryFormat)
-    case f: Equal        => OpNotation("=",    90, NonAssociative)
-    case f: NotEqual     => OpNotation("!=",   90, NonAssociative)
-    case f: GreaterEqual => OpNotation(">=",   90, NonAssociative)
-    case f: Greater      => OpNotation(">",    90, NonAssociative)
-    case f: LessEqual    => OpNotation("<=",   90, NonAssociative)
-    case f: Less         => OpNotation("<",    90, NonAssociative)
-    case f: Forall       => OpNotation("\\forall",96, UnaryFormat)
-    case f: Exists       => OpNotation("\\exists",97, UnaryFormat)
-    case f: Box          => OpNotation("[]",   98, UnaryFormat)
-    case f: Diamond      => OpNotation("<>",   99, UnaryFormat)
-    case f: Not          => OpNotation("!",   100, UnaryFormat)
-    case f: And          => OpNotation("&",   110, LeftAssociative)
-    case f: Or           => OpNotation("|",   120, LeftAssociative)
-    case f: Imply        => OpNotation("->",  130, RightAssociative)
-    case f: Equiv        => OpNotation("<->", 130, NonAssociative)
-
-    // programs
-    case p: ProgramConst => OpNotation(none,    0, AtomicFormat)
-    case p: DifferentialProgramConst => OpNotation(none,  0, AtomicFormat)
-    case p: Assign       => OpNotation(":=",  200, AtomicFormat)
-    case p: DiffAssign   => OpNotation(":=",  200, AtomicFormat)
-    case p: AssignAny    => OpNotation(":= *", 200, AtomicFormat)
-    case p: Test         => OpNotation("?",   200, AtomicFormat)
-    case p: ODESystem    => OpNotation("&",   200, NonAssociative)
-    case p: AtomicODE    => OpNotation("=",   200, AtomicFormat)
-    case p: DifferentialProduct => OpNotation(",", 210, RightAssociative)
-    case p: Loop         => OpNotation("*",   220, UnaryFormat)
-    case p: Compose      => OpNotation(";",    230, RightAssociative) //@todo compatibility mode for parser
-    //case p: Compose      => OpNotation("",    230, RightAssociative)
-    case p: Choice       => OpNotation("++",  240, LeftAssociative)
-  }
 }
