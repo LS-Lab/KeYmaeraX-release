@@ -65,22 +65,22 @@ object KeYmaeraXParser extends (String => Expression) {
   private def parseStep(st: ParseState): ParseState = {
     val (s, input@(la :: rest)) = st
     s match {
-      case Expr(t2: Term) :: (tok@Tok(OPERATOR(_))) :: Expr(t1: Term) :: _ =>
-        assert(op(tok).isInstanceOf[BinaryOpSpec[Term]], "binary operator expected since others should have been reduced\nin " + s)
+      case Expr(t2) :: (tok@Tok(OPERATOR(_))) :: Expr(t1) :: _ =>
+        assert(op(tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
         if (la == EOF || op(tok) < op(Tok(la)) || op(tok) <= op(Tok(la)) && op(tok).assoc == LeftAssociative)
-          reduce(st, 3, op(tok).asInstanceOf[BinaryOpSpec[Term]].const(tok.tok.img, t1, t2))
+          reduce(st, 3, op(tok).asInstanceOf[BinaryOpSpec[Expression]].const(tok.tok.img, t1, t2))
         else if (op(tok) > op(Tok(la)) || op(tok) >= op(Tok(la)) && op(tok).assoc == RightAssociative)
           shift(st)
         else error(st)
 
-      case (tok@Tok(OPERATOR(_))) :: Expr(t1: Term) :: _ =>
-        if (la.isInstanceOf[IDENT] || la == LPARENS) shift(st) else error(st)
+      case (tok@Tok(OPERATOR(_))) :: Expr(t1) :: _ =>
+        if (la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la == LPARENS) shift(st) else error(st)
 
-      case Tok(RPARENS) :: Expr(t1: Term) :: Tok(LPARENS) :: _ =>
-        if (la == LPARENS || la.isInstanceOf[IDENT]) error(st)
+      case Tok(RPARENS) :: Expr(t1) :: Tok(LPARENS) :: _ =>
+        if (la == LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
         else if (la == PRIME) ??? else reduce(st, 3, t1)
 
-      case Expr(t1: Term) :: Tok(LPARENS) :: _ =>
+      case Expr(t1) :: Tok(LPARENS) :: _ =>
         if (la.isInstanceOf[OPERATOR] || la == RPARENS) shift(st)
         else if (la == PRIME) ??? else error(st)
 
@@ -97,7 +97,7 @@ object KeYmaeraXParser extends (String => Expression) {
         else*/ reduce(st, 1, Number(BigDecimal(value)))
 
       // small stack cases
-      case Expr(t: Term) :: Nil =>
+      case Expr(t) :: Nil =>
         if (la == EOF) accept(st, t)
         else if (la == LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la.isInstanceOf[OPERATOR]) shift(st) //@todo or [ or <
         else error(st)
@@ -133,7 +133,8 @@ object KeYmaeraXParser extends (String => Expression) {
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
     val (s, input@(la :: rest)) = st
-    (Error("Unexpected token cannot be parsedn\nFound: " + la) :: s, input)
+    if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s)
+    (Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s) :: s, input)
   }
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
