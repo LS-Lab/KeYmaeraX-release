@@ -109,60 +109,176 @@ object OpSpec {
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
   def op(expr: Expression): OpSpec = expr match {
+      //@note could replace by reflection getField("s" + expr.getClass.getSimpleName)
+      //@todo could add a contract ensuring that constructor applied to expressions's children indeed produces expr.
     // terms
-    case DotTerm         => UnitOpSpec ("•",     0, DotTerm)
-    case Nothing         => UnitOpSpec ("",      0, Nothing)
-    case Anything        => UnitOpSpec ("?",     0, Anything)
-    case t: Variable     => UnitOpSpec (none,    0, name => Variable(name, None, Real))
-    case t: Number       => UnitOpSpec (none,    0, number => Number(BigDecimal(number)))
-    case t: FuncOf       => UnaryOpSpec[Term](none,    0, PrefixFormat, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
-    case t: DifferentialSymbol => UnaryOpSpec("'", 0, PostfixFormat, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
-    //case t: Pair         => OpNotation(",",     4, RightAssociative)
-    case t: Differential => UnaryOpSpec("'",    10, PostfixFormat, Differential.apply _)
-    case t: Neg          => UnaryOpSpec("-",    11, PrefixFormat, Neg.apply _)
-    case t: Power        => BinaryOpSpec("^",   20, RightAssociative, Power.apply _)
-    case t: Times        => BinaryOpSpec("*",    40, LeftAssociative, Times.apply _)
-    case t: Divide       => BinaryOpSpec("/",    40, LeftAssociative, Divide.apply _)
-    case t: Plus         => BinaryOpSpec("+",    50, LeftAssociative, Plus.apply _)
-    case t: Minus        => BinaryOpSpec("-",    50, LeftAssociative, Minus.apply _)
+    case DotTerm         => sDotTerm
+    case Nothing         => sNothing
+    case Anything        => sAnything
+    case t: Variable     => sVariable
+    case t: Number       => sNumber
+    case t: FuncOf       => sFuncOf
+    case t: DifferentialSymbol => sDifferentialSymbol
+    case t: Pair         => sPair
+    case t: Differential => sDifferential
+    case t: Neg          => sNeg
+    case t: Power        => sPower
+    case t: Times        => sTimes
+    case t: Divide       => sDivide
+    case t: Plus         => sPlus
+    case t: Minus        => sMinus
 
     // formulas
-    case DotFormula      => UnitOpSpec("_",     0, DotFormula)
-    case True            => UnitOpSpec("true",  0, True)
-    case False           => UnitOpSpec("false", 0, False)
-    case f: PredOf       => UnaryOpSpec(none,    0, PrefixFormat, (name, e:Expression) => PredOf(Function(name, None, Real, Bool), e.asInstanceOf[Term]))
-    case f: PredicationalOf => UnaryOpSpec(none,    0, PrefixFormat, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
-    case f: DifferentialFormula => UnaryOpSpec("'", 80, PostfixFormat, DifferentialFormula.apply _)
-    case f: Equal        => lBinaryOpSpec("=",    90, AtomicBinaryFormat, Equal.apply _)
-    case f: NotEqual     => lBinaryOpSpec("!=",   90, AtomicBinaryFormat, NotEqual.apply _)
-    case f: GreaterEqual => lBinaryOpSpec(">=",   90, AtomicBinaryFormat, GreaterEqual.apply _)
-    case f: Greater      => lBinaryOpSpec(">",    90, AtomicBinaryFormat, Greater.apply _)
-    case f: LessEqual    => lBinaryOpSpec("<=",   90, AtomicBinaryFormat, LessEqual.apply _)
-    case f: Less         => lBinaryOpSpec("<",    90, AtomicBinaryFormat, Less.apply _ )
-    case f: Forall       => BinaryOpSpec("\\forall",96, MixedBinary, (x:Expression, f:Expression) => Forall(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
-    case f: Exists       => BinaryOpSpec("\\exists",97, MixedBinary, (x:Expression, f:Expression) => Exists(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
-    case f: Box          => BinaryOpSpec("[]",   98, MixedBinary, (_, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
-    case f: Diamond      => BinaryOpSpec("<>",   99, MixedBinary, (_, a:Expression, f:Expression) => Diamond(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
-    case f: Not          => UnaryOpSpec("!",   100, PrefixFormat, Not.apply _)
-    case f: And          => BinaryOpSpec("&",   110, LeftAssociative, And.apply _)
-    case f: Or           => BinaryOpSpec("|",   120, LeftAssociative, Or.apply _)
-    case f: Imply        => BinaryOpSpec("->",  130, RightAssociative, Imply.apply _)
-    case f: Equiv        => BinaryOpSpec("<->", 130, NonAssociative, Equiv. apply _)
+    case DotFormula      => sDotFormula
+    case True            => sTrue
+    case False           => sFalse
+    case f: PredOf       => sPredOf
+    case f: PredicationalOf => sPredicationalOf
+    case f: DifferentialFormula => sDifferentialFormula
+    case f: Equal        => sEqual
+    case f: NotEqual     => sNotEqual
+    case f: GreaterEqual => sGreaterEqual
+    case f: Greater      => sGreater
+    case f: LessEqual    => sLessEqual
+    case f: Less         => sLess
+    case f: Forall       => sForall
+    case f: Exists       => sExists
+    case f: Box          => sBox
+    case f: Diamond      => sDiamond
+    case f: Not          => sNot
+    case f: And          => sAnd
+    case f: Or           => sOr
+    case f: Imply        => sImply
+    case f: Equiv        => sEquiv
 
     // programs
-    case p: ProgramConst => UnitOpSpec(none,    0, name => ProgramConst(name))
-    case p: DifferentialProgramConst => UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
-    case p: Assign       => lBinaryOpSpec[Program](":=",  200, AtomicBinaryFormat, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e.asInstanceOf[Term]))
-    case p: DiffAssign   => lBinaryOpSpec[Program](":=",  200, AtomicBinaryFormat, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
-    case p: AssignAny    => lUnaryOpSpecT[Program](":= *", 200, PrefixFormat, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
-    case p: Test         => lUnaryOpSpecF[Program]("?",   200, PrefixFormat, (f:Formula) => Test(f.asInstanceOf[Formula]))
-    case p: ODESystem    => BinaryOpSpec[Expression]("&",   200, NonAssociative, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
-    case p: AtomicODE    => BinaryOpSpec[Program]("=",   200, AtomicBinaryFormat, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
-    case p: DifferentialProduct => BinaryOpSpec(",", 210, RightAssociative, DifferentialProduct.apply _)
-    case p: Loop         => UnaryOpSpec("*",   220, PostfixFormat, Loop.apply _)
-    case p: Compose      => BinaryOpSpec(";",   230, RightAssociative, Compose.apply _) //@todo compatibility mode for parser
-    //case p: Compose      => OpNotation("",    230, RightAssociative)
-    case p: Choice       => BinaryOpSpec("++",  240, LeftAssociative, Choice.apply _)
+    case p: ProgramConst => sProgramConst
+    case p: DifferentialProgramConst => sDifferentialProgramConst
+    case p: Assign       => sAssign
+    case p: DiffAssign   => sDiffAssign
+    case p: AssignAny    => sAssignAny
+    case p: Test         => sTest
+    case p: ODESystem    => sODESystem
+    case p: AtomicODE    => sAtomicODE
+    case p: DifferentialProduct => sDifferentialProduct
+    case p: Loop         => sLoop
+    case p: Compose      => sCompose
+    case p: Choice       => sChoice
   }
 
+  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
+  private[parser] def op(tok: Terminal): OpSpec = {
+    tok.img match {
+      //@note could almost(!) replace by reflection to search through all OpSpec and check their images.
+      // terms
+      case sDotTerm.opcode => sDotTerm
+      //case sNothing.opcode => sNothing
+      case sAnything.opcode => sAnything
+      //case t: Variable => sVariable
+      //case t: Number => sNumber
+      //case t: FuncOf => sFuncOf
+      case sDifferential.opcode => sDifferentialSymbol /*|| sDifferential || sDifferentialFormula*/
+      //case t: Pair => sPair
+      case sMinus.opcode => sNeg /*|| sMinus*/
+      case sPower.opcode => sPower
+      case sTimes.opcode => sTimes /*|| sLoop*/
+      case sDivide.opcode => sDivide
+      case sPlus.opcode => sPlus
+
+      // formulas
+      case sDotFormula.opcode => sDotFormula
+      case sTrue.opcode => sTrue
+      case sFalse.opcode => sFalse
+      //case f: PredOf => sPredOf
+      //case f: PredicationalOf => sPredicationalOf
+      //case f: DifferentialFormula => sDifferentialFormula
+      case sEqual.opcode => sEqual
+      case sNotEqual.opcode => sNotEqual
+      case sGreaterEqual.opcode => sGreaterEqual
+      case sGreater.opcode => sGreater
+      case sLessEqual.opcode => sLessEqual
+      case sLess.opcode => sLess
+      case sForall.opcode => sForall
+      case sExists.opcode => sExists
+//      case f: Box => sBox
+//      case f: Diamond => sDiamond
+      case sNot.opcode => sNot
+      case sAnd.opcode => sAnd
+      case sOr.opcode => sOr
+      case sImply.opcode => sImply
+      case sEquiv.opcode => sEquiv
+
+      // programs
+      //case p: ProgramConst => sProgramConst
+      //case p: DifferentialProgramConst => sDifferentialProgramConst
+//      case p: Assign => sAssign
+//      case p: DiffAssign => sDiffAssign
+//      case p: AssignAny => sAssignAny
+      case sTest.opcode => sTest
+//      case p: ODESystem => sODESystem
+//      case p: AtomicODE => sAtomicODE
+//      case p: DifferentialProduct => sDifferentialProduct
+//      case sLoop.opcode => sLoop
+      case sCompose.opcode => sCompose
+      case sChoice.opcode => sChoice
+    }
+  } ensuring(r => r.opcode == tok.img, "OpSpec's opcode coincides with expected token " + tok)
+
+
+  // terms
+  val sDotTerm      = UnitOpSpec ("•",     0, DotTerm)
+  val sNothing      = UnitOpSpec ("",      0, Nothing)
+  val sAnything     = UnitOpSpec ("?",     0, Anything)
+  val sVariable     = UnitOpSpec (none,    0, name => Variable(name, None, Real))
+  val sNumber       = UnitOpSpec (none,    0, number => Number(BigDecimal(number)))
+  val sFuncOf       = UnaryOpSpec[Term](none,    0, PrefixFormat, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
+  val sDifferentialSymbol = UnaryOpSpec("'", 0, PostfixFormat, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
+  def sPair         = ??? // OpNotation(",",     4, RightAssociative)
+  val sDifferential = UnaryOpSpec("'",    10, PostfixFormat, Differential.apply _)
+  val sNeg          = UnaryOpSpec("-",    11, PrefixFormat, Neg.apply _)
+  val sPower        = BinaryOpSpec("^",   20, RightAssociative, Power.apply _)
+  val sTimes        = BinaryOpSpec("*",    40, LeftAssociative, Times.apply _)
+  val sDivide       = BinaryOpSpec("/",    40, LeftAssociative, Divide.apply _)
+  val sPlus         = BinaryOpSpec("+",    50, LeftAssociative, Plus.apply _)
+  val sMinus        = BinaryOpSpec("-",    50, LeftAssociative, Minus.apply _)
+
+  // formulas
+  val sDotFormula      = UnitOpSpec("_",     0, DotFormula)
+  val sTrue            = UnitOpSpec("true",  0, True)
+  val sFalse           = UnitOpSpec("false", 0, False)
+  val sPredOf       = UnaryOpSpec(none,    0, PrefixFormat, (name, e:Expression) => PredOf(Function(name, None, Real, Bool), e.asInstanceOf[Term]))
+  val sPredicationalOf = UnaryOpSpec(none,    0, PrefixFormat, (name, e:Formula) => PredicationalOf(Function(name, None, Bool, Bool), e.asInstanceOf[Formula]))
+  val sDifferentialFormula = UnaryOpSpec("'", 80, PostfixFormat, DifferentialFormula.apply _)
+  val sEqual        = lBinaryOpSpec("=",    90, AtomicBinaryFormat, Equal.apply _)
+  val sNotEqual     = lBinaryOpSpec("!=",   90, AtomicBinaryFormat, NotEqual.apply _)
+  val sGreaterEqual = lBinaryOpSpec(">=",   90, AtomicBinaryFormat, GreaterEqual.apply _)
+  val sGreater      = lBinaryOpSpec(">",    90, AtomicBinaryFormat, Greater.apply _)
+  val sLessEqual    = lBinaryOpSpec("<=",   90, AtomicBinaryFormat, LessEqual.apply _)
+  val sLess         = lBinaryOpSpec("<",    90, AtomicBinaryFormat, Less.apply _ )
+  val sForall       = BinaryOpSpec("\\forall",96, MixedBinary, (x:Expression, f:Expression) => Forall(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
+  val sExists       = BinaryOpSpec("\\exists",97, MixedBinary, (x:Expression, f:Expression) => Exists(Seq(x.asInstanceOf[Variable]), f.asInstanceOf[Formula]))
+  val sBox          = BinaryOpSpec("[]",   98, MixedBinary, (_, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
+  val sDiamond      = BinaryOpSpec("<>",   99, MixedBinary, (_, a:Expression, f:Expression) => Diamond(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
+  val sNot          = UnaryOpSpec("!",   100, PrefixFormat, Not.apply _)
+  val sAnd          = BinaryOpSpec("&",   110, LeftAssociative, And.apply _)
+  val sOr           = BinaryOpSpec("|",   120, LeftAssociative, Or.apply _)
+  val sImply        = BinaryOpSpec("->",  130, RightAssociative, Imply.apply _)
+  val sEquiv        = BinaryOpSpec("<->", 130, NonAssociative, Equiv. apply _)
+
+  // programs
+  val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
+  val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
+  val sAssign       = lBinaryOpSpec[Program](":=",  200, AtomicBinaryFormat, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e.asInstanceOf[Term]))
+  val sDiffAssign   = lBinaryOpSpec[Program](":=",  200, AtomicBinaryFormat, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
+  val sAssignAny    = lUnaryOpSpecT[Program](":= *", 200, PrefixFormat, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
+  val sTest         = lUnaryOpSpecF[Program]("?",   200, PrefixFormat, (f:Formula) => Test(f.asInstanceOf[Formula]))
+  val sODESystem    = BinaryOpSpec[Expression]("&",   200, NonAssociative, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
+  val sAtomicODE    = BinaryOpSpec[Program]("=",   200, AtomicBinaryFormat, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
+  val sDifferentialProduct = BinaryOpSpec(",", 210, RightAssociative, DifferentialProduct.apply _)
+  val sLoop         = UnaryOpSpec("*",   220, PostfixFormat, Loop.apply _)
+  val sCompose      = BinaryOpSpec(";",   230, RightAssociative, Compose.apply _) //@todo compatibility mode for parser
+  //valp: Compose     => OpNotation("",    230, RightAssociative)
+  val sChoice       = BinaryOpSpec("++",  240, LeftAssociative, Choice.apply _)
+
 }
+
