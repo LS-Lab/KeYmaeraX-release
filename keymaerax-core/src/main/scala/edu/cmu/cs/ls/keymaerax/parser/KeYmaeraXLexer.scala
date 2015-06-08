@@ -14,8 +14,9 @@ import scala.collection.immutable._
 sealed abstract class Terminal(val img: String) {
   override def toString = "\"" + img + "\""
 }
-abstract class OPERATOR(opcode: String) extends Terminal(opcode) {
-  override def toString = opcode
+abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
+  //final def opcode: String = img
+  override def toString = img
 }
 case class IDENT(name: String) extends Terminal(name) {
   override def toString = "ID(\"" + name + "\")"
@@ -34,6 +35,8 @@ object RBOX    extends Terminal("]")
 object LDIA    extends OPERATOR("<") //@todo really operator or better not?
 object RDIA    extends OPERATOR(">")
 
+object COMMA   extends OPERATOR(",")
+
 object PRIME   extends OPERATOR("'")
 object POWER   extends OPERATOR("^")
 object STAR    extends OPERATOR("*")
@@ -50,13 +53,25 @@ object IMPLY   extends OPERATOR("->")
 object FORALL  extends OPERATOR("\\forall")
 object EXISTS  extends OPERATOR("\\exists")
 
+object EQ      extends OPERATOR("=")
+object NOTEQ   extends OPERATOR("!=")
 object GREATEREQ extends OPERATOR(">=")
 object LESSEQ  extends OPERATOR("<=")
 
+object TRUE    extends OPERATOR("true")
+object FALSE   extends OPERATOR("false")
+
 object ASSIGNANY extends OPERATOR(":=*")
-object ASSIGN extends OPERATOR(":=")
+object ASSIGN  extends OPERATOR(":=")
+object TEST    extends OPERATOR("?")
 object COMPOSE extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++")
+
+// pseudos
+object NOTHING extends OPERATOR("")
+object DOT     extends OPERATOR("•")
+object PLACE   extends OPERATOR("_")
+object PSEUDO  extends OPERATOR("<pseudo>")
 
 
 sealed abstract class Location
