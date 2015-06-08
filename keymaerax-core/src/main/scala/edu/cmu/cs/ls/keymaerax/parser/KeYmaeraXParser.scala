@@ -15,6 +15,8 @@ case class IDENT(name: String) extends Terminal(name)
 case class NUMBER(value: String) extends Terminal(value)
 object LPARENS extends Terminal("(")
 object RPARENS extends Terminal(")")
+object LBRACK extends Terminal("{")
+object RBRACK extends Terminal("}")
 object PRIME extends Terminal("'")
 object EOF extends Terminal("<EOF>")
 
@@ -67,7 +69,9 @@ object KeYmaeraXParser extends (String => Expression) {
     s match {
       case Expr(t2) :: (tok@Tok(OPERATOR(_))) :: Expr(t1) :: _ =>
         assert(op(tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
-        if (la == EOF || op(tok) < op(Tok(la)) || op(tok) <= op(Tok(la)) && op(tok).assoc == LeftAssociative)
+        if (la == LPARENS || la == LBRACK || la == RBRACK) error(st)
+        else if (la == EOF || la == RPARENS || la == RBRACK
+          || op(tok) < op(Tok(la)) || op(tok) <= op(Tok(la)) && op(tok).assoc == LeftAssociative)
           reduce(st, 3, op(tok).asInstanceOf[BinaryOpSpec[Expression]].const(tok.tok.img, t1, t2))
         else if (op(tok) > op(Tok(la)) || op(tok) >= op(Tok(la)) && op(tok).assoc == RightAssociative)
           shift(st)
@@ -76,16 +80,28 @@ object KeYmaeraXParser extends (String => Expression) {
       case (tok@Tok(OPERATOR(_))) :: Expr(t1) :: _ =>
         if (la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la == LPARENS) shift(st) else error(st)
 
-      case Tok(RPARENS) :: Expr(t1) :: Tok(LPARENS) :: _ =>
+      case Tok(RPARENS) :: Expr(t1) :: Tok(LPARENS) :: _ if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (la == LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
         else if (la == PRIME) ??? else reduce(st, 3, t1)
 
-      case Expr(t1) :: Tok(LPARENS) :: _ =>
+      case Tok(RBRACK) :: Expr(t1:Program) :: Tok(LBRACK) :: _ =>
+        if (la == LBRACK || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
+        else reduce(st, 3, t1)
+
+      case Expr(t1) :: Tok(LPARENS) :: _ if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (la.isInstanceOf[OPERATOR] || la == RPARENS) shift(st)
         else if (la == PRIME) ??? else error(st)
 
+      case Expr(t1:Program) :: Tok(LBRACK) :: _ =>
+        if (la.isInstanceOf[OPERATOR] || la == RBRACK) shift(st)
+        else error(st)
+
       case Tok(LPARENS) :: _ =>
         if (la == LPARENS || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) shift(st)
+        else error(st)
+
+      case Tok(LBRACK) :: _ =>
+        if (la == LBRACK || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) shift(st)
         else error(st)
 
       case Tok(IDENT(name)) :: _ =>
@@ -133,8 +149,8 @@ object KeYmaeraXParser extends (String => Expression) {
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
     val (s, input@(la :: rest)) = st
-    if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s)
-    (Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s) :: s, input)
+    if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.mkString(", "))
+    (Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.mkString(", ")) :: s, input)
   }
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */

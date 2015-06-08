@@ -211,7 +211,7 @@ object OpSpec {
       // programs
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
-//      case p: Assign => sAssign
+      case sAssign.opcode => sAssign /*|| sDiffAssign */
 //      case p: DiffAssign => sDiffAssign
 //      case p: AssignAny => sAssignAny
       case sTest.opcode => sTest
