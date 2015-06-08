@@ -16,7 +16,7 @@ Associativity is left-associative, i.e. x-y-z is (x-y)-z unless noted otherwise.
 
     T ::= x | x' | num | ∙ | f(T) | -T | T^T | T*T | T/T | T+T | T-T | (T)' | (T)
 
-with `T^T` right-associative, i.e. x^4^2 is (x^4)^2
+with `T^T` right-associative, i.e. x^4^2 is x^(4^2)
 
 ==Formulas==
 
@@ -39,4 +39,4 @@ with the invisible `;` in P P right-associative
 with `D,D` right-associative
 
 
-Parser challenge:  < ? p > q > p > 1
+Parser would-be challenge:  < ? p > q > p > 1
