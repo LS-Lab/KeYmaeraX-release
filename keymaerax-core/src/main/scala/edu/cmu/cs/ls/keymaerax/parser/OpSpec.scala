@@ -179,7 +179,7 @@ object OpSpec {
       //case t: FuncOf => sFuncOf
       case sDifferential.opcode => sDifferentialSymbol /*|| sDifferential || sDifferentialFormula*/
       //case t: Pair => sPair
-      case sMinus.opcode => sNeg /*|| sMinus*/
+      case sMinus.opcode => /*sNeg ||*/ sMinus
       case sPower.opcode => sPower
       case sTimes.opcode => sTimes /*|| sLoop*/
       case sDivide.opcode => sDivide

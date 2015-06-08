@@ -5,8 +5,9 @@ import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-sealed abstract class Location
+/*sealed abstract class Location
 object UnknownLocation extends Location
+*/
 
 sealed abstract class Terminal(val img: String)
 case class OPERATOR(opcode: String) extends Terminal(opcode)
@@ -46,14 +47,17 @@ object KeYmaeraXParser extends (String => Expression) {
 
   private def lexer(input: String): TokenStream = ???
 
-  private def parse(input: TokenStream): Expression = parseLoop((Nil, input))._1 match {
-    case Accept(e) :: Nil => e
-    case Error(msg) :: context => throw new ParseException(msg)
+  /*private*/ def parse(input: TokenStream): Expression = {
+    require(input.endsWith(List(EOF)), "token streams have to end in " + EOF)
+    parseLoop((Nil, input))._1 match {
+      case Accept(e) :: Nil => e
+      case Error(msg) :: context => throw new ParseException(msg)
+    }
   }
 
   @tailrec
   private def parseLoop(st: ParseState): ParseState = st._1 match {
-    case result: FinalItem :: _ => st
+    case (result: FinalItem) :: _ => st
     case _ => parseLoop(parseStep(st))
   }
 
@@ -61,9 +65,9 @@ object KeYmaeraXParser extends (String => Expression) {
   private def parseStep(st: ParseState): ParseState = {
     val (s, input@(la :: rest)) = st
     s match {
-      case Expr(t2: Term) :: (tok@Tok(OPERATOR(_))) :: Expr(t1: Term) :: _
-        if op(tok).isInstanceOf[BinaryOpSpec[Term]] =>
-        if (op(tok) < op(Tok(la)) || op(tok) <= op(Tok(la)) && op(tok).assoc == LeftAssociative)
+      case Expr(t2: Term) :: (tok@Tok(OPERATOR(_))) :: Expr(t1: Term) :: _ =>
+        assert(op(tok).isInstanceOf[BinaryOpSpec[Term]], "binary operator expected since others should have been reduced\nin " + s)
+        if (la == EOF || op(tok) < op(Tok(la)) || op(tok) <= op(Tok(la)) && op(tok).assoc == LeftAssociative)
           reduce(st, 3, op(tok).asInstanceOf[BinaryOpSpec[Term]].const(tok.tok.img, t1, t2))
         else if (op(tok) > op(Tok(la)) || op(tok) >= op(Tok(la)) && op(tok).assoc == RightAssociative)
           shift(st)
@@ -107,6 +111,7 @@ object KeYmaeraXParser extends (String => Expression) {
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
     val (s, (la :: rest)) = st
+    require(la != EOF, "Cannot shift past end of file")
     (Tok(la) :: s, rest)
   }
 
