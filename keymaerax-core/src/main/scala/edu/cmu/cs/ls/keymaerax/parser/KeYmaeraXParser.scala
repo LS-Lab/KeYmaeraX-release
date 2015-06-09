@@ -82,6 +82,19 @@ object KeYmaeraXParser extends (String => Expression) {
           else error(st)
         }
 
+      // could be unary operators
+      case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
+        assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
+        if (beginExpression(la)) shift(st) // binary operator
+        else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==COMPOSE RDIA? */)
+          reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
+        else error(st)
+
+      case (Token(tok:OPERATOR,_)) :: _ if op(st, tok).assoc==PrefixFormat =>
+        assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
+        if (beginExpression(la)) shift(st)
+        else error(st)
+
       // special cases
       case Token(PRIME,_) :: Expr(x1:Variable) :: r =>
         reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
@@ -93,7 +106,7 @@ object KeYmaeraXParser extends (String => Expression) {
         reduce(st, 4, OpSpec.sDifferentialFormula.const(PRIME.img, f1), r)
 
       case (tok@Token(op:OPERATOR,_)) :: Expr(t1) :: _ if op != PRIME =>
-        if (la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==LPAREN || la==LBRACK) shift(st) else error(st)
+        if (beginExpression(la)) shift(st) else error(st)
 
       // modalities
       case Expr(f1:Formula) :: Token(RBOX,_) :: Expr(p1:Program) :: Token(LBOX,_) :: r =>
@@ -104,11 +117,11 @@ object KeYmaeraXParser extends (String => Expression) {
 
       // parentheses
       case Token(RBOX,_) :: Expr(t1:Program) :: Token(LBOX,_) :: _ =>
-        if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) shift(st)
+        if (beginExpression(la)) shift(st)
         else error(st)
 
       case Token(RDIA,_) :: Expr(t1:Program) :: Token(LDIA,_) :: _ =>
-        if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) shift(st)
+        if (beginExpression(la)) shift(st)
         else error(st)
 
       case Token(RPAREN,_) :: Expr(t1) :: Token(LPAREN,_) :: r if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
@@ -136,7 +149,7 @@ object KeYmaeraXParser extends (String => Expression) {
         else error(st)
 
       case Token(LPAREN,_) :: _ =>
-        if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) shift(st)
+        if (beginExpression(la)) shift(st)
         else error(st)
 
       case Token(LBRACK,_) :: _ =>
@@ -168,7 +181,7 @@ object KeYmaeraXParser extends (String => Expression) {
         else error(st)
 
       case Nil =>
-        if (la==LPAREN || la==LBRACK || la==LBOX || la==LDIA || la.isInstanceOf[IDENT] || la.isInstanceOf[Number]) shift(st)
+        if (beginExpression(la)) shift(st)
         else error(st)
 
       case _ =>
@@ -176,10 +189,14 @@ object KeYmaeraXParser extends (String => Expression) {
     }
   }
 
+  private def beginExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
+    la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
+    la==MINUS
+
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
     val (s, (la :: rest)) = st
-    require(la != EOF, "Cannot shift past end of file")
+    require(la.tok != EOF, "Cannot shift past end of file")
     (la :: s, rest)
   }
 

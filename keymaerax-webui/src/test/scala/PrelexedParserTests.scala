@@ -41,6 +41,36 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Plus(Variable("x"), Minus(Variable("y"), Variable("z")))
   }
 
+  it should "parse x-y" in {
+    parser.parse(toStream(IDENT("x"), MINUS, IDENT("y"))) should be
+    Minus(Variable("x"), Variable("y"))
+  }
+
+  it should "parse x+-y" in {
+    parser.parse(toStream(IDENT("x"), PLUS, MINUS, IDENT("y"))) should be
+    Plus(Variable("x"), Neg(Variable("y")))
+  }
+
+  it should "parse -x+y" in {
+    parser.parse(toStream(MINUS, IDENT("x"), PLUS, IDENT("y"))) should be
+    Plus(Neg(Variable("x")), Variable("y"))
+  }
+
+  it should "parse -x-y" in {
+    parser.parse(toStream(MINUS, IDENT("x"), MINUS, IDENT("y"))) should be
+    Minus(Neg(Variable("x")), Variable("y"))
+  }
+
+  it should "parse x*-y" in {
+    parser.parse(toStream(IDENT("x"), STAR, MINUS, IDENT("y"))) should be
+    Times(Variable("x"), Neg(Variable("y")))
+  }
+
+  it should "parse -x*y" in {
+    parser.parse(toStream(MINUS, IDENT("x"), STAR, IDENT("y"))) should be
+    Times(Neg(Variable("x")), Variable("y"))
+  }
+
   it should "parse x-y+z" in {
     parser.parse(toStream(IDENT("x"), MINUS, IDENT("y"), PLUS, IDENT("z"))) should be
     Plus(Minus(Variable("x"), Variable("y")), Variable("z"))
