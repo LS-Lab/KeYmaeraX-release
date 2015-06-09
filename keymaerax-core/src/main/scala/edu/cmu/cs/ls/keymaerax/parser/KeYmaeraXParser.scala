@@ -91,8 +91,8 @@ object KeYmaeraXParser extends (String => Expression) {
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
         else error(st)
 
-      case (Token(tok:OPERATOR,_)) :: _ if op(st, tok).assoc==PrefixFormat =>
-        assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
+      case (Token(tok:OPERATOR,_)) :: _ if op(st, tok).assoc==PrefixFormat || tok==MINUS =>
+        assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]] || tok==MINUS, "only unary operators are currently allowed to have prefix format\nin " + s)
         if (beginExpression(la)) shift(st)
         else error(st)
 
