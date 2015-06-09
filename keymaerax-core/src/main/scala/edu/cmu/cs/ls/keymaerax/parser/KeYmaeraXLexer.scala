@@ -65,7 +65,7 @@ object FALSE   extends OPERATOR("false")
 object ASSIGNANY extends OPERATOR(":=*")
 object ASSIGN  extends OPERATOR(":=")
 object TEST    extends OPERATOR("?")
-object COMPOSE extends OPERATOR(";")
+object SEMI    extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++")
 
 // pseudos: could probably demote so that some are not OPERATOR

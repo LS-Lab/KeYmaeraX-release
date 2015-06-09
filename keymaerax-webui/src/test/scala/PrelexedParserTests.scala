@@ -121,8 +121,18 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse x:=y+1;++z:=0;" in {
-    parser.parse(toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), COMPOSE, CHOICE, IDENT("z"), ASSIGN, NUMBER("0"))) should be
+    if (OpSpec.statementSemicolon) parser.parse(toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, CHOICE, IDENT("z"), ASSIGN, NUMBER("0"), SEMI)) should be
     Choice(Assign(Variable("x"), Plus(Variable("y"),Number(1))), Assign(Variable("z"), Number(0)))
+  }
+
+  it should "parse x:=y+1;z:=0" in {
+    if (!OpSpec.statementSemicolon) parser.parse(toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, IDENT("z"), ASSIGN, NUMBER("0"))) should be
+    Compose(Assign(Variable("x"), Plus(Variable("y"),Number(1))), Assign(Variable("z"), Number(0)))
+  }
+
+  it should "parse x:=y+1;z:=0;" in {
+    if (OpSpec.statementSemicolon) parser.parse(toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, IDENT("z"), ASSIGN, NUMBER("0"), SEMI)) should be
+    Compose(Assign(Variable("x"), Plus(Variable("y"),Number(1))), Assign(Variable("z"), Number(0)))
   }
 
   it should "parse x-y'+z" in {
@@ -141,12 +151,12 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse [x:=y+1]x>=0" in {
-    parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    if (!OpSpec.statementSemicolon) parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
 
   it should "parse [x:=y+1;]x>=0" in {
-    parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), COMPOSE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
 

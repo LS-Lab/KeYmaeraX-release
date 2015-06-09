@@ -35,6 +35,9 @@ case class Error(msg: String) extends FinalItem
  * @author aplatzer
  */
 object KeYmaeraXParser extends (String => Expression) {
+  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
+  import OpSpec.op
+  import OpSpec.statementSemicolon
 
   def apply(input: String): Expression = parse(lexer(input))
 
@@ -74,10 +77,12 @@ object KeYmaeraXParser extends (String => Expression) {
         else {
           val optok = op(st, tok)
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
-          if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==COMPOSE RDIA? */
-            || optok < op(st, la)  || optok <= op(st, la)  && optok.assoc == LeftAssociative)
-            reduce(st, 3, optok.asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2), r)
-          else if (optok > op(st, la)  || optok >= op(st, la)  && optok.assoc == RightAssociative)
+          if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+            || optok < op(st, la)  || optok <= op(st, la)  && optok.assoc == LeftAssociative) {
+            val result = optok.asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2)
+            if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {if (la==SEMI) reduce(shift(st), 4, result, r) else error(st)}
+            else reduce(st, 3, result, r)
+          } else if (optok > op(st, la)  || optok >= op(st, la)  && optok.assoc == RightAssociative)
             shift(st)
           else error(st)
         }
@@ -86,7 +91,7 @@ object KeYmaeraXParser extends (String => Expression) {
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
         if (beginExpression(la)) shift(st) // binary operator
-        else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==COMPOSE RDIA? */
+        else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
           || termFollows(la))
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
         else error(st)
@@ -210,9 +215,13 @@ object KeYmaeraXParser extends (String => Expression) {
     }
   }
 
+  // stack helper
+
   /** Top terminal token from stack or EOF if the top item is not a token or the stack is empty. */
   private def stackToken(s: Stack): Terminal =
     if (s.length>0 && s.head.isInstanceOf[Token]) s.head.asInstanceOf[Token].tok else EOF
+
+  // follows lookaheads
 
   /** Is la the beginning of a new expression? */
   private def beginExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
@@ -223,6 +232,8 @@ object KeYmaeraXParser extends (String => Expression) {
 
   private def termFollows(la: Terminal): Boolean = la==PLUS || la==MINUS || la==STAR || la==SLASH || la==POWER ||
     la==EQ || la==NOTEQ || la==LESSEQ || la==LDIA || la==GREATEREQ || la==RDIA
+
+  // parser actions
 
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
@@ -264,6 +275,4 @@ object KeYmaeraXParser extends (String => Expression) {
     (s, rest)
   }
 
-  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
-  private[parser] def op(st: ParseState, terminal: Terminal): OpSpec = OpSpec.op(st, terminal)
 }

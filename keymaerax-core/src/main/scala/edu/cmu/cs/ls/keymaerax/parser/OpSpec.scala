@@ -104,6 +104,8 @@ object BinaryOpSpec {
  * @author aplatzer
  */
 object OpSpec {
+  /*private[parser]*/ val statementSemicolon = true
+
   /** no notation */
   private val none = PSEUDO
 
@@ -166,7 +168,7 @@ object OpSpec {
   val sAtomicODE    = BinaryOpSpec[Program](EQ,   200, AtomicBinaryFormat, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA, 210, RightAssociative, DifferentialProduct.apply _)
   val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, Loop.apply _)
-  val sCompose      = BinaryOpSpec(COMPOSE, 230, RightAssociative, Compose.apply _) //@todo compatibility mode for parser
+  val sCompose      = BinaryOpSpec(SEMI, 230, RightAssociative, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
   val sChoice       = BinaryOpSpec(CHOICE,  240, LeftAssociative, Choice.apply _)
 
