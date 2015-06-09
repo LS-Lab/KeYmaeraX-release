@@ -149,4 +149,30 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), COMPOSE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
+
+  // pathetic cases
+
+  "After lexing pathetic input the parser"  should "parse (((p())))&q()" in {
+    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AND, IDENT("q"), LPAREN, RPAREN)) should be
+    And(p0, q0)
+  }
+
+  it should "parse p()&(((q())))" in {
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AND, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
+    And(p0, q0)
+  }
+
+  it should "parse (((f())))+g()>=0" in {
+    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AND, IDENT("q"), LPAREN, RPAREN)) should be
+    GreaterEqual(Plus(f0, g0), Number(0))
+  }
+
+  it should "parse 0<=f()+(((q())))" in {
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AND, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
+    LessEqual(Number(0), Plus(f0, g0))
+  }
+
+  it should "refuse to default when trying to parse p()" in {
+    a [Exception] should be thrownBy parser.parse(toStream(IDENT("p"), LPAREN, RPAREN))
+  }
 }
