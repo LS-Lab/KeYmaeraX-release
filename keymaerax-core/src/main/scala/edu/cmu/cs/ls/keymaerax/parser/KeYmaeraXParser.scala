@@ -86,7 +86,8 @@ object KeYmaeraXParser extends (String => Expression) {
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
         if (beginExpression(la)) shift(st) // binary operator
-        else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==COMPOSE RDIA? */)
+        else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==COMPOSE RDIA? */
+          || termFollows(la))
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
         else error(st)
 
@@ -203,7 +204,7 @@ object KeYmaeraXParser extends (String => Expression) {
         else error(st)
 
       case _ =>
-        throw new AssertionError("Incomplete parser does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s.reverse.mkString(", "))
+        throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s.reverse.mkString(", "))
     }
   }
 
