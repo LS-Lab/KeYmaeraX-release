@@ -70,6 +70,10 @@ object KeYmaeraXParser extends (String => Expression) {
     //@note reverse notation of :: for match since s is a stack represented as a list with top at head
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      //
+      case Expr(p1: Program) :: Expr(p2: Program) :: r if statementSemicolon =>
+        reduce(st, 2, op(st, SEMI).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+
       // binary operators with precedence
       case Expr(t2) :: (Token(tok:OPERATOR,_)) :: Expr(t1) :: r =>
         assert(op(st, tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
@@ -90,15 +94,15 @@ object KeYmaeraXParser extends (String => Expression) {
       // unary operators
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
-        if (beginExpression(la)) shift(st) // binary operator
+        if (firstExpression(la)) shift(st) // binary operator
         else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
-          || termFollows(la))
+          || followsTerm(la))
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
         else error(st)
 
       case (Token(tok:OPERATOR,_)) :: _ if op(st, tok).assoc==PrefixFormat || tok==MINUS =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]] || tok==MINUS, "only unary operators are currently allowed to have prefix format\nin " + s)
-        if (beginExpression(la)) shift(st)
+        if (firstExpression(la)) shift(st)
         else error(st)
 
       // special cases
@@ -112,7 +116,7 @@ object KeYmaeraXParser extends (String => Expression) {
         reduce(st, 4, OpSpec.sDifferentialFormula.const(PRIME.img, f1), r)
 
       case (tok@Token(op:OPERATOR,_)) :: Expr(t1) :: _ if op != PRIME =>
-        if (beginExpression(la)) shift(st) else error(st)
+        if (firstExpression(la)) shift(st) else error(st)
 
       // modalities
       case Expr(f1:Formula) :: Token(RBOX,_) :: Expr(p1:Program) :: Token(LBOX,_) :: r =>
@@ -125,10 +129,10 @@ object KeYmaeraXParser extends (String => Expression) {
       case Token(RPAREN,_) :: Token(LPAREN,_) :: Token(IDENT(name),_) :: r =>
         //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
         //@todo reduce outer RPAREN, LPAREN further first
-        if (formulaFollows(la)) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
-        else if (termFollows(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
-        else if (formulaFollows(stackToken(r))) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
-        else if (termFollows(stackToken(r))) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        if (followsFormula(la)) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
+        else if (followsTerm(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        else if (followsFormula(stackToken(r))) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
+        else if (followsTerm(stackToken(r))) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
         else if (la==RPAREN || la==EOF) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
@@ -136,18 +140,18 @@ object KeYmaeraXParser extends (String => Expression) {
       case Token(RPAREN,_) :: Expr(t1:Term) :: Token(LPAREN,_) :: Token(IDENT(name),_) :: r =>
         //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
         //@todo reduce outer RPAREN, LPAREN further first
-        if (formulaFollows(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
-        else if (termFollows(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
+        if (followsFormula(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
+        else if (followsTerm(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
         else if (la==RPAREN || la==EOF) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
       // parentheses
       case Token(RBOX,_) :: Expr(t1:Program) :: Token(LBOX,_) :: _ =>
-        if (beginExpression(la)) shift(st)
+        if (firstExpression(la)) shift(st)
         else error(st)
 
       case Token(RDIA,_) :: Expr(t1:Program) :: Token(LDIA,_) :: _ =>
-        if (beginExpression(la)) shift(st)
+        if (firstExpression(la)) shift(st)
         else error(st)
 
       case Token(RPAREN,_) :: Expr(t1) :: Token(LPAREN,_) :: r if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
@@ -175,7 +179,7 @@ object KeYmaeraXParser extends (String => Expression) {
         else error(st)
 
       case Token(LPAREN,_) :: _ =>
-        if (beginExpression(la) || la==RPAREN) shift(st)
+        if (firstExpression(la) || la==RPAREN) shift(st)
         else error(st)
 
       case Token(LBRACK,_) :: _ =>
@@ -200,14 +204,16 @@ object KeYmaeraXParser extends (String => Expression) {
       case Expr(t) :: Nil =>
         if (la == EOF) accept(st, t)
         else if (la.isInstanceOf[OPERATOR]) shift(st)
+        else if (statementSemicolon && t.isInstanceOf[Program] && firstProgram(la)) shift(st)
         else error(st)
 
       case Expr(t) :: _ :: _ =>
         if (la.isInstanceOf[OPERATOR]) shift(st)
+        else if (statementSemicolon && t.isInstanceOf[Program] && firstProgram(la)) shift(st)
         else error(st)
 
       case Nil =>
-        if (beginExpression(la)) shift(st)
+        if (firstExpression(la)) shift(st)
         else error(st)
 
       case _ =>
@@ -224,13 +230,17 @@ object KeYmaeraXParser extends (String => Expression) {
   // follows lookaheads
 
   /** Is la the beginning of a new expression? */
-  private def beginExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
+  private def firstExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
     la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
     la==MINUS
 
-  private def formulaFollows(la: Terminal): Boolean = la==AND || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+  /** Is la the beginning of a new program? */
+  private def firstProgram(la: Terminal): Boolean = la==LBRACK || la==TEST ||
+    la.isInstanceOf[IDENT]
 
-  private def termFollows(la: Terminal): Boolean = la==PLUS || la==MINUS || la==STAR || la==SLASH || la==POWER ||
+  private def followsFormula(la: Terminal): Boolean = la==AND || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+
+  private def followsTerm(la: Terminal): Boolean = la==PLUS || la==MINUS || la==STAR || la==SLASH || la==POWER ||
     la==EQ || la==NOTEQ || la==LESSEQ || la==LDIA || la==GREATEREQ || la==RDIA
 
   // parser actions
