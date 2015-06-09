@@ -27,12 +27,12 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse (x*y)+z" in {
-    parser.parse(toStream(LPARENS, IDENT("x"), STAR, IDENT("y"), RPARENS, PLUS, IDENT("z"))) should be
+    parser.parse(toStream(LPAREN, IDENT("x"), STAR, IDENT("y"), RPAREN, PLUS, IDENT("z"))) should be
     Plus(Times(Variable("x"), Variable("y")), Variable("z"))
   }
 
   it should "parse x*(y+z)" in {
-    parser.parse(toStream(IDENT("x"), STAR, LPARENS, IDENT("y"), PLUS, IDENT("z"), RPARENS)) should be
+    parser.parse(toStream(IDENT("x"), STAR, LPAREN, IDENT("y"), PLUS, IDENT("z"), RPAREN)) should be
     Times(Variable("x"), Plus(Variable("y"), Variable("z")))
   }
 
@@ -47,8 +47,18 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse x-(y+z)" in {
-    parser.parse(toStream(IDENT("x"), MINUS, LPARENS, IDENT("y"), PLUS, IDENT("z"), RPARENS)) should be
+    parser.parse(toStream(IDENT("x"), MINUS, LPAREN, IDENT("y"), PLUS, IDENT("z"), RPAREN)) should be
     Minus(Variable("x"), Minus(Variable("y"), Variable("z")))
+  }
+
+  it should "parse x-y*z+a*b" in {
+    parser.parse(toStream(IDENT("x"), MINUS, IDENT("y"), STAR, IDENT("z"), PLUS, IDENT("a"), PLUS, IDENT("b"))) should be
+    Plus(Minus(Variable("x"), Times(Variable("y"), Variable("z"))), Times(Variable("a"), Variable("b")))
+  }
+
+  it should "parse x-y+z*a/b^c" in {
+    parser.parse(toStream(IDENT("x"), MINUS, IDENT("y"), PLUS, IDENT("z"), STAR, IDENT("a"), SLASH, IDENT("b"), POWER, IDENT("c"))) should be
+    Plus(Minus(Variable("x"), Variable("y")), Times(Variable("z"), Divide(Variable("a"), Power(Variable("b"), Variable("c")))))
   }
 
   ignore should "parse p&q|r" in {
@@ -64,5 +74,30 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   it should "parse x:=y+1;++z:=0;" in {
     parser.parse(toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), COMPOSE, CHOICE, IDENT("z"), ASSIGN, NUMBER("0"))) should be
     Choice(Assign(Variable("x"), Plus(Variable("y"),Number(1))), Assign(Variable("z"), Number(0)))
+  }
+
+  it should "parse x-y'+z" in {
+    parser.parse(toStream(IDENT("x"), MINUS, IDENT("y"), PRIME, PLUS, IDENT("z"))) should be
+    Plus(Minus(Variable("x"), DifferentialSymbol(Variable("y"))), Variable("z"))
+  }
+
+  it should "parse x-(y)'+z" in {
+    parser.parse(toStream(IDENT("x"), MINUS, LPAREN, IDENT("y"), RPAREN, PRIME, PLUS, IDENT("z"))) should be
+    Plus(Minus(Variable("x"), Differential(Variable("y"))), Variable("z"))
+  }
+
+  it should "parse (x-y)'+z" in {
+    parser.parse(toStream(IDENT("x"), MINUS, LPAREN, IDENT("y"), RPAREN, PRIME, PLUS, IDENT("z"))) should be
+    Plus(Differential(Minus(Variable("x"), Variable("y"))), Variable("z"))
+  }
+
+  it should "parse [x:=y+1]x>=0" in {
+    parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse [x:=y+1;]x>=0" in {
+    parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), COMPOSE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
 }

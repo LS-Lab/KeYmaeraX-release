@@ -12,11 +12,11 @@ import scala.collection.immutable._
  * @author aplatzer
  */
 sealed abstract class Terminal(val img: String) {
-  override def toString = "\"" + img + "\""
+  override def toString = getClass.getSimpleName + "\"" + img + "\""
 }
 abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
-  override def toString = img
+  override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
 case class IDENT(name: String) extends Terminal(name) {
   override def toString = "ID(\"" + name + "\")"
@@ -26,8 +26,8 @@ case class NUMBER(value: String) extends Terminal(value) {
 }
 object EOF extends Terminal("<EOF>")
 
-object LPARENS extends Terminal("(")
-object RPARENS extends Terminal(")")
+object LPAREN  extends Terminal("(")
+object RPAREN  extends Terminal(")")
 object LBRACK  extends Terminal("{")
 object RBRACK  extends Terminal("}")
 object LBOX    extends Terminal("[")
@@ -69,10 +69,10 @@ object COMPOSE extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++")
 
 // pseudos: could probably demote so that some are not OPERATOR
-object NOTHING extends OPERATOR("")
+object NOTHING extends Terminal("")
 object DOT     extends OPERATOR("•") //(".")
 object PLACE   extends OPERATOR("⎵") //("_")
-object PSEUDO  extends OPERATOR("<pseudo>")
+object PSEUDO  extends Terminal("<pseudo>")
 
 
 sealed abstract class Location
