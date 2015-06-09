@@ -82,7 +82,7 @@ object KeYmaeraXParser extends (String => Expression) {
           else error(st)
         }
 
-      // could be unary operators
+      // unary operators
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
         if (beginExpression(la)) shift(st) // binary operator
@@ -114,6 +114,24 @@ object KeYmaeraXParser extends (String => Expression) {
 
       case Expr(f1:Formula) :: Token(RDIA,_) :: Expr(p1:Program) :: Token(LDIA,_) :: r =>
         reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
+
+      // function/predicate symbols arity 0
+      case Token(RPAREN,_) :: Token(LPAREN,_) :: Token(IDENT(name),_) :: r =>
+        //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
+        //@todo reduce outer RPAREN, LPAREN further first
+        if (formulaFollows(la)) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
+        else if (termFollows(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        else if (la==RPAREN) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else error(st)
+
+      // function/predicate symbols arity>0
+      case Token(RPAREN,_) :: Expr(t1:Term) :: Token(LPAREN,_) :: Token(IDENT(name),_) :: r =>
+        //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
+        //@todo reduce outer RPAREN, LPAREN further first
+        if (formulaFollows(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
+        else if (termFollows(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
+        else if (la==RPAREN) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else error(st)
 
       // parentheses
       case Token(RBOX,_) :: Expr(t1:Program) :: Token(LBOX,_) :: _ =>
@@ -149,7 +167,7 @@ object KeYmaeraXParser extends (String => Expression) {
         else error(st)
 
       case Token(LPAREN,_) :: _ =>
-        if (beginExpression(la)) shift(st)
+        if (beginExpression(la) || la==RPAREN) shift(st)
         else error(st)
 
       case Token(LBRACK,_) :: _ =>
@@ -163,7 +181,7 @@ object KeYmaeraXParser extends (String => Expression) {
       // ordinary terminals
       case Token(IDENT(name),_) :: r =>
         /*if (la == RPAREN || la.isInstanceOf[IDENT]) error(st)
-        else*/ if (la==LPAREN) /*function/predicate*/??? else reduce(st, 1, Variable(name,None,Real), r)
+        else*/ if (la==LPAREN) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
 
       case Token(NUMBER(value),_) :: r =>
         /*if (la.isInstanceOf[NUMBER] || la.isInstanceOf[IDENT] || la == LPAREN) error(st)
@@ -189,9 +207,15 @@ object KeYmaeraXParser extends (String => Expression) {
     }
   }
 
+  /** Is la the beginning of a new expression? */
   private def beginExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
     la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
     la==MINUS
+
+  private def formulaFollows(la: Terminal): Boolean = la==AND || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+
+  private def termFollows(la: Terminal): Boolean = la==PLUS || la==MINUS || la==STAR || la==SLASH || la==POWER ||
+    la==EQ || la==NOTEQ || la==LESSEQ || la==LDIA || la==GREATEREQ || la==RDIA
 
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {

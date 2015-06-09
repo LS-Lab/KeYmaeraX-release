@@ -234,7 +234,7 @@ object OpSpec {
 
   /** If the stack starts with an expr item, so has been reduced already, it can't be a prefix operator */
   private def isNotPrefix(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
-    case Expr(_) :: _ => true
+    case _ :: _ :: Expr(_) :: _ => true
     case _ => false
   }
 

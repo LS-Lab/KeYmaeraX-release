@@ -10,6 +10,10 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser
 
+  val f0 = FuncOf(Function("f",None,Unit,Real),Nothing)
+  val g0 = FuncOf(Function("g",None,Unit,Real),Nothing)
+  val h0 = FuncOf(Function("h",None,Unit,Real),Nothing)
+
   val p0 = PredOf(Function("p",None,Unit,Bool),Nothing)
   val q0 = PredOf(Function("q",None,Unit,Bool),Nothing)
   val r0 = PredOf(Function("r",None,Unit,Bool),Nothing)
@@ -34,6 +38,11 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   it should "parse x*(y+z)" in {
     parser.parse(toStream(IDENT("x"), STAR, LPAREN, IDENT("y"), PLUS, IDENT("z"), RPAREN)) should be
     Times(Variable("x"), Plus(Variable("y"), Variable("z")))
+  }
+
+  it should "parse -x" in {
+    parser.parse(toStream(MINUS, IDENT("x"))) should be
+    Neg(Variable("x"))
   }
 
   it should "parse x+y-z" in {
@@ -91,9 +100,19 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Plus(Minus(Variable("x"), Variable("y")), Times(Variable("z"), Divide(Variable("a"), Power(Variable("b"), Variable("c")))))
   }
 
-  ignore should "parse p&q|r" in {
-    parser.parse(toStream(IDENT("p"), AND, IDENT("q"), OR, IDENT("r"))) should be
+  it should "parse p()&q()|r()" in {
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AND, IDENT("q"), LPAREN, RPAREN, OR, IDENT("r"), LPAREN, RPAREN)) should be
     Or(And(p0, q0), r0)
+  }
+
+  it should "parse f()>0&g()<=2|r()<1" in {
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AND, IDENT("g"), LPAREN, RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))) should be
+    Or(And(Greater(f0, Number(0)), LessEqual(g0, Number(2))), Less(h0, Number(1)))
+  }
+
+  it should "parse f()>0&g(x)<=2|r()<1" in {
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AND, IDENT("g"), LPAREN, IDENT("x"), RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))) should be
+    Or(And(Greater(f0, Number(0)), LessEqual(FuncOf(Function("g",None,Real,Real),Variable("x")), Number(2))), Less(h0, Number(1)))
   }
 
   it should "parse x>0 & y<1 | z>=2" in {
