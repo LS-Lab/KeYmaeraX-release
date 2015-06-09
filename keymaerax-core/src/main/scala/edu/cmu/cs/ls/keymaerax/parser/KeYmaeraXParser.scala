@@ -122,7 +122,9 @@ object KeYmaeraXParser extends (String => Expression) {
         //@todo reduce outer RPAREN, LPAREN further first
         if (formulaFollows(la)) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
         else if (termFollows(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
-        else if (la==RPAREN) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else if (formulaFollows(stackToken(r))) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
+        else if (termFollows(stackToken(r))) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        else if (la==RPAREN || la==EOF) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
       // function/predicate symbols arity>0
@@ -131,7 +133,7 @@ object KeYmaeraXParser extends (String => Expression) {
         //@todo reduce outer RPAREN, LPAREN further first
         if (formulaFollows(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
         else if (termFollows(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
-        else if (la==RPAREN) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else if (la==RPAREN || la==EOF) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
       // parentheses
@@ -207,6 +209,10 @@ object KeYmaeraXParser extends (String => Expression) {
         throw new AssertionError("Incomplete parser missing an item, so does not yet know how to handle case.\nFound: " + la + "\nAfter: " + s.reverse.mkString(", "))
     }
   }
+
+  /** Top terminal token from stack or EOF if the top item is not a token or the stack is empty. */
+  private def stackToken(s: Stack): Terminal =
+    if (s.length>0 && s.head.isInstanceOf[Token]) s.head.asInstanceOf[Token].tok else EOF
 
   /** Is la the beginning of a new expression? */
   private def beginExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
