@@ -62,14 +62,18 @@ object KeYmaeraXParser extends (String => Expression) {
     val (s, input@(Token(la,_) :: rest)) = st
     s match {
       case Expr(t2) :: (Token(tok:OPERATOR,_)) :: Expr(t1) :: _ =>
-        assert(op(tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
+        assert(op(st, tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
         if (la==LPARENS || la==LBRACK || la==RBRACK) error(st)
-        else if (la==EOF || la==RPARENS || la==RBRACK
-          || op(tok) < op(la) || op(tok) <= op(la) && op(tok).assoc == LeftAssociative)
-          reduce(st, 3, op(tok).asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2))
-        else if (op(tok) > op(la) || op(tok) >= op(la) && op(tok).assoc == RightAssociative)
-          shift(st)
-        else error(st)
+        else {
+          val optok = op(st, tok)
+          //@todo op(st, la) : Potential problem: st is not the right parser state for la
+          if (la == EOF || la == RPARENS || la == RBRACK
+            || optok < op(st, la)  || optok <= op(st, la)  && optok.assoc == LeftAssociative)
+            reduce(st, 3, optok.asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2))
+          else if (optok > op(st, la)  || optok >= op(st, la)  && optok.assoc == RightAssociative)
+            shift(st)
+          else error(st)
+        }
 
       case (tok@Token(_:OPERATOR,_)) :: Expr(t1) :: _ =>
         if (la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la == LPARENS) shift(st) else error(st)
@@ -148,5 +152,5 @@ object KeYmaeraXParser extends (String => Expression) {
   }
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
-  private[parser] def op(terminal: Terminal): OpSpec = OpSpec.op(terminal)
+  private[parser] def op(st: ParseState, terminal: Terminal): OpSpec = OpSpec.op(st, terminal)
 }

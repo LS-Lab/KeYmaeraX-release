@@ -49,6 +49,7 @@ object AND     extends OPERATOR("&")
 object OR      extends OPERATOR("|")
 object EQUIV   extends OPERATOR("<->")
 object IMPLY   extends OPERATOR("->")
+object REVIMPLY extends OPERATOR("<-")
 
 object FORALL  extends OPERATOR("\\forall")
 object EXISTS  extends OPERATOR("\\exists")
@@ -67,10 +68,10 @@ object TEST    extends OPERATOR("?")
 object COMPOSE extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++")
 
-// pseudos
+// pseudos: could probably demote so that some are not OPERATOR
 object NOTHING extends OPERATOR("")
-object DOT     extends OPERATOR("•")
-object PLACE   extends OPERATOR("_")
+object DOT     extends OPERATOR("•") //(".")
+object PLACE   extends OPERATOR("⎵") //("_")
 object PSEUDO  extends OPERATOR("<pseudo>")
 
 
