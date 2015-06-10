@@ -17,6 +17,8 @@ import scala.math._
   * Kinds of expressions (term, formula, program).
   */
 sealed abstract class Kind
+/** All expressions that are neither terms nor formulas nor programs nor functions are of kind ExpressionKind */
+object ExpressionKind extends Kind { override def toString = "Expression" }
 /** All terms are of kind TermKind */
 object TermKind extends Kind { override def toString = "Term" }
 /** All formulas are of kind FormulaKind */
