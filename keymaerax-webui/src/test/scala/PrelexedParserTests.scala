@@ -70,6 +70,21 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Minus(Neg(Variable("x")), Variable("y"))
   }
 
+  it should "parse 2*-y" in {
+    parser.parse(toStream(NUMBER("2"), STAR, MINUS, IDENT("y"))) should be
+    Times(Variable("x"), Neg(Variable("y")))
+  }
+
+  it should "parse -2*y" in {
+    parser.parse(toStream(NUMBER("-2"), STAR, IDENT("y"))) should be
+    Times(Number(-2), Variable("y"))
+  }
+
+  it should "parse -(2)*y" in {
+    parser.parse(toStream(MINUS, NUMBER("2"), STAR, IDENT("y"))) should be
+    Times(Neg(Number(2)), Variable("y"))
+  }
+
   it should "parse x*-y" in {
     parser.parse(toStream(IDENT("x"), STAR, MINUS, IDENT("y"))) should be
     Times(Variable("x"), Neg(Variable("y")))
@@ -77,7 +92,27 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse -x*y" in {
     parser.parse(toStream(MINUS, IDENT("x"), STAR, IDENT("y"))) should be
-    Times(Neg(Variable("x")), Variable("y"))
+    Neg(Times(Variable("x"), Variable("y")))
+  }
+
+  it should "parse x/-y" in {
+    parser.parse(toStream(IDENT("x"), SLASH, MINUS, IDENT("y"))) should be
+    Divide(Variable("x"), Neg(Variable("y")))
+  }
+
+  it should "parse -x/y" in {
+    parser.parse(toStream(MINUS, IDENT("x"), SLASH, IDENT("y"))) should be
+    Neg(Divide(Variable("x"), Variable("y")))
+  }
+
+  it should "parse x^-y" in {
+    parser.parse(toStream(IDENT("x"), POWER, MINUS, IDENT("y"))) should be
+    Power(Variable("x"), Neg(Variable("y")))
+  }
+
+  it should "parse -x^y" in {
+    parser.parse(toStream(MINUS, IDENT("x"), POWER, IDENT("y"))) should be
+    Neg(Power(Variable("x"), Variable("y")))
   }
 
   it should "parse x-y+z" in {
@@ -201,17 +236,21 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse (((f())))+g()>=0" in {
-    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AMP, IDENT("q"), LPAREN, RPAREN)) should be
+    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("f"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, PLUS, IDENT("g"), LPAREN, RPAREN)) should be
     GreaterEqual(Plus(f0, g0), Number(0))
   }
 
-  it should "parse 0<=f()+(((q())))" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AMP, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
+  it should "parse 0<=f()+(((g())))" in {
+    parser.parse(toStream(NUMBER("0"), LESSEQ, IDENT("f"), LPAREN, RPAREN, PLUS, LPAREN, LPAREN, LPAREN, IDENT("g"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
     LessEqual(Number(0), Plus(f0, g0))
   }
 
-  it should "refuse to default when trying to parse p()" in {
+  it should "refuse to default to formula/term when trying to parse p()" in {
     a [ParseException] should be thrownBy parser.parse(toStream(IDENT("p"), LPAREN, RPAREN))
+  }
+
+  it should "refuse to default to formula/program when trying to parse x'=5" in {
+    a [ParseException] should be thrownBy parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5")))
   }
 
   it should "parse f()>0" in {

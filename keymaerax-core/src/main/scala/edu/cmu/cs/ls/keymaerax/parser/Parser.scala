@@ -13,20 +13,9 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Term, Formula, Program}
  */
 trait Parser extends (String => Expression) {
 
-  def parseExpression(input: String) = apply(input)
+  def termParser: (String => Expression)
 
-  def parseTerm(input: String): Term = parseExpression(input) match {
-    case t: Term => t
-    case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e)
-  }
+  def formulaParser: (String => Expression)
 
-  def parseFormula(input: String): Formula = parseExpression(input) match {
-    case f: Formula => f
-    case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e)
-  }
-
-  def parseProgram(input: String): Program = parseExpression(input) match {
-    case p: Program => p
-    case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e)
-  }
+  def programParser: (String => Expression)
 }
