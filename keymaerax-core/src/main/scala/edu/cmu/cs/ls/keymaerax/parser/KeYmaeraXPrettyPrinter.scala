@@ -1,5 +1,5 @@
 /**
- * Differential Dynamic Logic pretty printer in KeYmaera X notation.
+ * Differential Dynamic Logic pretty printer in concrete KeYmaera X notation.
  * @author aplatzer
  * @see "Andre Platzer. A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981, 2015."
  */
@@ -19,6 +19,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  */
 object KeYmaeraXPrettyPrinter extends (Expression => String) {
   import OpSpec.op
+  import OpSpec.statementSemicolon
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr)
@@ -101,6 +102,6 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /** Formatting the atomic statement s */
-  private def statement(s: String): String = s + ";"
+  private def statement(s: String): String = if (statementSemicolon) s + ";" else s
 
 }
