@@ -40,20 +40,38 @@ object KeYmaeraXParser extends Parser {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
-  def apply(input: String): Expression = parse(lexer(input))
+  def apply(input: String): Expression = parse(ExpressionKind, lexer(input))
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
   /** Parser stack of parser items with top at head. */
   type Stack = List[Item]
 
-  sealed case class ParseState(stack: Stack, input: TokenStream)
+  /** Parser state consisting of expected syntactic kind to parse currently, the item stack, and remaining input. */
+  sealed case class ParseState(kind: Kind, stack: Stack, input: TokenStream)
 
   private def lexer(input: String): TokenStream = KeYmaeraXLexer(input)
 
-  /*private*/ def parse(input: TokenStream): Expression = {
+  override def parseTerm(input: String): Term = parse(TermKind, lexer(input)) match {
+    case t: Term => t
+    case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e)
+  }
+
+  override def parseFormula(input: String): Formula = parse(FormulaKind, lexer(input)) match {
+    case f: Formula => f
+    case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e)
+  }
+
+  override def parseProgram(input: String): Program = parse(ProgramKind, lexer(input)) match {
+    case p: Program => p
+    case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e)
+  }
+
+  /*private*/ def parse(input: TokenStream): Expression = parse(ExpressionKind, input)
+
+  /*private*/ def parse(kind: Kind, input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
-    parseLoop(ParseState(Nil, input)).stack match {
+    parseLoop(ParseState(kind, Nil, input)).stack match {
       case Accept(e) :: Nil => e
       case Error(msg) :: context => throw new ParseException(msg)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
@@ -68,7 +86,7 @@ object KeYmaeraXParser extends Parser {
 
 
   private def parseStep(st: ParseState): ParseState = {
-    val ParseState(s, input@(Token(la,_) :: rest)) = st
+    val ParseState(kind, s, input@(Token(la,_) :: rest)) = st
     //@note reverse notation of :: for match since s is a stack represented as a list with top at head
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
@@ -160,11 +178,11 @@ object KeYmaeraXParser extends Parser {
 
       // modalities
       case Token(RBOX,_) :: Expr(t1:Program) :: Token(LBOX,_) :: _ =>
-        if (firstFormula(la)) shift(st)
+        if (firstFormula(la)) switch(shift(st), FormulaKind)
         else error(st)
 
       case Token(RDIA,_) :: Expr(t1:Program) :: Token(LDIA,_) :: _ =>
-        if (firstFormula(la)) shift(st)
+        if (firstFormula(la)) switch(shift(st), FormulaKind)
         else error(st)
 
       // parentheses
@@ -198,11 +216,17 @@ object KeYmaeraXParser extends Parser {
         else error(st)
 
       case Token(LBRACE,_) :: _ =>
-        if (firstProgram(la) /*|| firstFormula(la) for predicationals*/) shift(st)
+        if (firstProgram(la) /*|| firstFormula(la) for predicationals*/) shift(switch(st, ProgramKind))
         else error(st)
 
-      case Token(LBOX|LDIA,_) :: _ =>
-        if (firstProgram(la)) shift(st)
+      case Token(LBOX,_) :: _ =>
+        if (firstProgram(la)) switch(shift(st), ProgramKind)
+        else error(st)
+
+      case Token(LDIA,_) :: _ =>
+        if (firstProgram(la)) if (!firstTerm(la)) switch(shift(st), ProgramKind) else shift(st)
+        else if (firstTerm(la)) shift(switch(st, TermKind))
+        //if (firstProgram(la) || firstTerm(la)) shift(st)
         else error(st)
 
       // ordinary terminals
@@ -290,13 +314,14 @@ object KeYmaeraXParser extends Parser {
     la==LPAREN || la==PRIME ||
     la==ASSIGN || la==ASSIGNANY
 
+
   // parser actions
 
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
-    val ParseState(s, (la :: rest)) = st
+    val ParseState(kind, s, (la :: rest)) = st
     require(la.tok != EOF, "Cannot shift past end of file")
-    ParseState(la :: s, rest)
+    ParseState(kind, la :: s, rest)
   }
 
   /**
@@ -304,8 +329,8 @@ object KeYmaeraXParser extends Parser {
    * @param remainder Redundant parameter, merely for correctness checking.
    */
   private def reduce(st: ParseState, consuming: Int, reduced: Item, remainder: Stack): ParseState = {
-    val ParseState(s, input) = st
-    ParseState(reduced :: s.drop(consuming), input)
+    val ParseState(kind, s, input) = st
+    ParseState(kind, reduced :: s.drop(consuming), input)
   } ensuring(r => r.stack.tail == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   private def reduce(st: ParseState, consuming: Int, reduced: Expression, remainder: Stack): ParseState = reduce(st, consuming, Expr(reduced), remainder)
@@ -315,31 +340,34 @@ object KeYmaeraXParser extends Parser {
    * @param remainder Redundant parameter, merely for correctness checking.
    */
   private def reduce(st: ParseState, consuming: Int, reduced: Stack, remainder: Stack): ParseState = {
-    val ParseState(s, input) = st
-    ParseState(reduced ++ s.drop(consuming), input)
+    val ParseState(kind, s, input) = st
+    ParseState(kind, reduced ++ s.drop(consuming), input)
   } ensuring(r => r.stack.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: Expression): ParseState = {
-    val ParseState(s, input) = st
+    val ParseState(kind, s, input) = st
     require(input == List(Token(EOF)), "Can only accept after all input has been read.\nRemaining input: " + input)
     require(s.length == 1, "Can only accept with one single result on the stack.\nRemaining stack: " + s.reverse.mkString(", "))
-    ParseState(Accept(result) :: Nil, input)
+    ParseState(kind, Accept(result) :: Nil, input)
   }
 
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
-    val ParseState(s, input@(la :: rest)) = st
+    val ParseState(kind, s, input@(la :: rest)) = st
     if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.reverse.mkString(", "))
-    ParseState(Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ")) :: s, input)
+    ParseState(kind, Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ")) :: s, input)
   }
 
   /** Drop next input token la from consideration without shifting it to the parser stack s. */
   private def drop(st: ParseState): ParseState = {
-    val ParseState(s, (la :: rest)) = st
+    val ParseState(kind, s, (la :: rest)) = st
     require(la.tok != EOF, "Cannot drop end of file")
-    ParseState(s, rest)
+    ParseState(kind, s, rest)
   }
+
+  /** Switch parser to parse the given kind from now on. */
+  private def switch(st: ParseState, kind: Kind): ParseState = ParseState(kind, st.stack, st.input)
 
 
   // operator precedence lookup
@@ -350,13 +378,13 @@ object KeYmaeraXParser extends Parser {
     case _ => false
   }
 
-  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
+  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = st.kind==FormulaKind || (st.stack match {
     case Expr(_:Formula) :: _ => true
     case _ => false
-  }
+  })
 
   // this is a terrible approximation
-  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
+  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = st.kind==ProgramKind || (st.stack match {
     case Expr(_:Program) :: _ => true
     case Token(LBRACE,_) :: _ => true
     case Token(LBOX,_) :: _ => true
@@ -364,7 +392,7 @@ object KeYmaeraXParser extends Parser {
     case _ :: Token(LBOX,_) :: _ => true
     case _ :: Expr(_:Program) :: _ => true
     case _ => false
-  }
+  })
 
   private def isVariable(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
     case Expr(_:Variable) :: _ => true
