@@ -269,7 +269,7 @@ object KeYmaeraXParser extends Parser {
     la==EQ || la==NOTEQ || la==GREATEREQ || la==RDIA || la==LESSEQ || la==LDIA || // from T in formulas
     followsFormula(la) ||
     (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
-    else la==SEMI || la==CHOICE || la==STAR || la==RBRACE ) // from T in programs
+    else la==SEMI || la==CHOICE || la==STAR || la==RBRACE || la==COMMA) // from T in programs
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
@@ -340,5 +340,104 @@ object KeYmaeraXParser extends Parser {
     require(la.tok != EOF, "Cannot drop end of file")
     (s, rest)
   }
+
+  // operator precedence lookup
+  /** If the stack starts with an expr item, so has been reduced already, it can't be a prefix operator */
+  private def isNotPrefix(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+    case _ :: Token(_:OPERATOR, _) :: Expr(_) :: _ => true
+    case _ => false
+  }
+
+  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+    case Expr(_:Formula) :: _ => true
+    case _ => false
+  }
+
+  // this is a terrible approximation
+  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+    case Expr(_:Program) :: _ => true
+    case Token(LBRACE,_) :: _ => true
+    case Token(LBOX,_) :: _ => true
+    case _ :: Token(LBRACE,_) :: _ => true
+    case _ :: Token(LBOX,_) :: _ => true
+    case _ :: Expr(_:Program) :: _ => true
+    case _ => false
+  }
+
+  private def isVariable(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+    case Expr(_:Variable) :: _ => true
+    case _ => false
+  }
+
+  private def isDifferentialSymbol(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+    case Expr(_:DifferentialSymbol) :: _ => true
+    case _ => false
+  }
+
+  import OpSpec._
+
+  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
+  private[parser] def op(st: KeYmaeraXParser.ParseState, tok: Terminal): OpSpec = {
+    tok match {
+      //@note could almost(!) replace by reflection to search through all OpSpec and check their images.
+      // terms
+      case sDotTerm.op => sDotTerm
+      //case sNothing.opcode => sNothing
+      case sAnything.op => sAnything
+      //case t: Variable => sVariable
+      //case t: Number => sNumber
+      //case t: FuncOf => sFuncOf
+      case sDifferential.op => if (isVariable(st)) sDifferential
+      else if (isFormula(st)) sDifferentialFormula
+      else sDifferential
+      //case t: Pair => sPair
+      case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
+      case sPower.op => sPower
+      case sTimes.op => if (isProgram(st)) sLoop else sTimes
+      case sDivide.op => sDivide
+      case sPlus.op => sPlus
+
+      // formulas
+      case sDotFormula.op => sDotFormula
+      case sTrue.op => sTrue
+      case sFalse.op => sFalse
+      //case f: PredOf => sPredOf
+      //case f: PredicationalOf => sPredicationalOf
+      //case f: DifferentialFormula => sDifferentialFormula
+      case sEqual.op => if (isProgram(st)) sAtomicODE else sEqual
+      case sNotEqual.op => sNotEqual
+      case sGreaterEqual.op => sGreaterEqual
+      case sGreater.op => sGreater
+      case sLessEqual.op => sLessEqual
+      case sLess.op => sLess
+      case sForall.op => sForall
+      case sExists.op => sExists
+      //      case f: Box => sBox
+      //      case f: Diamond => sDiamond
+      case sNot.op => sNot
+      case sAnd.op => sAnd
+      case sOr.op => sOr
+      case sImply.op => sImply
+      case sRevImply.op => sRevImply
+      case sEquiv.op => sEquiv
+
+      // programs
+      //case p: ProgramConst => sProgramConst
+      //case p: DifferentialProgramConst => sDifferentialProgramConst
+      case sAssign.op => if (isDifferentialSymbol(st)) sDiffAssign else sAssign
+      //      case p: AssignAny => sAssignAny
+      case sTest.op => sTest
+      //      case p: ODESystem => sODESystem
+      //      case p: AtomicODE => sAtomicODE
+      case sDifferentialProduct.op => sDifferentialProduct
+      //      case sLoop.op => sLoop
+      case sCompose.op => sCompose
+      case sChoice.op => sChoice
+
+      //case
+      case sEOF.op => sEOF
+    }
+  } ensuring(r => r.op == tok && r.opcode == tok.img, "OpSpec's opcode coincides with expected token " + tok)
+
 
 }
