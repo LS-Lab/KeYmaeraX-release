@@ -94,7 +94,7 @@ object KeYmaeraXParser extends Parser {
           if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
             || optok < op(st, la)  || optok <= op(st, la)  && optok.assoc == LeftAssociative) {
             val result = optok.asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2)
-            if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {if (la==SEMI) reduce(shift(st), 4, result, r) else error(st)}
+            if (statementSemicolon && result.isInstanceOf[AtomicProgram] && !(result.isInstanceOf[DifferentialProgram])) {if (la==SEMI) reduce(shift(st), 4, result, r) else error(st)}
             else reduce(st, 3, result, r)
           } else if (optok > op(st, la)  || optok >= op(st, la)  && optok.assoc == RightAssociative)
             shift(st)
@@ -104,7 +104,7 @@ object KeYmaeraXParser extends Parser {
       // unary operators
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
-        if (firstExpression(la)) shift(st) // binary operator
+        if (firstExpression(la)) shift(st) // binary operator //@todo be more specific depending on kind of t1
         else if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
           || followsTerm(la))
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
@@ -158,49 +158,51 @@ object KeYmaeraXParser extends Parser {
       case Token(RPAREN,_) :: (tok3@Token(RPAREN,_)) :: Expr(t1:Term) :: (tok2@Token(LPAREN,_)) :: (tok1@Token(IDENT(name),_)) :: Token(LPAREN,_) :: r =>
         reduce(st, 6, List(tok3, Expr(t1), tok2, tok1), r)
 
-      // parentheses
+      // modalities
       case Token(RBOX,_) :: Expr(t1:Program) :: Token(LBOX,_) :: _ =>
-        if (firstExpression(la)) shift(st)
+        if (firstFormula(la)) shift(st)
         else error(st)
 
       case Token(RDIA,_) :: Expr(t1:Program) :: Token(LDIA,_) :: _ =>
-        if (firstExpression(la)) shift(st)
+        if (firstFormula(la)) shift(st)
         else error(st)
 
+      // parentheses
       case Token(RPAREN,_) :: Expr(t1) :: Token(LPAREN,_) :: r if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
-        if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-        else if (la==PRIME) shift(st) else reduce(st, 3, t1, r)
+        /*if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
+        else*/ if (la==PRIME) shift(st) else reduce(st, 3, t1, r)
 
       case Token(RBRACE,_) :: Expr(t1:Program) :: Token(LBRACE,_) :: r =>
-        if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-        else reduce(st, 3, t1, r)
+        /*if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
+        else*/ reduce(st, 3, t1, r)
 
       case Expr(t1) :: Token(LPAREN,_) :: _ if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
-        if (la.isInstanceOf[OPERATOR] || la == RPAREN) shift(st)
+        if (followsExpression(t1, la)) shift(st)
         else error(st)
 
       case Expr(t1:Program) :: Token(LBRACE,_) :: _ =>
-        if (la.isInstanceOf[OPERATOR] || la == RBRACE) shift(st)
+        if (followsProgram(la)) shift(st)
         else error(st)
 
       case Expr(t1) :: Token(LBOX,_) :: _ =>
-        if (la.isInstanceOf[OPERATOR] || la == RBOX) shift(st)
+        if (t1.isInstanceOf[Program] && followsProgram(la)) shift(st)
+        else if (t1.isInstanceOf[Variable] && followsIdentifier(la)) shift(st)
         else error(st)
 
       case Expr(t1) :: Token(LDIA,_) :: _ =>
-        if (la.isInstanceOf[OPERATOR] || la == RDIA) shift(st)
+        if (followsExpression(t1, la)) shift(st)
         else error(st)
 
       case Token(LPAREN,_) :: _ =>
-        if (firstExpression(la) || la==RPAREN) shift(st)
+        if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN) shift(st)
         else error(st)
 
       case Token(LBRACE,_) :: _ =>
-        if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==TEST) shift(st)
+        if (firstProgram(la) /*|| firstFormula(la) for predicationals*/) shift(st)
         else error(st)
 
       case Token(LBOX|LDIA,_) :: _ =>
-        if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==TEST) shift(st)
+        if (firstProgram(la)) shift(st)
         else error(st)
 
       // ordinary terminals
@@ -213,16 +215,15 @@ object KeYmaeraXParser extends Parser {
         else*/ reduce(st, 1, Number(BigDecimal(value)), r)
 
 
+      // non-accepting expression
+      case Expr(t) :: _ :: _ =>
+        if (followsExpression(t, la)) shift(st)
+        else error(st)
+
       // small stack cases
       case Expr(t) :: Nil =>
         if (la == EOF) accept(st, t)
-        else if (la.isInstanceOf[OPERATOR]) shift(st)
-        else if (statementSemicolon && t.isInstanceOf[Program] && firstProgram(la)) shift(st)
-        else error(st)
-
-      case Expr(t) :: _ :: _ =>
-        if (la.isInstanceOf[OPERATOR]) shift(st)
-        else if (statementSemicolon && t.isInstanceOf[Program] && firstProgram(la)) shift(st)
+        else if (followsExpression(t, la)) shift(st)
         else error(st)
 
       case Nil =>
@@ -272,10 +273,22 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
-    (if (statementSemicolon) false else la==SEMI)  ||
+    (if (statementSemicolon) firstProgram(la) else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP     // from D in differential programs
 
+  /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
+  private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
+    case _: Variable => followsIdentifier(la)
+    case _: Term => followsTerm(la)
+    case _: Formula => followsFormula(la)
+    case _: Program => followsProgram(la)
+  }
+
+  /** Follow(Identifier): Can la follow after an identifier? */
+  private def followsIdentifier(la: Terminal): Boolean = followsTerm(la) ||
+    la==LPAREN || la==PRIME ||
+    la==ASSIGN || la==ASSIGNANY
 
   // parser actions
 

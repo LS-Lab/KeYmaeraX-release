@@ -14,7 +14,7 @@ Associativity is left-associative, i.e. x-y-z is (x-y)-z unless noted otherwise.
 
 ==Terms==
 
-    T ::= x | x' | num | ∙ | f(T) | -T | T^T | T*T | T/T | T+T | T-T | (T)' | (T)
+    T ::= x | x' | num | ∙ | f(T) | f() | -T | T^T | T*T | T/T | T+T | T-T | (T)' | (T) 
 
 with `T^T` right-associative, i.e. x^4^2 is x^(4^2)
 
@@ -28,9 +28,15 @@ with `->` right-associative and no precedence for `->` versus `<->`
 
 ==Programs==
 
-    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | ;
+    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P
 
 with the invisible `;` in P P right-associative
+
+This is to be contrasted with the abstract dL grammar in theory:
+
+    P ::= a | x:=T | x':=T | ?F | D&F | P* | P;P | P++P | (P)
+
+with the visible `;` in P;P right-associative
 
 ==Differential programs==
 
