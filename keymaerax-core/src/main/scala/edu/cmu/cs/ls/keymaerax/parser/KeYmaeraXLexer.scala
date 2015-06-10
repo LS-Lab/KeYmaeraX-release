@@ -28,8 +28,8 @@ object EOF extends Terminal("<EOF>")
 
 object LPAREN  extends Terminal("(")
 object RPAREN  extends Terminal(")")
-object LBRACK  extends Terminal("{")
-object RBRACK  extends Terminal("}")
+object LBRACE  extends Terminal("{")
+object RBRACE  extends Terminal("}")
 object LBOX    extends Terminal("[")
 object RBOX    extends Terminal("]")
 object LDIA    extends OPERATOR("<") //@todo really operator or better not?

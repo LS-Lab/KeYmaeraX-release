@@ -288,7 +288,7 @@ object OpSpec {
       //case f: PredOf => sPredOf
       //case f: PredicationalOf => sPredicationalOf
       //case f: DifferentialFormula => sDifferentialFormula
-      case sEqual.op => sEqual
+      case sEqual.op => if (isProgram(st)) sAtomicODE else sEqual
       case sNotEqual.op => sNotEqual
       case sGreaterEqual.op => sGreaterEqual
       case sGreater.op => sGreater
@@ -309,12 +309,11 @@ object OpSpec {
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
       case sAssign.op => if (isDifferentialSymbol(st)) sDiffAssign else sAssign
-//      case p: DiffAssign => sDiffAssign
 //      case p: AssignAny => sAssignAny
       case sTest.op => sTest
 //      case p: ODESystem => sODESystem
 //      case p: AtomicODE => sAtomicODE
-//      case p: DifferentialProduct => sDifferentialProduct
+      case sDifferentialProduct.op => sDifferentialProduct
 //      case sLoop.op => sLoop
       case sCompose.op => sCompose
       case sChoice.op => sChoice

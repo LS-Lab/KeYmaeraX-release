@@ -87,11 +87,11 @@ object KeYmaeraXParser extends Parser {
       // binary operators with precedence
       case Expr(t2) :: (Token(tok:OPERATOR,_)) :: Expr(t1) :: r =>
         assert(op(st, tok).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
-        if (la==LPAREN || la==LBRACK || la==RBRACK) error(st)
+        if (la==LPAREN || la==LBRACE) error(st)
         else {
           val optok = op(st, tok)
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
-          if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+          if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
             || optok < op(st, la)  || optok <= op(st, la)  && optok.assoc == LeftAssociative) {
             val result = optok.asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2)
             if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {if (la==SEMI) reduce(shift(st), 4, result, r) else error(st)}
@@ -105,7 +105,7 @@ object KeYmaeraXParser extends Parser {
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
         if (firstExpression(la)) shift(st) // binary operator
-        else if (la==EOF || la==RPAREN || la==RBRACK || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+        else if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
           || followsTerm(la))
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
         else error(st)
@@ -171,16 +171,16 @@ object KeYmaeraXParser extends Parser {
         if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
         else if (la==PRIME) shift(st) else reduce(st, 3, t1, r)
 
-      case Token(RBRACK,_) :: Expr(t1:Program) :: Token(LBRACK,_) :: r =>
-        if (la==LBRACK || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
+      case Token(RBRACE,_) :: Expr(t1:Program) :: Token(LBRACE,_) :: r =>
+        if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
         else reduce(st, 3, t1, r)
 
       case Expr(t1) :: Token(LPAREN,_) :: _ if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (la.isInstanceOf[OPERATOR] || la == RPAREN) shift(st)
         else error(st)
 
-      case Expr(t1:Program) :: Token(LBRACK,_) :: _ =>
-        if (la.isInstanceOf[OPERATOR] || la == RBRACK) shift(st)
+      case Expr(t1:Program) :: Token(LBRACE,_) :: _ =>
+        if (la.isInstanceOf[OPERATOR] || la == RBRACE) shift(st)
         else error(st)
 
       case Expr(t1) :: Token(LBOX,_) :: _ =>
@@ -195,12 +195,12 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la) || la==RPAREN) shift(st)
         else error(st)
 
-      case Token(LBRACK,_) :: _ =>
-        if (la==LBRACK || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==TEST) shift(st)
+      case Token(LBRACE,_) :: _ =>
+        if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==TEST) shift(st)
         else error(st)
 
       case Token(LBOX|LDIA,_) :: _ =>
-        if (la==LBRACK || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==TEST) shift(st)
+        if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] || la==TEST) shift(st)
         else error(st)
 
       // ordinary terminals
@@ -243,12 +243,12 @@ object KeYmaeraXParser extends Parser {
   // follows lookaheads
 
   /** Is la the beginning of a new expression? */
-  private def firstExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACK || la==LBOX || la==LDIA ||
+  private def firstExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACE || la==LBOX || la==LDIA ||
     la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
     la==MINUS
 
   /** Is la the beginning of a new program? */
-  private def firstProgram(la: Terminal): Boolean = la==LBRACK || la==TEST ||
+  private def firstProgram(la: Terminal): Boolean = la==LBRACE || la==TEST ||
     la.isInstanceOf[IDENT]
 
   private def followsFormula(la: Terminal): Boolean = la==AND || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
