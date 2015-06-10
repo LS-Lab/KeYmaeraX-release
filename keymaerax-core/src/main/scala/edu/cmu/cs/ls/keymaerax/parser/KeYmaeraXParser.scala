@@ -33,8 +33,9 @@ case class Error(msg: String) extends FinalItem
  * KeYmaera X parser.
  * Created by aplatzer on 6/7/15.
  * @author aplatzer
+ * @see doc/dL-grammar.md
  */
-object KeYmaeraXParser extends (String => Expression) {
+object KeYmaeraXParser extends Parser {
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
   import OpSpec.op
   import OpSpec.statementSemicolon
@@ -55,6 +56,7 @@ object KeYmaeraXParser extends (String => Expression) {
     parseLoop((Nil, input))._1 match {
       case Accept(e) :: Nil => e
       case Error(msg) :: context => throw new ParseException(msg)
+      case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
   }
 
@@ -70,6 +72,14 @@ object KeYmaeraXParser extends (String => Expression) {
     //@note reverse notation of :: for match since s is a stack represented as a list with top at head
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      // modalities
+      case Expr(f1:Formula) :: Token(RBOX,_) :: Expr(p1:Program) :: Token(LBOX,_) :: r =>
+        reduce(st, 4, OpSpec.sBox.const(PSEUDO.img, p1, f1), r)
+
+      case Expr(f1:Formula) :: Token(RDIA,_) :: Expr(p1:Program) :: Token(LDIA,_) :: r =>
+        reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
+
+
       //
       case Expr(p1: Program) :: Expr(p2: Program) :: r if statementSemicolon =>
         reduce(st, 2, op(st, SEMI).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
@@ -118,13 +128,6 @@ object KeYmaeraXParser extends (String => Expression) {
       case (tok@Token(op:OPERATOR,_)) :: Expr(t1) :: _ if op != PRIME =>
         if (firstExpression(la)) shift(st) else error(st)
 
-      // modalities
-      case Expr(f1:Formula) :: Token(RBOX,_) :: Expr(p1:Program) :: Token(LBOX,_) :: r =>
-        reduce(st, 4, OpSpec.sBox.const(PSEUDO.img, p1, f1), r)
-
-      case Expr(f1:Formula) :: Token(RDIA,_) :: Expr(p1:Program) :: Token(LDIA,_) :: r =>
-        reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
-
       // function/predicate symbols arity 0
       case Token(RPAREN,_) :: Token(LPAREN,_) :: Token(IDENT(name),_) :: r =>
         //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
@@ -133,7 +136,8 @@ object KeYmaeraXParser extends (String => Expression) {
         else if (followsTerm(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
         else if (followsFormula(stackToken(r))) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
         else if (followsTerm(stackToken(r))) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
-        else if (la==RPAREN || la==EOF) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else if (la==RPAREN) shift(st)
+        else if (la==EOF) throw new ParseException("Ambiguous input\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
       // function/predicate symbols arity>0
@@ -142,8 +146,17 @@ object KeYmaeraXParser extends (String => Expression) {
         //@todo reduce outer RPAREN, LPAREN further first
         if (followsFormula(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
         else if (followsTerm(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
-        else if (la==RPAREN || la==EOF) throw new AssertionError("Problematic case not implemented yet\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else if (la==RPAREN) shift(st)
+        else if (la==EOF) throw new ParseException("Ambiguous input\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
+
+      // function/predicate symbols arity 0 compactify superfluous brackets to enable disambiguation
+      case Token(RPAREN,_) :: (tok3@Token(RPAREN,_)) :: (tok2@Token(LPAREN,_)) :: (tok1@Token(IDENT(name),_)) :: Token(LPAREN,_) :: r =>
+        reduce(st, 5, List(tok3, tok2, tok1), r)
+
+      // function/predicate symbols arity>0 compactify superfluous brackets to enable disambiguation
+      case Token(RPAREN,_) :: (tok3@Token(RPAREN,_)) :: Expr(t1:Term) :: (tok2@Token(LPAREN,_)) :: (tok1@Token(IDENT(name),_)) :: Token(LPAREN,_) :: r =>
+        reduce(st, 6, List(tok3, Expr(t1), tok2, tok1), r)
 
       // parentheses
       case Token(RBOX,_) :: Expr(t1:Program) :: Token(LBOX,_) :: _ =>
@@ -263,6 +276,15 @@ object KeYmaeraXParser extends (String => Expression) {
 
   private def reduce(st: ParseState, consuming: Int, reduced: Expression, remainder: Stack): ParseState = reduce(st, consuming, Expr(reduced), remainder)
 
+  /**
+   * Reduce the parser stack by reducing the consuming many items from the stack to the reduced item.
+   * @param remainder Redundant parameter, merely for correctness checking.
+   */
+  private def reduce(st: ParseState, consuming: Int, reduced: Stack, remainder: Stack): ParseState = {
+    val (s, input) = st
+    (reduced ++ s.drop(consuming), input)
+  } ensuring(r => r._1.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
+
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: Expression): ParseState = {
     val (s, input) = st
@@ -281,7 +303,7 @@ object KeYmaeraXParser extends (String => Expression) {
   /** Drop next input token la from consideration without shifting it to the parser stack s. */
   private def drop(st: ParseState): ParseState = {
     val (s, (la :: rest)) = st
-    require(la != EOF, "Cannot drop end of file")
+    require(la.tok != EOF, "Cannot drop end of file")
     (s, rest)
   }
 

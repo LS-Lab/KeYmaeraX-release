@@ -183,7 +183,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "refuse to default when trying to parse p()" in {
-    a [Throwable] should be thrownBy parser.parse(toStream(IDENT("p"), LPAREN, RPAREN))
+    a [ParseException] should be thrownBy parser.parse(toStream(IDENT("p"), LPAREN, RPAREN))
   }
 
   it should "parse f()>0" in {
