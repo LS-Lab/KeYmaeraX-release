@@ -172,7 +172,7 @@ object OpSpec {
   //valp: Compose     => OpNotation("",    230, RightAssociative)
   val sChoice       = BinaryOpSpec(CHOICE,  240, LeftAssociative, Choice.apply _)
 
-  val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
+  val sEOF          = UnitOpSpec  (EOS, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
 
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */

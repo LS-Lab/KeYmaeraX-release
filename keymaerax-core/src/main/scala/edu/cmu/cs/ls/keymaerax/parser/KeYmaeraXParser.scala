@@ -17,7 +17,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
 case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
-  override def toString = tok.toString
+  override def toString = tok.toString + "@" + loc.toString
 }
 /** Expressions that are partially parsed on the parser item stack. */
 case class Expr(expr: Expression) extends Item {
@@ -52,7 +52,7 @@ object KeYmaeraXParser extends Parser {
   private def lexer(input: String): TokenStream = KeYmaeraXLexer(input)
 
   /*private*/ def parse(input: TokenStream): Expression = {
-    require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    require(input.endsWith(List(Token(EOS))), "token streams have to end in " + EOS)
     parseLoop((Nil, input))._1 match {
       case Accept(e) :: Nil => e
       case Error(msg) :: context => throw new ParseException(msg)
@@ -91,7 +91,7 @@ object KeYmaeraXParser extends Parser {
         else {
           val optok = op(st, tok)
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
-          if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+          if (la==EOS || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
             || optok < op(st, la)  || optok <= op(st, la)  && optok.assoc == LeftAssociative) {
             val result = optok.asInstanceOf[BinaryOpSpec[Expression]].const(tok.img, t1, t2)
             if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {if (la==SEMI) reduce(shift(st), 4, result, r) else error(st)}
@@ -105,7 +105,7 @@ object KeYmaeraXParser extends Parser {
       case Expr(t1) :: (Token(tok:OPERATOR,_)) :: r if op(st, tok).assoc==PrefixFormat =>
         assert(op(st, tok).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
         if (firstExpression(la)) shift(st) // binary operator
-        else if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+        else if (la==EOS || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
           || followsTerm(la))
           reduce(st, 2, op(st, tok).asInstanceOf[UnaryOpSpec[Expression]].const(tok.img, t1), r)
         else error(st)
@@ -137,7 +137,7 @@ object KeYmaeraXParser extends Parser {
         else if (followsFormula(stackToken(r))) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
         else if (followsTerm(stackToken(r))) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
         else if (la==RPAREN) shift(st)
-        else if (la==EOF) throw new ParseException("Ambiguous input\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else if (la==EOS) throw new ParseException("Ambiguous input\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
       // function/predicate symbols arity>0
@@ -147,7 +147,7 @@ object KeYmaeraXParser extends Parser {
         if (followsFormula(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
         else if (followsTerm(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
         else if (la==RPAREN) shift(st)
-        else if (la==EOF) throw new ParseException("Ambiguous input\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
+        else if (la==EOS) throw new ParseException("Ambiguous input\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ") + "\nRemaining input: " + rest)
         else error(st)
 
       // function/predicate symbols arity 0 compactify superfluous brackets to enable disambiguation
@@ -215,7 +215,7 @@ object KeYmaeraXParser extends Parser {
 
       // small stack cases
       case Expr(t) :: Nil =>
-        if (la == EOF) accept(st, t)
+        if (la == EOS) accept(st, t)
         else if (la.isInstanceOf[OPERATOR]) shift(st)
         else if (statementSemicolon && t.isInstanceOf[Program] && firstProgram(la)) shift(st)
         else error(st)
@@ -238,7 +238,7 @@ object KeYmaeraXParser extends Parser {
 
   /** Top terminal token from stack or EOF if the top item is not a token or the stack is empty. */
   private def stackToken(s: Stack): Terminal =
-    if (s.length>0 && s.head.isInstanceOf[Token]) s.head.asInstanceOf[Token].tok else EOF
+    if (s.length>0 && s.head.isInstanceOf[Token]) s.head.asInstanceOf[Token].tok else EOS
 
   // follows lookaheads
 
@@ -261,7 +261,7 @@ object KeYmaeraXParser extends Parser {
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
     val (s, (la :: rest)) = st
-    require(la.tok != EOF, "Cannot shift past end of file")
+    require(la.tok != EOS, "Cannot shift past end of file")
     (la :: s, rest)
   }
 
@@ -288,7 +288,7 @@ object KeYmaeraXParser extends Parser {
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: Expression): ParseState = {
     val (s, input) = st
-    require(input == List(Token(EOF)), "Can only accept after all input has been read.\nRemaining input: " + input)
+    require(input == List(Token(EOS)), "Can only accept after all input has been read.\nRemaining input: " + input)
     require(s.length == 1, "Can only accept with one single result on the stack.\nRemaining stack: " + s.reverse.mkString(", "))
     (Accept(result) :: Nil, input)
   }
@@ -303,7 +303,7 @@ object KeYmaeraXParser extends Parser {
   /** Drop next input token la from consideration without shifting it to the parser stack s. */
   private def drop(st: ParseState): ParseState = {
     val (s, (la :: rest)) = st
-    require(la.tok != EOF, "Cannot drop end of file")
+    require(la.tok != EOS, "Cannot drop end of file")
     (s, rest)
   }
 

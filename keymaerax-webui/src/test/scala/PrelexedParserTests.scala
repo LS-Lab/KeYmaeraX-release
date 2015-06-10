@@ -18,7 +18,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val q0 = PredOf(Function("q",None,Unit,Bool),Nothing)
   val r0 = PredOf(Function("r",None,Unit,Bool),Nothing)
 
-  def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
+  def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOS)
 
   "After lexing the parser" should "parse x+y*z" in {
     parser.parse(toStream(IDENT("x"), PLUS, IDENT("y"), STAR, IDENT("z"))) should be
