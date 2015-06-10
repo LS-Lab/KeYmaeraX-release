@@ -27,11 +27,19 @@ abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
 }
 case class IDENT(name: String) extends Terminal(name) {
   override def toString = "ID(\"" + name + "\")"
-  override def regexp = """[a-zA-Z0-9_]+""".r
+  override def regexp = IDENT.regexp
+}
+object IDENT {
+  def regexp = """([a-zA-Z][a-zA-Z0-9\_]*)""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
 }
 case class NUMBER(value: String) extends Terminal(value) {
   override def toString = "NUM(" + value + ")"
-  override def regexp = """[0-9]+""".r
+  override def regexp = NUMBER.regexp
+}
+object NUMBER {
+  def regexp = """([0-9]+\.?[0-9]*)""".r //@todo a bit weird but this gives the entire number in a single group.
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
 }
 
 /**
@@ -82,8 +90,12 @@ object EQUIV   extends OPERATOR("<->")
 object IMPLY   extends OPERATOR("->")
 object REVIMPLY extends OPERATOR("<-")
 
-object FORALL  extends OPERATOR("\\forall")
-object EXISTS  extends OPERATOR("\\exists")
+object FORALL  extends OPERATOR("\\forall") {
+  override def regexp = """\\forall""".r
+}
+object EXISTS  extends OPERATOR("\\exists") {
+  override def regexp = """\\exists""".r
+}
 
 object EQ      extends OPERATOR("=")
 object NOTEQ   extends OPERATOR("!=")
@@ -120,6 +132,8 @@ case class SuffixRegion(line: Int, column: Int) extends Location
 
 /**
  * Created by aplatzer on 6/8/15.
+ * @author aplatzer
+ * @author nfulton
  */
 object KeYmaeraXLexer extends (String => List[Token]) {
 
@@ -154,10 +168,11 @@ object KeYmaeraXLexer extends (String => List[Token]) {
     def consumeColumns(cols: Int, terminal: Terminal, location: Location) = {
       assert(cols > 0, "Cannot move cursor less than 1 columns.")
       Some((
-        s.tail,
+        s.substring(cols),
         Token(terminal, spanningRegion(loc, cols-1)),
-        suffixOf(loc, cols+2)))
+        suffixOf(loc, cols)))
     }
+
     def consumeTerminalLength(terminal: Terminal, location: Location) =
       consumeColumns(terminal.img.length, terminal, location)
 
@@ -184,8 +199,23 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case RBOX.startPattern(_*) => consumeTerminalLength(RBOX, loc)
       case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
-      
 
+      case COMMA.startPattern(_*) => consumeTerminalLength(COMMA, loc)
+
+      case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
+      case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
+      case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
+
+//      case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
+      case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
+      case IMPLY.startPattern(_*) => consumeTerminalLength(IMPLY, loc)
+      case REVIMPLY.startPattern(_*) => consumeTerminalLength(REVIMPLY, loc)
+
+      case FORALL.startPattern(_*) => consumeTerminalLength(FORALL, loc)
+      case EXISTS.startPattern(_*) => consumeTerminalLength(EXISTS, loc)
+
+      case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
+      case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
 
       case "" => None
       case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
@@ -193,6 +223,36 @@ object KeYmaeraXLexer extends (String => List[Token]) {
   }
 /*
 
+      object POWER   extends OPERATOR("^")
+      object STAR    extends OPERATOR("*")
+      object PLUS    extends OPERATOR("+")
+
+      object NOT     extends OPERATOR("!")
+      object AND     extends OPERATOR("&")
+      object OR     extends OPERATOR("!")
+
+object FORALL  extends OPERATOR("\\forall")
+object EXISTS  extends OPERATOR("\\exists")
+
+object EQ      extends OPERATOR("=")
+object NOTEQ   extends OPERATOR("!=")
+object GREATEREQ extends OPERATOR(">=")
+object LESSEQ  extends OPERATOR("<=")
+
+object TRUE    extends OPERATOR("true")
+object FALSE   extends OPERATOR("false")
+
+object ASSIGNANY extends OPERATOR(":=*")
+object ASSIGN  extends OPERATOR(":=")
+object TEST    extends OPERATOR("?")
+object SEMI    extends OPERATOR(";")
+object CHOICE  extends OPERATOR("++")
+
+// pseudos: could probably demote so that some are not OPERATOR
+object NOTHING extends Terminal("")
+object DOT     extends OPERATOR("•") //(".")
+object PLACE   extends OPERATOR("⎵") //("_")
+object PSEUDO  extends Terminal("<pseudo>")
  */
 
 
@@ -226,6 +286,12 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc + colOffset)
     }
 
+  /**
+   * The lexer.
+   * @param input The input to lex.
+   * @param inputLocation The position of the input (e.g., wrt a source file).
+   * @return A token stream.
+   */
   private def lex(input: String, inputLocation:Location): TokenStream =
     if(input.trim.length == 0) {
       List(Token(EOS, inputLocation match {
