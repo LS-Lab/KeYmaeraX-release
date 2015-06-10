@@ -47,13 +47,13 @@ object KeYmaeraXParser extends Parser {
   /** Parser stack of parser items with top at head. */
   type Stack = List[Item]
 
-  type ParseState = (Stack, TokenStream)
+  sealed case class ParseState(stack: Stack, input: TokenStream)
 
   private def lexer(input: String): TokenStream = KeYmaeraXLexer(input)
 
   /*private*/ def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
-    parseLoop((Nil, input))._1 match {
+    parseLoop(ParseState(Nil, input)).stack match {
       case Accept(e) :: Nil => e
       case Error(msg) :: context => throw new ParseException(msg)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
@@ -61,14 +61,14 @@ object KeYmaeraXParser extends Parser {
   }
 
   @tailrec
-  private def parseLoop(st: ParseState): ParseState = st._1 match {
+  private def parseLoop(st: ParseState): ParseState = st.stack match {
     case (result: FinalItem) :: _ => st
     case _ => parseLoop(parseStep(st))
   }
 
 
   private def parseStep(st: ParseState): ParseState = {
-    val (s, input@(Token(la,_) :: rest)) = st
+    val ParseState(s, input@(Token(la,_) :: rest)) = st
     //@note reverse notation of :: for match since s is a stack represented as a list with top at head
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
@@ -294,9 +294,9 @@ object KeYmaeraXParser extends Parser {
 
   /** Shift to put the next input token la on the parser stack s. */
   private def shift(st: ParseState): ParseState = {
-    val (s, (la :: rest)) = st
+    val ParseState(s, (la :: rest)) = st
     require(la.tok != EOF, "Cannot shift past end of file")
-    (la :: s, rest)
+    ParseState(la :: s, rest)
   }
 
   /**
@@ -304,9 +304,9 @@ object KeYmaeraXParser extends Parser {
    * @param remainder Redundant parameter, merely for correctness checking.
    */
   private def reduce(st: ParseState, consuming: Int, reduced: Item, remainder: Stack): ParseState = {
-    val (s, input) = st
-    (reduced :: s.drop(consuming), input)
-  } ensuring(r => r._1.tail == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
+    val ParseState(s, input) = st
+    ParseState(reduced :: s.drop(consuming), input)
+  } ensuring(r => r.stack.tail == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   private def reduce(st: ParseState, consuming: Int, reduced: Expression, remainder: Stack): ParseState = reduce(st, consuming, Expr(reduced), remainder)
 
@@ -315,46 +315,48 @@ object KeYmaeraXParser extends Parser {
    * @param remainder Redundant parameter, merely for correctness checking.
    */
   private def reduce(st: ParseState, consuming: Int, reduced: Stack, remainder: Stack): ParseState = {
-    val (s, input) = st
-    (reduced ++ s.drop(consuming), input)
-  } ensuring(r => r._1.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
+    val ParseState(s, input) = st
+    ParseState(reduced ++ s.drop(consuming), input)
+  } ensuring(r => r.stack.drop(reduced.length) == remainder, "Expected remainder stack after consuming the indicated number of stack items.")
 
   /** Accept the given parser result. */
   private def accept(st: ParseState, result: Expression): ParseState = {
-    val (s, input) = st
+    val ParseState(s, input) = st
     require(input == List(Token(EOF)), "Can only accept after all input has been read.\nRemaining input: " + input)
     require(s.length == 1, "Can only accept with one single result on the stack.\nRemaining stack: " + s.reverse.mkString(", "))
-    (Accept(result) :: Nil, input)
+    ParseState(Accept(result) :: Nil, input)
   }
 
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
-    val (s, input@(la :: rest)) = st
+    val ParseState(s, input@(la :: rest)) = st
     if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.reverse.mkString(", "))
-    (Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ")) :: s, input)
+    ParseState(Error("Unexpected token cannot be parsed\nFound: " + la + "\nAfter: " + s.reverse.mkString(", ")) :: s, input)
   }
 
   /** Drop next input token la from consideration without shifting it to the parser stack s. */
   private def drop(st: ParseState): ParseState = {
-    val (s, (la :: rest)) = st
+    val ParseState(s, (la :: rest)) = st
     require(la.tok != EOF, "Cannot drop end of file")
-    (s, rest)
+    ParseState(s, rest)
   }
 
+
   // operator precedence lookup
+
   /** If the stack starts with an expr item, so has been reduced already, it can't be a prefix operator */
-  private def isNotPrefix(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+  private def isNotPrefix(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
     case _ :: Token(_:OPERATOR, _) :: Expr(_) :: _ => true
     case _ => false
   }
 
-  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
     case Expr(_:Formula) :: _ => true
     case _ => false
   }
 
   // this is a terrible approximation
-  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
     case Expr(_:Program) :: _ => true
     case Token(LBRACE,_) :: _ => true
     case Token(LBOX,_) :: _ => true
@@ -364,12 +366,12 @@ object KeYmaeraXParser extends Parser {
     case _ => false
   }
 
-  private def isVariable(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+  private def isVariable(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
     case Expr(_:Variable) :: _ => true
     case _ => false
   }
 
-  private def isDifferentialSymbol(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
+  private def isDifferentialSymbol(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
     case Expr(_:DifferentialSymbol) :: _ => true
     case _ => false
   }
