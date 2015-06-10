@@ -171,6 +171,11 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
       AtomicODE(DifferentialSymbol(Variable("y")), Number(5))), True), GreaterEqual(Variable("x"), Number(0)))
   }
 
+  it should "parse [{x'=1&x>2}]x>=0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, NUMBER("1"), AMP, IDENT("x"), RDIA, NUMBER("2"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(1)), Greater(Variable("x"),Number(2))), GreaterEqual(Variable("x"), Number(0)))
+  }
+
   it should "parse [{x'=y+1&x>0}]x>=0" in {
     if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), AMP, IDENT("x"), RDIA, NUMBER("0"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"),Number(1))), Greater(Variable("x"),Number(0))), GreaterEqual(Variable("x"), Number(0)))

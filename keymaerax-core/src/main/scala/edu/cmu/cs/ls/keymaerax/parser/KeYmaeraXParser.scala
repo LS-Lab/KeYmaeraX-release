@@ -445,7 +445,7 @@ object KeYmaeraXParser extends Parser {
       //      case f: Box => sBox
       //      case f: Diamond => sDiamond
       case sNot.op => sNot
-      case sAnd.op => sAnd
+      case sAnd.op => if (isProgram(st)) sODESystem else sAnd
       case sOr.op => sOr
       case sImply.op => sImply
       case sRevImply.op => sRevImply

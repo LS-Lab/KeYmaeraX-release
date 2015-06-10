@@ -45,4 +45,5 @@ with the visible `;` in P;P right-associative
 with `D,D` right-associative
 
 
-Parser would-be challenge:  < ? p > q > p > 1
+Parser would-be challenges:  < ? p > q > p > 1
+Parser expression challenges: f()    x'=5
