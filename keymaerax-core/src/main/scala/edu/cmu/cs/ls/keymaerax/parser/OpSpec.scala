@@ -151,7 +151,7 @@ object OpSpec {
   val sBox          = BinaryOpSpec[Expression](PSEUDO, 98, MixedBinary, (_:String, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sDiamond      = BinaryOpSpec[Expression](PSEUDO, 99, MixedBinary, (_:String, a:Expression, f:Expression) => Diamond(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sNot          = UnaryOpSpec[Formula] (NOT,   100, PrefixFormat, Not.apply _)
-  val sAnd          = BinaryOpSpec[Formula](AND,   110, LeftAssociative, And.apply _)
+  val sAnd          = BinaryOpSpec[Formula](AMP,   110, LeftAssociative, And.apply _)
   val sOr           = BinaryOpSpec[Formula](OR,   120, LeftAssociative, Or.apply _)
   val sImply        = BinaryOpSpec[Formula](IMPLY,  130, RightAssociative, Imply.apply _)
   val sRevImply     = BinaryOpSpec[Formula](REVIMPLY, 130, LeftAssociative, (l:Formula, r:Formula) => Imply(r, l)) /* swaps arguments */

@@ -45,7 +45,7 @@ object PLUS    extends OPERATOR("+")
 object MINUS   extends OPERATOR("-")
 
 object NOT     extends OPERATOR("!")
-object AND     extends OPERATOR("&")
+object AMP     extends OPERATOR("&")
 object OR      extends OPERATOR("|")
 object EQUIV   extends OPERATOR("<->")
 object IMPLY   extends OPERATOR("->")

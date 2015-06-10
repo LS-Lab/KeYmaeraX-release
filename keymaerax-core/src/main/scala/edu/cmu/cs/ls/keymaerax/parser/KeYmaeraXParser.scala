@@ -240,21 +240,42 @@ object KeYmaeraXParser extends Parser {
   private def stackToken(s: Stack): Terminal =
     if (s.length>0 && s.head.isInstanceOf[Token]) s.head.asInstanceOf[Token].tok else EOF
 
-  // follows lookaheads
+  // FIRST lookahead sets
 
   /** Is la the beginning of a new expression? */
-  private def firstExpression(la: Terminal): Boolean = la==LPAREN || la==LBRACE || la==LBOX || la==LDIA ||
-    la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
-    la==MINUS
+  private def firstExpression(la: Terminal): Boolean = firstFormula(la) || firstProgram(la) /*|| firstTerm(la) */
 
-  /** Is la the beginning of a new program? */
-  private def firstProgram(la: Terminal): Boolean = la==LBRACE || la==TEST ||
-    la.isInstanceOf[IDENT]
+  /** First(Term): Is la the beginning of a new term? */
+  private def firstTerm(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER] ||
+    la==MINUS || la==LPAREN || la==DOT
 
-  private def followsFormula(la: Terminal): Boolean = la==AND || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+  /** First(Formula): Is la the beginning of a new formula? */
+  private def firstFormula(la: Terminal): Boolean = firstTerm(la) || /*la.isInstanceOf[IDENT] ||*/
+    la==NOT || la==FORALL || la==EXISTS || la==LBOX || la==LDIA /*|| la==LPAREN */
 
-  private def followsTerm(la: Terminal): Boolean = la==PLUS || la==MINUS || la==STAR || la==SLASH || la==POWER ||
-    la==EQ || la==NOTEQ || la==LESSEQ || la==LDIA || la==GREATEREQ || la==RDIA
+  /** First(Program): Is la the beginning of a new program? */
+  private def firstProgram(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la==TEST || la==LBRACE
+
+  // FOLLOW sets
+
+  /** Follow(Formula): Can la follow after a formula? */
+  private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+    /*@todo || la=RBRACE from predicationals */
+
+  /** Follow(Term): Can la follow after a term? */
+  private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
+    la==POWER || la==STAR || la==SLASH || la==PLUS || la==MINUS ||  // from T in terms
+    la==EQ || la==NOTEQ || la==GREATEREQ || la==RDIA || la==LESSEQ || la==LDIA || // from T in formulas
+    followsFormula(la) ||
+    (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
+    else la==SEMI || la==CHOICE || la==STAR || la==RBRACE ) // from T in programs
+
+  /** Follow(Program): Can la follow after a program? */
+  private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
+    (if (statementSemicolon) false else la==SEMI)  ||
+    la==RBOX || la==RDIA ||  // from P in programs
+    la==COMMA || la==AMP     // from D in differential programs
+
 
   // parser actions
 

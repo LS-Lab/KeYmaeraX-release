@@ -101,22 +101,22 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse p()&q()|r()" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AND, IDENT("q"), LPAREN, RPAREN, OR, IDENT("r"), LPAREN, RPAREN)) should be
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AMP, IDENT("q"), LPAREN, RPAREN, OR, IDENT("r"), LPAREN, RPAREN)) should be
     Or(And(p0, q0), r0)
   }
 
   it should "parse f()>0&g()<=2|r()<1" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AND, IDENT("g"), LPAREN, RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))) should be
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AMP, IDENT("g"), LPAREN, RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))) should be
     Or(And(Greater(f0, Number(0)), LessEqual(g0, Number(2))), Less(h0, Number(1)))
   }
 
   it should "parse f()>0&g(x)<=2|r()<1" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AND, IDENT("g"), LPAREN, IDENT("x"), RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))) should be
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AMP, IDENT("g"), LPAREN, IDENT("x"), RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))) should be
     Or(And(Greater(f0, Number(0)), LessEqual(FuncOf(Function("g",None,Real,Real),Variable("x")), Number(2))), Less(h0, Number(1)))
   }
 
   it should "parse x>0 & y<1 | z>=2" in {
-    parser.parse(toStream(IDENT("x"), RDIA, NUMBER("0"), AND, IDENT("y"), LDIA, NUMBER("1"), OR, IDENT("z"), GREATEREQ, NUMBER("2"))) should be
+    parser.parse(toStream(IDENT("x"), RDIA, NUMBER("0"), AMP, IDENT("y"), LDIA, NUMBER("1"), OR, IDENT("z"), GREATEREQ, NUMBER("2"))) should be
     Or(And(Greater(Variable("x"), Number(0)), Less(Variable("y"),Number(1))), GreaterEqual(Variable("z"), Number(2)))
   }
 
@@ -172,12 +172,12 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse [{x'=y+1&x>0}]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), AND, IDENT("x"), RDIA, NUMBER("0"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), AMP, IDENT("x"), RDIA, NUMBER("0"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"),Number(1))), Greater(Variable("x"),Number(0))), GreaterEqual(Variable("x"), Number(0)))
   }
 
   it should "parse [{x'=y+1,y'=5&x>y}]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), COMMA, IDENT("y"), PRIME, EQ, NUMBER("5"), AND, IDENT("x"), RDIA, IDENT("y"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), COMMA, IDENT("y"), PRIME, EQ, NUMBER("5"), AMP, IDENT("x"), RDIA, IDENT("y"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"),Number(1))),
       AtomicODE(DifferentialSymbol(Variable("y")), Number(5))), Greater(Variable("x"),Variable("y"))), GreaterEqual(Variable("x"), Number(0)))
   }
@@ -186,22 +186,22 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   // pathetic cases
 
   "After lexing pathetic input the parser"  should "parse (((p())))&q()" in {
-    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AND, IDENT("q"), LPAREN, RPAREN)) should be
+    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AMP, IDENT("q"), LPAREN, RPAREN)) should be
     And(p0, q0)
   }
 
   it should "parse p()&(((q())))" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AND, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AMP, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
     And(p0, q0)
   }
 
   it should "parse (((f())))+g()>=0" in {
-    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AND, IDENT("q"), LPAREN, RPAREN)) should be
+    parser.parse(toStream(LPAREN, LPAREN, LPAREN, IDENT("p"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN, AMP, IDENT("q"), LPAREN, RPAREN)) should be
     GreaterEqual(Plus(f0, g0), Number(0))
   }
 
   it should "parse 0<=f()+(((q())))" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AND, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN, AMP, LPAREN, LPAREN, LPAREN, IDENT("q"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
     LessEqual(Number(0), Plus(f0, g0))
   }
 
