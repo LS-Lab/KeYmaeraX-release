@@ -222,6 +222,65 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
       AtomicODE(DifferentialSymbol(Variable("y")), Number(5))), Greater(Variable("x"),Variable("y"))), GreaterEqual(Variable("x"), Number(0)))
   }
 
+  it should "parse [a]x>=0" in {
+    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(ProgramConst("a"), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse [a;]x>=0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(ProgramConst("a"), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse <a>x>0" in {
+    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
+    Diamond(ProgramConst("a"), Greater(Variable("x"), Number(0)))
+  }
+
+  it should "parse <a;>x>0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
+    Diamond(ProgramConst("a"), Greater(Variable("x"), Number(0)))
+  }
+
+  it should "parse [a;b]x>=0" in {
+    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse [a;b;]x>=0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"),SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse <a;b>x>0" in {
+    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
+    Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  }
+
+  it should "parse <a;b;>x>0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"),SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
+    Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  }
+
+  it should "parse [a++b]x>=0" in {
+    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), CHOICE, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse [a;++b;]x>=0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, CHOICE, IDENT("b"),SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  }
+
+  it should "parse <a++b>x>0" in {
+    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), CHOICE, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
+    Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  }
+
+  it should "parse <a;++b;>x>0" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, CHOICE, IDENT("b"),SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
+    Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  }
 
   // pathetic cases
 

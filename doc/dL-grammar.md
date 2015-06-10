@@ -20,7 +20,7 @@ with `T^T` right-associative, i.e. x^4^2 is x^(4^2)
 
 ==Formulas==
 
-    F ::= T=T | T!=T | T>=T | T>T | T<=T | T<T | p(T) | C{F} | ⎵
+    F ::= T=T | T!=T | T>=T | T>T | T<=T | T<T | p(T) | p() | C{F} | ⎵
         | !F | \forall x F | \exists x F | [P]F | <P>F 
         | F&F | F|F | F->F | F<->F | (F)' | (F)
 
