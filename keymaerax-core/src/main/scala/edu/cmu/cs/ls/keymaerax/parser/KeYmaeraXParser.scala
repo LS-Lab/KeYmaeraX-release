@@ -39,7 +39,7 @@ case class Error(msg: String, st: String) extends FinalItem
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
 
-  def apply(input: String): Expression = parse(ExpressionKind, lexer(input))
+  def apply(input: String): Expression = parse(KeYmaeraXLexer(input))
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -49,29 +49,25 @@ object KeYmaeraXParser extends Parser {
     override def toString: String = "ParseState(" + stack + "  :|:  " + input.mkString(", ") +")"
   }
 
-  private def lexer(input: String): TokenStream = KeYmaeraXLexer(input)
-
-  override def termParser: (String => Expression) =
-    input => parse(TermKind, lexer(input)) match {
+  override def termParser: (String => Term) =
+    input => apply(input) match {
       case t: Term => t
       case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, e.toString)
     }
 
-  override def formulaParser: (String => Expression) =
-    input => parse(FormulaKind, lexer(input)) match {
+  override def formulaParser: (String => Formula) =
+    input => elaborate(OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
       case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, e.toString)
     }
 
-  override def programParser: (String => Expression) =
-    input => parse(ProgramKind, lexer(input)) match {
+  override def programParser: (String => Program) =
+    input => elaborate(OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
       case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, e.toString)
     }
 
-  /*private*/ def parse(input: TokenStream): Expression = parse(ExpressionKind, input)
-
-  /*private*/ def parse(kind: Kind, input: TokenStream): Expression = {
+  /*private*/ def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
@@ -125,11 +121,13 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
 
       // special case for elaboration of modalities
-      case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1) if la==EOF =>
+      case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
+        if la==EOF || la==RPAREN =>
         reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, e1), r)
 
       // special case for elaboration of modalities
-      case r :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_)) :+ Expr(e1) if la==EOF =>
+      case r :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_)) :+ Expr(e1)
+        if la==EOF || la==RPAREN =>
         reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
 
 

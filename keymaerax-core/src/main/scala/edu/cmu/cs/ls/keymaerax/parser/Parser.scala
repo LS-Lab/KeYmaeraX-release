@@ -13,9 +13,9 @@ import edu.cmu.cs.ls.keymaerax.core.{Expression, Term, Formula, Program}
  */
 trait Parser extends (String => Expression) {
 
-  def termParser: (String => Expression)
+  def termParser: (String => Term)
 
-  def formulaParser: (String => Expression)
+  def formulaParser: (String => Formula)
 
-  def programParser: (String => Expression)
+  def programParser: (String => Program)
 }
