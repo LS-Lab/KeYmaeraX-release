@@ -117,20 +117,20 @@ object KeYmaeraXParser extends Parser {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
-      // modal formulas
+      // modal formulas bind tight
       case r :+ Token(LBOX,_) :+ Expr(p1:Program) :+ Token(RBOX,_) :+ Expr(f1:Formula) =>
         reduce(st, 4, OpSpec.sBox.const(PSEUDO.img, p1, f1), r)
 
       case r :+ Token(LDIA,_) :+ Expr(p1:Program) :+ Token(RDIA,_) :+ Expr(f1:Formula) =>
         reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
 
-//      // special case for elaboration of a; for modalities
-//      case r :+ (tok1@Token(LBOX,_)) :+ Expr(x1:Variable) :+ (tok3@Token(RBOX,_)) =>
-//        reduce(st, 3, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sProgramConst, ProgramKind, x1)), r)
-//
-//      // special case for elaboration of a; for modalities
-//      case r :+ (tok1@Token(LDIA,_)) :+ Expr(x1:Variable) :+ (tok3@Token(RDIA,_)) =>
-//        reduce(st, 3, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sProgramConst, ProgramKind, x1)), r)
+      // special case for elaboration of modalities
+      case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1) if la==EOF =>
+        reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, e1), r)
+
+      // special case for elaboration of modalities
+      case r :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_)) :+ Expr(e1) if la==EOF =>
+        reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
 
 
       // special case for statementSemicolon
@@ -138,7 +138,7 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
 
       // binary operators with precedence
-      case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) =>
+      case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) =>
         assert(op(st, tok, List(t1.kind,t2.kind)).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
         if (la==LPAREN || la==LBRACE) error(st)
         else {
@@ -296,13 +296,13 @@ object KeYmaeraXParser extends Parser {
 
       // non-accepting expression
       case _ :+ _ :+ Expr(t) =>
-        if (followsExpression(t, la)) shift(st)
+        if (followsExpression(t, la) && la!=EOF) shift(st)
         else error(st)
 
       // small stack cases
       case Bottom :+ Expr(t) =>
         if (la == EOF) accept(st, t)
-        else if (followsExpression(t, la)) shift(st)
+        else if (followsExpression(t, la) && la!=EOF) shift(st)
         else error(st)
 
       case Bottom =>
@@ -467,7 +467,7 @@ object KeYmaeraXParser extends Parser {
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
   private[parser] def op(st: KeYmaeraXParser.ParseState, tok: Terminal, kinds: List[Kind]): OpSpec = {
     require(!kinds.isEmpty)
-    println("\top(" + tok +" " + kinds)
+   // println("\top(" + tok +" " + kinds)
     (tok: @switch) match {
       //@note could almost(!) replace by reflection to search through all OpSpec and check their images.
       // terms

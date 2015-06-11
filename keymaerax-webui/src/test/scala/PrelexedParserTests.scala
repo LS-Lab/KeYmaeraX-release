@@ -18,6 +18,10 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val q0 = PredOf(Function("q",None,Unit,Bool),Nothing)
   val r0 = PredOf(Function("r",None,Unit,Bool),Nothing)
 
+  val p = Function("p",None,Real,Bool)
+  val q = Function("q",None,Real,Bool)
+  val r = Function("r",None,Real,Bool)
+
   def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
 
   "After lexing the parser" should "parse x+y*z" in {
@@ -407,6 +411,21 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   it/*failing*/ should "parse <a;b>x>0" in {
     if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
     Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  }
+
+  it should "parse [a;]p(x)" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, RBOX, IDENT("p"), LPAREN, IDENT("x"), RPAREN)) should be
+    Box(ProgramConst("a"), PredOf(p, Variable("x")))
+  }
+
+  it should "parse [a;b;]p(x)" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"),SEMI, RBOX, IDENT("p"), LPAREN, IDENT("x"), RPAREN)) should be
+    Box(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
+  }
+
+  it should "parse <a;b;>p(x)" in {
+    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"),SEMI, RDIA, IDENT("p"), LPAREN, IDENT("x"), RPAREN)) should be
+    Diamond(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
   }
 
   it/*failing*/ should "parse <a;b;>x>0" in {
