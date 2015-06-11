@@ -39,14 +39,14 @@ case class NUMBER(value: String) extends Terminal(value) {
 }
 object NUMBER {
   //A bit weird, but this gives the entire number in a single group.
-  def regexp = """([0-9]+\.?[0-9]*)""".r
+  def regexp = """(-?[0-9]+\.?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
 }
 
 /**
  * End Of Stream
  */
-object EOF extends Terminal("<EOS>") {
+object EOF extends Terminal("<EOF>") {
   override def regexp = "$^".r //none.
 }
 
@@ -161,7 +161,11 @@ object KeYmaeraXLexer extends (String => List[Token]) {
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
 
-  def apply(input: String) = lex(input, SuffixRegion(1,1))
+  def apply(input: String) = {
+    val output = lex(input, SuffixRegion(1,1))
+    require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
+    output
+  } //ensuring(_.last.tok.equals(EOF), "Lexer should never return a list that does not end with EOF.")
 
   /**
    * Finds the next token in a string.
@@ -234,7 +238,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
-      case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
       case POWER.startPattern(_*) => consumeTerminalLength(POWER, loc)
       case STAR.startPattern(_*) => consumeTerminalLength(STAR, loc)
       case PLUS.startPattern(_*) => consumeTerminalLength(PLUS, loc)
@@ -270,6 +273,8 @@ object KeYmaeraXLexer extends (String => List[Token]) {
 
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
+      //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
+      case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
 
       case "" => None
       case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
@@ -313,11 +318,7 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    */
   private def lex(input: String, inputLocation:Location): TokenStream =
     if(input.trim.length == 0) {
-      List(Token(EOF, inputLocation match {
-        case UnknownLocation =>  UnknownLocation
-        case x:Region => x
-        case SuffixRegion(sl,sc) => Region(sl,sc,sl,sc)
-      }))
+      List(Token(EOF))
     }
     else {
       findNextToken(input, inputLocation) match {

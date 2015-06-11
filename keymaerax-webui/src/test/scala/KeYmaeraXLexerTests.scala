@@ -2,6 +2,9 @@ import edu.cmu.cs.ls.keymaerax.parser.{RPAREN, KeYmaeraXLexer, Region, LPAREN, E
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
+ * These are white space processing tests and location munging tests. All tests that don't care
+ * about white space or location munging and that produce a parsable stream should be added
+ * to PrelexedParserTests instead.
  * Created by nfulton on 6/10/15.
  */
 class KeYmaeraXLexerTests extends FlatSpec with Matchers {
