@@ -25,6 +25,8 @@ object TermKind extends Kind { override def toString = "Term" }
 object FormulaKind extends Kind { override def toString = "Formula" }
 /** All programs are of kind ProgramKind */
 object ProgramKind extends Kind { override def toString = "Program" }
+/** All differential programs are of kind DifferentialProgramKind */
+object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def toString = "DifferentialProgram" }
 /** Function/predicate symbols that are not themselves terms or formulas are of kind FunctionKind */
 object FunctionKind extends Kind { override def toString = "Function" }
 
@@ -368,7 +370,7 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
   * @author aplatzer
   */
 sealed trait Program extends Expression {
-  final def kind: Kind = ProgramKind
+  /*final*/ def kind: Kind = ProgramKind
   final def sort: Sort = Trafo
 }
 
@@ -417,7 +419,9 @@ case class Loop(child: Program) extends UnaryCompositeProgram
 //case class Dual(child: Program) extends CompositeProgram
 
 /** differential programs */
-sealed trait DifferentialProgram extends Program
+sealed trait DifferentialProgram extends Program {
+  override def kind: Kind = DifferentialProgramKind
+}
 /** Atomic differential programs */
 sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
 /** Differential equation system ode with given evolution domain constraint */
