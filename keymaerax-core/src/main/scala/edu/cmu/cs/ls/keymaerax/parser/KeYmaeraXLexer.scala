@@ -77,15 +77,25 @@ object RDIA    extends OPERATOR(">") {
 object COMMA   extends OPERATOR(",")
 
 object PRIME   extends OPERATOR("'")
-object POWER   extends OPERATOR("^")
-object STAR    extends OPERATOR("*")
+object POWER   extends OPERATOR("^") {
+  override def regexp = """\^""".r
+}
+object STAR    extends OPERATOR("*") {
+  override def regexp = """\*""".r
+}
 object SLASH   extends OPERATOR("/")
-object PLUS    extends OPERATOR("+")
+object PLUS    extends OPERATOR("+") {
+  override def regexp = """\+""".r
+}
 object MINUS   extends OPERATOR("-")
 
-object NOT     extends OPERATOR("!")
+object NOT     extends OPERATOR("!") {
+  override def regexp = """\!""".r
+}
 object AND     extends OPERATOR("&")
-object OR      extends OPERATOR("|")
+object OR      extends OPERATOR("|") {
+  override def regexp = """\|""".r
+}
 object EQUIV   extends OPERATOR("<->")
 object IMPLY   extends OPERATOR("->")
 object REVIMPLY extends OPERATOR("<-")
@@ -98,18 +108,26 @@ object EXISTS  extends OPERATOR("\\exists") {
 }
 
 object EQ      extends OPERATOR("=")
-object NOTEQ   extends OPERATOR("!=")
+object NOTEQ   extends OPERATOR("!=") {
+  override def regexp = """\!=""".r
+}
 object GREATEREQ extends OPERATOR(">=")
 object LESSEQ  extends OPERATOR("<=")
 
 object TRUE    extends OPERATOR("true")
 object FALSE   extends OPERATOR("false")
 
-object ASSIGNANY extends OPERATOR(":=*")
+object ASSIGNANY extends OPERATOR(":=*") {
+  override def regexp = """:=\*""".r
+}
 object ASSIGN  extends OPERATOR(":=")
-object TEST    extends OPERATOR("?")
+object TEST    extends OPERATOR("?") {
+  override def regexp = """;""".r
+}
 object SEMI    extends OPERATOR(";")
-object CHOICE  extends OPERATOR("++")
+object CHOICE  extends OPERATOR("++") {
+  override def regexp = """++""".r
+}
 
 // pseudos: could probably demote so that some are not OPERATOR
 object NOTHING extends Terminal("")
@@ -117,12 +135,14 @@ object DOT     extends OPERATOR("•") //(".")
 object PLACE   extends OPERATOR("⎵") //("_")
 object PSEUDO  extends Terminal("<pseudo>")
 
-
 sealed abstract class Location
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
 }
-case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location
+case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
+  assert(line <= endLine || (line == endLine && column <= endColumn),
+    "A region cannot start after it ends.")
+}
 /**
  * Like a region, but extends until the end of the input.
  * @param line The starting line.
@@ -132,6 +152,7 @@ case class SuffixRegion(line: Int, column: Int) extends Location
 
 /**
  * Created by aplatzer on 6/8/15.
+ * @todo NOTHING.
  * @author aplatzer
  * @author nfulton
  */
@@ -156,7 +177,10 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    */
   private def findNextToken(s: String, loc: Location): Option[(String, Token, Location)] = {
     val whitespace = """^(\ +).*""".r
-    val newline = """(?s)(^\n).*""".r
+    val newline = """(?s)(^\n).*""".r //@todo use something more portable.
+    val comment = """(?s)(/\*[\s\S]*\*/)""".r
+
+    val identAndNothing = ("^" + IDENT.regexp.pattern.pattern + "\(\).*").r
 
     /**
      *
@@ -177,7 +201,7 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       consumeColumns(terminal.img.length, terminal, location)
 
     s match {
-      //update location if we encounter whitespace.
+      //update location if we encounter whitespace/comments.
       case whitespace(spaces) => {
         findNextToken(s.substring(spaces.length), loc match {
           case UnknownLocation => UnknownLocation
@@ -190,6 +214,15 @@ object KeYmaeraXLexer extends (String => List[Token]) {
           case UnknownLocation     => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
+        })
+      }
+      case comment(comment) => {
+        val lastLineCol  = s.lines.toList.last.length //column of last line.
+        val lineCount    = s.lines.length
+        findNextToken(s.substring(comment.length), loc match {
+          case UnknownLocation => UnknownLocation
+          case Region(sl, sc, el, ec) => Region(sl + lineCount, sc + lastLineCol, el, ec)
+          case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+comment.length)
         })
       }
 
@@ -205,14 +238,47 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
+      case POWER.startPattern(_*) => consumeTerminalLength(POWER, loc)
+      case STAR.startPattern(_*) => consumeTerminalLength(STAR, loc)
+      case PLUS.startPattern(_*) => consumeTerminalLength(PLUS, loc)
 
-//      case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
+      case AND.startPattern(_*) => consumeTerminalLength(AND, loc)
+      case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
+      case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
       case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
       case IMPLY.startPattern(_*) => consumeTerminalLength(IMPLY, loc)
       case REVIMPLY.startPattern(_*) => consumeTerminalLength(REVIMPLY, loc)
 
       case FORALL.startPattern(_*) => consumeTerminalLength(FORALL, loc)
       case EXISTS.startPattern(_*) => consumeTerminalLength(EXISTS, loc)
+
+      case EQ.startPattern(_*) => consumeTerminalLength(EQ, loc)
+      case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
+      case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
+      case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
+
+      case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
+      case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
+
+      case ASSIGNANY.startPattern(_*) => consumeTerminalLength(ASSIGNANY, loc)
+      case ASSIGN.startPattern(_*) => consumeTerminalLength(ASSIGN, loc)
+      case TEST.startPattern(_*) => consumeTerminalLength(TEST, loc)
+      case SEMI.startPattern(_*) => consumeTerminalLength(SEMI, loc)
+      case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
+
+
+      case DOT.startPattern(_*) => consumeTerminalLength(DOT, loc)
+      case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
+      case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
+
+      //Note: NOTHING can only occur as in p(NOTHING), so we make NOTHING another ident parser.
+        //@todo then we need to recavot this method so that it retusn list of tokens.
+//      case identAndNothing(name) => consumeTerminalLength(IDENT(name), loc) match {
+//        case Some((remainder, token, remainderLoc)) => Some((
+//          remainder.substring(2),
+//
+//          ))
+//      }
 
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
@@ -221,39 +287,7 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
     }
   }
-/*
 
-      object POWER   extends OPERATOR("^")
-      object STAR    extends OPERATOR("*")
-      object PLUS    extends OPERATOR("+")
-
-      object NOT     extends OPERATOR("!")
-      object AND     extends OPERATOR("&")
-      object OR     extends OPERATOR("!")
-
-object FORALL  extends OPERATOR("\\forall")
-object EXISTS  extends OPERATOR("\\exists")
-
-object EQ      extends OPERATOR("=")
-object NOTEQ   extends OPERATOR("!=")
-object GREATEREQ extends OPERATOR(">=")
-object LESSEQ  extends OPERATOR("<=")
-
-object TRUE    extends OPERATOR("true")
-object FALSE   extends OPERATOR("false")
-
-object ASSIGNANY extends OPERATOR(":=*")
-object ASSIGN  extends OPERATOR(":=")
-object TEST    extends OPERATOR("?")
-object SEMI    extends OPERATOR(";")
-object CHOICE  extends OPERATOR("++")
-
-// pseudos: could probably demote so that some are not OPERATOR
-object NOTHING extends Terminal("")
-object DOT     extends OPERATOR("•") //(".")
-object PLACE   extends OPERATOR("⎵") //("_")
-object PSEUDO  extends Terminal("<pseudo>")
- */
 
 
 
