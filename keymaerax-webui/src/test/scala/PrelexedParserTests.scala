@@ -369,7 +369,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   }
 
-  it/*failing*/ should "parse [a;]x>=0" in {
+  it should "parse [a;]x>=0" in {
     if (OpSpec.statementSemicolon) {
       val lex = KeYmaeraXLexer("[a;]x>=0")
       val theStream = toStream(LBOX, IDENT("a"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
@@ -390,7 +390,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     }
   }
 
-  it/*failing*/ should "parse <a;>x>0" in {
+  it should "parse <a;>x>0" in {
     val lex = KeYmaeraXLexer("<a;>x>0")
     val theStream = toStream(LDIA, IDENT("a"), SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))
     lex.map(_.tok) should be (theStream.map(_.tok))
@@ -398,59 +398,115 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Diamond(ProgramConst("a"), Greater(Variable("x"), Number(0)))
   }
 
-  it/*failing*/ should "parse [a;b]x>=0" in {
-    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
-    Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  it should "parse [a;b]x>=0" in {
+    if (!OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("[a;b]x>=0")
+      val theStream = toStream(LBOX, IDENT("a"), SEMI, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+      lex.map(_.tok) should be (theStream.map(_.tok))
+      parser.parse(lex) should be
+      Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+    }
   }
 
-  it/*failing*/ should "parse [a;b;]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"),SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
-    Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  it should "parse [a;b;]x>=0" in {
+    if (OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("[a;b;]x>=0")
+      val theStream = toStream(LBOX, IDENT("a"), SEMI, IDENT("b"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+      lex.map(_.tok) should be (theStream.map(_.tok))
+      parser.parse(lex) should be
+      Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+    }
   }
 
-  it/*failing*/ should "parse <a;b>x>0" in {
-    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
-    Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  it should "parse <a;b>x>0" in {
+    if (!OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("<a;b>x>0")
+      val theStream = toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))
+      lex.map(_.tok) should be (theStream.map(_.tok))
+      parser.parse(lex) should be
+      Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+    }
   }
 
   it should "parse [a;]p(x)" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, RBOX, IDENT("p"), LPAREN, IDENT("x"), RPAREN)) should be
-    Box(ProgramConst("a"), PredOf(p, Variable("x")))
+    if (OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("[a;]p(x)")
+      val theStream = toStream(LBOX, IDENT("a"), SEMI, RBOX, IDENT("p"), LPAREN, IDENT("x"), RPAREN)
+      lex.map(_.tok) should be (theStream.map(_.tok))
+      parser.parse(lex) should be
+      Box(ProgramConst("a"), PredOf(p, Variable("x")))
+    }
+
   }
 
   it should "parse [a;b;]p(x)" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"),SEMI, RBOX, IDENT("p"), LPAREN, IDENT("x"), RPAREN)) should be
-    Box(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
+    if (OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("[a;b;]p(x)")
+      val theStream = toStream(LBOX, IDENT("a"), SEMI, IDENT("b"), SEMI, RBOX, IDENT("p"), LPAREN, IDENT("x"), RPAREN)
+      lex.map(_.tok) should be (theStream.map(_.tok))
+      parser.parse(lex) should be
+      Box(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
+    }
   }
 
   it should "parse <a;b;>p(x)" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"),SEMI, RDIA, IDENT("p"), LPAREN, IDENT("x"), RPAREN)) should be
-    Diamond(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
+    val lex = KeYmaeraXLexer("<a;b;>p(x)")
+    val theStream = toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), SEMI, RDIA, IDENT("p"), LPAREN, IDENT("x"), RPAREN)
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    if (OpSpec.statementSemicolon) {
+      parser.parse(lex) should be
+      Diamond(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p, Variable("x")))
+    }
   }
 
-  it/*failing*/ should "parse <a;b;>x>0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"),SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
-    Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  it should "parse <a;b;>x>0" in {
+    if (OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("<a;b;>x>0")
+      val theStream = toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))
+      lex.map(_.tok) should be(theStream.map(_.tok))
+      parser.parse(lex) should be
+      Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+    }
   }
 
-  it/*failing*/ should "parse [a++b]x>=0" in {
-    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), CHOICE, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
-    Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  it should "parse [a++b]x>=0" in {
+    if (!OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("[a++b]x>=0")
+      val theStream = toStream(LBOX, IDENT("a"), CHOICE, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+      lex.map(_.tok) should be(theStream.map(_.tok))
+      parser.parse(lex) should be
+      Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+    }
   }
 
-  it/*failing*/ should "parse [a;++b;]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, CHOICE, IDENT("b"),SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
-    Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+  it should "parse [a;++b;]x>=0" in {
+    if (OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("[a;++b;]x>=0")
+      val theStream = toStream(LBOX, IDENT("a"), SEMI, CHOICE, IDENT("b"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+      lex.map(_.tok) should be(theStream.map(_.tok))
+      parser.parse(lex) should be
+      Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
+    }
   }
 
-  it/*failing*/ should "parse <a++b>x>0" in {
-    if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), CHOICE, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
-    Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  it should "parse <a++b>x>0" in {
+    if (!OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("<a++b>x>0")
+      val theStream = toStream(LDIA, IDENT("a"), CHOICE, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))
+      lex.map(_.tok) should be(theStream.map(_.tok))
+      parser.parse(lex) should be
+      Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+    }
   }
 
-  it/*failing*/ should "parse <a;++b;>x>0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, CHOICE, IDENT("b"),SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
-    Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+  it should "parse <a;++b;>x>0" in {
+    if (OpSpec.statementSemicolon) {
+      val lex = KeYmaeraXLexer("<a;++b;>x>0")
+      val theStream = toStream(LDIA, IDENT("a"), SEMI, CHOICE, IDENT("b"), SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))
+      lex.map(_.tok) should be(theStream.map(_.tok))
+      parser.parse(lex) should be
+      Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
+    }
   }
 
   // pathetic cases
@@ -479,19 +535,28 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     GreaterEqual(Plus(f0, g0), Number(0))
   }
 
-  it/*failing*/ should "parse 0<=f()+(((g())))" in {
-    parser.parse(toStream(NUMBER("0"), LESSEQ, IDENT("f"), LPAREN, RPAREN, PLUS, LPAREN, LPAREN, LPAREN, IDENT("g"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
+  it should "parse 0<=f()+(((g())))" in {
+    val lex = KeYmaeraXLexer("0<=f()+(((g())))")
+    val theStream = toStream(NUMBER("0"), LESSEQ, IDENT("f"), LPAREN, RPAREN, PLUS, LPAREN, LPAREN, LPAREN, IDENT("g"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     LessEqual(Number(0), Plus(f0, g0))
   }
 
   it should "default to term when trying to parse p()" in {
-    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN)) should be
+    val lex = KeYmaeraXLexer("p()")
+    val theStream = toStream(IDENT("p"), LPAREN, RPAREN)
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     FuncOf(Function("p",None,Unit,Real), Nothing)
     //a [ParseException] should be thrownBy
   }
 
   it should "default to formula when trying to parse x'=5" in {
-    parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5"))) should be
+    val lex = KeYmaeraXLexer("x' = 5")
+    val theStream = toStream(IDENT("x"), PRIME, EQ, NUMBER("5"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     Equal(DifferentialSymbol(Variable("x")), Number(5))
   }
 
@@ -528,7 +593,10 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "default to formula when trying to parse x'=5" in {
-    parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5"))) should be
+    val lex = KeYmaeraXLexer("x' = 5")
+    val theStream = toStream(IDENT("x"), PRIME, EQ, NUMBER("5"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     Equal(DifferentialSymbol(Variable("x")), Number(5))
     parser("x'=5") should be (Equal(DifferentialSymbol(Variable("x")), Number(5)))
   }
