@@ -152,7 +152,6 @@ case class SuffixRegion(line: Int, column: Int) extends Location
 
 /**
  * Created by aplatzer on 6/8/15.
- * @todo NOTHING.
  * @author aplatzer
  * @author nfulton
  */
@@ -162,7 +161,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
   type TokenStream = List[Token]
 
   def apply(input: String) = lex(input, SuffixRegion(1,1))
-
 
   /**
    * Finds the next token in a string.
@@ -179,8 +177,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
     val whitespace = """^(\ +).*""".r
     val newline = """(?s)(^\n).*""".r //@todo use something more portable.
     val comment = """(?s)(/\*[\s\S]*\*/)""".r
-
-//    val identAndNothing = ("^" + IDENT.regexp.pattern.pattern + "\\(\\).*").r
 
     /**
      *
@@ -271,15 +267,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
-      //Note: NOTHING can only occur as in p(NOTHING), so we make NOTHING another ident parser.
-        //@todo then we need to recavot this method so that it retusn list of tokens.
-//      case identAndNothing(name) => consumeTerminalLength(IDENT(name), loc) match {
-//        case Some((remainder, token, remainderLoc)) => Some((
-//          remainder.substring(2),
-//
-//          ))
-//      }
-
       case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
 
@@ -287,9 +274,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
     }
   }
-
-
-
 
   /**
    * Returns the region containing everything between the starting position of the current location
