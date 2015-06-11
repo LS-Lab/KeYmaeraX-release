@@ -226,10 +226,10 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   //@todo I have no idea where this stream came from...
-  ignore should "parse f()>0&g(x)<=2|r()<1" in {
+  it should "parse f()>0&g(x)<=2|r()<1" in {
     val lex = KeYmaeraXLexer("f()>0&g(x)<=2|r()<1")
     val theStream =
-      toStream(IDENT("p"), LPAREN, RPAREN, RDIA, NUMBER("0"), AMP, IDENT("g"), LPAREN, IDENT("x"), RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))
+      toStream(IDENT("f"), LPAREN, RPAREN, RDIA, NUMBER("0"), AMP, IDENT("g"), LPAREN, IDENT("x"), RPAREN, LESSEQ, NUMBER("2"), OR, IDENT("r"), LPAREN, RPAREN, LDIA, NUMBER("1"))
     lex.map(_.tok) should be (theStream.map(_.tok))
     parser.parse(lex) should be
     Or(And(Greater(f0, Number(0)), LessEqual(FuncOf(Function("g",None,Real,Real),Variable("x")), Number(2))), Less(h0, Number(1)))
@@ -365,7 +365,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   }
 
-  ignore should "parse [a;]x>=0" in {
+  it/*failing*/ should "parse [a;]x>=0" in {
     if (OpSpec.statementSemicolon) {
       val lex = KeYmaeraXLexer("[a;]x>=0")
       val theStream = toStream(LBOX, IDENT("a"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
@@ -386,7 +386,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     }
   }
 
-  ignore should "parse <a;>x>0" in {
+  it/*failing*/ should "parse <a;>x>0" in {
     val lex = KeYmaeraXLexer("<a;>x>0")
     val theStream = toStream(LDIA, IDENT("a"), SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))
     lex.map(_.tok) should be (theStream.map(_.tok))
@@ -394,42 +394,42 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Diamond(ProgramConst("a"), Greater(Variable("x"), Number(0)))
   }
 
-  ignore should "parse [a;b]x>=0" in {
+  it/*failing*/ should "parse [a;b]x>=0" in {
     if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  ignore should "parse [a;b;]x>=0" in {
+  it/*failing*/ should "parse [a;b;]x>=0" in {
     if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, IDENT("b"),SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Compose(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  ignore should "parse <a;b>x>0" in {
+  it/*failing*/ should "parse <a;b>x>0" in {
     if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
     Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
   }
 
-  ignore should "parse <a;b;>x>0" in {
+  it/*failing*/ should "parse <a;b;>x>0" in {
     if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, IDENT("b"),SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
     Diamond(Compose(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
   }
 
-  ignore should "parse [a++b]x>=0" in {
+  it/*failing*/ should "parse [a++b]x>=0" in {
     if (!OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), CHOICE, IDENT("b"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  ignore should "parse [a;++b;]x>=0" in {
+  it/*failing*/ should "parse [a;++b;]x>=0" in {
     if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("a"), SEMI, CHOICE, IDENT("b"),SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
     Box(Choice(ProgramConst("a"), ProgramConst("b")), GreaterEqual(Variable("x"), Number(0)))
   }
 
-  ignore should "parse <a++b>x>0" in {
+  it/*failing*/ should "parse <a++b>x>0" in {
     if (!OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), CHOICE, IDENT("b"), RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
     Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
   }
 
-  ignore should "parse <a;++b;>x>0" in {
+  it/*failing*/ should "parse <a;++b;>x>0" in {
     if (OpSpec.statementSemicolon)  parser.parse(toStream(LDIA, IDENT("a"), SEMI, CHOICE, IDENT("b"),SEMI, RDIA, IDENT("x"), RDIA, NUMBER("0"))) should be
     Diamond(Choice(ProgramConst("a"), ProgramConst("b")), Greater(Variable("x"), Number(0)))
   }
@@ -460,16 +460,16 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     GreaterEqual(Plus(f0, g0), Number(0))
   }
 
-  ignore should "parse 0<=f()+(((g())))" in {
+  it/*failing*/ should "parse 0<=f()+(((g())))" in {
     parser.parse(toStream(NUMBER("0"), LESSEQ, IDENT("f"), LPAREN, RPAREN, PLUS, LPAREN, LPAREN, LPAREN, IDENT("g"), LPAREN, RPAREN, RPAREN, RPAREN, RPAREN)) should be
     LessEqual(Number(0), Plus(f0, g0))
   }
 
-  ignore should "refuse to default to formula/term when trying to parse p()" in {
+  it/*failing*/ should "refuse to default to formula/term when trying to parse p()" in {
     a [ParseException] should be thrownBy parser.parse(toStream(IDENT("p"), LPAREN, RPAREN))
   }
 
-  ignore should "refuse to default to formula/program when trying to parse x'=5" in {
+  it/*failing*/ should "refuse to default to formula/program when trying to parse x'=5" in {
     a [ParseException] should be thrownBy parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5")))
   }
 
