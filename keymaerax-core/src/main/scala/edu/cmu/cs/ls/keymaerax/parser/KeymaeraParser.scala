@@ -672,8 +672,8 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     
     lazy val andP : SubformulaParser = {
-      lazy val pattern = leftAssociative(precedence, andP, Some(AND))
-      log(pattern)(AND + " parser") ^^ {
+      lazy val pattern = leftAssociative(precedence, andP, Some(AMP))
+      log(pattern)(AMP + " parser") ^^ {
         case left ~ _ ~ right => And(left, right)
       }
     }
@@ -803,7 +803,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
 
     lazy val differentialSystemP : PackratParser[DifferentialProgram] = {
-      val pattern = rep1sep(atomicODEP | contEvolvePVarP, COMMA) ~ (AND ~> theFormulaParser.parser).?
+      val pattern = rep1sep(atomicODEP | contEvolvePVarP, COMMA) ~ (AMP ~> theFormulaParser.parser).?
       log(pattern)("Differential equation system") ^^ {
         case elements ~ constraint => {
           val diffProgram = computeProduct(elements)

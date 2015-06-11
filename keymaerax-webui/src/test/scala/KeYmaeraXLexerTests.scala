@@ -1,4 +1,4 @@
-import edu.cmu.cs.ls.keymaerax.parser.{RPAREN, KeYmaeraXLexer, Region, LPAREN, EOS, FORALL, IDENT, NUMBER}
+import edu.cmu.cs.ls.keymaerax.parser.{RPAREN, KeYmaeraXLexer, Region, LPAREN, EOF, FORALL, IDENT, NUMBER}
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -17,7 +17,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
 
   it should "Handle empty string correctly" in {
     val input = ""
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(EOS, Region(1,1,1,1))
+    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(EOF, Region(1,1,1,1))
   }
 
   it should "Handle newlines correctly" in {

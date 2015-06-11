@@ -14,13 +14,13 @@ Associativity is left-associative, i.e. x-y-z is (x-y)-z unless noted otherwise.
 
 ==Terms==
 
-    T ::= x | x' | num | ∙ | f(T) | -T | T^T | T*T | T/T | T+T | T-T | (T)' | (T)
+    T ::= x | x' | num | ∙ | f(T) | f() | -T | T^T | T*T | T/T | T+T | T-T | (T)' | (T) 
 
 with `T^T` right-associative, i.e. x^4^2 is x^(4^2)
 
 ==Formulas==
 
-    F ::= T=T | T!=T | T>=T | T>T | T<=T | T<T | p(T) | C{F} | ⎵
+    F ::= T=T | T!=T | T>=T | T>T | T<=T | T<T | p(T) | p() | C{F} | ⎵
         | !F | \forall x F | \exists x F | [P]F | <P>F 
         | F&F | F|F | F->F | F<->F | (F)' | (F)
 
@@ -28,9 +28,15 @@ with `->` right-associative and no precedence for `->` versus `<->`
 
 ==Programs==
 
-    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | ;
+    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P
 
 with the invisible `;` in P P right-associative
+
+This is to be contrasted with the abstract dL grammar in theory:
+
+    P ::= a | x:=T | x':=T | ?F | D&F | P* | P;P | P++P | (P)
+
+with the visible `;` in P;P right-associative
 
 ==Differential programs==
 
@@ -39,4 +45,5 @@ with the invisible `;` in P P right-associative
 with `D,D` right-associative
 
 
-Parser would-be challenge:  < ? p > q > p > 1
+Parser would-be challenges:  < ? p > q > p > 1
+Parser expression challenges: f()    x'=5

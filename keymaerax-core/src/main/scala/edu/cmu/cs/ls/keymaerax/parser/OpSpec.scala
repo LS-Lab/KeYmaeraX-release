@@ -151,7 +151,7 @@ object OpSpec {
   val sBox          = BinaryOpSpec[Expression](PSEUDO, 98, MixedBinary, (_:String, a:Expression, f:Expression) => Box(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sDiamond      = BinaryOpSpec[Expression](PSEUDO, 99, MixedBinary, (_:String, a:Expression, f:Expression) => Diamond(a.asInstanceOf[Program], f.asInstanceOf[Formula]))
   val sNot          = UnaryOpSpec[Formula] (NOT,   100, PrefixFormat, Not.apply _)
-  val sAnd          = BinaryOpSpec[Formula](AND,   110, LeftAssociative, And.apply _)
+  val sAnd          = BinaryOpSpec[Formula](AMP,   110, LeftAssociative, And.apply _)
   val sOr           = BinaryOpSpec[Formula](OR,   120, LeftAssociative, Or.apply _)
   val sImply        = BinaryOpSpec[Formula](IMPLY,  130, RightAssociative, Imply.apply _)
   val sRevImply     = BinaryOpSpec[Formula](REVIMPLY, 130, LeftAssociative, (l:Formula, r:Formula) => Imply(r, l)) /* swaps arguments */
@@ -164,7 +164,7 @@ object OpSpec {
   val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY, 200, PrefixFormat, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
   val sTest         = lUnaryOpSpecF[Program](TEST,   200, PrefixFormat, (f:Formula) => Test(f.asInstanceOf[Formula]))
-  val sODESystem    = BinaryOpSpec[Expression](PSEUDO, 200, NonAssociative, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
+  val sODESystem    = BinaryOpSpec[Expression](AMP, 219, NonAssociative, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
   val sAtomicODE    = BinaryOpSpec[Program](EQ,   200, AtomicBinaryFormat, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA, 210, RightAssociative, DifferentialProduct.apply _)
   val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, Loop.apply _)
@@ -172,7 +172,7 @@ object OpSpec {
   //valp: Compose     => OpNotation("",    230, RightAssociative)
   val sChoice       = BinaryOpSpec(CHOICE,  240, LeftAssociative, Choice.apply _)
 
-  val sEOF          = UnitOpSpec  (EOS, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
+  val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
 
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
@@ -233,95 +233,6 @@ object OpSpec {
     case p: Compose      => sCompose
     case p: Choice       => sChoice
   }
-
-  /** If the stack starts with an expr item, so has been reduced already, it can't be a prefix operator */
-  private def isNotPrefix(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
-    case _ :: Token(_:OPERATOR, _) :: Expr(_) :: _ => true
-    case _ => false
-  }
-
-  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
-    case Expr(_:Formula) :: _ => true
-    case _ => false
-  }
-
-  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
-    case Expr(_:Program) :: _ => true
-    case _ => false
-  }
-
-  private def isVariable(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
-    case Expr(_:Variable) :: _ => true
-    case _ => false
-  }
-
-  private def isDifferentialSymbol(st: KeYmaeraXParser.ParseState): Boolean = st._1 match {
-    case Expr(_:DifferentialSymbol) :: _ => true
-    case _ => false
-  }
-
-  /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
-  private[parser] def op(st: KeYmaeraXParser.ParseState, tok: Terminal): OpSpec = {
-    tok match {
-      //@note could almost(!) replace by reflection to search through all OpSpec and check their images.
-      // terms
-      case sDotTerm.op => sDotTerm
-      //case sNothing.opcode => sNothing
-      case sAnything.op => sAnything
-      //case t: Variable => sVariable
-      //case t: Number => sNumber
-      //case t: FuncOf => sFuncOf
-      case sDifferential.op => if (isVariable(st)) sDifferential
-      else if (isFormula(st)) sDifferentialFormula
-      else sDifferential
-      //case t: Pair => sPair
-      case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
-      case sPower.op => sPower
-      case sTimes.op => if (isProgram(st)) sLoop else sTimes
-      case sDivide.op => sDivide
-      case sPlus.op => sPlus
-
-      // formulas
-      case sDotFormula.op => sDotFormula
-      case sTrue.op => sTrue
-      case sFalse.op => sFalse
-      //case f: PredOf => sPredOf
-      //case f: PredicationalOf => sPredicationalOf
-      //case f: DifferentialFormula => sDifferentialFormula
-      case sEqual.op => if (isProgram(st)) sAtomicODE else sEqual
-      case sNotEqual.op => sNotEqual
-      case sGreaterEqual.op => sGreaterEqual
-      case sGreater.op => sGreater
-      case sLessEqual.op => sLessEqual
-      case sLess.op => sLess
-      case sForall.op => sForall
-      case sExists.op => sExists
-//      case f: Box => sBox
-//      case f: Diamond => sDiamond
-      case sNot.op => sNot
-      case sAnd.op => sAnd
-      case sOr.op => sOr
-      case sImply.op => sImply
-      case sRevImply.op => sRevImply
-      case sEquiv.op => sEquiv
-
-      // programs
-      //case p: ProgramConst => sProgramConst
-      //case p: DifferentialProgramConst => sDifferentialProgramConst
-      case sAssign.op => if (isDifferentialSymbol(st)) sDiffAssign else sAssign
-//      case p: AssignAny => sAssignAny
-      case sTest.op => sTest
-//      case p: ODESystem => sODESystem
-//      case p: AtomicODE => sAtomicODE
-      case sDifferentialProduct.op => sDifferentialProduct
-//      case sLoop.op => sLoop
-      case sCompose.op => sCompose
-      case sChoice.op => sChoice
-
-      //case
-      case sEOF.op => sEOF
-    }
-  } ensuring(r => r.op == tok && r.opcode == tok.img, "OpSpec's opcode coincides with expected token " + tok)
 
 }
 

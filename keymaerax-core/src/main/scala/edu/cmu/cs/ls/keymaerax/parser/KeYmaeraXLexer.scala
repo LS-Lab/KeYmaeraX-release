@@ -45,7 +45,7 @@ object NUMBER {
 /**
  * End Of Stream
  */
-object EOS extends Terminal("<EOS>") {
+object EOF extends Terminal("<EOS>") {
   override def regexp = "$^".r //none.
 }
 
@@ -92,7 +92,7 @@ object MINUS   extends OPERATOR("-")
 object NOT     extends OPERATOR("!") {
   override def regexp = """\!""".r
 }
-object AND     extends OPERATOR("&")
+object AMP     extends OPERATOR("&")
 object OR      extends OPERATOR("|") {
   override def regexp = """\|""".r
 }
@@ -242,7 +242,7 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case STAR.startPattern(_*) => consumeTerminalLength(STAR, loc)
       case PLUS.startPattern(_*) => consumeTerminalLength(PLUS, loc)
 
-      case AND.startPattern(_*) => consumeTerminalLength(AND, loc)
+      case AMP.startPattern(_*) => consumeTerminalLength(AMP, loc)
       case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
       case OR.startPattern(_*) => consumeTerminalLength(OR, loc)
       case EQUIV.startPattern(_*) => consumeTerminalLength(EQUIV, loc)
@@ -328,7 +328,7 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    */
   private def lex(input: String, inputLocation:Location): TokenStream =
     if(input.trim.length == 0) {
-      List(Token(EOS, inputLocation match {
+      List(Token(EOF, inputLocation match {
         case UnknownLocation =>  UnknownLocation
         case x:Region => x
         case SuffixRegion(sl,sc) => Region(sl,sc,sl,sc)
