@@ -11,6 +11,19 @@ import testHelper.SequentFactory._
  * @author Stefan Mitsch
  */
 class SyntacticDerivationTests extends TacticTestSuite {
+  "abstraction" should "at least work" in {
+    val f = "[s := 0;] \\forall x. x=x".asFormula
+    val tactic = TacticLibrary.abstractionT(SuccPos(0)) &
+      TacticLibrary.debugT("one") &
+      TacticLibrary.skolemizeT(SuccPos(0)) &
+      TacticLibrary.debugT("two") &
+      TacticLibrary.skolemizeT(SuccPos(0)) &
+      TacticLibrary.debugT("end")
+
+    val node = helper.runTactic(tactic, helper.formulaToNode(f), mustApply = true)
+    node.openGoals().flatMap(_.sequent.succ) should contain only "x=x".asFormula
+  }
+  
   "ForallDerivativeT" should "atomize" in {
     val f = "(\\forall s. s > 0)'".asFormula
     val tactic = SyntacticDerivationInContext.ForallDerivativeT(SuccPosition(0))

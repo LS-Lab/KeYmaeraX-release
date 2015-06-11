@@ -46,7 +46,7 @@ object KeYmaeraXParser extends Parser {
 
   /** Parser state consisting of expected syntactic kind to parse currently, the item stack, and remaining input. */
   sealed case class ParseState(kind: Kind, stack: Stack[Item], input: TokenStream) {
-    override def toString: String = "ParseState(" + kind + stack + "  ::  " + input.mkString(", ") +")"
+    override def toString: String = "ParseState(" + kind + stack + "  :|:  " + input.mkString(", ") +")"
   }
 
   private def lexer(input: String): TokenStream = KeYmaeraXLexer(input)
