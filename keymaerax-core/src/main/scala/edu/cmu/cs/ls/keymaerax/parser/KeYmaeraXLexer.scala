@@ -180,7 +180,7 @@ object KeYmaeraXLexer extends (String => List[Token]) {
     val newline = """(?s)(^\n).*""".r //@todo use something more portable.
     val comment = """(?s)(/\*[\s\S]*\*/)""".r
 
-    val identAndNothing = ("^" + IDENT.regexp.pattern.pattern + "\(\).*").r
+//    val identAndNothing = ("^" + IDENT.regexp.pattern.pattern + "\\(\\).*").r
 
     /**
      *
