@@ -12,14 +12,14 @@ import scala.collection.immutable._
  * @author aplatzer
  */
 sealed abstract class Terminal(val img: String) {
-  override def toString = getClass.getSimpleName + "\"" + img + "\""
+  override def toString = getClass.getSimpleName// + "\"" + img + "\""
 }
 abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
 case class IDENT(name: String) extends Terminal(name) {
-  override def toString = "ID(\"" + name + "\")"
+  override def toString = "ID(" + name + ")"
 }
 case class NUMBER(value: String) extends Terminal(value) {
   override def toString = "NUM(" + value + ")"
