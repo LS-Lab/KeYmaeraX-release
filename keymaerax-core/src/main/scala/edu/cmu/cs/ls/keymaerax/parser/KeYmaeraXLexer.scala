@@ -127,7 +127,7 @@ object TEST    extends OPERATOR("?") {
 }
 object SEMI    extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++") {
-  override def regexp = """++""".r
+  override def regexp = """\+\+""".r
 }
 
 // pseudos: could probably demote so that some are not OPERATOR
