@@ -123,7 +123,7 @@ object ASSIGNANY extends OPERATOR(":=*") {
 }
 object ASSIGN  extends OPERATOR(":=")
 object TEST    extends OPERATOR("?") {
-  override def regexp = """;""".r
+  override def regexp = """\?""".r
 }
 object SEMI    extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++") {
@@ -169,8 +169,8 @@ object KeYmaeraXLexer extends (String => List[Token]) {
 
   /**
    * Finds the next token in a string.
-   * Untested correctness condition: If a token's regex pattern contains another's, then the more
-   * restrictive token is processed first in the massive if/else.
+   * @todo Untested correctness condition: If a token's regex pattern contains another's, then the more restrictive token is processed first in the massive if/else.
+   *
    * @param s The string to process.
    * @param loc The location of s.
    * @return A triple containing:
@@ -226,6 +226,9 @@ object KeYmaeraXLexer extends (String => List[Token]) {
           case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+theComment.length)
         })
 
+      //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
+      case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
+      case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
 
       case LPAREN.startPattern(_*) => consumeTerminalLength(LPAREN, loc)
       case RPAREN.startPattern(_*) => consumeTerminalLength(RPAREN, loc)
@@ -235,6 +238,10 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
 
       case COMMA.startPattern(_*) => consumeTerminalLength(COMMA, loc)
+
+      //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
+      case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
+
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
@@ -254,9 +261,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
 
       case EQ.startPattern(_*) => consumeTerminalLength(EQ, loc)
       case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
-      case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
-      case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
-
       case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
       case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
 
@@ -264,7 +268,6 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case ASSIGN.startPattern(_*) => consumeTerminalLength(ASSIGN, loc)
       case TEST.startPattern(_*) => consumeTerminalLength(TEST, loc)
       case SEMI.startPattern(_*) => consumeTerminalLength(SEMI, loc)
-      case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
 
 
       case DOT.startPattern(_*) => consumeTerminalLength(DOT, loc)
