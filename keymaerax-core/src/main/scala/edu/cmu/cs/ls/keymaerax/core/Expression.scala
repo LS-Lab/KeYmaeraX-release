@@ -421,6 +421,7 @@ sealed trait DifferentialProgram extends Program
 /** Atomic differential programs */
 sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
 /** Differential equation system ode with given evolution domain constraint */
+//@todo should not be a differential program since not nested within DifferentialProduct.
 case class ODESystem(ode: DifferentialProgram, constraint: Formula)
   extends Program with DifferentialProgram
 /** Uninterpreted differential program constant */
@@ -461,8 +462,11 @@ object DifferentialProduct {
    * @note Completeness: reassociate needed in DifferentialProduct data structures for
    *       axiom "DE differential effect (system)" so as not to get stuck after it.
    */
-  def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct =
+  def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
+    require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
+    require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
     reassociate(left, right)
+  }
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
     case a: DifferentialProduct => Some(a.left, a.right)
