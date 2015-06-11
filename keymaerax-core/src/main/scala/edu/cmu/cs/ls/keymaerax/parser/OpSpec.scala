@@ -121,7 +121,7 @@ object OpSpec {
   private val binterm = (TermKind,TermKind)
   val sDotTerm      = UnitOpSpec (DOT,     0, DotTerm)
   val sNothing      = UnitOpSpec (NOTHING,  0, Nothing)
-  val sAnything     = UnitOpSpec (TEST,    0, Anything)
+  val sAnything     = UnitOpSpec (ANYTHING, 0, Anything)
   val sVariable     = UnitOpSpec (none,    0, name => Variable(name, None, Real))
   val sNumber       = UnitOpSpec (none,    0, number => Number(BigDecimal(number)))
   val sFuncOf       = UnaryOpSpec[Term](none,    0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))

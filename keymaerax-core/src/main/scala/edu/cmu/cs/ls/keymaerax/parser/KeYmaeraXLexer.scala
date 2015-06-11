@@ -134,6 +134,9 @@ object CHOICE  extends OPERATOR("++") {
 object NOTHING extends Terminal("")
 object DOT     extends OPERATOR("•") //(".")
 object PLACE   extends OPERATOR("⎵") //("_")
+object ANYTHING extends OPERATOR("??") {
+  override def regexp = """\?\?""".r
+}
 object PSEUDO  extends Terminal("<pseudo>")
 
 sealed abstract class Location

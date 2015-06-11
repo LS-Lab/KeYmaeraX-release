@@ -292,6 +292,9 @@ object KeYmaeraXParser extends Parser {
         else*/ reduce(st, 1, Number(BigDecimal(value)), r)
 
 
+      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING),_) =>
+        reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
+
       // non-accepting expression
       case _ :+ _ :+ Expr(t) =>
         if (followsExpression(t, la) && la!=EOF) shift(st)
@@ -429,18 +432,18 @@ object KeYmaeraXParser extends Parser {
   // operator precedence lookup
 
   /** If the stack starts with an expr item, so has been reduced already, it can't be a prefix operator */
-  private def isNotPrefix(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
+  private def isNotPrefix(st: ParseState): Boolean = st.stack match {
     case _ :+ Expr(_) :+ Token(_:OPERATOR, _)  :+ _ => true
     case _ => false
   }
 
-  private def isFormula(st: KeYmaeraXParser.ParseState): Boolean = (st.stack match {
+  private def isFormula(st: ParseState): Boolean = (st.stack match {
     case _ :+ Expr(_:Formula) => true
     case _ => false
   })
 
   // this is a terrible approximation
-  private def isProgram(st: KeYmaeraXParser.ParseState): Boolean = (st.stack match {
+  private def isProgram(st: ParseState): Boolean = (st.stack match {
     case _ :+ Expr(_:Program) => true
     case _ :+ Token(LBRACE,_) => true
     case _ :+ Token(LBOX,_) => true
@@ -450,12 +453,12 @@ object KeYmaeraXParser extends Parser {
     case _ => false
   })
 
-  private def isVariable(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
+  private def isVariable(st: ParseState): Boolean = st.stack match {
     case _ :+ Expr(_:Variable) => true
     case _ => false
   }
 
-  private def isDifferentialSymbol(st: KeYmaeraXParser.ParseState): Boolean = st.stack match {
+  private def isDifferentialSymbol(st: ParseState): Boolean = st.stack match {
     case _ :+ Expr(_:DifferentialSymbol) => true
     case _ => false
   }
@@ -463,14 +466,13 @@ object KeYmaeraXParser extends Parser {
   import OpSpec._
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
-  private[parser] def op(st: KeYmaeraXParser.ParseState, tok: Terminal, kinds: List[Kind]): OpSpec = {
-    require(!kinds.isEmpty)
+  private[parser] def op(st: ParseState, tok: Terminal, kinds: List[Kind]): OpSpec = {
    // println("\top(" + tok +" " + kinds)
     (tok: @switch) match {
       //@note could almost(!) replace by reflection to search through all OpSpec and check their images.
       // terms
       case sDotTerm.op => sDotTerm
-      //case sNothing.opcode => sNothing
+      case sNothing.op => sNothing
       case sAnything.op => sAnything
       //case t: Variable => sVariable
       //case t: Number => sNumber
@@ -480,7 +482,7 @@ object KeYmaeraXParser extends Parser {
       //case t: Pair => sPair
       case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
-      case sTimes.op => if (kinds(0)==ProgramKind)/*if (isProgram(st))*/ sLoop else sTimes
+      case sTimes.op => if (!kinds.isEmpty && kinds(0)==ProgramKind)/*if (isProgram(st))*/ sLoop else sTimes
       case sDivide.op => sDivide
       case sPlus.op => sPlus
 
@@ -494,7 +496,7 @@ object KeYmaeraXParser extends Parser {
       case sEqual.op => if (isProgram(st)) sAtomicODE else sEqual
       case sNotEqual.op => sNotEqual
       case sGreaterEqual.op => sGreaterEqual
-      case sGreater.op => if (kinds(0)==ProgramKind) sNone else sGreater   // 1/2 sDiamond
+      case sGreater.op => if (!kinds.isEmpty && kinds(0)==ProgramKind) sNone else sGreater   // 1/2 sDiamond
       case sLessEqual.op => sLessEqual
       case sLess.op => if (kinds.length>=2 && kinds(1)==ProgramKind) sNone else sLess    // 1/2 sDiamond
       case sForall.op => sForall
@@ -502,7 +504,7 @@ object KeYmaeraXParser extends Parser {
       //      case f: Box => sBox
       //      case f: Diamond => sDiamond
       case sNot.op => sNot
-      case sAnd.op => if (kinds(0)==ProgramKind||kinds(0)==DifferentialProgramKind)/*if (isProgram(st))*/ sODESystem else sAnd
+      case sAnd.op => if (!kinds.isEmpty && kinds(0)==ProgramKind||kinds(0)==DifferentialProgramKind)/*if (isProgram(st))*/ sODESystem else sAnd
       case sOr.op => sOr
       case sImply.op => sImply
       case sRevImply.op => sRevImply
