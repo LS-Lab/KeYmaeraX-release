@@ -503,19 +503,19 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Greater(f0, Number(0))
   }
 
-  "The parser" should "default to term when trying to parse p() as a term" in {
+  "The parser" should "parse a term when trying to parse p() as a term" in {
     parser.termParser("p()") should be (FuncOf(Function("p",None,Unit,Real), Nothing))
   }
 
-  it should "default to term when trying to parse p(x) as a term" in {
+  it should "parse a term when trying to parse p(x) as a term" in {
     parser.termParser("p(x)") should be (FuncOf(Function("p",None,Real,Real), Variable("x")))
   }
 
-  it should "default to formula when trying to parse p() as a formula" in {
+  it should "parse a formula when trying to parse p() as a formula" in {
     parser.formulaParser("p()") should be (PredOf(Function("p",None,Unit,Bool), Nothing))
   }
 
-  it should "default to formula when trying to parse p(x) as a formula" in {
+  it should "parse a formula when trying to parse p(x) as a formula" in {
     parser.formulaParser("p(x)") should be (PredOf(Function("p",None,Real,Bool), Variable("x")))
   }
 
