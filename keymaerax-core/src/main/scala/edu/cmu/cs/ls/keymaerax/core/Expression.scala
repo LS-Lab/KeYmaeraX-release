@@ -25,6 +25,8 @@ object TermKind extends Kind { override def toString = "Term" }
 object FormulaKind extends Kind { override def toString = "Formula" }
 /** All programs are of kind ProgramKind */
 object ProgramKind extends Kind { override def toString = "Program" }
+/** All differential programs are of kind DifferentialProgramKind */
+object DifferentialProgramKind extends Kind/*ProgramKind.type*/ { override def toString = "DifferentialProgram" }
 /** Function/predicate symbols that are not themselves terms or formulas are of kind FunctionKind */
 object FunctionKind extends Kind { override def toString = "Function" }
 
@@ -368,7 +370,7 @@ case class DifferentialFormula(child: Formula) extends UnaryCompositeFormula
   * @author aplatzer
   */
 sealed trait Program extends Expression {
-  final def kind: Kind = ProgramKind
+  /*final*/ def kind: Kind = ProgramKind
   final def sort: Sort = Trafo
 }
 
@@ -417,10 +419,13 @@ case class Loop(child: Program) extends UnaryCompositeProgram
 //case class Dual(child: Program) extends CompositeProgram
 
 /** differential programs */
-sealed trait DifferentialProgram extends Program
+sealed trait DifferentialProgram extends Program {
+  override def kind: Kind = DifferentialProgramKind
+}
 /** Atomic differential programs */
 sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
 /** Differential equation system ode with given evolution domain constraint */
+//@todo should not be a differential program since not nested within DifferentialProduct.
 case class ODESystem(ode: DifferentialProgram, constraint: Formula)
   extends Program with DifferentialProgram
 /** Uninterpreted differential program constant */
@@ -461,8 +466,11 @@ object DifferentialProduct {
    * @note Completeness: reassociate needed in DifferentialProduct data structures for
    *       axiom "DE differential effect (system)" so as not to get stuck after it.
    */
-  def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct =
+  def apply(left: DifferentialProgram, right: DifferentialProgram): DifferentialProduct = {
+    require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
+    require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
     reassociate(left, right)
+  }
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
     case a: DifferentialProduct => Some(a.left, a.right)

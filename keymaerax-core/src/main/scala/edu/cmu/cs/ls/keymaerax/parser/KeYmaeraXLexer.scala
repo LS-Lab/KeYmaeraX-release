@@ -13,7 +13,7 @@ import scala.util.matching.Regex
  * @author aplatzer
  */
 sealed abstract class Terminal(val img: String) {
-  override def toString = getClass.getSimpleName + "\"" + img + "\""
+  override def toString = getClass.getSimpleName// + "\"" + img + "\""
   /**
    * @return The regex that identifies this token.
    */
