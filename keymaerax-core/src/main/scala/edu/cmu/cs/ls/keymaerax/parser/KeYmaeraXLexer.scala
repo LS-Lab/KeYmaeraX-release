@@ -236,6 +236,10 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case RBOX.startPattern(_*) => consumeTerminalLength(RBOX, loc)
       case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
+      case LBRACE.startPattern(_*) => consumeTerminalLength(LBRACE, loc)
+      case RBRACE.startPattern(_*) => consumeTerminalLength(RBRACE, loc)
+
+
 
       case COMMA.startPattern(_*) => consumeTerminalLength(COMMA, loc)
 

@@ -261,42 +261,67 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   }
 
   it should "parse x:=y+1;z:=0;" in {
-    if (OpSpec.statementSemicolon) parser.parse(toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, IDENT("z"), ASSIGN, NUMBER("0"), SEMI)) should be
+    val lex = KeYmaeraXLexer("x:=y+1;z:=0;")
+    val theStream = toStream(IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, IDENT("z"), ASSIGN, NUMBER("0"), SEMI)
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    if (OpSpec.statementSemicolon) parser.parse(lex) should be
     Compose(Assign(Variable("x"), Plus(Variable("y"),Number(1))), Assign(Variable("z"), Number(0)))
   }
 
   it should "parse x-y'+z" in {
-    parser.parse(toStream(IDENT("x"), MINUS, IDENT("y"), PRIME, PLUS, IDENT("z"))) should be
+    val lex = KeYmaeraXLexer("x-y'+z")
+    val theStream = toStream(IDENT("x"), MINUS, IDENT("y"), PRIME, PLUS, IDENT("z"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     Plus(Minus(Variable("x"), DifferentialSymbol(Variable("y"))), Variable("z"))
   }
 
   it should "parse x-(y)'+z" in {
-    parser.parse(toStream(IDENT("x"), MINUS, LPAREN, IDENT("y"), RPAREN, PRIME, PLUS, IDENT("z"))) should be
+    val lex = KeYmaeraXLexer("x-(y)'+z")
+    val theStream = toStream(IDENT("x"), MINUS, LPAREN, IDENT("y"), RPAREN, PRIME, PLUS, IDENT("z"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     Plus(Minus(Variable("x"), Differential(Variable("y"))), Variable("z"))
   }
 
   it should "parse (x-y)'+z" in {
-    parser.parse(toStream(IDENT("x"), MINUS, LPAREN, IDENT("y"), RPAREN, PRIME, PLUS, IDENT("z"))) should be
+    val lex = KeYmaeraXLexer("(x-y)'+z")
+    val theStream = toStream(LPAREN, IDENT("x"), MINUS, IDENT("y"), RPAREN, PRIME, PLUS, IDENT("z"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be
     Plus(Differential(Minus(Variable("x"), Variable("y"))), Variable("z"))
   }
 
   it should "parse [x:=y+1]x>=0" in {
-    if (!OpSpec.statementSemicolon) parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    val lex = KeYmaeraXLexer("[x:=y+1]x>=0")
+    val theStream = toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    if (!OpSpec.statementSemicolon) parser.parse(lex) should be
     Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
 
   it should "parse [x:=y+1;]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    val lex = KeYmaeraXLexer("[x:=y+1;]x>=0")
+    val theStream = toStream(LBOX, IDENT("x"), ASSIGN, IDENT("y"), PLUS, NUMBER("1"), SEMI, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    if (OpSpec.statementSemicolon)  parser.parse(lex) should be
     Box(Assign(Variable("x"), Plus(Variable("y"),Number(1))), GreaterEqual(Variable("x"), Number(0)))
   }
 
   it should "parse [{x'=y+1}]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    val lex = KeYmaeraXLexer("[{x'=y+1}]x>=0")
+    val theStream = toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    if (OpSpec.statementSemicolon)  parser.parse(lex) should be
     Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"),Number(1))), True), GreaterEqual(Variable("x"), Number(0)))
   }
 
   it should "parse [{x'=y+1,y'=5}]x>=0" in {
-    if (OpSpec.statementSemicolon)  parser.parse(toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), COMMA, IDENT("y"), PRIME, EQ, NUMBER("5"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))) should be
+    val lex = KeYmaeraXLexer("[{x'=y+1,y'=5}]x>=0")
+    val theStream =
+      toStream(LBOX, LBRACE, IDENT("x"), PRIME, EQ, IDENT("y"), PLUS, NUMBER("1"), COMMA, IDENT("y"), PRIME, EQ, NUMBER("5"), RBRACE, RBOX, IDENT("x"), GREATEREQ, NUMBER("0"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    if (OpSpec.statementSemicolon)  parser.parse(lex) should be
     Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Plus(Variable("y"),Number(1))),
       AtomicODE(DifferentialSymbol(Variable("y")), Number(5))), True), GreaterEqual(Variable("x"), Number(0)))
   }
