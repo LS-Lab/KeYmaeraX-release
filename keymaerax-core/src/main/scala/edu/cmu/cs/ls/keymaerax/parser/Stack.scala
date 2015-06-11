@@ -34,18 +34,20 @@ sealed trait Stack[+A] {
     case tail :+ top => 1 + tail.length
   }
 
-  /** Fold the elements of this stack with f starting with z at the bottom. */
+  /** Fold the elements of this stack by f starting with z at the Bottom. */
   def fold[B](z: B)(f: (B, A) => B): B = this match {
     case Bottom => z
     case tail :+ top => f(tail.fold(z)(f), top)
   }
 
-  override def toString: String = fold("")((s, e)=>s + " :+ " + e)
+  override def toString: String = fold("")((s, e) => s + " :+ " + e)
 }
+
 case class :+[B](tail: Stack[B], top: B) extends Stack[B] {
   def isEmpty = false
   def drop(n: Int) = {require(n>=0); if (n==0) this else tail.drop(n-1)}
 }
+
 object Bottom extends Stack[Nothing] {
   def top = throw new UnsupportedOperationException("Empty stack has no top")
   def tail = throw new UnsupportedOperationException("Empty stack has no tail")

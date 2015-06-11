@@ -178,15 +178,16 @@ object OpSpec {
   val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY, 200, PrefixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
   val sTest         = lUnaryOpSpecF[Program](TEST,   200, PrefixFormat, untermprog, (f:Formula) => Test(f.asInstanceOf[Formula]))
-  val sAtomicODE    = BinaryOpSpec[Program](EQ,   200, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
-  val sDifferentialProduct = BinaryOpSpec(COMMA, 210, RightAssociative, bindiffprog, DifferentialProduct.apply _)
-  val sODESystem    = BinaryOpSpec[Expression](AMP, 219, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
+  val sAtomicODE    = BinaryOpSpec[Program](EQ,   90/*200*/, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
+  val sDifferentialProduct = BinaryOpSpec(COMMA, 95/*210*/, RightAssociative, bindiffprog, DifferentialProduct.apply _)
+  val sODESystem    = BinaryOpSpec[Expression](AMP, 99/*219*/, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
   val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, unprog, Loop.apply _)
   val sCompose      = BinaryOpSpec(SEMI, 230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
   val sChoice       = BinaryOpSpec(CHOICE,  240, LeftAssociative, binprog, Choice.apply _)
 
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
+  val sNone         = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))
 
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
