@@ -484,12 +484,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     LessEqual(Number(0), Plus(f0, g0))
   }
 
-  it/*failing*/ should "refuse to default to formula/term when trying to parse p()" in {
-    a [ParseException] should be thrownBy parser.parse(toStream(IDENT("p"), LPAREN, RPAREN))
+  it should "default to term when trying to parse p()" in {
+    parser.parse(toStream(IDENT("p"), LPAREN, RPAREN)) should be
+    FuncOf(Function("p",None,Unit,Real), Nothing)
+    //a [ParseException] should be thrownBy
   }
 
-  it/*failing*/ should "refuse to default to formula/program when trying to parse x'=5" in {
-    a [ParseException] should be thrownBy parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5")))
+  it should "default to formula when trying to parse x'=5" in {
+    parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5"))) should be
+    Equal(DifferentialSymbol(Variable("x")), Number(5))
   }
 
   it should "parse f()>0" in {
@@ -499,4 +502,51 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.parse(lex) should be
     Greater(f0, Number(0))
   }
+
+  "The parser" should "default to term when trying to parse p() as a term" in {
+    parser.termParser("p()") should be (FuncOf(Function("p",None,Unit,Real), Nothing))
+  }
+
+  it should "default to term when trying to parse p(x) as a term" in {
+    parser.termParser("p(x)") should be (FuncOf(Function("p",None,Real,Real), Variable("x")))
+  }
+
+  it should "default to formula when trying to parse p() as a formula" in {
+    parser.formulaParser("p()") should be (PredOf(Function("p",None,Unit,Bool), Nothing))
+  }
+
+  it should "default to formula when trying to parse p(x) as a formula" in {
+    parser.formulaParser("p(x)") should be (PredOf(Function("p",None,Real,Bool), Variable("x")))
+  }
+
+  it should "default to formula when trying to parse x'=5" in {
+    parser.parse(toStream(IDENT("x"), PRIME, EQ, NUMBER("5"))) should be
+    Equal(DifferentialSymbol(Variable("x")), Number(5))
+    parser("x'=5") should be (Equal(DifferentialSymbol(Variable("x")), Number(5)))
+  }
+
+  it should "parse a formula when trying to parse x'=5 as a formula" in {
+    parser.formulaParser("x'=5") should be (Equal(DifferentialSymbol(Variable("x")), Number(5)))
+  }
+
+  it should "default to formula when trying to parse x'=5&x>2" in {
+    parser("x'=5&x>2") should be (And(Equal(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
+  }
+
+  it should "???parse a simple program when trying to parse x'=5 as a program" in {
+    parser.programParser("x'=5") should be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
+  }
+
+  it should "parse an ODESystem program when trying to parse x'=5 as a program" in {
+    parser.programParser("x'=5") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True))
+  }
+
+  it should "parse a formula when trying to parse x'=5&x>2 as a formula" in {
+    parser.formulaParser("x'=5&x>2") should be (And(Equal(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
+  }
+
+  it should "parse a program when trying to parse x'=5&x>2 as a program" in {
+    parser.programParser("x'=5&x>2") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
+  }
+
 }
