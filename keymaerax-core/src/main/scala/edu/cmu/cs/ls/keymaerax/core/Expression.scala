@@ -112,10 +112,10 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
     if (cmp != 0) cmp else index.getOrElse(-1) - other.index.getOrElse(-1)
   } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
-  override def toString: String = index match {
+  override def toString: String = (index match {
     case None => name
     case Some(idx) => name + "_" + idx
-  }
+  }) + "@" + getClass.getSimpleName
 }
 
 /*********************************************************************************
