@@ -38,7 +38,8 @@ case class NUMBER(value: String) extends Terminal(value) {
   override def regexp = NUMBER.regexp
 }
 object NUMBER {
-  def regexp = """([0-9]+\.?[0-9]*)""".r //@todo a bit weird but this gives the entire number in a single group.
+  //A bit weird, but this gives the entire number in a single group.
+  def regexp = """([0-9]+\.?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
 }
 
@@ -198,29 +199,29 @@ object KeYmaeraXLexer extends (String => List[Token]) {
 
     s match {
       //update location if we encounter whitespace/comments.
-      case whitespace(spaces) => {
+      case whitespace(spaces) =>
         findNextToken(s.substring(spaces.length), loc match {
           case UnknownLocation => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl, sc+spaces.length, el, ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl, sc+ spaces.length)
         })
-      }
-      case newline(_*) => {
+
+      case newline(_*) =>
         findNextToken(s.tail, loc match {
           case UnknownLocation     => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
         })
-      }
-      case comment(comment) => {
+
+      case comment(theComment) =>
         val lastLineCol  = s.lines.toList.last.length //column of last line.
         val lineCount    = s.lines.length
-        findNextToken(s.substring(comment.length), loc match {
+        findNextToken(s.substring(theComment.length), loc match {
           case UnknownLocation => UnknownLocation
           case Region(sl, sc, el, ec) => Region(sl + lineCount, sc + lastLineCol, el, ec)
-          case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+comment.length)
+          case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+theComment.length)
         })
-      }
+
 
       case LPAREN.startPattern(_*) => consumeTerminalLength(LPAREN, loc)
       case RPAREN.startPattern(_*) => consumeTerminalLength(RPAREN, loc)
