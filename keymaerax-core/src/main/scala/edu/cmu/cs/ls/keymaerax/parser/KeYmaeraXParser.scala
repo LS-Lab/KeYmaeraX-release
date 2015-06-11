@@ -96,7 +96,7 @@ object KeYmaeraXParser extends Parser {
     case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => AtomicODE(xp, e)
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => ODESystem(AtomicODE(xp, e), h)
-    case _ => throw new IllegalArgumentException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op)
+    case _ => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op, "")
   }
   /** Elaborate the composition op(e) that is coming from token tok by lifting defaulted types as needed. */
   private def elaborate(tok: Terminal, op: UnaryOpSpec[Expression], e: Expression): Expression =

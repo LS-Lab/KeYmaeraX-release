@@ -503,7 +503,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Greater(f0, Number(0))
   }
 
-  "The parser" should "parse a term when trying to parse p() as a term" in {
+  "The parser" should "not parse p()+x as a formula" in {
+    a [ParseException] should be thrownBy parser.formulaParser("p()+x")
+  }
+
+  it should "not parse f()&x>0 as a term" in {
+    a [ParseException] should be thrownBy parser.termParser("f()&x>0")
+  }
+
+  it should "parse a term when trying to parse p() as a term" in {
     parser.termParser("p()") should be (FuncOf(Function("p",None,Unit,Real), Nothing))
   }
 
@@ -533,8 +541,8 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("x'=5&x>2") should be (And(Equal(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
-  it should "???parse a simple program when trying to parse x'=5 as a program" in {
-    parser.programParser("x'=5") should be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
+  it should "probably not parse a simple program when trying to parse x'=5 as a program" in {
+    parser.programParser("x'=5") should not be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
   }
 
   it should "parse an ODESystem program when trying to parse x'=5 as a program" in {
@@ -549,4 +557,17 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("x'=5&x>2") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
+  it should "always parse x'=5,y'=7&x>2 as a program" in {
+    parser("x'=5,y'=7&x>2") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
+    parser.programParser("x'=5,y'=7&x>2") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
+  }
+
+  it should "not parse x'=5,y'=7&x>2 as a formula" in {
+    a [ParseException] should be thrownBy parser.formulaParser("x'=5,y'=7&x>2")
+  }
+
+  it should "parse (<a;b;>p(x))&q()" in {
+    parser("(<a;b;>p(x))&q()") should be
+    And(Diamond(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p,Variable("x"))), q0)
+  }
 }
