@@ -121,15 +121,15 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
 
       // special case to force elaboration of modalities at the end
-      case r0@(_ :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_))) :+ Expr(e1)
+      case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
         if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
-        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r0)
+        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3 )
         //reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, e1), r)
 
       // special case to force elaboration of modalities at the end
-      case r0@(_ :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_))) :+ Expr(e1)
+      case r :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_)) :+ Expr(e1)
         if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
-        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r0)
+        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
         //reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
 
 
