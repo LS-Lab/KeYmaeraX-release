@@ -149,8 +149,9 @@ object KeYmaeraXParser extends Parser {
             || optok < op(st, la, List(t2.kind,ExpressionKind)) || optok <= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == LeftAssociative) {
             //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
             val result = elaborate(tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
-            if (statementSemicolon && result.isInstanceOf[AtomicProgram] && !(result.isInstanceOf[DifferentialProgram]) && !(result.isInstanceOf[ODESystem])) {if (la==SEMI) reduce(shift(st), 4, result, r) else error(st)}
-            else reduce(st, 3, result, r)
+            if (statementSemicolon && result.isInstanceOf[AtomicProgram] && !(result.isInstanceOf[DifferentialProgram]) && !(result.isInstanceOf[ODESystem])) {
+              if (la == SEMI) reduce(shift(st), 4, result, r) else error(st)
+            } else reduce(st, 3, result, r)
           } else if (optok > op(st, la, List(t2.kind,ExpressionKind)) || optok >= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
             shift(st)
           else error(st)
@@ -190,26 +191,14 @@ object KeYmaeraXParser extends Parser {
 
       // function/predicate symbols arity 0
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
-        //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
-        //@todo reduce outer RPAREN, LPAREN further first
-        if (followsTerm(la) || followsFormula(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
-//        if (followsFormula(la) && !followsTerm(la)) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
-//        else if (followsTerm(la) && !followsFormula(la)) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
-//        else if (followsFormula(stackToken(r)) && !followsTerm(stackToken(r))) reduce(st, 3, PredOf(Function(name, None, Unit, Bool), Nothing), r)
-//        else if (followsTerm(stackToken(r)) && !followsFormula(stackToken(r))) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
         else if (la==RPAREN) shift(st)
-        else if (la==EOF) throw new ParseException("Ambiguous input\nFound: " + la, st.toString)
         else error(st)
 
       // function/predicate symbols arity>0
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_)  =>
-        //@todo walk past LPAREN in r to disambiguate for cases like 1>0&((((((p(x+y))))))) but unclear for: ((((((p(x+y)))))))&1>0
-        //@todo reduce outer RPAREN, LPAREN further first
-        if (followsTerm(la) || followsFormula(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
-//        if (followsFormula(la) && !followsTerm(la)) reduce(st, 4, PredOf(Function(name, None, Real, Bool), t1), r)
-//        else if (followsTerm(la) && !followsFormula(la)) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
+        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
         else if (la==RPAREN) shift(st)
-        else if (la==EOF) throw new ParseException("Ambiguous input\nFound: " + la, st.toString)
         else error(st)
 
       // modalities
@@ -223,32 +212,18 @@ object KeYmaeraXParser extends Parser {
 
       // parentheses
       case r :+ Token(LPAREN,_) :+ Expr(t1) :+ Token(RPAREN,_) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
-        /*if (la==LPAREN || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-        else*/ if (la==PRIME) shift(st) else reduce(st, 3, t1, r)
+        if (la==PRIME) shift(st) else reduce(st, 3, t1, r)
 
       case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) =>
-        /*if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-        else*/ reduce(st, 3, t1, r)
+        reduce(st, 3, t1, r)
 
       // elaboration special pattern case
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) =>
-        /*if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-        else*/ reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
+        reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
       // elaboration special pattern case
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@And(Equal(_:DifferentialSymbol,_),_)) =>
-        /*if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-        else*/ reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
-
-//      // elaboration special pattern case
-//      case r :+ Token(LBRACE,_) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) :+ Token(RBRACE,_) =>
-//        /*if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-//        else*/ reduce(st, 3, elaborate(DifferentialProgramKind, t1), r)
-//
-//      // elaboration special pattern case
-//      case r :+ Token(LBRACE,_) :+ Expr(t1@And(Equal(_:DifferentialSymbol,_),_)) :+ Token(RBRACE,_) =>
-//        /*if (la==LBRACE || la.isInstanceOf[IDENT] || la.isInstanceOf[NUMBER]) error(st)
-//        else*/ reduce(st, 3, elaborate(DifferentialProgramKind, t1), r)
+        reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
       case _ :+ Token(LPAREN,_) :+ Expr(t1) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (followsExpression(t1, la)) shift(st)
@@ -285,13 +260,10 @@ object KeYmaeraXParser extends Parser {
 
       // ordinary terminals
       case r :+ Token(IDENT(name),_) =>
-        /*if (la == RPAREN || la.isInstanceOf[IDENT]) error(st)
-        else*/
         if (la==LPAREN) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
 
       case r :+ Token(NUMBER(value),_) =>
-        /*if (la.isInstanceOf[NUMBER] || la.isInstanceOf[IDENT] || la == LPAREN) error(st)
-        else*/ reduce(st, 1, Number(BigDecimal(value)), r)
+        reduce(st, 1, Number(BigDecimal(value)), r)
 
 
       case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING),_) =>
