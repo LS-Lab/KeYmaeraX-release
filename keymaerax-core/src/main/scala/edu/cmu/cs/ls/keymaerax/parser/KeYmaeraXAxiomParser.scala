@@ -5,6 +5,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXLexer.TokenStream
 
 /**
  * Created by nfulton on 6/11/15.
+ * @author nfulton
  */
 object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
   def apply(s: String) = parse(KeYmaeraXLexer.lexAxiomFile(s))
@@ -26,12 +27,12 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
   }
 
   def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
-    require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axion block.")
-    require(input.tail.head.tok.isInstanceOf[AXIOM_NAME])
+    require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axiom block.")
+    require(input.tail.head.tok.isInstanceOf[AXIOM_NAME, "expected ALP block to have a string as a name"])
 
     val name = input.tail.head match {
       case Token(AXIOM_NAME(x),_) => x
-      case _ => throw new Exception("Require should have failed.")
+      case _ => throw new AssertionError("Require should have failed.")
     }
     //Find the End. token and exclude it.
     val (axiomTokens, remainderTokens) =
@@ -39,7 +40,7 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
 
     val axiom = KeYmaeraXParser.parse(axiomTokens :+ Token(EOF, UnknownLocation)) match {
       case axiomAsFormula : Formula => axiomAsFormula
-      case _ => throw new Exception("Parsed a non-formula in an Axiom context.")
+      case e:_ => throw new ParseException("Parsed a non-formula in an Axiom context.", e.toString)
     }
 
     (name, axiom, remainderTokens.tail)
