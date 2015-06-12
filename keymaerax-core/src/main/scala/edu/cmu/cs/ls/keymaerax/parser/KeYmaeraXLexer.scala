@@ -139,6 +139,16 @@ object ANYTHING extends OPERATOR("??") {
 }
 object PSEUDO  extends Terminal("<pseudo>")
 
+object AXIOM_BEGIN extends Terminal("Axiom.")
+object AXIOM_END extends Terminal("End.")
+case class DELIMITED_STRING(var s: String) extends Terminal("<string>") {
+  override def regexp = DELIMITED_STRING_PAT.regexp
+}
+object DELIMITED_STRING_PAT {
+  def regexp = """\"(.*)\""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
+}
+
 sealed abstract class Location
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
@@ -176,12 +186,13 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    *
    * @param s The string to process.
    * @param loc The location of s.
+   * @param isAxiomFile true if "Axiom. ... End." blocksm may be present.
    * @return A triple containing:
    *          _1: the next token,
    *          _2: the portion of the string following the next token,
    *          _3: The location of the beginning of the next string.
    */
-  private def findNextToken(s: String, loc: Location): Option[(String, Token, Location)] = {
+  private def findNextToken(s: String, loc: Location, isAxiomFile: Boolean = false): Option[(String, Token, Location)] = {
     val whitespace = """^(\ +).*""".r
     val newline = """(?s)(^\n).*""".r //@todo use something more portable.
     val comment = """(?s)(/\*[\s\S]*\*/)""".r
@@ -211,14 +222,14 @@ object KeYmaeraXLexer extends (String => List[Token]) {
           case UnknownLocation => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl, sc+spaces.length, el, ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl, sc+ spaces.length)
-        })
+        }, isAxiomFile)
 
       case newline(_*) =>
         findNextToken(s.tail, loc match {
           case UnknownLocation     => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
-        })
+        }, isAxiomFile)
 
       case comment(theComment) =>
         val lastLineCol  = s.lines.toList.last.length //column of last line.
@@ -227,7 +238,18 @@ object KeYmaeraXLexer extends (String => List[Token]) {
           case UnknownLocation => UnknownLocation
           case Region(sl, sc, el, ec) => Region(sl + lineCount, sc + lastLineCol, el, ec)
           case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+theComment.length)
-        })
+        }, isAxiomFile)
+
+      //Axiom file cases
+      case AXIOM_BEGIN.startPattern(_*) =>
+        if(isAxiomFile) consumeTerminalLength(AXIOM_BEGIN, loc)
+        else throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
+      case AXIOM_END.startPattern(_*) =>
+        if(isAxiomFile) consumeTerminalLength(AXIOM_END, loc)
+        else throw new Exception("Encountered ``End.`` in non-axiom lexing mode.")
+      case DELIMITED_STRING_PAT.startPattern(str) =>
+        if(isAxiomFile) consumeColumns(str.length + 2, DELIMITED_STRING(str), loc)
+        else throw new Exception("Encountered delimited string in non-axiom lexing mode.")
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
       case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
@@ -326,14 +348,17 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    * @param inputLocation The position of the input (e.g., wrt a source file).
    * @return A token stream.
    */
-  private def lex(input: String, inputLocation:Location): TokenStream =
+  private def lex(input: String, inputLocation:Location, isAxiomLexer: Boolean = false): TokenStream =
     if(input.trim.length == 0) {
       List(Token(EOF))
     }
     else {
-      findNextToken(input, inputLocation) match {
+      findNextToken(input, inputLocation, isAxiomLexer) match {
         case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc)
         case None => throw new Exception("Have not reached EOF but could not find next token in ." + input + ".")
       }
     }
+
+
+  def lexAxiomFile(input: String, inputLocation: Location = SuffixRegion(1,1)) = lex(input, inputLocation, true)
 }
