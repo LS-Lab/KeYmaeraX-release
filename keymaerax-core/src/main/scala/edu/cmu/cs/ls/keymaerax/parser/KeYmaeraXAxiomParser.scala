@@ -19,28 +19,30 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axion block.")
     val (nextAxiom, nextFormula, remainder) = parseNextAxiom(input)
-    if(remainder.length <3)  List((nextAxiom, nextFormula))
-    else (nextAxiom, nextFormula) +: parse(remainder)
+    if(remainder.length == 1 && remainder.head.tok.equals(EOF))
+      List((nextAxiom, nextFormula))
+    else
+      (nextAxiom, nextFormula) +: parse(remainder)
   }
 
   def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
     require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axion block.")
-    require(input.tail.head.tok.isInstanceOf[DELIMITED_STRING])
+    require(input.tail.head.tok.isInstanceOf[AXIOM_NAME])
 
     val name = input.tail.head match {
-      case DELIMITED_STRING(x) => x
+      case Token(AXIOM_NAME(x),_) => x
       case _ => throw new Exception("Require should have failed.")
     }
     //Find the End. token and exclude it.
-    val (axiomTokens, remainderWithEnd) = input.tail.tail.span(!_.equals(AXIOM_END)) //1st element is AXIOM_BEGIN, 2nd is DELIMITED_STRING.
-    val remainderTokens = remainderWithEnd.tail //remove AXIOM_END from beginning of remainder.
+    val (axiomTokens, remainderTokens) =
+      input.tail.tail.span(x => !x.tok.equals(AXIOM_END)) //1st element is AXIOM_BEGIN, 2nd is AXIOM_NAME.
 
     val axiom = KeYmaeraXParser.parse(axiomTokens :+ Token(EOF, UnknownLocation)) match {
       case axiomAsFormula : Formula => axiomAsFormula
       case _ => throw new Exception("Parsed a non-formula in an Axiom context.")
     }
 
-    (name, axiom, remainderTokens)
+    (name, axiom, remainderTokens.tail)
   }
 
 }

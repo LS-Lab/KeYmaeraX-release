@@ -19,7 +19,7 @@ sealed abstract class Terminal(val img: String) {
    */
   def regexp : scala.util.matching.Regex = img.r
 
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
@@ -31,7 +31,7 @@ case class IDENT(name: String) extends Terminal(name) {
 }
 object IDENT {
   def regexp = """([a-zA-Z][a-zA-Z0-9\_]*)""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 case class NUMBER(value: String) extends Terminal(value) {
   override def toString = "NUM(" + value + ")"
@@ -40,7 +40,7 @@ case class NUMBER(value: String) extends Terminal(value) {
 object NUMBER {
   //A bit weird, but this gives the entire number in a single group.
   def regexp = """(-?[0-9]+\.?[0-9]*)""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
 /**
@@ -139,14 +139,16 @@ object ANYTHING extends OPERATOR("??") {
 }
 object PSEUDO  extends Terminal("<pseudo>")
 
-object AXIOM_BEGIN extends Terminal("Axiom.")
-object AXIOM_END extends Terminal("End.")
-case class DELIMITED_STRING(var s: String) extends Terminal("<string>") {
-  override def regexp = DELIMITED_STRING_PAT.regexp
+object AXIOM_BEGIN extends Terminal("Axiom") {
+  override def regexp = """Axiom""".r
 }
-object DELIMITED_STRING_PAT {
-  def regexp = """\"(.*)\""".r
-  val startPattern: Regex = ("^" + regexp.pattern.pattern + ".*").r
+object AXIOM_END extends Terminal("End.")
+case class AXIOM_NAME(var s: String) extends Terminal("<string>") {
+  override def regexp = AXIOM_NAME_PAT.regexp
+}
+object AXIOM_NAME_PAT {
+  def regexp = """\"(.*)\"\.""".r
+  val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
 sealed abstract class Location
@@ -193,8 +195,8 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    *          _3: The location of the beginning of the next string.
    */
   private def findNextToken(s: String, loc: Location, isAxiomFile: Boolean = false): Option[(String, Token, Location)] = {
-    val whitespace = """^(\ +).*""".r
-    val newline = """(?s)(^\n).*""".r //@todo use something more portable.
+    val whitespace = """^(\ +)[\s\S]*""".r
+    val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
     val comment = """(?s)(/\*[\s\S]*\*/)""".r
 
     /**
@@ -247,8 +249,8 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case AXIOM_END.startPattern(_*) =>
         if(isAxiomFile) consumeTerminalLength(AXIOM_END, loc)
         else throw new Exception("Encountered ``End.`` in non-axiom lexing mode.")
-      case DELIMITED_STRING_PAT.startPattern(str) =>
-        if(isAxiomFile) consumeColumns(str.length + 2, DELIMITED_STRING(str), loc)
+      case AXIOM_NAME_PAT.startPattern(str) =>
+        if(isAxiomFile) consumeColumns(str.length + 3, AXIOM_NAME(str), loc) //+3 = ",",.
         else throw new Exception("Encountered delimited string in non-axiom lexing mode.")
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
@@ -354,11 +356,12 @@ object KeYmaeraXLexer extends (String => List[Token]) {
     }
     else {
       findNextToken(input, inputLocation, isAxiomLexer) match {
-        case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc)
+        case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc, isAxiomLexer)
         case None => throw new Exception("Have not reached EOF but could not find next token in ." + input + ".")
       }
     }
 
 
-  def lexAxiomFile(input: String, inputLocation: Location = SuffixRegion(1,1)) = lex(input, inputLocation, true)
+  def lexAxiomFile(input: String, inputLocation: Location = SuffixRegion(1,1)) =
+    lex(input, inputLocation, true)
 }
