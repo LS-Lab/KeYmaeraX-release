@@ -3,7 +3,7 @@ package edu.cmu.cs.ls.keymaerax.parser
 import edu.cmu.cs.ls.keymaerax.core.ProverException
 
 /**
- * Created by aplatzer on 6/7/15.
+ * Indicates a parse error at the given location.
  * @author aplatzer
  */
-class ParseException(msg: String, state: String) extends ProverException(msg + "\nin " + state)
+case class ParseException(msg: String, loc: Location, state: String) extends ProverException(msg + "\nat " + loc + "\nin " + state)

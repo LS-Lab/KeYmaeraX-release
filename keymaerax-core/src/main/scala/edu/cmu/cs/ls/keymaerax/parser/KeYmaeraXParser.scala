@@ -27,7 +27,7 @@ trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
 case class Accept(expr: Expression) extends FinalItem
 /** Parser items representing erroneous ill-formed input. */
-case class Error(msg: String, st: String) extends FinalItem
+case class Error(msg: String, loc: Location, st: String) extends FinalItem
 
 
 /**
@@ -46,32 +46,38 @@ object KeYmaeraXParser extends Parser {
 
   /** Parser state consisting of expected syntactic kind to parse currently, the item stack, and remaining input. */
   sealed case class ParseState(stack: Stack[Item], input: TokenStream) {
-    override def toString: String = "ParseState(" + stack + "  :|:  " + input.mkString(", ") +")"
+    override def toString: String = "ParseState(" + stack + "  <|>  " + input.mkString(", ") +")"
   }
 
   override def termParser: (String => Term) =
     input => apply(input) match {
       case t: Term => t
-      case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
   override def formulaParser: (String => Formula) =
     input => elaborate(OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
-      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+    }
+
+  private[parser] def formulaTokenParser: (TokenStream => Formula) =
+    input => elaborate(OpSpec.sNone, FormulaKind, parse(input)) match {
+      case f: Formula => f
+      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
   override def programParser: (String => Program) =
     input => elaborate(OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
-      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
-  /*private*/ def parse(input: TokenStream): Expression = {
+  /*private[core]*/ def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
-      case context :+ Error(msg, st) => throw new ParseException(msg, st)
+      case context :+ Error(msg, loc, st) => throw new ParseException(msg, loc, st)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
   }
@@ -96,7 +102,9 @@ object KeYmaeraXParser extends Parser {
     case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => AtomicODE(xp, e)
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => ODESystem(AtomicODE(xp, e), h)
-    case _ => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op, "")
+    // lift differential equations without evolution domain constraints to ODESystems
+    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => ODESystem(ode, True)
+    case _ => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op, UnknownLocation, "")
   }
   /** Elaborate the composition op(e) that is coming from token tok by lifting defaulted types as needed. */
   private def elaborate(tok: Terminal, op: UnaryOpSpec[Expression], e: Expression): Expression =
@@ -115,10 +123,10 @@ object KeYmaeraXParser extends Parser {
     s match {
       // modal formulas bind tight
       case r :+ Token(LBOX,_) :+ Expr(p1:Program) :+ Token(RBOX,_) :+ Expr(f1:Formula) =>
-        reduce(st, 4, OpSpec.sBox.const(PSEUDO.img, p1, f1), r)
+        reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, f1), r)
 
       case r :+ Token(LDIA,_) :+ Expr(p1:Program) :+ Token(RDIA,_) :+ Expr(f1:Formula) =>
-        reduce(st, 4, OpSpec.sDiamond.const(PSEUDO.img, p1, f1), r)
+        reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, f1), r)
 
       // special case to force elaboration of modalities at the end
       case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
@@ -235,7 +243,7 @@ object KeYmaeraXParser extends Parser {
 
       case _ :+ Token(LBOX,_) :+ Expr(t1) =>
         if (t1.isInstanceOf[Program] && followsProgram(la)) shift(st)
-        else if (t1.isInstanceOf[Variable] && followsIdentifier(la)) shift(st)
+        else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
         else error(st)
 
       case _ :+ Token(LDIA,_) :+ Expr(t1)  =>
@@ -391,8 +399,8 @@ object KeYmaeraXParser extends Parser {
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
     val ParseState(s, input@(la :: rest)) = st
-    if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la, st.toString)
-    ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la, st.toString), input)
+    if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString)
+    ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString), input)
   }
 
   /** Drop next input token la from consideration without shifting it to the parser stack s. */

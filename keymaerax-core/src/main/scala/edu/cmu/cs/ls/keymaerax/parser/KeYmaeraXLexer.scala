@@ -151,6 +151,9 @@ object AXIOM_NAME_PAT {
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
+/**
+ * The location where a Terminal is located in an input stream.
+ */
 sealed abstract class Location
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
@@ -158,6 +161,7 @@ object UnknownLocation extends Location {
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   assert(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
+  override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
 }
 /**
  * Like a region, but extends until the end of the input.
