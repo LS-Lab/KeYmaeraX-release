@@ -112,10 +112,13 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
     if (cmp != 0) cmp else index.getOrElse(-1) - other.index.getOrElse(-1)
   } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
-  override def toString: String = (index match {
+  /** Get name with index of this NamedSymbol. */
+  def asString: String = (index match {
     case None => name
     case Some(idx) => name + "_" + idx
-  }) + "@" + getClass.getSimpleName
+  })
+
+  override def toString: String = asString + "@" + getClass.getSimpleName
 }
 
 /*********************************************************************************
@@ -150,7 +153,7 @@ sealed case class DifferentialSymbol(x: Variable)
   require(x.sort == Real, "differential symbols expect real sort")
   def name: String = x.name
   def index: Option[Int] = x.index
-  override def toString: String =  super.toString + "'"
+  override def toString: String =  x.asString + "'" + "@" + getClass.getSimpleName
 }
 
 /** Number literal */
