@@ -168,7 +168,9 @@ case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends 
  * @param line The starting line.
  * @param column The ending line.
  */
-case class SuffixRegion(line: Int, column: Int) extends Location
+case class SuffixRegion(line: Int, column: Int) extends Location {
+  override def toString = line + ":" + column + " to " + EOF
+}
 
 /**
  * Created by aplatzer on 6/8/15.

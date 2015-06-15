@@ -39,6 +39,9 @@ case class Error(msg: String, loc: Location, st: String) extends FinalItem
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
 
+  private val immediateError = true
+
+
   def apply(input: String): Expression = parse(KeYmaeraXLexer(input))
 
   /** Lexer's token stream with first token at head. */
@@ -90,22 +93,35 @@ object KeYmaeraXParser extends Parser {
 
   // elaboration based on expected types
 
-  /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed. */
-  private def elaborate(op: OpSpec, kind: Kind, e: Expression): Expression = if (e.kind==kind) e else e match {
+  /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or return None. */
+  private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
-    case FuncOf(f, t) if kind==FormulaKind => PredOf(Function(f.name,f.index,f.domain,Bool), t)
+    case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
     // lift misclassified defaulted differential program constant
-    case x: Variable if kind==DifferentialProgramKind && x.index==None => DifferentialProgramConst(x.name)
+    case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
     // lift misclassified defaulted program constant
-    case x: Variable if kind==ProgramKind && x.index==None => ProgramConst(x.name)
+    case x: Variable if kind==ProgramKind && x.index==None => Some(ProgramConst(x.name))
     // lift misclassified defaulted differential equation
-    case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => AtomicODE(xp, e)
+    case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => Some(AtomicODE(xp, e))
     // lift misclassified defaulted differential equation
-    case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => ODESystem(AtomicODE(xp, e), h)
+    case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => Some(ODESystem(AtomicODE(xp, e), h))
     // lift differential equations without evolution domain constraints to ODESystems
-    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => ODESystem(ode, True)
-    case _ => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op, UnknownLocation, "")
+    case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode, True))
+    case _ => None
   }
+
+  /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or throw exception. */
+  private def elaborate(op: OpSpec, kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
+    case Some(e) => e
+    case None => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op, UnknownLocation, "")
+  }
+
+  /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or leave as is. */
+  private def possibleElaborate(kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
+    case Some(e) => e
+    case None => e
+  }
+
   /** Elaborate the composition op(e) that is coming from token tok by lifting defaulted types as needed. */
   private def elaborate(tok: Terminal, op: UnaryOpSpec[Expression], e: Expression): Expression =
     op.const(tok.img, elaborate(op, op.kind, e))
@@ -121,6 +137,17 @@ object KeYmaeraXParser extends Parser {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      // special cases for early prime conversion
+      case r :+ Expr(x1:Variable) :+ Token(PRIME,_) =>
+        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
+
+      case r :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) :+ Token(PRIME,_) =>
+        reduce(st, 4, OpSpec.sDifferential.const(PRIME.img, t1), r)
+
+      case r :+ Token(LPAREN,_) :+ Expr(f1:Formula) :+ Token(RPAREN,_) :+ Token(PRIME,_) =>
+        reduce(st, 4, OpSpec.sDifferentialFormula.const(PRIME.img, f1), r)
+
+
       // modal formulas bind tight
       case r :+ Token(LBOX,_) :+ Expr(p1:Program) :+ Token(RBOX,_) :+ Expr(f1:Formula) =>
         reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, f1), r)
@@ -157,8 +184,10 @@ object KeYmaeraXParser extends Parser {
             || optok < op(st, la, List(t2.kind,ExpressionKind)) || optok <= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == LeftAssociative) {
             //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
             val result = elaborate(tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
-            if (statementSemicolon && result.isInstanceOf[AtomicProgram] && !(result.isInstanceOf[DifferentialProgram]) && !(result.isInstanceOf[ODESystem])) {
-              if (la == SEMI) reduce(shift(st), 4, result, r) else error(st)
+            if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
+              if (la == SEMI) reduce(shift(st), 4, result, r)
+              else if (result.isInstanceOf[DifferentialProgram] || result.isInstanceOf[ODESystem]) reduce(st, 3, result, r) // optional SEMI
+              else error(st)
             } else reduce(st, 3, result, r)
           } else if (optok > op(st, la, List(t2.kind,ExpressionKind)) || optok >= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
             shift(st)
@@ -178,16 +207,6 @@ object KeYmaeraXParser extends Parser {
         assert(op(st, tok, List(ExpressionKind)).isInstanceOf[UnaryOpSpec[_]] || tok==MINUS, "only unary operators are currently allowed to have prefix format\nin " + s)
         if (firstExpression(la)) shift(st)
         else error(st)
-
-      // special cases
-      case r :+ Expr(x1:Variable) :+ Token(PRIME,_) =>
-        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
-
-      case r :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) :+ Token(PRIME,_) =>
-        reduce(st, 4, OpSpec.sDifferential.const(PRIME.img, t1), r)
-
-      case r :+ Token(LPAREN,_) :+ Expr(f1:Formula) :+ Token(RPAREN,_) :+ Token(PRIME,_) =>
-        reduce(st, 4, OpSpec.sDifferentialFormula.const(PRIME.img, f1), r)
 
       // special case for elaboration to a;
       case r :+ Expr(t1:Variable) :+ Token(SEMI,_) if statementSemicolon =>
@@ -244,6 +263,7 @@ object KeYmaeraXParser extends Parser {
       case _ :+ Token(LBOX,_) :+ Expr(t1) =>
         if (t1.isInstanceOf[Program] && followsProgram(la)) shift(st)
         else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
+        else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st)
 
       case _ :+ Token(LDIA,_) :+ Expr(t1)  =>
@@ -399,8 +419,8 @@ object KeYmaeraXParser extends Parser {
   /** Error parsing the next input token la when in parser stack s.*/
   private def error(st: ParseState): ParseState = {
     val ParseState(s, input@(la :: rest)) = st
-    if (true) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString)
-    ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString), input)
+    if (immediateError) throw new ParseException("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString)
+    else ParseState(s :+ Error("Unexpected token cannot be parsed\nFound: " + la, la.loc, st.toString), input)
   }
 
   /** Drop next input token la from consideration without shifting it to the parser stack s. */
