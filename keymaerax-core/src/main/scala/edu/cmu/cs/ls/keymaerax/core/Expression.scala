@@ -112,10 +112,13 @@ sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
     if (cmp != 0) cmp else index.getOrElse(-1) - other.index.getOrElse(-1)
   } ensuring(r => r!=0 || this==other, "no different categories of symbols with same name " + this + " compared to " + other)
 
-  override def toString: String = (index match {
+  /** Get name with index of this NamedSymbol. */
+  def asString: String = (index match {
     case None => name
     case Some(idx) => name + "_" + idx
-  }) + "@" + getClass.getSimpleName
+  })
+
+  override def toString: String = asString + "@" + getClass.getSimpleName
 }
 
 /*********************************************************************************
@@ -150,7 +153,7 @@ sealed case class DifferentialSymbol(x: Variable)
   require(x.sort == Real, "differential symbols expect real sort")
   def name: String = x.name
   def index: Option[Int] = x.index
-  override def toString: String =  super.toString + "'"
+  override def toString: String =  x.asString + "'" + "@" + getClass.getSimpleName
 }
 
 /** Number literal */
@@ -423,11 +426,13 @@ sealed trait DifferentialProgram extends Program {
   override def kind: Kind = DifferentialProgramKind
 }
 /** Atomic differential programs */
-sealed trait AtomicDifferentialProgram extends DifferentialProgram with AtomicProgram
+sealed trait AtomicDifferentialProgram extends AtomicProgram with DifferentialProgram
 /** Differential equation system ode with given evolution domain constraint */
 //@todo should not be a differential program since not nested within DifferentialProduct.
 case class ODESystem(ode: DifferentialProgram, constraint: Formula)
-  extends Program with DifferentialProgram
+  extends Program with DifferentialProgram {
+  override def kind: Kind = ProgramKind
+}
 /** Uninterpreted differential program constant */
 sealed case class DifferentialProgramConst(name: String) extends NamedSymbol with AtomicDifferentialProgram {
   def index: Option[Int] = None

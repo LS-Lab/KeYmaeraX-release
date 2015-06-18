@@ -613,6 +613,14 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("x'=5") should not be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
   }
 
+  it should "parse an ODESystem program from [x'=5;]p(x)" in {
+    parser("[x'=5;]p(x)") should be (Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse an ODESystem program from <x'=5;>p(x)" in {
+    parser("<x'=5;>p(x)") should be (Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
+  }
+
   it should "parse an ODESystem program when trying to parse x'=5 as a program" in {
     parser.programParser("x'=5") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True))
   }

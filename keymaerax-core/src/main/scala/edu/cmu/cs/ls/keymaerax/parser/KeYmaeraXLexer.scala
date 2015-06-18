@@ -171,6 +171,9 @@ object PROGRAM extends Terminal("P")
 object CP extends Terminal("CP")
 object MFORMULA extends Terminal("F")
 
+/**
+ * The location where a Terminal is located in an input stream.
+ */
 sealed abstract class Location
 object UnknownLocation extends Location {
   override def toString = "<somewhere>"
@@ -178,13 +181,16 @@ object UnknownLocation extends Location {
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
   assert(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
+  override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
 }
 /**
  * Like a region, but extends until the end of the input.
  * @param line The starting line.
  * @param column The ending line.
  */
-case class SuffixRegion(line: Int, column: Int) extends Location
+case class SuffixRegion(line: Int, column: Int) extends Location {
+  override def toString = line + ":" + column + " to " + EOF
+}
 
 /**
  * Created by aplatzer on 6/8/15.
