@@ -250,7 +250,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    *          _3: The location of the beginning of the next string.
    */
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
-    val whitespace = """^([\ +|\t+])[\s\S]*""".r
+    val whitespace = """^(\s+)[\s\S]*""".r
     val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
     val comment = """(?s)(^/\*[\s\S]*?\*/)[\s\S]*""".r
 
@@ -375,19 +375,17 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case LBRACE.startPattern(_*) => consumeTerminalLength(LBRACE, loc)
       case RBRACE.startPattern(_*) => consumeTerminalLength(RBRACE, loc)
 
-
-
       case COMMA.startPattern(_*) => consumeTerminalLength(COMMA, loc)
 
       //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
       case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
-
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
       case POWER.startPattern(_*) => consumeTerminalLength(POWER, loc)
       case STAR.startPattern(_*) => consumeTerminalLength(STAR, loc)
       case PLUS.startPattern(_*) => consumeTerminalLength(PLUS, loc)
+        
 
       case AMP.startPattern(_*) => consumeTerminalLength(AMP, loc)
       case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
