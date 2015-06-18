@@ -1,5 +1,7 @@
-import edu.cmu.cs.ls.keymaerax.parser.{RPAREN, KeYmaeraXLexer, Region, LPAREN, EOF, FORALL, IDENT, NUMBER}
-import org.scalatest.{Matchers, FlatSpec}
+package parserTests
+
+import edu.cmu.cs.ls.keymaerax.parser._
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
  * These are white space processing tests and location munging tests. All tests that don't care
@@ -20,7 +22,7 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
 
   it should "Handle empty string correctly" in {
     val input = ""
-    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(EOF, Region(1,1,1,1))
+    KeYmaeraXLexer(input).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(EOF, UnknownLocation)
   }
 
   it should "Handle newlines correctly" in {
@@ -62,6 +64,22 @@ class KeYmaeraXLexerTests extends FlatSpec with Matchers {
   it should "parse an number" in {
     val n = "99.999"
     KeYmaeraXLexer(n).head shouldBe edu.cmu.cs.ls.keymaerax.parser.Token(NUMBER(n), Region(1,1,1,n.length))
+  }
+
+  it should "parse a single comment" in {
+    val n = "/*an identifier*/x"
+    KeYmaeraXLexer(n).head.tok shouldBe(IDENT("x"))
+  }
+
+  it should "parse a multi-line comment" in {
+    val n =
+      """
+        |/*
+        | * This is a comment.
+        | */
+        | x
+      """.stripMargin
+    KeYmaeraXLexer(n).head.tok shouldBe(IDENT("x"))
   }
 
 }

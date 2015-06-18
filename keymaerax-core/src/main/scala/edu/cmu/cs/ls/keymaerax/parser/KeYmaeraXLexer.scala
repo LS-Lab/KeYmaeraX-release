@@ -161,9 +161,15 @@ object PERIOD extends Terminal(".") {
 }
 object FUNCTIONS_BLOCK extends Terminal("Functions.")
 object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
+object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 object PROBLEM_BLOCK extends Terminal("Problem.")
 object REAL extends Terminal("R")
 object BOOL extends Terminal("B")
+//Is there any reason we parse a bunch of stuff just to throw it away? Are these suppose to be in our sort heirarchy...?
+object TERM extends Terminal("T")
+object PROGRAM extends Terminal("P")
+object CP extends Terminal("CP")
+object MFORMULA extends Terminal("F")
 
 sealed abstract class Location
 object UnknownLocation extends Location {
@@ -221,7 +227,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     else {
       findNextToken(input, inputLocation, AxiomFileMode()) match {
         case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc, mode)
-        case None => throw new Exception("Have not reached EOF but could not find next token in ." + input + ".")
+        case None => List(Token(EOF)) //note: This case can happen if the input is e.g. only a comment or only whitespace.
       }
     }
 
@@ -238,9 +244,9 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
    *          _3: The location of the beginning of the next string.
    */
   private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
-    val whitespace = """^(\ +)[\s\S]*""".r
+    val whitespace = """^([\ +|\t+])[\s\S]*""".r
     val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
-    val comment = """(?s)(/\*[\s\S]*\*/)""".r
+    val comment = """(?s)(^/\*[\s\S]*?\*/)[\s\S]*""".r
 
     /**
      *
@@ -262,6 +268,16 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
     s match {
       //update location if we encounter whitespace/comments.
+      case comment(theComment) => {
+        val lastLineCol = s.lines.toList.last.length //column of last line.
+        val lineCount = s.lines.length
+        findNextToken(s.substring(theComment.length), loc match {
+          case UnknownLocation => UnknownLocation
+          case Region(sl, sc, el, ec) => Region(sl + lineCount, lastLineCol, el, ec)
+          case SuffixRegion(sl, sc) => SuffixRegion(sl + lineCount, theComment.length)
+        }, mode)
+      }
+
       case whitespace(spaces) =>
         findNextToken(s.substring(spaces.length), loc match {
           case UnknownLocation => UnknownLocation
@@ -274,15 +290,6 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
           case UnknownLocation     => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
-        }, mode)
-
-      case comment(theComment) =>
-        val lastLineCol  = s.lines.toList.last.length //column of last line.
-        val lineCount    = s.lines.length
-        findNextToken(s.substring(theComment.length), loc match {
-          case UnknownLocation => UnknownLocation
-          case Region(sl, sc, el, ec) => Region(sl + lineCount, sc + lastLineCol, el, ec)
-          case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+theComment.length)
         }, mode)
 
       // File cases
@@ -298,6 +305,10 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
         case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
         case _ => throw new Exception("ProgramVariables. should only occur when processing files.")
       }
+      case VARIABLES_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(VARIABLES_BLOCK, loc)
+        case _ => throw new Exception("Variables. should only occur when processing files.")
+      }
       case BOOL.startPattern(_*) => mode match {
         case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(BOOL, loc)
         case _ => throw new Exception("Bool symbol declaration should only occur when processing files.")
@@ -305,6 +316,22 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case REAL.startPattern(_*) => mode match {
         case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(REAL, loc)
         case _ => throw new Exception("Real symbol declaration should only occur when processing files.")
+      }
+      case TERM.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(TERM, loc)
+        case _ => throw new Exception("Term symbol declaration should only occur when processing files.")
+      }
+      case PROGRAM.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PROGRAM, loc)
+        case _ => throw new Exception("Program symbol declaration should only occur when processing files.")
+      }
+      case CP.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(CP, loc)
+        case _ => throw new Exception("CP symbol declaration should only occur when processing files.")
+      }
+      case MFORMULA.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(MFORMULA, loc)
+        case _ => throw new Exception("MFORMULA symbol declaration should only occur when processing files.")
       }
       //.kyx file cases
       case PROBLEM_BLOCK.startPattern(_*) => mode match {
@@ -386,7 +413,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
 
-      case "" => None
+      case _ if s.isEmpty => None
       case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
     }
   }

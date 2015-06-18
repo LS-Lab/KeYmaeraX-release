@@ -57,6 +57,9 @@ object KeYmaeraXDeclarationsParser {
       val (programVariables, finalRemainder) = processProgramVariables(remainder)
       (programVariables ++ functions, finalRemainder)
     }
+    else if(tokens.head.tok.equals(VARIABLES_BLOCK)) {
+      processVariables(tokens)
+    }
     else {
       (Map(), tokens)
     }
@@ -81,6 +84,15 @@ object KeYmaeraXDeclarationsParser {
 
   def processFunctionSymbols(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort)], List[Token]) = {
     if(tokens.head.tok.equals(FUNCTIONS_BLOCK)) {
+      val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
+      val funSymbolsSection = funSymbolsTokens.tail
+      (processDeclarations(funSymbolsSection, Map()), remainder.tail)
+    }
+    else (Map(), tokens)
+  }
+
+  def processVariables(tokens: List[Token]) : (Map[(String, Option[Int]), (Option[Sort], Sort)], List[Token]) = {
+    if(tokens.head.tok.equals(VARIABLES_BLOCK)) {
       val(funSymbolsTokens, remainder) = tokens.span(x => !x.tok.equals(END_BLOCK))
       val funSymbolsSection = funSymbolsTokens.tail
       (processDeclarations(funSymbolsSection, Map()), remainder.tail)
@@ -166,7 +178,10 @@ object KeYmaeraXDeclarationsParser {
       val name = id.name
       if(name.contains("_")) {
         val parts = name.split("_", 2)
-        (parts(0), Some(parts(1).toInt))
+        if(parts(1).nonEmpty)
+          (parts(0), Some(parts(1).toInt))
+        else
+          (parts(0), None) //This is just a name that ends withe a _.
       }
       else (name, None)
     case _ => throw new Exception("Expected variable name identifier but found " + nameToken + " at " + nameToken.loc)
@@ -176,6 +191,11 @@ object KeYmaeraXDeclarationsParser {
   private def parseSort(sortToken : Token) : Sort = sortToken.tok match {
     case edu.cmu.cs.ls.keymaerax.parser.REAL => edu.cmu.cs.ls.keymaerax.core.Real
     case edu.cmu.cs.ls.keymaerax.parser.BOOL => edu.cmu.cs.ls.keymaerax.core.Bool
+    case edu.cmu.cs.ls.keymaerax.parser.TERM => edu.cmu.cs.ls.keymaerax.core.Real //@todo
+    case edu.cmu.cs.ls.keymaerax.parser.PROGRAM => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
+    case edu.cmu.cs.ls.keymaerax.parser.CP => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
+    case edu.cmu.cs.ls.keymaerax.parser.MFORMULA => edu.cmu.cs.ls.keymaerax.core.Bool //@todo
+    case edu.cmu.cs.ls.keymaerax.parser.TEST => edu.cmu.cs.ls.keymaerax.core.Bool //@todo this is getting stupid
     case _ => throw new Exception("Expected sort token but found " + sortToken)
   }
 

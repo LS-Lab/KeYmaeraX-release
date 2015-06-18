@@ -23,7 +23,7 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  * @see "Andre Platzer. The complete proof theory of hybrid systems. ACM/IEEE Symposium on Logic in Computer Science, LICS 2012, June 25–28, 2012, Dubrovnik, Croatia, pages 541-550. IEEE 2012"
  * @author aplatzer
  */
-private[core] object AxiomBase {
+/*private[core]*/ object AxiomBase {
   /**
    * KeYmaera X Axiomatic Proof Rules.
    * @note Soundness-critical: Only return locally sound proof rules.
@@ -202,7 +202,7 @@ private[core] object AxiomBase {
    * Look up an axiom of KeYmaera X,
    * i.e. sound axioms are valid formulas of differential dynamic logic.
    */
-  private def loadAxiomString() : String =
+  /*private*/ def loadAxiomString() : String =
 """
 /**
  * KeYmaera Axioms.
