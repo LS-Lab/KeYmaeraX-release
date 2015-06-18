@@ -8,6 +8,12 @@ package edu.cmu.cs.ls.keymaerax.parser
 import scala.collection.immutable._
 import scala.util.matching.Regex
 
+
+sealed abstract class LexerMode
+case class ExpressionMode() extends LexerMode
+case class AxiomFileMode() extends LexerMode
+case class ProblemFileMode() extends LexerMode
+
 /**
  * Terminal symbols of the differential dynamic logic grammar.
  * @author aplatzer
@@ -142,7 +148,7 @@ object PSEUDO  extends Terminal("<pseudo>")
 object AXIOM_BEGIN extends Terminal("Axiom") {
   override def regexp = """Axiom""".r
 }
-object AXIOM_END extends Terminal("End.")
+object END_BLOCK extends Terminal("End.")
 case class AXIOM_NAME(var s: String) extends Terminal("<string>") {
   override def regexp = AXIOM_NAME_PAT.regexp
 }
@@ -150,6 +156,14 @@ object AXIOM_NAME_PAT {
   def regexp = """\"(.*)\"\.""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
+object PERIOD extends Terminal(".") {
+  override def regexp = "\\.".r
+}
+object FUNCTIONS_BLOCK extends Terminal("Functions.")
+object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
+object PROBLEM_BLOCK extends Terminal("Problem.")
+object REAL extends Terminal("R")
+object BOOL extends Terminal("B")
 
 sealed abstract class Location
 object UnknownLocation extends Location {
@@ -171,16 +185,45 @@ case class SuffixRegion(line: Int, column: Int) extends Location
  * @author aplatzer
  * @author nfulton
  */
-object KeYmaeraXLexer extends (String => List[Token]) {
+object KeYmaeraXLexer extends ((String) => List[Token]) {
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
 
-  def apply(input: String) = {
-    val output = lex(input, SuffixRegion(1,1))
+  /**
+   * The lexer has multiple modes for the different sorts of files that are supported by KeYmaeraX.
+   * The lexer will disallow non-expression symbols from occuring when the lexer is in expression mode.
+   * This also ensures that reserved symbols are never used as function names.
+   * @param input The string to lex.
+   * @param mode The lexer mode.
+   * @return A stream of symbols corresponding to input.
+   */
+  def inMode(input: String, mode: LexerMode) = {
+    val output = lex(input, SuffixRegion(1,1), mode)
     require(output.last.tok.equals(EOF), "Expected EOF but found " + output.last.tok)
     output
-  } //ensuring(_.last.tok.equals(EOF), "Lexer should never return a list that does not end with EOF.")
+  }
+
+  def apply(input: String) = inMode(input, ExpressionMode())
+
+  /**
+   * The lexer.
+   * @todo optimize
+   * @param input The input to lex.
+   * @param inputLocation The position of the input (e.g., wrt a source file).
+   * @param mode The mode of the lexer.
+   * @return A token stream.
+   */
+  private def lex(input: String, inputLocation:Location, mode: LexerMode): TokenStream =
+    if(input.trim.length == 0) {
+      List(Token(EOF))
+    }
+    else {
+      findNextToken(input, inputLocation, AxiomFileMode()) match {
+        case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc, mode)
+        case None => throw new Exception("Have not reached EOF but could not find next token in ." + input + ".")
+      }
+    }
 
   /**
    * Finds the next token in a string.
@@ -188,13 +231,13 @@ object KeYmaeraXLexer extends (String => List[Token]) {
    *
    * @param s The string to process.
    * @param loc The location of s.
-   * @param isAxiomFile true if "Axiom. ... End." blocksm may be present.
+   * @param mode The mode of the lexer.
    * @return A triple containing:
    *          _1: the next token,
    *          _2: the portion of the string following the next token,
    *          _3: The location of the beginning of the next string.
    */
-  private def findNextToken(s: String, loc: Location, isAxiomFile: Boolean = false): Option[(String, Token, Location)] = {
+  private def findNextToken(s: String, loc: Location, mode: LexerMode): Option[(String, Token, Location)] = {
     val whitespace = """^(\ +)[\s\S]*""".r
     val newline = """(?s)(^\n)[\s\S]*""".r //@todo use something more portable.
     val comment = """(?s)(/\*[\s\S]*\*/)""".r
@@ -224,14 +267,14 @@ object KeYmaeraXLexer extends (String => List[Token]) {
           case UnknownLocation => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl, sc+spaces.length, el, ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl, sc+ spaces.length)
-        }, isAxiomFile)
+        }, mode)
 
       case newline(_*) =>
         findNextToken(s.tail, loc match {
           case UnknownLocation     => UnknownLocation
           case Region(sl,sc,el,ec) => Region(sl+1,1,el,ec)
           case SuffixRegion(sl,sc) => SuffixRegion(sl+1, 1)
-        }, isAxiomFile)
+        }, mode)
 
       case comment(theComment) =>
         val lastLineCol  = s.lines.toList.last.length //column of last line.
@@ -240,18 +283,51 @@ object KeYmaeraXLexer extends (String => List[Token]) {
           case UnknownLocation => UnknownLocation
           case Region(sl, sc, el, ec) => Region(sl + lineCount, sc + lastLineCol, el, ec)
           case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc+theComment.length)
-        }, isAxiomFile)
+        }, mode)
 
+      // File cases
+      case PERIOD.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PERIOD, loc)
+        case _ => throw new Exception("Periods should only occur when processing files.")
+      }
+      case FUNCTIONS_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(FUNCTIONS_BLOCK, loc)
+        case _ => throw new Exception("Functions. should only occur when processing files.")
+      }
+      case PROGRAM_VARIABLES_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PROGRAM_VARIABLES_BLOCK, loc)
+        case _ => throw new Exception("ProgramVariables. should only occur when processing files.")
+      }
+      case BOOL.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(BOOL, loc)
+        case _ => throw new Exception("Bool symbol declaration should only occur when processing files.")
+      }
+      case REAL.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(REAL, loc)
+        case _ => throw new Exception("Real symbol declaration should only occur when processing files.")
+      }
+      //.kyx file cases
+      case PROBLEM_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(PROBLEM_BLOCK, loc)
+        case _ => throw new Exception("Problem./End. sections should only occur when processing .kyx files.")
+      }
       //Axiom file cases
-      case AXIOM_BEGIN.startPattern(_*) =>
-        if(isAxiomFile) consumeTerminalLength(AXIOM_BEGIN, loc)
-        else throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
-      case AXIOM_END.startPattern(_*) =>
-        if(isAxiomFile) consumeTerminalLength(AXIOM_END, loc)
-        else throw new Exception("Encountered ``End.`` in non-axiom lexing mode.")
-      case AXIOM_NAME_PAT.startPattern(str) =>
-        if(isAxiomFile) consumeColumns(str.length + 3, AXIOM_NAME(str), loc) //+3 = ",",.
-        else throw new Exception("Encountered delimited string in non-axiom lexing mode.")
+      case AXIOM_BEGIN.startPattern(_*) => mode match {
+        case AxiomFileMode() => consumeTerminalLength(AXIOM_BEGIN, loc)
+        case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
+      }
+      case END_BLOCK.startPattern(_*) => mode match {
+        case AxiomFileMode() | ProblemFileMode() => consumeTerminalLength(END_BLOCK, loc)
+        case _ => throw new Exception("Encountered ``Axiom.`` in non-axiom lexing mode.")
+      }
+      case AXIOM_NAME_PAT.startPattern(str) => mode match {
+        case AxiomFileMode() =>
+          //An axiom name looks like "blah". but only blah gets grouped, so there are three
+          // extra characters to account for.
+          consumeColumns(str.length + 3, AXIOM_NAME(str), loc)
+        case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
+      }
+
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
       case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
@@ -343,25 +419,4 @@ object KeYmaeraXLexer extends (String => List[Token]) {
       case Region(sl, sc, el, ec) => Region(sl, sc + colOffset, el, ec)
       case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc + colOffset)
     }
-
-  /**
-   * The lexer.
-   * @param input The input to lex.
-   * @param inputLocation The position of the input (e.g., wrt a source file).
-   * @return A token stream.
-   */
-  private def lex(input: String, inputLocation:Location, isAxiomLexer: Boolean = false): TokenStream =
-    if(input.trim.length == 0) {
-      List(Token(EOF))
-    }
-    else {
-      findNextToken(input, inputLocation, isAxiomLexer) match {
-        case Some((nextInput, token, nextLoc)) => token +: lex(nextInput, nextLoc, isAxiomLexer)
-        case None => throw new Exception("Have not reached EOF but could not find next token in ." + input + ".")
-      }
-    }
-
-
-  def lexAxiomFile(input: String, inputLocation: Location = SuffixRegion(1,1)) =
-    lex(input, inputLocation, true)
 }

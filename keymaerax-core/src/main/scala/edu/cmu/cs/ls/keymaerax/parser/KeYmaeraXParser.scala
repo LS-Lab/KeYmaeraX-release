@@ -39,7 +39,7 @@ case class Error(msg: String, st: String) extends FinalItem
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
 
-  def apply(input: String): Expression = parse(KeYmaeraXLexer(input))
+  def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
