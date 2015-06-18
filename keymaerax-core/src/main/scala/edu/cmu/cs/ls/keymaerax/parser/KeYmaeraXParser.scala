@@ -165,6 +165,23 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
         //reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
 
+      // special quantifier notation
+      case r :+ (tok1@Token(FORALL,_)) :+ Expr(v1:Variable) :+ Expr(f1:Formula) =>
+        reduce(st, 3, OpSpec.sForall.const(tok1.tok.img, v1, f1), r)
+
+      case r :+ (tok1@Token(EXISTS,_)) :+ Expr(v1:Variable) :+ Expr(f1:Formula) =>
+        reduce(st, 3, OpSpec.sExists.const(tok1.tok.img, v1, f1), r)
+
+      // special case to force elaboration of quantifiers at the end
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Expr(v1:Variable) :+ Expr(e1)
+        if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
+        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(v1) )
+
+      case r :+ (tok1@Token(FORALL,_)) =>
+        if (la.isInstanceOf[IDENT]) shift(st) else error(st)
+
+      case r :+ (tok1@Token(EXISTS,_)) =>
+        if (la.isInstanceOf[IDENT]) shift(st) else error(st)
 
       // special case for statementSemicolon
       case r :+ Expr(p1: Program) :+ Expr(p2: Program) if statementSemicolon =>

@@ -646,4 +646,24 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("(<a;b;>p(x))&q()") should be
     And(Diamond(Compose(ProgramConst("a"), ProgramConst("b")), PredOf(p,Variable("x"))), q0)
   }
+
+  it should "parse \\forall x x>=0" in {
+    parser("\\forall x x>=0") should be
+    Forall(Seq(Variable("x")), GreaterEqual(Variable("x"),Number(0)))
+  }
+
+  it should "parse \\forall x p(x)" in {
+    parser("\\forall x p(x)") should be
+    Forall(Seq(Variable("x")), PredOf(p, Variable("x")))
+  }
+
+  it should "parse \\forall x x>=0&x<0" in {
+    parser("\\forall x x>=0&x<0") should be
+    And(Forall(Seq(Variable("x")), GreaterEqual(Variable("x"),Number(0))), Less(Variable("x"),Number(0)))
+  }
+
+  it should "parse \\forall x p(x)&q(x)" in {
+    parser("\\forall x p(x)&q(x)") should be
+    And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
+  }
 }
