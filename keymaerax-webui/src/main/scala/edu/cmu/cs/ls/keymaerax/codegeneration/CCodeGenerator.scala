@@ -1,5 +1,4 @@
 package edu.cmu.cs.ls.keymaerax.codegeneration
-
 import java.io.{FileWriter, File}
 
 import edu.cmu.cs.ls.keymaerax.api.ComponentConfig
@@ -11,8 +10,10 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  * Created by ran on 6/16/15.
  * @author Ran Ji
  */
-class CCodeGenerator {
+class CCodeGenerator extends (Expression => String) {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
+  
+  def apply(e: Expression): String = generateCCode(e)
 
   def generateCCodeFromKeyFile(path: String) : String = {
     val content = io.Source.fromInputStream(getClass.getResourceAsStream(path)).mkString
