@@ -111,7 +111,8 @@ class CCodeGenerator {
       case Not(ff) => "!(" + compileFormula(ff) + ")"
       case And(l, r) => "(" + compileFormula(l) + "&&" + compileFormula(r) + ")"
       case Or(l, r) => "(" + compileFormula(l) + "||" + compileFormula(r) + ")"
-      case Imply(l, r) => "(" + "!" + compileFormula(l) + "||" + compileFormula(r) + ")"
+      case Imply(l, r) => "!(" + compileFormula(l) + ") || (" + compileFormula(r) + ")"
+      //case Imply(l, r) => "(" + "!" + compileFormula(l) + "||" + compileFormula(r) + ")"
       case Equiv(l, r) => "((" + "!" + compileFormula(l) + "||" + compileFormula(r) + ")" +
         "&&" + "(" +  "!" + compileFormula(r) + "||" + compileFormula(l) +  "))"
       case Equal(l, r) => "(" + compileTerm(l) + "==" + compileTerm(r) + ")"
