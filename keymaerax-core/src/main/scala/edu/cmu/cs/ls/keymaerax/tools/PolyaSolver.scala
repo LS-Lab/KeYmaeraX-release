@@ -19,6 +19,7 @@ class PolyaSolver extends SMTSolver {
 
   val pathToPolya : String = {
     val polyaTempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
+    if(!new File(polyaTempDir).exists) new File(polyaTempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
 
     // so far only for Mac Os

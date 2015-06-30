@@ -19,6 +19,7 @@ class Z3Solver extends SMTSolver {
 
   val pathToZ3 : String = {
     val z3TempDir = System.getProperty("user.home") + File.separator + ".keymaerax"
+    if(!new File(z3TempDir).exists) new File(z3TempDir).mkdirs
     val osName = System.getProperty("os.name").toLowerCase(Locale.ENGLISH)
     if(osName.contains("windows") && new File(z3TempDir+"z3.exe").exists()) {
       z3TempDir+"z3.exe"
@@ -60,6 +61,7 @@ class Z3Solver extends SMTSolver {
           new File(z3TempDir, "z3")
         }
       }
+
       // Get a stream to the script in the resources dir
       val z3Dest = new FileOutputStream(z3Temp)
       // Copy file to temporary directory
