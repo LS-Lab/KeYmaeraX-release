@@ -98,12 +98,12 @@ object SetLattice {
   def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new TopSet(Set(DotTerm, DotFormula), topSymbols.toSet)
 
   /**
-   * Only applies if sl isTop.
+   * Symbols and differential symbols of sl.
    * @param sl A SetLattice of NamedSymbols.
    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables of sl.
    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = {
-    assert(sl isTop, "Cannot extend to differentialSymbols unless sl isTop " + sl)
+    assert(!(sl isTop), "Cannot extend to differentialSymbols if sl isTop " + sl)
     val diffSymbols: Set[NamedSymbol] =
       sl.toSymbolSet
         .filter(_.isInstanceOf[Variable])
