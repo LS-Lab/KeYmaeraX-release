@@ -175,7 +175,7 @@ private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[
   //def subsetOf(other: TopSet[A]): Boolean = other.excluded.subsetOf(excluded)
   /* (top except ts) /\ (top except os) == (top except ts++os) */
   //def intersect(other: TopSet[A]): TopSet[A] = new TopSet(excluded ++ other.excluded, symbols.intersect(other.symbols))
-  def intersect(other: immutable.Set[A]): SetLattice[A] = TopSet(other -- excluded, symbols.intersect(other)) /* (top except ts) /\ os == os--ts */
+  def intersect(other: immutable.Set[A]): SetLattice[A] = FiniteLattice(other -- excluded)   /* (top except ts) /\ os == os--ts */
 
   def map[B](fun: A => B): TopSet[B] = new TopSet(excluded.map(fun), symbols.map(fun))
 
