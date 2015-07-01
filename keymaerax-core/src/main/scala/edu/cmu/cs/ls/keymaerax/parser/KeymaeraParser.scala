@@ -161,7 +161,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     catch {
       case e : Exception => require(requirement = false,
-        "Parse of print did not succeed on: " + printOfParse + "\nExpected: " + PrettyPrinter.printer(parse) +
+        "Parse of print did not succeed on:\n" + printOfParse + "\nExpected:\n" + PrettyPrinter.printer(parse) +
         "\n Exception was: " + e)
     }
 
