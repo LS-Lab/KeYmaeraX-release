@@ -21,8 +21,12 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
+  private val checkPrettyPrinter = true
+
   /** Pretty-print term to a string */
-  def apply(expr: Expression): String = stringify(expr)
+  def apply(expr: Expression): String = stringify(expr) ensuring(
+    r => !checkPrettyPrinter || KeYmaeraXParser(r) == expr, "Parse of print is identity.\nExpression: " + expr + "\nPrinted:   " + stringify(expr) + "\nReparsed:   " + KeYmaeraXParser(stringify(expr))
+    )
 
   /** Pretty-print term to a string without contract checking. */
   private[parser] def stringify(expr: Expression) = expr match {
@@ -91,7 +95,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case Test(f)                => statement(op(program).opcode + pp(f))
     case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
     case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
-    //case p: UnaryCompositeProgram=> op(p).opcode + pp(p.child)
+    //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         /*op(t).opcode + */
