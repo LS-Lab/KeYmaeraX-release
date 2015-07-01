@@ -2,6 +2,7 @@ package edu.cmu.cs.ls.keymaerax.tactics
 
 import ExpressionTraversal.{StopTraversal, ExpressionTraversalFunction}
 import edu.cmu.cs.ls.keymaerax.core._
+import edu.cmu.cs.ls.keymaerax.tactics
 import edu.cmu.cs.ls.keymaerax.tactics.AxiomTactic.{uncoverAxiomT,uncoverConditionalAxiomT,axiomLookupBaseT}
 import edu.cmu.cs.ls.keymaerax.tactics.BranchLabels._
 import edu.cmu.cs.ls.keymaerax.tactics.FOQuantifierTacticsImpl._
@@ -566,7 +567,7 @@ object ODETactics {
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+              Some(globalAlphaRenamingT(x, aX))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
@@ -575,7 +576,9 @@ object ODETactics {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
-      if (x.name != aX.name || x.index != aX.index) SubstitutionHelper.replaceFree(axiom)(aX, x)//replaceFree(axiom)(aX, x, None)
+      if (x.name != aX.name || x.index != aX.index) {
+        AlphaConversionHelper.replaceBound(axiom)(aX, x)
+      }
       else axiom
     }
     axiomLookupBaseT("DA differential ghost", subst, alpha, axiomInstance)
