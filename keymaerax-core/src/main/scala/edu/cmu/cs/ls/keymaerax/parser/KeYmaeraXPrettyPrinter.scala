@@ -85,7 +85,11 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case p: DifferentialProgram => pp(p)
     case Loop(a)                => pp(a) + op(program).opcode
     //case p: UnaryCompositeProgram=> op(p).opcode + pp(p.child)
-    case t: BinaryCompositeProgram=>
+    case t: Compose if OpSpec.statementSemicolon =>
+      (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
+        /*op(t).opcode + */
+        (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
+    case t: BinaryCompositeProgram =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
