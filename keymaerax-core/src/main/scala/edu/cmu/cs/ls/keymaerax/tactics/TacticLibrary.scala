@@ -279,7 +279,7 @@ object TacticLibrary {
 
   def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
     override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
-      case Box(_, _) => true
+      case Box(_,_) => true
       case _ => false
     })
 
@@ -292,18 +292,20 @@ object TacticLibrary {
           val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
           //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
           val qPhi =
-            if (vars.isEmpty) Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
+            if (vars.isEmpty) phi //Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
             else
               vars.to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
-              foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+                foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+
+          //val numQuantifiers = if (vars.isEmpty) 1 else vars.length
 
           Some(cutT(Some(Imply(qPhi, Box(prg, qPhi)))) & onBranch(
             (cutUseLbl, lastAnte(ImplyLeftT) &&(
               hideT(p) /* result */,
               cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
                 assertT(1, 1) & lastAnte(assertPT(Box(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
-                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*) &
-                assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_, _) => false case _ => true }) &
+                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*vars.length) &
+                assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_,_) => phi match { case Forall(_,_) => true case _  => false } case _ => true }) &
                 (AxiomCloseT | debugT("Abstraction cut use: Axiom close failed unexpectedly") & stopT)
               )),
             (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
@@ -312,6 +314,41 @@ object TacticLibrary {
       }
     }
   }
+//  def abstractionT: PositionTactic = new PositionTactic("Abstraction") {
+//    override def applies(s: Sequent, p: Position): Boolean = p.isTopLevel && !p.isAnte && (s(p) match {
+//      case Box(_, _) => true
+//      case _ => false
+//    })
+//
+//    override def apply(p: Position): Tactic = new ConstructionTactic(name) {
+//      require(!p.isAnte, "No abstraction in antecedent")
+//
+//      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+//      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+//        case b@Box(prg, phi) =>
+//          val vars = StaticSemantics.boundVars(prg).intersect(StaticSemantics.freeVars(phi)).toSet.to[Seq]
+//          //else throw new IllegalArgumentException("Cannot handle non-concrete programs")
+//          val qPhi =
+//            if (vars.isEmpty) Forall(Variable("$abstractiondummy", None, Real)::Nil, phi)
+//            else
+//              vars.to[scala.collection.immutable.SortedSet]. //sortWith((l, r) => l.name < r.name || l.index.getOrElse(-1) < r.index.getOrElse(-1)). // sort by name; if same name, next by index
+//              foldRight(phi)((v, f) => Forall(v.asInstanceOf[Variable] :: Nil, f))
+//
+//          Some(cutT(Some(Imply(qPhi, Box(prg, qPhi)))) & onBranch(
+//            (cutUseLbl, lastAnte(ImplyLeftT) &&(
+//              hideT(p) /* result */,
+//              cohide2T(AntePosition(node.sequent.ante.length), p.topLevel) &
+//                assertT(1, 1) & lastAnte(assertPT(Box(prg, qPhi))) & lastSucc(assertPT(b)) & (boxMonotoneT | NilT) &
+//                assertT(1, 1) & lastAnte(assertPT(qPhi)) & lastSucc(assertPT(phi)) & (lastAnte(instantiateT)*) &
+//                assertT(1, 1) & assertT(s => s.ante.head match { case Forall(_, _) => false case _ => true }) &
+//                (AxiomCloseT | debugT("Abstraction cut use: Axiom close failed unexpectedly") & stopT)
+//              )),
+//            (cutShowLbl, hideT(p) & lastSucc(ImplyRightT) & lastSucc(boxVacuousT) &
+//              (AxiomCloseT | debugT("Abstraction cut show: Axiom close failed unexpectedly") & stopT))
+//          ))
+//      }
+//    }
+//  }
 
   /*********************************************
    * Basic Tactics
