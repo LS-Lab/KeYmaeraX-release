@@ -32,6 +32,13 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /**
+   * Whether parentheses around ``t.child`` can be skipped because they are implied.
+   */
+  private def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+  private def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
+  private def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
+
+  /**
    * Whether parentheses around ``t.left`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
@@ -53,7 +60,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case Number(n)              => n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
-    case t: UnaryCompositeTerm  => op(t).opcode + pp(t.child)
+    case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
@@ -66,10 +73,10 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /**/"."/**/ + pp(f.child)
-    case f: Box                 => "[" + pp(f.program) + "]" + pp(f.child)
-    case f: Diamond             => "<" + pp(f.program) + ">" + pp(f.child)
-    case g: UnaryCompositeFormula=> op(g).opcode + pp(g.child)
+    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /**/"."/**/ + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case f: Box                 => "[" + pp(f.program) + "]" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case f: Diamond             => "<" + pp(f.program) + ">" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case t: UnaryCompositeFormula=> op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
     case t: BinaryCompositeFormula=>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
         op(t).opcode +
@@ -82,8 +89,8 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case Test(f)                => statement(op(program).opcode + pp(f))
-    case p: DifferentialProgram => pp(p)
-    case Loop(a)                => pp(a) + op(program).opcode
+    case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
+    case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     //case p: UnaryCompositeProgram=> op(p).opcode + pp(p.child)
     case t: Compose if OpSpec.statementSemicolon =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
@@ -96,7 +103,6 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   private def pp(program: DifferentialProgram): String = program match {
-    case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
