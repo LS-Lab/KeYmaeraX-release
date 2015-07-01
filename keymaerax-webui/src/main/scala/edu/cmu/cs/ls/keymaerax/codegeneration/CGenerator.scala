@@ -10,10 +10,10 @@ import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraParser
  * Created by ran on 6/16/15.
  * @author Ran Ji
  */
-class CCodeGenerator extends (Expression => String) {
+class CGenerator extends CodeGenerator {
 
-  def apply(kExpr: Expression, cDataType: String): String = generateCCode(kExpr, cDataType)
   def apply(kExpr: Expression): String = apply(kExpr, "long double")
+  def apply(kExpr: Expression, cDataType: String): String = generateCCode(kExpr, cDataType)
 
 //  def generateCCodeFromKeyFile(path: String) : String = {
 //    val content = io.Source.fromInputStream(getClass.getResourceAsStream(path)).mkString
@@ -192,4 +192,3 @@ class CCodeGenerator extends (Expression => String) {
   }
 }
 
-class CodeGenerationException(s: String) extends Exception(s)

@@ -2,7 +2,7 @@ import java.io.File
 
 import org.scalatest.{BeforeAndAfterEach, Matchers, FlatSpec}
 import testHelper.StringConverter._
-import edu.cmu.cs.ls.keymaerax.codegeneration.CCodeGenerator
+import edu.cmu.cs.ls.keymaerax.codegeneration.CGenerator
 
 /**
  * Created by ran on 6/22/15.
@@ -10,10 +10,10 @@ import edu.cmu.cs.ls.keymaerax.codegeneration.CCodeGenerator
  */
 class CCodeGeneratorTests extends FlatSpec with Matchers with BeforeAndAfterEach {
   type KExpr = edu.cmu.cs.ls.keymaerax.core.Expression
-  var cGen : CCodeGenerator = null
+  var cGen : CGenerator = null
 
   override def beforeEach() = {
-    cGen = new CCodeGenerator
+    cGen = new CGenerator
   }
 
   override def afterEach() = {
