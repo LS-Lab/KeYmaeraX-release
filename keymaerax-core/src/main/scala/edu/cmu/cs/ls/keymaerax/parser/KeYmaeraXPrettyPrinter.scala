@@ -47,11 +47,11 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   private def pp(term: Term): String = term match {
     case DotTerm|Anything|Nothing=> op(term).opcode
-    case x: Variable            => x.toString
+    case x: Variable            => x.asString
     case DifferentialSymbol(x)  => pp(x) + op(term).opcode
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
     case Number(n)              => n.toString()
-    case FuncOf(f, c)           => f.toString + "(" + pp(c) + ")"
+    case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + pp(t.child)
     case t: BinaryCompositeTerm =>
@@ -62,8 +62,8 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   private def pp(formula: Formula): String = formula match {
     case True|False|DotFormula  => op(formula).opcode
-    case PredOf(p, c)           => p.toString + "(" + pp(c) + ")"
-    case PredicationalOf(p, c)  => p.toString + "{" + pp(c) + "}"
+    case PredOf(p, c)           => p.asString + "(" + pp(c) + ")"
+    case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
     case f: Quantified          => op(formula).opcode + " " + f.vars.mkString(",") + /**/"."/**/ + pp(f.child)
@@ -77,7 +77,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   private def pp(program: Program): String = program match {
-    case ProgramConst(a)        => statement(a)
+    case a: ProgramConst        => statement(a.asString)
     case Assign(x, e)           => statement(pp(x) + op(program).opcode + pp(e))
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
@@ -93,7 +93,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   private def pp(program: DifferentialProgram): String = program match {
     case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
-    case DifferentialProgramConst(a) => a.toString
+    case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
