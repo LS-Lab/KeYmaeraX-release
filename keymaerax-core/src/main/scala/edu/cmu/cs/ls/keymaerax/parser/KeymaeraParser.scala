@@ -129,7 +129,7 @@ class KeYmaeraParser(enabledLogging: Boolean = false,
     }
     
     //Ensure that parse( print(parse(problemText)) ) = parse(problemText)
-    val printOfParse = KeYmaeraPrettyPrinter(parseResult)
+    val printOfParse = PrettyPrinter.printer(parseResult)
     checkParser(functions ++ builtinFunctions, predicateConstants, variables, programs, differentialPrograms, parseResult,printOfParse)
     
     parseResult
