@@ -475,7 +475,8 @@ object DifferentialProduct {
     require(!left.isInstanceOf[ODESystem], "Left should not be its own ODESystem: " + left + " with " + right)
     require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
     reassociate(left, right)
-  }
+  } ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
+    "No duplicate differential equations allowed when composing " + left + " and " + right)
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
     case a: DifferentialProduct => Some(a.left, a.right)
@@ -494,8 +495,17 @@ object DifferentialProduct {
   }) ensuring(r => listify(r) == listify(left) ++ listify(right),
     "reassociating DifferentialProduct does not change the list of atomic ODEs")
 
+  /** Turn differential program ode along its DifferentialProduct into a list */
   private def listify(ode: DifferentialProgram): immutable.List[DifferentialProgram] = ode match {
     case p: DifferentialProduct => listify(p.left) ++ listify(p.right)
     case a: AtomicDifferentialProgram => a :: Nil
   }
+
+  /** The list of all differential symbols in ode */
+  private def differentialSymbols(ode: DifferentialProgram): immutable.List[DifferentialSymbol] = ode match {
+    case p: DifferentialProduct => differentialSymbols(p.left) ++ differentialSymbols(p.right)
+    case AtomicODE(xp, _) => xp :: Nil
+    case a: DifferentialProgramConst => Nil
+  }
+
 }
