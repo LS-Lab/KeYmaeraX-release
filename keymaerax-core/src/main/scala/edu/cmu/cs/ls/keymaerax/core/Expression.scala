@@ -478,7 +478,7 @@ object DifferentialProduct {
     require(!right.isInstanceOf[ODESystem], "Right should not be its own ODESystem: " + left + " with " + right)
     reassociate(left, right)
   } ensuring(r => differentialSymbols(r).length == differentialSymbols(r).distinct.length,
-    "No duplicate differential equations allowed when composing " + left + " and " + right)
+    "No duplicate differential equations allowed when composing " + left + " and " + right + " to form " + reassociate(left, right))
 
   def unapply(e: Any): Option[(DifferentialProgram, DifferentialProgram)] = e match {
     case a: DifferentialProduct => Some(a.left, a.right)

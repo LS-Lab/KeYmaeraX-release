@@ -237,9 +237,14 @@ object KeYmaeraXParser extends Parser {
         val optok = op(st, tok, List(t1.kind))
         if (firstExpression(la)) shift(st) // binary operator //@todo be more specific depending on kind of t1
         else if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
-          || optok <= op(st, la, List(t1.kind,ExpressionKind))) //|| followsTerm(la))
-          reduce(st, 2, elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1), r)
-        else if (optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
+          || optok <= op(st, la, List(t1.kind,ExpressionKind))) {
+          //|| followsTerm(la))
+          val result = elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1)
+          if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
+            if (la == SEMI) reduce(shift(st), 3, result, r)
+            else error(st)
+          } else reduce(st, 2, result, r)
+        } else if (optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
         else error(st)
 
       case _ :+ Token(tok:OPERATOR,_) if op(st, tok, List(ExpressionKind)).assoc==PrefixFormat || tok==MINUS =>
