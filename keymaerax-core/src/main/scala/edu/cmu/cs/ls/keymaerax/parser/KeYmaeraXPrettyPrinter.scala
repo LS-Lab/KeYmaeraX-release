@@ -25,8 +25,16 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || KeYmaeraXParser(r) == expr, "Parse of print is identity.\nPrinted:   " + stringify(expr) + "\nReparsed:   " + KeYmaeraXParser(stringify(expr))
+    r => !checkPrettyPrinter || reparse(expr, r) == expr, "Parse of print is identity.\nPrinted:   " + stringify(expr) + "\nReparsed:   " + reparse(expr, stringify(expr))
     )
+
+  /** Reparse the string print as the same kind as expr has */
+  private def reparse(expr: Expression, print: String): Expression = expr.kind match {
+    case TermKind => KeYmaeraXParser.termParser(print)
+    case FormulaKind => KeYmaeraXParser.formulaParser(print)
+    case ProgramKind => KeYmaeraXParser.programParser(print)
+    //case DifferentialProgramKind
+  }
 
   /** Pretty-print term to a string without contract checking. */
   private[parser] def stringify(expr: Expression) = expr match {
