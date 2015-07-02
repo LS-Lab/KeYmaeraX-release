@@ -5,7 +5,7 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.core.{Expression, Term, Formula, Program}
+import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * Parser interface for KeYmaera X.
@@ -18,4 +18,6 @@ trait Parser extends (String => Expression) {
   def formulaParser: (String => Formula)
 
   def programParser: (String => Program)
+
+  def differentialProgramParser: (String => DifferentialProgram)
 }

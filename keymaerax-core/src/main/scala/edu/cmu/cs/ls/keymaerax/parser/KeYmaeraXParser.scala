@@ -74,6 +74,12 @@ object KeYmaeraXParser extends Parser {
       case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
+  override def differentialProgramParser: (String => DifferentialProgram) =
+    input => elaborate(OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
+      case p: DifferentialProgram => p
+      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+    }
+
   /*private[core]*/ def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     parseLoop(ParseState(Bottom, input)).stack match {
@@ -135,6 +141,17 @@ object KeYmaeraXParser extends Parser {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
     // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
+      // ordinary terminals
+      case r :+ Token(IDENT(name),_) =>
+        if (la==LPAREN) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
+
+      case r :+ Token(NUMBER(value),_) =>
+        reduce(st, 1, Number(BigDecimal(value)), r)
+
+
+      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING),_) =>
+        reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
+
       // special cases for early prime conversion
       case r :+ Expr(x1:Variable) :+ Token(PRIME,_) =>
         reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
@@ -228,12 +245,22 @@ object KeYmaeraXParser extends Parser {
         //@note should not have gone to SEMI if there would have been another reduction to an atomic program already.
         reduce(st, 2, elaborate(OpSpec.sProgramConst, ProgramKind, t1), r)
 
+      case _ :+ Expr(t1) :+ (tok@Token(STAR,_)) =>
+        if (firstExpression(la) ||
+          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
+
       case _ :+ Expr(t1) :+ (tok@Token(op:OPERATOR,_)) if op != PRIME =>
         if (firstExpression(la)) shift(st) else error(st)
 
       // function/predicate symbols arity 0
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
         if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        else if (la==RPAREN) shift(st)
+        else error(st)
+
+      // function/predicate symbols of argument ANYTHING
+      case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), Anything), r)
         else if (la==RPAREN) shift(st)
         else error(st)
 
@@ -286,7 +313,7 @@ object KeYmaeraXParser extends Parser {
         else error(st)
 
       case _ :+ Token(LPAREN,_) =>
-        if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN) shift(st)
+        if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN || la==ANYTHING) shift(st)
         else error(st)
 
       case _ :+ Token(LBRACE,_) =>
@@ -300,17 +327,6 @@ object KeYmaeraXParser extends Parser {
       case _ :+ Token(LDIA,_) =>
         if (firstProgram(la) || firstTerm(la)) shift(st)
         else error(st)
-
-      // ordinary terminals
-      case r :+ Token(IDENT(name),_) =>
-        if (la==LPAREN) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
-
-      case r :+ Token(NUMBER(value),_) =>
-        reduce(st, 1, Number(BigDecimal(value)), r)
-
-
-      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING),_) =>
-        reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // non-accepting expression
       case _ :+ _ :+ Expr(t) =>

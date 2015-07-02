@@ -25,8 +25,16 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || KeYmaeraXParser(r) == expr, "Parse of print is identity.\nExpression: " + expr + "\nPrinted:   " + stringify(expr) + "\nReparsed:   " + KeYmaeraXParser(stringify(expr))
+    r => !checkPrettyPrinter || reparse(expr, r) == expr, "Parse of print is identity.\nPrinted:   " + stringify(expr) + "\nReparsed:   " + reparse(expr, stringify(expr))
     )
+
+  /** Reparse the string print as the same kind as expr has */
+  private def reparse(expr: Expression, print: String): Expression = expr.kind match {
+    case TermKind => KeYmaeraXParser.termParser(print)
+    case FormulaKind => KeYmaeraXParser.formulaParser(print)
+    case ProgramKind => KeYmaeraXParser.programParser(print)
+    case DifferentialProgramKind => KeYmaeraXParser.differentialProgramParser(print)
+  }
 
   /** Pretty-print term to a string without contract checking. */
   private[parser] def stringify(expr: Expression) = expr match {
@@ -77,7 +85,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /**/"."/**/ + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /*"." +*/ (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Box                 => "[" + pp(f.program) + "]" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Diamond             => "<" + pp(f.program) + ">" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case t: UnaryCompositeFormula=> op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
@@ -104,6 +112,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
+    case ode: DifferentialProgram => pp(ode)
   }
 
   private def pp(program: DifferentialProgram): String = program match {
