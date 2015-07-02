@@ -143,7 +143,7 @@ object KeYmaeraXParser extends Parser {
     s match {
       // ordinary terminals
       case r :+ Token(IDENT(name),_) =>
-        if (la==LPAREN) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
+        if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
 
       case r :+ Token(NUMBER(value),_) =>
         reduce(st, 1, Number(BigDecimal(value)), r)
@@ -270,6 +270,11 @@ object KeYmaeraXParser extends Parser {
         else if (la==RPAREN) shift(st)
         else error(st)
 
+      // predicational symbols arity>0
+      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_)  =>
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), f1), r)
+        else error(st)
+
       // modalities
       case _ :+ Token(LBOX,_) :+ Expr(t1:Program) :+ Token(RBOX,_) =>
         if (firstFormula(la)) shift(st)
@@ -317,7 +322,7 @@ object KeYmaeraXParser extends Parser {
         else error(st)
 
       case _ :+ Token(LBRACE,_) =>
-        if (firstProgram(la) /*|| firstFormula(la) for predicationals*/) shift(st)
+        if (firstProgram(la) || firstFormula(la) /*for predicationals*/) shift(st)
         else error(st)
 
       case _ :+ Token(LBOX,_) =>
@@ -365,7 +370,7 @@ object KeYmaeraXParser extends Parser {
 
   /** First(Formula): Is la the beginning of a new formula? */
   private def firstFormula(la: Terminal): Boolean = firstTerm(la) || /*la.isInstanceOf[IDENT] ||*/
-    la==NOT || la==FORALL || la==EXISTS || la==LBOX || la==LDIA /*|| la==LPAREN */
+    la==NOT || la==FORALL || la==EXISTS || la==LBOX || la==LDIA || la==TRUE || la==FALSE || la==PLACE /*|| la==LPAREN */
 
   /** First(Program): Is la the beginning of a new program? */
   private def firstProgram(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la==TEST || la==LBRACE

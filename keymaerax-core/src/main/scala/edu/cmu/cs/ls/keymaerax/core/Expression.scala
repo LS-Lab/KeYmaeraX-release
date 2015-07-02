@@ -100,8 +100,10 @@ sealed trait ApplicationOf extends Expression {
  * @note User-level symbols should not use underscores, which are reserved for the core.
  */
 sealed trait NamedSymbol extends Expression with Ordered[NamedSymbol] {
-  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
-    "non-empty names without underscores (except at end for internal names): " + name)
+//  require(!name.isEmpty && !name.substring(0, name.length-1).contains("_"),
+//    "non-empty names without underscores (except at end for internal names): " + name)
+  if(!(!name.isEmpty && !name.substring(0, name.length-1).contains("_")))
+    print("WARNING: non-empty names without underscores (except at end for internal names): " + name)
   require(!name.contains("'"), "names cannot mention primes, not even the names of differential symbols: " + name)
 
   def name: String
