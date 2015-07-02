@@ -153,7 +153,7 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, Number(BigDecimal(value)), r)
 
 
-      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING),_) =>
+      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING | TRUE|FALSE),_) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // special cases for early prime conversion
@@ -246,6 +246,11 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la)) shift(st)
         else error(st)
 
+      // unary postfix operator
+      case r :+ Expr(t1) :+ Token(tok:OPERATOR,_) if op(st, tok, List(t1.kind)).assoc==PostfixFormat =>
+        assert(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have postfix format\nin " + s)
+        reduce(st, 2, elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1), r)
+
       // special case for elaboration to a;
       case r :+ Expr(t1:Variable) :+ Token(SEMI,_) if statementSemicolon =>
         //@note should not have gone to SEMI if there would have been another reduction to an atomic program already.
@@ -297,6 +302,10 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) =>
         reduce(st, 3, t1, r)
 
+      // differential equation system special notation
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
+        reduce(st, 5, elaborate(st, tok2.tok, OpSpec.sODESystem, p1, f1), r)
+
       // elaboration special pattern case
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) =>
         reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
@@ -321,6 +330,8 @@ object KeYmaeraXParser extends Parser {
 
       case _ :+ Token(LDIA,_) :+ Expr(t1)  =>
         if (followsExpression(t1, la)) shift(st)
+        else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
+        else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st)
 
       case _ :+ Token(LPAREN,_) =>
@@ -504,6 +515,7 @@ object KeYmaeraXParser extends Parser {
 
   private def isDifferentialSymbol(st: ParseState): Boolean = st.stack match {
     case _ :+ Expr(_:DifferentialSymbol) => true
+    case _ :+ Expr(_:DifferentialSymbol) :+ Token(ASSIGN,_) :+ Expr(_) => true
     case _ => false
   }
 
@@ -558,7 +570,7 @@ object KeYmaeraXParser extends Parser {
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
       case sAssign.op => if (isDifferentialSymbol(st)) sDiffAssign else sAssign
-      //      case p: AssignAny => sAssignAny
+      case sAssignAny.op => sAssignAny
       case sTest.op => sTest
       //      case p: ODESystem => sODESystem
       //      case p: AtomicODE => sAtomicODE

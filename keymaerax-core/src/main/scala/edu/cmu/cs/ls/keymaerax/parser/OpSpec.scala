@@ -171,13 +171,14 @@ object OpSpec {
   private val bindiffprog = (DifferentialProgramKind,DifferentialProgramKind)
   private val bintermprog = binterm
   private val untermprog = unterm
+  private val unfmlprog = (FormulaKind)
   private val diffprogfmlprog = (DifferentialProgramKind,FormulaKind)
   val sProgramConst = UnitOpSpec(none,    0, name => ProgramConst(name))
   val sDifferentialProgramConst = UnitOpSpec(none,  0, name => DifferentialProgramConst(name))
   val sAssign       = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (x:Term, e:Term) => Assign(x.asInstanceOf[Variable], e.asInstanceOf[Term]))
   val sDiffAssign   = lBinaryOpSpec[Program](ASSIGN,  200, AtomicBinaryFormat, bintermprog, (xp:Term, e:Term) => DiffAssign(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sAssignAny    = lUnaryOpSpecT[Program](ASSIGNANY, 200, PrefixFormat, untermprog, (x:Term) => AssignAny(x.asInstanceOf[Variable]))
-  val sTest         = lUnaryOpSpecF[Program](TEST,   200, PrefixFormat, untermprog, (f:Formula) => Test(f.asInstanceOf[Formula]))
+  val sTest         = lUnaryOpSpecF[Program](TEST,   200, PrefixFormat, unfmlprog, (f:Formula) => Test(f.asInstanceOf[Formula]))
   val sAtomicODE    = BinaryOpSpec[Program](EQ,   90/*200*/, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA, 95/*210*/, RightAssociative, bindiffprog, DifferentialProduct.apply _)
   val sODESystem    = BinaryOpSpec[Expression](AMP, 99/*219*/, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
