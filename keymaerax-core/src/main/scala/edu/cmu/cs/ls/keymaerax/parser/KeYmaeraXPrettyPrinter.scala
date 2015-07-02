@@ -33,7 +33,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case TermKind => KeYmaeraXParser.termParser(print)
     case FormulaKind => KeYmaeraXParser.formulaParser(print)
     case ProgramKind => KeYmaeraXParser.programParser(print)
-    //case DifferentialProgramKind
+    case DifferentialProgramKind => KeYmaeraXParser.differentialProgramParser(print)
   }
 
   /** Pretty-print term to a string without contract checking. */
@@ -85,7 +85,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /**/"."/**/ + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /*"." +*/ (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Box                 => "[" + pp(f.program) + "]" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Diamond             => "<" + pp(f.program) + ">" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case t: UnaryCompositeFormula=> op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
