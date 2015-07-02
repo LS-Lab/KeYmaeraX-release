@@ -19,7 +19,7 @@ object PrettyPrinter {
   private var pp: PrettyPrinter = (e => e.canonicalString)
 
   //@todo move this initialization outside the core
-  setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter)
+  setPrinter(edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.printer)
 
   def printer: PrettyPrinter = pp
 
