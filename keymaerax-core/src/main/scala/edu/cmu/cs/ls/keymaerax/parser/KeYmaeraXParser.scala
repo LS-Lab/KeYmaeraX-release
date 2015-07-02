@@ -228,12 +228,22 @@ object KeYmaeraXParser extends Parser {
         //@note should not have gone to SEMI if there would have been another reduction to an atomic program already.
         reduce(st, 2, elaborate(OpSpec.sProgramConst, ProgramKind, t1), r)
 
+      case _ :+ Expr(t1) :+ (tok@Token(STAR,_)) =>
+        if (firstExpression(la) ||
+          t1.isInstanceOf[Program] && followsProgram((la))) shift(st) else error(st)
+
       case _ :+ Expr(t1) :+ (tok@Token(op:OPERATOR,_)) if op != PRIME =>
         if (firstExpression(la)) shift(st) else error(st)
 
       // function/predicate symbols arity 0
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
         if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
+        else if (la==RPAREN) shift(st)
+        else error(st)
+
+      // function/predicate symbols of argument ANYTHING
+      case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), Anything), r)
         else if (la==RPAREN) shift(st)
         else error(st)
 
@@ -286,7 +296,7 @@ object KeYmaeraXParser extends Parser {
         else error(st)
 
       case _ :+ Token(LPAREN,_) =>
-        if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN) shift(st)
+        if (firstFormula(la) /*|| firstTerm(la)*/ || la==RPAREN || la==ANYTHING) shift(st)
         else error(st)
 
       case _ :+ Token(LBRACE,_) =>

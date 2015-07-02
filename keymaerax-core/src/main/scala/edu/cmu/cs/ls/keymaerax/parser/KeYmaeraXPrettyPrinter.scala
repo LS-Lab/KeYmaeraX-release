@@ -25,7 +25,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || KeYmaeraXParser(r) == expr, "Parse of print is identity.\nExpression: " + expr + "\nPrinted:   " + stringify(expr) + "\nReparsed:   " + KeYmaeraXParser(stringify(expr))
+    r => !checkPrettyPrinter || KeYmaeraXParser(r) == expr, "Parse of print is identity.\nPrinted:   " + stringify(expr) + "\nReparsed:   " + KeYmaeraXParser(stringify(expr))
     )
 
   /** Pretty-print term to a string without contract checking. */
@@ -104,6 +104,7 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
+    case ode: DifferentialProgram => pp(ode)
   }
 
   private def pp(program: DifferentialProgram): String = program match {
