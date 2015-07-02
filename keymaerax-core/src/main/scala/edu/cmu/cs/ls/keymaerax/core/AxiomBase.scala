@@ -421,9 +421,10 @@ End.
 /* Differential Auxiliary / Differential Ghost */
 Axiom "DA differential ghost".
   /*@TODO Code Review discrepancy: change to TODO form from theory, not old calculus */
-  [c&H(?);]p(?) <- ((p(?) <-> \exists x. q(?)) & [c,x'=t()*x+s()&H(?);]q(?))
-/*@TODO [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?) */
-/* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
+  /* [c&H(?);]p(?) <- ((p(?) <-> \exists x. q(?)) &
+   * [c,x'=t()*x+s()&H(?);]q(?)) */
+  [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?)
+  /* [x'=f(x)&q(x);]p(x) <-> \exists y. [(x'=f(x),y'=a(x)*y+b(x))&q(x);]p(x) THEORY */
 End.
 
 /* @Derived */

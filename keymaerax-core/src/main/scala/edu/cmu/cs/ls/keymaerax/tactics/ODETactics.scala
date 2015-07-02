@@ -318,11 +318,7 @@ object ODETactics {
             // boxAssignT and equivRight will extend antecedent by 2 -> length + 1
             val lastAntePos = AntePosition(node.sequent.ante.length + 1)
             val introTime = nonAbbrvDiscreteGhostT(Some(initialTime), Number(0))(p) & boxAssignT(p) &
-              diffAuxiliaryT(time, Number(0), Number(1))(p) & AndRightT(p) &&
-              (EquivRightT(p) & onBranch((equivLeftLbl, vacuousExistentialQuanT(None)(p) &
-                                                        AxiomCloseT(lastAntePos, p)),
-                                         (equivRightLbl, skolemizeT(lastAntePos) & AxiomCloseT(lastAntePos, p))),
-                NilT)
+              diffAuxiliaryT(time, Number(0), Number(1))(p) & FOQuantifierTacticsImpl.instantiateT(time, time)(p)
 
             (time, introTime, true)
         }
@@ -528,46 +524,45 @@ object ODETactics {
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Differential Auxiliary Section.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  def diffAuxiliaryT(x: Variable, t: Term, s: Term, psi: Option[Formula] = None): PositionTactic = {
+  def diffAuxiliaryT(x: Variable, t: Term, s: Term): PositionTactic = {
     def axiomInstance(fml: Formula): Formula = fml match {
       case Box(ode@ODESystem(c, h), p) if !StaticSemantics(ode).bv.contains(x) &&
-          !StaticSemantics.symbols(t).contains(x) && !StaticSemantics.symbols(s).contains(x) =>
+        !StaticSemantics.symbols(t).contains(x) && !StaticSemantics.symbols(s).contains(x) =>
         // construct instance
-        val q = psi match { case Some(pred) => pred case None => p }
-        val lhs = And(Equiv(p, Exists(x :: Nil, q)), Box(ODESystem(DifferentialProduct(c,
-          AtomicODE(DifferentialSymbol(x), Plus(Times(t, x), s))), h), q))
-        Imply(lhs, fml)
+        // [c&H(?);]p(?) <-> \exists y. [c,y'=t()*y+s()&H(?);]p(?)
+        Equiv(
+          fml,
+          Exists(x :: Nil, Box(ODESystem(DifferentialProduct(c,
+            AtomicODE(DifferentialSymbol(x), Plus(Times(t, x), s))), h), p)))
       case _ => False
     }
-    uncoverAxiomT("DA differential ghost", axiomInstance, _ => diffAuxiliaryBaseT(x, t, s, psi))
+    uncoverAxiomT("DA differential ghost", axiomInstance, _ => diffAuxiliaryBaseT(x, t, s))
   }
 
-  private def diffAuxiliaryBaseT(x: Variable, t: Term, s: Term, psi: Option[Formula]): PositionTactic = {
+  private def diffAuxiliaryBaseT(y: Variable, t: Term, s: Term): PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
-      case Imply(_, Box(ode@ODESystem(c, h), p)) =>
-        val q = psi match { case Some(pred) => pred case None => p }
+      case Equiv(Box(ode@ODESystem(c, h), p), _) =>
         val aP = PredOf(Function("p", None, Real, Bool), Anything)
-        val aQ = PredOf(Function("q", None, Real, Bool), Anything)
         val aH = PredOf(Function("H", None, Real, Bool), Anything)
         val aC = DifferentialProgramConst("c")
         val aS = FuncOf(Function("s", None, Unit, Real), Nothing)
         val aT = FuncOf(Function("t", None, Unit, Real), Nothing)
-        SubstitutionPair(aP, p) :: SubstitutionPair(aQ, q) :: SubstitutionPair(aH, h) ::
+        SubstitutionPair(aP, p) :: SubstitutionPair(aH, h) ::
           SubstitutionPair(aC, c) :: SubstitutionPair(aS, s) :: SubstitutionPair(aT, t) :: Nil
     }
 
-    val aX = Variable("x", None, Real)
+    val aY = Variable("y", None, Real)
     def alpha(fml: Formula): PositionTactic = {
-      if (x.name != aX.name || x.index != aX.index) {
+      if (y.name != aY.name || y.index != aY.index) {
         new PositionTactic("Alpha") {
           override def applies(s: Sequent, p: Position): Boolean = s(p) match {
-            case Imply(And(Equiv(_, Exists(_, _)), _), _) => true
+            case Equiv(Box(_, _), Exists(_, _)) => true
             case _ => false
           }
 
           override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
             override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-              Some(globalAlphaRenamingT(x, aX))
+              Some(globalAlphaRenamingT(y, aY))
 
             override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
           }
@@ -576,9 +571,7 @@ object ODETactics {
     }
 
     def axiomInstance(fml: Formula, axiom: Formula): Formula = {
-      if (x.name != aX.name || x.index != aX.index) {
-        AlphaConversionHelper.replaceBound(axiom)(aX, x)
-      }
+      if (y.name != aY.name || y.index != aY.index) AlphaConversionHelper.replaceBound(axiom)(aY, y)
       else axiom
     }
     axiomLookupBaseT("DA differential ghost", subst, alpha, axiomInstance)
@@ -668,6 +661,7 @@ object ODETactics {
       }
     }
   }
+
   /** Uncovering differential equation system from context */
   private def diffEffectSystemT(axInstance: Formula, subst: List[SubstitutionPair],
                                 alpha: PositionTactic, x: Variable): PositionTactic = {
