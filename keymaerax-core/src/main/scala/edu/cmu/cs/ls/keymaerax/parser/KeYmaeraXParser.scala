@@ -22,7 +22,7 @@ case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
 /** Expressions that are partially parsed on the parser item stack. */
 case class Expr(expr: Expression) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
-  override def toString: String = KeYmaeraXPrettyPrinter.stringify(expr)
+  override def toString: String = KeYmaeraXPrettyPrinter.printer.stringify(expr)
 }
 trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
@@ -411,7 +411,7 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
-    (if (statementSemicolon) firstProgram(la) else la==SEMI)  ||
+    (if (statementSemicolon) firstProgram(la) || /*Not sure:*/ la==SEMI else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
     la==EOF

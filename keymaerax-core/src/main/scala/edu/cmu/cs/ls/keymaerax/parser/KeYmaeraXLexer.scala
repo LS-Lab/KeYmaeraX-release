@@ -421,7 +421,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
 
       case _ if s.isEmpty => None
-      case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
+      case _ => throw new Exception("Lexer did not understand input at " + loc + " in `\n" + s +"\n` First character was `" + s(0) + "`")
     }
   }
 
