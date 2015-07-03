@@ -30,7 +30,7 @@ with `->` right-associative and no precedence for `->` versus `<->`
 
     P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P
 
-with the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3 is x:=1;{x:=2;x:=3}
+with `++` and the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3 is x:=1;{x:=2;x:=3}
 
 This is to be contrasted with the abstract dL grammar in theory:
 

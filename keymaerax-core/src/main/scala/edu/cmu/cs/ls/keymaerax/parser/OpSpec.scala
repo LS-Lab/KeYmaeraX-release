@@ -185,7 +185,7 @@ object OpSpec {
   val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, unprog, Loop.apply _)
   val sCompose      = BinaryOpSpec(SEMI, 230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
-  val sChoice       = BinaryOpSpec(CHOICE,  240, LeftAssociative, binprog, Choice.apply _)
+  val sChoice       = BinaryOpSpec(CHOICE,  240, RightAssociative, binprog, Choice.apply _)
 
   val sEOF          = UnitOpSpec  (EOF, Int.MaxValue, _ => throw new AssertionError("Cannot construct EOF"))
   val sNone         = UnitOpSpec  (PSEUDO, Int.MaxValue, _ => throw new AssertionError("Cannot construct NONE"))

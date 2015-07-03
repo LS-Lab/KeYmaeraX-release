@@ -31,7 +31,7 @@ class RandomParserTests extends FlatSpec with Matchers {
     for (i <- 1 to randomTrials) {
       val e = rand.nextFormula(randomComplexity)
       val printed = pp.stringify(e)
-      println("Reparsing: " + printed)
+      println("Random in: " + printed)
       val full = pp.fullPrinter(e)
       println("Fullform:  " + full)
       parseShouldBe(full, e)

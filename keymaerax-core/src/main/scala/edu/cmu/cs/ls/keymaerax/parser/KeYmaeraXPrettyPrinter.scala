@@ -119,7 +119,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case Test(f)                => statement(op(program).opcode + pp(f))
-    case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
+    case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
     case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
@@ -133,13 +133,15 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case ode: DifferentialProgram => pp(ode)
   }
 
-  private def pp(program: DifferentialProgram): String = program match {
+  private def ppODE(program: DifferentialProgram): String = program match {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
-      (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
+      (if (skipParensLeft(t)) ppODE(t.left) else "{" + ppODE(t.left) + "}") +
         op(t).opcode +
-        (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
+        (if (skipParensRight(t)) ppODE(t.right) else "{" + ppODE(t.right) + "}")
+    // this case is supposed to have been handled already in pp(Program)
+    case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
   }
 
   /** Formatting the atomic statement s */

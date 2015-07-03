@@ -230,12 +230,12 @@ object KeYmaeraXParser extends Parser {
 
       // special case for sCompose in case statementSemicolon
       case r :+ Expr(p1: Program) :+ Expr(p2: Program) if statementSemicolon =>
-        if (la==LPAREN) error(st)
+        if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
         val optok = OpSpec.sCompose
         assume(optok.assoc==RightAssociative)
         //@todo op(st, la) : Potential problem: st is not the right parser state for la
         if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
-          || la==LBRACE // special case for statementSemicolon, which already ate up SEMI in p2
+          || statementSemicolon&&la==LBRACE
           || optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative)
           reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
         else if (optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
@@ -245,12 +245,14 @@ object KeYmaeraXParser extends Parser {
       // binary operators with precedence
       case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) && tok!=TEST =>
         assert(op(st, tok, List(t1.kind,t2.kind)).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
-        if (la==LPAREN || la==LBRACE) error(st)
+        if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
         else {
           // pass t1,t2 kinds so that op/2 can make up its mind well in disambiguation.
           val optok = op(st, tok, List(t1.kind,t2.kind))
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
+          //@todo if statementSemicolon then the missing SEMI causes incorrect predictions of operator precedence ++ versus ;
           if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+            || statementSemicolon&&la==LBRACE
             || optok < op(st, la, List(t2.kind,ExpressionKind)) || optok <= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == LeftAssociative) {
             //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
             val result = elaborate(st, tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
