@@ -179,7 +179,7 @@ object UnknownLocation extends Location {
   override def toString = "<somewhere>"
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
-  assert(line <= endLine || (line == endLine && column <= endColumn),
+  require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
   override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
 }

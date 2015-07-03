@@ -30,7 +30,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || reparse(expr, r) == expr, "Parse of print is identity.\nExpression: " + fullPrinter(expr) + "\nPrinted:   " + stringify(expr) + "\nReparsed:   " + reparse(expr, stringify(expr) + "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))))
+    r => !checkPrettyPrinter || reparse(expr, r) == expr, "Parse of print is identity.\nExpression: " + fullPrinter(expr) + "\nPrinted:   " + stringify(expr) + "\nReparsed:   " + reparse(expr, stringify(expr)) + "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
     )
 
   /** Reparse the string print as the same kind as expr has */
