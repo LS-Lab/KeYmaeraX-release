@@ -45,7 +45,9 @@ case class NUMBER(value: String) extends Terminal(value) {
 }
 object NUMBER {
   //A bit weird, but this gives the entire number in a single group.
-  def regexp = """(-?[0-9]+\.?[0-9]*)""".r
+  //def regexp = """(-?[0-9]+\.?[0-9]*)""".r
+  //@NOTE Minus sign artificially excluded from the number to make sure x-5 lexes as IDENT("x"),MINUS,NUMBER("5") not as IDENT("x"),NUMBER("-5")
+  def regexp = """([0-9]+\.?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
