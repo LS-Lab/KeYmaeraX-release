@@ -55,6 +55,7 @@ class RandomFormula(val rand : Random = new Random()) {
         case it if 100 until 110 contains it => Less(nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
         case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
+//case it if 110 until 170 contains it => True
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
 		    case it if 290 until 400 contains it => DotFormula

@@ -9,6 +9,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  */
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser
+  val pp = KeYmaeraXPrettyPrinter.printer
 
   val x = Variable("x")
   val y = Variable("y")
@@ -626,7 +627,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("x'=5&x>2") should be (And(Equal(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
-  it should "probably not parse a simple program when trying to parse x'=5 as a program" in {
+  ignore should "probably not parse a simple program when trying to parse x'=5 as a program" in {
     parser.programParser("x'=5") should not be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
   }
 
@@ -652,6 +653,27 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse [{x'=5,y'=2&x>7}]p(x)" in {
     parser("[{x'=5,y'=2&x>7}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Greater(Variable("x"),Number(7))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&x>7->y<2}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7->y<2}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Imply(Greater(Variable("x"),Number(7)),Less(y,Number(2)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&x>7&y<2}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7&y<2}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), And(Greater(Variable("x"),Number(7)),Less(y,Number(2)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&x>7|y<8}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7|y<8}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&!x>7}]p(x)" in {
+    parser("[{x'=5,y'=2&!x>7}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Not(Greater(Variable("x"),Number(7)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse lexically disambiguated x< -y not as REVIMPLY" in {
+    parser("x< -y") should be (Less(x,Neg(y)))
+    parser(pp(Less(x,Neg(y))) should be (Less(x,Neg(y)))
   }
 
   it should "parse [x:=q();]f()->r()+c(x)>0" in {
@@ -690,7 +712,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
       PredOf(Function("g",None,Real,Bool),Anything)))
   }
 
-  it should "parse an ODESystem program when trying to parse x'=5 as a program" in {
+  ignore should "parse an ODESystem program when trying to parse x'=5 as a program" in {
     parser.programParser("x'=5") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True))
   }
 

@@ -8,8 +8,8 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  * @author aplatzer
  */
 class RandomParserTests extends FlatSpec with Matchers {
-  val randomTrials = 40
-  val randomComplexity = 4
+  val randomTrials = 40000
+  val randomComplexity = 6
   val rand = new RandomFormula()
 
 
