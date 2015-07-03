@@ -89,7 +89,8 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
-    case t@Neg(Number(n))       => op(t).opcode + "(" + pp(Number(n)) + ")"
+    //@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7
+    case t@Neg(Number(n))       => " " + op(t).opcode + "(" + pp(Number(n)) + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
