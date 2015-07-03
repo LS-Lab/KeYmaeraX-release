@@ -30,7 +30,11 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || reparse(expr, r) == expr, "Parse of print is identity.\nExpression: " + fullPrinter(expr) + "\nPrinted:   " + stringify(expr) + "\nReparsed:   " + reparse(expr, stringify(expr)) + "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
+    r => !checkPrettyPrinter || reparse(expr, r) == expr,
+    "Parse of print is identity.\nExpression: " + fullPrinter(expr) +
+      "\nPrinted:    " + stringify(expr) +
+      "\nReparsed:   " + reparse(expr, stringify(expr)) +
+      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
     )
 
   /** Reparse the string print as the same kind as expr has */
@@ -46,6 +50,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)
+    case f: Function => f.asString
   }
 
   /** A pretty printer in full form with full parentheses */
@@ -80,6 +85,8 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case Number(n)              => n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
+    // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
+    case t@Neg(Number(n))       => op(t).opcode + "(" + pp(Number(n)) + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +

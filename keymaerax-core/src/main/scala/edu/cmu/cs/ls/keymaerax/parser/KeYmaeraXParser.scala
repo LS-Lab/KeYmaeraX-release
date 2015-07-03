@@ -110,12 +110,19 @@ object KeYmaeraXParser extends Parser {
     case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
     // lift misclassified defaulted program constant
     case x: Variable if kind==ProgramKind && x.index==None => Some(ProgramConst(x.name))
+    // lift misclassified defaulted term (p(x))' to formula as needed.
+    case Differential(t) if kind==FormulaKind => elaboratable(kind, t) match {
+      case Some(f:Formula) => Some(DifferentialFormula(f))
+      case None => None
+    }
     // lift misclassified defaulted differential equation
     case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => Some(AtomicODE(xp, e))
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => Some(ODESystem(AtomicODE(xp, e), h))
     // lift differential equations without evolution domain constraints to ODESystems
     case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode, True))
+    // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
+    case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
     case _ => None
   }
 
@@ -177,15 +184,20 @@ object KeYmaeraXParser extends Parser {
 
       // special case to force elaboration of modalities at the end
       case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
+        if (la==EOF || la==RPAREN || followsFormula(la)&& !followsTerm(la)) && e1.kind!=FormulaKind =>
         reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3 )
         //reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, e1), r)
 
       // special case to force elaboration of modalities at the end
       case r :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
+        if (la==EOF || la==RPAREN || followsFormula(la)&& !followsTerm(la)) && e1.kind!=FormulaKind =>
         reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
         //reduce(st, 4, elaborate(st, OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
+
+      // special case to force elaboration to DifferentialProgramConst
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(e1:Variable)
+        if (la==AMP || la==COMMA) =>
+        reduce(st, 1, elaborate(st, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
       // special quantifier notation
       case r :+ (tok1@Token(FORALL,_)) :+ Expr(v1:Variable) :+ Expr(f1:Formula) =>
@@ -210,7 +222,7 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
 
       // binary operators with precedence
-      case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) =>
+      case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) && tok!=TEST =>
         assert(op(st, tok, List(t1.kind,t2.kind)).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
         if (la==LPAREN || la==LBRACE) error(st)
         else {
@@ -255,7 +267,11 @@ object KeYmaeraXParser extends Parser {
       // unary postfix operator
       case r :+ Expr(t1) :+ Token(tok:OPERATOR,_) if op(st, tok, List(t1.kind)).assoc==PostfixFormat =>
         assert(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have postfix format\nin " + s)
-        reduce(st, 2, elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1), r)
+        val result = elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1)
+        if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
+          if (la == SEMI) reduce(shift(st), 3, result, r)
+          else error(st)
+        } else reduce(st, 2, result, r)
 
       // special case for elaboration to a;
       case r :+ Expr(t1:Variable) :+ Token(SEMI,_) if statementSemicolon =>
@@ -277,6 +293,7 @@ object KeYmaeraXParser extends Parser {
 
       // function/predicate symbols of argument ANYTHING
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+        //@todo disambiguate function versus predicate
         if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), Anything), r)
         else if (la==RPAREN) shift(st)
         else error(st)
@@ -403,7 +420,7 @@ object KeYmaeraXParser extends Parser {
   /** Follow(Formula): Can la follow after a formula? */
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
     la==RBRACE /* from predicationals */ ||
-    la==EOF
+    la==PRIME || la==EOF
 
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
@@ -412,7 +429,7 @@ object KeYmaeraXParser extends Parser {
     followsFormula(la) ||
     (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
     else la==SEMI || la==CHOICE || la==STAR || la==RBRACE || la==COMMA) || // from T in programs
-    la==EOF
+    la==PRIME || la==EOF
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
@@ -536,8 +553,8 @@ object KeYmaeraXParser extends Parser {
       case sDotTerm.op => sDotTerm
       case sNothing.op => sNothing
       case sAnything.op => sAnything
-      //case t: Variable => sVariable
-      //case t: Number => sNumber
+      case sVariable.op => sVariable
+      case sNumber.op => sNumber
       //case t: FuncOf => sFuncOf
       case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula
       else sDifferential

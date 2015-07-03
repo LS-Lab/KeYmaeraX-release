@@ -621,6 +621,22 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("<x'=5;>p(x)") should be (Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
   }
 
+  it should "parse [{x'=5&x>7}]p(x)" in {
+    parser("[{x'=5&x>7}]p(x)") should be (Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(7))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse [{x'=5,y'=2}]p(x)" in {
+    parser("[{x'=5,y'=2}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), True), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse [{y'=2,x'=5}]p(x)" in {
+    parser("[{y'=2,x'=5}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("y")), Number(2)), AtomicODE(DifferentialSymbol(Variable("x")), Number(5))), True), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse [{x'=5,y'=2&x>7}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Greater(Variable("x"),Number(7))), PredOf(p, Variable("x"))))
+  }
+
   it should "parse an ODESystem program when trying to parse x'=5 as a program" in {
     parser.programParser("x'=5") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True))
   }
