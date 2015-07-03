@@ -41,6 +41,8 @@ object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
 
   private val immediateError = true
+
+  /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
 
   /** Lexer's token stream with first token at head. */
@@ -65,6 +67,7 @@ object KeYmaeraXParser extends Parser {
       case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
+  /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
   private[parser] def formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f

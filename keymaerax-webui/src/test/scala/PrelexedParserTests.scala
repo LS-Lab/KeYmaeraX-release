@@ -673,7 +673,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse lexically disambiguated x< -y not as REVIMPLY" in {
     parser("x< -y") should be (Less(x,Neg(y)))
-    parser(pp(Less(x,Neg(y))) should be (Less(x,Neg(y)))
+    parser(pp(Less(x,Neg(y)))) should be (Less(x,Neg(y)))
   }
 
   it should "parse [x:=q();]f()->r()+c(x)>0" in {
