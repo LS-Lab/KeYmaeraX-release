@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 object KeYmaeraXPrettyPrinter {
   val printer: KeYmaeraXPrettyPrinter = new KeYmaeraXPrettyPrinter()
+  val fullPrinter: (Expression => String) = printer.fullPrinter
   def apply(expr: Expression): String = printer(expr)
 }
 
@@ -31,10 +32,12 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
     r => !checkPrettyPrinter || reparse(expr, r) == expr,
-    "Parse of print is identity.\nExpression: " + fullPrinter(expr) +
+    "Parse of print is identity." +
+      "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
       "\nReparsed:   " + reparse(expr, stringify(expr)) +
-      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
+      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
 
   /** Reparse the string print as the same kind as expr has */
@@ -46,7 +49,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /** Pretty-print term to a string without contract checking. */
-  private[parser] def stringify(expr: Expression) = expr match {
+  /*private[parser]*/ def stringify(expr: Expression) = expr match {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)
@@ -54,7 +57,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /** A pretty printer in full form with full parentheses */
-  val fullPrinter: (Expression => String) = FullPrettyPrinter
+  def fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /**
    * Whether parentheses around ``t.child`` can be skipped because they are implied.
@@ -116,7 +119,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case AssignAny(x)           => statement(pp(x) + op(program).opcode)
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case Test(f)                => statement(op(program).opcode + pp(f))
-    case ODESystem(ode, f)      => "{" + pp(ode) + op(program).opcode + pp(f) + "}"
+    case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
     case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
@@ -130,13 +133,15 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case ode: DifferentialProgram => pp(ode)
   }
 
-  private def pp(program: DifferentialProgram): String = program match {
+  private def ppODE(program: DifferentialProgram): String = program match {
     case a: DifferentialProgramConst => a.asString
     case AtomicODE(xp, e)       => pp(xp) + op(program).opcode + pp(e)
     case t: DifferentialProduct =>
-      (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
+      (if (skipParensLeft(t)) ppODE(t.left) else "{" + ppODE(t.left) + "}") +
         op(t).opcode +
-        (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
+        (if (skipParensRight(t)) ppODE(t.right) else "{" + ppODE(t.right) + "}")
+    // this case is supposed to have been handled already in pp(Program)
+    case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
   }
 
   /** Formatting the atomic statement s */
@@ -144,7 +149,10 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
 
 }
 
+/** A pretty printer in full form with full parentheses */
 object FullPrettyPrinter extends KeYmaeraXPrettyPrinter {
+  override def apply(expr: Expression): String = stringify(expr)
+
   private[parser] override def skipParens(t: UnaryComposite): Boolean = false
   private[parser] override def skipParens(t: Quantified): Boolean = false
   private[parser] override def skipParens(t: Modal): Boolean = false

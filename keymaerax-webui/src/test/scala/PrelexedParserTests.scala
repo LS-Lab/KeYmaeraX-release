@@ -10,6 +10,10 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser
 
+  val x = Variable("x")
+  val y = Variable("y")
+  val z = Variable("z")
+
   val f0 = FuncOf(Function("f",None,Unit,Real),Nothing)
   val g0 = FuncOf(Function("g",None,Unit,Real),Nothing)
   val h0 = FuncOf(Function("h",None,Unit,Real),Nothing)
@@ -22,9 +26,22 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val q = Function("q",None,Real,Bool)
   val r = Function("r",None,Real,Bool)
 
-  def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
+  private def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
 
-  "After lexing the parser" should "parse x+y*z" in {
+  def parseShouldBe(input: String, expr: Expression) = {
+    val parse = parser(input)
+    if (!(parse == expr)) {
+      println(
+        "\nInput:      " + input +
+        "\nParsed:     " + parse + " @ " + parse.getClass.getSimpleName +
+        "\nExpression: " + KeYmaeraXPrettyPrinter.fullPrinter(parse))
+      parse should be (expr)
+    }
+  }
+
+
+
+  "After lexing the token parser" should "parse x+y*z" in {
     val lex = KeYmaeraXLexer("x + y * z")
     val theStream = toStream(IDENT("x"), PLUS, IDENT("y"), STAR, IDENT("z"))
     lex.map(_.tok) should be (theStream.map(_.tok))
@@ -568,7 +585,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Greater(f0, Number(0))
   }
 
-  "The parser" should "not parse p()+x as a formula" in {
+  "The string parser" should "not parse p()+x as a formula" in {
     a [ParseException] should be thrownBy parser.formulaParser("p()+x")
   }
 
@@ -635,6 +652,42 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse [{x'=5,y'=2&x>7}]p(x)" in {
     parser("[{x'=5,y'=2&x>7}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Greater(Variable("x"),Number(7))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse [x:=q();]f()->r()+c(x)>0" in {
+    parser("[x:=q();]f()->r()+c(x)>0") should be (Imply(
+      Box(Assign(x, FuncOf(Function("q",None,Unit,Real),Nothing)), PredOf(Function("f",None,Unit,Bool),Nothing)),
+      Greater(Plus(FuncOf(Function("r",None,Unit,Real),Nothing), FuncOf(Function("c",None,Real,Real),x)), Number(0))))
+  }
+
+  it should "parse [x:=q(x);]f(x)->r(x)+c(x)>0" in {
+    parser("[x:=q(x);]f(x)->r(x)+c(x)>0") should be (Imply(
+      Box(Assign(x, FuncOf(Function("q",None,Real,Real),x)), PredOf(Function("f",None,Real,Bool),x)),
+      Greater(Plus(FuncOf(Function("r",None,Real,Real),x), FuncOf(Function("c",None,Real,Real),x)), Number(0))))
+  }
+
+  it should "parse [x:=q(??);]f(??)->r(??)+c(x)>0" in {
+    parser("[x:=q(??);]f(??)->r(??)+c(x)>0") should be (Imply(
+      Box(Assign(x, FuncOf(Function("q",None,Real,Real),Anything)), PredOf(Function("f",None,Real,Bool),Anything)),
+      Greater(Plus(FuncOf(Function("r",None,Real,Real),Anything), FuncOf(Function("c",None,Real,Real),x)), Number(0))))
+  }
+
+  it should "parse [x:=q();]f()->g()" in {
+    parseShouldBe("[x:=q();]f()->g()", Imply(
+      Box(Assign(x, FuncOf(Function("q",None,Unit,Real),Nothing)), PredOf(Function("f",None,Unit,Bool),Nothing)),
+      PredOf(Function("g",None,Unit,Bool),Nothing)))
+  }
+
+  it should "parse [x:=q(x);]f(x)->g(x)" in {
+    parser("[x:=q(x);]f(x)->g(x)") should be (Imply(
+      Box(Assign(x, FuncOf(Function("q",None,Real,Real),x)), PredOf(Function("f",None,Real,Bool),x)),
+      PredOf(Function("g",None,Real,Bool),x)))
+  }
+
+  it should "parse [x:=q(??);]f(??)->g(??)" in {
+    parser("[x:=q(??);]f(??)->g(??)") should be (Imply(
+      Box(Assign(x, FuncOf(Function("q",None,Real,Real),Anything)), PredOf(Function("f",None,Real,Bool),Anything)),
+      PredOf(Function("g",None,Real,Bool),Anything)))
   }
 
   it should "parse an ODESystem program when trying to parse x'=5 as a program" in {

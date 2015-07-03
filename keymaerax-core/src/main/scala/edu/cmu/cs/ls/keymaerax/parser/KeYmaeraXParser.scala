@@ -54,7 +54,7 @@ object KeYmaeraXParser extends Parser {
   }
 
   override def termParser: (String => Term) =
-    input => apply(input) match {
+    input => elaborate(eofState, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
       case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
@@ -106,6 +106,8 @@ object KeYmaeraXParser extends Parser {
   private def elaboratable(kind: Kind, e: Expression): Option[Expression] = if (e.kind==kind) Some(e) else e match {
     // lift misclassified defaulted function application to predicate application when required by context type.
     case FuncOf(f, t) if kind==FormulaKind => Some(PredOf(Function(f.name,f.index,f.domain,Bool), t))
+    // lift misclassified defaulted predicate application to function application when required by context type.
+    case PredOf(f, t) if kind==TermKind => Some(FuncOf(Function(f.name,f.index,f.domain,Real), t))
     // lift misclassified defaulted differential program constant
     case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
     // lift misclassified defaulted program constant
@@ -113,6 +115,11 @@ object KeYmaeraXParser extends Parser {
     // lift misclassified defaulted term (p(x))' to formula as needed.
     case Differential(t) if kind==FormulaKind => elaboratable(kind, t) match {
       case Some(f:Formula) => Some(DifferentialFormula(f))
+      case None => None
+    }
+    // lift misclassified defaulted formula (f(x))' to term as needed.
+    case DifferentialFormula(f) if kind==TermKind => elaboratable(kind, f) match {
+      case Some(t:Term) => Some(Differential(t))
       case None => None
     }
     // lift misclassified defaulted differential equation
@@ -156,6 +163,10 @@ object KeYmaeraXParser extends Parser {
       // ordinary terminals
       case r :+ Token(IDENT(name),_) =>
         if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
+
+      // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
+      case r :+ Token(MINUS,_) :+ Token(NUMBER(n),loc) if !n.startsWith("-") && !isNotPrefix(st) =>
+        reduce(st, 2, Bottom :+ Token(NUMBER("-" + n), loc), r)
 
       case r :+ Token(NUMBER(value),_) =>
         reduce(st, 1, Number(BigDecimal(value)), r)
@@ -217,19 +228,31 @@ object KeYmaeraXParser extends Parser {
       case r :+ (tok1@Token(EXISTS,_)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st)
 
-      // special case for statementSemicolon
+      // special case for sCompose in case statementSemicolon
       case r :+ Expr(p1: Program) :+ Expr(p2: Program) if statementSemicolon =>
-        reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+        if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
+        val optok = OpSpec.sCompose
+        assume(optok.assoc==RightAssociative)
+        //@todo op(st, la) : Potential problem: st is not the right parser state for la
+        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+          || statementSemicolon&&la==LBRACE
+          || optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative)
+          reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+        else if (optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
+          shift(st)
+        else error(st)
 
       // binary operators with precedence
       case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) && tok!=TEST =>
         assert(op(st, tok, List(t1.kind,t2.kind)).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
-        if (la==LPAREN || la==LBRACE) error(st)
+        if (la==LPAREN || !statementSemicolon&&la==LBRACE) error(st)
         else {
           // pass t1,t2 kinds so that op/2 can make up its mind well in disambiguation.
           val optok = op(st, tok, List(t1.kind,t2.kind))
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
+          //@todo if statementSemicolon then the missing SEMI causes incorrect predictions of operator precedence ++ versus ;
           if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+            || statementSemicolon&&la==LBRACE
             || optok < op(st, la, List(t2.kind,ExpressionKind)) || optok <= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == LeftAssociative) {
             //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
             val result = elaborate(st, tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
@@ -286,26 +309,19 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la)) shift(st) else error(st)
 
       // function/predicate symbols arity 0
-      case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
-        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 3, FuncOf(Function(name, None, Unit, Real), Nothing), r)
-        else if (la==RPAREN) shift(st)
-        else error(st)
+      case r :+ Token(tok@IDENT(_),_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
+        reduceFuncOrPredOf(st, 3, tok, Nothing, r)
 
       // function/predicate symbols of argument ANYTHING
-      case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
-        //@todo disambiguate function versus predicate
-        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), Anything), r)
-        else if (la==RPAREN) shift(st)
-        else error(st)
+      case r :+ Token(tok@IDENT(_),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+        reduceFuncOrPredOf(st, 4, tok, Anything, r)
 
       // function/predicate symbols arity>0
-      case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_)  =>
-        if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
-        else if (la==RPAREN) shift(st)
-        else error(st)
+      case r :+ Token(tok@IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
+        reduceFuncOrPredOf(st, 4, tok, t1, r)
 
       // predicational symbols arity>0
-      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_)  =>
+      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), f1), r)
         else error(st)
 
@@ -395,6 +411,26 @@ object KeYmaeraXParser extends Parser {
 
   // stack helper
 
+    /**
+     * Reduce consuming items in the parse state st to function/predicate name applied to argument arg,
+     * while automatically disambiguating between function and predicate symbols based on lookahead
+     * and parser state of stack items.
+     * @NOTE Needs to be able to disambiguate early in [x:=q()]f()->r()+c(x)>0
+     */
+  private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
+    val ParseState(s, input@(Token(la, _) :: rest)) = st
+    if (termBinOp(la) || isTerm(st) && followsTerm(la))
+      reduce(st, consuming, FuncOf(Function(name.name, None, arg.sort, Real), arg), remainder)
+    else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
+      reduce(st, consuming, PredOf(Function(name.name, None, arg.sort, Bool), arg), remainder)
+    else if (followsFormula(la))
+      reduce(st, consuming, PredOf(Function(name.name, None, arg.sort, Bool), arg), remainder)
+    else if (followsTerm(la))
+      reduce(st, consuming, FuncOf(Function(name.name, None, arg.sort, Real), arg), remainder)
+    else if (la == RPAREN) shift(st)
+    else error(st)
+  }
+
   /** Top terminal token from stack or EOF if the top item is not a token or the stack is empty. */
   private def stackToken(s: Stack[Item]): Terminal =
     if (!s.isEmpty && s.top.isInstanceOf[Token]) s.top.asInstanceOf[Token].tok else EOF
@@ -422,6 +458,9 @@ object KeYmaeraXParser extends Parser {
     la==RBRACE /* from predicationals */ ||
     la==PRIME || la==EOF
 
+  /** Is la a (binary) operator that only works for formulas? */
+  private def formulaBinOp(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV
+
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
     la==POWER || la==STAR || la==SLASH || la==PLUS || la==MINUS ||  // from T in terms
@@ -430,6 +469,12 @@ object KeYmaeraXParser extends Parser {
     (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
     else la==SEMI || la==CHOICE || la==STAR || la==RBRACE || la==COMMA) || // from T in programs
     la==PRIME || la==EOF
+
+  /** Is la a (binary) operator that only works for terms? */
+  private def termBinOp(la: Terminal): Boolean =
+    la==POWER || la==STAR || la==SLASH || la==PLUS || la==MINUS ||  // from T in terms
+    la==EQ || la==NOTEQ || la==GREATEREQ || la==LESSEQ // from T in formulas
+  //|| la==RDIA || la==LDIA // from T in formulas but also possibly as modalities
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
@@ -507,7 +552,7 @@ object KeYmaeraXParser extends Parser {
   }
 
 
-  // operator precedence lookup
+  // state lookup based on parser state
 
   /** If the stack starts with an expr item, so has been reduced already, it can't be a prefix operator */
   private def isNotPrefix(st: ParseState): Boolean = st.stack match {
@@ -515,8 +560,19 @@ object KeYmaeraXParser extends Parser {
     case _ => false
   }
 
+  /** If the stack starts with something that is guaranteed to be a formula item */
   private def isFormula(st: ParseState): Boolean = (st.stack match {
+    case _ :+ Token(op:OPERATOR,_) => formulaBinOp(op)
+    case _ :+ Token(op:OPERATOR,_) :+ Expr(_) => formulaBinOp(op)
     case _ :+ Expr(_:Formula) => true
+    case _ => false
+  })
+
+  /** If the stack starts with something that is guaranteed to be a term item */
+  private def isTerm(st: ParseState): Boolean = (st.stack match {
+    case _ :+ Token(op:OPERATOR,_) => termBinOp(op)
+    case _ :+ Token(op:OPERATOR,_) :+ Expr(_) => termBinOp(op)
+    case _ :+ Expr(_:Term) => true
     case _ => false
   })
 
@@ -542,6 +598,8 @@ object KeYmaeraXParser extends Parser {
     case _ => false
   }
 
+  // operator precedence lookup based on parser state
+
   import OpSpec._
 
   /** The operator notation of the top-level operator of expr with opcode, precedence and associativity  */
@@ -553,12 +611,12 @@ object KeYmaeraXParser extends Parser {
       case sDotTerm.op => sDotTerm
       case sNothing.op => sNothing
       case sAnything.op => sAnything
-      case sVariable.op => sVariable
-      case sNumber.op => sNumber
+      case s:IDENT/*sVariable.op*/ => sVariable //@todo could also be FuncOf/PredOf if la==LPAREN
+      case s:NUMBER/*sNumber.op*/ => sNumber
       //case t: FuncOf => sFuncOf
       case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula
       else sDifferential
-      //case t: Pair => sPair
+      //case t: Pair => sPair  or sDifferentialProduct
       case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
       case sTimes.op => if (!kinds.isEmpty && kinds(0)==ProgramKind)/*if (isProgram(st))*/ sLoop else sTimes
@@ -605,7 +663,7 @@ object KeYmaeraXParser extends Parser {
       //case
       case sEOF.op => sEOF
     }
-  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone, "OpSpec's opcode coincides with expected token " + tok)
+  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER], "OpSpec's opcode coincides with expected token " + tok)
 
 
 }

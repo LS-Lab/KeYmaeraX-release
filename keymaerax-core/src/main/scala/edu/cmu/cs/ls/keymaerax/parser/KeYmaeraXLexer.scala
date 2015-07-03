@@ -45,7 +45,9 @@ case class NUMBER(value: String) extends Terminal(value) {
 }
 object NUMBER {
   //A bit weird, but this gives the entire number in a single group.
-  def regexp = """(-?[0-9]+\.?[0-9]*)""".r
+  //def regexp = """(-?[0-9]+\.?[0-9]*)""".r
+  //@NOTE Minus sign artificially excluded from the number to make sure x-5 lexes as IDENT("x"),MINUS,NUMBER("5") not as IDENT("x"),NUMBER("-5")
+  def regexp = """([0-9]+\.?[0-9]*)""".r
   val startPattern: Regex = ("^" + regexp.pattern.pattern + "[\\s\\S]*").r
 }
 
@@ -163,14 +165,14 @@ object FUNCTIONS_BLOCK extends Terminal("Functions.")
 object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
 object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 object PROBLEM_BLOCK extends Terminal("Problem.")
-//@todo the following should be lexed as identifiers
-object REAL extends Terminal("R")
-object BOOL extends Terminal("B")
+//@todo the following R, B, T, P etc should be lexed as identifiers. Adapt code to make them disappear.
+object REAL extends Terminal("$$$R")
+object BOOL extends Terminal("$$$B")
 //Is there any reason we parse a bunch of stuff just to throw it away? Are these suppose to be in our sort heirarchy...?
-object TERM extends Terminal("T")
-object PROGRAM extends Terminal("P")
-object CP extends Terminal("CP")
-object MFORMULA extends Terminal("F")
+object TERM extends Terminal("$$$T")
+object PROGRAM extends Terminal("$$$P")
+object CP extends Terminal("$$$CP")
+object MFORMULA extends Terminal("$$F")
 
 /**
  * The location where a Terminal is located in an input stream.
