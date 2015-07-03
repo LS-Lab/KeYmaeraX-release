@@ -9,7 +9,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  */
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser
-  val pp = KeYmaeraXPrettyPrinter.printer
+  val pp = KeYmaeraXPrettyPrinter
 
   val x = Variable("x")
   val y = Variable("y")

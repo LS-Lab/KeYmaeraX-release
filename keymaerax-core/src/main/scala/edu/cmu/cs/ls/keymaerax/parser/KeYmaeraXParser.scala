@@ -22,7 +22,7 @@ case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
 /** Expressions that are partially parsed on the parser item stack. */
 case class Expr(expr: Expression) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
-  override def toString: String = KeYmaeraXPrettyPrinter.printer.stringify(expr)
+  override def toString: String = KeYmaeraXPrettyPrinter.stringify(expr)
 }
 trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */

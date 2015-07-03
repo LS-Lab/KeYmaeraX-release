@@ -5,25 +5,26 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
+
 import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-object KeYmaeraXPrettyPrinter {
-  val printer: KeYmaeraXPrettyPrinter = new KeYmaeraXPrettyPrinter()
-  val fullPrinter: (Expression => String) = printer.fullPrinter
-  def apply(expr: Expression): String = printer(expr)
-}
+/**
+ * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
+ */
+object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter
 
 /**
- * KeYmaera X Pretty Printer formats differential dynamic logic expressions
+ * KeYmaera X Printer formats differential dynamic logic expressions
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
  * with explicit statement end ``;`` operator.
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  * @see doc/dL-grammar.md
  */
-class KeYmaeraXPrettyPrinter extends (Expression => String) {
+class KeYmaeraXPrinter extends (Expression => String) {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
@@ -62,23 +63,21 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   /**
    * Whether parentheses around ``t.child`` can be skipped because they are implied.
    */
-  private[parser] def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
-  private[parser] def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
-  private[parser] def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
+  protected def skipParens(t: UnaryComposite): Boolean = false
+  protected def skipParens(t: Quantified): Boolean = false
+  protected def skipParens(t: Modal): Boolean = false
 
   /**
    * Whether parentheses around ``t.left`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  private[parser] def skipParensLeft(t: BinaryComposite): Boolean =
-    op(t.left) < op(t) || op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
+  protected def skipParensLeft(t: BinaryComposite): Boolean = false
 
   /**
    * Whether parentheses around ``t.right`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  private[parser] def skipParensRight(t: BinaryComposite): Boolean =
-    op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
+  protected def skipParensRight(t: BinaryComposite): Boolean = false
 
   /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
   private val LEXSPACE: String = " "
@@ -154,13 +153,36 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
 
 }
 
-/** A pretty printer in full form with full parentheses */
-object FullPrettyPrinter extends KeYmaeraXPrettyPrinter {
-  override def apply(expr: Expression): String = stringify(expr)
+/**
+ * KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
+ * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
+ * with explicit statement end ``;`` operator.
+ * @author aplatzer
+ * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
+ * @see doc/dL-grammar.md
+ */
+class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
+  protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+  protected override def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
+  protected override def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
 
-  private[parser] override def skipParens(t: UnaryComposite): Boolean = false
-  private[parser] override def skipParens(t: Quantified): Boolean = false
-  private[parser] override def skipParens(t: Modal): Boolean = false
-  private[parser] override def skipParensLeft(t: BinaryComposite): Boolean = false
-  private[parser] override def skipParensRight(t: BinaryComposite): Boolean = false
+  /**
+   * Whether parentheses around ``t.left`` can be skipped because they are implied.
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   */
+  protected override def skipParensLeft(t: BinaryComposite): Boolean =
+    op(t.left) < op(t) || op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
+
+  /**
+   * Whether parentheses around ``t.right`` can be skipped because they are implied.
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   */
+  protected override def skipParensRight(t: BinaryComposite): Boolean =
+    op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
+
+}
+
+/** A pretty printer in full form with full parentheses */
+object FullPrettyPrinter extends KeYmaeraXPrinter {
+  override def apply(expr: Expression): String = stringify(expr)
 }

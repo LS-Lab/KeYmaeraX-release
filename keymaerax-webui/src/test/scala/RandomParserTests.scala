@@ -13,7 +13,7 @@ class RandomParserTests extends FlatSpec with Matchers {
   val rand = new RandomFormula()
 
 
-  val pp = KeYmaeraXPrettyPrinter.printer
+  val pp = KeYmaeraXPrettyPrinter
   val parser = KeYmaeraXParser
 
   def parseShouldBe(input: String, expr: Expression) = {
