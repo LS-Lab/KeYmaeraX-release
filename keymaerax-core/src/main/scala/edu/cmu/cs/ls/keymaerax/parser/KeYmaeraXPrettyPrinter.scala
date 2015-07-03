@@ -80,6 +80,9 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   private[parser] def skipParensRight(t: BinaryComposite): Boolean =
     op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
+  /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
+  private val LEXSPACE: String = " "
+
   private def pp(term: Term): String = term match {
     case DotTerm|Anything|Nothing=> op(term).opcode
     case x: Variable            => x.asString
@@ -89,8 +92,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
-    //@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7
-    case t@Neg(Number(n))       => " " + op(t).opcode + "(" + pp(Number(n)) + ")"
+    case t@Neg(Number(n))       => op(t).opcode + "(" + pp(Number(n)) + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
@@ -102,6 +104,8 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case True|False|DotFormula  => op(formula).opcode
     case PredOf(p, c)           => p.asString + "(" + pp(c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
+    // special case to disambiguate between x<-y as in x < -y compared to x REVIMPLY y
+    case f: Less                => pp(f.left) + LEXSPACE + op(formula).opcode + LEXSPACE + pp(f.right)
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
     case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /*"." +*/ (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
