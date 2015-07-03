@@ -165,14 +165,14 @@ object FUNCTIONS_BLOCK extends Terminal("Functions.")
 object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
 object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 object PROBLEM_BLOCK extends Terminal("Problem.")
-//@todo the following should be lexed as identifiers
-object REAL extends Terminal("R")
-object BOOL extends Terminal("B")
+//@todo the following R, B, T, P etc should be lexed as identifiers. Adapt code to make them disappear.
+object REAL extends Terminal("$$$R")
+object BOOL extends Terminal("$$$B")
 //Is there any reason we parse a bunch of stuff just to throw it away? Are these suppose to be in our sort heirarchy...?
-object TERM extends Terminal("T")
-object PROGRAM extends Terminal("P")
-object CP extends Terminal("CP")
-object MFORMULA extends Terminal("F")
+object TERM extends Terminal("$$$T")
+object PROGRAM extends Terminal("$$$P")
+object CP extends Terminal("$$$CP")
+object MFORMULA extends Terminal("$$F")
 
 /**
  * The location where a Terminal is located in an input stream.
