@@ -11,6 +11,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 object KeYmaeraXPrettyPrinter {
   val printer: KeYmaeraXPrettyPrinter = new KeYmaeraXPrettyPrinter()
+  val fullPrinter: (Expression => String) = printer.fullPrinter
   def apply(expr: Expression): String = printer(expr)
 }
 
@@ -31,9 +32,10 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
     r => !checkPrettyPrinter || reparse(expr, r) == expr,
-    "Parse of print is identity.\nExpression: " + fullPrinter(expr) +
+    "Parse of print is identity." +
+      "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
-      "\nReparsed:   " + reparse(expr, stringify(expr)) +
+      "\nReparsed:   " + reparse(expr, stringify(expr)) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
       "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
     )
 
@@ -54,7 +56,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /** A pretty printer in full form with full parentheses */
-  val fullPrinter: (Expression => String) = FullPrettyPrinter
+  def fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /**
    * Whether parentheses around ``t.child`` can be skipped because they are implied.
@@ -144,7 +146,10 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
 
 }
 
+/** A pretty printer in full form with full parentheses */
 object FullPrettyPrinter extends KeYmaeraXPrettyPrinter {
+  override def apply(expr: Expression): String = stringify(expr)
+
   private[parser] override def skipParens(t: UnaryComposite): Boolean = false
   private[parser] override def skipParens(t: Quantified): Boolean = false
   private[parser] override def skipParens(t: Modal): Boolean = false
