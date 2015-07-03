@@ -40,6 +40,9 @@ case class Error(msg: String, loc: Location, st: String) extends FinalItem
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
 
+  /** This default parser. */
+  val parser = this
+
   private val immediateError = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */

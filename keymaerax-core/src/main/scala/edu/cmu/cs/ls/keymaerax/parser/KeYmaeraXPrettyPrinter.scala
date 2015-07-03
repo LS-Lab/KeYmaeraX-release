@@ -14,7 +14,10 @@ import edu.cmu.cs.ls.keymaerax.core._
 /**
  * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
  */
-object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter
+object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
+  /** This default pretty printer. */
+  val pp = this
+}
 
 /**
  * KeYmaera X Printer formats differential dynamic logic expressions

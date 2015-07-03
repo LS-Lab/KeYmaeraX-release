@@ -9,20 +9,48 @@ package edu.cmu.cs.ls.keymaerax
  * Provides a parser to read string and file inputs with differential dynamic logic.
  * Conversely provides a pretty-printer to format [[edu.cmu.cs.ls.keymaerax.core.Expression differential dynamic logic expression data structure]]
  * as human readable concrete syntax.
- *
+ * {{{
+ *     Printer: Expression -> String
+ *     Parser: String -> Expression
+ * }}}
  * ==Usage Overview==
  *
  * ===Printing Differential Dynamic Logic===
+ * {{{  Printer: Expression -> String}}}
  * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]] implements the pretty-printer for the concrete syntax
  * of differential dynamic logic used in KeYmaera X.
+ * A pretty-printer is essentially a function from differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]] to strings.
  *
+ * Printing formulas to strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.apply]]:
+ * {{{
+ * val pp = KeYmaeraXPrettyPrinter
+ * // "x < -y"
+ * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+ * val fml0str = pp(fml0)
+ * // "true -> [x:=1;]x>=0"
+ * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ * val fml1str = pp(fml1)
+ * }}}
+ *
+ * Fully-parenthesized strings are obtained using the [[edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter]] printer:
+ * {{{
+ * val pp = FullPrettyPrinter
+ * // "x < -(y)"
+ * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+ * val fml0str = pp(fml0)
+ * // "true -> ([x:=1;](x>=0))"
+ * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ * val fml1str = pp(fml1)
+ * }}}
+
  * ===Parsing Differential Dynamic Logic===
+ * {{{Parser: String -> Expression}}}
  * [[edu.cmu.cs.ls.keymaerax.parser.Parser]] defines the interface for all differential dynamic logic parsers in KeYmaera X.
  * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]] implements the parser for the concrete syntax
  * of differential dynamic logic used in KeYmaera X.
  * A parser is essentially a function from input string to differential dynamic logic [[edu.cmu.cs.ls.keymaerax.core.Expression expressions]].
  *
- * Parsing formulas from strings is straightforward:
+ * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
  * {{{
  * val parser = KeYmaeraXParser
  * val fml0 = parser("x!=5")
@@ -64,10 +92,43 @@ package edu.cmu.cs.ls.keymaerax
  * Similarly, a parser that only parses terms is obtained via [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.termParser]]
  * and a parser that only parses programs is obtained via [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.programParser]]
  *
+ * ==Pretty-Printing Parsed Strings==
+ *
+ * Corresponding parsers and pretty-printers match with one another.
+ * Parsing a pretty-printed expression results in the original expression again"
+ * {{{
+ *   parse(print(e)) == e
+ * }}}
+ * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]] and [[[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]] are inverses in this sense.
+ * The converse `print(parse(s)) == s` is not quite the case, because there can be minor spacing differences.
+ *
+ * Parsing the pretty-print of an expression with compatible printers and parsers always gives the original expression back:
+ * {{{
+ *   val parser = KeYmaeraXParser
+ *   val pp = KeYmaeraXPrettyPrinter
+ *   val fml = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ *   // something like "true -> [x:=1;]x>=0" modulo spacing
+ *   val print = pp(fml)
+ *   val reparse = parser(print)
+ *   if (fml == reparse) println("Print and reparse successful") else println("Discrepancy")
+ * }}}
+ *  It can be quite helpful to print an expression that has been parsed to check how it got parsed:
+ * {{{
+ *   val parser = KeYmaeraXParser
+ *   val pp = KeYmaeraXPrettyPrinter
+ *   val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
+ *   val parse = parser(input)
+ *   println("Parsed:   " + parse)
+ *   val print = pp(parse)
+ *   println("Printed:  " + print)
+ *   println("Original: " + input)
+ *   println("Can differ slightly by spacing and parentheses")
+ * }}}
+ *
  * @author aplatzer
  * @see Andre Platzer. [[http://www.cs.cmu.edu/~aplatzer/pub/usubst.pdf A uniform substitution calculus for differential dynamic logic]].  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015.
  * @see Andre Platzer. [[http://arxiv.org/pdf/1503.01981.pdf A uniform substitution calculus for differential dynamic logic.  arXiv 1503.01981]], 2015.
  * @see "Nathan Fulton, Stefan Mitsch, Jan-David Quesel, Marcus Volp and Andre Platzer. KeYmaera X: An axiomatic tactical theorem prover for hybrid systems.  In Amy P. Felty and Aart Middeldorp, editors, International Conference on Automated Deduction, CADE'15, Berlin, Germany, Proceedings, LNCS. Springer, 2015."
- * @see doc/dL-grammar.md
+ * @see [[doc/dL-grammar.md]]
  */
 package object parser {}

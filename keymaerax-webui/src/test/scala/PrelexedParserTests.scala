@@ -757,4 +757,8 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("\\forall x p(x)&q(x)") should be
     And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
   }
+
+  "Parser documentation" should "compile and run" in {
+
+  }
 }
