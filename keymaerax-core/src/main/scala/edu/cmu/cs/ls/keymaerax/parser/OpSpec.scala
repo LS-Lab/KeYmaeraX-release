@@ -181,7 +181,7 @@ object OpSpec {
   val sTest         = lUnaryOpSpecF[Program](TEST,   200, PrefixFormat, unfmlprog, (f:Formula) => Test(f.asInstanceOf[Formula]))
   val sAtomicODE    = BinaryOpSpec[Program](EQ,   90/*200*/, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA, 95/*210*/, RightAssociative, bindiffprog, DifferentialProduct.apply _)
-  val sODESystem    = BinaryOpSpec[Expression](AMP, 99/*219*/, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
+  val sODESystem    = BinaryOpSpec[Expression](AMP, 150, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
   val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, unprog, Loop.apply _)
   val sCompose      = BinaryOpSpec(SEMI, 230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)
