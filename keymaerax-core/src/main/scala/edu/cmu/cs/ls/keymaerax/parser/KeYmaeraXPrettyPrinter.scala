@@ -35,8 +35,9 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     "Parse of print is identity." +
       "\nExpression: " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName +
       "\nPrinted:    " + stringify(expr) +
-      "\nReparsed:   " + reparse(expr, stringify(expr)) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
-      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
+      "\nReparsed:   " + reparse(expr, stringify(expr)) +
+      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
+      "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
 
   /** Reparse the string print as the same kind as expr has */
@@ -48,7 +49,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /** Pretty-print term to a string without contract checking. */
-  private[parser] def stringify(expr: Expression) = expr match {
+  /*private[parser]*/ def stringify(expr: Expression) = expr match {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)

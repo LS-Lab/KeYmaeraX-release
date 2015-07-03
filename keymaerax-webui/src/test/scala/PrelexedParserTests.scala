@@ -28,7 +28,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   private def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
 
-  private def parseShouldBe(input: String, expr: Expression) = {
+  def parseShouldBe(input: String, expr: Expression) = {
     val parse = parser(input)
     if (!(parse == expr)) {
       println(

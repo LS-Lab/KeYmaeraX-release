@@ -164,6 +164,10 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(IDENT(name),_) =>
         if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
 
+      // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
+      case r :+ Token(MINUS,_) :+ Token(NUMBER(n),loc) if !n.startsWith("-") && !isNotPrefix(st) =>
+        reduce(st, 2, Bottom :+ Token(NUMBER("-" + n), loc), r)
+
       case r :+ Token(NUMBER(value),_) =>
         reduce(st, 1, Number(BigDecimal(value)), r)
 
@@ -224,9 +228,19 @@ object KeYmaeraXParser extends Parser {
       case r :+ (tok1@Token(EXISTS,_)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st)
 
-      // special case for statementSemicolon
+      // special case for sCompose in case statementSemicolon
       case r :+ Expr(p1: Program) :+ Expr(p2: Program) if statementSemicolon =>
-        reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+        if (la==LPAREN) error(st)
+        val optok = OpSpec.sCompose
+        assume(optok.assoc==RightAssociative)
+        //@todo op(st, la) : Potential problem: st is not the right parser state for la
+        if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
+          || la==LBRACE // special case for statementSemicolon, which already ate up SEMI in p2
+          || optok < op(st, la, List(p2.kind,ExpressionKind)) || optok <= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == LeftAssociative)
+          reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
+        else if (optok > op(st, la, List(p2.kind,ExpressionKind)) || optok >= op(st, la, List(p2.kind,ExpressionKind)) && optok.assoc == RightAssociative)
+          shift(st)
+        else error(st)
 
       // binary operators with precedence
       case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) && tok!=TEST =>
@@ -600,7 +614,7 @@ object KeYmaeraXParser extends Parser {
       //case t: FuncOf => sFuncOf
       case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula
       else sDifferential
-      //case t: Pair => sPair
+      //case t: Pair => sPair  or sDifferentialProduct
       case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
       case sTimes.op => if (!kinds.isEmpty && kinds(0)==ProgramKind)/*if (isProgram(st))*/ sLoop else sTimes
@@ -647,7 +661,7 @@ object KeYmaeraXParser extends Parser {
       //case
       case sEOF.op => sEOF
     }
-  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone, "OpSpec's opcode coincides with expected token " + tok)
+  } ensuring(r => r.op == tok && r.opcode == tok.img || r==sNone || tok.isInstanceOf[IDENT] || tok.isInstanceOf[NUMBER], "OpSpec's opcode coincides with expected token " + tok)
 
 
 }

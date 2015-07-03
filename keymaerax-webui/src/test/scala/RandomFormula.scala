@@ -53,8 +53,9 @@ class RandomFormula(val rand : Random = new Random()) {
         case it if 80 until 90 contains it => LessEqual(nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 90 until 100 contains it => Greater(nextT(vars, n-1, dots), nextT(vars, n-1, dots))
         case it if 100 until 110 contains it => Less(nextT(vars, n-1, dots), nextT(vars, n-1, dots))
-        case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
-        case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
+//        case it if 110 until 140 contains it => Forall(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
+//        case it if 140 until 170 contains it => Exists(Seq(vars(rand.nextInt(vars.length))), nextF(vars, n-1, dots))
+case it if 110 until 170 contains it => True
         case it if 170 until 230 contains it => Box(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
         case it if 230 until 290 contains it => Diamond(nextP(vars, n-1, dots), nextF(vars, n-1, dots))
 		    case it if 290 until 400 contains it => DotFormula
@@ -94,7 +95,7 @@ class RandomFormula(val rand : Random = new Random()) {
           case it if 10 until 20 contains it => Test(nextF(vars, n-1, dots))
           case it if 20 until 30 contains it => Assign(vars(rand.nextInt(vars.length)), nextT(vars, n-1, dots))
           case it if 30 until 40 contains it => AssignAny(vars(rand.nextInt(vars.length)))
-          case it if 40 until 50 contains it => ODESystem(nextODE(vars, n, dots), nextF(vars, n-1, dots))
+          case it if 40 until 50 contains it => ODESystem(nextODE(vars, n, 0, vars.length, dots), nextF(vars, n-1, dots))
           case it if 50 until 100 contains it => Choice(nextP(vars, n-1, dots), nextP(vars, n-1, dots))
           case it if 100 until 150 contains it => Compose(nextP(vars, n-1, dots), nextP(vars, n-1, dots))
           case it if 150 until 200 contains it => Loop(nextP(vars, n-1, dots))
@@ -102,14 +103,26 @@ class RandomFormula(val rand : Random = new Random()) {
         }
     }
 
-    def nextODE(vars : IndexedSeq[Variable], n : Int, dots: Boolean = false) : DifferentialProgram = {
-      require(n>=0)
-      if (n == 0 || rand.nextFloat()<=shortProbability) return AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, 0, dots))
-      val r = rand.nextInt(20)
-        r match {
-          case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(rand.nextInt(vars.length))), nextT(vars, n-1, dots))
-          case it if 10 until 20 contains it => DifferentialProduct(nextODE(vars, n-1, dots), nextODE(vars, n-1, dots))
-          case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
-        }
+  /**
+   * randomly generate an ODE paying attention to avoid duplicates.
+   * This algorithm is merg-sort-esque and only generates ODEs for differential equations of
+   * vars[lower..upper)
+   * It just watches that both subintervals remain nonempty
+   */
+  def nextODE(vars : IndexedSeq[Variable], n : Int, lower: Int, upper: Int, dots: Boolean = false) : DifferentialProgram = {
+    require(n>=0)
+    require(0<=lower && lower<upper && upper<=vars.length)
+    if (lower == upper-1) return AtomicODE(DifferentialSymbol(vars(lower)), nextT(vars, 0, dots))
+    val v = lower + rand.nextInt(upper-lower)
+    assert(lower <= v && v < upper)
+    if (n == 0 || rand.nextFloat()<=shortProbability
+      || lower==v || v == upper-1) return AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, 0, dots))
+    val r = rand.nextInt(20)
+    r match {
+      case it if 0 until 10 contains it => AtomicODE(DifferentialSymbol(vars(v)), nextT(vars, n-1, dots))
+      case it if 10 until 20 contains it =>
+        DifferentialProduct(nextODE(vars, n-1, lower, v, dots), nextODE(vars, n-1, v, upper, dots))
+      case _ => throw new IllegalStateException("random number generator range for ODE generation produces the right range " + r)
     }
+  }
 }
