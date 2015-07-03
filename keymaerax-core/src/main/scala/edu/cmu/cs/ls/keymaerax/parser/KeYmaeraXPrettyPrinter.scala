@@ -9,6 +9,11 @@ import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
 
+object KeYmaeraXPrettyPrinter {
+  val printer: KeYmaeraXPrettyPrinter = new KeYmaeraXPrettyPrinter()
+  def apply(expr: Expression): String = printer(expr)
+}
+
 /**
  * KeYmaera X Pretty Printer formats differential dynamic logic expressions
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
@@ -17,7 +22,7 @@ import edu.cmu.cs.ls.keymaerax.core._
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  * @see doc/dL-grammar.md
  */
-object KeYmaeraXPrettyPrinter extends (Expression => String) {
+class KeYmaeraXPrettyPrinter extends (Expression => String) {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
@@ -25,7 +30,11 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
 
   /** Pretty-print term to a string */
   def apply(expr: Expression): String = stringify(expr) ensuring(
-    r => !checkPrettyPrinter || reparse(expr, r) == expr, "Parse of print is identity.\nPrinted:   " + stringify(expr) + "\nReparsed:   " + reparse(expr, stringify(expr))
+    r => !checkPrettyPrinter || reparse(expr, r) == expr,
+    "Parse of print is identity.\nExpression: " + fullPrinter(expr) +
+      "\nPrinted:    " + stringify(expr) +
+      "\nReparsed:   " + reparse(expr, stringify(expr)) +
+      "\nExpression: " + fullPrinter(reparse(expr, stringify(expr)))
     )
 
   /** Reparse the string print as the same kind as expr has */
@@ -41,27 +50,31 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)
+    case f: Function => f.asString
   }
+
+  /** A pretty printer in full form with full parentheses */
+  val fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /**
    * Whether parentheses around ``t.child`` can be skipped because they are implied.
    */
-  private def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
-  private def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
-  private def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
+  private[parser] def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+  private[parser] def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
+  private[parser] def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
 
   /**
    * Whether parentheses around ``t.left`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  private def skipParensLeft(t: BinaryComposite): Boolean =
+  private[parser] def skipParensLeft(t: BinaryComposite): Boolean =
     op(t.left) < op(t) || op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
 
   /**
    * Whether parentheses around ``t.right`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  private def skipParensRight(t: BinaryComposite): Boolean =
+  private[parser] def skipParensRight(t: BinaryComposite): Boolean =
     op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
 
   private def pp(term: Term): String = term match {
@@ -72,6 +85,8 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
     case Number(n)              => n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
+    // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
+    case t@Neg(Number(n))       => op(t).opcode + "(" + pp(Number(n)) + ")"
     case t: UnaryCompositeTerm  => op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
     case t: BinaryCompositeTerm =>
       (if (skipParensLeft(t)) pp(t.left) else "(" + pp(t.left) + ")") +
@@ -127,4 +142,12 @@ object KeYmaeraXPrettyPrinter extends (Expression => String) {
   /** Formatting the atomic statement s */
   private def statement(s: String): String = if (statementSemicolon) s + ";" else s
 
+}
+
+object FullPrettyPrinter extends KeYmaeraXPrettyPrinter {
+  private[parser] override def skipParens(t: UnaryComposite): Boolean = false
+  private[parser] override def skipParens(t: Quantified): Boolean = false
+  private[parser] override def skipParens(t: Modal): Boolean = false
+  private[parser] override def skipParensLeft(t: BinaryComposite): Boolean = false
+  private[parser] override def skipParensRight(t: BinaryComposite): Boolean = false
 }

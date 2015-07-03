@@ -21,7 +21,8 @@ case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
 }
 /** Expressions that are partially parsed on the parser item stack. */
 case class Expr(expr: Expression) extends Item {
-  override def toString = expr.toString
+  //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
+  override def toString: String = KeYmaeraXPrettyPrinter.printer.stringify(expr)
 }
 trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
@@ -47,6 +48,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Parser state consisting of expected syntactic kind to parse currently, the item stack, and remaining input. */
   sealed case class ParseState(stack: Stack[Item], input: TokenStream) {
+    /** Lookahead location of this parser state */
+    private[parser] def location: Location = input.head.loc
     override def toString: String = "ParseState(" + stack + "  <|>  " + input.mkString(", ") +")"
   }
 
@@ -57,28 +60,30 @@ object KeYmaeraXParser extends Parser {
     }
 
   override def formulaParser: (String => Formula) =
-    input => elaborate(OpSpec.sNone, FormulaKind, apply(input)) match {
+    input => elaborate(eofState, OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
       case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
   private[parser] def formulaTokenParser: (TokenStream => Formula) =
-    input => elaborate(OpSpec.sNone, FormulaKind, parse(input)) match {
+    input => elaborate(eofState, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
       case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
   override def programParser: (String => Program) =
-    input => elaborate(OpSpec.sNone, ProgramKind, apply(input)) match {
+    input => elaborate(eofState, OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
       case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
 
   override def differentialProgramParser: (String => DifferentialProgram) =
-    input => elaborate(OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
+    input => elaborate(eofState, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
       case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
     }
+
+  private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
   /*private[core]*/ def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
@@ -105,19 +110,26 @@ object KeYmaeraXParser extends Parser {
     case x: Variable if kind==DifferentialProgramKind && x.index==None => Some(DifferentialProgramConst(x.name))
     // lift misclassified defaulted program constant
     case x: Variable if kind==ProgramKind && x.index==None => Some(ProgramConst(x.name))
+    // lift misclassified defaulted term (p(x))' to formula as needed.
+    case Differential(t) if kind==FormulaKind => elaboratable(kind, t) match {
+      case Some(f:Formula) => Some(DifferentialFormula(f))
+      case None => None
+    }
     // lift misclassified defaulted differential equation
     case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => Some(AtomicODE(xp, e))
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => Some(ODESystem(AtomicODE(xp, e), h))
     // lift differential equations without evolution domain constraints to ODESystems
     case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode, True))
+    // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
+    case ode: ODESystem if kind==ProgramKind || kind==DifferentialProgramKind => Some(ode)
     case _ => None
   }
 
   /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or throw exception. */
-  private def elaborate(op: OpSpec, kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
+  private def elaborate(st: ParseState, op: OpSpec, kind: Kind, e: Expression): Expression = elaboratable(kind, e) match {
     case Some(e) => e
-    case None => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in " + op, UnknownLocation, "")
+    case None => throw new ParseException("Cannot elaborate " + e + " of kind " + e.kind + " to expected kind " + kind + " for use in operator " + op, st.location, st.toString)
   }
 
   /** Elaborate e to the expected kind of a part of op by lifting defaulted types as needed or leave as is. */
@@ -127,12 +139,12 @@ object KeYmaeraXParser extends Parser {
   }
 
   /** Elaborate the composition op(e) that is coming from token tok by lifting defaulted types as needed. */
-  private def elaborate(tok: Terminal, op: UnaryOpSpec[Expression], e: Expression): Expression =
-    op.const(tok.img, elaborate(op, op.kind, e))
+  private def elaborate(st: ParseState, tok: Terminal, op: UnaryOpSpec[Expression], e: Expression): Expression =
+    op.const(tok.img, elaborate(st, op, op.kind, e))
 
   /** Elaborate the composition op(e1, e2) that is coming from token tok by lifting defaulted types as needed. */
-  private def elaborate(tok: Terminal, op: BinaryOpSpec[Expression], e1: Expression, e2: Expression): Expression =
-    op.const(tok.img, elaborate(op, op.kind._1, e1), elaborate(op, op.kind._2, e2))
+  private def elaborate(st: ParseState, tok: Terminal, op: BinaryOpSpec[Expression], e1: Expression, e2: Expression): Expression =
+    op.const(tok.img, elaborate(st, op, op.kind._1, e1), elaborate(st, op, op.kind._2, e2))
 
 
   // parsing
@@ -143,13 +155,13 @@ object KeYmaeraXParser extends Parser {
     s match {
       // ordinary terminals
       case r :+ Token(IDENT(name),_) =>
-        if (la==LPAREN) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
+        if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
 
       case r :+ Token(NUMBER(value),_) =>
         reduce(st, 1, Number(BigDecimal(value)), r)
 
 
-      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING),_) =>
+      case r :+ Token(tok@(DOT|PLACE|NOTHING|ANYTHING | TRUE|FALSE),_) =>
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // special cases for early prime conversion
@@ -165,22 +177,27 @@ object KeYmaeraXParser extends Parser {
 
       // modal formulas bind tight
       case r :+ Token(LBOX,_) :+ Expr(p1:Program) :+ Token(RBOX,_) :+ Expr(f1:Formula) =>
-        reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, f1), r)
+        reduce(st, 4, elaborate(st, OpSpec.sBox.op, OpSpec.sBox, p1, f1), r)
 
       case r :+ Token(LDIA,_) :+ Expr(p1:Program) :+ Token(RDIA,_) :+ Expr(f1:Formula) =>
-        reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, f1), r)
+        reduce(st, 4, elaborate(st, OpSpec.sDiamond.op, OpSpec.sDiamond, p1, f1), r)
 
       // special case to force elaboration of modalities at the end
       case r :+ (tok1@Token(LBOX,_)) :+ Expr(p1:Program) :+ (tok3@Token(RBOX,_)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
-        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3 )
+        if (la==EOF || la==RPAREN || followsFormula(la)&& !followsTerm(la)) && e1.kind!=FormulaKind =>
+        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3 )
         //reduce(st, 4, elaborate(OpSpec.sBox.op, OpSpec.sBox, p1, e1), r)
 
       // special case to force elaboration of modalities at the end
       case r :+ (tok1@Token(LDIA,_)) :+ Expr(p1:Program) :+ (tok3@Token(RDIA,_)) :+ Expr(e1)
-        if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
-        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
-        //reduce(st, 4, elaborate(OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
+        if (la==EOF || la==RPAREN || followsFormula(la)&& !followsTerm(la)) && e1.kind!=FormulaKind =>
+        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(p1) :+ tok3)
+        //reduce(st, 4, elaborate(st, OpSpec.sDiamond.op, OpSpec.sDiamond, p1, e1), r)
+
+      // special case to force elaboration to DifferentialProgramConst
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(e1:Variable)
+        if (la==AMP || la==COMMA) =>
+        reduce(st, 1, elaborate(st, OpSpec.sNone, DifferentialProgramKind, e1), r :+ tok1)
 
       // special quantifier notation
       case r :+ (tok1@Token(FORALL,_)) :+ Expr(v1:Variable) :+ Expr(f1:Formula) =>
@@ -192,7 +209,7 @@ object KeYmaeraXParser extends Parser {
       // special case to force elaboration of quantifiers at the end
       case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Expr(v1:Variable) :+ Expr(e1)
         if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
-        reduce(st, 1, elaborate(OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(v1) )
+        reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(v1) )
 
       case r :+ (tok1@Token(FORALL,_)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st)
@@ -205,17 +222,17 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 2, op(st, SEMI, List(p1.kind,p2.kind)).asInstanceOf[BinaryOpSpec[Program]].const(SEMI.img, p1, p2), r)
 
       // binary operators with precedence
-      case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) =>
+      case r :+ Expr(t1) :+ (Token(tok:OPERATOR,_)) :+ Expr(t2) if !(t1.kind==ProgramKind && tok==RDIA) && tok!=TEST =>
         assert(op(st, tok, List(t1.kind,t2.kind)).isInstanceOf[BinaryOpSpec[_]], "binary operator expected since others should have been reduced\nin " + s)
         if (la==LPAREN || la==LBRACE) error(st)
         else {
-          //@todo pass t1,t2 kinds so that op/2 can make up its mind well in disambiguation.
+          // pass t1,t2 kinds so that op/2 can make up its mind well in disambiguation.
           val optok = op(st, tok, List(t1.kind,t2.kind))
           //@todo op(st, la) : Potential problem: st is not the right parser state for la
           if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
             || optok < op(st, la, List(t2.kind,ExpressionKind)) || optok <= op(st, la, List(t2.kind,ExpressionKind)) && optok.assoc == LeftAssociative) {
             //println("\tGOT: " + tok + "\t" + "LA: " + la + "\tAfter: " + s + "\tRemaining: " + input)
-            val result = elaborate(tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
+            val result = elaborate(st, tok, optok.asInstanceOf[BinaryOpSpec[Expression]], t1, t2)
             if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
               if (la == SEMI) reduce(shift(st), 4, result, r)
               else if (result.isInstanceOf[DifferentialProgram] || result.isInstanceOf[ODESystem]) reduce(st, 3, result, r) // optional SEMI
@@ -226,13 +243,20 @@ object KeYmaeraXParser extends Parser {
           else error(st)
         }
 
-      // unary prefix operators
+      // unary prefix operators with precedence
       case r :+ Token(tok:OPERATOR,_) :+ Expr(t1)  if op(st, tok, List(t1.kind)).assoc==PrefixFormat =>
         assert(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have prefix format\nin " + s)
+        val optok = op(st, tok, List(t1.kind))
         if (firstExpression(la)) shift(st) // binary operator //@todo be more specific depending on kind of t1
         else if (la==EOF || la==RPAREN || la==RBRACE || la==RBOX /*||@todo la==RDIA or la==SEMI RDIA? */
-          || followsTerm(la))
-          reduce(st, 2, elaborate(tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1), r)
+          || optok <= op(st, la, List(t1.kind,ExpressionKind))) {
+          //|| followsTerm(la))
+          val result = elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1)
+          if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
+            if (la == SEMI) reduce(shift(st), 3, result, r)
+            else error(st)
+          } else reduce(st, 2, result, r)
+        } else if (optok > op(st, la, List(t1.kind,ExpressionKind))) shift(st)
         else error(st)
 
       case _ :+ Token(tok:OPERATOR,_) if op(st, tok, List(ExpressionKind)).assoc==PrefixFormat || tok==MINUS =>
@@ -240,10 +264,19 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la)) shift(st)
         else error(st)
 
+      // unary postfix operator
+      case r :+ Expr(t1) :+ Token(tok:OPERATOR,_) if op(st, tok, List(t1.kind)).assoc==PostfixFormat =>
+        assert(op(st, tok, List(t1.kind)).isInstanceOf[UnaryOpSpec[_]], "only unary operators are currently allowed to have postfix format\nin " + s)
+        val result = elaborate(st, tok, op(st, tok, List(t1.kind)).asInstanceOf[UnaryOpSpec[Expression]], t1)
+        if (statementSemicolon && result.isInstanceOf[AtomicProgram]) {
+          if (la == SEMI) reduce(shift(st), 3, result, r)
+          else error(st)
+        } else reduce(st, 2, result, r)
+
       // special case for elaboration to a;
       case r :+ Expr(t1:Variable) :+ Token(SEMI,_) if statementSemicolon =>
         //@note should not have gone to SEMI if there would have been another reduction to an atomic program already.
-        reduce(st, 2, elaborate(OpSpec.sProgramConst, ProgramKind, t1), r)
+        reduce(st, 2, elaborate(st, OpSpec.sProgramConst, ProgramKind, t1), r)
 
       case _ :+ Expr(t1) :+ (tok@Token(STAR,_)) =>
         if (firstExpression(la) ||
@@ -260,6 +293,7 @@ object KeYmaeraXParser extends Parser {
 
       // function/predicate symbols of argument ANYTHING
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+        //@todo disambiguate function versus predicate
         if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), Anything), r)
         else if (la==RPAREN) shift(st)
         else error(st)
@@ -268,6 +302,11 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_)  =>
         if (followsTerm(la) /*|| followsFormula(la)*/) reduce(st, 4, FuncOf(Function(name, None, Real, Real), t1), r)
         else if (la==RPAREN) shift(st)
+        else error(st)
+
+      // predicational symbols arity>0
+      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_)  =>
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), f1), r)
         else error(st)
 
       // modalities
@@ -286,13 +325,17 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(LBRACE,_) :+ Expr(t1:Program) :+ Token(RBRACE,_) =>
         reduce(st, 3, t1, r)
 
+      // differential equation system special notation
+      case r :+ (tok1@Token(LBRACE,_)) :+ Expr(p1:DifferentialProgram) :+ (tok2@Token(AMP,_)) :+ Expr(f1:Formula) :+ (tok3@Token(RBRACE,_)) =>
+        reduce(st, 5, elaborate(st, tok2.tok, OpSpec.sODESystem, p1, f1), r)
+
       // elaboration special pattern case
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@Equal(_:DifferentialSymbol,_)) =>
-        reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
+        reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
       // elaboration special pattern case
       case r :+ (tok1@Token(LBRACE,_)) :+ Expr(t1@And(Equal(_:DifferentialSymbol,_),_)) =>
-        reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
+        reduce(st, 2, Bottom :+ tok1 :+ Expr(elaborate(st, OpSpec.sODESystem, DifferentialProgramKind, t1)), r)
 
       case _ :+ Token(LPAREN,_) :+ Expr(t1) if t1.isInstanceOf[Term] || t1.isInstanceOf[Formula] =>
         if (followsExpression(t1, la)) shift(st)
@@ -310,6 +353,8 @@ object KeYmaeraXParser extends Parser {
 
       case _ :+ Token(LDIA,_) :+ Expr(t1)  =>
         if (followsExpression(t1, la)) shift(st)
+        else if ((t1.isInstanceOf[Variable] || t1.isInstanceOf[DifferentialSymbol]) && followsIdentifier(la)) shift(st)
+        else if ((elaboratable(ProgramKind, t1)!=None || elaboratable(DifferentialProgramKind, t1)!=None) && followsProgram(la)) shift(st)
         else error(st)
 
       case _ :+ Token(LPAREN,_) =>
@@ -317,7 +362,7 @@ object KeYmaeraXParser extends Parser {
         else error(st)
 
       case _ :+ Token(LBRACE,_) =>
-        if (firstProgram(la) /*|| firstFormula(la) for predicationals*/) shift(st)
+        if (firstProgram(la) || firstFormula(la) /*for predicationals*/) shift(st)
         else error(st)
 
       case _ :+ Token(LBOX,_) =>
@@ -365,7 +410,7 @@ object KeYmaeraXParser extends Parser {
 
   /** First(Formula): Is la the beginning of a new formula? */
   private def firstFormula(la: Terminal): Boolean = firstTerm(la) || /*la.isInstanceOf[IDENT] ||*/
-    la==NOT || la==FORALL || la==EXISTS || la==LBOX || la==LDIA /*|| la==LPAREN */
+    la==NOT || la==FORALL || la==EXISTS || la==LBOX || la==LDIA || la==TRUE || la==FALSE || la==PLACE /*|| la==LPAREN */
 
   /** First(Program): Is la the beginning of a new program? */
   private def firstProgram(la: Terminal): Boolean = la.isInstanceOf[IDENT] || la==TEST || la==LBRACE
@@ -374,8 +419,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Follow(Formula): Can la follow after a formula? */
   private def followsFormula(la: Terminal): Boolean = la==AMP || la==OR || la==IMPLY || la==REVIMPLY || la==EQUIV || la==RPAREN ||
-    /*@todo || la=RBRACE from predicationals */
-    la==EOF
+    la==RBRACE /* from predicationals */ ||
+    la==PRIME || la==EOF
 
   /** Follow(Term): Can la follow after a term? */
   private def followsTerm(la: Terminal): Boolean = la==RPAREN ||
@@ -384,11 +429,11 @@ object KeYmaeraXParser extends Parser {
     followsFormula(la) ||
     (if (statementSemicolon) la==SEMI || la==RBRACE || la==AMP
     else la==SEMI || la==CHOICE || la==STAR || la==RBRACE || la==COMMA) || // from T in programs
-    la==EOF
+    la==PRIME || la==EOF
 
   /** Follow(Program): Can la follow after a program? */
   private def followsProgram(la: Terminal): Boolean = la==RBRACE || la==CHOICE || la==STAR/**/ ||
-    (if (statementSemicolon) firstProgram(la) else la==SEMI)  ||
+    (if (statementSemicolon) firstProgram(la) || /*Not sure:*/ la==SEMI else la==SEMI)  ||
     la==RBOX || la==RDIA ||  // from P in programs
     la==COMMA || la==AMP ||  // from D in differential programs
     la==EOF
@@ -407,7 +452,7 @@ object KeYmaeraXParser extends Parser {
   /** Follow(Identifier): Can la follow after an identifier? */
   private def followsIdentifier(la: Terminal): Boolean = followsTerm(la) ||
     la==LPAREN || la==PRIME ||
-    la==ASSIGN || la==ASSIGNANY || la==EOF
+    la==ASSIGN || la==ASSIGNANY || la==EOF || firstFormula(la) /* from \exists x ... */
 
 
   // parser actions
@@ -493,6 +538,7 @@ object KeYmaeraXParser extends Parser {
 
   private def isDifferentialSymbol(st: ParseState): Boolean = st.stack match {
     case _ :+ Expr(_:DifferentialSymbol) => true
+    case _ :+ Expr(_:DifferentialSymbol) :+ Token(ASSIGN,_) :+ Expr(_) => true
     case _ => false
   }
 
@@ -507,8 +553,8 @@ object KeYmaeraXParser extends Parser {
       case sDotTerm.op => sDotTerm
       case sNothing.op => sNothing
       case sAnything.op => sAnything
-      //case t: Variable => sVariable
-      //case t: Number => sNumber
+      case sVariable.op => sVariable
+      case sNumber.op => sNumber
       //case t: FuncOf => sFuncOf
       case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula
       else sDifferential
@@ -547,7 +593,7 @@ object KeYmaeraXParser extends Parser {
       //case p: ProgramConst => sProgramConst
       //case p: DifferentialProgramConst => sDifferentialProgramConst
       case sAssign.op => if (isDifferentialSymbol(st)) sDiffAssign else sAssign
-      //      case p: AssignAny => sAssignAny
+      case sAssignAny.op => sAssignAny
       case sTest.op => sTest
       //      case p: ODESystem => sODESystem
       //      case p: AtomicODE => sAtomicODE

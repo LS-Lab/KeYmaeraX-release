@@ -163,6 +163,7 @@ object FUNCTIONS_BLOCK extends Terminal("Functions.")
 object PROGRAM_VARIABLES_BLOCK extends Terminal("ProgramVariables.")
 object VARIABLES_BLOCK extends Terminal("Variables.") //used in axioms file...
 object PROBLEM_BLOCK extends Terminal("Problem.")
+//@todo the following should be lexed as identifiers
 object REAL extends Terminal("R")
 object BOOL extends Terminal("B")
 //Is there any reason we parse a bunch of stuff just to throw it away? Are these suppose to be in our sort heirarchy...?
@@ -179,7 +180,7 @@ object UnknownLocation extends Location {
   override def toString = "<somewhere>"
 }
 case class Region(line: Int, column: Int, endLine: Int, endColumn: Int) extends Location {
-  assert(line <= endLine || (line == endLine && column <= endColumn),
+  require(line <= endLine || (line == endLine && column <= endColumn),
     "A region cannot start after it ends.")
   override def toString = line + ":" + column + (if (column!=endColumn || line!=endLine) " to " + endLine + ":" + endColumn else "")
 }
@@ -365,13 +366,12 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
       case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
       case LESSEQ.startPattern(_*) => consumeTerminalLength(LESSEQ, loc)
+      case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
 
       case LPAREN.startPattern(_*) => consumeTerminalLength(LPAREN, loc)
       case RPAREN.startPattern(_*) => consumeTerminalLength(RPAREN, loc)
       case LBOX.startPattern(_*) => consumeTerminalLength(LBOX, loc)
       case RBOX.startPattern(_*) => consumeTerminalLength(RBOX, loc)
-      case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
-      case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
       case LBRACE.startPattern(_*) => consumeTerminalLength(LBRACE, loc)
       case RBRACE.startPattern(_*) => consumeTerminalLength(RBRACE, loc)
 
@@ -385,7 +385,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case POWER.startPattern(_*) => consumeTerminalLength(POWER, loc)
       case STAR.startPattern(_*) => consumeTerminalLength(STAR, loc)
       case PLUS.startPattern(_*) => consumeTerminalLength(PLUS, loc)
-        
+
 
       case AMP.startPattern(_*) => consumeTerminalLength(AMP, loc)
       case NOT.startPattern(_*) => consumeTerminalLength(NOT, loc)
@@ -398,9 +398,10 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case EXISTS.startPattern(_*) => consumeTerminalLength(EXISTS, loc)
 
       case EQ.startPattern(_*) => consumeTerminalLength(EQ, loc)
-      case NOTEQ.startPattern(_*) => consumeTerminalLength(NOTEQ, loc)
       case TRUE.startPattern(_*) => consumeTerminalLength(TRUE, loc)
       case FALSE.startPattern(_*) => consumeTerminalLength(FALSE, loc)
+
+      case ANYTHING.startPattern(_*) => consumeTerminalLength(ANYTHING, loc)
 
       case ASSIGNANY.startPattern(_*) => consumeTerminalLength(ASSIGNANY, loc)
       case ASSIGN.startPattern(_*) => consumeTerminalLength(ASSIGN, loc)
@@ -417,8 +418,11 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
 
+      case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
+      case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
+
       case _ if s.isEmpty => None
-      case _ => throw new Exception("Lexer did not understand input at " + loc + " in ." + s +". First character was ." + s(0) + ".")
+      case _ => throw new Exception("Lexer did not understand input at " + loc + " in `\n" + s +"\n` First character was `" + s(0) + "`")
     }
   }
 
