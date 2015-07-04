@@ -32,9 +32,18 @@ case class Error(msg: String, loc: Location, st: String) extends FinalItem
 
 
 /**
- * KeYmaera X parser.
- * Created by aplatzer on 6/7/15.
+ * KeYmaera X parser reads input strings in the concrete syntax of differential dynamic logic of KeYmaera X.
+ * @example
+ * Parsing formulas from strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser.apply]]:
+ * {{{
+ * val parser = KeYmaeraXParser
+ * val fml0 = parser("x!=5")
+ * val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+ * val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+ * }}}
+
  * @author aplatzer
+ * @see [[edu.cmu.cs.ls.keymaerax.parser]]
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 object KeYmaeraXParser extends Parser {

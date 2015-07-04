@@ -100,10 +100,11 @@ object BinaryOpSpec {
 
 
 /**
- * Differential Dynamic Logic operator notation specifications.
+ * Differential Dynamic Logic's concrete syntax: operator notation specifications.
  * @author aplatzer
  */
 object OpSpec {
+  /** Whether atomic statements and with a semicolon instead of separating sequential compositions */
   /*private[parser]*/ val statementSemicolon = true
 
   /** no notation */

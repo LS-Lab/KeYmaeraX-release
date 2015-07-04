@@ -13,6 +13,7 @@ import edu.cmu.cs.ls.keymaerax.core._
 
 /**
  * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
  */
 object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
   /** This default pretty printer. */
@@ -23,6 +24,17 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * KeYmaera X Printer formats differential dynamic logic expressions
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
  * with explicit statement end ``;`` operator.
+ * @example
+ * Printing formulas to strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.apply]]:
+ * {{{
+ * val pp = KeYmaeraXPrettyPrinter
+ * // "x < -y"
+ * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+ * val fml0str = pp(fml0)
+ * // "true -> [x:=1;]x>=0"
+ * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ * val fml1str = pp(fml1)
+ * }}}
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
  * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
@@ -187,7 +199,21 @@ class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
 
 }
 
-/** A pretty printer in full form with full parentheses */
+/**
+ * A pretty printer in full form with full parentheses
+ * @example
+ * Fully parenthesized strings are obtained using the [[edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter]] printer:
+ * {{{
+ * val pp = FullPrettyPrinter
+ * // "x < -(y)"
+ * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+ * val fml0str = pp(fml0)
+ * // "true -> ([x:=1;](x>=0))"
+ * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ * val fml1str = pp(fml1)
+ * }}}
+ * @author aplatzer
+ */
 object FullPrettyPrinter extends KeYmaeraXPrinter {
   override def apply(expr: Expression): String = stringify(expr)
 }
