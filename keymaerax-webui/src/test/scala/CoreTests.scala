@@ -29,6 +29,11 @@ class CoreTests extends FlatSpec with Matchers {
     an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), Plus(x, Minus(y, DifferentialSymbol(z))))}
   }
 
+  it should "reject duplicate differential equations" in {
+    an [IllegalArgumentException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(new Variable("x")), Number(2)))}
+    an [IllegalArgumentException] should be thrownBy {DifferentialProduct(new AtomicODE(new DifferentialSymbol(x), Number(7)), new AtomicODE(new DifferentialSymbol(new Variable("x")), Number(7)))}
+  }
+
   //@todo add core SeqPos tests
 
   "Tactic (Positions)" should "have HereP == new PosInExpr(Nil)" in {
