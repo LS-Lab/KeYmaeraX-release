@@ -758,7 +758,81 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
   }
 
-  "Parser documentation" should "compile and run" in {
+  "Parser documentation" should "compile and run printer 1" in {
+    val pp = KeYmaeraXPrettyPrinter
+    // "x < -y"
+    val fml0 = Less(Variable("x"), Neg(Variable("y")))
+    val fml0str = pp(fml0)
+    // "true -> [x:=1;]x>=0"
+    val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+    val fml1str = pp(fml1)
+  }
 
+  it should "compile and run printer 2" in {
+    val pp = KeYmaeraXPrettyPrinter
+    // "x < -(y)"
+    val fml0 = Less(Variable("x"), Neg(Variable("y")))
+    val fml0str = pp(fml0)
+    // "true -> ([x:=1;](x>=0))"
+    val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+    val fml1str = pp(fml1)
+  }
+
+  it should "compile and run parser 1" in {
+    val parser = KeYmaeraXParser
+    val fml0 = parser("x!=5")
+    val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+    val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+  }
+
+  it should "compile and run parser 2" in {
+    val parser = KeYmaeraXParser
+    // formulas
+    val fml0 = parser("x!=5")
+    val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+    val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+    // terms
+    val term0 = parser("x+5")
+    val term1 = parser("x^2-2*x+7")
+    val term2 = parser("x*y/3+(x-1)^2+5*z")
+    // programs
+    val prog0 = parser("x:=1;")
+    val prog1 = parser("x:=1;x:=5;x:=-1;")
+    val prog2 = parser("x:=1;{{x'=5}++x:=0;}")
+  }
+
+    it should "compile and run formula parser 1" in {
+      // the formula parser only accepts formulas
+      val parser = KeYmaeraXParser.formulaParser
+      // formulas
+      val fml0 = parser("x!=5")
+      val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+      val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+      // terms will cause exceptions
+      try { parser("x+5") } catch {case e: ParseException => println("Rejected")}
+      // programs will cause exceptions
+      try { parser("x:=1;") } catch {case e: ParseException => println("Rejected")}
+    }
+
+  it should "compile and run parse of print 1" in {
+    val parser = KeYmaeraXParser
+    val pp = KeYmaeraXPrettyPrinter
+    val fml = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+    // something like "true -> [x:=1;]x>=0" modulo spacing
+    val print = pp(fml)
+    val reparse = parser(print)
+    if (fml == reparse) println("Print and reparse successful") else println("Discrepancy")
+  }
+
+  it should "compile and run parse of print of parse" in {
+    val parser = KeYmaeraXParser
+    val pp = KeYmaeraXPrettyPrinter
+    val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
+    val parse = parser(input)
+    println("Parsed:   " + parse)
+    val print = pp(parse)
+    println("Printed:  " + print)
+    println("Original: " + input)
+    println("Can differ slightly by spacing and parentheses")
   }
 }
