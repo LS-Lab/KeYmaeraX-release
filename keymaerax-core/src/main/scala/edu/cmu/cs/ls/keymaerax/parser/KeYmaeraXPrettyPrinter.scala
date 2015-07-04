@@ -69,7 +69,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
   }
 
   /** Pretty-print term to a string without contract checking. */
-  /*private[parser]*/ def stringify(expr: Expression) = expr match {
+  private[parser] def stringify(expr: Expression) = expr match {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)

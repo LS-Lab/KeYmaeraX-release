@@ -102,7 +102,7 @@ object KeYmaeraXParser extends Parser {
 
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
-  /*private[parser]*/ def parse(input: TokenStream): Expression = {
+  private[parser] def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e

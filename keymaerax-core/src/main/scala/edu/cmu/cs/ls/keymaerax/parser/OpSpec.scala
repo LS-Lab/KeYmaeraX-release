@@ -105,7 +105,7 @@ object BinaryOpSpec {
  */
 object OpSpec {
   /** Whether atomic statements and with a semicolon instead of separating sequential compositions */
-  /*private[parser]*/ val statementSemicolon = true
+  private[parser] val statementSemicolon = true
 
   /** no notation */
   private val none = PSEUDO

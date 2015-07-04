@@ -1,4 +1,4 @@
-package parserTests
+package edu.cmu.cs.ls.keymaerax.parser
 
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{FlatSpec, Matchers}
