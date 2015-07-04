@@ -57,6 +57,8 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     )
 
   def parser: Parser = KeYmaeraXParser
+  def fullPrinter: (Expression => String) = FullPrettyPrinter
+
 
   /** Reparse the string print as the same kind as expr has */
   private def reparse(expr: Expression, print: String): Expression = expr.kind match {
@@ -73,9 +75,6 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case p: Program => pp(p)
     case f: Function => f.asString
   }
-
-  /** A pretty printer in full form with full parentheses */
-  def fullPrinter: (Expression => String) = FullPrettyPrinter
 
   /**
    * Whether parentheses around ``t.child`` can be skipped because they are implied.

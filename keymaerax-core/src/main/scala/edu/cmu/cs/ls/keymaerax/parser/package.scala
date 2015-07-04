@@ -115,12 +115,16 @@ package edu.cmu.cs.ls.keymaerax
  * ===Parsing Pretty-Printed Strings===
  *
  * Corresponding parsers and pretty-printers match with one another.
- * Parsing a pretty-printed expression results in the original expression again"
+ * Parsing a pretty-printed expression results in the original expression again:
  * {{{
  *   parse(print(e)) == e
  * }}}
  * [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXParser]] and [[[[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter]] are inverses in this sense.
- * The converse `print(parse(s)) == s` is not quite the case, because there can be minor spacing differences.
+ * The converse `print(parse(s)) == s` is not quite the case, because there can be minor spacing and superfluous parentheses differences.
+ * The following slightly weaker form still holds:
+ * {{{
+ *   parse(print(parse(s))) == parse(s)
+ * }}}
  *
  * Parsing the pretty-print of an expression with compatible printers and parsers always gives the original expression back:
  * {{{

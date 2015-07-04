@@ -14,21 +14,21 @@ import edu.cmu.cs.ls.keymaerax.core._
  * KeYmaera X parser items on the parser stack.
  * @author aplatzer
  */
-sealed trait Item
+private[parser] sealed trait Item
 /** Tokens are terminals occurring at a given location in the input. */
-case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
+private[parser] case class Token(tok: Terminal, loc: Location = UnknownLocation) extends Item {
   override def toString = tok.toString
 }
 /** Expressions that are partially parsed on the parser item stack. */
-case class Expr(expr: Expression) extends Item {
+private[parser] case class Expr(expr: Expression) extends Item {
   //@NOTE Not just "override def toString = expr.toString" to avoid infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
   override def toString: String = KeYmaeraXPrettyPrinter.stringify(expr)
 }
-trait FinalItem extends Item
+private[parser] trait FinalItem extends Item
 /** Parser items representing expressions that are accepted by the parser. */
-case class Accept(expr: Expression) extends FinalItem
+private[parser] case class Accept(expr: Expression) extends FinalItem
 /** Parser items representing erroneous ill-formed input. */
-case class Error(msg: String, loc: Location, st: String) extends FinalItem
+private[parser] case class Error(msg: String, loc: Location, st: String) extends FinalItem
 
 
 /**
@@ -63,7 +63,7 @@ object KeYmaeraXParser extends Parser {
   type TokenStream = List[Token]
 
   /** Parser state consisting of expected syntactic kind to parse currently, the item stack, and remaining input. */
-  sealed case class ParseState(stack: Stack[Item], input: TokenStream) {
+  private[parser] sealed case class ParseState(stack: Stack[Item], input: TokenStream) {
     /** Lookahead location of this parser state */
     private[parser] def location: Location = input.head.loc
     override def toString: String = "ParseState(" + stack + "  <|>  " + input.mkString(", ") +")"
@@ -102,7 +102,7 @@ object KeYmaeraXParser extends Parser {
 
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
-  /*private[core]*/ def parse(input: TokenStream): Expression = {
+  /*private[parser]*/ def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
     parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
