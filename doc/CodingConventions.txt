@@ -26,3 +26,8 @@ Soundness-critical core:
   def something(x: Int, p: Function): Boolean
   
   instead of def something(x : Int, p : Function) : Boolean
+  
+9) For reasons of modularity, abstraction, and documentation, limit accessibility of functions and types to a need-to-know basis. Use the private[this] or private modifier if nobody needs to know/use it. Use protected and/or private[packagename] if private is too restrictive. Only use general public access for parts that are conceptually important interfaces to the rest of the system.
+Remember that test cases declared in the same package get to see private[packagename] and protected functions. And that PrivateMethodTester can be used to test private functions (albeit with some notational overhead).
+
+10) Document your source code and its intended use cases well. Seriously. Including package.scala overviews.
