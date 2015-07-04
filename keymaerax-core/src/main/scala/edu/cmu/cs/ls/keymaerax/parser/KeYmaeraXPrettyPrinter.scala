@@ -25,9 +25,9 @@ object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
  * with explicit statement end ``;`` operator.
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
- * @see doc/dL-grammar.md
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
-class KeYmaeraXPrinter extends (Expression => String) {
+class KeYmaeraXPrinter extends PrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
@@ -43,6 +43,8 @@ class KeYmaeraXPrinter extends (Expression => String) {
       "\nExpression: " + fullPrinter(reparse(expr, stringify(expr))) + " @ " + reparse(expr, stringify(expr)).getClass.getSimpleName +
       "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
+
+  def parser: Parser = KeYmaeraXParser
 
   /** Reparse the string print as the same kind as expr has */
   private def reparse(expr: Expression, print: String): Expression = expr.kind match {

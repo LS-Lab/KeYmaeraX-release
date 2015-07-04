@@ -35,7 +35,7 @@ case class Error(msg: String, loc: Location, st: String) extends FinalItem
  * KeYmaera X parser.
  * Created by aplatzer on 6/7/15.
  * @author aplatzer
- * @see doc/dL-grammar.md
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
 object KeYmaeraXParser extends Parser {
   import OpSpec.statementSemicolon
@@ -47,6 +47,8 @@ object KeYmaeraXParser extends Parser {
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
+
+  def printer: PrettyPrinter = KeYmaeraXPrettyPrinter
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]

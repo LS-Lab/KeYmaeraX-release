@@ -835,4 +835,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     println("Original: " + input)
     println("Can differ slightly by spacing and parentheses")
   }
+
+  it should "compile and run full print" in {
+    val parser = KeYmaeraXParser
+    val pp = FullPrettyPrinter
+    val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
+    val parse = parser(input)
+    println("Parsed:   " + parse)
+    val print = pp(parse)
+    println("Printed:  " + print)
+    println("Original: " + input)
+  }
 }

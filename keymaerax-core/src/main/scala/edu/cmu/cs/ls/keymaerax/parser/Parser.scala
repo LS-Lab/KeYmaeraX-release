@@ -27,4 +27,8 @@ trait Parser extends (String => Expression) {
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
   def differentialProgramParser: (String => DifferentialProgram)
+
+  /** A pretty-printer that can write the output that this parser reads */
+  def printer: PrettyPrinter
+
 }
