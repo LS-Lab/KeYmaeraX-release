@@ -150,7 +150,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
-    case ode: DifferentialProgram => pp(ode)
+    case ode: DifferentialProgram => ppODE(ode)
   }
 
   private def ppODE(program: DifferentialProgram): String = program match {
