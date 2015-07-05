@@ -1,7 +1,11 @@
+package edu.cmu.cs.ls.keymaerax.parser
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+
+import test.RandomFormula
 
 /**
  * Tests the parser on pretty prints of randomly generated formulas

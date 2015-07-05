@@ -10,6 +10,8 @@ import scala.util.Random
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
 
+import test._
+
 /**
  * Created by rjcn on 01/09/15.
  * @author Ran Ji

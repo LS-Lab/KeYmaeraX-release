@@ -19,7 +19,15 @@ class CoreTests extends FlatSpec with Matchers {
   val z = Variable("z", None, Real)
 
 
-  "Core (Data Strutures)" should "require explicit-form differential equations" in {
+  "Core (Data Strutures)" should "accept explicit differential equations" in {
+    new AtomicODE(new DifferentialSymbol(x), new Number(5)) should be (new AtomicODE(new DifferentialSymbol(x), new Number(5)))
+  }
+
+  it should "require explicit-form differential equation" in {
+    an[IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
+  }
+
+  it should "require explicit-form differential equations" in {
     an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(x))}
     an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new DifferentialSymbol(y))}
     an [IllegalArgumentException] should be thrownBy {new AtomicODE(new DifferentialSymbol(x), new Differential(x))}
