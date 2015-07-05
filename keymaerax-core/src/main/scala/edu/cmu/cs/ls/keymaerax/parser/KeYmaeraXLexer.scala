@@ -107,6 +107,7 @@ object OR      extends OPERATOR("|") {
 }
 object EQUIV   extends OPERATOR("<->")
 object IMPLY   extends OPERATOR("->")
+//@todo maybe could change to <-- to disambiguate poor lexer's x<-7 REVIMPLY from LDIA MINUS
 object REVIMPLY extends OPERATOR("<-")
 
 object FORALL  extends OPERATOR("\\forall") {
@@ -136,6 +137,10 @@ object TEST    extends OPERATOR("?") {
 object SEMI    extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++") {
   override def regexp = """\+\+""".r
+}
+
+object DCHOICE  extends OPERATOR("--") {
+  override def regexp = """--""".r
 }
 
 // pseudos: could probably demote so that some are not OPERATOR
@@ -381,6 +386,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
       case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
+      //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
+      case DCHOICE.startPattern(_*) => consumeTerminalLength(DCHOICE, loc)
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
