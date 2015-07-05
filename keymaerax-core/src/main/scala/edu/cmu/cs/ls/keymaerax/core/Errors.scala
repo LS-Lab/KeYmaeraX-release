@@ -46,7 +46,7 @@ class ProverException(msg: String) extends RuntimeException(msg) {
 class CoreException(msg: String) extends ProverException(msg)
 
 case class SubstitutionClashException(subst: String/*Substitution*/, U: String/*SetLattice[NamedSymbol]*/, e: String/*Expression*/, context: String/*Expression*/, clashes: String/*SetLattice[NamedSymbol]*/, info: String = "")
-  extends CoreException("Substitution clash:\n" + subst + "\nnot " + U + "-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info) {
+  extends CoreException("Substitution clash:\n" + subst + "\nis not (" + U + ")-admissible\nfor " + e + "\nwhen substituting in " + context + "\n" + info) {
   //  def inContext(context: String): SubstitutionClashException =
     //new SubstitutionClashException(subst, U, e, this.context, clashes, info + "\nin " + context).initCause(this).asInstanceOf[SubstitutionClashException]
 }
