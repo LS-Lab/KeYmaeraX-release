@@ -105,6 +105,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
     case Number(n)              => n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
+    // special notation
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
     case t@Neg(Number(n))       => op(t).opcode + "(" + pp(Number(n)) + ")"
