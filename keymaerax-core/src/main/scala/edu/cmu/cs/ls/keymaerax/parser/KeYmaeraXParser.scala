@@ -141,8 +141,10 @@ object KeYmaeraXParser extends Parser {
     }
     // lift misclassified defaulted differential equation
     case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => Some(AtomicODE(xp, e))
+    //@todo And(And(x'=5,x>0),x<12)) is not lifted yet
     // lift misclassified defaulted differential equation
-    case And(Equal(xp:DifferentialSymbol, e), h) if kind==DifferentialProgramKind || kind==ProgramKind => Some(ODESystem(AtomicODE(xp, e), h))
+    case And(Equal(xp:DifferentialSymbol, e), h)
+      if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(h) => Some(ODESystem(AtomicODE(xp, e), h))
     // lift differential equations without evolution domain constraints to ODESystems
     case ode: DifferentialProgram if ode.kind==DifferentialProgramKind && kind==ProgramKind => Some(ODESystem(ode, True))
     // whether ODESystem is classified as ProgramKind or DifferentialProgramKind
