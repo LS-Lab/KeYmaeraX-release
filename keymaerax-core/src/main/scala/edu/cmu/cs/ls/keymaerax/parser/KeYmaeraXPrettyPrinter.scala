@@ -123,7 +123,7 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case f: Less                => pp(f.left) + LEXSPACE + op(formula).opcode + LEXSPACE + pp(f.right)
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /*"." +*/ (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + " " + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Box                 => "[" + pp(f.program) + "]" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Diamond             => "<" + pp(f.program) + ">" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case t: UnaryCompositeFormula=> op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
