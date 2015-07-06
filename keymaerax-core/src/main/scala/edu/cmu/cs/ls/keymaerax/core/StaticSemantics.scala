@@ -72,15 +72,6 @@ object StaticSemantics {
 
 
   /**
-   * The set FV(e) of free variables of expression e.
-   */
-  def freeVars(e: Expression): SetLattice[NamedSymbol] = e match {
-    case t: Term => freeVars(t)
-    case f: Formula => freeVars(f)
-    case a: Program => freeVars(a)
-  }
-
-  /**
    * The set FV(t) of free variables of term t.
    */
   def freeVars(term: Term): SetLattice[NamedSymbol] = term match {
@@ -124,6 +115,15 @@ object StaticSemantics {
   def freeVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).fv
 
   /**
+   * The set FV(e) of free variables of expression e.
+   */
+  def freeVars(e: Expression): SetLattice[NamedSymbol] = e match {
+    case t: Term => freeVars(t)
+    case f: Formula => freeVars(f)
+    case a: Program => freeVars(a)
+  }
+
+  /**
    * The set BV(f) of bound variables of formula f.
    */
   def boundVars(f: Formula): SetLattice[NamedSymbol] = StaticSemantics(f).bv
@@ -132,6 +132,14 @@ object StaticSemantics {
    * The set BV(a) of bound variables of program a.
    */
   def boundVars(a: Program): SetLattice[NamedSymbol] = StaticSemantics(a).bv
+
+  /** The set var(e) of variables of expression e, whether free or bound. */
+  def vars(e: Expression): SetLattice[NamedSymbol] = e match {
+    case t: Term => freeVars(t)
+    case f: Formula => freeVars(f) ++ boundVars(f)
+    case a: Program => freeVars(a) ++ boundVars(a)
+  }
+
 
   // implementation
 
