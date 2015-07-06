@@ -5,6 +5,8 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
+
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 
@@ -54,10 +56,12 @@ object KeYmaeraXParser extends Parser {
 
   private val immediateError = true
 
+  private val DEBUG = false
+
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
 
-  def printer: PrettyPrinter = KeYmaeraXPrettyPrinter
+  def printer: KeYmaeraXPrettyPrinter.type = KeYmaeraXPrettyPrinter
 
   /** Lexer's token stream with first token at head. */
   type TokenStream = List[Token]
@@ -72,49 +76,64 @@ object KeYmaeraXParser extends Parser {
   override def termParser: (String => Term) =
     input => elaborate(eofState, OpSpec.sNone, TermKind, apply(input)) match {
       case t: Term => t
-      case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a term but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
     }
 
   override def formulaParser: (String => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, apply(input)) match {
       case f: Formula => f
-      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
     }
 
   /** Parse the input token stream in the concrete syntax as a differential dynamic logic formula */
   private[parser] def formulaTokenParser: (TokenStream => Formula) =
     input => elaborate(eofState, OpSpec.sNone, FormulaKind, parse(input)) match {
       case f: Formula => f
-      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a formula but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
     }
 
   override def programParser: (String => Program) =
     input => elaborate(eofState, OpSpec.sNone, ProgramKind, apply(input)) match {
       case p: Program => p
-      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
     }
 
   override def differentialProgramParser: (String => DifferentialProgram) =
     input => elaborate(eofState, OpSpec.sNone, DifferentialProgramKind, apply(input)) match {
       case p: DifferentialProgram => p
-      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input + "\nParsed: " + e, UnknownLocation, e.toString)
+      case e@_ => throw new ParseException("Input does not parse as a program but as " + e.kind + "\nInput: " + input, UnknownLocation, printer.stringify(e))
     }
 
   private val eofState = ParseState(Bottom, List(Token(EOF, UnknownLocation)))
 
   private[parser] def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
-    parseLoop(ParseState(Bottom, input)).stack match {
+    val parse = parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
       case context :+ Error(msg, loc, st) => throw new ParseException(msg, loc, st)
       case _ => throw new AssertionError("Parser terminated with unexpected stack")
     }
+    semanticAnalysis(parse) match {
+      case None => parse
+      case Some(error) => throw new ParseException("Semantic analysis violation\nInput: " + input, UnknownLocation, "Parsed: " + printer.stringify(parse) + "\n" + error)
+    }
   }
 
+  /** Repeatedly perform parseStep until a final parser item is produced. */
   @tailrec
   private def parseLoop(st: ParseState): ParseState = st.stack match {
     case _ :+ (result: FinalItem) => st
     case _ => parseLoop(parseStep(st))
+  }
+
+  /** Semantic analysis of expressions after parsing, returning errors if any or None. */
+  private def semanticAnalysis(e: Expression): Option[String] = {
+    val symbols = StaticSemantics.symbols(e)
+    val names = symbols.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol]))
+    assert(!DEBUG || (names.size == symbols.size) == (symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).distinct.length == symbols.toList.map(s => (s.name, s.index, s.isInstanceOf[DifferentialSymbol])).length), "equivalent ways of checking uniqueness via set conversion or list distinctness")
+    //@NOTE Stringify avoids infinite recursion of KeYmaeraXPrettyPrinter.apply contract checking.
+    if (names.size == symbols.size) None
+    else Some("Semantic analysis: Unique names_index expected that identify a unique type.\nsymbols " + symbols + "\nin " + printer.stringify(e))
   }
 
   // elaboration based on expected types

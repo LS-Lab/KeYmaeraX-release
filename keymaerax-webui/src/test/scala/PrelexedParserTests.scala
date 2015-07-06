@@ -746,9 +746,14 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser.programParser("x'=5&x>2") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
-  it should "always parse x'=5,y'=7&x>2 as a program" in {
+  it should "perhaps ealways parse x'=5,y'=7&x>2 as a program" in {
     parser("x'=5,y'=7&x>2") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
     parser.programParser("x'=5,y'=7&x>2") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
+  }
+
+  it should "always parse {x'=5,y'=7&x>2} as a program" in {
+    parser("{x'=5,y'=7&x>2}") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
+    parser.programParser("{x'=5,y'=7&x>2}") should be (ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(7))), Greater(Variable("x"),Number(2))))
   }
 
   it should "not parse x'=5,y'=7&x>2 as a formula" in {
@@ -780,8 +785,28 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
   }
 
-  it should "parse" in {
+  "Predicate/function parser" should "parse" in {
     parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x,y)), Greater(FuncOf(f2,Pair(x,y)), FuncOf(g,x)))
+  }
+
+  it should "refuse to parse type mess p(x,y)->f(x,y)>p(x)" in {
+    a [ParseException] should be thrownBy parser("p(x,y)->f(x,y)>p(x)")
+  }
+
+  it should "refuse to parse type mess p(x,y)->!p(x)" in {
+    a [ParseException] should be thrownBy parser("p(x,y)->!p(x)")
+  }
+
+  it should "refuse to parse type mess p()->!p(x)" in {
+    a [ParseException] should be thrownBy parser("p()->!p(x)")
+  }
+
+  it should "refuse to parse type mess p() -> [x:=p();]true" in {
+    a [ParseException] should be thrownBy parser("p() -> [x:=p();]true")
+  }
+
+  it should "refuse to parse type mess p() -> [{x'=p()}]true" in {
+    a [ParseException] should be thrownBy parser("p() -> [{x'=p()}]true")
   }
 
   /////////////////////////////////////
