@@ -108,10 +108,10 @@ object StaticSemantics {
   }
 
   /**
-   * Check whether t is a properly differential term, i.e. mentions differentials or differential symbols.
+   * Check whether expression e is a properly differential term/expression, i.e. mentions differentials or differential symbols.
    * @note Only verbatim mentions are counted, so not via Anything.
    */
-  def isDifferential(t: Term): Boolean = freeVars(t).toSymbolSet.exists(x => x.isInstanceOf[DifferentialSymbol])
+  def isDifferential(e: Expression): Boolean = freeVars(e).toSymbolSet.exists(x => x.isInstanceOf[DifferentialSymbol])
 
   /**
    * The set FV(f) of free variables of formula f.

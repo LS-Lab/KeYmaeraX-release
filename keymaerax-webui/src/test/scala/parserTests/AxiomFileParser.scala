@@ -1,4 +1,4 @@
-package parserTests
+package edu.cmu.cs.ls.keymaerax.core
 
 import edu.cmu.cs.ls.keymaerax.parser.{KeYmaeraXLexer, KeYmaeraXAxiomParser}
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}

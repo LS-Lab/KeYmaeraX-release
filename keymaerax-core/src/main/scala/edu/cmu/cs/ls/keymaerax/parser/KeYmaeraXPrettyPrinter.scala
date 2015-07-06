@@ -5,25 +5,41 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
+import edu.cmu.cs.ls.keymaerax.parser.OpSpec._
+
 import scala.collection.immutable._
 
 import edu.cmu.cs.ls.keymaerax.core._
 
-object KeYmaeraXPrettyPrinter {
-  val printer: KeYmaeraXPrettyPrinter = new KeYmaeraXPrettyPrinter()
-  val fullPrinter: (Expression => String) = printer.fullPrinter
-  def apply(expr: Expression): String = printer(expr)
+/**
+ * Default KeYmaera X Pretty Printer formats differential dynamic logic expressions
+ * @see [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrecedencePrinter]]
+ */
+object KeYmaeraXPrettyPrinter extends KeYmaeraXPrecedencePrinter {
+  /** This default pretty printer. */
+  val pp = this
 }
 
 /**
- * KeYmaera X Pretty Printer formats differential dynamic logic expressions
+ * KeYmaera X Printer formats differential dynamic logic expressions
  * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
  * with explicit statement end ``;`` operator.
+ * @example
+ * Printing formulas to strings is straightforward using [[edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter.apply]]:
+ * {{{
+ * val pp = KeYmaeraXPrettyPrinter
+ * // "x < -y"
+ * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+ * val fml0str = pp(fml0)
+ * // "true -> [x:=1;]x>=0"
+ * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ * val fml1str = pp(fml1)
+ * }}}
  * @author aplatzer
  * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
- * @see doc/dL-grammar.md
+ * @see [[http://keymaeraX.org/doc/dL-grammar.md Grammar]]
  */
-class KeYmaeraXPrettyPrinter extends (Expression => String) {
+class KeYmaeraXPrinter extends PrettyPrinter {
   import OpSpec.op
   import OpSpec.statementSemicolon
 
@@ -40,6 +56,10 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
       "\nExpected:   " + fullPrinter(expr) + " @ " + expr.getClass.getSimpleName
     )
 
+  def parser: Parser = KeYmaeraXParser
+  def fullPrinter: (Expression => String) = FullPrettyPrinter
+
+
   /** Reparse the string print as the same kind as expr has */
   private def reparse(expr: Expression, print: String): Expression = expr.kind match {
     case TermKind => KeYmaeraXParser.termParser(print)
@@ -49,36 +69,34 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
   }
 
   /** Pretty-print term to a string without contract checking. */
-  /*private[parser]*/ def stringify(expr: Expression) = expr match {
+  private[parser] def stringify(expr: Expression) = expr match {
     case t: Term => pp(t)
     case f: Formula => pp(f)
     case p: Program => pp(p)
     case f: Function => f.asString
   }
 
-  /** A pretty printer in full form with full parentheses */
-  def fullPrinter: (Expression => String) = FullPrettyPrinter
-
   /**
    * Whether parentheses around ``t.child`` can be skipped because they are implied.
    */
-  private[parser] def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
-  private[parser] def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
-  private[parser] def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
+  protected def skipParens(t: UnaryComposite): Boolean = false
+  protected def skipParens(t: Quantified): Boolean = false
+  protected def skipParens(t: Modal): Boolean = false
 
   /**
    * Whether parentheses around ``t.left`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  private[parser] def skipParensLeft(t: BinaryComposite): Boolean =
-    op(t.left) < op(t) || op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
+  protected def skipParensLeft(t: BinaryComposite): Boolean = false
 
   /**
    * Whether parentheses around ``t.right`` can be skipped because they are implied.
    * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
    */
-  private[parser] def skipParensRight(t: BinaryComposite): Boolean =
-    op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
+  protected def skipParensRight(t: BinaryComposite): Boolean = false
+
+  /**@NOTE The extra space disambiguates x<-7 as in x < (-7) from x REVIMPLY 7 as well as x<-(x^2) from x REVIMPLY ... */
+  private val LEXSPACE: String = " "
 
   private def pp(term: Term): String = term match {
     case DotTerm|Anything|Nothing=> op(term).opcode
@@ -87,6 +105,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case Differential(t)        => "(" + pp(t) + ")" + op(term).opcode
     case Number(n)              => n.toString()
     case FuncOf(f, c)           => f.asString + "(" + pp(c) + ")"
+    // special notation
     case Pair(l, r)             => "(" + pp(l) + op(term).opcode + pp(r) + ")"
     // special case forcing to disambiguate between -5 as in the number (-5) as opposed to -(5).
     case t@Neg(Number(n))       => op(t).opcode + "(" + pp(Number(n)) + ")"
@@ -101,9 +120,11 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
     case True|False|DotFormula  => op(formula).opcode
     case PredOf(p, c)           => p.asString + "(" + pp(c) + ")"
     case PredicationalOf(p, c)  => p.asString + "{" + pp(c) + "}"
+    // special case to disambiguate between x<-y as in x < -y compared to x REVIMPLY y
+    case f: Less                => pp(f.left) + LEXSPACE + op(formula).opcode + LEXSPACE + pp(f.right)
     case f: ComparisonFormula   => pp(f.left) + op(formula).opcode + pp(f.right)
     case DifferentialFormula(g) => "(" + pp(g) + ")" + op(formula).opcode
-    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + /*"." +*/ (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
+    case f: Quantified          => op(formula).opcode + " " + f.vars.map(pp).mkString(",") + " " + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Box                 => "[" + pp(f.program) + "]" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case f: Diamond             => "<" + pp(f.program) + ">" + (if (skipParens(f)) pp(f.child) else "(" + pp(f.child) + ")")
     case t: UnaryCompositeFormula=> op(t).opcode + (if (skipParens(t)) pp(t.child) else "(" + pp(t.child) + ")")
@@ -130,7 +151,7 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
         op(t).opcode +
         (if (skipParensRight(t)) pp(t.right) else "{" + pp(t.right) + "}")
-    case ode: DifferentialProgram => pp(ode)
+    case ode: DifferentialProgram => ppODE(ode)
   }
 
   private def ppODE(program: DifferentialProgram): String = program match {
@@ -149,13 +170,50 @@ class KeYmaeraXPrettyPrinter extends (Expression => String) {
 
 }
 
-/** A pretty printer in full form with full parentheses */
-object FullPrettyPrinter extends KeYmaeraXPrettyPrinter {
-  override def apply(expr: Expression): String = stringify(expr)
+/**
+ * KeYmaera X Pretty Printer formats differential dynamic logic expressions with compact brackets
+ * in KeYmaera X notation according to the concrete syntax of differential dynamic logic
+ * with explicit statement end ``;`` operator.
+ * @author aplatzer
+ * @todo Augment with ensuring postconditions that check correct reparse non-recursively.
+ * @see doc/dL-grammar.md
+ */
+class KeYmaeraXPrecedencePrinter extends KeYmaeraXPrinter {
+  protected override def skipParens(t: UnaryComposite): Boolean = op(t.child) <= op(t)
+  protected override def skipParens(t: Quantified): Boolean = op(t.child) <= op(t)
+  protected override def skipParens(t: Modal): Boolean = op(t.child) <= op(t)
 
-  private[parser] override def skipParens(t: UnaryComposite): Boolean = false
-  private[parser] override def skipParens(t: Quantified): Boolean = false
-  private[parser] override def skipParens(t: Modal): Boolean = false
-  private[parser] override def skipParensLeft(t: BinaryComposite): Boolean = false
-  private[parser] override def skipParensRight(t: BinaryComposite): Boolean = false
+  /**
+   * Whether parentheses around ``t.left`` can be skipped because they are implied.
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   */
+  protected override def skipParensLeft(t: BinaryComposite): Boolean =
+    op(t.left) < op(t) || op(t.left) <= op(t) && op(t).assoc == LeftAssociative && op(t.left).assoc == LeftAssociative
+
+  /**
+   * Whether parentheses around ``t.right`` can be skipped because they are implied.
+   * @note Based on (seemingly redundant) inequality comparisons since equality incompatible with comparison ==
+   */
+  protected override def skipParensRight(t: BinaryComposite): Boolean =
+    op(t.right) < op(t) || op(t.right) <= op(t) && op(t).assoc == RightAssociative && op(t.right).assoc == RightAssociative
+
+}
+
+/**
+ * A pretty printer in full form with full parentheses
+ * @example
+ * Fully parenthesized strings are obtained using the [[edu.cmu.cs.ls.keymaerax.parser.FullPrettyPrinter]] printer:
+ * {{{
+ * val pp = FullPrettyPrinter
+ * // "x < -(y)"
+ * val fml0 = Less(Variable("x"),Neg(Variable("y")))
+ * val fml0str = pp(fml0)
+ * // "true -> ([x:=1;](x>=0))"
+ * val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+ * val fml1str = pp(fml1)
+ * }}}
+ * @author aplatzer
+ */
+object FullPrettyPrinter extends KeYmaeraXPrinter {
+  override def apply(expr: Expression): String = stringify(expr)
 }

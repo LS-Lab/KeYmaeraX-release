@@ -1,19 +1,23 @@
+package edu.cmu.cs.ls.keymaerax.parser
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
 import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
+
+import test.RandomFormula
 
 /**
  * Tests the parser on pretty prints of randomly generated formulas
  * @author aplatzer
  */
 class RandomParserTests extends FlatSpec with Matchers {
-  val randomTrials = 40
-  val randomComplexity = 4
+  val randomTrials = 40000
+  val randomComplexity = 6
   val rand = new RandomFormula()
 
 
-  val pp = KeYmaeraXPrettyPrinter.printer
+  val pp = KeYmaeraXPrettyPrinter
   val parser = KeYmaeraXParser
 
   def parseShouldBe(input: String, expr: Expression) = {

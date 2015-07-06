@@ -31,8 +31,11 @@ abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
-case class IDENT(name: String) extends Terminal(name) {
-  override def toString = "ID(\"" + name + "\")"
+case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name) {
+  override def toString = "ID(\"" + (index match {
+    case None => name
+    case Some(idx) => name + "," + idx
+  }) + "\")"
   override def regexp = IDENT.regexp
 }
 object IDENT {
@@ -107,6 +110,7 @@ object OR      extends OPERATOR("|") {
 }
 object EQUIV   extends OPERATOR("<->")
 object IMPLY   extends OPERATOR("->")
+//@todo maybe could change to <-- to disambiguate poor lexer's x<-7 REVIMPLY from LDIA MINUS
 object REVIMPLY extends OPERATOR("<-")
 
 object FORALL  extends OPERATOR("\\forall") {
@@ -137,6 +141,12 @@ object SEMI    extends OPERATOR(";")
 object CHOICE  extends OPERATOR("++") {
   override def regexp = """\+\+""".r
 }
+
+/*@TODO
+object DCHOICE  extends OPERATOR("--") {
+  override def regexp = """--""".r
+}
+*/
 
 // pseudos: could probably demote so that some are not OPERATOR
 object NOTHING extends Terminal("")
@@ -381,6 +391,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
       case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
+      //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
+      //@TODO case DCHOICE.startPattern(_*) => consumeTerminalLength(DCHOICE, loc)
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
@@ -415,7 +427,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
-      case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
+      //@TODO Incorrect code. Should split identifier into name and index properly
+      case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name, None), loc)
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
       //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)

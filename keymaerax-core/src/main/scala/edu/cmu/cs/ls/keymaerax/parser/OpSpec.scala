@@ -100,11 +100,12 @@ object BinaryOpSpec {
 
 
 /**
- * Differential Dynamic Logic operator notation specifications.
+ * Differential Dynamic Logic's concrete syntax: operator notation specifications.
  * @author aplatzer
  */
 object OpSpec {
-  /*private[parser]*/ val statementSemicolon = true
+  /** Whether atomic statements and with a semicolon instead of separating sequential compositions */
+  private[parser] val statementSemicolon = true
 
   /** no notation */
   private val none = PSEUDO
@@ -126,7 +127,7 @@ object OpSpec {
   val sNumber       = UnitOpSpec (none,    0, number => Number(BigDecimal(number)))
   val sFuncOf       = UnaryOpSpec[Term](none,    0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME, 0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
-  def sPair         = ??? // OpNotation(COMMA,     4, RightAssociative)
+  val sPair         = BinaryOpSpec[Term](COMMA,   888, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,    10, PostfixFormat, unterm, Differential.apply _)
   val sNeg          = UnaryOpSpec[Term] (MINUS,    11, PrefixFormat, unterm, Neg.apply _)
   val sPower        = BinaryOpSpec[Term](POWER,   20, RightAssociative, binterm, Power.apply _)
@@ -181,7 +182,7 @@ object OpSpec {
   val sTest         = lUnaryOpSpecF[Program](TEST,   200, PrefixFormat, unfmlprog, (f:Formula) => Test(f.asInstanceOf[Formula]))
   val sAtomicODE    = BinaryOpSpec[Program](EQ,   90/*200*/, AtomicBinaryFormat, bintermprog, (_:String, xp:Expression, e:Expression) => AtomicODE(xp.asInstanceOf[DifferentialSymbol], e.asInstanceOf[Term]))
   val sDifferentialProduct = BinaryOpSpec(COMMA, 95/*210*/, RightAssociative, bindiffprog, DifferentialProduct.apply _)
-  val sODESystem    = BinaryOpSpec[Expression](AMP, 99/*219*/, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
+  val sODESystem    = BinaryOpSpec[Expression](AMP, 150, NonAssociative, diffprogfmlprog, (_:String, ode:Expression, h:Expression) => ODESystem(ode.asInstanceOf[DifferentialProgram], h.asInstanceOf[Formula]))
   val sLoop         = UnaryOpSpec(STAR,   220, PostfixFormat, unprog, Loop.apply _)
   val sCompose      = BinaryOpSpec(SEMI, 230, RightAssociative, binprog, Compose.apply _) //@todo compatibility mode for parser
   //valp: Compose     => OpNotation("",    230, RightAssociative)

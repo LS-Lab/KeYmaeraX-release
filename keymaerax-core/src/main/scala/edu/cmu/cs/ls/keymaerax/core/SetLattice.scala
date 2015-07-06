@@ -183,8 +183,8 @@ private case class TopSet[A](excluded: immutable.Set[A], symbols: immutable.Set[
   def toSet[B >: A]: Set[B] = throw new IllegalStateException("SetLattice.top has no set representation")
   def toSymbolSet[B >: A]: Set[B] = symbols.toSet
 
-  override def toString: String = "top except " + excluded.toString
-  def prettyString: String = "top except {" + excluded.mkString(",") + "}"
+  override def toString: String = "all but " + excluded.toString
+  def prettyString: String = "all but {" + excluded.mkString(",") + "}"
 }
 
 

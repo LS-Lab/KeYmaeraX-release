@@ -6,6 +6,7 @@ import StringConverter._
 
 import scala.collection.immutable.Seq
 import scala.collection.immutable.IndexedSeq
+import test._
 
 object USubstTest extends Tag("USubstTest")
 object OptimisticTest extends Tag("OptimisticTest")

@@ -15,6 +15,8 @@ import edu.cmu.cs.ls.keymaerax.tactics.TacticLibrary._
 
 import org.scalatest.Tag
 
+import test._
+
 object MyTest extends Tag("MyTest")
 object USTest extends Tag("USTest")
 object BadassignT extends Tag("BadassignT")

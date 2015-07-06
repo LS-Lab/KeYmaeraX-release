@@ -1,3 +1,5 @@
+package edu.cmu.cs.ls.keymaerax.parser
+
 import scala.collection.immutable._
 import edu.cmu.cs.ls.keymaerax.core._
 import edu.cmu.cs.ls.keymaerax.parser._
@@ -9,6 +11,7 @@ import org.scalatest.{PrivateMethodTester, Matchers, FlatSpec}
  */
 class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTester {
   val parser = KeYmaeraXParser
+  val pp = KeYmaeraXPrettyPrinter
 
   val x = Variable("x")
   val y = Variable("y")
@@ -18,6 +21,10 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val g0 = FuncOf(Function("g",None,Unit,Real),Nothing)
   val h0 = FuncOf(Function("h",None,Unit,Real),Nothing)
 
+  val f = Function("f",None,Real,Real)
+  val g = Function("g",None,Real,Real)
+  val h = Function("h",None,Real,Real)
+
   val p0 = PredOf(Function("p",None,Unit,Bool),Nothing)
   val q0 = PredOf(Function("q",None,Unit,Bool),Nothing)
   val r0 = PredOf(Function("r",None,Unit,Bool),Nothing)
@@ -25,6 +32,14 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val p = Function("p",None,Real,Bool)
   val q = Function("q",None,Real,Bool)
   val r = Function("r",None,Real,Bool)
+
+  val f2 = Function("f",None,Tuple(Real,Real),Real)
+  val g2 = Function("g",None,Tuple(Real,Real),Real)
+  val h2 = Function("h",None,Tuple(Real,Real),Real)
+
+  val p2 = Function("p",None,Tuple(Real,Real),Bool)
+  val q2 = Function("q",None,Tuple(Real,Real),Bool)
+  val r2 = Function("r",None,Tuple(Real,Real),Bool)
 
   private def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
 
@@ -129,7 +144,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Times(Variable("x"), Neg(Variable("y")))
   }
 
-  it should "parse -2*y" in {
+  it should "could parse -2*y" in {
+    val lex = KeYmaeraXLexer("-2 * y")
+    val theStream = toStream(MINUS, NUMBER("2"), STAR, IDENT("y"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be (Times(Neg(Number(2)), Variable("y")),
+      Times(Number(-2), Variable("y")))
+  }
+
+  it should "could lexed parse -2*y" in {
     val lex = KeYmaeraXLexer("-2 * y")
     val theStream = toStream(NUMBER("-2"), STAR, IDENT("y"))
     lex.map(_.tok) should be (theStream.map(_.tok))
@@ -626,15 +649,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("x'=5&x>2") should be (And(Equal(DifferentialSymbol(Variable("x")), Number(5)), Greater(Variable("x"),Number(2))))
   }
 
-  it should "probably not parse a simple program when trying to parse x'=5 as a program" in {
+  ignore should "probably not parse a simple program when trying to parse x'=5 as a program" in {
     parser.programParser("x'=5") should not be (AtomicODE(DifferentialSymbol(Variable("x")), Number(5)))
   }
 
-  it should "parse an ODESystem program from [x'=5;]p(x)" in {
+  it should "perhaps parse an ODESystem program from [x'=5;]p(x)" in {
     parser("[x'=5;]p(x)") should be (Box(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
   }
 
-  it should "parse an ODESystem program from <x'=5;>p(x)" in {
+  it should "perhaps parse an ODESystem program from <x'=5;>p(x)" in {
     parser("<x'=5;>p(x)") should be (Diamond(ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True), PredOf(p, Variable("x"))))
   }
 
@@ -652,6 +675,27 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
 
   it should "parse [{x'=5,y'=2&x>7}]p(x)" in {
     parser("[{x'=5,y'=2&x>7}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Greater(Variable("x"),Number(7))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&x>7->y<2}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7->y<2}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Imply(Greater(Variable("x"),Number(7)),Less(y,Number(2)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&x>7&y<2}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7&y<2}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), And(Greater(Variable("x"),Number(7)),Less(y,Number(2)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&x>7|y<8}]p(x)" in {
+    parser("[{x'=5,y'=2&x>7|y<8}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Or(Greater(Variable("x"),Number(7)),Less(y,Number(8)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse long evolution domains [{x'=5,y'=2&!x>7}]p(x)" in {
+    parser("[{x'=5,y'=2&!x>7}]p(x)") should be (Box(ODESystem(DifferentialProduct(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), AtomicODE(DifferentialSymbol(Variable("y")), Number(2))), Not(Greater(Variable("x"),Number(7)))), PredOf(p, Variable("x"))))
+  }
+
+  it should "parse lexically disambiguated x< -y not as REVIMPLY" in {
+    parser("x< -y") should be (Less(x,Neg(y)))
+    parser(pp(Less(x,Neg(y)))) should be (Less(x,Neg(y)))
   }
 
   it should "parse [x:=q();]f()->r()+c(x)>0" in {
@@ -690,7 +734,7 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
       PredOf(Function("g",None,Real,Bool),Anything)))
   }
 
-  it should "parse an ODESystem program when trying to parse x'=5 as a program" in {
+  ignore should "parse an ODESystem program when trying to parse x'=5 as a program" in {
     parser.programParser("x'=5") should be (ODESystem(AtomicODE(DifferentialSymbol(Variable("x")), Number(5)), True))
   }
 
@@ -734,5 +778,101 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   it should "parse \\forall x p(x)&q(x)" in {
     parser("\\forall x p(x)&q(x)") should be
     And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
+  }
+
+  it should "parse" in {
+    parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x,y)), Greater(FuncOf(f2,Pair(x,y)), FuncOf(g,x)))
+  }
+
+  /////////////////////////////////////
+
+
+  "Parser documentation" should "compile and run printer 1" in {
+    val pp = KeYmaeraXPrettyPrinter
+    // "x < -y"
+    val fml0 = Less(Variable("x"), Neg(Variable("y")))
+    val fml0str = pp(fml0)
+    // "true -> [x:=1;]x>=0"
+    val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+    val fml1str = pp(fml1)
+  }
+
+  it should "compile and run printer 2" in {
+    val pp = KeYmaeraXPrettyPrinter
+    // "x < -(y)"
+    val fml0 = Less(Variable("x"), Neg(Variable("y")))
+    val fml0str = pp(fml0)
+    // "true -> ([x:=1;](x>=0))"
+    val fml1 = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+    val fml1str = pp(fml1)
+  }
+
+  it should "compile and run parser 1" in {
+    val parser = KeYmaeraXParser
+    val fml0 = parser("x!=5")
+    val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+    val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+  }
+
+  it should "compile and run parser 2" in {
+    val parser = KeYmaeraXParser
+    // formulas
+    val fml0 = parser("x!=5")
+    val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+    val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+    // terms
+    val term0 = parser("x+5")
+    val term1 = parser("x^2-2*x+7")
+    val term2 = parser("x*y/3+(x-1)^2+5*z")
+    // programs
+    val prog0 = parser("x:=1;")
+    val prog1 = parser("x:=1;x:=5;x:=-1;")
+    val prog2 = parser("x:=1;{{x'=5}++x:=0;}")
+  }
+
+    it should "compile and run formula parser 1" in {
+      // the formula parser only accepts formulas
+      val parser = KeYmaeraXParser.formulaParser
+      // formulas
+      val fml0 = parser("x!=5")
+      val fml1 = parser("x>0 -> [x:=x+1;]x>1")
+      val fml2 = parser("x>=0 -> [{x'=2}]x>=0")
+      // terms will cause exceptions
+      try { parser("x+5") } catch {case e: ParseException => println("Rejected")}
+      // programs will cause exceptions
+      try { parser("x:=1;") } catch {case e: ParseException => println("Rejected")}
+    }
+
+  it should "compile and run parse of print 1" in {
+    val parser = KeYmaeraXParser
+    val pp = KeYmaeraXPrettyPrinter
+    val fml = Imply(True, Box(Assign(Variable("x"), Number(1)), GreaterEqual(Variable("x"), Number(0))))
+    // something like "true -> [x:=1;]x>=0" modulo spacing
+    val print = pp(fml)
+    val reparse = parser(print)
+    if (fml == reparse) println("Print and reparse successful") else println("Discrepancy")
+  }
+
+  it should "compile and run parse of print of parse" in {
+    val parser = KeYmaeraXParser
+    val pp = KeYmaeraXPrettyPrinter
+    val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
+    val parse = parser(input)
+    println("Parsed:   " + parse)
+    val print = pp(parse)
+    println("Printed:  " + print)
+    println("Original: " + input)
+    println("Can differ slightly by spacing and parentheses")
+  }
+
+  it should "compile and run full print" in {
+    val parser = KeYmaeraXParser
+    val pp = FullPrettyPrinter
+    val input = "x^2>=0 & x<44 -> [x:=2;{x'=1&x<=10}]x>=1"
+    val parse = parser(input)
+    println("Parsed:   " + parse)
+    val print = pp(parse)
+    println("Printed:  " + print)
+    println("Original: " + input)
   }
 }

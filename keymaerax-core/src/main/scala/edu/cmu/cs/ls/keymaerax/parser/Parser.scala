@@ -13,11 +13,22 @@ import edu.cmu.cs.ls.keymaerax.core._
  */
 trait Parser extends (String => Expression) {
 
+  /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
+  def apply(input: String): Expression
+
+  /** Parse the input string in the concrete syntax as a differential dynamic logic term */
   def termParser: (String => Term)
 
+  /** Parse the input string in the concrete syntax as a differential dynamic logic formula */
   def formulaParser: (String => Formula)
 
+  /** Parse the input string in the concrete syntax as a differential dynamic logic program */
   def programParser: (String => Program)
 
+  /** Parse the input string in the concrete syntax as a differential dynamic logic differential program */
   def differentialProgramParser: (String => DifferentialProgram)
+
+  /** A pretty-printer that can write the output that this parser reads */
+  def printer: PrettyPrinter
+
 }
