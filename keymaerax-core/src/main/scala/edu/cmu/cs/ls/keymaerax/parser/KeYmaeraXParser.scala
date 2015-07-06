@@ -140,7 +140,8 @@ object KeYmaeraXParser extends Parser {
       case None => None
     }
     // lift misclassified defaulted differential equation
-    case Equal(xp:DifferentialSymbol, e) if kind==DifferentialProgramKind || kind==ProgramKind => Some(AtomicODE(xp, e))
+    case Equal(xp:DifferentialSymbol, e)
+      if (kind==DifferentialProgramKind || kind==ProgramKind) && !StaticSemantics.isDifferential(e) => Some(AtomicODE(xp, e))
     //@todo And(And(x'=5,x>0),x<12)) is not lifted yet
     // lift misclassified defaulted differential equation
     case And(Equal(xp:DifferentialSymbol, e), h)
@@ -341,10 +342,20 @@ object KeYmaeraXParser extends Parser {
       case r :+ Token(tok@IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
         reduceFuncOrPredOf(st, 4, tok, t1, r)
 
+      // function/predicate symbols arity>0: special elaboration case for misclassified t() as formula
+      case r :+ Token(tok@IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Formula) :+ Token(RPAREN,_) =>
+        reduceFuncOrPredOf(st, 4, tok, elaborate(st, OpSpec.sFuncOf,TermKind, t1).asInstanceOf[Term], r)
+
       // predicational symbols arity>0
       case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
         if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), f1), r)
         else error(st)
+
+      // predicational symbols arity>0: special elaboration case for misclassified t() as formula
+      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), elaborate(st, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
+        else error(st)
+
 
       // modalities
       case _ :+ Token(LBOX,_) :+ Expr(t1:Program) :+ Token(RBOX,_) =>
@@ -507,11 +518,11 @@ object KeYmaeraXParser extends Parser {
   /** Follow(kind(expr)): Can la follow an expression of the kind of expr? */
   private def followsExpression(expr: Expression, la: Terminal): Boolean = expr match {
     case _: Variable => followsIdentifier(la) || /*if elaborated to program*/ followsProgram(la)
-    case FuncOf(_,_) => followsTerm(la) || /*if elaborated to formula*/ followsFormula(la) //@todo line irrelevant since followsTerm subsumes followsFormula
+    case FuncOf(_,_) => followsTerm(la) || /*elaboratable(FormulaKind, t)!=None &&*/ followsFormula(la) //@todo line irrelevant since followsTerm subsumes followsFormula
     case _: Term => followsTerm(la)
     case And(Equal(_:DifferentialSymbol, _), _) => followsFormula(la) || /*if elaborated to ODE*/ followsProgram(la)
     case Equal(_:DifferentialSymbol, _) => followsFormula(la) || /*if elaborated to ODE*/ followsProgram(la)
-    case _: Formula => followsFormula(la)
+    case f: Formula => followsFormula(la) || elaboratable(TermKind, f)!=None && followsTerm(la)
     case _: Program => followsProgram(la)
   }
 
@@ -637,7 +648,7 @@ object KeYmaeraXParser extends Parser {
       //case t: FuncOf => sFuncOf
       case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula
       else sDifferential
-      //case t: Pair => sPair  or sDifferentialProduct
+      case sPair.op => if (!kinds.isEmpty && (kinds(0)==DifferentialProgramKind || kinds(0)==ProgramKind)) sDifferentialProduct else sPair
       case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
       case sTimes.op => if (!kinds.isEmpty && kinds(0)==ProgramKind)/*if (isProgram(st))*/ sLoop else sTimes
