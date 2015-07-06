@@ -205,7 +205,7 @@ object KeYmaeraXParser extends Parser {
 
       // ordinary terminals disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name,idx),_) =>
-        if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
+        if (la==LPAREN || la==LBRACE || la==PRIME) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
       case r :+ Token(MINUS,_) :+ Token(NUMBER(n),loc) if !n.startsWith("-") && !isNotPrefix(st) =>
@@ -219,6 +219,10 @@ object KeYmaeraXParser extends Parser {
         reduce(st, 1, op(st, tok, List()).asInstanceOf[UnitOpSpec].const(tok.img), r)
 
       // special cases for early prime conversion
+      case r :+ Token(IDENT(name,idx),_) :+ Token(PRIME,_) =>
+        reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, Variable(name,idx,Real)), r)
+
+      // special cases for early prime conversion, possibly redundant
       case r :+ Expr(x1:Variable) :+ Token(PRIME,_) =>
         reduce(st, 2, OpSpec.sDifferentialSymbol.const(PRIME.img, x1), r)
 

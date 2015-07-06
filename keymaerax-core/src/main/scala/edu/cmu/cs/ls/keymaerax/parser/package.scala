@@ -11,7 +11,7 @@ package edu.cmu.cs.ls.keymaerax
  * as human readable concrete syntax.
  * {{{
  *     PrettyPrinter: Expression => String
- *     Parser: String > Expression
+ *     Parser: String => Expression
  * }}}
  *
  * ==Usage Overview==
