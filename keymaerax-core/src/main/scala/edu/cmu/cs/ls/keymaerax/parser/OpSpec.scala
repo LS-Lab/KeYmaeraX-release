@@ -127,7 +127,7 @@ object OpSpec {
   val sNumber       = UnitOpSpec (none,    0, number => Number(BigDecimal(number)))
   val sFuncOf       = UnaryOpSpec[Term](none,    0, PrefixFormat, unterm, (name:String, e:Term) => FuncOf(Function(name, None, Real, Real), e))
   val sDifferentialSymbol = UnaryOpSpec[Term](PRIME, 0, PostfixFormat, unterm, (v:Term) => DifferentialSymbol(v.asInstanceOf[Variable]))
-  def sPair         = BinaryOpSpec[Term](COMMA,     4, RightAssociative, binterm, Pair.apply _)
+  val sPair         = BinaryOpSpec[Term](COMMA,     4, RightAssociative, binterm, Pair.apply _)
   val sDifferential = UnaryOpSpec[Term] (PRIME,    10, PostfixFormat, unterm, Differential.apply _)
   val sNeg          = UnaryOpSpec[Term] (MINUS,    11, PrefixFormat, unterm, Neg.apply _)
   val sPower        = BinaryOpSpec[Term](POWER,   20, RightAssociative, binterm, Power.apply _)

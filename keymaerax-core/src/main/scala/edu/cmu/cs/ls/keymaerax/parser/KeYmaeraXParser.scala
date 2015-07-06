@@ -646,8 +646,7 @@ object KeYmaeraXParser extends Parser {
       case s:IDENT/*sVariable.op*/ => sVariable //@todo could also be FuncOf/PredOf if la==LPAREN
       case s:NUMBER/*sNumber.op*/ => sNumber
       //case t: FuncOf => sFuncOf
-      case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula
-      else sDifferential
+      case sDifferential.op => if (isVariable(st)) sDifferential else if (isFormula(st)) sDifferentialFormula else sDifferential
       case sPair.op => if (!kinds.isEmpty && (kinds(0)==DifferentialProgramKind || kinds(0)==ProgramKind)) sDifferentialProduct else sPair
       case sMinus.op => if (isNotPrefix(st)) sMinus else sNeg
       case sPower.op => sPower
