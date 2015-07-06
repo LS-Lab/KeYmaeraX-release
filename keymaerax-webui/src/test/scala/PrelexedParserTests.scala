@@ -809,6 +809,11 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     a [ParseException] should be thrownBy parser("p() -> [{x'=p()}]true")
   }
 
+  it should "refuse to parse type mess x() -> [x:=x(x);]x()>x(x,x())" in {
+    a [ParseException] should be thrownBy parser("x() -> [x:=x(x);]x()>x(x,x())")
+  }
+
+
   /////////////////////////////////////
 
 
