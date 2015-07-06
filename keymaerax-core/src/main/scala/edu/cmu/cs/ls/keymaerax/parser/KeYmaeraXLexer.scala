@@ -31,7 +31,7 @@ abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
-case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name) {
+case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name + (index match {case Some(x) => x.toString.length + 1 case None => 0})) {
   override def toString = "ID(\"" + (index match {
     case None => name
     case Some(idx) => name + "," + idx
@@ -428,7 +428,10 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
       //@TODO Incorrect code. Should split identifier into name and index properly
-      case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name, None), loc)
+      case IDENT.startPattern(name) => {
+        val (s, idx) = splitName(name)
+        consumeTerminalLength(IDENT(s, idx), loc)
+      }
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
       //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
@@ -469,4 +472,13 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case Region(sl, sc, el, ec) => Region(sl, sc + colOffset, el, ec)
       case SuffixRegion(sl, sc)   => SuffixRegion(sl, sc + colOffset)
     }
+
+  private def splitName(s : String) : (String, Option[Int]) =
+    if(s.contains("_")) {
+      // a_b_2 ==> "a_b", 2
+      val parts = s.split("_")
+      val idx = Some(Integer.parseInt(parts.last))
+      val name = parts.dropRight(1).reduce(_ + "_" + _)
+      (name, idx)
+    } else (s, None)
 }
