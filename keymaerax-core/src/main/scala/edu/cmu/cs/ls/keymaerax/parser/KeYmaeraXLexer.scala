@@ -31,8 +31,11 @@ abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
-case class IDENT(name: String) extends Terminal(name) {
-  override def toString = "ID(\"" + name + "\")"
+case class IDENT(name: String, index: Option[Int]) extends Terminal(name) {
+  override def toString = "ID(\"" + (index match {
+    case None => name
+    case Some(idx) => name + "," + idx
+  }) + "\")"
   override def regexp = IDENT.regexp
 }
 object IDENT {

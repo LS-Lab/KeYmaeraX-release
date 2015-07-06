@@ -181,12 +181,12 @@ object KeYmaeraXParser extends Parser {
     //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
       // ordinary terminals disambiguate to predicate/function/predicational versus variable
-      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(IDENT(name),_) =>
-        if (firstFormula(la)) reduce(st, 1, Variable(name,None,Real), r :+ tok1) else error(st)
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(IDENT(name,idx),_) =>
+        if (firstFormula(la)) reduce(st, 1, Variable(name,idx,Real), r :+ tok1) else error(st)
 
       // ordinary terminals disambiguate to predicate/function/predicational versus variable
-      case r :+ Token(IDENT(name),_) =>
-        if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
+      case r :+ Token(IDENT(name,idx),_) =>
+        if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,idx,Real), r)
 
       // special case for negative numbers to turn lexer's MINUS, NUMBER("5") again into NUMBER("-5")
       case r :+ Token(MINUS,_) :+ Token(NUMBER(n),loc) if !n.startsWith("-") && !isNotPrefix(st) =>
@@ -331,29 +331,29 @@ object KeYmaeraXParser extends Parser {
         if (firstExpression(la)) shift(st) else error(st)
 
       // function/predicate symbols arity 0
-      case r :+ Token(tok@IDENT(_),_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
+      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(RPAREN,_)  =>
         reduceFuncOrPredOf(st, 3, tok, Nothing, r)
 
       // function/predicate symbols of argument ANYTHING
-      case r :+ Token(tok@IDENT(_),_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
+      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Token(ANYTHING,_) :+ Token(RPAREN,_)  =>
         reduceFuncOrPredOf(st, 4, tok, Anything, r)
 
       // function/predicate symbols arity>0
-      case r :+ Token(tok@IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
+      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Term) :+ Token(RPAREN,_) =>
         reduceFuncOrPredOf(st, 4, tok, t1, r)
 
       // function/predicate symbols arity>0: special elaboration case for misclassified t() as formula
-      case r :+ Token(tok@IDENT(name),_) :+ Token(LPAREN,_) :+ Expr(t1:Formula) :+ Token(RPAREN,_) =>
+      case r :+ Token(tok:IDENT,_) :+ Token(LPAREN,_) :+ Expr(t1:Formula) :+ Token(RPAREN,_) =>
         reduceFuncOrPredOf(st, 4, tok, elaborate(st, OpSpec.sFuncOf,TermKind, t1).asInstanceOf[Term], r)
 
       // predicational symbols arity>0
-      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
-        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), f1), r)
+      case r :+ Token(IDENT(name,idx),_) :+ Token(LBRACE,_) :+ Expr(f1:Formula) :+ Token(RBRACE,_) =>
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), f1), r)
         else error(st)
 
       // predicational symbols arity>0: special elaboration case for misclassified t() as formula
-      case r :+ Token(IDENT(name),_) :+ Token(LBRACE,_) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
-        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, None, Bool, Bool), elaborate(st, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
+      case r :+ Token(IDENT(name,idx),_) :+ Token(LBRACE,_) :+ Expr(f1:Term) :+ Token(RBRACE,_) =>
+        if (followsFormula(la)) reduce(st, 4, PredicationalOf(Function(name, idx, Bool, Bool), elaborate(st, OpSpec.sPredOf, FormulaKind, f1).asInstanceOf[Formula]), r)
         else error(st)
 
 
@@ -452,13 +452,13 @@ object KeYmaeraXParser extends Parser {
   private def reduceFuncOrPredOf(st: ParseState, consuming: Int, name: IDENT, arg: Term, remainder: Stack[Item]): ParseState = {
     val ParseState(s, input@(Token(la, _) :: rest)) = st
     if (termBinOp(la) || isTerm(st) && followsTerm(la))
-      reduce(st, consuming, FuncOf(Function(name.name, None, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
     else if (formulaBinOp(la) || isFormula(st) && followsFormula(la))
-      reduce(st, consuming, PredOf(Function(name.name, None, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsFormula(la))
-      reduce(st, consuming, PredOf(Function(name.name, None, arg.sort, Bool), arg), remainder)
+      reduce(st, consuming, PredOf(Function(name.name, name.index, arg.sort, Bool), arg), remainder)
     else if (followsTerm(la))
-      reduce(st, consuming, FuncOf(Function(name.name, None, arg.sort, Real), arg), remainder)
+      reduce(st, consuming, FuncOf(Function(name.name, name.index, arg.sort, Real), arg), remainder)
     else if (la == RPAREN) shift(st)
     else error(st)
   }
