@@ -410,8 +410,10 @@ Axiom "DC differential cut".
 End.
 
 Axiom "DE differential effect".
-  [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)  /* @TODO sound but incomplete */
+  /* [x'=f(x)&q(x);]p(x) <-> [x'=f(x)&q(x);][x':=f(x);]p(x)  @TODO sound but incomplete */
   /* @TODO [x'=f(x)&q(x);]p(x,x') <-> [x'=f(x)&q(x);][x':=f(x);]p(x,x')  THEORY */
+  /*@NOTE Generalized compared to theory as in DE differential effect (system) */
+  [x'=f(x)&q(x);]p(?) <-> [x'=f(x)&q(x);][x':=f(x);]p(?)
 End.
 
 Axiom "DI differential invariant".
