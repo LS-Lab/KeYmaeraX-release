@@ -21,6 +21,10 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val g0 = FuncOf(Function("g",None,Unit,Real),Nothing)
   val h0 = FuncOf(Function("h",None,Unit,Real),Nothing)
 
+  val f = Function("f",None,Real,Real)
+  val g = Function("g",None,Real,Real)
+  val h = Function("h",None,Real,Real)
+
   val p0 = PredOf(Function("p",None,Unit,Bool),Nothing)
   val q0 = PredOf(Function("q",None,Unit,Bool),Nothing)
   val r0 = PredOf(Function("r",None,Unit,Bool),Nothing)
@@ -28,6 +32,14 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
   val p = Function("p",None,Real,Bool)
   val q = Function("q",None,Real,Bool)
   val r = Function("r",None,Real,Bool)
+
+  val f2 = Function("f",None,Tuple(Real,Real),Real)
+  val g2 = Function("g",None,Tuple(Real,Real),Real)
+  val h2 = Function("h",None,Tuple(Real,Real),Real)
+
+  val p2 = Function("p",None,Tuple(Real,Real),Bool)
+  val q2 = Function("q",None,Tuple(Real,Real),Bool)
+  val r2 = Function("r",None,Tuple(Real,Real),Bool)
 
   private def toStream(input: Terminal*): List[Token] = input.toList.map (t=>Token(t, UnknownLocation)) :+ Token(EOF)
 
@@ -132,7 +144,15 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Times(Variable("x"), Neg(Variable("y")))
   }
 
-  it should "parse -2*y" in {
+  it should "could parse -2*y" in {
+    val lex = KeYmaeraXLexer("-2 * y")
+    val theStream = toStream(MINUS, NUMBER("2"), STAR, IDENT("y"))
+    lex.map(_.tok) should be (theStream.map(_.tok))
+    parser.parse(lex) should be (Times(Neg(Number(2)), Variable("y")),
+      Times(Number(-2), Variable("y")))
+  }
+
+  it should "could lexed parse -2*y" in {
     val lex = KeYmaeraXLexer("-2 * y")
     val theStream = toStream(NUMBER("-2"), STAR, IDENT("y"))
     lex.map(_.tok) should be (theStream.map(_.tok))
@@ -759,6 +779,13 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     parser("\\forall x p(x)&q(x)") should be
     And(Forall(Seq(Variable("x")), PredOf(p, Variable("x"))), PredOf(q,Variable("x")))
   }
+
+  it should "parse" in {
+    parser("p(x,y)->f(x,y)>g(x)") shouldBe Imply(PredOf(p2, Pair(x,y)), Greater(FuncOf(f2,Pair(x,y)), FuncOf(g,x)))
+  }
+
+  /////////////////////////////////////
+
 
   "Parser documentation" should "compile and run printer 1" in {
     val pp = KeYmaeraXPrettyPrinter
