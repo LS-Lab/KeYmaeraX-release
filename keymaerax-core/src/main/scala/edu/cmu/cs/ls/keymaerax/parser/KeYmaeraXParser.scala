@@ -175,9 +175,13 @@ object KeYmaeraXParser extends Parser {
 
   private def parseStep(st: ParseState): ParseState = {
     val ParseState(s, input@(Token(la,_) :: rest)) = st
-    // This table of LR Parser matches needs an entry for every prefix substring of the grammar.
+    //@note This table of LR Parser matches needs an entry for every prefix substring of the grammar.
     s match {
-      // ordinary terminals
+      // ordinary terminals disambiguate to predicate/function/predicational versus variable
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Token(IDENT(name),_) =>
+        if (firstFormula(la)) reduce(st, 1, Variable(name,None,Real), r :+ tok1) else error(st)
+
+      // ordinary terminals disambiguate to predicate/function/predicational versus variable
       case r :+ Token(IDENT(name),_) =>
         if (la==LPAREN || la==LBRACE) shift(st) else reduce(st, 1, Variable(name,None,Real), r)
 
@@ -239,10 +243,10 @@ object KeYmaeraXParser extends Parser {
         if (la==EOF || la==RPAREN) && e1.kind!=FormulaKind =>
         reduce(st, 1, elaborate(st, OpSpec.sNone, FormulaKind, e1), r :+ tok1 :+ Expr(v1) )
 
-      case r :+ (tok1@Token(FORALL,_)) =>
-        if (la.isInstanceOf[IDENT]) shift(st) else error(st)
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) :+ Expr(v1:Variable) =>
+        if (firstFormula(la)) shift(st) else error(st)
 
-      case r :+ (tok1@Token(EXISTS,_)) =>
+      case r :+ (tok1@Token(FORALL|EXISTS,_)) =>
         if (la.isInstanceOf[IDENT]) shift(st) else error(st)
 
       // special case for sCompose in case statementSemicolon
