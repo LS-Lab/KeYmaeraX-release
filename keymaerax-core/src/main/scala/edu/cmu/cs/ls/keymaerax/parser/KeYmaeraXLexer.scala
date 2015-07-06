@@ -139,9 +139,11 @@ object CHOICE  extends OPERATOR("++") {
   override def regexp = """\+\+""".r
 }
 
+/*@TODO
 object DCHOICE  extends OPERATOR("--") {
   override def regexp = """--""".r
 }
+*/
 
 // pseudos: could probably demote so that some are not OPERATOR
 object NOTHING extends Terminal("")
@@ -387,7 +389,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       //This has to come before PLUS because otherwise ++ because PLUS,PLUS instead of CHOICE.
       case CHOICE.startPattern(_*) => consumeTerminalLength(CHOICE, loc)
       //This has to come before MINUS because otherwise -- because MINUS,MINUS instead of DCHOICE.
-      case DCHOICE.startPattern(_*) => consumeTerminalLength(DCHOICE, loc)
+      //@TODO case DCHOICE.startPattern(_*) => consumeTerminalLength(DCHOICE, loc)
 
       case PRIME.startPattern(_*) => consumeTerminalLength(PRIME, loc)
       case SLASH.startPattern(_*) => consumeTerminalLength(SLASH, loc)
