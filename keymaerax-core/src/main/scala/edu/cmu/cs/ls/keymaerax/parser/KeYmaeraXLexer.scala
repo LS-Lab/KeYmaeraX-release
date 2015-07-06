@@ -31,7 +31,7 @@ abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
-case class IDENT(name: String, index: Option[Int]) extends Terminal(name) {
+case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name) {
   override def toString = "ID(\"" + (index match {
     case None => name
     case Some(idx) => name + "," + idx
@@ -427,7 +427,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
       case PLACE.startPattern(_*) => consumeTerminalLength(PLACE, loc)
       case PSEUDO.startPattern(_*) => consumeTerminalLength(PSEUDO, loc)
 
-      case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name), loc)
+      //@TODO Incorrect code. Should split identifier into name and index properly
+      case IDENT.startPattern(name) => consumeTerminalLength(IDENT(name, None), loc)
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
       //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
