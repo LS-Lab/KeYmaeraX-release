@@ -410,6 +410,22 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
           consumeColumns(str.length + 3, LEMMA_AXIOM_NAME(str), loc)
         case _ => throw new Exception("Encountered delimited string in non-axiom lexing mode.")
       }
+      //Lemma file cases (2)
+      case TOOL_INPUT.startPattern(_*) => mode match {
+        case LemmaFileMode() => consumeTerminalLength(TOOL_INPUT, loc)
+        case _ => throw new Exception("Encountered ``input`` in non-lemma lexing mode.")
+      }
+      case TOOL_OUTPUT.startPattern(_*) => mode match {
+        case LemmaFileMode() => consumeTerminalLength(TOOL_OUTPUT, loc)
+        case _ => throw new Exception("Encountered ``output`` in non-lemma lexing mode.")
+      }
+      case TOOL_IO_PAT.startPattern(str) => mode match {
+        case LemmaFileMode() =>
+          //A tool input/output looks like "blah" but only blah gets grouped, so there are two
+          // extra characters to account for.
+          consumeColumns(str.length + 2, TOOL_IO(str), loc)
+        case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
+      }
 
       //These have to come before LBOX,RBOX because otherwise <= becopmes LDIA, EQUALS
       case GREATEREQ.startPattern(_*) => consumeTerminalLength(GREATEREQ, loc)
@@ -475,23 +491,6 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
 
       case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
       case RDIA.startPattern(_*) => consumeTerminalLength(RDIA, loc)
-
-      //Lemma file cases (2)
-      case TOOL_INPUT.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TOOL_INPUT, loc)
-        case _ => throw new Exception("Encountered ``input`` in non-lemma lexing mode.")
-      }
-      case TOOL_OUTPUT.startPattern(_*) => mode match {
-        case LemmaFileMode() => consumeTerminalLength(TOOL_OUTPUT, loc)
-        case _ => throw new Exception("Encountered ``output`` in non-lemma lexing mode.")
-      }
-      case TOOL_IO_PAT.startPattern(str) => mode match {
-        case LemmaFileMode() =>
-          //A tool input/output looks like "blah" but only blah gets grouped, so there are two
-          // extra characters to account for.
-          consumeColumns(str.length + 2, TOOL_IO(str), loc)
-        case _ => throw new Exception("Encountered delimited string in non-lemma lexing mode.")
-      }
 
       case _ if s.isEmpty => None
       case _ => throw new Exception("Lexer did not understand input at " + loc + " in `\n" + s +"\n` First character was `" + s(0) + "`")
