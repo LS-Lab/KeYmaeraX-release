@@ -32,11 +32,11 @@ with `->` right-associative and no precedence for `->` versus `<->`
 
 with `++` and the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3 is x:=1;{x:=2;x:=3}
 
-This is to be contrasted with the abstract dL grammar in theory:
+This grammar is to be contrasted with the abstract dL grammar in theory:
 
     P ::= a | x:=T | x':=T | ?F | D&F | P* | P;P | P++P | (P)
 
-with the visible `;` in P;P right-associative
+with the rather visible `;` in P;P right-associative (and `++` being still right-associative).
 
 ==Differential programs==
 
@@ -44,8 +44,9 @@ with the visible `;` in P;P right-associative
 
 with `D,D` right-associative
 
+==Types==
 
-Finally, it is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`
+It is considered an error to use the same name with different types in different places, such as in `x() -> [x:=x(x);]x()>x(x,x())`
 
 Parser would-be challenges:  < ? p > q > p > 1
 Parser expression challenges: f()    x'=5

@@ -5,8 +5,6 @@
  */
 package edu.cmu.cs.ls.keymaerax.parser
 
-import edu.cmu.cs.ls.keymaerax.parser.KeYmaeraXPrettyPrinter
-
 import scala.annotation.{switch, tailrec}
 import scala.collection.immutable._
 
@@ -56,7 +54,7 @@ object KeYmaeraXParser extends Parser {
 
   private val immediateError = true
 
-  private val DEBUG = false
+  private val DEBUG = true
 
   /** Parse the input string in the concrete syntax as a differential dynamic logic expression */
   def apply(input: String): Expression = parse(KeYmaeraXLexer.inMode(input, ExpressionMode()))
@@ -108,6 +106,7 @@ object KeYmaeraXParser extends Parser {
 
   private[parser] def parse(input: TokenStream): Expression = {
     require(input.endsWith(List(Token(EOF))), "token streams have to end in " + EOF)
+    if (DEBUG) println("Parsing: " + input)
     val parse = parseLoop(ParseState(Bottom, input)).stack match {
       case Bottom :+ Accept(e) => e
       case context :+ Error(msg, loc, st) => throw new ParseException(msg, loc, st)

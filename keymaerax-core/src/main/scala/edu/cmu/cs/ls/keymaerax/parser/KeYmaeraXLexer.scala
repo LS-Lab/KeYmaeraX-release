@@ -433,7 +433,8 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
         consumeTerminalLength(IDENT(s, idx), loc)
       }
       case NUMBER.startPattern(n) => consumeTerminalLength(NUMBER(n), loc)
-      //Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
+      //@NOTE Minus has to come after number so that -9 is lexed as Number(-9) instead of as Minus::Number(9).
+      //@NOTE Yet NUMBER has been demoted not to feature - signs, so it has become irrelevant for now.
       case MINUS.startPattern(_*) => consumeTerminalLength(MINUS, loc)
 
       case LDIA.startPattern(_*) => consumeTerminalLength(LDIA, loc)
