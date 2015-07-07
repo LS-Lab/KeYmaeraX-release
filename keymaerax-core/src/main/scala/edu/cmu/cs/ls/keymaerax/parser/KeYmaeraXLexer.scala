@@ -31,7 +31,7 @@ abstract class OPERATOR(val opcode: String) extends Terminal(opcode) {
   //final def opcode: String = img
   override def toString = getClass.getSimpleName //+ "\"" + img + "\""
 }
-case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name + (index match {case Some(x) => x.toString.length + 1 case None => 0})) {
+case class IDENT(name: String, index: Option[Int] = None) extends Terminal(name + (index match {case Some(x) => "_"+x.toString case None => ""})) {
   override def toString = "ID(\"" + (index match {
     case None => name
     case Some(idx) => name + "," + idx
@@ -475,7 +475,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     }
 
   private def splitName(s : String) : (String, Option[Int]) =
-    if(s.contains("_")) {
+    if(s.contains("_") && !s.endsWith("_")) {
       // a_b_2 ==> "a_b", 2
       val parts = s.split("_")
       val idx = Some(Integer.parseInt(parts.last))
