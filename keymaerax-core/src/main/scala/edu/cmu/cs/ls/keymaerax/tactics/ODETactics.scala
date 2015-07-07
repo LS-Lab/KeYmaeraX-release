@@ -218,10 +218,10 @@ object ODETactics {
   private def diffEffectAtomicBaseT: PositionTactic = {
     def subst(fml: Formula): List[SubstitutionPair] = fml match {
       case Equiv(Box(ode@ODESystem(AtomicODE(dx@DifferentialSymbol(x), t), q), p), _) =>
-        val aP = PredOf(Function("p", None, Real, Bool), DotTerm)
+        val aP = PredOf(Function("p", None, Real, Bool), Anything)
         val aQ = PredOf(Function("q", None, Real, Bool), DotTerm)
         val aF = FuncOf(Function("f", None, Real, Real), DotTerm)
-        SubstitutionPair(aP, SubstitutionHelper.replaceFree(p)(x, DotTerm)) ::
+        SubstitutionPair(aP, p) ::
           SubstitutionPair(aQ, SubstitutionHelper.replaceFree(q)(x, DotTerm)) ::
           SubstitutionPair(aF, SubstitutionHelper.replaceFree(t)(x, DotTerm)) :: Nil
     }
@@ -239,7 +239,7 @@ object ODETactics {
 
             override def apply(p: Position): Tactic = new ConstructionTactic(this.name) {
               override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] =
-                Some(globalAlphaRenamingT(x.name, x.index, aX.name, aX.index))
+                Some(globalAlphaRenamingT(x, aX))
 
               override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
             }
@@ -715,6 +715,61 @@ object ODETactics {
                 (arithmeticT | NilT) & debugT("Finished result")
             ))
           }
+        }
+      }
+    }
+  }
+
+  /**
+   * Turns things that are constant in ODEs into function symbols.
+   * @example Turns v>0, a>0 |- [v'=a;]v>0, a>0 into v>0, a()>0 |- [v'=a();]v>0, a()>0
+   * @return
+   */
+  def diffIntroduceConstantT: PositionTactic = new PositionTactic("IDC introduce differential constants") {
+    override def applies(s: Sequent, p: Position): Boolean = getFormula(s, p) match {
+      case Box(ode@ODESystem(_, _), _) => true
+      case _ => false
+    }
+
+    private def primedSymbols(ode: DifferentialProgram) = {
+      var primedSymbols = Set[Variable]()
+      ExpressionTraversal.traverse(new ExpressionTraversalFunction {
+        override def preT(p: PosInExpr, t: Term): Either[Option[StopTraversal], Term] = t match {
+          case DifferentialSymbol(ps) => primedSymbols += ps; Left(None)
+          case Differential(_) => throw new IllegalArgumentException("Only derivatives of variables supported")
+          case _ => Left(None)
+        }
+      }, ode)
+      primedSymbols
+    }
+
+    private def diffConstants(ode: DifferentialProgram): Set[Variable] =
+      (StaticSemantics.symbols(ode) -- primedSymbols(ode)).filter(_.isInstanceOf[Variable]).map(_.asInstanceOf[Variable])
+
+    override def apply(p: Position): Tactic = new ConstructionTactic("IDC introduce differential constants") {
+      override def applicable(node: ProofNode): Boolean = applies(node.sequent, p)
+
+      override def constructTactic(tool: Tool, node: ProofNode): Option[Tactic] = node.sequent(p) match {
+        case f@Box(ode@ODESystem(_, _), _) =>
+      val dc = diffConstants(ode)
+      if (dc.isEmpty) {
+      None
+      } else {
+      val subst = dc.map(c => SubstitutionPair(FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing), c)).toList
+      val fsWithDCFree = (node.sequent.ante ++ node.sequent.succ).
+      filter(f => StaticSemantics.freeVars(f).toSet.intersect(dc.toSet[NamedSymbol]).nonEmpty)
+      val constified = fsWithDCFree.map(f => f -> constify(f, dc)).toMap
+      Some(uniformSubstT(subst, constified))
+      }
+        case _ => throw new IllegalArgumentException("Checked by applies to never happen")
+      }
+
+      private def constify(f: Formula, consts: Set[Variable]): Formula = {
+        if (consts.isEmpty) f
+        else {
+          val c = consts.head
+          constify(SubstitutionHelper.replaceFree(f)(c, FuncOf(Function(c.name, c.index, Unit, c.sort), Nothing)),
+            consts.tail)
         }
       }
     }
