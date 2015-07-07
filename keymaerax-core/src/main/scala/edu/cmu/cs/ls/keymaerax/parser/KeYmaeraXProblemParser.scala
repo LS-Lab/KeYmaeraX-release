@@ -10,7 +10,7 @@ import scala.annotation.tailrec
  * Created by nfulton on 6/12/15.
  */
 object KeYmaeraXProblemParser {
-  def apply(s : String) = parseProblem(KeYmaeraXLexer(s))._2
+  def apply(s : String) = parseProblem(KeYmaeraXLexer.inMode(s, ProblemFileMode()))._2
 
   def parseProblem(tokens: List[Token]) :  (Map[(String, Option[Int]), (Option[Sort], Sort)], Formula) = {
     val (decls, remainingTokens) = KeYmaeraXDeclarationsParser(tokens)
@@ -189,9 +189,10 @@ object KeYmaeraXDeclarationsParser {
 
 
   private def parseSort(sortToken : Token) : Sort = sortToken.tok match {
-    case edu.cmu.cs.ls.keymaerax.parser.REAL => edu.cmu.cs.ls.keymaerax.core.Real
-    case edu.cmu.cs.ls.keymaerax.parser.BOOL => edu.cmu.cs.ls.keymaerax.core.Bool
-    case edu.cmu.cs.ls.keymaerax.parser.TERM => edu.cmu.cs.ls.keymaerax.core.Real //@todo
+    case edu.cmu.cs.ls.keymaerax.parser.IDENT("R", _) => edu.cmu.cs.ls.keymaerax.core.Real
+    case edu.cmu.cs.ls.keymaerax.parser.IDENT("B", _) => edu.cmu.cs.ls.keymaerax.core.Bool
+    case edu.cmu.cs.ls.keymaerax.parser.IDENT("T", _) => edu.cmu.cs.ls.keymaerax.core.Real
+    case edu.cmu.cs.ls.keymaerax.parser.TERM => edu.cmu.cs.ls.keymaerax.core.Real //@todo deprecated -- should be handled by T identifier.
     case edu.cmu.cs.ls.keymaerax.parser.PROGRAM => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
     case edu.cmu.cs.ls.keymaerax.parser.CP => edu.cmu.cs.ls.keymaerax.core.Trafo //@todo
     case edu.cmu.cs.ls.keymaerax.parser.MFORMULA => edu.cmu.cs.ls.keymaerax.core.Bool //@todo

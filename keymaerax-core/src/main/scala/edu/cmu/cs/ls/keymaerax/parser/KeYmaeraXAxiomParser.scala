@@ -39,10 +39,10 @@ object KeYmaeraXAxiomParser extends (String => List[(String, Formula)]) {
 
   def parseNextAxiom(input: TokenStream): (String, Formula, TokenStream) = {
     require(input.head.tok.equals(AXIOM_BEGIN), "expected ALP file to begin with Axiom block.")
-    require(input.tail.head.tok.isInstanceOf[AXIOM_NAME], "expected ALP block to have a string as a name")
+    require(input.tail.head.tok.isInstanceOf[LEMMA_AXIOM_NAME], "expected ALP block to have a string as a name")
 
     val name = input.tail.head match {
-      case Token(AXIOM_NAME(x),_) => x
+      case Token(LEMMA_AXIOM_NAME(x),_) => x
       case _ => throw new AssertionError("Require should have failed.")
     }
     //Find the End. token and exclude it.

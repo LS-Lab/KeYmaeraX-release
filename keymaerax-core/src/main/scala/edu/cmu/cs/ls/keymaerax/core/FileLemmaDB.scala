@@ -29,14 +29,10 @@ class FileLemmaDB extends LemmaDB {
   override def contains(lemmaID: LemmaID): Boolean = new File(lemmadbpath, lemmaID + ".alp").exists()
 
   override def get(lemmaID: LemmaID): Option[Lemma] = {
-    val parser = new KeYmaeraParser()
     val file = new File(lemmadbpath, lemmaID + ".alp")
     if (file.exists()) {
-      val knowledge = parser.ProofFileParser.runParser(scala.io.Source.fromFile(file).mkString)
-      val (name, formula, evidence) = LoadedKnowledgeTools.fromName(knowledge)(lemmaID + ".alp").head match {
-        case LoadedLemma(n, f, e) => (n, f, e)
-        case _ => throw new IllegalStateException("ID " + lemmaID + " does not identify a lemma")
-      }
+      val (name, formula, (toolInput, toolOutput)) = KeYmaeraXLemmaParser(scala.io.Source.fromFile(file).mkString)
+      val evidence = List(ToolEvidence(Map(toolInput -> toolOutput)))
       // TODO this means, all lemma DB implementations have to be part of the core
       // TODO Code Review: Any way of checking/certifying this to remove it from the core?
       val fact = Provable.toolFact(new Sequent(Nil,
@@ -76,15 +72,44 @@ class FileLemmaDB extends LemmaDB {
 
   private def saveProof(file: File, f: Formula, ev: List[Evidence]): Unit = {
     val namesToDeclare = StaticSemantics.symbols(f) -- StaticSemantics(f).bv.toSymbolSet ++ StaticSemantics(f).fv.toSymbolSet
-    val header = new KeYmaeraPrettyPrinter(ParseSymbols).proofHeader(namesToDeclare.toList)
-    val fString = new KeYmaeraPrettyPrinter(ParseSymbols).stringify(f)
+    val header = proofHeader(namesToDeclare.toList)
+    val fString = KeYmaeraXPrettyPrinter(f)
 
     val fileContents = header + "Lemma " + "\"" + file.getName + "\"." + "\n" +
-      fString + "\nEnd.\n" + ev.map(KeYmaeraPrettyPrinter.stringifyEvidence).mkString("\n")
+      fString + "\nEnd.\n" + ev.map(stringifyEvidence).mkString("\n")
 
     val pw = new PrintWriter(file)
     pw.write(fileContents)
     //@TODO Code Review: Read and parse file again. Compare with f.
     pw.close()
   }
+
+  private def proofHeader(ns : List[NamedSymbol]) : String = {
+    val varDecls = ns.map({
+      case Variable(n, i, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "."
+      case Function(n, i, Unit, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "()" + "."
+      case Function(n, i, d, s) => sortProofPrinter(s) + " " + n + printIndex(i) + "(" + sortProofPrinter(d) + ")" + "."
+    })
+    "Variables.\n" + varDecls.mkString("\n") + "\nEnd.\n"
+  }
+
+  private def sortProofPrinter(s:Sort):String = s match {
+    case Bool        => "T"
+    case Trafo       => "P"
+    case Real        => "T"
+    case Unit        => "Void"
+    case _: ObjectSort => ???
+  }
+
+  private def printIndex(index: Option[Int]) = index match {
+    case None => ""
+    case Some(i) => "_" + i
+  }
+
+  private def stringifyEvidence(e:Evidence) = e match {
+    case e : ProofEvidence => ??? //TODO
+    case e : ExternalEvidence => "External.\n\t" + e.file.toString + "\nEnd."
+    case e : ToolEvidence => "Tool.\n\t" + e.info.map( p => p._1 + "\t\"" + p._2 + "\"").mkString("\n\t") + "\nEnd."
+  }
+
 }
