@@ -98,23 +98,27 @@ object SetLattice {
   def topVarsDiffVars[A >: NamedSymbol](topSymbols: A*): SetLattice[A] = new TopSet(Set(DotTerm, DotFormula), topSymbols.toSet)
 
   /**
-   * Symbols and differential symbols of sl.
+   * Symbols and differential symbols of set lattice sl.
    * @param sl A SetLattice of NamedSymbols.
-   * @return sl ++ sl' where sl' is the lattice containing the primes of the variables of sl.
+   * @return sl ++ sl' where sl' is the lattice containing the primes of the variables in sl.
    */
-  def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = {
-    // V\cup V' already closed under adding '.
-    //@todo Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
-    if (sl == topVarsDiffVars[NamedSymbol]()) topVarsDiffVars()
-    else {
-      assert(!(sl isTop), "Extension to differentialSymbols are not yet implemented if sl isTop " + sl)
-      val diffSymbols: Set[NamedSymbol] =
-        sl.toSymbolSet
-          .filter(_.isInstanceOf[Variable])
-          .map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
-      sl ++ SetLattice(diffSymbols)
-    }
+  def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = sl match {
+    case TopSet(excluded, symbols) if excluded == topVarsDiffVars().asInstanceOf[TopSet[NamedSymbol]].excluded =>
+      // V\cup V' already closed under adding '.
+      //@todo Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
+      TopSet(excluded, extendToDifferentialSymbols(symbols))
+    case FiniteLattice(set) => SetLattice(extendToDifferentialSymbols(set))
+    case sl:TopSet[NamedSymbol] =>
+      assert(false, "Extension to differentialSymbols are not yet implemented if sl isTop " + sl); ???
   }
+
+  /**
+   * Symbols and differential symbols of set.
+   * @param set A Set of NamedSymbols.
+   * @return set ++ set' where set' is the set containing the primes of the variables in set.
+   */
+  def extendToDifferentialSymbols(set : Set[NamedSymbol]) : Set[NamedSymbol] = set ++
+    set.filter(_.isInstanceOf[Variable]).map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
 }
 
 /**
