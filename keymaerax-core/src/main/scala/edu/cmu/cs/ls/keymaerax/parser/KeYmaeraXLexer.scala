@@ -474,7 +474,7 @@ object KeYmaeraXLexer extends ((String) => List[Token]) {
     }
 
   private def splitName(s : String) : (String, Option[Int]) =
-    if(s.contains("_")) {
+    if(s.contains("_") && !s.endsWith("_")) {
       // a_b_2 ==> "a_b", 2
       val parts = s.split("_")
       val idx = Some(Integer.parseInt(parts.last))
