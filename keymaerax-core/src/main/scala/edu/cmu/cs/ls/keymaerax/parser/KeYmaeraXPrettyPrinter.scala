@@ -141,7 +141,9 @@ class KeYmaeraXPrinter extends PrettyPrinter {
     case DiffAssign(xp, e)      => statement(pp(xp) + op(program).opcode + pp(e))
     case Test(f)                => statement(op(program).opcode + pp(f))
     case ODESystem(ode, f)      => "{" + ppODE(ode) + op(program).opcode + pp(f) + "}"
-    case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
+    //@note forced parentheses in grammar
+    case t: Loop                => "{" + pp(t.child) + "}" + op(program).opcode
+    //case t: Loop                => (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     //case t: UnaryCompositeProgram=> (if (skipParens(t)) pp(t.child) else "{" + pp(t.child) + "}") + op(program).opcode
     case t: Compose if OpSpec.statementSemicolon =>
       (if (skipParensLeft(t)) pp(t.left) else "{" + pp(t.left) + "}") +
