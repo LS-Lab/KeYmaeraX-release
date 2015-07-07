@@ -103,12 +103,17 @@ object SetLattice {
    * @return sl ++ sl' where sl' is the lattice containing the primes of the variables of sl.
    */
   def extendToDifferentialSymbols(sl : SetLattice[NamedSymbol]) : SetLattice[NamedSymbol] = {
-    assert(!(sl isTop), "Cannot extend to differentialSymbols if sl isTop " + sl)
-    val diffSymbols: Set[NamedSymbol] =
-      sl.toSymbolSet
-        .filter(_.isInstanceOf[Variable])
-        .map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
-    sl ++ SetLattice(diffSymbols)
+    // V\cup V' already closed under adding '.
+    //@todo Its overapproximation topVarsDiffVars is also closed since DotTerm, DotFormula are not variables
+    if (sl == topVarsDiffVars[NamedSymbol]()) topVarsDiffVars()
+    else {
+      assert(!(sl isTop), "Extension to differentialSymbols are not yet implemented if sl isTop " + sl)
+      val diffSymbols: Set[NamedSymbol] =
+        sl.toSymbolSet
+          .filter(_.isInstanceOf[Variable])
+          .map(x => DifferentialSymbol(x.asInstanceOf[Variable]))
+      sl ++ SetLattice(diffSymbols)
+    }
   }
 }
 
