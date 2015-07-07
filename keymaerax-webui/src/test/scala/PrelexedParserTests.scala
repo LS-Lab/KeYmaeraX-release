@@ -609,7 +609,27 @@ class PrelexedParserTests extends FlatSpec with Matchers with PrivateMethodTeste
     Greater(f0, Number(0))
   }
 
-  "The string parser" should "not parse p()+x as a formula" in {
+  "The string parser" should "parse -x-y" in {
+    parser("-x-y") shouldBe
+      Minus(Neg(Variable("x")), Variable("y"))
+  }
+
+  it should "parse -x*y" in {
+    parser("-x*y") shouldBe
+      Times(Neg(Variable("x")), Variable("y"))
+  }
+
+  it should "parse -x/y" in {
+    parser("-x/y") shouldBe
+      Divide(Neg(Variable("x")), Variable("y"))
+  }
+
+  it should "parse -x^y" in {
+    parser("-x^y") shouldBe
+      Power(Neg(Variable("x")), Variable("y"))
+  }
+
+  it should "not parse p()+x as a formula" in {
     a [ParseException] should be thrownBy parser.formulaParser("p()+x")
   }
 

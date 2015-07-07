@@ -22,13 +22,13 @@ with `T^T` right-associative, i.e. x^4^2 is x^(4^2)
 
     F ::= T=T | T!=T | T>=T | T>T | T<=T | T<T | p(T) | p() | C{F} | ⎵
         | !F | \forall x F | \exists x F | [P]F | <P>F 
-        | F&F | F|F | F->F | F<->F | (F)' | (F)
+        | F&F | F|F | F->F | F<->F | true | false | (F)' | (F)
 
 with `->` right-associative and no precedence for `->` versus `<->`
 
 ==Programs==
 
-    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P
+    P ::= a; | x:=T; | x':=T; | ?F; | {D&F} | {P}* | P P | P++P | {P}
 
 with `++` and the invisible `;` in P P right-associative, i.e. x:=1;x:=2;x:=3 is x:=1;{x:=2;x:=3}
 
